@@ -10,6 +10,7 @@ TMPDIR_TEST="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR_TEST"' EXIT
 mkdir -p "$TMPDIR_TEST/sprints" "$TMPDIR_TEST/lib" "$TMPDIR_TEST/events" "$TMPDIR_TEST/run" "$TMPDIR_TEST/state"
 cp lib/epic_decomposer.py "$TMPDIR_TEST/lib/epic_decomposer.py"
+cp lib/prerequisite_resolver.py "$TMPDIR_TEST/lib/prerequisite_resolver.py"
 
 ok() { echo "PASS: $*"; PASS=$((PASS+1)); }
 fail() { echo "FAIL: $*"; FAIL=$((FAIL+1)); }
@@ -65,6 +66,60 @@ FIRST_STATUS="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["
 SECOND_STATUS="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["status"])' "$TMPDIR_TEST/sprints/${SECOND_SID}.status.json")"
 [[ "$FIRST_STATUS" == "active" ]] && ok "root child activated" || fail "root child status expected active got $FIRST_STATUS"
 [[ "$SECOND_STATUS" == "queued" ]] && ok "dependent child queued" || fail "dependent child status expected queued got $SECOND_STATUS"
+
+OUT_CAPPED="$(run_epic create --title "全局 WIP 已满的复杂需求" --request "$REQ" --slug epic-split-capped --activate-ready --global-active-limit 1 --json)"
+CAPPED_EPIC_ID="$(json_get "$OUT_CAPPED" epic_id)"
+CAPPED_FIRST_SID="$(json_get "$OUT_CAPPED" children.0.sid)"
+CAPPED_FIRST_STATUS="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["status"])' "$TMPDIR_TEST/sprints/${CAPPED_FIRST_SID}.status.json")"
+[[ "$CAPPED_FIRST_STATUS" == "queued" ]] && ok "global WIP cap prevents initial root child activation" || fail "capped root child expected queued got $CAPPED_FIRST_STATUS"
+CAPPED_EPIC_STATUS="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["status"])' "$TMPDIR_TEST/sprints/${CAPPED_EPIC_ID}.epic.json")"
+[[ "$CAPPED_EPIC_STATUS" == "queued" ]] && ok "capped epic remains queued" || fail "capped epic expected queued got $CAPPED_EPIC_STATUS"
+CAP_ACTIVATE_OUT="$(run_epic activate-ready "$CAPPED_EPIC_ID" --global-active-limit 1 --json)"
+python3 - "$CAP_ACTIVATE_OUT" <<'PY' \
+  && ok "activate-ready reports global WIP backpressure" || fail "activate-ready did not report WIP backpressure"
+import json, sys
+payload = json.loads(sys.argv[1])
+assert payload["activated"] == [], payload
+assert payload["backpressure"] is True, payload
+assert payload["backpressure_reason"] == "global_epic_child_wip_limit", payload
+PY
+HARNESS_DIR="$TMPDIR_TEST" SOLAR_EPIC_ACTIVE_CHILD_LIMIT=1 python3 - "$CAPPED_EPIC_ID" <<'PY' \
+  && ok "autopilot suppresses ready children when global WIP cap is full" || fail "autopilot did not suppress ready children under WIP cap"
+import importlib.util
+import sys
+from pathlib import Path
+
+root = Path.cwd()
+spec = importlib.util.spec_from_file_location("solar_autopilot_monitor", root / "tools" / "solar-autopilot-monitor.py")
+mod = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(mod)
+findings = mod.inspect_epics()
+assert any(f.get("type") == "epic_activation_backpressure" for f in findings), findings
+assert not any(
+    f.get("type") == "epic_ready_children" and f.get("sid") == sys.argv[1]
+    for f in findings
+), findings
+PY
+python3 - "$TMPDIR_TEST" "$CAPPED_EPIC_ID" <<'PY'
+import json, sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / "sprints"
+epic_id = sys.argv[2]
+meta_path = root / f"{epic_id}.epic.json"
+meta = json.loads(meta_path.read_text())
+for sid in meta.get("child_sprints", []):
+    status_path = root / f"{sid}.status.json"
+    if not status_path.exists():
+        continue
+    status = json.loads(status_path.read_text())
+    status["status"] = "cancelled"
+    status["phase"] = "superseded"
+    status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n")
+meta["status"] = "closed"
+meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
+PY
 
 run_epic validate "$EPIC_ID" --json | grep -q '"ok": true' \
   && ok "epic validates" || fail "epic validate failed"
