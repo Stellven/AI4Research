@@ -46,6 +46,7 @@ OPERATORD_RESULT_TIMEOUT_SEC = float(os.environ.get("SOLAR_OPERATORD_RESULT_TIME
 OPERATORD_RESULT_POLL_INTERVAL_SEC = float(os.environ.get("SOLAR_OPERATORD_RESULT_POLL_INTERVAL_SEC", "1") or "1")
 GRAPH_SUMMARY_CACHE_TTL_SEC = int(os.environ.get("SOLAR_MULTI_TASK_GRAPH_SUMMARY_CACHE_TTL_SEC", "5") or "5")
 PROBE_CACHE_PATH = Path(os.environ.get("SOLAR_MULTI_TASK_PROBE_CACHE", RUN_DIR / "capability-probes.json"))
+CODEX_FIRST_ROUTING_BOOST = int(os.environ.get("SOLAR_CODEX_FIRST_ROUTING_BOOST", "80") or "80")
 
 # Normalized fallback ladders for observability surfaces such as
 # ``solar_monitor_bridge``. Keep these lightweight and model-agnostic enough
@@ -904,6 +905,34 @@ def operator_matches_class(operator: dict[str, Any], class_name: str) -> bool:
     return str(op_class).lower() == class_name.lower()
 
 
+def codex_first_routing_enabled() -> bool:
+    return os.environ.get("SOLAR_CODEX_FIRST_ROUTING", "1").strip().lower() not in {"0", "false", "off", "no"}
+
+
+def operator_is_codex(operator: dict[str, Any]) -> bool:
+    values: list[str] = [
+        str(operator.get("operator_id") or ""),
+        str(operator.get("actor_id") or ""),
+        str(operator.get("profile") or ""),
+        str(operator.get("provider") or ""),
+        str(operator.get("vendor") or ""),
+        str(operator.get("model") or ""),
+        str(operator.get("model_config") or ""),
+        str(operator.get("base_url") or ""),
+        str(operator.get("backend") or ""),
+        str(operator.get("operator_class") or ""),
+    ]
+    for key in ("preferred_for", "task_classes", "roles", "strengths", "capabilities"):
+        raw = operator.get(key) or []
+        if isinstance(raw, str):
+            values.append(raw)
+        elif isinstance(raw, dict):
+            values.extend(str(item) for item in raw.keys())
+        else:
+            values.extend(str(item) for item in raw)
+    return "codex" in " ".join(values).lower()
+
+
 def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
     preferred = str(node.get("preferred_operator") or "").strip()
     if preferred:
@@ -1000,13 +1029,22 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
             for c in classes_list:
                 if operator_matches_class(operator, str(c)):
                     score += 100
+        if codex_first_routing_enabled() and operator_is_codex(operator):
+            score += CODEX_FIRST_ROUTING_BOOST
                     
         scored.append((score, operator))
         
     if not scored:
         return None, "operator_selector_no_match"
         
-    scored.sort(key=lambda item: (item[0], str(item[1].get("operator_id") or "")), reverse=True)
+    scored.sort(
+        key=lambda item: (
+            1 if codex_first_routing_enabled() and operator_is_codex(item[1]) else 0,
+            item[0],
+            str(item[1].get("operator_id") or ""),
+        ),
+        reverse=True,
+    )
     return scored[0][1], ""
 
 
@@ -4166,6 +4204,14 @@ def _task_status_message() -> str:
     return f"当前任务: {dag_summary}; {bg_summary}{ready_text}; workers=" + "; ".join(parts)
 
 
+def _looks_like_greeting(text: str) -> bool:
+    lowered = text.lower().strip()
+    if lowered in {"hi", "hello", "hey", "嗨", "你好"}:
+        return True
+    normalized = re.sub(r"\s+", " ", lowered)
+    return bool(re.search(r"\b(can\s+(?:you|u)\s+say\s+(?:hi|hello)|say\s+(?:hi|hello))\b", normalized))
+
+
 def handle_screen_input(text: str, args: argparse.Namespace) -> tuple[str, str]:
     raw = text.strip()
     if not raw:
@@ -4200,6 +4246,11 @@ def handle_screen_input(text: str, args: argparse.Namespace) -> tuple[str, str]:
         matched = _intent_label(intent)
         append_screen_command(raw, intent, "doctor", "ok", matched)
         return "doctor", "显示 doctor"
+    if _looks_like_greeting(raw):
+        intent = local_intent(raw, "greeting")
+        matched = _intent_label(intent)
+        append_screen_command(raw, intent, "greeting", "ok", matched)
+        return "message", "Hi 👋（来自 main-screen 的本地问候处理）"
     if _looks_like_profile_switch(raw):
         intent = local_intent(raw, "profile_switch")
         matched = _intent_label(intent)

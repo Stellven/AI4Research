@@ -27,6 +27,32 @@ def test_fake_worker_catalog_includes_spec_and_codex_bridge(monkeypatch) -> None
     assert "pane3.bridge" in worker["capabilities"]
 
 
+def test_dry_run_worker_discovery_includes_operator_pool(monkeypatch) -> None:
+    monkeypatch.delenv("SOLAR_GRAPH_DISPATCH_FAKE_WORKERS", raising=False)
+    monkeypatch.delenv("SOLAR_GRAPH_DISPATCH_RESTRICT_SESSION", raising=False)
+    monkeypatch.setattr(mod, "_prune_expired_operator_blocks", lambda: None)
+    monkeypatch.setattr(mod, "_builder_operator_pool_available_count", lambda: 1)
+    monkeypatch.setattr(mod.subprocess, "check_output", lambda *args, **kwargs: b"")
+
+    workers = mod._discover_workers(dry_run=True)
+
+    pool_workers = [item for item in workers if str(item.get("pane", "")).startswith("operator-pool:builder")]
+    assert pool_workers
+    assert pool_workers[0]["role"] == "builder"
+    assert "codex.bridge" in pool_workers[0]["capabilities"]
+    assert "guard.secret-leak-guard" in pool_workers[0]["capabilities"]
+    assert "resource.repo-workspace" in pool_workers[0]["capabilities"]
+
+
+def test_pm_submit_parser_accepts_dry_run_operator_id() -> None:
+    parsed = mod._parse_pm_submit_output(
+        "[DRY-RUN] operator_id = mini-codex-gpt53-spark-builder-6\n"
+        "[DRY-RUN] task_id     = pm-sprint-S1-test\n"
+    )
+
+    assert parsed["operator_id"] == "mini-codex-gpt53-spark-builder-6"
+
+
 def test_worker_discovery_keeps_planner_panes_for_role_aware_dispatch(monkeypatch) -> None:
     monkeypatch.setattr(
         mod.subprocess,

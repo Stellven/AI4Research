@@ -21,7 +21,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-import yaml
+try:
+    import yaml  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - exercised in subprocess/runtime without PyYAML
+    from simple_yaml import safe_load as _safe_yaml_load
+
+    class _YamlCompat:
+        safe_load = staticmethod(_safe_yaml_load)
+
+    yaml = _YamlCompat()
 
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))

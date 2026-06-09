@@ -11,7 +11,16 @@
 # ================================================================
 set -eu
 
-HARNESS_DIR="$HOME/.solar/harness"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HARNESS_DIR="${HARNESS_DIR:-$SCRIPT_DIR}"
+REPO_DIR="$(cd "$HARNESS_DIR/.." && pwd)"
+if [[ -x "$REPO_DIR/.venv/bin/python3" ]]; then
+  case ":$PATH:" in
+    *":$REPO_DIR/.venv/bin:"*) ;;
+    *) export PATH="$REPO_DIR/.venv/bin:$PATH" ;;
+  esac
+fi
+export HARNESS_DIR
 SESSION_NAME="solar-harness"
 LAB_SESSION_NAME="solar-harness-lab"
 
@@ -23,7 +32,7 @@ from pathlib import Path
 
 SESSION_NAME = "solar-harness"
 LAB_SESSION_NAME = "solar-harness-lab"
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = os.environ.get("HARNESS_DIR") or os.path.expanduser("~/.solar/harness")
 sys.path.insert(0, os.path.join(HARNESS_DIR, "lib"))
 try:
     from qmd_resolver import resolve_qmd_bin
@@ -56,7 +65,7 @@ result = {
     "gateway_compat": {
         "checked": False,
         "ok": False,
-        "script": os.path.join(os.path.expanduser("~/.solar/harness"), "test-gateway-compat.sh")
+        "script": os.path.join(HARNESS_DIR, "test-gateway-compat.sh")
     },
     "task_graph_gate_audit": {
         "present": False,
@@ -86,7 +95,7 @@ if os.path.isfile(layout_path):
         pass
 
 # bash version
-for b in ["/opt/homebrew/bin/bash", "/usr/local/bin/bash"]:
+for b in [os.environ.get("SOLAR_BASH4", ""), os.environ.get("BASH4", ""), "/opt/homebrew/bin/bash", "/usr/local/bin/bash"]:
     if os.path.isfile(b):
         try:
             r = subprocess.run([b, "--version"], capture_output=True, text=True, timeout=5)
@@ -154,7 +163,8 @@ def scan_session(session):
                 "persona": "",
                 "persona_source": "",
                 "layout_persona": layout_personas.get(f"{parts[0]}:{parts[1]}", ""),
-                "claude_alive": False
+                "runtime_alive": False,
+                "runtime_process": ""
             }
             # Prefer the launch wrapper argv. Pane scrollback can lose the
             # Persona header after long conversations; argv remains reliable.
@@ -170,8 +180,12 @@ def scan_session(session):
                         ["ps", "-p", str(pid), "-o", "args="],
                         capture_output=True, text=True, timeout=2
                     ).stdout.strip()
-                    if re.search(r"(^|/)(claude|claude\.exe)(\s|$)", args):
-                        pane["claude_alive"] = True
+                    if re.search(r"(^|/)(claude|claude\.exe|codex|codex\.exe)(\s|$)", args):
+                        pane["runtime_alive"] = True
+                        if re.search(r"(^|/)(codex|codex\.exe)(\s|$)", args):
+                            pane["runtime_process"] = "codex"
+                        elif re.search(r"(^|/)(claude|claude\.exe)(\s|$)", args):
+                            pane["runtime_process"] = "claude"
                     m = re.search(r"start-(?:incarnation|launcher)\.sh\s+([A-Za-z0-9_-]+)", args)
                     if m and not pane["persona"]:
                         pane["persona"] = m.group(1)
@@ -221,9 +235,9 @@ for p in result["panes"]:
         result["warnings"].append(
             f"pane {p['target']} persona mismatch: layout={layout_persona}, actual={actual_persona}, source={p.get('persona_source','?')}"
         )
-    if layout_persona and not p.get("claude_alive"):
+    if layout_persona and not p.get("runtime_alive"):
         result["warnings"].append(
-            f"pane {p['target']} has no live claude child (layout={layout_persona}, actual={actual_persona or '?'})"
+            f"pane {p['target']} has no live solar runtime child (layout={layout_persona}, actual={actual_persona or '?'})"
         )
 
 # repairs available

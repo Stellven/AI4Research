@@ -101,7 +101,7 @@ Product brief 写入 `~/.solar/harness/sprints/<sprint-id>.product-brief.md`，�
 python3 ~/.solar/harness/lib/html_artifact.py register --sid <sprint-id> --kind prd_html --path ~/.solar/harness/sprints/<sprint-id>.prd.html
 ```
 
-helper 会把 `prd_html` 注册到 status.json，并在本机自动打开；失败只记录 warn，不允许阻断 PM -> Planner 主链路。
+helper 会把 `prd_html` 注册到 status.json。默认不自动打开浏览器；如需本机打开，显式设置 `SOLAR_HTML_AUTO_OPEN=1`。失败只记录 warn，不允许阻断 PM -> Planner 主链路。
 
 ## 与其他角色的交互
 

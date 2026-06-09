@@ -76,7 +76,7 @@ def _register_status(sid: str, kind: str, html_path: Path) -> bool:
 
 
 def _should_open() -> bool:
-    return os.environ.get("SOLAR_HTML_AUTO_OPEN", "1").strip().lower() not in {
+    return os.environ.get("SOLAR_HTML_AUTO_OPEN", "0").strip().lower() not in {
         "0",
         "false",
         "no",

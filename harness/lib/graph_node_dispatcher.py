@@ -4555,7 +4555,7 @@ def _graph_node_task_type(node: dict[str, Any]) -> str:
 def _parse_pm_submit_output(stdout: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
     task_match = re.search(r"task_id\s*=\s*(\S+)", stdout)
-    operator_match = re.search(r"operator\s*=\s*([^\s(]+)", stdout)
+    operator_match = re.search(r"(?:operator_id|operator)\s*=\s*([^\s(]+)", stdout)
     dispatch_match = re.search(r"dispatch\s*=\s*(\S+)", stdout)
     result_match = re.search(r"result\s*=\s*(\S+)", stdout)
     if task_match:
@@ -5243,6 +5243,7 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         "optimization", "runtime_design",
         "algorithm_design", "solar-harness-control-plane", "architecture-writing",
         "code_impl", "test_generation", "test_execution",
+        "guard.secret-leak-guard", "resource.repo-workspace",
         "skill.methodology", "workflow.planning", "debug.systematic", "test.tdd",
         "architecture", "distributed-systems", "evaluation",
         "agents_sdk.design", "agents_sdk.guardrails", "agents_sdk.tracing",
@@ -5298,8 +5299,6 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
             or pane.startswith("solar-harness-multi-task:")
         ):
             continue
-        if dispatch_role != "builder":
-            continue
         models = _models_for_pane(pane, title)
         tail = _pane_tail(pane)
         health = _pane_health(pane)
@@ -5340,8 +5339,7 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
             _actorhost_bridge(pane=pane, required_capabilities=worker_capabilities),
         )
         workers.append(worker)
-    if not dry_run:
-        workers.extend(_builder_operator_pool_workers(worker_skills, worker_capabilities))
+    workers.extend(_builder_operator_pool_workers(worker_skills, worker_capabilities))
     workers.sort(key=lambda item: _pane_execution_priority(str(item.get("pane") or "")))
     return workers
 

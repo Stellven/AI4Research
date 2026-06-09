@@ -87,6 +87,7 @@ CODE_EXEC_TASK_TYPES = {
 }
 CODE_EXEC_ROLES = {"builder", "implementation", "implementer", "coder", "dev"}
 CODE_EXEC_AVOID_MARKERS = {"implementation", "code-edit", "repo-modification"}
+CODEX_FIRST_ROUTING_BOOST = int(os.environ.get("SOLAR_CODEX_FIRST_ROUTING_BOOST", "80") or "80")
 BUILDER_READY_LOGICAL_OPERATORS = {
     "ImplementationWorker",
     "PatchWorker",
@@ -107,6 +108,32 @@ NON_BUILDER_READY_LOGICAL_OPERATORS = {
     "SecurityGate",
     "QuotaBroker",
 }
+
+
+def codex_first_routing_enabled() -> bool:
+    return os.environ.get("SOLAR_CODEX_FIRST_ROUTING", "1").strip().lower() not in {"0", "false", "off", "no"}
+
+
+def _operator_is_codex(op: dict[str, Any], op_id: str = "") -> bool:
+    values: list[str] = [
+        op_id,
+        str(op.get("operator_id") or ""),
+        str(op.get("actor_id") or ""),
+        str(op.get("profile") or ""),
+        str(op.get("provider") or ""),
+        str(op.get("vendor") or ""),
+        str(op.get("model") or ""),
+        str(op.get("model_config") or ""),
+        str(op.get("base_url") or ""),
+        str(op.get("backend") or ""),
+    ]
+    for key in ("preferred_for", "task_classes", "roles", "strengths"):
+        raw = op.get(key) or []
+        if isinstance(raw, str):
+            values.append(raw)
+        else:
+            values.extend(str(item) for item in raw)
+    return "codex" in " ".join(values).lower()
 
 
 def _load_concurrency_policy_module() -> Any | None:
@@ -769,6 +796,8 @@ def _operator_priority(
         priority += 20
     if default_profile and (op_id == default_profile or str(op.get("profile", "")) == default_profile):
         priority += 8
+    if codex_first_routing_enabled() and _operator_is_codex(op, op_id):
+        priority += CODEX_FIRST_ROUTING_BOOST
 
     if spillover_spec and policy_mod:
         group = policy_mod.infer_builder_group(op)
@@ -779,6 +808,12 @@ def _operator_priority(
             else:
                 priority -= 10
     return priority
+
+
+def _operator_candidate_sort_key(item: tuple[int, str, dict[str, Any]]) -> tuple[int, int, str]:
+    priority, op_id, op = item
+    codex_rank = 1 if codex_first_routing_enabled() and _operator_is_codex(op, op_id) else 0
+    return codex_rank, priority, op_id
 
 
 def _role_spillover_candidates(
@@ -949,7 +984,7 @@ def select_operator_by_role(
                 spillover_spec=spillover_spec,
             )
             if spillover_candidates:
-                spillover_candidates.sort(key=lambda x: -x[0])
+                spillover_candidates.sort(key=_operator_candidate_sort_key, reverse=True)
                 _, best_id, best_op = spillover_candidates[0]
                 return best_id, best_op, ""
             if spillover_reason:
@@ -958,7 +993,7 @@ def select_operator_by_role(
             return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
         return "", {}, f"no_dispatchable_operator_for_role: {norm_role}"
 
-    candidates.sort(key=lambda x: -x[0])
+    candidates.sort(key=_operator_candidate_sort_key, reverse=True)
     _, best_id, best_op = candidates[0]
     return best_id, best_op, ""
 

@@ -13,7 +13,7 @@ capsules:
     - performance
     - debug
     owner: lisihao
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-codex-gpt55-medium-builder-1
   - capability_capsule_id: cap.requirement-compiler-implementation
     version: 0.1.0
     capsule_kind: capability
@@ -25,7 +25,7 @@ capsules:
     - implementation
     - builder
     owner: lisihao
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-codex-gpt55-medium-builder-1
   - capability_capsule_id: cap.requirement-compiler-planner
     version: 0.1.0
     capsule_kind: capability
@@ -38,7 +38,7 @@ capsules:
     - prd
     - task-graph
     owner: lisihao
-    default_operator_profile: mini-claude-opus-planner
+    default_operator_profile: mini-codex-gpt55-medium-planner-1
   - capability_capsule_id: cap.requirement-compiler-verification
     version: 0.1.0
     capsule_kind: capability
@@ -51,7 +51,7 @@ capsules:
     - review
     - acceptance
     owner: lisihao
-    default_operator_profile: mini-claude-opus-evaluator
+    default_operator_profile: mini-codex-gpt55-medium-evaluator-1
   - capability_capsule_id: cap.requirement-research-scout
     version: 0.1.0
     capsule_kind: capability
@@ -75,7 +75,7 @@ capsules:
     - research
     - synthesis
     owner: lisihao
-    default_operator_profile: mini-claude-opus-planner
+    default_operator_profile: mini-codex-gpt55-medium-planner-1
   - capability_capsule_id: cap.understand-anything-chat-builder
     version: 0.1.0
     capsule_kind: capability
@@ -149,7 +149,7 @@ capsules:
     - secrets
     - guard
     owner: lisihao
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-codex-gpt55-medium-builder-1
   resource:
   - capability_capsule_id: resource.repo-workspace
     version: 0.1.0
@@ -162,7 +162,7 @@ capsules:
     - repo
     - worktree
     owner: lisihao
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-codex-gpt55-medium-builder-1
   - capability_capsule_id: resource.github-readonly
     version: 0.1.0
     capsule_kind: resource
@@ -174,4 +174,4 @@ capsules:
     - github
     - readonly
     owner: lisihao
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-codex-gpt55-medium-builder-1

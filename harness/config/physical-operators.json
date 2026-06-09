@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-02T03:53:03Z",
+  "updated_at": "2026-06-09T15:36:45Z",
   "operators": {
     "mini-claude-opus-planner": {
       "display_name": "Mac mini Claude Opus planner",
@@ -308,18 +308,18 @@
         "runtime_state": "idle",
         "cooldown_until": null,
         "last_error": null,
-        "last_error_at": "2026-05-31T01:57:10Z",
-        "last_pruned_at": "2026-05-31T01:57:10Z"
+        "last_error_at": "2026-06-08T19:39:08Z",
+        "last_pruned_at": "2026-06-09T03:09:58Z"
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T01:57:10Z",
-        "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/spri",
-        "last_pruned_at": "2026-05-31T01:57:10Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "auth_expired",
+        "last_block_reason": "auth_expired",
+        "last_block_source": "failure_flow_control",
+        "last_block_detected_at": "2026-06-08T19:39:08Z",
+        "last_block_expires_at": "2026-06-09T01:39:08Z",
+        "last_block_excerpt": "Not logged in · Please run /login",
+        "last_pruned_at": "2026-06-09T03:09:58Z",
+        "last_prune_reason": "expired_operator_block"
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -398,18 +398,18 @@
         "runtime_state": "idle",
         "cooldown_until": null,
         "last_error": null,
-        "last_error_at": "2026-05-31T03:26:48Z",
-        "last_pruned_at": "2026-05-31T03:26:48Z"
+        "last_error_at": "2026-06-08T19:22:29Z",
+        "last_pruned_at": "2026-06-08T19:38:21Z"
       },
       "flow_control": {
         "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T03:26:48Z",
-        "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
-        "last_pruned_at": "2026-05-31T03:26:48Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_reason": "contract_closeout_failed",
+        "last_block_source": "graph_node_dispatcher",
+        "last_block_detected_at": "2026-06-08T19:22:29Z",
+        "last_block_expires_at": "2026-06-08T19:37:29Z",
+        "last_block_excerpt": "{\"pane\": \"operator:mini-claude-opus-evaluator\", \"dispatch_id\": \"graph-eval-sprint-20260608-182232-intent-can-u-say-hi-71ce0a65-S1-20260608T192215Z-q1\", \"reason\": \"eval_failed_contract_closeout\", \"operator_status\": \"failed\", \"result_json\": \"/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/harness/run/operator-results/mini-claude-opus-evaluator/pm-sprint-20260608-182232-intent-can-u-say-hi-71ce0a65-S1-af509a5e/result.json\"}",
+        "last_pruned_at": "2026-06-08T19:38:21Z",
+        "last_prune_reason": "expired_operator_block"
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -1340,18 +1340,18 @@
         "runtime_state": "idle",
         "cooldown_until": null,
         "last_error": null,
-        "last_error_at": "2026-05-31T03:26:48Z",
-        "last_pruned_at": "2026-05-31T03:26:48Z"
+        "last_error_at": "2026-06-09T03:24:40Z",
+        "last_pruned_at": "2026-06-09T15:02:01Z"
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T03:26:48Z",
-        "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
-        "last_pruned_at": "2026-05-31T03:26:48Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "auth_expired",
+        "last_block_reason": "auth_expired",
+        "last_block_source": "failure_flow_control",
+        "last_block_detected_at": "2026-06-09T03:24:40Z",
+        "last_block_expires_at": "2026-06-09T09:24:40Z",
+        "last_block_excerpt": "Not logged in · Please run /login",
+        "last_pruned_at": "2026-06-09T15:02:01Z",
+        "last_prune_reason": "expired_operator_block"
       },
       "compat_maps_to": {
         "host_type": "tmux_pane",
@@ -2697,11 +2697,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -2786,11 +2786,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -2876,11 +2876,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -2966,11 +2966,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -3056,11 +3056,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -3146,11 +3146,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -3236,11 +3236,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -3326,11 +3326,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -4144,11 +4144,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "compat_alias_for": "codex_worktree",
@@ -4230,11 +4230,11 @@
         "git_commit": "allowed"
       },
       "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
-      "command_path": "/opt/homebrew/bin/codex",
+      "command_path": "codex",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/opt/homebrew/bin/codex",
+        "command_path": "codex",
         "cache_seconds": 300
       },
       "compat_alias_for": "codex_worktree",
@@ -4243,6 +4243,178 @@
         "carrier_hint": {
           "codex_meta": {
             "worktree_path": "/tmp/codex/mini-codex-gpt55-medium-planner-2",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt55-medium-evaluator-1": {
+      "display_name": "Mac mini Codex GPT 5.5 medium evaluator pool slot 1",
+      "plane": "headless",
+      "owner_host": "lisihao@100.122.223.55",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-evaluator",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "model_config": "Codex CLI;gpt-5.5;reasoning=high;evaluator-pool;review",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-09T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "evaluator"
+      ],
+      "task_classes": [
+        "verification",
+        "review",
+        "evidence",
+        "regression"
+      ],
+      "strengths": [
+        "review",
+        "risk",
+        "quality-gate",
+        "evidence"
+      ],
+      "preferred_for": [
+        "evaluator",
+        "review",
+        "verification",
+        "codex",
+        "gpt"
+      ],
+      "avoid_for": [
+        "bulk-extraction"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "codex",
+        "cache_seconds": 300
+      },
+      "evaluator_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.5-medium-evaluator",
+        "slot": 1,
+        "priority": 5
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt55-medium-evaluator-1",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt55-medium-evaluator-2": {
+      "display_name": "Mac mini Codex GPT 5.5 medium evaluator pool slot 2",
+      "plane": "headless",
+      "owner_host": "lisihao@100.122.223.55",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-evaluator",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "model_config": "Codex CLI;gpt-5.5;reasoning=high;evaluator-pool;review",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-09T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "evaluator"
+      ],
+      "task_classes": [
+        "verification",
+        "review",
+        "evidence",
+        "regression"
+      ],
+      "strengths": [
+        "review",
+        "risk",
+        "quality-gate",
+        "evidence"
+      ],
+      "preferred_for": [
+        "evaluator",
+        "review",
+        "verification",
+        "codex",
+        "gpt"
+      ],
+      "avoid_for": [
+        "bulk-extraction"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "codex",
+        "cache_seconds": 300
+      },
+      "evaluator_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.5-medium-evaluator",
+        "slot": 2,
+        "priority": 5
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt55-medium-evaluator-2",
             "repo": "solar-operators",
             "branch": "main"
           }

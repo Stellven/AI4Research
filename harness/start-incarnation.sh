@@ -17,7 +17,9 @@ done
 
 PERSONA="${1:?Usage: $0 <planner|builder|evaluator> [workdir]}"
 WORK_DIR="${2:-.}"
-HARNESS_DIR="$HOME/.solar/harness"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HARNESS_DIR="${HARNESS_DIR:-$SCRIPT_DIR}"
+export HARNESS_DIR
 
 # sprint-20260502-191700 follow-up: --print-config 必须**前置**
 # 旧 bug: 先 [[ -f PERSONA_FILE ]] || exit 1 → "--print-config" 当 PERSONA 找文件失败 → 永远进不到 --print-config 分支
@@ -27,7 +29,13 @@ if [[ "$PERSONA" == "--print-config" ]]; then
   exit $?
 fi
 
-PERSONA_FILE="$HOME/.solar/harness/personas/${PERSONA}.md"
+# Legacy compatibility: Solar panes now launch through pane-launcher, which
+# owns the Codex/Claude runtime switch. Keep this file as a stable old entry.
+if [[ -x "$HARNESS_DIR/pane-launcher.sh" ]]; then
+  exec bash "$HARNESS_DIR/pane-launcher.sh" "$PERSONA" "$WORK_DIR"
+fi
+
+PERSONA_FILE="$HARNESS_DIR/personas/${PERSONA}.md"
 [[ -f "$PERSONA_FILE" ]] || { echo "ERROR: Persona not found: $PERSONA_FILE"; exit 1; }
 [[ -d "$WORK_DIR" ]] || { echo "ERROR: Dir not found: $WORK_DIR"; exit 1; }
 

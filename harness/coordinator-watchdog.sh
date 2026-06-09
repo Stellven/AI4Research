@@ -22,13 +22,23 @@ if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
   exit 1
 fi
 
-HARNESS_DIR="$HOME/.solar/harness"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HARNESS_DIR="${HARNESS_DIR:-$SCRIPT_DIR}"
+REPO_DIR="$(cd "$HARNESS_DIR/.." && pwd)"
+if [[ -x "$REPO_DIR/.venv/bin/python3" ]]; then
+  case ":$PATH:" in
+    *":$REPO_DIR/.venv/bin:"*) ;;
+    *) export PATH="$REPO_DIR/.venv/bin:$PATH" ;;
+  esac
+fi
 SPRINTS_DIR="$HARNESS_DIR/sprints"
+export HARNESS_DIR SPRINTS_DIR
 SESSION_NAME="solar-harness"
 LAB_SESSION_NAME="solar-harness-lab"
 WATCHDOG_PID_FILE="$HARNESS_DIR/.watchdog.pid"
 WATCHDOG_STATE="$HARNESS_DIR/.watchdog-state"
 COORD_PID_FILE="$HARNESS_DIR/.coordinator.pid"
+WATCHDOG_BASH4="${SOLAR_BASH4:-${BASH:-/opt/homebrew/bin/bash}}"
 
 # 熔断阈值
 MAX_CONSECUTIVE_FAILURES=3
@@ -176,7 +186,7 @@ do_check() {
     fi
   done
 
-  bash "$HARNESS_DIR/coordinator.sh" >> "$HARNESS_DIR/.coordinator.log" 2>&1 &
+  "$WATCHDOG_BASH4" "$HARNESS_DIR/coordinator.sh" >> "$HARNESS_DIR/.coordinator.log" 2>&1 &
   log "Coordinator 重启已触发 (spawn PID: $!, pidfile 由 coordinator 接管)"
 
   if [[ -n "$active_sid" ]]; then
@@ -313,7 +323,7 @@ declare -A PERSONA_PANES=(
 )
 
 _load_layout_panes() {
-  local layout="$HOME/.solar/harness/farm-layout.json"
+  local layout="$HARNESS_DIR/farm-layout.json"
   [[ -f "$layout" ]] || return 0
   local target role
   while IFS=$'\t' read -r target role; do
@@ -471,7 +481,7 @@ check_panes() {
     _esc_w=$(printf '%q' "$_respawn_workdir")
     # sprint-20260502-200424 D2: 用绝对路径 bash + 注入完整 PATH
     # 根因: tmux respawn-pane 不继承用户 shell profile, ~/n/bin/claude 找不到 → exit 127
-    local _restart_bash="/opt/homebrew/bin/bash"
+    local _restart_bash="$WATCHDOG_BASH4"
     [[ -x "$_restart_bash" ]] || _restart_bash="/bin/bash"
     local _user_path="${PATH}"
     for _p in /opt/homebrew/bin /usr/local/bin "$HOME/n/bin" "$HOME/.local/bin" "$HOME/.npm-global/bin" "$HOME/.bun/bin"; do
@@ -552,7 +562,7 @@ launchd_domain() {
 write_launchd_plist() {
   local plist_path="$1"
   local script_path="$HARNESS_DIR/coordinator-watchdog.sh"
-  local bash_path="/opt/homebrew/bin/bash"
+  local bash_path="$WATCHDOG_BASH4"
   [[ -x "$bash_path" ]] || bash_path="/bin/bash"
   mkdir -p "$(dirname "$plist_path")"
   cat > "$plist_path" << PLIST_EOF
@@ -662,7 +672,7 @@ case "${1:-help}" in
       fi
       warn "launchd 启动失败，回退到后台进程模式"
     fi
-    nohup /opt/homebrew/bin/bash "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
+    nohup "$WATCHDOG_BASH4" "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
     echo $! > "$WATCHDOG_PID_FILE"
     ok "Watchdog 启动完成 (PID: $!)"
     ;;
@@ -826,7 +836,7 @@ case "${1:-help}" in
         if [[ "$current_md5" != "$INIT_MD5" ]]; then
           log "[hot-reload] watchdog md5 changed: ${INIT_MD5} → ${current_md5}, exec restart"
           cleanup_watchdog_pid
-          exec /opt/homebrew/bin/bash "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon
+          exec "$WATCHDOG_BASH4" "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon
         fi
       fi
     done

@@ -1,0 +1,24 @@
+- [ ] [2026-06-08T19:12:21Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild
+- [ ] [2026-06-08T19:32:12Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T19:39:25Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T19:46:38Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T19:53:52Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T20:01:06Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T20:08:19Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T20:15:32Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T20:22:46Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T21:04:05Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T21:11:17Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T21:18:32Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T21:25:45Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T21:32:58Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T21:40:10Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T21:47:22Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T22:36:41Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-08T23:53:04Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-09T00:00:21Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-09T00:07:39Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-09T00:14:57Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-09T00:22:14Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-09T01:45:10Z] [WATCHDOG-CIRCUIT-BREAKER] Pane solar-harness-lab:0.1 (host_role=builder, persona=lab-builder) 300s 内 restart 3/3 次,已熔断,停止重启,需人工介入
+- [ ] [2026-06-09T15:11:59Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild

@@ -55,6 +55,9 @@ LABEL_ALIAS_GROUPS = [
         "solar-harness-control-plane",
         "control-plane",
         "workflow.planning",
+        "planner",
+        "planning",
+        "product",
         "governance",
         "autopilot",
         "routing",
@@ -2615,6 +2618,8 @@ def _normalize_worker_entry(worker: dict[str, Any]) -> dict[str, Any]:
             "reporting",
             "model.routing",
             "harness.model_routing",
+            "guard.secret-leak-guard",
+            "resource.repo-workspace",
         ]
     if not normalized.get("models"):
         if "lab" in pane or role in {"lab", "lab-builder"}:

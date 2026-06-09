@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-06-02T01:59:19Z",
+  "updated_at": "2026-06-09T15:36:45Z",
   "actors": {
     "mini-claude-opus-planner": {
       "actor_id": "mini-claude-opus-planner",
@@ -5752,6 +5752,264 @@
         {
           "actor_id": "mini-antigravity-gemini31-pro",
           "condition": "emergency_only"
+        }
+      ]
+    },
+    "mini-codex-gpt55-medium-evaluator-1": {
+      "actor_id": "mini-codex-gpt55-medium-evaluator-1",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt55-medium-evaluator-1",
+      "aliases": [
+        "mini-codex-gpt55-medium-evaluator-1"
+      ],
+      "role": "evaluator",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.5 medium evaluator pool slot 1",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt55-medium-evaluator-1/inbox",
+        "outbox": "actors/mini-codex-gpt55-medium-evaluator-1/outbox",
+        "logs": "actors/mini-codex-gpt55-medium-evaluator-1/logs",
+        "state_json": "actors/mini-codex-gpt55-medium-evaluator-1/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt55-medium-evaluator-1/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt55-medium-evaluator-1/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 4,
+        "debugging": 3,
+        "testing": 4,
+        "review": 5,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 4,
+        "root_cause_debug": 3,
+        "test_generation": 3,
+        "test_execution": 3,
+        "research_synthesis": 3,
+        "academic_critique": 4,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "high",
+        "prefer_for": [
+          "evaluator",
+          "review",
+          "verification",
+          "codex",
+          "gpt"
+        ],
+        "avoid_for": [
+          "bulk-extraction"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt55-medium-evaluator-1 at 2026-06-09T00:00:00Z for Codex-first evaluator routing"
+      },
+      "persona_binding": {
+        "persona_id": "evaluator",
+        "persona_file": "personas/evaluator.md",
+        "knobs_override": {
+          "mode": "review",
+          "final_acceptance_signoff": true
+        }
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt55-medium-evaluator-2": {
+      "actor_id": "mini-codex-gpt55-medium-evaluator-2",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt55-medium-evaluator-2",
+      "aliases": [
+        "mini-codex-gpt55-medium-evaluator-2"
+      ],
+      "role": "evaluator",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.5 medium evaluator pool slot 2",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt55-medium-evaluator-2/inbox",
+        "outbox": "actors/mini-codex-gpt55-medium-evaluator-2/outbox",
+        "logs": "actors/mini-codex-gpt55-medium-evaluator-2/logs",
+        "state_json": "actors/mini-codex-gpt55-medium-evaluator-2/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt55-medium-evaluator-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt55-medium-evaluator-2/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 4,
+        "debugging": 3,
+        "testing": 4,
+        "review": 5,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 4,
+        "root_cause_debug": 3,
+        "test_generation": 3,
+        "test_execution": 3,
+        "research_synthesis": 3,
+        "academic_critique": 4,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "high",
+        "prefer_for": [
+          "evaluator",
+          "review",
+          "verification",
+          "codex",
+          "gpt"
+        ],
+        "avoid_for": [
+          "bulk-extraction"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt55-medium-evaluator-2 at 2026-06-09T00:00:00Z for Codex-first evaluator routing"
+      },
+      "persona_binding": {
+        "persona_id": "evaluator",
+        "persona_file": "personas/evaluator.md",
+        "knobs_override": {
+          "mode": "review",
+          "final_acceptance_signoff": true
+        }
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator-print",
+          "condition": "quota_exhausted"
         }
       ]
     }

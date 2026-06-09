@@ -3,9 +3,48 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 from selector_runtime_store import actor_load_snapshot, record_selection, round_robin_start_index
+
+CODEX_FIRST_ROUTING_BOOST = int(os.environ.get("SOLAR_CODEX_FIRST_ROUTING_BOOST", "80") or "80")
+
+
+def codex_first_routing_enabled() -> bool:
+    return os.environ.get("SOLAR_CODEX_FIRST_ROUTING", "1").strip().lower() not in {"0", "false", "off", "no"}
+
+
+def _operator_is_codex(operator: dict[str, Any], operator_id: str = "") -> bool:
+    values: list[str] = [
+        operator_id,
+        str(operator.get("operator_id") or ""),
+        str(operator.get("actor_id") or ""),
+        str(operator.get("profile") or ""),
+        str(operator.get("provider") or ""),
+        str(operator.get("vendor") or ""),
+        str(operator.get("model") or ""),
+        str(operator.get("model_config") or ""),
+        str(operator.get("base_url") or ""),
+        str(operator.get("backend") or ""),
+        str(operator.get("operator_class") or ""),
+    ]
+    for key in ("preferred_for", "task_classes", "roles", "strengths", "capabilities"):
+        raw = operator.get(key) or []
+        if isinstance(raw, str):
+            values.append(raw)
+        elif isinstance(raw, dict):
+            values.extend(str(item) for item in raw.keys())
+        else:
+            values.extend(str(item) for item in raw)
+    return "codex" in " ".join(values).lower()
+
+
+def _codex_first_candidate_rank(candidate: dict[str, Any], actors: dict[str, dict[str, Any]]) -> int:
+    actor_id = str(candidate.get("actor_id") or "")
+    if codex_first_routing_enabled() and _operator_is_codex(actors.get(actor_id, {}), actor_id):
+        return 0
+    return 1
 
 
 def _normalize_bound_candidates(candidates: list[Any]) -> list[dict[str, Any]]:
@@ -92,6 +131,7 @@ def _order_bound_candidates(
         return sorted(
             ordered,
             key=lambda candidate: (
+                _codex_first_candidate_rank(candidate, actors),
                 _actor_cost_tier(actors.get(candidate["actor_id"], {})),
                 *_candidate_priority(candidate),
             ),
@@ -100,14 +140,29 @@ def _order_bound_candidates(
         return sorted(
             ordered,
             key=lambda candidate: (
+                _codex_first_candidate_rank(candidate, actors),
                 *_actor_load_rank(candidate["actor_id"], actors.get(candidate["actor_id"], {})),
                 *_candidate_priority(candidate),
             ),
         )
     if policy == "round_robin" and len(ordered) > 1:
+        if codex_first_routing_enabled():
+            codex_ordered = [
+                candidate
+                for candidate in ordered
+                if _codex_first_candidate_rank(candidate, actors) == 0
+            ]
+            if codex_ordered:
+                cursor = round_robin_start_index(operator_type or "__global__", len(codex_ordered))
+                other_ordered = [
+                    candidate
+                    for candidate in ordered
+                    if _codex_first_candidate_rank(candidate, actors) != 0
+                ]
+                return codex_ordered[cursor:] + codex_ordered[:cursor] + other_ordered
         cursor = round_robin_start_index(operator_type or "__global__", len(ordered))
         return ordered[cursor:] + ordered[:cursor]
-    return ordered
+    return sorted(ordered, key=lambda candidate: (_codex_first_candidate_rank(candidate, actors), *_candidate_priority(candidate)))
 
 
 def select_bound_candidate(
@@ -469,8 +524,17 @@ def rank_physical_operators(
             or str(operator.get("profile") or "") == default_operator_profile
         ):
             score += 8
+        if codex_first_routing_enabled() and _operator_is_codex(operator, str(operator.get("operator_id") or "")):
+            score += CODEX_FIRST_ROUTING_BOOST
         scored.append((score, operator))
-    scored.sort(key=lambda item: (item[0], str(item[1].get("operator_id") or "")), reverse=True)
+    scored.sort(
+        key=lambda item: (
+            1 if codex_first_routing_enabled() and _operator_is_codex(item[1], str(item[1].get("operator_id") or "")) else 0,
+            item[0],
+            str(item[1].get("operator_id") or ""),
+        ),
+        reverse=True,
+    )
     return scored
 
 

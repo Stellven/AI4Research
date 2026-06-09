@@ -4,7 +4,7 @@
 > 让用户当老板，让 AI 组织自己完成软件工程。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Solar Core](https://img.shields.io/badge/Solar-Core-38bdf8.svg)](CLAUDE.md)
+[![Solar Core](https://img.shields.io/badge/Solar-Core-38bdf8.svg)](AGENTS.md)
 [![Solar Harness](https://img.shields.io/badge/Solar-Harness-8b5cf6.svg)](harness/)
 [![AI Native](https://img.shields.io/badge/AI--Native-Execution%20Fabric-14b8a6.svg)](#solar-是什么)
 
@@ -20,7 +20,7 @@ Solar 当前由三层组成：
 
 | Layer | Directory | Role |
 |---|---|---|
-| **Solar Core** | `CLAUDE.md`, `agents/`, `skills/`, `rules/`, `hooks/`, `core/` | Claude/Codex-native workflow kernel: agents, skills, rules, hooks, and operating context. |
+| **Solar Core** | `AGENTS.md`, `CLAUDE.md` legacy context, `agents/`, `skills/`, `rules/`, `hooks/`, `core/` | Codex-first workflow kernel: source adapters, agents, skills, rules, hooks, and operating context. |
 | **Solar Harness** | `harness/` | Requirement compiler, sprint control plane, TaskGraph runtime, actor/operator fleet, evaluator, benchmark, and experience memory. |
 | **Solar Knowledge** | `docs/`, `scripts/`, research adapters, runtime-generated indices | Knowledge surface for docs, accepted artifacts, research evidence, source maps, and future context maps. |
 
@@ -224,7 +224,7 @@ The user should not become the glue between tools, models, agents, browser tabs,
 
 | Capability | Status | Notes |
 |---|---|---|
-| Solar Core install | Available | Installs Claude/Codex-facing agents, rules, skills, hooks, and core files. |
+| Solar Core install | Available | Installs Codex/Claude-facing agents, rules, skills, hooks, and core files. |
 | Solar Harness local runtime | Available | File-backed sprint contracts, coordinator, queues, leases, builder/evaluator flow. |
 | TaskGraph DAG scheduling | Available | Dependency gating, write-scope batching, capability matching, parent-gate checks. |
 | Actor / host registry | Available | Models AI workers and execution surfaces with capability, cost, quota, lifecycle, mailbox, and evidence fields. |
@@ -290,6 +290,21 @@ Dedicated documents:
 | [`INSTALL-AGENT.md`](INSTALL-AGENT.md) | Step-by-step install/deploy/self-check protocol for AI agents. |
 | [`SKILLS-INSTALL.md`](SKILLS-INSTALL.md) | Optional skill expansion protocol for AI agents. |
 | [`scripts/sync-harness-runtime.sh`](scripts/sync-harness-runtime.sh) | Syncs repository `harness/` into the local runtime `~/.solar/harness/`. |
+| [`docs/codex-core-entrypoints.md`](docs/codex-core-entrypoints.md) | Codex App/CLI entrypoints and Core-to-Harness mapping. |
+
+### Codex Core entry
+
+Codex is the active Core surface for new Solar project entry. Heterogeneous input
+still enters through source adapters and RawIntent metadata; Harness keeps its
+existing intake and scheduling interfaces.
+
+```bash
+cd ~/Solar
+codex "请把这个需求通过 Solar Codex Core 提交到 Harness: <需求文本>"
+
+# Direct CLI RawIntent submission without autopilot dispatch:
+bash scripts/solar-codex-intake.sh --source codex_cli --no-dispatch --json "<需求文本>"
+```
 
 ### Harness runtime
 

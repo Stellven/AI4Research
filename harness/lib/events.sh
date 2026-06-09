@@ -46,7 +46,7 @@ _atomic_append() {
   rmdir "$lock_dir" 2>/dev/null || true
 }
 
-emit_event() {
+_events_emit_impl() {
   local actor="${1:?emit_event: actor required}"
   local event_name="${2:?emit_event: event required}"
   local severity="${3:-info}"
@@ -134,5 +134,9 @@ for e in sorted(seen):
 " 2>/dev/null
 }
 
-# Also export as events_emit for callers that need to avoid name collision
-events_emit() { emit_event "$@"; }
+emit_event() { _events_emit_impl "$@"; }
+
+# Also export as events_emit for callers that need to avoid name collision.
+# Keep this bound to the implementation, not to emit_event, because some
+# legacy callers source this library and then define their own emit_event shim.
+events_emit() { _events_emit_impl "$@"; }

@@ -10,7 +10,15 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import yaml
+try:
+    import yaml  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - exercised in subprocess/runtime without PyYAML
+    from simple_yaml import safe_load as _safe_yaml_load
+
+    class _YamlCompat:
+        safe_load = staticmethod(_safe_yaml_load)
+
+    yaml = _YamlCompat()
 
 from capability_capsules import (
     CAPSULE_REGISTRY_PATH,
@@ -30,6 +38,38 @@ LOGICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "logical-operators.json"
 PHYSICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "physical-operators.json"
 ARTIFACT_ADAPTER_REGISTRY_PATH = HARNESS_DIR / "config" / "artifact-adapter-capsules.registry.yaml"
 EFFECT_KEYS = ("read", "write", "execute", "network", "cost", "risk")
+
+CODEX_FIRST_ROUTING_BOOST = int(os.environ.get("SOLAR_CODEX_FIRST_ROUTING_BOOST", "80") or "80")
+
+
+def codex_first_routing_enabled() -> bool:
+    return os.environ.get("SOLAR_CODEX_FIRST_ROUTING", "1").strip().lower() not in {"0", "false", "off", "no"}
+
+
+def _operator_is_codex(operator: Dict[str, Any], operator_id: str = "") -> bool:
+    values: List[str] = [
+        operator_id,
+        str(operator.get("operator_id") or ""),
+        str(operator.get("actor_id") or ""),
+        str(operator.get("profile") or ""),
+        str(operator.get("provider") or ""),
+        str(operator.get("vendor") or ""),
+        str(operator.get("model") or ""),
+        str(operator.get("model_config") or ""),
+        str(operator.get("base_url") or ""),
+        str(operator.get("backend") or ""),
+        str(operator.get("operator_class") or ""),
+    ]
+    for key in ("preferred_for", "task_classes", "roles", "strengths", "capabilities"):
+        raw = operator.get(key) or []
+        if isinstance(raw, str):
+            values.append(raw)
+        elif isinstance(raw, dict):
+            values.extend(str(item) for item in raw.keys())
+        else:
+            values.extend(str(item) for item in raw)
+    return "codex" in " ".join(values).lower()
+
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
@@ -734,6 +774,9 @@ def enumerate_physical_candidates(
             priority += 20
         if default_profile and (op_id == default_profile or str(spec.get("profile", "")) == default_profile):
             priority += 8
+        codex_candidate = codex_first_routing_enabled() and _operator_is_codex(spec, op_id)
+        if codex_candidate:
+            priority += CODEX_FIRST_ROUTING_BOOST
         candidates.append(
             {
                 "operator_id": op_id,
@@ -743,10 +786,17 @@ def enumerate_physical_candidates(
                 "profile": spec.get("profile"),
                 "model": spec.get("model"),
                 "preferred_for": spec.get("preferred_for", []),
+                "codex_first": codex_candidate,
             }
         )
 
-    candidates.sort(key=lambda item: (-int(item["priority"]), str(item["operator_id"])))
+    candidates.sort(
+        key=lambda item: (
+            0 if item.get("codex_first") else 1,
+            -int(item["priority"]),
+            str(item["operator_id"]),
+        )
+    )
     return candidates
 
 

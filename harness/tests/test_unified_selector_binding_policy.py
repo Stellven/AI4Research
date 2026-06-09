@@ -59,3 +59,57 @@ def test_least_loaded_policy_prefers_lower_runtime_snapshot(monkeypatch):
 
     assert selected == "actor-free"
     assert rejected == []
+
+
+def test_priority_policy_prefers_codex_bound_candidate(monkeypatch):
+    monkeypatch.setattr(selector, "record_selection", lambda *args, **kwargs: None)
+
+    selected, rejected = selector.select_bound_candidate(
+        [
+            {"actor_id": "mini-claude-opus-planner", "priority": 1},
+            {"actor_id": "mini-codex-gpt55-medium-planner-1", "priority": 10},
+        ],
+        selection_policy="priority_first",
+        operator_type="DeepArchitect",
+    )
+
+    assert selected == "mini-codex-gpt55-medium-planner-1"
+    assert rejected == []
+
+
+def test_rank_physical_operators_prefers_codex_over_claude_defaults():
+    ranked = selector.rank_physical_operators(
+        operators=[
+            {
+                "operator_id": "mini-claude-sonnet-builder",
+                "enabled": True,
+                "available": True,
+                "role": "builder",
+                "roles": ["builder"],
+                "task_classes": ["implementation"],
+                "profile": "builder",
+                "preferred_for": ["builder", "implementation"],
+            },
+            {
+                "operator_id": "mini-codex-gpt53-spark-builder-1",
+                "enabled": True,
+                "available": True,
+                "role": "builder",
+                "roles": ["builder"],
+                "task_classes": ["implementation"],
+                "profile": "codex-builder",
+                "provider": "openai",
+                "model_config": "Codex CLI;gpt-5.3-codex-spark",
+                "preferred_for": ["builder", "implementation", "codex"],
+            },
+        ],
+        node={"task_type": "implementation", "goal": "Implement approved change"},
+        selector={},
+        dispatchable_fn=lambda operator: (True, ""),
+        role="builder",
+        task_type="implementation",
+        preferred_operator_ids={"mini-claude-sonnet-builder"},
+        default_operator_profile="mini-claude-sonnet-builder",
+    )
+
+    assert ranked[0][1]["operator_id"] == "mini-codex-gpt53-spark-builder-1"

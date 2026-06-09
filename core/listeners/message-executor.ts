@@ -9,6 +9,13 @@ import Database from 'bun:sqlite';
 import { ReplySender } from '../reply/reply-sender';
 import { sendNtfy } from '../notify/ntfy';
 import { getGuardianIdentifiers } from '../config/privacy';
+import {
+  CORE_TO_HARNESS_SCHEMA_VERSION,
+  submitCoreToHarness,
+  type CoreToHarnessMode,
+  type CoreToHarnessRequest,
+  type CoreToHarnessUrgency,
+} from '../harness';
 
 const DB_PATH = `${process.env.HOME}/.solar/solar.db`;
 
@@ -196,7 +203,7 @@ export class MessageExecutor {
   }
 
   /**
-   * 执行任务 - 调用 Claude 处理
+   * 执行任务 - 进入 Harness RawIntent 链路
    */
   private async executeTask(task: QueuedTask, context: string): Promise<string> {
     // 提取用户指令 (邮件正文第一行通常是指令)
@@ -248,21 +255,116 @@ ${context}
 
 请根据用户指令处理，给出简洁的回复。如果是分析任务，给出分析结果；如果是设计任务，给出设计方案。`;
 
-    // 调用 Claude (通过 claude CLI)
-    try {
-      const result = await Bun.spawn(['claude', '-p', prompt], {
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
+    const request = this.buildHarnessRequest(task, instruction, prompt, context);
+    const result = await submitCoreToHarness(request);
 
-      const output = await new Response(result.stdout).text();
-      return output.trim() || '任务已处理';
-
-    } catch (e) {
-      // 降级: 返回简单确认
-      console.warn('[Executor] Claude 调用失败，使用降级回复');
-      return `收到您的消息: "${instruction.slice(0, 50)}..."\n\n已记录，稍后处理。`;
+    if (!result.ok) {
+      const detail = result.error || result.consume?.error || result.capture?.error || 'unknown harness error';
+      throw new Error(`Harness intake failed: ${detail}`);
     }
+
+    const sprintId = result.consume?.results?.[0]?.sprint_id || 'N/A';
+    const consumeStatus = result.consume?.results?.[0]?.status || (request.consume?.enabled === false ? 'capture_only' : 'N/A');
+    return [
+      'Solar Harness 已接收任务。',
+      '',
+      `- request_id: ${request.request_id}`,
+      `- intent_id: ${result.intent_id || 'N/A'}`,
+      `- consume_status: ${consumeStatus}`,
+      `- sprint_id: ${sprintId}`,
+      `- raw_intent: ${result.capture?.raw_intent || 'N/A'}`,
+      `- requirement_ir: ${result.capture?.requirement_ir || 'N/A'}`,
+    ].join('\n');
+  }
+
+  private buildHarnessRequest(
+    task: QueuedTask,
+    instruction: string,
+    prompt: string,
+    context: string,
+  ): CoreToHarnessRequest {
+    const isThreadReply = context.includes('=== 邮件线程历史 ===');
+    const requestId = this.toIntentId(task.task_id);
+
+    return {
+      schema_version: CORE_TO_HARNESS_SCHEMA_VERSION,
+      request_id: requestId,
+      created_at: new Date().toISOString(),
+      source: {
+        channel: task.source,
+        actor: task.sender || 'unknown',
+        device: task.source,
+        thread_ref: task.source_id,
+        source_trust: 'guardian_direct',
+      },
+      workspace: {
+        repo: process.cwd(),
+        cwd: process.cwd(),
+        knowledge_query: instruction,
+      },
+      routing: {
+        mode: this.inferMode(task),
+        urgency: this.inferUrgency(task),
+        allow_autodispatch: false,
+        requires_human_confirm: false,
+        require_research_artifact: false,
+      },
+      raw_input: {
+        text: task.content,
+        quoted_context: isThreadReply ? [context] : [],
+      },
+      core_analysis: {
+        title: instruction.slice(0, 90) || task.task_id,
+        objective: instruction,
+        problem: prompt,
+        constraints: [
+          'Enter Solar-Harness through RawIntent and requirement compilation.',
+          'Do not bypass TaskGraph, operator runtime, evidence logging, or Harness policy gates.',
+        ],
+        non_goals: [
+          'Do not execute this message by directly invoking a model CLI from Core.',
+        ],
+        acceptance: [
+          'Harness capture returns an intent_id and persisted RawIntent artifacts.',
+          'Harness consume reports a sprint_id or an explicit non-consumed status.',
+        ],
+        suggested_logical_operators: [
+          'RequirementCompiler',
+          'Planner',
+        ],
+      },
+      consume: {
+        enabled: true,
+        auto_dispatch_planner: false,
+      },
+    };
+  }
+
+  private inferMode(task: QueuedTask): CoreToHarnessMode {
+    const text = `${task.parsed_intent || ''}\n${task.content}`.toLowerCase();
+    if (/(debug|bug|失败|报错|修复|卡住)/i.test(text)) return 'debug';
+    if (/(research|report|论文|调研|报告)/i.test(text)) return 'research';
+    if (/(architecture|strategy|架构|设计|operator|runtime|schema|算子)/i.test(text)) return 'strategy';
+    if (/(monitor|heartbeat|巡检|监控)/i.test(text)) return 'monitor';
+    if (/(review|审查|评审)/i.test(text)) return 'review';
+    return 'delivery';
+  }
+
+  private inferUrgency(task: QueuedTask): CoreToHarnessUrgency {
+    const text = `${task.priority || ''}\n${task.content}`.toLowerCase();
+    if (/(urgent|p0|紧急|马上|立即)/i.test(text)) return 'urgent';
+    if (/(high|p1|重要)/i.test(text)) return 'high';
+    if (/(low|p3|不急)/i.test(text)) return 'low';
+    return 'normal';
+  }
+
+  private toIntentId(taskId: string): string {
+    const safe = taskId
+      .trim()
+      .replace(/[^A-Za-z0-9_.-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 96);
+    return safe.startsWith('intent-') ? safe : `intent-${safe || Date.now()}`;
   }
 
   /**

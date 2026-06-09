@@ -18,6 +18,11 @@ secrets/
 *.tmp
 .DS_Store
 node_modules/
+.bun-cache/
+.uv-cache/
+.venv/
+.test-home/
+__pycache__/
 bun.lockb
 *.cache
 
@@ -50,11 +55,13 @@ coverage/
 
 # Solar Harness 运行时/证据产物
 harness/.coverage
+harness/.pm/
 harness/run/
 harness/state/
 reports/
 harness/intake-requests/
 harness/intents/intent-*/
+harness/sprints/sprint-*
 harness/handovers/*.md
 harness/sprints/*-eval.json
 harness/sprints/*-handoff.md

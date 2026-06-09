@@ -44,12 +44,22 @@ if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
   exit 1
 fi
 
-HARNESS_DIR="$HOME/.solar/harness"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HARNESS_DIR="${HARNESS_DIR:-$SCRIPT_DIR}"
+REPO_DIR="$(cd "$HARNESS_DIR/.." && pwd)"
+if [[ -x "$REPO_DIR/.venv/bin/python3" ]]; then
+  case ":$PATH:" in
+    *":$REPO_DIR/.venv/bin:"*) ;;
+    *) export PATH="$REPO_DIR/.venv/bin:$PATH" ;;
+  esac
+fi
 SPRINTS_DIR="$HARNESS_DIR/sprints"
+export HARNESS_DIR SPRINTS_DIR
 SESSION_NAME="solar-harness"
 LAB_SESSION_NAME="solar-harness-lab"
 COORD_STATE="$HARNESS_DIR/.coordinator-state"
 SESSION_SH="$HARNESS_DIR/session.sh"
+COORD_BASH4="${SOLAR_BASH4:-${BASH:-/opt/homebrew/bin/bash}}"
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 
@@ -2917,12 +2927,12 @@ PY
 
 4. 额外写人读 HTML artifact 到:
    ~/.solar/harness/sprints/${sid}.prd.html
-   HTML 是给用户阅读和审阅的可视化 artifact，不能替代 prd.md。必须 self-contained，不依赖外部 CSS/JS/CDN。
+   HTML 是给用户阅读和审阅的可视化 artifact，不能替代 prd.md。必须 self-contained，不依赖外部 CSS/JS/CDN。默认只注册不自动打开浏览器。
    优先使用统一渲染器生成:
    python3 ~/.solar/harness/lib/render_sprint_html.py render --sid ${sid} --kind prd --register
    \`prd.html\` 和后续 \`planning.html\` 必须统一为同一套 richer 视觉系统：深色 hero、锚点目录 TOC、卡片分区、流程/架构图、技术栈/算子绑定区、风险矩阵；不能只是 Markdown 转 HTML，也不能退化成朴素米色文档页。
 
-5. 写完 HTML 后注册并自动打开:
+5. 写完 HTML 后注册 HTML artifact（默认不自动打开浏览器）:
    python3 ~/.solar/harness/lib/html_artifact.py register --sid ${sid} --kind prd_html --path ~/.solar/harness/sprints/${sid}.prd.html
    helper 失败只记录 warn，不允许阻断 PM -> Planner 主链路。
 
@@ -3008,14 +3018,14 @@ PY
 6. 额外写人读 HTML artifact 到:
    ~/.solar/harness/sprints/${sid}.design.html
    ~/.solar/harness/sprints/${sid}.planning.html
-   HTML 是给用户阅读和审阅的可视化 artifact，不能替代 design.md、plan.md 或 task_graph.json。必须 self-contained，不依赖外部 CSS/JS/CDN。
+   HTML 是给用户阅读和审阅的可视化 artifact，不能替代 design.md、plan.md 或 task_graph.json。必须 self-contained，不依赖外部 CSS/JS/CDN。默认只注册不自动打开浏览器。
    `design.html` 用来承载架构设计视图，`planning.html` 用来承载执行计划 / DAG 视图；两者必须属于同一套 html-anything 默认视觉系统。
    优先使用统一渲染器生成:
    python3 ~/.solar/harness/lib/render_sprint_html.py render --sid ${sid} --kind design --register
    python3 ~/.solar/harness/lib/render_sprint_html.py render --sid ${sid} --kind planning --register
    \`design.html\` / \`planning.html\` 必须和 PM 侧 \`prd.html\` 保持同一套 richer 视觉系统：深色 hero、锚点目录 TOC、卡片分区、流程/架构图、技术栈/算子绑定区、风险矩阵；禁止回退成旧的朴素米色 planning 页。`design.html` 必须突出架构方案与技术栈绑定，`planning.html` 必须突出 DAG/并发边界、文件级写范围、验证命令、风险矩阵和 stop rules。
 
-7. 写完 HTML 后注册并自动打开:
+7. 写完 HTML 后注册 HTML artifact（默认不自动打开浏览器）:
    python3 ~/.solar/harness/lib/html_artifact.py register --sid ${sid} --kind design_html --path ~/.solar/harness/sprints/${sid}.design.html
    python3 ~/.solar/harness/lib/html_artifact.py register --sid ${sid} --kind planning_html --path ~/.solar/harness/sprints/${sid}.planning.html
    helper 失败只记录 warn，不允许阻断 Planner -> Builder 主链路。
@@ -5168,7 +5178,7 @@ PY
         log "[hot-reload] md5 changed: ${INIT_MD5} → ${current_md5}, exec restart"
         # D4 兜底: exec 失败时告警 + 更新 INIT_MD5 防死循环
         clean_my_pidfile
-        if ! exec /opt/homebrew/bin/bash "$0" "$@" 2>>"$COORD_LOG"; then
+        if ! exec "$COORD_BASH4" "$0" "$@" 2>>"$COORD_LOG"; then
           log "[HOT-RELOAD-FAILED] exec restart failed at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           echo "- [ ] [HOT-RELOAD-FAILED] exec restart failed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$HARNESS_DIR/PLANNER-INBOX.md" 2>/dev/null || true
           echo "[HOT-RELOAD-FAILED]" > "$HARNESS_DIR/.planner-last-notice" 2>/dev/null || true

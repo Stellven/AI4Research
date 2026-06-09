@@ -22,6 +22,7 @@
     "dashboard:compact": "bun run demos/agent-dashboard.ts --layout=compact",
     "dashboard:minimal": "bun run demos/agent-dashboard.ts --layout=minimal",
     "dashboard:web": "bun run core/dashboard/server.ts",
+    "smoke:codex": "bun run core/codex-smoke.ts \"installed solar codex smoke: say hi\"",
     "test": "bun test",
     "test:ui": "bun run tests/ui-engine.test.ts",
     "test:llm": "bun run tests/llm-integration.test.ts"

@@ -107,6 +107,54 @@ def test_task_type_matching():
     assert op.get("operator_id") == "operator-builder", op
     assert not err
 
+
+def test_codex_first_routing_prefers_codex_builder(monkeypatch):
+    registry = {
+        "version": 1,
+        "operators": {
+            "mini-claude-sonnet-builder": {
+                "display_name": "Claude Builder",
+                "role": "builder",
+                "profile": "builder",
+                "enabled": True,
+                "available": True,
+                "auth_mode": "subscription",
+                "quota_guard_state": "ok",
+                "task_classes": ["implementation"],
+                "preferred_for": ["builder", "implementation"],
+                "cost_tier": "low",
+            },
+            "mini-codex-gpt53-spark-builder-1": {
+                "display_name": "Codex Builder",
+                "role": "builder",
+                "profile": "codex-builder",
+                "provider": "openai",
+                "model_config": "Codex CLI;gpt-5.3-codex-spark",
+                "enabled": True,
+                "available": True,
+                "auth_mode": "subscription",
+                "quota_guard_state": "ok",
+                "task_classes": ["implementation"],
+                "preferred_for": ["builder", "implementation", "codex"],
+                "cost_tier": "medium",
+            },
+        },
+    }
+    monkeypatch.setattr(m, "load_physical_operators", lambda: registry)
+
+    node = {
+        "task_type": "implementation",
+        "operator_selector": {
+            "task_type": "implementation",
+        },
+    }
+    op, err = m.select_operator(node, {"name": "builder"})
+
+    assert op is not None
+    assert op.get("operator_id") == "mini-codex-gpt53-spark-builder-1", op
+    assert not err
+
+
 def test_capability_scores():
     # required_capabilities constraint
     node = {

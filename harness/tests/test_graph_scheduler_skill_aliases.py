@@ -36,6 +36,14 @@ def test_backend_development_alias_matches_builder_impl_family() -> None:
     assert mod._skills_match(worker, ["backend-development"]) is True
 
 
+def test_planner_alias_matches_planning_worker_skill() -> None:
+    worker = {
+        "skills": ["planning", "workflow.planning", "markdown"],
+        "capabilities": ["harness.dag"],
+    }
+    assert mod._skills_match(worker, ["planner"]) is True
+
+
 def test_assign_workers_prefers_planner_role_before_builder_fallback() -> None:
     node = {
         "id": "N1",

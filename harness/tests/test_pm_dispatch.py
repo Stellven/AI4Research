@@ -63,6 +63,147 @@ def test_select_operator_by_role_prefers_capsule_operator_constraints(monkeypatc
     assert operator_id == "builder-b"
 
 
+def test_select_operator_by_role_prefers_codex_over_capsule_claude_constraints(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "mini-claude-sonnet-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                    "profile": "builder",
+                    "preferred_for": ["builder", "implementation"],
+                },
+                "mini-codex-gpt53-spark-builder-1": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                    "profile": "codex-builder",
+                    "provider": "openai",
+                    "model_config": "Codex CLI;gpt-5.3-codex-spark",
+                    "preferred_for": ["builder", "implementation", "codex"],
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda op: (True, ""))
+
+    operator_id, _, reason = pm_dispatch.select_operator_by_role(
+        role="builder",
+        task_type="implementation",
+        resolved_capsule={
+            "operator_constraints": {
+                "preferred": ["mini-claude-sonnet-builder"],
+                "forbidden": [],
+                "default_operator_profile": "mini-claude-sonnet-builder",
+            }
+        },
+    )
+
+    assert reason == ""
+    assert operator_id == "mini-codex-gpt53-spark-builder-1"
+
+
+def test_select_operator_by_role_explicit_operator_overrides_codex_first(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "mini-claude-sonnet-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                    "profile": "builder",
+                    "preferred_for": ["builder", "implementation"],
+                },
+                "mini-codex-gpt53-spark-builder-1": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                    "profile": "codex-builder",
+                    "provider": "openai",
+                    "model_config": "Codex CLI;gpt-5.3-codex-spark",
+                    "preferred_for": ["builder", "implementation", "codex"],
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda op: (True, ""))
+
+    operator_id, _, reason = pm_dispatch.select_operator_by_role(
+        role="builder",
+        task_type="implementation",
+        prefer_operator="mini-claude-sonnet-builder",
+    )
+
+    assert reason == ""
+    assert operator_id == "mini-claude-sonnet-builder"
+
+
+def test_select_operator_by_role_prefers_codex_planner(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "mini-claude-opus-planner": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["planner"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["planning"],
+                    "profile": "planner",
+                    "preferred_for": ["planner", "planning"],
+                },
+                "mini-codex-gpt55-medium-planner-1": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["planner"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["planning", "requirements"],
+                    "profile": "codex-planner",
+                    "provider": "openai",
+                    "model_config": "Codex CLI;gpt-5.5",
+                    "preferred_for": ["planner", "planning", "codex"],
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda op: (True, ""))
+
+    operator_id, _, reason = pm_dispatch.select_operator_by_role(
+        role="planner",
+        task_type="planning",
+        resolved_capsule={
+            "operator_constraints": {
+                "preferred": ["mini-claude-opus-planner"],
+                "forbidden": [],
+                "default_operator_profile": "mini-claude-opus-planner",
+            }
+        },
+    )
+
+    assert reason == ""
+    assert operator_id == "mini-codex-gpt55-medium-planner-1"
+
+
 def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
     pm_dispatch = _load_pm_dispatch()
     with tempfile.TemporaryDirectory() as td:
