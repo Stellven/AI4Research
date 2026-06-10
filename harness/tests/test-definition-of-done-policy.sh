@@ -5,10 +5,10 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 HARNESS_DIR="$REPO_DIR/harness"
 CLAUDE_FILE="$REPO_DIR/CLAUDE.md"
-if ! grep -Fq "DEFINITION OF DONE" "$CLAUDE_FILE" 2>/dev/null && [[ -f "/Users/sihaoli/Solar/CLAUDE.md" ]]; then
-  CLAUDE_FILE="/Users/sihaoli/Solar/CLAUDE.md"
-elif ! grep -Fq "DEFINITION OF DONE" "$CLAUDE_FILE" 2>/dev/null && [[ -f "/Users/lisihao/Solar/CLAUDE.md" ]]; then
-  CLAUDE_FILE="/Users/lisihao/Solar/CLAUDE.md"
+if ! grep -Fq "DEFINITION OF DONE" "$CLAUDE_FILE" 2>/dev/null && [[ -f "~/Solar/CLAUDE.md" ]]; then
+  CLAUDE_FILE="~/Solar/CLAUDE.md"
+elif ! grep -Fq "DEFINITION OF DONE" "$CLAUDE_FILE" 2>/dev/null && [[ -f "${HOME}/Solar/CLAUDE.md" ]]; then
+  CLAUDE_FILE="${HOME}/Solar/CLAUDE.md"
 fi
 
 PASS=0

@@ -15,7 +15,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>cd "$HOME/.solar/harness" &amp;&amp; python3 lib/mineru_extract.py idle-worker --rate-limit 3 --log ~/.solar/logs/mineru-idle.log 2&gt;&gt;~/.solar/logs/mineru-idle.log</string>
+        <string>cd "{{SOLAR_HOME}}/harness" &amp;&amp; python3 lib/mineru_extract.py idle-worker --rate-limit 3 --log "{{SOLAR_HOME}}/logs/mineru-idle.log" 2&gt;&gt;"{{SOLAR_HOME}}/logs/mineru-idle.log"</string>
     </array>
 
     <!-- Run at idle CPU priority — never block user shell -->
@@ -53,7 +53,7 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>HARNESS_DIR</key>
-        <string>/Users/sihaoli/.solar/harness</string>
+        <string>{{SOLAR_HOME}}/harness</string>
         <key>MINERU_RATE_LIMIT_RPM</key>
         <string>3</string>
         <key>MINERU_MEMORY_CAP_MB</key>
@@ -62,9 +62,9 @@
 
     <!-- Stdout/Stderr to log file -->
     <key>StandardOutPath</key>
-    <string>/Users/sihaoli/.solar/logs/mineru-idle-stdout.log</string>
+    <string>{{SOLAR_HOME}}/logs/mineru-idle-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/sihaoli/.solar/logs/mineru-idle-stderr.log</string>
+    <string>{{SOLAR_HOME}}/logs/mineru-idle-stderr.log</string>
 
     <!-- Run on load -->
     <key>RunAtLoad</key>

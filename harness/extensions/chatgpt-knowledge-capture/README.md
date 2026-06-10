@@ -9,5 +9,5 @@ Click the extension icon to capture the current page into the Solar knowledge in
 
 Recommended unpacked install path:
 
-- MacBook: `/Users/sihaoli/Solar/harness/extensions/chatgpt-knowledge-capture`
-- Mac mini: `/Users/lisihao/Solar/harness/extensions/chatgpt-knowledge-capture`
+- MacBook: `~/Solar/harness/extensions/chatgpt-knowledge-capture`
+- Mac mini: `~/Solar/harness/extensions/chatgpt-knowledge-capture`

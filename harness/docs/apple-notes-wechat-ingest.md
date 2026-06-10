@@ -90,7 +90,7 @@ solar-harness notes uninstall-scheduler
   "notes_folder": "Solar Inbox",
   "tags": ["#solar-ingest", "#知识库", "#solar"],
   "interval_seconds": 7200,
-  "raw_dir": "/Users/sihaoli/Knowledge/_raw/apple-notes",
+  "raw_dir": "~/Knowledge/_raw/apple-notes",
   "all_notes": false,
   "fetch_wechat": true,
   "wechat_timeout_seconds": 20

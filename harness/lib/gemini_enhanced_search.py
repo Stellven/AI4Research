@@ -32,7 +32,7 @@ def _truthy(value: str | None) -> bool:
 
 
 def _agy_path() -> str:
-    return os.environ.get("AGY_BIN") or shutil.which("agy") or "/Users/lisihao/.local/bin/agy"
+    return os.environ.get("AGY_BIN") or shutil.which("agy") or "~/.local/bin/agy"
 
 
 def _doctor() -> dict[str, Any]:

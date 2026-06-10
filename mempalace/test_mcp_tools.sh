@@ -4,7 +4,7 @@ set -e
 python3.11 <<'PYEOF'
 import warnings; warnings.filterwarnings('ignore')
 import sys
-sys.path.insert(0, '/Users/sihaoli/.solar/mempalace')
+sys.path.insert(0, '~/.solar/mempalace')
 from mempalace_mcp_server import (
     mempalace_add, mempalace_search, mempalace_delete, mempalace_stats,
     mempalace_diary_write, mempalace_diary_read,

@@ -4,7 +4,7 @@ set -e
 python3.11 -c "
 import warnings; warnings.filterwarnings('ignore')
 import sys
-sys.path.insert(0, '/Users/sihaoli/.solar/mempalace')
+sys.path.insert(0, '~/.solar/mempalace')
 from mempalace_mcp_server import mempalace_stats
 s = mempalace_stats()
 count = s.get('total_docs', 0)

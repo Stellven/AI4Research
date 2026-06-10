@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-HARNESS_DIR="${HARNESS_DIR:-/Users/lisihao/Solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${HOME}/Solar/harness}"
 PYTHON="${PYTHON:-python3}"
-DB="${DB:-/Users/lisihao/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite}"
-STATE_DIR="${STATE_DIR:-/Users/lisihao/.solar/harness/state/tech-hotspot-radar}"
+DB="${DB:-${HOME}/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite}"
+STATE_DIR="${STATE_DIR:-${HOME}/.solar/harness/state/tech-hotspot-radar}"
 CONFIG="${CONFIG:-$HARNESS_DIR/config/tech-hotspot-radar.yaml}"
-LOG_DIR="${LOG_DIR:-/Users/lisihao/.solar/harness/run}"
+LOG_DIR="${LOG_DIR:-${HOME}/.solar/harness/run}"
 LOCK_DIR="${LOCK_DIR:-$STATE_DIR/youtube-daily-previous-day.lockdir}"
 LOCAL_TZ="${LOCAL_TZ:-America/Toronto}"
 
@@ -28,7 +28,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PA
 export PYTHONIOENCODING="utf-8"
 export BROWSER_AGENT_HEADLESS="${BROWSER_AGENT_HEADLESS:-false}"
 export TECH_HOTSPOT_BROWSER_CHATGPT_HEADLESS="${TECH_HOTSPOT_BROWSER_CHATGPT_HEADLESS:-false}"
-export BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE="${BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE:-/Users/lisihao/.solar/harness/browser-agent-chatgpt-local.json}"
+export BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE="${BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE:-${HOME}/.solar/harness/browser-agent-chatgpt-local.json}"
 
 read -r YESTERDAY_DATE YESTERDAY_WEEK < <("$PYTHON" - <<'PY'
 import datetime as dt

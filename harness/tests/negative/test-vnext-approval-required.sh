@@ -13,7 +13,7 @@ SCOPE_DIR="$TMPDIR/scope"
 SIDE_EFFECT="$SCOPE_DIR/touched.txt"
 mkdir -p "$SCOPE_DIR"
 
-cd /Users/sihaoli/.solar
+cd ~/.solar
 
 python3 - "$TMPDIR" "$SCOPE_DIR" "$SIDE_EFFECT" <<'PY'
 import os, sys

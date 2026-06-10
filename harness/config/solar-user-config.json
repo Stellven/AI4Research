@@ -7,9 +7,9 @@
     "timezone": "America/Toronto"
   },
   "paths": {
-    "knowledge_vault": "/Users/lisihao/Knowledge",
-    "raw_dir": "/Users/lisihao/Knowledge/_raw",
-    "harness_dir": "/Users/lisihao/.solar/harness"
+    "knowledge_vault": "~/Knowledge",
+    "raw_dir": "~/Knowledge/_raw",
+    "harness_dir": "~/.solar/harness"
   },
   "models": {
     "planner": "opus",
@@ -31,7 +31,7 @@
   "mirage": {
     "enabled": true,
     "workspace_id": "solar-default",
-    "config_path": "/Users/lisihao/.solar/harness/config/mirage.solar.yaml"
+    "config_path": "~/.solar/harness/config/mirage.solar.yaml"
   },
   "apple_notes": {
     "enabled": true,

@@ -10,7 +10,7 @@ workspace_name: "solar-runtime"
 ssh_profiles:
   mini:
     host: "mini"
-    user: "lisihao"
+    user: "solar"
     control_master: true
 
 tabs:

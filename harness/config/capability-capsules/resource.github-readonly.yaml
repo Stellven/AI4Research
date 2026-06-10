@@ -79,5 +79,5 @@ operator_compatibility:
     - mini-claude-sonnet-builder
   forbidden: []
 provenance:
-  owner: lisihao
+  owner: opensolar
   created_at: "2026-05-24T00:00:00Z"

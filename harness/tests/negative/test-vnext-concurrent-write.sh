@@ -19,7 +19,7 @@ SCOPE_DIR="$TMPDIR/scope"
 SHARED_TARGET="$SCOPE_DIR/contested.txt"
 mkdir -p "$SCOPE_DIR"
 
-cd /Users/sihaoli/.solar
+cd ~/.solar
 
 (
   python3 - "$TMPDIR" "$SCOPE_DIR" "$SHARED_TARGET" <<'PY' &

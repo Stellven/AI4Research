@@ -74,10 +74,10 @@ class TestHookFailOpen:
 class TestRunnerEmitRealEvents:
     def test_actual_runner_writes_event_from_arbitrary_cwd(self, tmp_path):
         f = tmp_path / "runner-events.jsonl"
-        runner = Path("/Users/sihaoli/.solar/harness/autopilot/hooks/livework_heartbeat_runner.py")
+        runner = Path("~/.solar/harness/autopilot/hooks/livework_heartbeat_runner.py")
         env = {
             **os.environ,
-            "HARNESS_DIR": "/Users/sihaoli/.solar/harness",
+            "HARNESS_DIR": "~/.solar/harness",
             "LIVEWORK_EVENTS_JSONL": str(f),
             "LIVEWORK_HEARTBEAT_INTERVAL": "0",
         }
@@ -168,6 +168,6 @@ class TestNoAutopilotChange:
             ["git", "diff", "--name-only", "HEAD", "--",
              "autopilot.sh", "autopilot/**"],
             capture_output=True, text=True,
-            cwd="/Users/sihaoli/.solar/harness",
+            cwd="~/.solar/harness",
         )
         assert "autopilot" not in result.stdout, f"autopilot files changed: {result.stdout}"

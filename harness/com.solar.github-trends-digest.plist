@@ -9,7 +9,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/lisihao/Solar/harness/scripts/run_github_trends_digest.sh</string>
+    <string>{{HARNESS_DIR}}/scripts/run_github_trends_digest.sh</string>
   </array>
 
   <key>StartCalendarInterval</key>
@@ -21,7 +21,7 @@
   </dict>
 
   <key>WorkingDirectory</key>
-  <string>/Users/lisihao/Solar/harness</string>
+  <string>{{HARNESS_DIR}}</string>
 
   <key>EnvironmentVariables</key>
   <dict>
@@ -30,12 +30,12 @@
     <key>PYTHONIOENCODING</key>
     <string>utf-8</string>
     <key>GITHUB_TRENDS_MAIL_TO</key>
-    <string>sean.lisihao@huawei.com</string>
+    <string>solar@example.com</string>
   </dict>
 
   <key>StandardOutPath</key>
-  <string>/Users/lisihao/Solar/harness/logs/github-trends-digest.out.log</string>
+  <string>{{HARNESS_DIR}}/logs/github-trends-digest.out.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/lisihao/Solar/harness/logs/github-trends-digest.err.log</string>
+  <string>{{HARNESS_DIR}}/logs/github-trends-digest.err.log</string>
 </dict>
 </plist>

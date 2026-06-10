@@ -10,7 +10,7 @@ This sprint wires two default behaviors:
    retrieves bounded context from `~/.solar/solar.db` and injects it as
    `<solar-knowledge-context>…</solar-knowledge-context>`.
 
-2. **Obsidian vault indexing** — `/Users/sihaoli/Knowledge` is indexed into
+2. **Obsidian vault indexing** — `~/Knowledge` is indexed into
    `obsidian_vault_index` (and `fts_unified_search`) so Solar KB queries can
    surface your own notes.
 
@@ -29,7 +29,7 @@ Expected: one entry under `UserPromptSubmit.hooks`.
 ### 2. Run initial vault index
 
 ```bash
-solar-harness wiki sync-vault --vault /Users/sihaoli/Knowledge --once
+solar-harness wiki sync-vault --vault ~/Knowledge --once
 ```
 
 ### 3. Start capture server (optional, auto-scheduler)
@@ -112,7 +112,7 @@ solar-harness wiki capture-server stop
 
 ```bash
 # Re-index vault
-solar-harness wiki sync-vault --vault /Users/sihaoli/Knowledge
+solar-harness wiki sync-vault --vault ~/Knowledge
 
 # Verify
 sqlite3 ~/.solar/solar.db "SELECT COUNT(*) FROM obsidian_vault_index WHERE deleted_at IS NULL;"

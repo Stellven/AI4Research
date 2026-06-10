@@ -12,7 +12,7 @@ capsules:
     - mlx
     - performance
     - debug
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-claude-sonnet-builder
   - capability_capsule_id: cap.requirement-compiler-implementation
     version: 0.1.0
@@ -24,7 +24,7 @@ capsules:
     - requirements
     - implementation
     - builder
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-claude-sonnet-builder
   - capability_capsule_id: cap.requirement-compiler-planner
     version: 0.1.0
@@ -37,7 +37,7 @@ capsules:
     - planner
     - prd
     - task-graph
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-claude-opus-planner
   - capability_capsule_id: cap.requirement-compiler-verification
     version: 0.1.0
@@ -50,7 +50,7 @@ capsules:
     - verifier
     - review
     - acceptance
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-claude-opus-evaluator
   - capability_capsule_id: cap.requirement-research-scout
     version: 0.1.0
@@ -62,7 +62,7 @@ capsules:
     - requirements
     - research
     - scout
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-thunderomlx-qwen36-knowledge
   - capability_capsule_id: cap.requirement-research-synthesizer
     version: 0.1.0
@@ -74,7 +74,7 @@ capsules:
     - requirements
     - research
     - synthesis
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-claude-opus-planner
   - capability_capsule_id: cap.understand-anything-chat-builder
     version: 0.1.0
@@ -86,7 +86,7 @@ capsules:
     - knowledge
     - understand-anything
     - codebasechatbuilder
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-understand-anything-pane-bridge
   - capability_capsule_id: cap.understand-anything-domain-analysis-builder
     version: 0.1.0
@@ -98,7 +98,7 @@ capsules:
     - knowledge
     - understand-anything
     - domainanalysisbuilder
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-understand-anything-pane-bridge
   - capability_capsule_id: cap.understand-anything-indexer
     version: 0.1.0
@@ -111,7 +111,7 @@ capsules:
     - codebase
     - onboarding
     - understand-anything
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-understand-anything-pane-bridge
   - capability_capsule_id: cap.understand-anything-knowledge-graph-builder
     version: 0.1.0
@@ -123,7 +123,7 @@ capsules:
     - knowledge
     - understand-anything
     - knowledgegraphbuilder
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-understand-anything-pane-bridge
   - capability_capsule_id: cap.understand-anything-tour-builder
     version: 0.1.0
@@ -135,7 +135,7 @@ capsules:
     - knowledge
     - understand-anything
     - repositorytourbuilder
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-understand-anything-pane-bridge
   guard:
   - capability_capsule_id: guard.secret-leak-guard
@@ -148,7 +148,7 @@ capsules:
     - governance
     - secrets
     - guard
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-claude-sonnet-builder
   resource:
   - capability_capsule_id: resource.repo-workspace
@@ -161,7 +161,7 @@ capsules:
     - resource
     - repo
     - worktree
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-claude-sonnet-builder
   - capability_capsule_id: resource.github-readonly
     version: 0.1.0
@@ -173,5 +173,5 @@ capsules:
     - resource
     - github
     - readonly
-    owner: lisihao
+    owner: opensolar
     default_operator_profile: mini-claude-sonnet-builder

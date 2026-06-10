@@ -8,26 +8,26 @@ created_at: "2026-05-08T14:30:00Z"
 mounts:
   - path: /knowledge
     source_type: disk
-    root: "/Users/lisihao/Knowledge"
+    root: "~/Knowledge"
     mode: ro
     description: "Obsidian vault (read-only)"
 
   - path: /raw
     source_type: disk
-    root: "/Users/lisihao/Knowledge/_raw"
+    root: "~/Knowledge/_raw"
     mode: rw
     redact_on_write: true
     description: "Staging area for new content"
 
   - path: /sources
     source_type: disk
-    root: "/Users/lisihao/Knowledge/_sources"
+    root: "~/Knowledge/_sources"
     mode: ro
     description: "Canonical source library (read-only)"
 
   - path: /papers
     source_type: disk
-    root: "/Users/lisihao/Knowledge/_sources/papers"
+    root: "~/Knowledge/_sources/papers"
     mode: ro
     description: "Canonical papers and PDFs (read-only)"
 
@@ -39,7 +39,7 @@ mounts:
 
   - path: /solar-db
     source_type: disk
-    root: "/Users/lisihao/.solar/harness/_sources/solar-db"
+    root: "~/.solar/harness/_sources/solar-db"
     mode: ro
     deny_subpaths:
       - "secrets/"
@@ -50,24 +50,24 @@ mounts:
 
   - path: /cortex
     source_type: disk
-    root: "/Users/lisihao/.claude/core/cortex"
+    root: "~/.claude/core/cortex"
     mode: ro
     description: "Cortex knowledge base (read-only)"
 
   - path: /sprints
     source_type: disk
-    root: "/Users/lisihao/.solar/harness/sprints"
+    root: "~/.solar/harness/sprints"
     mode: ro
     description: "Sprint artifacts (read-only)"
 
   - path: /drive
     source_type: gdrive
-    root: "/Users/lisihao/Library/CloudStorage/GoogleDrive-haogege1977@gmail.com"
+    root: "~/Library/CloudStorage/GoogleDrive-example@example.com"
     local_provider: "macos-google-drive-file-provider"
     credential_env: "GOOGLE_APPLICATION_CREDENTIALS"
     mode: ro
     optional: true
-    description: "Google Drive local File Provider mount for haogege1977@gmail.com (optional, read-only by default)"
+    description: "Google Drive local File Provider mount for example@example.com (optional, read-only by default)"
 
 policy:
   default_timeout_s: 30

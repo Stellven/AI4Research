@@ -172,7 +172,7 @@ if [ "$FAIL" -eq 0 ]; then
     echo "  5. (可选 L2) 启动 Solar Harness 协调器:"
     echo "     $SOLAR_HOME/bin/solar-harness"
     echo ""
-    echo "📚 完整文档: https://github.com/lisihao/Solar"
+    echo "📚 完整文档: https://github.com/suraj-subrahmanyan/opensolar"
     echo "📖 用户指南: $SOLAR_DIR/USER-GUIDE.md"
     echo "🤖 AI 安装剧本: $SOLAR_DIR/INSTALL-AGENT.md"
     echo "🔧 Skills 指南: $SOLAR_DIR/SKILLS-INSTALL.md"
@@ -183,6 +183,6 @@ else
     echo "🆘 故障排查:"
     echo "  - 检查仓库完整性: ls $SOLAR_DIR/{CLAUDE.md,rules,agents,hooks,harness,mempalace,codex-bridge}"
     echo "  - 检查权限: ls -la $CLAUDE_DIR/ $SOLAR_HOME/"
-    echo "  - 提交 issue: https://github.com/lisihao/Solar/issues"
+    echo "  - 提交 issue: https://github.com/suraj-subrahmanyan/opensolar/issues"
     exit 1
 fi

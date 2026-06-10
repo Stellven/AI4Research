@@ -146,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
     exp.add_argument("--db", required=True)
     exp.add_argument("--out", required=True)
     exp.add_argument("--from-prefix", default=DEFAULT_FROM_PREFIX)
-    exp.add_argument("--to-prefix", default="/Users/lisihao")
+    exp.add_argument("--to-prefix", default="~")
     exp.add_argument("--tables", nargs="+", default=list(DEFAULT_TABLES))
     exp.set_defaults(func=export_state)
 

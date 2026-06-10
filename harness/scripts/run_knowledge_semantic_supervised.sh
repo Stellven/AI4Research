@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-HARNESS_DIR="${HARNESS_DIR:-/Users/lisihao/Solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${HOME}/Solar/harness}"
 PYTHON="${PYTHON:-python3}"
-export PATH="/Users/lisihao/.solar/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
-export SOLAR_HARNESS_BIN="${SOLAR_HARNESS_BIN:-/Users/lisihao/.solar/bin/solar-harness}"
-VAULT="${VAULT:-/Users/lisihao/Knowledge}"
+export PATH="${HOME}/.solar/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
+export SOLAR_HARNESS_BIN="${SOLAR_HARNESS_BIN:-${HOME}/.solar/bin/solar-harness}"
+VAULT="${VAULT:-${HOME}/Knowledge}"
 REGISTRY_DB="${REGISTRY_DB:-$VAULT/_registry/knowledge_ingest.sqlite}"
 ENDPOINT="${ENDPOINT:-http://127.0.0.1:8002/v1/chat/completions}"
 LOCAL_MODEL="${LOCAL_MODEL:-Qwen3.6-35b-a3b}"
 SOURCE_DIR="${SOURCE_DIR:-$VAULT/_raw}"
-LOG_DIR="${LOG_DIR:-/Users/lisihao/.solar/harness/run}"
-LOCK_DIR="${LOCK_DIR:-/Users/lisihao/.solar/harness/state/knowledge-semantic-supervised.lockdir}"
+LOG_DIR="${LOG_DIR:-${HOME}/.solar/harness/run}"
+LOCK_DIR="${LOCK_DIR:-${HOME}/.solar/harness/state/knowledge-semantic-supervised.lockdir}"
 
 mkdir -p "$LOG_DIR" "$(dirname "$LOCK_DIR")"
 if pgrep -f "knowledge-semantic-extract.py .*supervised-backfill" >/dev/null 2>&1; then

@@ -9,7 +9,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/lisihao/Solar/harness/scripts/run_youtube_influence_digest.sh</string>
+    <string>{{HARNESS_DIR}}/scripts/run_youtube_influence_digest.sh</string>
   </array>
 
   <key>StartCalendarInterval</key>
@@ -35,7 +35,7 @@
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/lisihao/Solar/harness</string>
+  <string>{{HARNESS_DIR}}</string>
 
   <key>EnvironmentVariables</key>
   <dict>
@@ -46,8 +46,8 @@
   </dict>
 
   <key>StandardOutPath</key>
-  <string>/Users/lisihao/Solar/harness/logs/youtube-influence-digest.out.log</string>
+  <string>{{HARNESS_DIR}}/logs/youtube-influence-digest.out.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/lisihao/Solar/harness/logs/youtube-influence-digest.err.log</string>
+  <string>{{HARNESS_DIR}}/logs/youtube-influence-digest.err.log</string>
 </dict>
 </plist>

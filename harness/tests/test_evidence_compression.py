@@ -27,8 +27,8 @@ from github_intelligence.evidence import (
 )
 
 # Test DB setup
-TEST_DB_SRC = "/Users/lisihao/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
-TEST_DB_DST = "/Users/lisihao/.gemini/antigravity-cli/scratch/test-evidence-B6.sqlite"
+TEST_DB_SRC = "~/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
+TEST_DB_DST = "~/.gemini/antigravity-cli/scratch/test-evidence-B6.sqlite"
 TEST_REPO = "test/evidence-B6-repo"
 
 

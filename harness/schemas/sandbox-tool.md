@@ -145,7 +145,7 @@ Claude → MCP sandbox.write_file → gRPC → Remote FS
     "env": {
       "SANDBOX_MODE": "docker",
       "SANDBOX_IMAGE": "solar-builder:latest",
-      "PROJECT_ROOT": "/Users/lisihao/..."
+      "PROJECT_ROOT": "~/..."
     }
   }
 }

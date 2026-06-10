@@ -43,7 +43,7 @@ def _render_html(runtime_root: Path, sprint_id: str, kind: str) -> dict[str, obj
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runtime-root", default="/Users/lisihao/.solar/harness")
+    parser.add_argument("--runtime-root", default="~/.solar/harness")
     parser.add_argument("--sprint-id", required=True)
     args = parser.parse_args()
 

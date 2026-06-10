@@ -99,7 +99,7 @@ while :; do
       "s0_eval_dispatched" \
       "evaluator" \
       "solar-harness:0.3" \
-      "读取并执行 G0 evaluator review：先读 /Users/sihaoli/.solar/harness/sprints/sprint-20260509-solar-product-platform.s0-snapshot.contract.md 和 ${S0_HANDOFF}；验证 snapshot/restore/secret-exclusion/现有命令不破。通过则更新 parent status phase=g0_passed handoff_to=coordinator；失败则 phase=s0_failed_review handoff_to=builder_main 并写 eval。"
+      "读取并执行 G0 evaluator review：先读 ~/.solar/harness/sprints/sprint-20260509-solar-product-platform.s0-snapshot.contract.md 和 ${S0_HANDOFF}；验证 snapshot/restore/secret-exclusion/现有命令不破。通过则更新 parent status phase=g0_passed handoff_to=coordinator；失败则 phase=s0_failed_review handoff_to=builder_main 并写 eval。"
   fi
 
   for slice in s1 s2 s6; do
@@ -109,7 +109,7 @@ while :; do
         "${slice}_eval_dispatched" \
         "evaluator" \
         "solar-harness:0.3" \
-        "读取并执行 ${slice^^} evaluator review：先读 $handoff、/Users/sihaoli/.solar/harness/sprints/sprint-20260509-solar-product-platform.contract.md 和 /Users/sihaoli/.solar/harness/sprints/sprint-20260509-solar-product-platform.plan.md；只评估该 slice，不要把 parent sprint 标成 passed。通过则记录 ${slice}_eval_passed；失败则写明 blocker 并 handoff_to=builder_main。"
+        "读取并执行 ${slice^^} evaluator review：先读 $handoff、~/.solar/harness/sprints/sprint-20260509-solar-product-platform.contract.md 和 ~/.solar/harness/sprints/sprint-20260509-solar-product-platform.plan.md；只评估该 slice，不要把 parent sprint 标成 passed。通过则记录 ${slice}_eval_passed；失败则写明 blocker 并 handoff_to=builder_main。"
     fi
   done
 
@@ -132,7 +132,7 @@ PY
           "s0_builder_nudge" \
           "builder" \
           "solar-harness:0.2" \
-          "S0 nightwatch 温和提醒：你正在执行 /Users/sihaoli/.solar/harness/sprints/sprint-20260509-solar-product-platform.s0-dispatch.md。请继续完成 snapshot/restore foundation；如果遇到阻塞，写明 blocker 到 s0-handoff 并更新 status，不要停在无输出状态。"
+          "S0 nightwatch 温和提醒：你正在执行 ~/.solar/harness/sprints/sprint-20260509-solar-product-platform.s0-dispatch.md。请继续完成 snapshot/restore foundation；如果遇到阻塞，写明 blocker 到 s0-handoff 并更新 status，不要停在无输出状态。"
       fi
     fi
   fi
@@ -155,7 +155,7 @@ PY
           "s6_builder_nudge" \
           "builder" \
           "solar-harness:0.2" \
-          "S6 nightwatch 温和提醒：你正在执行 /Users/sihaoli/.solar/harness/sprints/sprint-20260509-solar-product-platform.s6-control-plane-dispatch.md。请继续完成 control-plane slice；如果遇到阻塞，写明 blocker 到 s6-handoff 并更新 status，不要停在无输出状态。"
+          "S6 nightwatch 温和提醒：你正在执行 ~/.solar/harness/sprints/sprint-20260509-solar-product-platform.s6-control-plane-dispatch.md。请继续完成 control-plane slice；如果遇到阻塞，写明 blocker 到 s6-handoff 并更新 status，不要停在无输出状态。"
       fi
     fi
   fi

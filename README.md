@@ -251,7 +251,7 @@ The user should not become the glue between tools, models, agents, browser tabs,
 ### Human install
 
 ```bash
-git clone https://github.com/lisihao/Solar.git ~/Solar
+git clone https://github.com/suraj-subrahmanyan/opensolar.git ~/Solar
 cd ~/Solar
 ./install.sh
 ```
@@ -270,7 +270,7 @@ What install does:
 If you want Claude, Codex, Cursor, Copilot, or another code agent to install Solar for you, give it this exact instruction:
 
 ```text
-Install Solar from https://github.com/lisihao/Solar using INSTALL-AGENT.md.
+Install Solar from https://github.com/suraj-subrahmanyan/opensolar using INSTALL-AGENT.md.
 Follow the steps exactly. Before each command, report: purpose, command, and expected output.
 Do not use sudo/root. Stop immediately on any failure and show the exact output.
 After installation, run the L1 + L2 self-check:

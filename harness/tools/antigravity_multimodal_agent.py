@@ -491,7 +491,7 @@ def main() -> int:
 
     images = image_paths(dispatch)
     add_dirs = sorted({str(path.parent) for path in images})
-    agy = os.environ.get("AGY_BIN", "/Users/lisihao/.local/bin/agy")
+    agy = os.environ.get("AGY_BIN", "~/.local/bin/agy")
     timeout = os.environ.get("AGY_PRINT_TIMEOUT", "10m")
     default_task_dir = dispatch_file.parent if dispatch_file is not None else Path.cwd()
     task_dir = Path(os.environ.get("TASK_DIR", default_task_dir)).expanduser()

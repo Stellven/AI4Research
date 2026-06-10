@@ -16,8 +16,8 @@ from github_intelligence import cards
 from github_intelligence.cards import generate_analysis_card, verify_card
 
 # Test DB paths
-TEST_DB_SRC = "/Users/lisihao/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
-TEST_DB_DST = "/Users/lisihao/.gemini/antigravity-cli/scratch/test-cards-B12.sqlite"
+TEST_DB_SRC = "~/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
+TEST_DB_DST = "~/.gemini/antigravity-cli/scratch/test-cards-B12.sqlite"
 
 
 @pytest.fixture(scope="module")

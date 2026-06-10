@@ -26,13 +26,13 @@ This release note records the S01-S05 evidence set for the YouTube transcript ac
 
 | Node | Evidence |
 |---|---|
-| V1 Dashboard/CLI E2E | `/Users/lisihao/.solar/harness/reports/youtube/s05-acceptance/V1-cli_discover.json` |
-| V1 Transcript Status | `/Users/lisihao/.solar/harness/reports/youtube/s05-acceptance/V1-transcript_status.json` |
-| V2 Premium Optional Policy | `/Users/lisihao/.solar/harness/reports/youtube/s05-acceptance/V2-premium_optional_local_asr_policy.json` |
-| V2 Premium Contract Unit | `/Users/lisihao/.solar/harness/reports/youtube/s05-acceptance/V2-premium_contract_unit.json` |
-| V3 Backup | `/Users/lisihao/.solar/harness/reports/youtube/s05-acceptance/V3-backup_path.json` |
-| V3 Production Schema Gate | `/Users/lisihao/.solar/harness/reports/youtube/s05-acceptance/V3-production_schema_semantic_gate.json` |
-| V4 Regression Aggregation | `/Users/lisihao/.solar/harness/reports/youtube/s05-acceptance/V4-regression_report.json` |
+| V1 Dashboard/CLI E2E | `~/.solar/harness/reports/youtube/s05-acceptance/V1-cli_discover.json` |
+| V1 Transcript Status | `~/.solar/harness/reports/youtube/s05-acceptance/V1-transcript_status.json` |
+| V2 Premium Optional Policy | `~/.solar/harness/reports/youtube/s05-acceptance/V2-premium_optional_local_asr_policy.json` |
+| V2 Premium Contract Unit | `~/.solar/harness/reports/youtube/s05-acceptance/V2-premium_contract_unit.json` |
+| V3 Backup | `~/.solar/harness/reports/youtube/s05-acceptance/V3-backup_path.json` |
+| V3 Production Schema Gate | `~/.solar/harness/reports/youtube/s05-acceptance/V3-production_schema_semantic_gate.json` |
+| V4 Regression Aggregation | `~/.solar/harness/reports/youtube/s05-acceptance/V4-regression_report.json` |
 
 ## Key Numbers
 
@@ -62,8 +62,8 @@ Premium provider calls are optional and require `SOLAR_YOUTUBE_PREMIUM_OPENAI_KE
 SQLite backup restore:
 
 ```bash
-cp /Users/lisihao/.solar/harness/backups/youtube/20260529T122641Z/youtube.db.backup \
-  /Users/lisihao/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite
+cp ~/.solar/harness/backups/youtube/20260529T122641Z/youtube.db.backup \
+  ~/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite
 ```
 
 Module rollback targets:

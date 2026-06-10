@@ -143,7 +143,7 @@ VENV_PY="venvs/mia-memory-serve/bin/python3"
   && ok "native venv python exists" \
   || fail "venv not found: $VENV_PY"
 
-BERT_PATH="/Users/sihaoli/.cache/huggingface/hub/models--sentence-transformers--all-MiniLM-L6-v2/snapshots/c9745ed1d9f207416be6d2e6f8de32d1f16199bf"
+BERT_PATH="~/.cache/huggingface/hub/models--sentence-transformers--all-MiniLM-L6-v2/snapshots/c9745ed1d9f207416be6d2e6f8de32d1f16199bf"
 [[ -d "$BERT_PATH" ]] \
   && ok "BERT model cache present ($BERT_PATH)" \
   || fail "BERT model cache missing: $BERT_PATH"

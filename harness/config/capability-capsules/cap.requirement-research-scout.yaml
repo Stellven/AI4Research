@@ -89,5 +89,5 @@ operator_compatibility:
   forbidden:
     - mini-antigravity-gemini35-flash-high
 provenance:
-  owner: lisihao
+  owner: opensolar
   created_at: "2026-05-24T00:00:00Z"

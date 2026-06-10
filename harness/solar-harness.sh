@@ -4251,7 +4251,7 @@ PY
         fi
         ;;
       sync-vault)
-        # S2.5: Index /Users/sihaoli/Knowledge (or --vault PATH) into Solar DB
+        # S2.5: Index ~/Knowledge (or --vault PATH) into Solar DB
         _indexer="${HARNESS_DIR}/lib/obsidian-vault-indexer.py"
         _sv_vault="${OBSIDIAN_VAULT_PATH:-$HOME/Knowledge}"
         _sv_args=()

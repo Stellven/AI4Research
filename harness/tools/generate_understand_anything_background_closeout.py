@@ -16,8 +16,8 @@ from understand_anything_background_closeout import auto_closeout_understand_any
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runtime-root", default="/Users/lisihao/.solar/harness")
-    parser.add_argument("--target-repo", default="/Users/lisihao/Solar")
+    parser.add_argument("--runtime-root", default="~/.solar/harness")
+    parser.add_argument("--target-repo", default="~/Solar")
     args = parser.parse_args()
 
     result = auto_closeout_understand_anything_background(

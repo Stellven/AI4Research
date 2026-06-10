@@ -78,7 +78,7 @@ def tmp_config(tmp_path, monkeypatch):
     config_file = tmp_path / "remote-config.json"
     config_file.write_text(json.dumps({
         "remote_user": "testuser",
-        "remote_host": "192.168.1.100",
+        "remote_host": "192.0.2.100",
         "remote_path": "/home/testuser",
     }), encoding="utf-8")
     import remote_dispatch
@@ -97,7 +97,7 @@ class TestConfigDriven:
         """Config file values are loaded."""
         config = load_config()
         assert config["remote_user"] == "testuser"
-        assert config["remote_host"] == "192.168.1.100"
+        assert config["remote_host"] == "192.0.2.100"
         assert config["remote_path"] == "/home/testuser"
 
     def test_load_config_env_override(self, tmp_config, monkeypatch):
@@ -148,9 +148,9 @@ class TestConfigDriven:
         import remote_dispatch
         source = Path(remote_dispatch.__file__).read_text(encoding="utf-8")
         # Should not contain any raw IP addresses in the source
-        assert "100.122.223.55" not in source
-        assert "192.168.3.189" not in source
-        assert "lisihao@" not in source
+        assert "100.64.0.10" not in source
+        assert "192.0.2.189" not in source
+        assert "legacy-user@" not in source
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +216,7 @@ class TestDoctor:
         """Doctor includes the target (user@host) in output."""
         monkeypatch.setattr("subprocess.run", MagicMock(return_value=MagicMock(returncode=1, stdout="", stderr="")))
         result = doctor(load_config())
-        assert result["target"] == "testuser@192.168.1.100"
+        assert result["target"] == "testuser@192.0.2.100"
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +421,7 @@ class TestPull:
 
         result = pull_remote_status(sid, config, local_dir=sprints)
         assert "pulled" in result
-        assert result["source_host"] == "192.168.1.100"
+        assert result["source_host"] == "192.0.2.100"
 
 
 # ---------------------------------------------------------------------------

@@ -39,7 +39,7 @@ if [[ -z "$HOST" ]]; then exit 0; fi
 
 # SSH 读 mac mini outbox 末尾
 REMOTE_OUTBOX="$HOME/.solar/state/remote-outbox.jsonl"
-LINES=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "lisihao@${HOST}" \
+LINES=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "${SOLAR_REMOTE_USER:-solar}@${HOST}" \
     "tail -1 '$REMOTE_OUTBOX' 2>/dev/null" 2>/dev/null || true)
 
 if [[ -z "$LINES" ]]; then

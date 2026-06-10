@@ -22,7 +22,7 @@ Solar 当前由三层组成：
 ## 2. 快速安装
 
 ```bash
-git clone https://github.com/lisihao/Solar.git ~/Solar
+git clone https://github.com/suraj-subrahmanyan/opensolar.git ~/Solar
 cd ~/Solar
 ./install.sh
 ```
@@ -50,7 +50,7 @@ Solar L1 + L2 安装完成
 如果你希望 Claude、Codex、Cursor、Copilot 等 Agent 帮你安装，直接把下面的话交给它：
 
 ```text
-Install Solar from https://github.com/lisihao/Solar using INSTALL-AGENT.md.
+Install Solar from https://github.com/suraj-subrahmanyan/opensolar using INSTALL-AGENT.md.
 Before each command, report purpose, command, and expected output.
 Do not use sudo/root. Stop on the first failure and show the exact output.
 After install, verify L1 + L2 and run ~/.solar/bin/solar-harness help.

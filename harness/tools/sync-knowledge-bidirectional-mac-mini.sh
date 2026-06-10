@@ -6,7 +6,7 @@
 # or machine-local indexes/databases.
 set -euo pipefail
 
-REMOTE="${REMOTE:-${SOLAR_MAC_MINI_REMOTE:-lisihao@100.122.223.55}}"
+REMOTE="${REMOTE:-${SOLAR_MAC_MINI_REMOTE:-solar@example-host}}"
 LOCAL_HOME="${LOCAL_HOME:-$HOME}"
 LOCAL_VAULT="${LOCAL_VAULT:-$LOCAL_HOME/Knowledge}"
 LOCAL_EXTRACTED="${LOCAL_EXTRACTED:-$LOCAL_HOME/.solar/extracted_knowledge}"
@@ -21,7 +21,7 @@ Usage:
   sync-knowledge-bidirectional-mac-mini.sh [--remote user@host] [--dry-run] [--no-checksum]
 
 Env:
-  REMOTE / SOLAR_MAC_MINI_REMOTE  default: lisihao@100.122.223.55
+  REMOTE / SOLAR_MAC_MINI_REMOTE  default: solar@example-host
   LOCAL_VAULT                     default: ~/Knowledge
   LOCAL_EXTRACTED                 default: ~/.solar/extracted_knowledge
   REMOTE_HOME                     default: remote $HOME

@@ -33,8 +33,8 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 KNOWLEDGE_RAW = Path.home() / "Knowledge" / "_raw"
-DEFAULT_MAIL_TO = "sean.lisihao@huawei.com"
-DEFAULT_GMAIL_USER = "lisihao@gmail.com"
+DEFAULT_MAIL_TO = "solar@example.com"
+DEFAULT_GMAIL_USER = ""
 DEFAULT_GMAIL_KEYCHAIN_SERVICE = "solar-ai-influence-gmail"
 
 

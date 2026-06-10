@@ -35,7 +35,7 @@ L0 Raw Sources
 ```bash
 solar-harness ragflow doctor --json
 solar-harness ragflow config --json
-solar-harness ragflow export-manifest --vault /Users/sihaoli/Knowledge
+solar-harness ragflow export-manifest --vault ~/Knowledge
 solar-harness ragflow search --query "KV cache quantization" --source raw_sources --json --fail-open
 solar-harness ragflow evidence-pack --query "RAGFlow 如何补 Solar Karpathy Wiki" --json
 ```
@@ -45,7 +45,7 @@ solar-harness ragflow evidence-pack --query "RAGFlow 如何补 Solar Karpathy Wi
 Config file:
 
 ```text
-/Users/sihaoli/.solar/harness/config/ragflow.solar.json
+~/.solar/harness/config/ragflow.solar.json
 ```
 
 Runtime environment:

@@ -5,8 +5,8 @@ schedule:
   hour: 7
   minute: 37
 output:
-  state_dir: /Users/lisihao/.solar/harness/state/github-trends
-  database: /Users/lisihao/.solar/harness/state/github-trends/github-trends.sqlite
+  state_dir: ~/.solar/harness/state/github-trends
+  database: ~/.solar/harness/state/github-trends/github-trends.sqlite
   retention_days: 100
 fetch:
   timeout_seconds: 20

@@ -24,6 +24,9 @@ core/db/*.sqlite3
 *.tmp
 .DS_Store
 **/.DS_Store
+__pycache__/
+**/__pycache__/
+*.pyc
 node_modules/
 bun.lockb
 *.cache
@@ -58,9 +61,11 @@ coverage/
 
 # Solar Harness 运行时/证据产物
 harness/.coverage
+harness/.workdir
 harness/run/
 harness/runs/
 harness/state/
+harness/release/artifacts/
 reports/
 harness/intake-requests/
 harness/intents/

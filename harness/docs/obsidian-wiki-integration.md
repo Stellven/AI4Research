@@ -269,14 +269,14 @@ What it does:
 2. The server writes a Markdown file under:
 
 ```text
-/Users/sihaoli/Knowledge/_raw/web-captures/
+~/Knowledge/_raw/web-captures/
 ```
 
 3. Or you select multiple files with the file picker. Uploaded PDFs, Markdown,
    JSONL, logs, text files, and images are copied under:
 
 ```text
-/Users/sihaoli/Knowledge/_raw/file-uploads/
+~/Knowledge/_raw/file-uploads/
 ```
 
 4. A background scheduler scans every 60 seconds.
@@ -313,7 +313,7 @@ solar-harness wiki import-solar-db --scope solar --per-table-limit 25
 Default export directory:
 
 ```text
-/Users/sihaoli/Knowledge/_raw/solar-db-export/
+~/Knowledge/_raw/solar-db-export/
 ```
 
 Tables exported by default:

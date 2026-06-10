@@ -37,7 +37,7 @@ workspace_name: "my-workspace"
 ssh_profiles:
   mini:
     host: "mini"
-    user: "lisihao"
+    user: "solar"
     control_master: true   # 开启 ControlMaster
 
 tabs:
@@ -79,7 +79,7 @@ tabs:
 ```sshconfig
 Host mini
   HostName your-mini.local
-  User lisihao
+  User solar
   ControlMaster auto
   ControlPath ~/.ssh/cmux-%r@%h:%p
   ControlPersist 10m

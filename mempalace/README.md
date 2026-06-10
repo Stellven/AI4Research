@@ -62,7 +62,7 @@ chroma_persist_dir: ~/.solar/mempalace/data
     "solar-mempalace": {
       "command": "/opt/homebrew/bin/python3.11",
       "args": ["-m", "mempalace_mcp_server"],
-      "cwd": "/Users/sihaoli/.solar/mempalace"
+      "cwd": "~/.solar/mempalace"
     }
   }
 }

@@ -78,7 +78,7 @@ Purpose: get the public Solar repository.
 if [ -d ~/Solar/.git ]; then
   cd ~/Solar && git pull --ff-only
 else
-  git clone https://github.com/lisihao/Solar.git ~/Solar
+  git clone https://github.com/suraj-subrahmanyan/opensolar.git ~/Solar
 fi
 ```
 

@@ -27,8 +27,8 @@ from github_intelligence.detectors import (
 )
 
 # Test DB paths
-TEST_DB_SRC = "/Users/lisihao/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
-TEST_DB_DST = "/Users/lisihao/.gemini/antigravity-cli/scratch/test-detectors-B10.sqlite"
+TEST_DB_SRC = "~/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
+TEST_DB_DST = "~/.gemini/antigravity-cli/scratch/test-detectors-B10.sqlite"
 
 
 @pytest.fixture(scope="module")

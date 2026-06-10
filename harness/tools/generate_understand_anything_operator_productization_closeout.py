@@ -19,7 +19,7 @@ from understand_anything_operator_productization_closeout import (  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runtime-root", default="/Users/lisihao/.solar/harness")
+    parser.add_argument("--runtime-root", default="~/.solar/harness")
     parser.add_argument("--node", action="append", default=[])
     args = parser.parse_args()
 

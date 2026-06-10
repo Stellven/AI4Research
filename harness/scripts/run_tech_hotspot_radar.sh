@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-HARNESS_DIR="${HARNESS_DIR:-/Users/lisihao/Solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${HOME}/Solar/harness}"
 PYTHON="${PYTHON:-python3}"
 CONFIG="${CONFIG:-$HARNESS_DIR/config/tech-hotspot-radar.yaml}"
-DB="${DB:-/Users/lisihao/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite}"
-LOCK_DIR="${LOCK_DIR:-/Users/lisihao/.solar/harness/state/tech-hotspot-radar/collector.lockdir}"
+DB="${DB:-${HOME}/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite}"
+LOCK_DIR="${LOCK_DIR:-${HOME}/.solar/harness/state/tech-hotspot-radar/collector.lockdir}"
 TODAY_UTC="$("$PYTHON" - <<'PY'
 import datetime as dt
 print(dt.datetime.now(dt.UTC).date().isoformat())

@@ -5,7 +5,7 @@
     "mini": {
       "host_id": "mini",
       "host_type": "claude_code_session",
-      "display_name": "Mac mini (Tailscale 100.122.223.55)",
+      "display_name": "Mac mini (Tailscale 100.64.0.10)",
       "display_meta": {
         "label": "mini"
       },
@@ -16,10 +16,10 @@
         "shutdown_policy": "never"
       },
       "address": {
-        "ssh": "lisihao@100.122.223.55",
-        "tailscale_ip": "100.122.223.55",
+        "ssh": "solar@example-host",
+        "tailscale_ip": "100.64.0.10",
         "hostname": "mac-mini.local",
-        "harness_dir": "/Users/lisihao/.solar/harness"
+        "harness_dir": "~/.solar/harness"
       },
       "heartbeat": {
         "interval_sec": 30,
@@ -29,7 +29,7 @@
       "probe": {
         "last_probe_at": "2026-05-23T00:53:00Z",
         "last_probe_result": "ok",
-        "probe_cmd": "ssh lisihao@100.122.223.55 echo SOLAR_HOST_OK",
+        "probe_cmd": "ssh solar@example-host echo SOLAR_HOST_OK",
         "probe_expected": "SOLAR_HOST_OK"
       }
     },
@@ -47,7 +47,7 @@
         "ssh": null,
         "tailscale_ip": null,
         "hostname": "localhost",
-        "harness_dir": "/Users/lisihao/.solar/harness"
+        "harness_dir": "~/.solar/harness"
       },
       "heartbeat": {
         "interval_sec": 15,
@@ -57,7 +57,7 @@
       "probe": {
         "last_probe_at": "2026-05-25T16:30:00Z",
         "last_probe_result": "ok",
-        "probe_cmd": "test -d /Users/lisihao/.solar/harness/run/browser-profiles && echo BROWSER_HOST_OK",
+        "probe_cmd": "test -d ~/.solar/harness/run/browser-profiles && echo BROWSER_HOST_OK",
         "probe_expected": "BROWSER_HOST_OK"
       },
       "carrier": {

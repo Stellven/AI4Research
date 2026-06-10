@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 
-SCRIPT = Path("/Users/lisihao/Solar/harness/scripts/ai_influence_daily.py")
+SCRIPT = Path("~/Solar/harness/scripts/ai_influence_daily.py")
 
 
 def _load_module():

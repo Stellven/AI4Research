@@ -48,7 +48,7 @@ sequenceDiagram
 1.  **State Projection**: When `poll_browser_job` reads a state of `reauth_required`, it projects the status as `WAITING_HUMAN`.
 2.  **Notification**: The monitoring bridge generates a human-intervention ticket including the `profile_ref` and `account_label`.
 3.  **Manual Login Procedure**:
-    *   The administrator launches the corresponding Chrome profile on the target owner host (e.g. `lisihao@localhost`).
+    *   The administrator launches the corresponding Chrome profile on the target owner host (e.g. `solar@localhost`).
     *   Use the command:
         ```bash
         python3 -m browser_agent --profile "browser-agent" --interactive
@@ -105,8 +105,8 @@ Location: `HARNESS_DIR/run/operator-results/{operator_id}/{task_id}/result.json`
   "finished_at": "2026-05-25T16:58:05Z",
   "log_tail": "[2026-05-25T16:58:00Z] Job webapp_research_operator submitted...\n[2026-05-25T16:58:05Z] Execution complete.",
   "artifacts": [
-    "/Users/lisihao/.solar/harness/run/operator-results/webapp_research_operator/T001/screenshot.png",
-    "/Users/lisihao/.solar/harness/run/operator-results/webapp_research_operator/T001/logs.txt"
+    "~/.solar/harness/run/operator-results/webapp_research_operator/T001/screenshot.png",
+    "~/.solar/harness/run/operator-results/webapp_research_operator/T001/logs.txt"
   ]
 }
 ```

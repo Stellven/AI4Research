@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HARNESS_DIR="${HARNESS_DIR:-/Users/lisihao/Solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${HOME}/Solar/harness}"
 PYTHON="${PYTHON:-python3}"
 ACCOUNTS="${AI_INFLUENCE_ACCOUNTS:-$HARNESS_DIR/ai-influence-digest/references/accounts_extended.txt}"
 STATE_DIR="${AI_INFLUENCE_STATE_DIR:-$HOME/.solar/harness/state/ai-influence-digest}"

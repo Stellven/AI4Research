@@ -13,7 +13,7 @@ sample='
 ● How is Claude doing this session?
   (optional)
   1: Bad    2: Fine    3: Good   0: Dismiss
-  /Users/lisihao/.solar/harness/sprints/example.dispatch.md
+  ${HOME}/.solar/harness/sprints/example.dispatch.md
   ⏵⏵ bypass permissions on
 '
 

@@ -144,7 +144,7 @@ def find_binary(name: str, configured: str = "") -> str:
         candidate = Path(configured).expanduser()
         if candidate.exists() and os.access(candidate, os.X_OK):
             return str(candidate)
-    bundled = Path("/Users/lisihao/Solar/harness/.venv-youtube-digest/bin") / name
+    bundled = Path("~/Solar/harness/.venv-youtube-digest/bin") / name
     if bundled.exists() and os.access(bundled, os.X_OK):
         return str(bundled)
     return shutil.which(name) or ""
@@ -204,10 +204,10 @@ def wiki_dispatch_dir_for_raw(raw_path: Path, config: dict[str, Any]) -> Path | 
     if out_cfg.get("dispatch_dir"):
         return Path(out_cfg["dispatch_dir"]).expanduser()
     try:
-        raw_path.resolve().relative_to(Path("/Users/lisihao/Knowledge/_raw").resolve())
+        raw_path.resolve().relative_to(Path("~/Knowledge/_raw").resolve())
     except Exception:
         return None
-    return Path("/Users/lisihao/Knowledge/_raw/solar-harness/.dispatch")
+    return Path("~/Knowledge/_raw/solar-harness/.dispatch")
 
 
 def create_wiki_dispatch_for_source(source: Path, project: str, config: dict[str, Any]) -> str:
@@ -232,7 +232,7 @@ type: wiki-dispatch
 action: ingest
 skill: wiki-ingest
 generated_at: {generated}
-vault_path: /Users/lisihao/Knowledge
+vault_path: ~/Knowledge
 status: pending
 source: {source}
 project: {project}
@@ -486,7 +486,7 @@ def fetch_transcript_via_browser_operator(video_id: str, timeout_seconds: int = 
         env.setdefault("BROWSER_AGENT_PROFILE_DIRECTORY", "Default")
         env.setdefault("BROWSER_AGENT_TARGET_ACCOUNT_EMAIL", "browser-agent@example.com")
 
-        operator_script = Path("/Users/lisihao/Solar/harness/tools/youtube_transcript_operator.py")
+        operator_script = Path("~/Solar/harness/tools/youtube_transcript_operator.py")
         if not operator_script.exists():
             operator_script = Path(__file__).resolve().parents[1] / "tools" / "youtube_transcript_operator.py"
 
@@ -744,7 +744,7 @@ def render_transcript_for_report(video: Video) -> str:
 
 def asr_config(config: dict[str, Any]) -> dict[str, Any]:
     out_cfg = config.get("output") or {}
-    state_dir = Path(out_cfg.get("state_dir", "/Users/lisihao/.solar/harness/state/youtube-influence-digest")).expanduser()
+    state_dir = Path(out_cfg.get("state_dir", "~/.solar/harness/state/youtube-influence-digest")).expanduser()
     raw_dir = Path(out_cfg.get("raw_dir", str(Path.home() / "Knowledge/_raw/youtube-influence-digest"))).expanduser()
     cfg = dict(config.get("asr") or {})
     cfg["enabled"] = False
@@ -1388,7 +1388,7 @@ def write_markdown(videos: list[Video], channels: list[Channel], config: dict[st
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="YouTube influence transcript digest collector")
-    parser.add_argument("--config", default="/Users/lisihao/Solar/harness/config/youtube-influence-digest.yaml")
+    parser.add_argument("--config", default="~/Solar/harness/config/youtube-influence-digest.yaml")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force-host", action="store_true", help="bypass Mac mini hostname guard")
     parser.add_argument("--limit-channels", type=int, default=0)
@@ -1411,7 +1411,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     out_cfg = config.get("output", {})
-    state_dir = Path(out_cfg.get("state_dir", "/Users/lisihao/.solar/harness/state/youtube-influence-digest")).expanduser()
+    state_dir = Path(out_cfg.get("state_dir", "~/.solar/harness/state/youtube-influence-digest")).expanduser()
     seen = load_seen(state_dir, int(out_cfg.get("keep_seen_days", 45)))
     fetched_at = iso_z()
     session = requests.Session()

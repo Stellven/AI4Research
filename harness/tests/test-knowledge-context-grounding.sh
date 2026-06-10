@@ -19,7 +19,7 @@ MD
 
 PYTHONPATH="$ROOT/lib" python3 - "$TMP_DIR/_extracted/sample.extracted.md" <<'PY'
 import importlib.util, pathlib, sys
-mod_path = pathlib.Path("/Users/lisihao/Solar/harness/lib/solar-knowledge-context.py")
+mod_path = pathlib.Path("${HOME}/Solar/harness/lib/solar-knowledge-context.py")
 spec = importlib.util.spec_from_file_location("skc", mod_path)
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

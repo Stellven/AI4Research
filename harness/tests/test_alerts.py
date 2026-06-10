@@ -18,9 +18,9 @@ from github_intelligence.alerts import (
     check_duplicate_alert
 )
 
-TEST_DB_SRC = "/Users/lisihao/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
-TEST_DB_DST = "/Users/lisihao/.gemini/antigravity-cli/scratch/test-alerts-B11.sqlite"
-TEST_CONFIG_PATH = "/Users/lisihao/.gemini/antigravity-cli/scratch/test-github-config.yaml"
+TEST_DB_SRC = "~/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
+TEST_DB_DST = "~/.gemini/antigravity-cli/scratch/test-alerts-B11.sqlite"
+TEST_CONFIG_PATH = "~/.gemini/antigravity-cli/scratch/test-github-config.yaml"
 
 
 @pytest.fixture(scope="function")

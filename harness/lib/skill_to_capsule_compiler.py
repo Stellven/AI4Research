@@ -220,7 +220,7 @@ def compile_capsule_draft(plugin_id: str, capability: NormalizedCapability) -> d
             "forbidden": [],
         },
         "provenance": {
-            "owner": "lisihao",
+            "owner": "opensolar",
             "created_at": _now_iso(),
             "compiler": "skill_to_capsule_compiler",
         },
@@ -236,7 +236,7 @@ def _registry_entry_for(capsule: NormalizedCapability) -> dict[str, Any]:
         "schema_ref": "draft/capability-capsule.v1.draft.json",
         "manifest_path": f"capability-capsules/{capsule.capsule_id}.yaml",
         "tags": ["knowledge", "understand-anything", capsule.logical_operator.lower()],
-        "owner": "lisihao",
+        "owner": "opensolar",
         "default_operator_profile": derive_physical_operator(capsule.capability_id),
     }
 

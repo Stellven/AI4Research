@@ -21,8 +21,8 @@ from youtube.acceptance_suite import (
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", default="/Users/lisihao/Solar/harness")
-    parser.add_argument("--runtime-root", default="/Users/lisihao/.solar/harness")
+    parser.add_argument("--root", default="~/Solar/harness")
+    parser.add_argument("--runtime-root", default="~/.solar/harness")
     parser.add_argument("--knowledge-context", default="solar-harness context inject used")
     args = parser.parse_args()
 

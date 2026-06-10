@@ -1,8 +1,8 @@
 # Solar MemPalace L3 配置文件
 
 # 目录配置
-data_dir: /Users/sihaoli/.solar/mempalace/data
-models_dir: /Users/sihaoli/.solar/mempalace/models
+data_dir: ~/.solar/mempalace/data
+models_dir: ~/.solar/mempalace/models
 
 # Collection 配置
 collection_name: solar_memories

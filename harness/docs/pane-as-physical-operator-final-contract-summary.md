@@ -266,10 +266,10 @@ registry/runtime = operator binding truth
 
 如果需要完整细节或中间设计演进，请回看：
 
-- `/Users/lisihao/.solar/harness/sprints/sprint-20260523-pane-as-physical-operator-architecture.*`
-- `/Users/lisihao/.solar/harness/sprints/sprint-20260523-physical-operator-taxonomy-truthification.*`
-- `/Users/lisihao/.solar/harness/sprints/sprint-20260523-operator-class-compatibility-cutover.*`
+- `~/.solar/harness/sprints/sprint-20260523-pane-as-physical-operator-architecture.*`
+- `~/.solar/harness/sprints/sprint-20260523-physical-operator-taxonomy-truthification.*`
+- `~/.solar/harness/sprints/sprint-20260523-operator-class-compatibility-cutover.*`
 
 运行时压缩版摘要工件：
 
-- `/Users/lisihao/.solar/harness/sprints/sprint-20260523-pane-as-physical-operator-final-contract-summary.md`
+- `~/.solar/harness/sprints/sprint-20260523-pane-as-physical-operator-final-contract-summary.md`

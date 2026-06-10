@@ -7,7 +7,7 @@ set -euo pipefail
 
 LOCAL_HOME="${HOME}"
 HARNESS_DIR="${LOCAL_HOME}/.solar/harness"
-REMOTE_USER="${SOLAR_MAC_MINI_USER:-lisihao}"
+REMOTE_USER="${SOLAR_MAC_MINI_USER:-solar}"
 REMOTE_HOST="${SOLAR_MAC_MINI_HOST:-}"
 REMOTE_PATH="${SOLAR_MAC_MINI_PATH:-}"
 DRY_RUN=false
@@ -19,8 +19,8 @@ Usage:
   sync-code-to-mac-mini.sh [--host user@host] [--dry-run] [--verify-only]
 
 Env:
-  SOLAR_MAC_MINI_USER  default: lisihao
-  SOLAR_MAC_MINI_HOST  default: auto-detect 100.122.223.55 then 192.168.3.189
+  SOLAR_MAC_MINI_USER  default: solar
+  SOLAR_MAC_MINI_HOST  default: auto-detect 100.64.0.10 then 192.0.2.189
   SOLAR_MAC_MINI_PATH  default: remote $HOME
 EOF
 }
@@ -59,13 +59,13 @@ detect_remote() {
     return
   fi
   local host
-  for host in 100.122.223.55 192.168.3.189; do
+  for host in 100.64.0.10 192.0.2.189; do
     if ssh_try "${REMOTE_USER}@${host}" 'printf ok' >/dev/null 2>&1; then
       printf '%s@%s\n' "$REMOTE_USER" "$host"
       return
     fi
   done
-  die "cannot reach Mac mini via 100.122.223.55 or 192.168.3.189"
+  die "cannot reach Mac mini via 100.64.0.10 or 192.0.2.189"
 }
 
 REMOTE="$(detect_remote)"
@@ -155,7 +155,7 @@ verify_remote() {
     grep -q 'graph-scheduler' /tmp/solar-harness-help.verify
     grep -q 'verify-integrations' /tmp/solar-harness-help.verify
     grep -q 'context inject' /tmp/solar-harness-help.verify
-    if grep -R --exclude-dir='__pycache__' --exclude='*.pyc' --exclude='sync-code-to-mac-mini.sh' --exclude='model-config.sh' '/Users/sihaoli' '$REMOTE_PATH/.solar/harness/lib' '$REMOTE_PATH/.solar/harness/tools' '$REMOTE_PATH/.solar/harness/'*.sh '$REMOTE_PATH/.solar/bin' '$REMOTE_PATH/.solar/codex-bridge' >/tmp/solar-path-leaks.verify 2>/dev/null; then
+    if grep -R --exclude-dir='__pycache__' --exclude='*.pyc' --exclude='sync-code-to-mac-mini.sh' --exclude='model-config.sh' '~' '$REMOTE_PATH/.solar/harness/lib' '$REMOTE_PATH/.solar/harness/tools' '$REMOTE_PATH/.solar/harness/'*.sh '$REMOTE_PATH/.solar/bin' '$REMOTE_PATH/.solar/codex-bridge' >/tmp/solar-path-leaks.verify 2>/dev/null; then
       echo 'path_leaks_found'
       head -20 /tmp/solar-path-leaks.verify
       exit 42

@@ -111,7 +111,7 @@
         "diagram-analysis",
         "pdf-page-image"
       ],
-      "command": "AGY_BIN=/Users/lisihao/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
       "max_parallel": 2
     },
     "knowledge-extractor": {

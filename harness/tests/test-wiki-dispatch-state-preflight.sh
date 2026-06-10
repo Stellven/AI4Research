@@ -42,7 +42,7 @@ grep -q "SOLAR_STATE_READ_PREFLIGHT" "$dispatch" || {
   exit 1
 }
 
-printf '%s' '{"tool_name":"Write","tool_input":{"file_path":"/Users/sihaoli/Knowledge/references/preflight-smoke.md"}}' \
+printf '%s' '{"tool_name":"Write","tool_input":{"file_path":"~/Knowledge/references/preflight-smoke.md"}}' \
   | "$ENFORCER" >/tmp/solar-wiki-preflight-enforcer.out
 
 grep -q '"continue": true' /tmp/solar-wiki-preflight-enforcer.out || {

@@ -17,7 +17,7 @@ from typing import Any
 
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8002"
-DEFAULT_SETTINGS = Path("/Users/lisihao/.omlx/settings.json")
+DEFAULT_SETTINGS = Path("~/.omlx/settings.json")
 
 
 def _read_api_key(settings_path: Path) -> str | None:

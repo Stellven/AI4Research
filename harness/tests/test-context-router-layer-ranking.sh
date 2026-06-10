@@ -25,7 +25,7 @@ mirage = load("mirage_search", harness / "lib" / "mirage_search.py")
 
 unified_hits = [
     {"source": "qmd", "path": "qmd://solar-wiki/raw/a.md", "title": "raw", "score": 999},
-    {"source": "solar_db", "path": "obsidian:/Users/sihaoli/Knowledge/references/a.md", "title": "ref", "score": 0.1},
+    {"source": "solar_db", "path": "obsidian:~/Knowledge/references/a.md", "title": "ref", "score": 0.1},
     {"source": "qmd", "path": "qmd://solar-wiki/concepts/a.md", "title": "concept", "score": 0.2},
     {"source": "qmd", "path": "qmd://solar-wiki/synthesis/a.md", "title": "synthesis", "score": 0.3},
 ]
@@ -35,7 +35,7 @@ assert [h["layer"] for h in ordered] == ["synthesis", "concepts", "references", 
 unified_topic_hits = [
     {"source": "qmd", "path": "qmd://solar-wiki/references/solar-harness-pm-1210-context-inject-fix-20260512.md", "title": "fix", "snippet": "太空数据中心 context inject", "score": 0.99},
     {"source": "qmd", "path": "qmd://solar-wiki/references/太空数据中心散热方案.md", "title": "太空数据中心散热方案", "snippet": "太空数据中心散热", "score": 0.90},
-    {"source": "solar_db", "path": "/Users/sihaoli/Knowledge/references/太空数据中心散热方案.md", "title": "太空数据中心散热方案", "snippet": "太空数据中心散热", "score": 0.80},
+    {"source": "solar_db", "path": "~/Knowledge/references/太空数据中心散热方案.md", "title": "太空数据中心散热方案", "snippet": "太空数据中心散热", "score": 0.80},
 ]
 ordered_topic = unified._sort_context_hits(unified_topic_hits, "太空数据中心 space data center orbital data center")
 assert ordered_topic[0]["title"] == "太空数据中心散热方案", ordered_topic
@@ -44,16 +44,16 @@ assert all("1210" not in h["path"] for h in filtered_topic), filtered_topic
 
 kb_hits = [
     {"path": "qmd://solar-wiki/raw/a.md", "id": "raw", "title": "raw", "snippet": "", "score": 999},
-    {"path": "/Users/sihaoli/Knowledge/references/a.md", "id": "ref", "title": "ref", "snippet": "", "score": 0.1},
-    {"path": "/Users/sihaoli/Knowledge/concepts/a.md", "id": "concept", "title": "concept", "snippet": "", "score": 0.2},
-    {"path": "/Users/sihaoli/Knowledge/synthesis/a.md", "id": "synthesis", "title": "synthesis", "snippet": "", "score": 0.3},
+    {"path": "~/Knowledge/references/a.md", "id": "ref", "title": "ref", "snippet": "", "score": 0.1},
+    {"path": "~/Knowledge/concepts/a.md", "id": "concept", "title": "concept", "snippet": "", "score": 0.2},
+    {"path": "~/Knowledge/synthesis/a.md", "id": "synthesis", "title": "synthesis", "snippet": "", "score": 0.3},
 ]
 ordered = kb._rank_hits(kb_hits, "a")
 assert [h["layer"] for h in ordered] == ["synthesis", "concepts", "references", "raw-evidence"], ordered
 
 mirage_hits = [
     {"source_type": "qmd", "path": "qmd://solar-wiki/raw/a.md", "score_or_rank": 999},
-    {"source_type": "solar_db", "path": "/Users/sihaoli/Knowledge/references/a.md", "score_or_rank": 0.1},
+    {"source_type": "solar_db", "path": "~/Knowledge/references/a.md", "score_or_rank": 0.1},
 ]
 assert mirage._layer_priority(mirage_hits[1]) < mirage._layer_priority(mirage_hits[0])
 

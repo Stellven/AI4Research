@@ -7,7 +7,7 @@ argument-hint: "[email|tasks|reminders|notes|notion|trello|status]"
 
 # /office - 办公助手模式
 
-> 基于 [Moltbot](https://github.com/lisihao/moltbot) 的办公能力集成
+> 基于 [Moltbot](https://github.com/suraj-subrahmanyan/opensolar) 的办公能力集成
 
 ## 启动
 

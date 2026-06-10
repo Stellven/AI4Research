@@ -29,8 +29,8 @@ except Exception:
     yaml = None
 
 UTC = dt.timezone.utc
-HARNESS_ROOT = Path("/Users/lisihao/Solar/harness")
-LIVE_ROOT = Path("/Users/lisihao/.solar/harness")
+HARNESS_ROOT = Path("~/Solar/harness")
+LIVE_ROOT = Path("~/.solar/harness")
 DEFAULT_DB = LIVE_ROOT / "state/tech-hotspot-radar/tech-hotspot-radar.sqlite"
 DEFAULT_STATE_DIR = LIVE_ROOT / "state/tech-hotspot-radar"
 DEFAULT_CONFIG = HARNESS_ROOT / "config/tech-hotspot-radar.yaml"

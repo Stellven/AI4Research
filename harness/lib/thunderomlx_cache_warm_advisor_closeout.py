@@ -10,7 +10,7 @@ from acceptance_closeout import auto_closeout_graph_nodes
 
 SPRINT_ID = "sprint-20260520-thunderomlx-cache-warm-advisor"
 NODE_IDS = ("N2", "N3", "N4")
-THUNDER_ROOT = Path("/Users/lisihao/ThunderOMLX")
+THUNDER_ROOT = Path("~/ThunderOMLX")
 
 
 def _now() -> str:

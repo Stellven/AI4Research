@@ -112,7 +112,7 @@ By default, this flag will be `false` (legacy compatibility mode).
     1. Resolves the selected `operator_id` via capability matching.
     2. Builds a standard task envelope and calls `operator_runtime.submit()`.
     3. Spawns a lightweight tmux monitor window for user visibility.
-    4. The monitor window runs a script that polls `/Users/lisihao/.solar/harness/run/operator-results/<operator_id>/<task_id>/result.json`.
+    4. The monitor window runs a script that polls `~/.solar/harness/run/operator-results/<operator_id>/<task_id>/result.json`.
     5. Once the result file appears, the monitor script reads the status/exit code, copies the handoff/results if successful, marks the node state in the graph (e.g., `completed` or `failed`), and exits.
     6. If the polling timeout is reached before the result file is written, it marks the task as failed (timeout).
 

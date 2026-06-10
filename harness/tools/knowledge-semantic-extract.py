@@ -1569,7 +1569,7 @@ def run_qmd_update(args: argparse.Namespace) -> None:
     solar_harness = (
         os.environ.get("SOLAR_HARNESS_BIN")
         or shutil.which("solar-harness")
-        or "/Users/lisihao/.solar/bin/solar-harness"
+        or "~/.solar/bin/solar-harness"
     )
     if not Path(solar_harness).exists():
         print(

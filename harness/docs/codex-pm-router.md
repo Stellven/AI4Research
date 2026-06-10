@@ -24,13 +24,13 @@
 ## 组成
 
 ```text
-/Users/lisihao/.codex/skills/codex-pm-router/
+~/.codex/skills/codex-pm-router/
   SKILL.md
   templates/
   references/
   scripts/compile.sh
 
-/Users/lisihao/Solar/harness/tools/codex_pm_router.py
+~/Solar/harness/tools/codex_pm_router.py
 ```
 
 其中：
@@ -41,7 +41,7 @@
 ## 使用方式
 
 ```bash
-python3 /Users/lisihao/Solar/harness/tools/codex_pm_router.py \
+python3 ~/Solar/harness/tools/codex_pm_router.py \
   --text "fix the cache miss bug in allocator" \
   --format json
 ```
@@ -49,7 +49,7 @@ python3 /Users/lisihao/Solar/harness/tools/codex_pm_router.py \
 研究型需求：
 
 ```bash
-python3 /Users/lisihao/Solar/harness/tools/codex_pm_router.py \
+python3 ~/Solar/harness/tools/codex_pm_router.py \
   --text "Analyze these papers and improve PM writing" \
   --paper "arXiv:2511.01815" \
   --paper "ICLR 2026 coding agent paper" \
@@ -59,11 +59,11 @@ python3 /Users/lisihao/Solar/harness/tools/codex_pm_router.py \
 直接把 `.pm/` 和 sprint package 落盘：
 
 ```bash
-python3 /Users/lisihao/Solar/harness/tools/codex_pm_router.py \
+python3 ~/Solar/harness/tools/codex_pm_router.py \
   --text "Upgrade PM pane into a requirement compiler" \
   --sprint-id sprint-20260523-requirement-compiler \
-  --emit-dir /Users/lisihao/Solar \
-  --emit-sprint-root /Users/lisihao/.solar/harness/sprints \
+  --emit-dir ~/Solar \
+  --emit-sprint-root ~/.solar/harness/sprints \
   --format json
 ```
 
@@ -72,7 +72,7 @@ python3 /Users/lisihao/Solar/harness/tools/codex_pm_router.py \
 ```bash
 solar-harness pm-dispatch compile-request \
   --text "Upgrade PM pane into a requirement compiler" \
-  --workspace-root /Users/lisihao/Solar \
+  --workspace-root ~/Solar \
   --dispatch-planner
 ```
 

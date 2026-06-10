@@ -84,7 +84,7 @@ solar-harness mirage exec [--json] [--allow-write-drive] [--allow-write-projects
 
 Executes shell command with:
 - **Verb allowlist**: first token must be in `allowed_verbs` (ls, find, grep, cat, head, wc, jq, echo)
-- **Path rewriting**: `/knowledge/...` → `/Users/sihaoli/Knowledge/...` (and all other mounts)
+- **Path rewriting**: `/knowledge/...` → `~/Knowledge/...` (and all other mounts)
 - **Write boundary**: redirects (>, >>, tee) to read-only mounts are blocked and logged
 - **Secret redaction**: stdout is scanned for credential patterns before returning
 - **Timeout**: default 30s; stdout truncated at 1MB

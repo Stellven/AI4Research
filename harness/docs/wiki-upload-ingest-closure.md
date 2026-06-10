@@ -43,11 +43,11 @@ The upload-to-searchable-knowledge pipeline processes batches of user-uploaded f
 
 ```bash
 # Check for false-completed: dispatch says completed but no result file
-for f in /Users/sihaoli/Knowledge/_raw/solar-harness/.dispatch/wiki-ingest-*.md; do
+for f in ~/Knowledge/_raw/solar-harness/.dispatch/wiki-ingest-*.md; do
   id=$(basename "$f" .md | sed 's/wiki-ingest-//')
   status=$(grep '^status:' "$f" | head -1 | awk '{print $2}')
   if [ "$status" = "completed" ]; then
-    result="/Users/sihaoli/Knowledge/_raw/solar-harness/.dispatch/wiki-result-${id}.md"
+    result="~/Knowledge/_raw/solar-harness/.dispatch/wiki-result-${id}.md"
     if [ ! -f "$result" ]; then
       echo "FALSE-COMPLETED: $id (no result file)"
     fi
@@ -174,8 +174,8 @@ If `solar-harness wiki audit-uploads` is not yet implemented:
 ```bash
 # Count uploads
 BATCH="20260508T122047Z"
-UPLOAD_DIR="/Users/sihaoli/Knowledge/_raw/file-uploads"
-DISPATCH_DIR="/Users/sihaoli/Knowledge/_raw/solar-harness/.dispatch"
+UPLOAD_DIR="~/Knowledge/_raw/file-uploads"
+DISPATCH_DIR="~/Knowledge/_raw/solar-harness/.dispatch"
 
 echo "Uploads: $(find "$UPLOAD_DIR" -maxdepth 1 -type f -name "${BATCH}-*" | wc -l | tr -d ' ')"
 
@@ -217,17 +217,17 @@ solar-harness wiki backfill-uploads --batch <BATCH_ID> --repair --json
 
 ```bash
 # Find the upload file
-FILE="/Users/sihaoli/Knowledge/_raw/file-uploads/20260508T122047Z-XX-name.ext"
+FILE="~/Knowledge/_raw/file-uploads/20260508T122047Z-XX-name.ext"
 
 # Create a new dispatch manually if needed
 DISPATCH_ID="wiki-ingest-$(date -u +%Y%m%dT%H%M%SZ)"
-cat > "/Users/sihaoli/Knowledge/_raw/solar-harness/.dispatch/${DISPATCH_ID}.md" << EOF
+cat > "~/Knowledge/_raw/solar-harness/.dispatch/${DISPATCH_ID}.md" << EOF
 ---
 type: wiki-dispatch
 action: ingest
 skill: wiki-ingest
 generated_at: $(date -u +%Y%m%dT%H%M%SZ)
-vault_path: /Users/sihaoli/Knowledge
+vault_path: ~/Knowledge
 status: dispatched
 ---
 source: ${FILE}
@@ -240,13 +240,13 @@ EOF
 ```bash
 # 1. Reset state to dispatched
 DISPATCH_ID="wiki-ingest-XXXXXXXXXXXXXXXXX"
-DISPATCH_FILE="/Users/sihaoli/Knowledge/_raw/solar-harness/.dispatch/${DISPATCH_ID}.md"
+DISPATCH_FILE="~/Knowledge/_raw/solar-harness/.dispatch/${DISPATCH_ID}.md"
 
 # Edit status back to dispatched
 sed -i '' 's/status: completed/status: dispatched/' "$DISPATCH_FILE"
 
 # 2. Remove orphan result file if it exists
-rm -f "/Users/sihaoli/Knowledge/_raw/solar-harness/.dispatch/wiki-result-${DISPATCH_ID#wiki-ingest-}.md"
+rm -f "~/Knowledge/_raw/solar-harness/.dispatch/wiki-result-${DISPATCH_ID#wiki-ingest-}.md"
 
 # 3. Re-process the dispatch via agent
 ```
@@ -266,7 +266,7 @@ rm -f "/Users/sihaoli/Knowledge/_raw/solar-harness/.dispatch/wiki-result-${DISPA
 
 ```bash
 BATCH="20260508T122047Z"
-VAULT="/Users/sihaoli/Knowledge"
+VAULT="~/Knowledge"
 UPLOAD_DIR="${VAULT}/_raw/file-uploads"
 DISPATCH_DIR="${VAULT}/_raw/solar-harness/.dispatch"
 
@@ -292,11 +292,11 @@ done
 
 ```bash
 # Move to quarantine instead of deleting
-QUARANTINE="/Users/sihaoli/Knowledge/_raw/file-uploads/.quarantine"
+QUARANTINE="~/Knowledge/_raw/file-uploads/.quarantine"
 mkdir -p "$QUARANTINE"
 
 PROBLEM_FILE="20260508T122047Z-XX-problematic.pages"
-mv "/Users/sihaoli/Knowledge/_raw/file-uploads/${PROBLEM_FILE}" "$QUARANTINE/"
+mv "~/Knowledge/_raw/file-uploads/${PROBLEM_FILE}" "$QUARANTINE/"
 
 # Record why
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Quarantined: ${PROBLEM_FILE} — reason: extraction failed, corrupted" \
@@ -309,7 +309,7 @@ echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Quarantined: ${PROBLEM_FILE} — reason: ex
 
 ```bash
 BATCH="20260508T122047Z"
-VAULT="/Users/sihaoli/Knowledge"
+VAULT="~/Knowledge"
 DISPATCH_DIR="${VAULT}/_raw/solar-harness/.dispatch"
 
 # DO NOT run without explicit human confirmation
@@ -389,7 +389,7 @@ If two dispatches are created in the same second (common during batch uploads), 
 
 ```bash
 # Check for collisions
-ls /Users/sihaoli/Knowledge/_raw/solar-harness/.dispatch/wiki-ingest-*.md | \
+ls ~/Knowledge/_raw/solar-harness/.dispatch/wiki-ingest-*.md | \
   xargs -I{} basename {} .md | sed 's/wiki-ingest-//' | sort | uniq -d
 # If any output, there are duplicate IDs
 ```

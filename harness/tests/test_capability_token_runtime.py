@@ -22,8 +22,8 @@ def test_expired_token():
 
 def test_allow_path():
     t = CapabilityToken("t1", ["file:write"], "2099-01-01T00:00:00Z", "a1",
-                        allow_paths=["/Users/lisihao/.solar/harness"])
-    r = t.check_path_access("/Users/lisihao/.solar/harness/lib/test.py")
+                        allow_paths=["~/.solar/harness"])
+    r = t.check_path_access("~/.solar/harness/lib/test.py")
     assert r["allowed"]
     r2 = t.check_path_access("/etc/passwd")
     assert not r2["allowed"]

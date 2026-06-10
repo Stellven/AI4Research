@@ -121,7 +121,7 @@ def test_code_understanding_request_rewrites_standard_graph_goals():
     router = _load_router()
     payload = router.build_pm_intake(
         "为这个仓库生成 knowledge graph、architecture map 和 onboarding artifacts。",
-        repo_context=["/Users/lisihao/Solar"],
+        repo_context=["~/Solar"],
         sprint_id="sprint-test",
         target_system="solar-harness",
     )
@@ -144,7 +144,7 @@ def test_code_understanding_request_rewrites_research_graph_goals():
     payload = router.build_pm_intake(
         "结合仓库和这些论文，输出代码库理解、architecture map、onboarding 和 knowledge graph。",
         papers=["paper-a"],
-        repo_context=["/Users/lisihao/Solar"],
+        repo_context=["~/Solar"],
         sprint_id="sprint-test",
         target_system="solar-harness",
     )

@@ -5,7 +5,7 @@
     "mini-claude-opus-planner": {
       "display_name": "Mac mini Claude Opus planner",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "planner",
       "role": "planner",
@@ -75,7 +75,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T03:26:48Z",
         "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
         "last_pruned_at": "2026-05-31T03:26:48Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -96,7 +96,7 @@
     "mini-claude-opus-planner-2": {
       "display_name": "Mac mini Claude Opus planner (instance 2)",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "planner",
       "role": "planner",
@@ -169,7 +169,7 @@
     "mini-claude-opus-planner-3": {
       "display_name": "Mac mini Claude Opus planner (instance 3)",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "planner",
       "role": "planner",
@@ -242,7 +242,7 @@
     "mini-claude-sonnet-builder": {
       "display_name": "Mac mini Claude Sonnet builder",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "builder",
       "role": "builder",
@@ -317,7 +317,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T01:57:10Z",
         "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/spri",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
         "last_pruned_at": "2026-05-31T01:57:10Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -338,7 +338,7 @@
     "mini-claude-opus-evaluator": {
       "display_name": "Mac mini Claude Opus evaluator",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "evaluator",
       "role": "evaluator",
@@ -407,7 +407,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T03:26:48Z",
         "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
         "last_pruned_at": "2026-05-31T03:26:48Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -428,7 +428,7 @@
     "mini-thunderomlx-qwen36-knowledge": {
       "display_name": "Mac mini ThunderOMLX Qwen3.6 knowledge",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "knowledge-extractor",
       "role": "builder",
@@ -492,7 +492,7 @@
         "last_block_source": "failure_flow_control",
         "last_block_detected_at": "2026-05-31T02:07:41Z",
         "last_block_expires_at": "2026-05-31T03:07:41Z",
-        "last_block_excerpt": "operatord: backend=command task=pm-sprint-20260530-需求单-apo-v2-lease-quota-cost-aware-agent-plan-optimizer-s01-requirements-N0-e0644add operatord: local-stub exit 0 [ERROR] missing pm_result: /Users/lisihao/.solar/harness/sprints/sprint-20260530-需求单-apo-v2-lease-quota-cost-aware-agent-plan-optimizer-s01-requirements.N0.pm-result.md",
+        "last_block_excerpt": "operatord: backend=command task=pm-sprint-20260530-需求单-apo-v2-lease-quota-cost-aware-agent-plan-optimizer-s01-requirements-N0-e0644add operatord: local-stub exit 0 [ERROR] missing pm_result: ~/.solar/harness/sprints/sprint-20260530-需求单-apo-v2-lease-quota-cost-aware-agent-plan-optimizer-s01-requirements.N0.pm-result.md",
         "last_pruned_at": "2026-05-31T03:07:42Z",
         "last_prune_reason": "expired_operator_block"
       },
@@ -511,7 +511,7 @@
     "mini-antigravity-gemini35-flash-high": {
       "display_name": "Mac mini Antigravity Gemini 3.5 Flash High",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "gemini-builder",
       "role": "builder",
@@ -576,7 +576,7 @@
     "mini-antigravity-gemini35-flash-image": {
       "display_name": "Mac mini Antigravity Gemini 3.5 Flash multimodal image",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "gemini-builder",
       "role": "builder",
@@ -587,7 +587,7 @@
       "model": "gemini-3.5-flash-high",
       "model_config": "Antigravity CLI agy;multimodal=blocked-until-media-adapter",
       "base_url": "agy-cli",
-      "command_path": "/Users/lisihao/.local/bin/agy",
+      "command_path": "~/.local/bin/agy",
       "auth_mode": "oauth",
       "key_ref": "antigravity_oauth",
       "quota_cycle": "google-account",
@@ -634,7 +634,7 @@
       "fallback_profile": "builder",
       "last_smoke_at": "2026-05-31T04:15:00Z",
       "last_smoke_evidence": "operator_runtime image smoke refused placeholder/non-final output; Antigravity CLI log showed media=0",
-      "command": "AGY_BIN=/Users/lisihao/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
       "state": {
         "availability": "disabled",
         "runtime_state": "blocked",
@@ -657,7 +657,7 @@
     "mini-antigravity-gemini31-pro": {
       "display_name": "Mac mini Antigravity Gemini 3.1 Pro",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "gemini-planner",
       "role": "planner",
@@ -751,8 +751,8 @@
           "Verifier"
         ]
       },
-      "command": "AGY_BIN=/Users/lisihao/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
-      "command_path": "/Users/lisihao/.local/bin/agy",
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command_path": "~/.local/bin/agy",
       "registry_fix_note": "2026-05-23T00:14Z: add command adapter so enabled Gemini 3.1 Pro command backend is actually dispatchable",
       "state": {
         "availability": "enabled",
@@ -787,7 +787,7 @@
     "mini-antigravity-gemini31-pro-image": {
       "display_name": "Mac mini Antigravity Gemini 3.1 Pro multimodal image",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "gemini-planner",
       "role": "planner",
@@ -798,7 +798,7 @@
       "model": "gemini-3.1-pro",
       "model_config": "Antigravity CLI agy;multimodal=image-input;reasoning=high",
       "base_url": "agy-cli",
-      "command_path": "/Users/lisihao/.local/bin/agy",
+      "command_path": "~/.local/bin/agy",
       "auth_mode": "oauth",
       "key_ref": "antigravity_oauth",
       "quota_cycle": "google-account",
@@ -906,7 +906,7 @@
           "Verifier"
         ]
       },
-      "command": "AGY_BIN=/Users/lisihao/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
       "compat_alias_for": "antigravity_managed_env",
       "compat_maps_to": {
         "host_type": "antigravity_managed_env",
@@ -922,7 +922,7 @@
     "mini-glm51-knowledge": {
       "display_name": "Mac mini GLM-5.1 knowledge",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "glm-knowledge",
       "role": "builder",
@@ -1013,7 +1013,7 @@
     "mini-local-scan": {
       "display_name": "Mac mini local scan",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "local-scanner",
       "role": "builder",
@@ -1098,7 +1098,7 @@
     "mini-router": {
       "display_name": "Mac mini Router",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "meta-router",
       "role": "planner",
@@ -1182,7 +1182,7 @@
     "mini-audit": {
       "display_name": "Mac mini Audit Ledger",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "audit-ledger",
       "role": "evaluator",
@@ -1265,7 +1265,7 @@
     "mini-claude-opus-planner-print": {
       "display_name": "Mac mini Claude Opus planner programmatic print (reserve)",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "planner",
       "role": "planner",
@@ -1349,7 +1349,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T03:26:48Z",
         "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
         "last_pruned_at": "2026-05-31T03:26:48Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -1369,7 +1369,7 @@
     "mini-claude-sonnet-builder-print": {
       "display_name": "Mac mini Claude Sonnet builder programmatic print (reserve)",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "builder",
       "role": "builder",
@@ -1457,7 +1457,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T01:57:10Z",
         "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/spri",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
         "last_pruned_at": "2026-05-31T01:57:10Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -1477,7 +1477,7 @@
     "mini-claude-opus-evaluator-print": {
       "display_name": "Mac mini Claude Opus evaluator programmatic print (reserve)",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "evaluator",
       "role": "evaluator",
@@ -1560,7 +1560,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T03:26:48Z",
         "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
         "last_pruned_at": "2026-05-31T03:26:48Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -1674,7 +1674,7 @@
     "mini-gemini-deep-research": {
       "display_name": "Gemini Deep Research Browser Agent",
       "plane": "interactive_browser",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "browser-agent",
       "role": "knowledge-extractor",
@@ -1746,7 +1746,7 @@
     "mini-chatgpt-deep-research": {
       "display_name": "ChatGPT Thinking High Browser Agent",
       "plane": "interactive_browser",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "browser-agent",
       "role": "knowledge-extractor",
@@ -1801,7 +1801,7 @@
       "context_tier": "high",
       "max_concurrency": 1,
       "fallback_profile": "builder",
-      "command": "PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" CHATGPT_MODEL=\"${CHATGPT_MODEL:-chatgpt-5.5}\" CHATGPT_REASONING_EFFORT=\"${CHATGPT_REASONING_EFFORT:-high}\" BROWSER_AGENT_CHATGPT_MODEL_MODE=\"${BROWSER_AGENT_CHATGPT_MODEL_MODE:-thinking}\" BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE=\"${BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE:-true}\" BROWSER_AGENT_CHATGPT_PROJECT_NAME=\"${BROWSER_AGENT_CHATGPT_PROJECT_NAME:-杂项}\" BROWSER_AGENT_PROFILE_DIRECTORY=\"${BROWSER_AGENT_PROFILE_DIRECTORY:-Profile 1}\" BROWSER_AGENT_PROFILE_STRATEGY=\"${BROWSER_AGENT_PROFILE_STRATEGY:-persistent}\" BROWSER_AGENT_CHATGPT_PROFILE_STRATEGY=\"${BROWSER_AGENT_CHATGPT_PROFILE_STRATEGY:-persistent}\" BROWSER_AGENT_TARGET_ACCOUNT_EMAIL=\"${BROWSER_AGENT_TARGET_ACCOUNT_EMAIL:-browser-agent@example.com}\" BROWSER_AGENT_CHATGPT_ACCOUNT_EMAIL=\"${BROWSER_AGENT_CHATGPT_ACCOUNT_EMAIL:-browser-agent@example.com}\" BROWSER_AGENT_USER_DATA_DIR=\"${BROWSER_AGENT_USER_DATA_DIR:-/Users/lisihao/Library/Application Support/Google/Chrome}\" BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE=\"${BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE:-/Users/lisihao/.solar/harness/browser-agent-chatgpt-local.json}\" python3 \"$HARNESS_DIR/tools/chatgpt_browser_agent_task_operator.py\"",
+      "command": "PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" CHATGPT_MODEL=\"${CHATGPT_MODEL:-chatgpt-5.5}\" CHATGPT_REASONING_EFFORT=\"${CHATGPT_REASONING_EFFORT:-high}\" BROWSER_AGENT_CHATGPT_MODEL_MODE=\"${BROWSER_AGENT_CHATGPT_MODEL_MODE:-thinking}\" BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE=\"${BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE:-true}\" BROWSER_AGENT_CHATGPT_PROJECT_NAME=\"${BROWSER_AGENT_CHATGPT_PROJECT_NAME:-杂项}\" BROWSER_AGENT_PROFILE_DIRECTORY=\"${BROWSER_AGENT_PROFILE_DIRECTORY:-Profile 1}\" BROWSER_AGENT_PROFILE_STRATEGY=\"${BROWSER_AGENT_PROFILE_STRATEGY:-persistent}\" BROWSER_AGENT_CHATGPT_PROFILE_STRATEGY=\"${BROWSER_AGENT_CHATGPT_PROFILE_STRATEGY:-persistent}\" BROWSER_AGENT_TARGET_ACCOUNT_EMAIL=\"${BROWSER_AGENT_TARGET_ACCOUNT_EMAIL:-browser-agent@example.com}\" BROWSER_AGENT_CHATGPT_ACCOUNT_EMAIL=\"${BROWSER_AGENT_CHATGPT_ACCOUNT_EMAIL:-browser-agent@example.com}\" BROWSER_AGENT_USER_DATA_DIR=\"${BROWSER_AGENT_USER_DATA_DIR:-~/Library/Application Support/Google/Chrome}\" BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE=\"${BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE:-~/.solar/harness/browser-agent-chatgpt-local.json}\" python3 \"$HARNESS_DIR/tools/chatgpt_browser_agent_task_operator.py\"",
       "policy": {
         "write_files": "artifact_dir_only",
         "run_shell": "restricted_operator_command",
@@ -1829,8 +1829,8 @@
         "host_type": "ssh_devbox",
         "carrier_hint": {
           "ssh_meta": {
-            "hostname": "100.122.223.55",
-            "user": "lisihao",
+            "hostname": "100.64.0.10",
+            "user": "solar",
             "port": 22
           }
         }
@@ -1840,7 +1840,7 @@
     "mini-youtube-transcript-extractor": {
       "display_name": "YouTube Transcript Extractor Browser Agent",
       "plane": "interactive_browser",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "browser-agent",
       "role": "knowledge-extractor",
@@ -1914,7 +1914,7 @@
     "mini-reasonix-deepseek-v4-builder": {
       "display_name": "Mac mini Reasonix DeepSeek V4 advisory reviewer",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "deepseek-advisory",
       "role": "evaluator",
@@ -2083,7 +2083,7 @@
         "last_block_source": "graph_node_dispatcher",
         "last_block_detected_at": "2026-06-02T02:38:35Z",
         "last_block_expires_at": "2026-06-02T02:53:35Z",
-        "last_block_excerpt": "{\"pane\": \"operator:mini-reasonix-deepseek-v4-builder\", \"dispatch_id\": \"graph-eval-sprint-20260530-032545-intent-rawintent-8f1b76d6-S4-20260602T023729Z-q1\", \"reason\": \"eval_failed_contract_closeout\", \"operator_status\": \"completed\", \"result_json\": \"/Users/lisihao/.solar/harness/run/operator-results/mini-reasonix-deepseek-v4-builder/pm-sprint-20260530-032545-intent-rawintent-8f1b76d6-S4-11c11314/result.json\"}",
+        "last_block_excerpt": "{\"pane\": \"operator:mini-reasonix-deepseek-v4-builder\", \"dispatch_id\": \"graph-eval-sprint-20260530-032545-intent-rawintent-8f1b76d6-S4-20260602T023729Z-q1\", \"reason\": \"eval_failed_contract_closeout\", \"operator_status\": \"completed\", \"result_json\": \"~/.solar/harness/run/operator-results/mini-reasonix-deepseek-v4-builder/pm-sprint-20260530-032545-intent-rawintent-8f1b76d6-S4-11c11314/result.json\"}",
         "last_pruned_at": "2026-06-02T02:54:09Z",
         "last_prune_reason": "expired_operator_block"
       },
@@ -2102,7 +2102,7 @@
     "op.browser.webwright.playwright.01": {
       "display_name": "Webwright Playwright Task Operator",
       "plane": "interactive_browser",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "browser-agent",
       "role": "browser_task_operator",
@@ -2169,7 +2169,7 @@
     "op.browser.browser_use_mcp.quick.01": {
       "display_name": "Browser-use MCP Quick Tool Operator",
       "plane": "interactive_browser",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "browser-agent",
       "role": "browser_tool_operator",
@@ -2221,7 +2221,7 @@
     "mini-antigravity-gemini35-flash-builder-1": {
       "display_name": "Mac mini Antigravity Gemini 3.5 Flash builder pool slot 1",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "gemini-builder",
       "role": "builder",
@@ -2281,12 +2281,12 @@
         "network": "allowed",
         "git_commit": "allowed"
       },
-      "command": "AGY_BIN=/Users/lisihao/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
-      "command_path": "/Users/lisihao/.local/bin/agy",
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command_path": "~/.local/bin/agy",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/Users/lisihao/.local/bin/agy",
+        "command_path": "~/.local/bin/agy",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -2328,7 +2328,7 @@
     "mini-antigravity-gemini35-flash-builder-2": {
       "display_name": "Mac mini Antigravity Gemini 3.5 Flash builder pool slot 2",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "gemini-builder",
       "role": "builder",
@@ -2388,12 +2388,12 @@
         "network": "allowed",
         "git_commit": "allowed"
       },
-      "command": "AGY_BIN=/Users/lisihao/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
-      "command_path": "/Users/lisihao/.local/bin/agy",
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command_path": "~/.local/bin/agy",
       "launch_cmd_kind": "print_once",
       "health_check": {
         "type": "command",
-        "command_path": "/Users/lisihao/.local/bin/agy",
+        "command_path": "~/.local/bin/agy",
         "cache_seconds": 300
       },
       "builder_pool": {
@@ -2435,7 +2435,7 @@
     "mini-claude-sonnet-builder-2": {
       "display_name": "Mac mini Claude Sonnet builder pool slot 2",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "builder",
       "role": "builder",
@@ -2536,7 +2536,7 @@
     "mini-claude-sonnet-builder-3": {
       "display_name": "Mac mini Claude Sonnet builder pool slot 3",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "builder",
       "role": "builder",
@@ -2637,7 +2637,7 @@
     "mini-codex-gpt55-medium-builder-1": {
       "display_name": "Mac mini Codex GPT 5.5 medium builder pool slot 1",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-builder",
       "role": "builder",
@@ -2726,7 +2726,7 @@
     "mini-codex-gpt55-medium-builder-2": {
       "display_name": "Mac mini Codex GPT 5.5 medium builder pool slot 2",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-builder",
       "role": "builder",
@@ -2815,7 +2815,7 @@
     "mini-codex-gpt53-spark-builder-1": {
       "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 1",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-builder",
       "role": "builder",
@@ -2905,7 +2905,7 @@
     "mini-codex-gpt53-spark-builder-2": {
       "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 2",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-builder",
       "role": "builder",
@@ -2995,7 +2995,7 @@
     "mini-codex-gpt53-spark-builder-3": {
       "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 3",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-builder",
       "role": "builder",
@@ -3085,7 +3085,7 @@
     "mini-codex-gpt53-spark-builder-4": {
       "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 4",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-builder",
       "role": "builder",
@@ -3175,7 +3175,7 @@
     "mini-codex-gpt53-spark-builder-5": {
       "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 5",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-builder",
       "role": "builder",
@@ -3265,7 +3265,7 @@
     "mini-codex-gpt53-spark-builder-6": {
       "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 6",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-builder",
       "role": "builder",
@@ -3355,7 +3355,7 @@
     "mini-glm51-builder-1": {
       "display_name": "Mac mini GLM-5.1 builder pool slot 1",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "builder",
       "role": "builder",
@@ -3444,7 +3444,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T01:57:10Z",
         "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/spri",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
         "last_pruned_at": "2026-05-31T01:57:10Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -3465,7 +3465,7 @@
     "mini-glm51-builder-2": {
       "display_name": "Mac mini GLM-5.1 builder pool slot 2",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "builder",
       "role": "builder",
@@ -3554,7 +3554,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T01:57:10Z",
         "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/spri",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
         "last_pruned_at": "2026-05-31T01:57:10Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -3575,7 +3575,7 @@
     "mini-glm51-builder-3": {
       "display_name": "Mac mini GLM-5.1 builder pool slot 3",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "builder",
       "role": "builder",
@@ -3664,7 +3664,7 @@
         "last_block_source": "tmux_pane:solar-harness:0.2",
         "last_block_detected_at": "2026-05-31T01:57:10Z",
         "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 /Users/lisihao /.solar/harness/sprints/spri",
+        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
         "last_pruned_at": "2026-05-31T01:57:10Z",
         "last_prune_reason": "weak_pane_rate_limit_evidence"
       },
@@ -3685,7 +3685,7 @@
     "mini-reasonix-deepseek-v4-flash-builder-1": {
       "display_name": "Mac mini Reasonix DeepSeek V4 Flash builder pool slot 1",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "deepseek-builder",
       "role": "builder",
@@ -3783,7 +3783,7 @@
     "mini-reasonix-deepseek-v4-flash-builder-2": {
       "display_name": "Mac mini Reasonix DeepSeek V4 Flash builder pool slot 2",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "deepseek-builder",
       "role": "builder",
@@ -3881,7 +3881,7 @@
     "mini-thunderomlx-qwen36-builder": {
       "display_name": "Mac mini ThunderOMLX Qwen3.6 builder pool slot 1",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "builder",
       "role": "builder",
@@ -3973,7 +3973,7 @@
     "technology-diagram-painter": {
       "display_name": "Technology Diagram Painter Browser Agent",
       "plane": "interactive_browser",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "browser-agent",
       "role": "builder",
@@ -4081,7 +4081,7 @@
     "mini-codex-gpt55-medium-planner-1": {
       "display_name": "Mac mini Codex GPT 5.5 medium planner support slot 1",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-planner",
       "role": "planner",
@@ -4167,7 +4167,7 @@
     "mini-codex-gpt55-medium-planner-2": {
       "display_name": "Mac mini Codex GPT 5.5 medium planner support slot 2",
       "plane": "headless",
-      "owner_host": "lisihao@100.122.223.55",
+      "owner_host": "solar@example-host",
       "pane": "solar-harness-multi-task:*",
       "profile": "codex-planner",
       "role": "planner",
