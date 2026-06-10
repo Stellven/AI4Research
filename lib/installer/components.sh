@@ -37,6 +37,11 @@ resolve_components() {
         fi
     fi
 
+    for name in $requested; do
+        contains_word "$name" "$COMPONENT_ORDER" \
+            || die "unknown component: $name (known: $(printf '%s' "$COMPONENT_ORDER" | tr ' ' ','))"
+    done
+
     if contains_word "harness" "$requested" && ! contains_word "kernel" "$requested"; then
         requested="kernel $requested"
     fi
