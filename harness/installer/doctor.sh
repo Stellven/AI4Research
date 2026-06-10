@@ -184,6 +184,7 @@ tvs_root = resolve_tvs_root()
 tvs_cli = os.path.join(HARNESS_DIR, "lib", "tvs_render_cli.ts")
 tvs_result = {
     "status": "missing",
+    "optional": True,
     "bun": result["bins"].get("bun", "missing"),
     "cli": "ok" if os.path.isfile(tvs_cli) else "missing",
     "root": "ok" if tvs_root else "missing",
@@ -192,14 +193,14 @@ tvs_result = {
 }
 
 if tvs_result["cli"] == "missing":
-    tvs_result["status"] = "missing"
-    result["warnings"].append("tvs renderer bridge missing: lib/tvs_render_cli.ts")
+    tvs_result["status"] = "optional_missing"
+    result["warnings"].append("optional tvs renderer bridge missing: lib/tvs_render_cli.ts")
 elif tvs_result["bun"] == "missing":
-    tvs_result["status"] = "missing"
-    result["warnings"].append("tvs renderer missing required dependency: bun")
+    tvs_result["status"] = "optional_missing"
+    result["warnings"].append("optional tvs renderer dependency missing: bun")
 elif tvs_result["root"] == "missing":
-    tvs_result["status"] = "missing"
-    result["warnings"].append("tvs renderer missing required dependency: TVS root; set SOLAR_TVS_ROOT")
+    tvs_result["status"] = "optional_missing"
+    result["warnings"].append("optional tvs renderer root missing; set SOLAR_TVS_ROOT to enable")
 else:
     payload = json.dumps({
         "canvas": {"width": 40},
@@ -308,8 +309,6 @@ critical_bins = [
 ]
 
 if any(v == "missing" for v in critical_paths) or any(v == "missing" for v in critical_bins):
-    result["verdict"] = "fail"
-elif result["services"].get("tvs_renderer", {}).get("status") != "ok":
     result["verdict"] = "fail"
 elif len(result["warnings"]) > 3:
     result["verdict"] = "degraded"

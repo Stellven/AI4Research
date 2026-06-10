@@ -13,7 +13,7 @@
 #   SOLAR_HOME         install root (default: /opt/solar or ~/.solar)
 #   HARNESS_DIR        harness directory (default: $SOLAR_HOME/harness)
 #   KNOWLEDGE_VAULT    Obsidian vault path (default: ~/Knowledge)
-#   SOLAR_TVS_ROOT     TVS package checkout path; must contain index.ts
+#   SOLAR_TVS_ROOT     optional TVS package checkout path; must contain index.ts
 #   SKIP_LLM_CLI=1     skip Claude/Codex binary checks
 #   FAKE_KEYS=1        use test placeholder keys
 #
@@ -51,7 +51,7 @@ while [[ $# -gt 0 ]]; do
       echo "Solar Product Platform Installer"
       echo "Usage: install.sh [--non-interactive] [--skip-llm-cli] [--fake-keys] [--vault PATH]"
       echo ""
-      echo "Required for TVS rendering:"
+      echo "Optional for TVS rendering:"
       echo "  bun              JavaScript runtime for tvs_render_cli.ts"
       echo "  SOLAR_TVS_ROOT   TVS checkout path containing index.ts"
       exit 0 ;;
@@ -166,18 +166,21 @@ install_deps() {
   fi
 
   if ! command -v bun &>/dev/null; then
-    red "Bun is required for TVS rendering. Install Bun first: https://bun.sh/docs/installation"
-    exit 1
+    yellow "Bun not found; JavaScript runtime and TVS-backed features are unavailable until Bun is installed."
   fi
 
   local tvs_root
   tvs_root="$(resolve_tvs_root || true)"
   if [[ -z "$tvs_root" ]]; then
-    red "TVS renderer dependency missing. Set SOLAR_TVS_ROOT to a TVS checkout containing index.ts."
-    exit 1
+    if [[ -n "$SOLAR_TVS_ROOT" ]]; then
+      yellow "SOLAR_TVS_ROOT is set but does not contain index.ts; TVS rendering will be disabled."
+    else
+      yellow "TVS renderer optional dependency not configured; set SOLAR_TVS_ROOT to enable it."
+    fi
+  else
+    export SOLAR_TVS_ROOT="$tvs_root"
+    info "TVS renderer root: $SOLAR_TVS_ROOT"
   fi
-  export SOLAR_TVS_ROOT="$tvs_root"
-  info "TVS renderer root: $SOLAR_TVS_ROOT"
 
   # Check optional LLM CLIs
   if [[ "$SKIP_LLM_CLI" != "true" ]]; then
@@ -189,7 +192,7 @@ install_deps() {
     fi
   fi
 
-  green "Dependencies OK"
+  green "Required dependencies OK"
 }
 
 # ── create directory structure ────────────────────────────────────────────
