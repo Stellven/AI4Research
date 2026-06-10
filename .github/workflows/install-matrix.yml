@@ -69,4 +69,12 @@ jobs:
 
       - name: Install and uninstall smoke
         shell: bash
-        run: ./scripts/smoke-install-matrix.sh "${{ matrix.profile }}"
+        run: |
+          status=0
+          ./scripts/smoke-install-matrix.sh "${{ matrix.profile }}" 2>&1 | tee "$RUNNER_TEMP/smoke.log" || status=$?
+          if [ "$status" -ne 0 ]; then
+            # Surface the failure tail as a check-run annotation: job logs
+            # need admin rights on this fork, annotations are public.
+            tail -c 6000 "$RUNNER_TEMP/smoke.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::error title=smoke failure tail::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+            exit "$status"
+          fi
