@@ -15,4 +15,7 @@ else
     exit 1
 fi
 
+export SOLAR_HOME="${SOLAR_HOME:-$HOME/.solar}"
+export SOLAR_DB_PATH="${SOLAR_DB_PATH:-$SOLAR_HOME/db/solar.db}"
+
 exec bun run core/daemon/server.ts "$@"

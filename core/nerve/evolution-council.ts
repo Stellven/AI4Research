@@ -992,7 +992,7 @@ ${JSON.stringify(session.trigger_context, null, 2)}
 // ============================================================================
 
 if (require.main === module) {
-  const dbPath = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/solar.db`;
+  const dbPath = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
 
   const council = new EvolutionCouncil(dbPath);
 

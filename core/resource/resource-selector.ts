@@ -8,7 +8,7 @@
 import Database from 'bun:sqlite';
 import { discoverResources } from './discover-remote';
 
-const DB_PATH = `${process.env.HOME}/.solar/solar.db`;
+const DB_PATH = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
 
 //------------------------------------------------------------------------------
 // 类型定义

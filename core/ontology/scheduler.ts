@@ -304,7 +304,7 @@ export function getOntologyScheduler(db: Database): OntologyScheduler {
 // ==================== CLI 测试 ====================
 
 if (import.meta.main) {
-  const db = new Database(`${process.env.HOME}/.solar/solar.db`);
+  const db = new Database(process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`);
   const scheduler = getOntologyScheduler(db);
 
   console.log("任务状态:");

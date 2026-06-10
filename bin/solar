@@ -88,6 +88,21 @@ PY
     fi
 }
 
+remove_installed_skills() {
+    manifest="$CLAUDE_DIR/solar/installed-skills.txt"
+    [ -f "$manifest" ] || return 0
+    while IFS= read -r skill_name; do
+        case "$skill_name" in
+            ""|.*|*/*) continue ;;
+        esac
+        skill_path="$CLAUDE_DIR/skills/$skill_name"
+        if guard_path "$skill_path"; then
+            rm -rf "$skill_path"
+        fi
+    done < "$manifest"
+    rmdir "$CLAUDE_DIR/skills" 2>/dev/null || true
+}
+
 guard_path() {
     [ -n "$1" ] || return 1
     [ "$1" != "/" ] || return 1
@@ -121,6 +136,7 @@ uninstall() {
     fi
 
     remove_sentinel
+    remove_installed_skills
     if guard_path "$CLAUDE_DIR/solar"; then
         rm -rf "$CLAUDE_DIR/solar"
     fi

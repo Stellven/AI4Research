@@ -29,7 +29,7 @@ export interface DaemonConfig {
 
 const DEFAULT_CONFIG: DaemonConfig = {
   socketPath: "/tmp/solar.sock",
-  dbPath: `${process.env.HOME}/.solar/solar.db`,
+  dbPath: process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`,
   cacheDir: `${process.env.HOME}/.solar/cache`,
   pluginDir: `${process.env.HOME}/.solar/plugins`,
   syncInterval: 1000,

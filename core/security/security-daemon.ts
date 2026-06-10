@@ -16,7 +16,7 @@ import { $ } from 'bun';
 import { SecurityMonitor } from './security-monitor';
 import { getNotificationEmail } from '../config/privacy';
 
-const DB_PATH = `${process.env.HOME}/.solar/solar.db`;
+const DB_PATH = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
 
 // 检测间隔配置
 const CHECK_INTERVALS = {

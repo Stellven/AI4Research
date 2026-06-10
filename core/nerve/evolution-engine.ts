@@ -823,7 +823,7 @@ export function getEvolutionEngine(dbPath?: string): EvolutionEngine {
 // ============================================================================
 
 if (require.main === module) {
-  const dbPath = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/solar.db`;
+  const dbPath = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
 
   const engine = new EvolutionEngine(dbPath);
 

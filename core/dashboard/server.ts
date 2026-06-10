@@ -11,13 +11,13 @@ import { existsSync } from "node:fs";
 import { ReplySender } from "../reply/reply-sender";
 
 const STATE_FILE = import.meta.dir + "/state.json";
-const DASHBOARD_FILE = Bun.file(import.meta.dir + "/../../demos/solar-dashboard.html");
+const DASHBOARD_FILE = Bun.file(import.meta.dir + "/assets/solar-dashboard.html");
 const ORCH_DASHBOARD_FILE = Bun.file(
-  import.meta.dir + "/../../demos/orchestrator-dashboard.html",
+  import.meta.dir + "/assets/orchestrator-dashboard.html",
 );
 const PORT = 3721;
 const DAEMON_SOCKET = "/tmp/solar.sock";
-const SOLAR_DB_PATH = `${process.env.HOME || ""}/.solar/solar.db`;
+const SOLAR_DB_PATH = process.env.SOLAR_DB_PATH || `${process.env.HOME || ""}/.solar/db/solar.db`;
 const HEALTH_CONFIG_ID = 1;
 const HEALTH_ALERT_COOLDOWN_MINUTES_DEFAULT = 15;
 const HEALTH_MONITOR_INTERVAL_SECONDS_DEFAULT = 60;

@@ -34,7 +34,7 @@ export class MessageHandler {
   private db: Database;
   private scheduler: TaskScheduler;
 
-  constructor(dbPath: string = `${process.env.HOME}/.solar/solar.db`) {
+  constructor(dbPath: string = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`) {
     this.db = new Database(dbPath);
     this.scheduler = new TaskScheduler(dbPath);
     this.ensureSchema();

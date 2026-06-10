@@ -11,6 +11,7 @@ component_install() {
     cp "$SOURCE_DIR/package.json" "$SOLAR_HOME/package.json"
     cp "$SOURCE_DIR/bun.lock" "$SOLAR_HOME/bun.lock"
     [ -f "$SOURCE_DIR/tsconfig.json" ] && cp "$SOURCE_DIR/tsconfig.json" "$SOLAR_HOME/tsconfig.json"
+    (cd "$SOLAR_HOME" && bun install --frozen-lockfile)
     return 0
 }
 

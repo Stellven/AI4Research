@@ -58,7 +58,7 @@ import { getPreferenceObserver, SessionData } from "./observer";
  * 快速初始化本体系统
  */
 export function initOntology(dbPath?: string) {
-  const path = dbPath ?? `${process.env.HOME}/.solar/solar.db`;
+  const path = dbPath ?? process.env.SOLAR_DB_PATH ?? `${process.env.HOME}/.solar/db/solar.db`;
   const db = new Database(path);
   const ontology = getOntologyManager(db);
   const observer = getPreferenceObserver();

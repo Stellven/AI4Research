@@ -289,7 +289,7 @@ let _db: Database | null = null;
 
 function getDb(): Database {
   if (!_db) {
-    _db = new Database(`${process.env.HOME}/.solar/solar.db`);
+    _db = new Database(process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`);
   }
   return _db;
 }
@@ -316,7 +316,7 @@ export function quickRecordTask(
 // ==================== CLI 测试 ====================
 
 if (import.meta.main) {
-  const db = new Database(`${process.env.HOME}/.solar/solar.db`);
+  const db = new Database(process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`);
 
   const agentId = process.argv[2] || "coder";
   console.log(`\n获取 Agent "${agentId}" 的本体上下文...\n`);

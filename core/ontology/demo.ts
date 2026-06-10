@@ -11,7 +11,7 @@ async function demo() {
   console.log("=== Solar Ontology Demo ===\n");
 
   // 1. 初始化
-  const dbPath = `${process.env.HOME}/.solar/solar.db`;
+  const dbPath = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
   console.log(`[1] 初始化数据库: ${dbPath}`);
   const db = new Database(dbPath);
   const ontology = new OntologyManager(db);

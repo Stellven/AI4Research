@@ -1,0 +1,63 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+export type SkillDispatchResult = {
+  output: string;
+  mode: "markdown";
+  entry: string;
+};
+
+export class SkillDispatcher {
+  private roots: string[];
+
+  constructor(roots?: string[]) {
+    this.roots = roots || this.defaultRoots();
+  }
+
+  async execute(skillName: string, content: string): Promise<SkillDispatchResult> {
+    const safeName = this.normalizeSkillName(skillName);
+    const entry = this.findSkillEntry(safeName);
+    if (!entry) {
+      throw new Error(`skill not found: ${safeName}; searched: ${this.roots.join(", ")}`);
+    }
+
+    const instructions = readFileSync(entry, "utf-8");
+    return {
+      mode: "markdown",
+      entry,
+      output: [
+        `Skill: ${safeName}`,
+        `Entry: ${entry}`,
+        "",
+        instructions,
+        "",
+        "Task:",
+        content,
+      ].join("\n"),
+    };
+  }
+
+  private defaultRoots(): string[] {
+    const roots = [];
+    if (process.env.SOLAR_SKILLS_DIR) roots.push(process.env.SOLAR_SKILLS_DIR);
+    if (process.env.HOME) roots.push(join(process.env.HOME, ".claude", "skills"));
+    if (process.env.SOLAR_HOME) roots.push(join(process.env.SOLAR_HOME, "skills"));
+    return roots.map((root) => resolve(root));
+  }
+
+  private normalizeSkillName(name: string): string {
+    const cleaned = name.replace(/^\/+/, "").trim();
+    if (!/^[A-Za-z0-9._-]+$/.test(cleaned)) {
+      throw new Error(`invalid skill name: ${name}`);
+    }
+    return cleaned;
+  }
+
+  private findSkillEntry(skillName: string): string | null {
+    for (const root of this.roots) {
+      const entry = join(root, skillName, "SKILL.md");
+      if (existsSync(entry)) return entry;
+    }
+    return null;
+  }
+}

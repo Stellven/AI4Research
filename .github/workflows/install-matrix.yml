@@ -1,0 +1,34 @@
+name: install-matrix
+
+on:
+  push:
+    branches:
+      - pkg/migration
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  install:
+    name: ${{ matrix.os }} / ${{ matrix.profile }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        profile:
+          - minimal
+          - full-non-rust
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        if: matrix.profile == 'full-non-rust'
+        with:
+          bun-version: latest
+
+      - name: Install and uninstall smoke
+        shell: /bin/bash
+        run: ./scripts/smoke-install-matrix.sh "${{ matrix.profile }}"
