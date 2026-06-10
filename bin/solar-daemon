@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -e
+
+if ! command -v bun >/dev/null 2>&1; then
+    echo "solar-daemon requires bun. Install Bun or omit the core-runtime component." >&2
+    exit 127
+fi
+
+if [ -n "${SOLAR_HOME:-}" ] && [ -f "$SOLAR_HOME/core/daemon/server.ts" ]; then
+    cd "$SOLAR_HOME"
+elif [ -f "$(cd "$(dirname "$0")/.." && pwd)/core/daemon/server.ts" ]; then
+    cd "$(cd "$(dirname "$0")/.." && pwd)"
+else
+    echo "core runtime not found. Re-run install.sh with --components core-runtime." >&2
+    exit 1
+fi
+
+exec bun run core/daemon/server.ts "$@"
