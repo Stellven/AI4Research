@@ -78,3 +78,6 @@ jobs:
             tail -c 6000 "$RUNNER_TEMP/smoke.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::error title=smoke failure tail::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
             exit "$status"
           fi
+          # Positive evidence: emit the gate lines as a public notice
+          # annotation so success is verifiable without log access.
+          grep -E 'smoke profile passed|db schema assertions passed|daemon socket gate|dashboard http gate|install complete' "$RUNNER_TEMP/smoke.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::notice title=smoke evidence::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'

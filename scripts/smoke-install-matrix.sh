@@ -181,6 +181,7 @@ if [ "$core_gate" = "true" ]; then
         cat "$daemon_log" >&2 || true
         exit 1
     fi
+    echo "daemon socket gate: ok"
 
     # Start the dashboard only after the daemon is up: both open the same
     # SQLite DB and the first opener's WAL conversion needs an exclusive
@@ -200,6 +201,7 @@ if [ "$core_gate" = "true" ]; then
         cat "$dashboard_log" >&2 || true
         exit 1
     fi
+    echo "dashboard http gate: ok"
     if [ -e "$home_dir/.solar/solar.db" ]; then
         echo "legacy DB path was created: $home_dir/.solar/solar.db" >&2
         exit 1
