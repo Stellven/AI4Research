@@ -17,18 +17,14 @@
     "smoke:health-monitor": "bun run scripts/smoke-health-monitor.ts",
     "skills:reindex": "bun run scripts/rebuild-skills-index.ts",
     "matrix:skills": "bun run scripts/generate-skills-matrix.ts",
-    "ui-watcher": "bun run core/daemon/ui-watcher.ts",
-    "dashboard": "bun run demos/agent-dashboard.ts",
-    "dashboard:compact": "bun run demos/agent-dashboard.ts --layout=compact",
-    "dashboard:minimal": "bun run demos/agent-dashboard.ts --layout=minimal",
+    "dashboard": "bun run core/dashboard/server.ts",
     "dashboard:web": "bun run core/dashboard/server.ts",
     "test": "bun test",
     "test:ui": "bun run tests/ui-engine.test.ts",
     "test:llm": "bun run tests/llm-integration.test.ts"
   },
   "dependencies": {
-    "bonjour-service": "^1.3.0",
-    "tvs": "file:../TVS"
+    "bonjour-service": "^1.3.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
