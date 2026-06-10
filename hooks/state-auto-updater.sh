@@ -4,6 +4,13 @@
 
 STATE_FILE="$HOME/.solar/STATE.md"
 DB_FILE="$HOME/.solar/solar.db"
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -r "$HOOK_DIR/lib/portable.sh" ]]; then
+    # shellcheck source=lib/portable.sh
+    . "$HOOK_DIR/lib/portable.sh"
+fi
+
+SOLAR_PYTHON_BIN="$(solar_python 2>/dev/null || command -v python3)"
 
 # 检查文件存在
 if [[ ! -f "$STATE_FILE" ]]; then
@@ -48,29 +55,41 @@ NEW_PROGRESS="<!-- AUTO-PROGRESS -->
 
 # 检查是否已有 AUTO-PROGRESS 区块
 if grep -q "<!-- AUTO-PROGRESS -->" "$STATE_FILE"; then
-    # 使用 sed 替换整个区块
-    # macOS sed 需要特殊处理多行
-    python3 << PYTHON
+    STATE_FILE="$STATE_FILE" NEW_PROGRESS="$NEW_PROGRESS" "$SOLAR_PYTHON_BIN" << 'PYTHON'
+import os
 import re
 
-with open('$STATE_FILE', 'r') as f:
+state_file = os.environ['STATE_FILE']
+new_block = os.environ['NEW_PROGRESS']
+
+with open(state_file, 'r') as f:
     content = f.read()
 
-new_block = '''$NEW_PROGRESS'''
-
-# 替换 AUTO-PROGRESS 区块
 pattern = r'<!-- AUTO-PROGRESS -->.*?<!-- /AUTO-PROGRESS -->'
 new_content = re.sub(pattern, new_block, content, flags=re.DOTALL)
 
-with open('$STATE_FILE', 'w') as f:
+with open(state_file, 'w') as f:
     f.write(new_content)
 PYTHON
 else
-    # 在 # Next Actions 之前插入
-    sed -i '' "/^# Next Actions/i\\
-\\
-$NEW_PROGRESS\\
-" "$STATE_FILE" 2>/dev/null || true
+    STATE_FILE="$STATE_FILE" NEW_PROGRESS="$NEW_PROGRESS" "$SOLAR_PYTHON_BIN" << 'PYTHON' || true
+import os
+
+state_file = os.environ['STATE_FILE']
+new_block = os.environ['NEW_PROGRESS']
+
+with open(state_file, 'r') as f:
+    content = f.read()
+
+marker = '# Next Actions'
+if marker in content:
+    content = content.replace(marker, f'{new_block}\n\n{marker}', 1)
+else:
+    content = f'{content.rstrip()}\n\n{new_block}\n'
+
+with open(state_file, 'w') as f:
+    f.write(content)
+PYTHON
 fi
 
 echo "✓ STATE.md 自动更新完成 ($TIMESTAMP)"
