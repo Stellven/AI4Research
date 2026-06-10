@@ -23,6 +23,24 @@ maintainers working in this repo. It is not an installed runtime artifact.
 - Optional bridges and experimental integrations stay component-gated and off
   by default unless the plan says otherwise.
 
+## Compatibility Modules
+
+The public extraction omitted a few modules that the daemon imports. The
+following are minimal compatibility implementations, provisionally ratified
+and pending the upstream originals:
+
+- `core/daemon/skill-dispatcher.ts` — resolves installed `SKILL.md` files;
+  fails loudly on missing skills.
+- `core/orchestrator/` (`index.ts`, `types.ts`, `retry-policy.ts`) —
+  single-node graph construction/execution, events, retry policy, and the
+  control surfaces the daemon calls.
+- `core/config/privacy.ts` — env-backed contact/identity config with neutral
+  fallbacks and no personal data.
+
+Rules for these files: keep each header marker intact, do not extend their
+behavior beyond what the daemon needs to boot and serve, and expect a future
+change to replace them wholesale with upstream originals.
+
 ## Local Workflow
 
 - Work on `pkg/migration` unless the user asks for a different branch.

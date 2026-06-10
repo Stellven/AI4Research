@@ -1,3 +1,8 @@
+// Compatibility implementation — pending upstream original.
+// Absent from the public extraction but imported by the daemon. Minimal real
+// behavior only; do not extend beyond what the daemon needs to boot and
+// serve. See AGENTS.md "Compatibility Modules".
+
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 

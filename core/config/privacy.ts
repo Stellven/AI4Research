@@ -1,3 +1,9 @@
+// Compatibility implementation — pending upstream original.
+// Absent from the public extraction but imported by reply/security/listener
+// surfaces. Env-backed values with neutral fallbacks only; do not extend
+// beyond what the daemon needs to boot and serve. See AGENTS.md
+// "Compatibility Modules".
+
 function splitList(value: string | undefined): string[] {
   return (value || "")
     .split(",")
