@@ -32,10 +32,13 @@ checks = {
     "db": os.path.join(solar_home, "db", "solar.db"),
     "solar_bin": os.path.join(solar_home, "bin", "solar"),
 }
+fail_keys = {"solar_home", "receipt", "solar_bin"}
+if "kernel" in result["components"] or not result["components"]:
+    fail_keys.add("kernel")
 for key, path in checks.items():
     ok = os.path.isdir(path) if key.endswith("_dir") or key == "solar_home" else os.path.exists(path)
     result["paths"][key] = "ok" if ok else "missing"
-    if not ok and key in ("solar_home", "receipt", "kernel", "solar_bin"):
+    if not ok and key in fail_keys:
         result["verdict"] = "fail"
         result["warnings"].append(f"path missing: {key}")
 
