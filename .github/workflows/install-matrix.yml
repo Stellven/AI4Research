@@ -22,13 +22,35 @@ jobs:
           - full-non-rust
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: oven-sh/setup-bun@v2
         if: matrix.profile == 'full-non-rust'
         with:
           bun-version: latest
 
+      - name: Pin bash to /bin/bash on macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/system-bash"
+          ln -sf /bin/bash "$RUNNER_TEMP/system-bash/bash"
+          echo "$RUNNER_TEMP/system-bash" >> "$GITHUB_PATH"
+
+      - name: Assert macOS leg runs system bash 3.2
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          echo "bash resolves to: $(command -v bash)"
+          echo "BASH_VERSION=$BASH_VERSION"
+          case "$BASH_VERSION" in
+            3.2.*) echo "confirmed macOS system bash 3.2" ;;
+            *)
+              echo "expected /bin/bash 3.2 on the macOS leg, got: $BASH_VERSION" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Install and uninstall smoke
-        shell: /bin/bash
+        shell: bash
         run: ./scripts/smoke-install-matrix.sh "${{ matrix.profile }}"
