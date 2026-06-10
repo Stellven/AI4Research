@@ -26,15 +26,21 @@ case "$profile" in
         ;;
 esac
 
+# Daemon and dashboard are started as their own process groups (set -m):
+# `bun run <script>` spawns the real server as a child process, so killing
+# only the job-leader pid leaks a listener that can then serve a stale
+# response to the next run's HTTP gate.
+kill_group() {
+    [ -n "$1" ] || return 0
+    kill -- -"$1" >/dev/null 2>&1 || kill "$1" >/dev/null 2>&1 || true
+    wait "$1" >/dev/null 2>&1 || true
+}
+
 cleanup() {
-    if [ -n "$dashboard_pid" ]; then
-        kill "$dashboard_pid" >/dev/null 2>&1 || true
-        wait "$dashboard_pid" >/dev/null 2>&1 || true
-    fi
-    if [ -n "$daemon_pid" ]; then
-        kill "$daemon_pid" >/dev/null 2>&1 || true
-        wait "$daemon_pid" >/dev/null 2>&1 || true
-    fi
+    kill_group "$dashboard_pid"
+    dashboard_pid=""
+    kill_group "$daemon_pid"
+    daemon_pid=""
     rm -f /tmp/solar.sock
 }
 trap cleanup EXIT INT TERM
@@ -75,6 +81,40 @@ if data.get("verdict") != "ok":
 PY
 }
 
+assert_db_schema() {
+    SOLAR_DB="$home_dir/.solar/db/solar.db" python3 - <<'PY'
+import os
+import sqlite3
+
+conn = sqlite3.connect(os.environ["SOLAR_DB"])
+names = {row[0] for row in conn.execute("SELECT name FROM sqlite_master")}
+for need in ("cortex_sources", "sys_favorites", "fts_unified_search"):
+    if need not in names:
+        raise SystemExit(f"installed db missing table: {need}")
+conn.execute(
+    "INSERT INTO fts_unified_search(doc_id,title,doc_type,content) "
+    "VALUES('smoke','t','probe','smoke probe content')"
+)
+rows = list(
+    conn.execute(
+        "SELECT doc_id FROM fts_unified_search "
+        "WHERE fts_unified_search MATCH 'probe'"
+    )
+)
+if not rows:
+    raise SystemExit("fts5 MATCH probe returned nothing")
+conn.rollback()
+print("db schema assertions passed")
+PY
+}
+
+assert_no_bun_home_leak() {
+    if [ -e "$home_dir/.bun" ]; then
+        echo "bun wrote into the sandbox home outside SOLAR_HOME: $home_dir/.bun" >&2
+        exit 1
+    fi
+}
+
 assert_residue_empty() {
     residue="$sandbox/residue.txt"
     find "$home_dir" -mindepth 1 -print | sort > "$residue"
@@ -99,6 +139,8 @@ HOME="$home_dir" "$repo_dir/install.sh" \
 
 HOME="$home_dir" "$home_dir/.solar/bin/solar" doctor --json > "$doctor_json"
 assert_doctor_ok
+assert_db_schema
+assert_no_bun_home_leak
 
 HOME="$home_dir" "$repo_dir/install.sh" \
     --yes \
@@ -113,8 +155,22 @@ if [ "$sentinel_count" != "1" ]; then
 fi
 
 if [ "$core_gate" = "true" ]; then
+    # Preconditions: the gate must observe THIS run's servers, not a stale
+    # listener leaked by an earlier run.
+    if [ -e /tmp/solar.sock ]; then
+        echo "stale /tmp/solar.sock present; kill the old daemon first" >&2
+        exit 1
+    fi
+    if curl -fsS "http://127.0.0.1:3721/" >/dev/null 2>&1; then
+        echo "port 3721 already serving; kill the stale dashboard first" >&2
+        exit 1
+    fi
+
+    set -m
     HOME="$home_dir" SOLAR_HOME="$home_dir/.solar" "$home_dir/.solar/bin/solar-daemon" >"$daemon_log" 2>&1 &
     daemon_pid="$!"
+    set +m
+
     if ! wait_for_file_socket /tmp/solar.sock; then
         echo "daemon did not create socket" >&2
         cat "$daemon_log" >&2 || true
@@ -126,10 +182,21 @@ if [ "$core_gate" = "true" ]; then
         exit 1
     fi
 
-    (cd "$home_dir/.solar" && HOME="$home_dir" bun run dashboard:web >"$dashboard_log" 2>&1) &
+    # Start the dashboard only after the daemon is up: both open the same
+    # SQLite DB and the first opener's WAL conversion needs an exclusive
+    # lock, so a concurrent cold start hits SQLITE_BUSY.
+    set -m
+    (cd "$home_dir/.solar" && HOME="$home_dir" exec bun run dashboard:web >"$dashboard_log" 2>&1) &
     dashboard_pid="$!"
+    set +m
+
     if ! wait_for_http "http://127.0.0.1:3721/"; then
         echo "dashboard route did not return 200" >&2
+        cat "$dashboard_log" >&2 || true
+        exit 1
+    fi
+    if ! kill -0 "$dashboard_pid" >/dev/null 2>&1; then
+        echo "dashboard process exited early" >&2
         cat "$dashboard_log" >&2 || true
         exit 1
     fi
@@ -140,8 +207,6 @@ if [ "$core_gate" = "true" ]; then
 fi
 
 cleanup
-daemon_pid=""
-dashboard_pid=""
 
 HOME="$home_dir" "$home_dir/.solar/bin/solar" uninstall --yes
 assert_residue_empty
