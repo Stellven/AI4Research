@@ -1,9 +1,0 @@
-{"ts":"2026-05-03T15:11:39Z","event":"phase_transition","by":"solar-harness","sid":"sprint-20260503-111139","data":{"from":"none","to":"spec"}}
-{"ts": "2026-05-03T15:34:34Z", "event": "plan_verdict", "by": "evaluator", "verdict": "approve", "sid": "sprint-20260503-111139"}
-{"ts": "2026-05-03T17:45:28Z", "event": "handoff_submitted", "by": "builder", "sid": "sprint-20260503-111139", "data": {"round": "1"}}
-{"ts": "2026-05-03T17:50:49Z", "event": "eval_failed", "by": "evaluator", "verdict": "fail", "sid": "sprint-20260503-111139"}
-{"ts": "2026-05-03T17:56:59Z", "event": "handoff_submitted", "by": "builder", "sid": "sprint-20260503-111139", "data": {"round": "3"}}
-{"ts": "2026-05-03T17:59:48Z", "event": "eval_passed", "by": "evaluator", "verdict": "pass", "sid": "sprint-20260503-111139"}
-{"ts":"2026-05-03T17:59:54Z","event":"planner_notified","by":"coordinator","data":{"status":"passed"}}
-{"ts": "2026-05-24T01:51:12Z", "event": "accepted_artifact_exported", "source": "accepted-artifact-export", "path": "/Users/lisihao/Knowledge/_raw/solar-harness/accepted/sprint-20260503-111139.accepted.md", "bytes": 21887, "source_hash": "846dfa23b79bbf6638939e8e1bce881d559262199c2f7757aacbcc6c95c90929", "sidecars": {"source_artifact_index": "/Users/lisihao/Knowledge/_raw/solar-harness/accepted/sprint-20260503-111139.source_artifact_index.md", "summary:eval": "/Users/lisihao/Knowledge/_raw/solar-harness/accepted/sprint-20260503-111139.eval.summary.md", "summary:events": "/Users/lisihao/Knowledge/_raw/solar-harness/accepted/sprint-20260503-111139.events.summary.md", "summary:status": "/Users/lisihao/Knowledge/_raw/solar-harness/accepted/sprint-20260503-111139.status.summary.md"}}
-{"ts": "2026-05-24T01:51:12Z", "event": "accepted_artifact_ingest_dispatched", "source": "accepted-artifact-export", "dispatch_file": "/Users/lisihao/Knowledge/_raw/solar-harness/.dispatch/sprint-20260503-111139.dispatch.md"}

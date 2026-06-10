@@ -11,12 +11,19 @@ secrets/
 *.db
 *.sqlite
 *.sqlite3
+.solar/
+core/db/*.db
+core/db/*.db-wal
+core/db/*.db-shm
+core/db/*.sqlite
+core/db/*.sqlite3
 .solar/solar.db
 
 # 缓存和临时文件
 *.log
 *.tmp
 .DS_Store
+**/.DS_Store
 node_modules/
 bun.lockb
 *.cache
@@ -29,6 +36,7 @@ bun.lockb
 
 # 备份文件
 *.backup
+*.backup.*
 *.bak
 *~
 
@@ -51,10 +59,16 @@ coverage/
 # Solar Harness 运行时/证据产物
 harness/.coverage
 harness/run/
+harness/runs/
 harness/state/
 reports/
 harness/intake-requests/
+harness/intents/
 harness/intents/intent-*/
+harness/sprints/
+harness/sprints/**
+insight-reports/
+insight-reports/**
 harness/handovers/*.md
 harness/sprints/*-eval.json
 harness/sprints/*-handoff.md

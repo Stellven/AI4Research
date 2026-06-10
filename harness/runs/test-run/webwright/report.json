@@ -1,6 +1,0 @@
-{
-  "ok": true,
-  "target_url": "https://www.zhihu.com",
-  "stdout": "[Fallback Playwright] Launching browser (headless=True)...\n[Fallback Playwright] Navigating to https://www.zhihu.com...\n[Fallback Playwright] Waiting 5 seconds...\n[Fallback Playwright] Screenshot saved to /Users/lisihao/.solar/harness/runs/test-run/webwright/screenshots/page_screenshot.png\n[Fallback Playwright] Title: \u77e5\u4e4e - \u6709\u95ee\u9898\uff0c\u5c31\u4f1a\u6709\u7b54\u6848\n[Fallback Playwright] URL: https://www.zhihu.com/signin?next=%2F\n[Fallback Playwright] Done.\n",
-  "stderr": ""
-}
