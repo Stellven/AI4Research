@@ -248,74 +248,48 @@ The user should not become the glue between tools, models, agents, browser tabs,
 
 ## Quick Start
 
-### Human install
-
 ```bash
-git clone https://github.com/suraj-subrahmanyan/opensolar.git ~/Solar
-cd ~/Solar
+git clone https://github.com/suraj-subrahmanyan/OpenSolar.git
+cd OpenSolar
 ./install.sh
 ```
 
-What install does:
-
-- copies Solar Core assets into `~/.claude/`;
-- creates `~/.solar/`;
-- syncs the published `harness/` source into `~/.solar/harness/` when present;
-- copies optional packaged runtime components such as `mempalace/` and `codex-bridge/` when present;
-- creates `~/.solar/bin/solar-harness`;
-- runs L1 + L2 install verification.
-
-### Agent install / deploy / self-check path
-
-If you want Claude, Codex, Cursor, Copilot, or another code agent to install Solar for you, give it this exact instruction:
-
-```text
-Install Solar from https://github.com/suraj-subrahmanyan/opensolar using INSTALL-AGENT.md.
-Follow the steps exactly. Before each command, report: purpose, command, and expected output.
-Do not use sudo/root. Stop immediately on any failure and show the exact output.
-After installation, run the L1 + L2 self-check:
-
-cd ~/Solar && ./install.sh
-~/.solar/bin/solar-harness help
-cd ~/Solar && ./scripts/sync-harness-runtime.sh
-~/.solar/bin/solar-harness help
-
-If optional third-party skills are requested, use SKILLS-INSTALL.md, but do not install optional third-party skills without asking first.
-```
-
-Dedicated documents:
-
-| Document | Purpose |
-|---|---|
-| [`INSTALL-AGENT.md`](INSTALL-AGENT.md) | Step-by-step install/deploy/self-check protocol for AI agents. |
-| [`SKILLS-INSTALL.md`](SKILLS-INSTALL.md) | Optional skill expansion protocol for AI agents. |
-| [`scripts/sync-harness-runtime.sh`](scripts/sync-harness-runtime.sh) | Syncs repository `harness/` into the local runtime `~/.solar/harness/`. |
-
-### Harness runtime
+On a terminal this runs interactively — it detects your OS, resolves a
+component selection, shows what it will do, and asks to proceed. For an
+unattended install:
 
 ```bash
-cd ~/Solar
-./scripts/sync-harness-runtime.sh
-~/.solar/bin/solar-harness help
-~/.solar/bin/solar-harness start
+./install.sh --yes --components kernel,harness
 ```
 
-Runtime boundary:
+The default selection is `kernel` + `harness`, plus `core-runtime` when `bun`
+is present. Verify, then start Claude Code:
 
-- repository source: `~/Solar/harness/`
-- local runtime: `~/.solar/harness/`
-- generated runtime state: `run/`, `state/`, `logs/`, `cache/`, `vendor/`, `venvs/`
+```bash
+~/.solar/bin/solar doctor --json    # expect "verdict": "ok"
+claude                              # approve the one-time @~/.claude/solar/SOLAR.md import
+```
 
-Runtime logs, databases, private trajectories, local model caches, and machine-local state should not be committed as source.
+Solar installs a Claude Code kernel overlay under `~/.claude/solar/` and a
+runtime under `~/.solar/`. It never overwrites your `~/.claude/CLAUDE.md`
+wholesale — it edits only a sentinel-marked block, which the uninstaller
+removes cleanly.
 
-### Optional skills and plugins
+The complete guide — all platforms, components, flags, the installed layout,
+agent-driven installs, and the `solar` lifecycle commands — is canonical in
+**[`INSTALL.md`](INSTALL.md)**:
 
-Base install is intentionally conservative:
+| Topic | Where |
+|---|---|
+| Full install guide (platforms, flags, layout, agent install) | [`INSTALL.md`](INSTALL.md) |
+| Component reference (generated from manifests) | [`docs/COMPONENTS.md`](docs/COMPONENTS.md) |
+| Windows / WSL2 | [`docs/WINDOWS.md`](docs/WINDOWS.md) |
+| Uninstalling | [`docs/UNINSTALL.md`](docs/UNINSTALL.md) |
 
-- Solar-bundled skills are copied from `skills/` into `~/.claude/skills/`.
-- Third-party skill packs are optional; use [`SKILLS-INSTALL.md`](SKILLS-INSTALL.md) and ask the user before installing optional repositories.
-- Harness plugin support is installed as framework code. Plugins must provide `harness/plugins/<id>/manifest.yaml` and pass plugin validation before they should be treated as usable.
-- API-backed features can be configured locally with `.env.template`. Do not commit local environment files.
+Bundled skills install under `~/.claude/skills/`; third-party skill packs are
+optional and installed only on request. API keys are never required to install
+— copy `.env.template` to a local `.env` if you want API-backed features
+(never commit `.env`).
 
 ---
 
