@@ -156,6 +156,28 @@ jobs:
       - name: Assert --dry-run writes zero files
         run: ./scripts/check-dry-run.sh
 
+  docs-links:
+    name: docs link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install lychee
+        run: |
+          mkdir -p "$RUNNER_TEMP/ly"
+          curl -fsSL -o "$RUNNER_TEMP/ly.tgz" https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-musl.tar.gz
+          tar xzf "$RUNNER_TEMP/ly.tgz" -C "$RUNNER_TEMP/ly"
+          echo "$RUNNER_TEMP/ly/lychee-x86_64-unknown-linux-musl" >> "$GITHUB_PATH"
+
+      - name: Check canonical docs links
+        run: |
+          # Canonical/shipped docs only. The docs/ design-report corpus is a
+          # dev artifact (not shipped) and is intentionally not link-gated.
+          # WS8 extends this list with INSTALL.md / docs/COMPONENTS.md /
+          # docs/UNINSTALL.md as those canonical docs are created.
+          lychee --no-progress --max-retries 3 --timeout 20 --accept '200,206,429' \
+            README.md AGENTS.md docs/WINDOWS.md docs/UPSTREAM-EXPORT-REQUEST.md
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
