@@ -183,6 +183,28 @@ jobs:
             docs/COMPONENTS.md docs/UNINSTALL.md docs/WINDOWS.md \
             docs/UPSTREAM-EXPORT-REQUEST.md
 
+  installed-clean:
+    name: installed-payload personal-clean
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Scan the shipped payload for personal tokens
+        run: |
+          ./scripts/check-installed-clean.sh --self-test
+          ./scripts/check-installed-clean.sh
+
+      - name: Negative test — a planted personal token must fail the gate
+        run: |
+          printf '\n# planted sihaoli\n' >> core/notify/ntfy.ts
+          if ./scripts/check-installed-clean.sh >/dev/null 2>&1; then
+            git checkout -- core/notify/ntfy.ts
+            echo "::error title=installed-clean negative test::gate missed a planted personal token"
+            exit 1
+          fi
+          git checkout -- core/notify/ntfy.ts
+          echo "negative test ok: planted personal token correctly caught"
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
