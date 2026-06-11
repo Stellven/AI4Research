@@ -89,3 +89,7 @@ shell-snapshots/
 client_secret_*.json
 *.googleusercontent.com.json
 *credentials*.json
+
+# 本地工作文件（策略要求：仅本地，不得提交）
+MIGRATION_PLAN.md
+WORKLOG.md
