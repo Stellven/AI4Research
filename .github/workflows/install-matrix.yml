@@ -47,13 +47,18 @@ jobs:
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
-          $issues = Invoke-ScriptAnalyzer -Path ./install.ps1 -Severity Error,Warning
+          # Exclusions appropriate for a user-facing installer bootstrapper:
+          # Write-Host is intentional CLI output; the internal state-changing
+          # helpers do not need ShouldProcess plumbing. All other Error/Warning
+          # rules stay active.
+          $exclude = @('PSAvoidUsingWriteHost', 'PSUseShouldProcessForStateChangingFunctions')
+          $issues = Invoke-ScriptAnalyzer -Path ./install.ps1 -Severity Error,Warning -ExcludeRule $exclude
           $issues | Format-Table -AutoSize
           if ($issues.Count -gt 0) {
             Write-Error "PSScriptAnalyzer found $($issues.Count) issue(s)"
             exit 1
           }
-          Write-Host "install.ps1 lint clean"
+          Write-Output "install.ps1 lint clean"
 
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
