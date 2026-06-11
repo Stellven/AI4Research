@@ -1,3 +1,8 @@
 {
-  "UserPromptSubmit": ["intent-engine-hook.sh"]
+  "UserPromptSubmit": ["intent-engine-hook.sh"],
+  "SessionStart": ["session-resume-hook.sh"],
+  "PreCompact": ["pre-compact-anchor.sh"],
+  "SessionEnd": ["state-auto-updater.sh", "session-end-save.sh"],
+  "Stop": ["solar-stop-reminder.sh"],
+  "PostToolUse": ["state-read-tracker.sh", "context-monitor.sh"]
 }

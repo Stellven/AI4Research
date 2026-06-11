@@ -16,7 +16,7 @@ fi
 
 # 2. 检查是否有未文档化的重要讨论
 # 通过检测关键词来判断
-if [ -f "$HOME/.solar/solar.db" ]; then
+if [ -f "$HOME/.solar/db/solar.db" ]; then
   SESSION_ID="$SESSION_ID" PROJECT_DIR="$PROJECT_DIR" python3 - <<'PY' || true
 import json
 import os

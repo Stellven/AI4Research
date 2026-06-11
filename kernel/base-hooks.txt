@@ -6,3 +6,10 @@
 # settings-merge mechanism supports that without changing this payload model.
 intent-engine-hook
 hook-logger
+session-resume-hook
+pre-compact-anchor
+state-auto-updater
+session-end-save
+solar-stop-reminder
+state-read-tracker
+context-monitor

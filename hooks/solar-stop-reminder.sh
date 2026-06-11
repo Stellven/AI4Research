@@ -3,7 +3,7 @@
 # Claude 回复结束前触发
 # 检查 STATE.md In-Progress 任务 + OS 通知
 
-source "$HOME/.claude/hooks/hook-logger.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/hook-logger.sh"
 _START_MS=$(hook_time_ms)
 
 STATE_FILE="${SOLAR_STATE_FILE:-$HOME/.solar/STATE.md}"

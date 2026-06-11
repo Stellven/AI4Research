@@ -3,7 +3,7 @@
 # 在 SessionEnd 时自动更新 STATE.md 的 Progress 和 AUTO-PROGRESS 区块
 
 STATE_FILE="$HOME/.solar/STATE.md"
-DB_FILE="$HOME/.solar/solar.db"
+DB_FILE="$HOME/.solar/db/solar.db"
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -r "$HOOK_DIR/lib/portable.sh" ]]; then
     # shellcheck source=lib/portable.sh
