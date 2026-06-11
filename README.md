@@ -230,7 +230,7 @@ The user should not become the glue between tools, models, agents, browser tabs,
 | Actor / host registry | Available | Models AI workers and execution surfaces with capability, cost, quota, lifecycle, mailbox, and evidence fields. |
 | Operator runtime | Available | Leases operators, submits task envelopes, writes inbox files and heartbeats, records results, and blocks unavailable states. |
 | Logical operator catalog | Available | Maps high-level work classes to capability requirements, concurrency limits, workflow stages, candidate actors, and fallback policy. |
-| Multi-pane / TUI execution | Available | Product delivery panes plus builder lab style execution. |
+| Multi-pane / TUI execution | Plumbing available; live Claude manual-pending | `solar-harness` can preflight deps, create the tmux layout, start coordinator plumbing, and verify dispatch files. Live Claude panes and real delegation results require owner/manual verification when Claude auth/quota is available. |
 | Model / operator registry | Available | Model aliases, physical operators, actors, hosts, capability/risk/cost profiles. |
 | Capability capsule registry | Available / evolving | Stable and draft capsules for requirement compilation, research, understand-anything, guards, and resources. |
 | Evidence-native evaluation | Available | Handoff, eval, node verdict, session logs, deterministic research gates. |
@@ -274,6 +274,11 @@ Solar installs a Claude Code kernel overlay under `~/.claude/solar/` and a
 runtime under `~/.solar/`. It never overwrites your `~/.claude/CLAUDE.md`
 wholesale — it edits only a sentinel-marked block, which the uninstaller
 removes cleanly.
+
+Runtime boundary: deterministic install, doctor, preflight, layout, coordinator,
+and dispatch-file plumbing are available today. Live Claude pane behavior and
+real Claude delegation output are intentionally manual-pending until a user with
+working Claude auth/quota verifies them.
 
 The complete guide — all platforms, components, flags, the installed layout,
 agent-driven installs, and the `solar` lifecycle commands — is canonical in

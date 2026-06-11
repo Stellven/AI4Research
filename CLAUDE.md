@@ -49,8 +49,12 @@ git diff --check
 bash scripts/check-privacy.sh
 bash scripts/check-installed-clean.sh
 bash scripts/smoke-install-matrix.sh minimal
-bash scripts/release-cut.sh --source HEAD --exclude-file release-exclude.txt
+bash scripts/release-cut.sh --source HEAD
 ```
+
+Private migration branches may need owner-provided release-cut inputs before the
+public tree is cut. Public contributor docs must not depend on local-only
+release files being present.
 
 For harness runtime launch work, also run:
 

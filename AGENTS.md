@@ -6,12 +6,12 @@ maintainers working in this repo. It is not an installed runtime artifact.
 
 ## Source of Truth
 
-- Read `MIGRATION_PLAN.md` before migration work.
-- Read `WORKLOG.md` before resuming an in-progress local task.
-- Do not regenerate, restructure, or reinterpret the migration plan during
-  implementation. If the plan conflicts with verified repository facts, record
-  the mismatch in `WORKLOG.md` and stop only when the conflict blocks the
-  current task.
+- For public contributors, use the current issue/request, verified git state,
+  `README.md`, `INSTALL.md`, and the tracked docs as the source of truth.
+- Maintainer migration checkouts may also include local-only planning/worklog
+  notes. Read them when present and relevant, but never publish them.
+- If task notes conflict with verified repository facts, record the mismatch in
+  the local task notes and stop only when the conflict blocks the current task.
 
 ## Scope
 
@@ -46,8 +46,8 @@ change to replace them wholesale with upstream originals.
 - Work on `pkg/migration` unless the user asks for a different branch.
 - Local commits are allowed when a scoped task has been verified.
 - Do not push branches, tags, or commits without explicit user approval.
-- Keep `MIGRATION_PLAN.md` and `WORKLOG.md` as local working documents unless
-  the user explicitly asks to publish them.
+- Keep local planning/worklog notes out of public commits unless the user
+  explicitly asks to publish them.
 - One task should map to one commit. Use workstream-prefixed messages such as
   `WS1: repair package manifest`.
 
@@ -65,6 +65,7 @@ change to replace them wholesale with upstream originals.
 ## Verification
 
 - Prefer automated checks over judgment calls.
-- Record meaningful command results and gate status in `WORKLOG.md`.
+- Record meaningful command results and gate status in the local task notes when
+  the task provides them.
 - If a required check cannot run, record the reason and keep the task marked as
   unverified until the missing check is addressed.
