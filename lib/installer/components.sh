@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# COMPONENT_* manifest fields are reset in load_component() and set by the
+# sourced component.sh, then consumed cross-file (mcp-register / config-vars /
+# py-deps / component scripts). shellcheck cannot see that cross-file use, so
+# SC2034 ("appears unused") is a false positive for this manifest loader.
+# shellcheck disable=SC2034
 
 COMPONENT_ORDER="kernel core-runtime harness skills-md skills-office skills-obsidian skills-calendar skills-browser codex-bridge mempalace daemons"
 

@@ -132,6 +132,21 @@ jobs:
           fi
           grep -E 'gitleaks secret scan|negative self-test|live scan|negative test ok|privacy-gate passed' "$RUNNER_TEMP/privacy.log" | python3 -c 'import sys; d = sys.stdin.read(); print("::notice title=privacy-gate evidence::" + d.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
 
+  shellcheck:
+    name: shellcheck installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install shellcheck 0.10.0
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/sc.tar.xz" https://github.com/koalaman/shellcheck/releases/download/v0.10.0/shellcheck-v0.10.0.linux.x86_64.tar.xz
+          tar xJf "$RUNNER_TEMP/sc.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/shellcheck-v0.10.0" >> "$GITHUB_PATH"
+
+      - name: shellcheck install.sh + lib/installer (warning severity)
+        run: shellcheck -S warning install.sh lib/installer/*.sh
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
