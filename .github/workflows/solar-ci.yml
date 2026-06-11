@@ -116,6 +116,7 @@ jobs:
           bash harness/tests/test-multi-task-entrypoint.sh
           bash harness/tests/test-pm-planner-html-artifacts.sh
           bash scripts/check-harness-plumbing.sh
+          bash scripts/check-solar-ui-lite.sh
 
   verification-release-gate:
     name: Verification release gate

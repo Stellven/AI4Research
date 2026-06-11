@@ -250,11 +250,16 @@ All lifecycle operations go through `~/.solar/bin/solar`:
 ```bash
 solar doctor [--json]              # health + drift check
 solar update [extra install flags] # re-run the installer for the recorded components
+solar ui [--once] [--watch N] [--no-color] # read-only terminal dashboard
 solar backup [--out FILE]          # archive config + secrets + receipt + db
 solar restore <archive>            # restore from a backup archive
 solar components list              # list installed components
 solar uninstall [--yes] [--keep-data] [--dry-run]
 ```
+
+`solar ui` is TVS-free and read-only. It shows install health, harness
+preflight/readiness, tmux/coordinator/runtime artifacts when present, and the
+manual boundary for live Claude panes and real delegation.
 
 `solar update` re-runs the installer from the source directory recorded in the
 receipt, for exactly the components you installed. Uninstalling is documented

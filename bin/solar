@@ -14,6 +14,7 @@ Usage:
   solar update [extra install flags]
   solar backup [--out FILE]
   solar restore <archive>
+  solar ui [--once] [--watch N] [--no-color]
   solar uninstall [--yes] [--keep-data] [--dry-run]
   solar components list
 EOF
@@ -366,12 +367,41 @@ PY
     fi
 }
 
+do_ui() {
+    script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+    helper=""
+    for candidate in \
+        "$SOLAR_HOME/harness/lib/cli/solar_ui_lite.py" \
+        "$script_dir/../harness/lib/cli/solar_ui_lite.py"
+    do
+        if [ -f "$candidate" ]; then
+            helper="$candidate"
+            break
+        fi
+    done
+    if [ -z "$helper" ]; then
+        src=""
+        if src="$(receipt_field source_dir 2>/dev/null)"; then
+            if [ -f "$src/harness/lib/cli/solar_ui_lite.py" ]; then
+                helper="$src/harness/lib/cli/solar_ui_lite.py"
+            fi
+        fi
+    fi
+    if [ -z "$helper" ]; then
+        echo "Solar UI-lite helper not found; reinstall with harness or run from the source checkout." >&2
+        exit 1
+    fi
+    command -v python3 >/dev/null 2>&1 || { echo "python3 is required for solar ui" >&2; exit 1; }
+    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" exec python3 "$helper" "$@"
+}
+
 cmd="${1:-}"
 case "$cmd" in
     doctor) shift; doctor "$@" ;;
     update) shift; do_update "$@" ;;
     backup) shift; do_backup "$@" ;;
     restore) shift; do_restore "$@" ;;
+    ui) shift; do_ui "$@" ;;
     uninstall) shift; uninstall "$@" ;;
     components)
         shift
