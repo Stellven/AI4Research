@@ -36,6 +36,9 @@ jobs:
       - name: Check daemon templates render clean
         run: ./scripts/check-daemons-render.sh
 
+      - name: Check docs/COMPONENTS.md is in sync with the manifests
+        run: ./scripts/gen-components-doc.sh --check
+
   ps1-lint:
     name: install.ps1 lint
     runs-on: ubuntu-latest
@@ -176,7 +179,9 @@ jobs:
           # WS8 extends this list with INSTALL.md / docs/COMPONENTS.md /
           # docs/UNINSTALL.md as those canonical docs are created.
           lychee --no-progress --max-retries 3 --timeout 20 --accept '200,206,429' \
-            README.md AGENTS.md docs/WINDOWS.md docs/UPSTREAM-EXPORT-REQUEST.md
+            README.md AGENTS.md INSTALL.md \
+            docs/COMPONENTS.md docs/UNINSTALL.md docs/WINDOWS.md \
+            docs/UPSTREAM-EXPORT-REQUEST.md
 
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
