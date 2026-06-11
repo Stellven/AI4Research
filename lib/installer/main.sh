@@ -110,8 +110,13 @@ main() {
     ensure_base_dirs
     install_solar_bin
     config_init
-    install_components
+    # Initialize the database BEFORE installing components so it exists before
+    # the daemons component starts the service. Otherwise the daemon's first
+    # boot races db-init and fails (recovered only by the restart policy).
+    # db_init reads schema from SOURCE_DIR, so it has no dependency on the
+    # component copy step.
     db_init
+    install_components
     settings_merge
     mcp_register
     write_receipt
