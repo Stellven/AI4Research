@@ -6,6 +6,7 @@
 . "$SOLAR_SOURCE_DIR/lib/installer/kernel-gen.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/render-template.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/config-vars.sh"
+. "$SOLAR_SOURCE_DIR/lib/installer/py-deps.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/settings-merge.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/mcp-register.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/db-init.sh"
@@ -31,6 +32,7 @@ Options:
   --dry-run                   Print actions without writing
   --fake-keys                 Write test-only placeholder env files
   --skip-llm-cli              Skip LLM CLI checks for CI
+  --skip-py-deps              Validate Python requirements only (deps-light CI)
   --help                      Show this help
 EOF
 }
@@ -40,6 +42,7 @@ parse_args() {
     DRY_RUN="${SOLAR_DRY_RUN:-false}"
     FAKE_KEYS="${SOLAR_FAKE_KEYS:-false}"
     SKIP_LLM_CLI="${SOLAR_SKIP_LLM_CLI:-false}"
+    SKIP_PY_DEPS="${SOLAR_SKIP_PY_DEPS:-false}"
     NO_HOOKS="${SOLAR_NO_HOOKS:-false}"
     NO_MCP="${SOLAR_NO_MCP:-false}"
     LIST_COMPONENTS=false
@@ -63,6 +66,7 @@ parse_args() {
             --dry-run) DRY_RUN=true; shift ;;
             --fake-keys) FAKE_KEYS=true; shift ;;
             --skip-llm-cli) SKIP_LLM_CLI=true; shift ;;
+            --skip-py-deps) SKIP_PY_DEPS=true; shift ;;
             --no-hooks) NO_HOOKS=true; shift ;;
             --no-mcp) NO_MCP=true; shift ;;
             --no-modify-path|--quiet|--verbose) shift ;;
@@ -70,7 +74,7 @@ parse_args() {
             *) die "unknown option: $1" ;;
         esac
     done
-    export YES DRY_RUN FAKE_KEYS SKIP_LLM_CLI NO_HOOKS NO_MCP REQUESTED_COMPONENTS SOLAR_SET_VARS
+    export YES DRY_RUN FAKE_KEYS SKIP_LLM_CLI SKIP_PY_DEPS NO_HOOKS NO_MCP REQUESTED_COMPONENTS SOLAR_SET_VARS
 }
 
 confirm_if_needed() {

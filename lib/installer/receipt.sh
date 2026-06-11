@@ -35,6 +35,10 @@ all_roots = {
     "harness": [os.path.join(os.environ["SOLAR_HOME"], "harness")],
     "skills-md": [os.path.join(os.environ["CLAUDE_DIR"], "skills")],
     "codex-bridge": [os.path.join(os.environ["SOLAR_HOME"], "codex-bridge")],
+    "mempalace": [
+        os.path.join(os.environ["SOLAR_HOME"], "mempalace"),
+        os.path.join(os.environ["SOLAR_HOME"], "venv"),
+    ],
 }
 receipt = {
     "schema": 1,

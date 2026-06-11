@@ -310,7 +310,8 @@ uninstall() {
     fi
     rmdir "$CLAUDE_DIR" 2>/dev/null || true
     if [ "$keep_data" = "true" ]; then
-        rm -rf "$SOLAR_HOME/bin" "$SOLAR_HOME/harness" "$SOLAR_HOME/core" "$SOLAR_HOME/codex-bridge"
+        rm -rf "$SOLAR_HOME/bin" "$SOLAR_HOME/harness" "$SOLAR_HOME/core" "$SOLAR_HOME/codex-bridge" \
+               "$SOLAR_HOME/mempalace" "$SOLAR_HOME/venv"
         rm -f "$RECEIPT_PATH"
     elif guard_path "$SOLAR_HOME"; then
         rm -rf "$SOLAR_HOME"

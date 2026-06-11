@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-COMPONENT_ORDER="kernel core-runtime harness skills-md skills-office skills-obsidian skills-calendar skills-browser codex-bridge daemons"
+COMPONENT_ORDER="kernel core-runtime harness skills-md skills-office skills-obsidian skills-calendar skills-browser codex-bridge mempalace daemons"
 
 component_manifest() {
     printf '%s/components.d/%s/component.sh\n' "$SOURCE_DIR" "$1"
@@ -17,6 +17,8 @@ load_component() {
     COMPONENT_MCP_SERVERS=""
     COMPONENT_PLATFORMS=""
     COMPONENT_CONFIG_VARS=""
+    COMPONENT_PYTHON_REQS=""
+    COMPONENT_REQUIRES_COMPONENTS=""
     # shellcheck source=/dev/null
     . "$manifest"
 }
