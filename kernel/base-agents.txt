@@ -1,4 +1,4 @@
-# Kernel base agents — the 7 on the @Agent line, installed to
+# Kernel base agents — the active @Agent line, installed to
 # ~/.claude/solar/agents/. The other ~128 agents ship only with the
 # agents-extra component (off by default).
 dev
@@ -6,5 +6,4 @@ qa
 test
 write
 pm
-secretary
 researcher

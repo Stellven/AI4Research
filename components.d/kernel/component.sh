@@ -19,7 +19,7 @@ component_install() {
     fi
 
     # Rules and agents install from allowlists (WS2): only general-discipline
-    # rules and the 7 base @Agent files ship with the base kernel; rules/agents
+    # rules and the active base @Agent files ship with the base kernel; rules/agents
     # whose purpose is an excised/optional component are parked in the repo and
     # not installed. Hook curation + registration is owned by the settings-merge
     # workstream.

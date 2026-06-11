@@ -1,2 +1,2 @@
 ## @Agent
-`@Dev` `@QA` `@Test` `@Write` `@PM` `@Secretary` `@Researcher`
+`@Dev` `@QA` `@Test` `@Write` `@PM` `@Researcher`

@@ -126,7 +126,7 @@ if echo "$PROMPT_TRIMMED" | grep -qiE '^@[A-Za-z]'; then
     AGENT_UPPER=$(echo "$AGENT_TAG" | tr '[:lower:]' '[:upper:]')
 
     # 映射 @Agent 到 subagent_type
-    # Base @Agent roster (the 7 agents the base kernel installs). The
+    # Base @Agent roster (the active agents the base kernel installs). The
     # extended roster is dispatched only when the agents-extra component
     # ships its own intents.conf entries.
     case "$AGENT_UPPER" in
@@ -135,7 +135,6 @@ if echo "$PROMPT_TRIMMED" | grep -qiE '^@[A-Za-z]'; then
         @TEST)        SUBAGENT="test" ;;
         @WRITE)       SUBAGENT="write" ;;
         @PM)          SUBAGENT="pm" ;;
-        @SECRETARY)   SUBAGENT="secretary" ;;
         @RESEARCHER)  SUBAGENT="researcher" ;;
         *)            SUBAGENT="" ;;
     esac
