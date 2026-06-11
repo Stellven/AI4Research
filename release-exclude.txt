@@ -2,7 +2,8 @@
 # Consumed by: scripts/release-cut.sh --exclude-file release-exclude.txt
 #
 # These are the parked, NON-INSTALLED files that still carry personal/persona
-# tokens (the release gate's check-2 set, 19 files). Each was confirmed NOT in
+# tokens (18 files). CLAUDE.md is NOT here: per owner decision it is scrubbed
+# personal-data-free and KEPT as public contributor docs. Each was confirmed NOT in
 # the shipped allowlists (kernel/base-rules.txt, base-hooks.txt, base-agents.txt),
 # so excluding it per-file drops NO installer-required file. Exclude-vs-scrub is
 # your call PER FILE — e.g. you may prefer to keep a SCRUBBED CLAUDE.md as public
@@ -18,8 +19,7 @@
 # --- contain token-bearing FILENAMES, so it excludes itself) ---
 release-exclude.txt
 
-# --- root contributor / trigger docs ---
-CLAUDE.md
+# --- root trigger docs (CLAUDE.md is scrubbed + KEPT, not excluded) ---
 SPRINTS-HIGHLIGHTS.md
 TRIGGERS.md
 
