@@ -187,12 +187,13 @@ VALUES
 ('risk_tolerance', 'risk', '风险容忍', '对风险的接受程度', 'continuous', '[0, 1]'),
 ('automation_trust', 'risk', '自动化信任', '对自动执行的信任程度', 'continuous', '[0, 1]');
 
--- 初始关系 (监护人)
+-- 初始关系 (监护人) — neutral default identity; the installer/user personalizes
+-- the guardian at runtime (no personal data seeded into a fresh install).
 INSERT OR IGNORE INTO ont_relationships (relationship_id, entity_type, entity_name, relationship_type, importance, context)
-VALUES ('guardian:sihaoli', 'person', 'sihaoli', 'guardian', 1.0, '{"role": "监护人", "first_law": true}');
+VALUES ('guardian:owner', 'person', 'owner', 'guardian', 1.0, '{"role": "监护人", "first_law": true}');
 
 -- 全局规则初始化
 INSERT OR IGNORE INTO ont_global_rules (rule_key, rule_value, source_dimension, confidence)
 VALUES
 ('confirm_external_actions', 'true', 'first_law', 1.0),
-('guardian_name', '"sihaoli"', 'first_law', 1.0);
+('guardian_name', '"owner"', 'first_law', 1.0);
