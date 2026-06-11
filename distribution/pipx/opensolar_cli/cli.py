@@ -1,4 +1,4 @@
-"""Thin pipx-friendly wrapper for the OpenSolar shell installer."""
+"""Thin pipx-friendly wrapper for the OpenJiuwen Solar shell installer."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ PASSTHROUGH_ENV = (
 )
 
 HELP = f"""\
-OpenSolar pipx demo wrapper
+OpenJiuwen Solar pipx demo wrapper
 
 Usage:
   opensolar <command> [args...]
@@ -43,6 +43,9 @@ Commands:
 Demo pipx install:
   pipx install ./distribution/pipx
   pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@demo/pipx-wrapper#subdirectory=distribution/pipx"
+
+Package name:
+  openjiuwen-solar installs the `opensolar` command.
 
 Examples:
   opensolar install --yes --components kernel,harness

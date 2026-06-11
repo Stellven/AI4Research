@@ -3,14 +3,14 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "opensolar"
+name = "openjiuwen-solar"
 version = "0.1.0"
-description = "Demo-only pipx wrapper for the OpenSolar shell installer"
+description = "Demo-only pipx wrapper for the OpenJiuwen Solar shell installer"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
-  { name = "OpenSolar contributors" }
+  { name = "OpenJiuwen Solar contributors" }
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",

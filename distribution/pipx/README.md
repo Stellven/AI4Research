@@ -1,8 +1,9 @@
-# OpenSolar pipx Demo Wrapper
+# OpenJiuwen Solar pipx Demo Wrapper
 
-This package installs a thin `opensolar` console command for demo use. It does
-not bundle the OpenSolar repository payload into the wheel. `opensolar install`
-delegates to the canonical shell path:
+This package is named `openjiuwen-solar` and installs a thin `opensolar`
+console command for demo use. It does not bundle the OpenSolar repository
+payload into the wheel. `opensolar install` delegates to the canonical shell
+path:
 
 ```text
 get-solar.sh -> clone selected channel into $SOLAR_SRC -> install.sh
@@ -53,8 +54,8 @@ and exits `1`.
 
 ## Warnings
 
-`pipx uninstall opensolar` removes only this wrapper. It does not uninstall the
-OpenSolar runtime. Run this first:
+`pipx uninstall openjiuwen-solar` removes only this wrapper. It does not
+uninstall the OpenSolar runtime. Run this first:
 
 ```bash
 opensolar uninstall --yes
