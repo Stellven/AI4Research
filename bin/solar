@@ -164,6 +164,30 @@ PY
     fi
 }
 
+# Stop and remove daemon services Solar registered (recorded at install time).
+# Best-effort: missing launchctl/systemctl is not fatal.
+remove_daemons() {
+    record="$SOLAR_HOME/registered-daemons.txt"
+    [ -f "$record" ] || return 0
+    while IFS="$(printf '\t')" read -r kind label path; do
+        case "$kind" in
+            launchd)
+                [ -f "$path" ] && launchctl unload "$path" >/dev/null 2>&1 || true
+                rm -f "$path"
+                ;;
+            systemd)
+                if command -v systemctl >/dev/null 2>&1; then
+                    systemctl --user disable --now "$label" >/dev/null 2>&1 || true
+                fi
+                rm -f "$path"
+                # Remove now-empty systemd dirs Solar created (rmdir no-ops if
+                # the dir still holds user content).
+                rmdir "$HOME/.config/systemd/user" "$HOME/.config/systemd" "$HOME/.config" 2>/dev/null || true
+                ;;
+        esac
+    done < "$record"
+}
+
 # Remove MCP servers Solar registered (recorded at install time), via the
 # sanctioned claude CLI. Best-effort: a missing claude CLI is not fatal.
 remove_mcp_servers() {
@@ -278,6 +302,7 @@ uninstall() {
 
     remove_sentinel
     remove_solar_settings
+    remove_daemons
     remove_mcp_servers
     remove_installed_skills
     if guard_path "$CLAUDE_DIR/solar"; then

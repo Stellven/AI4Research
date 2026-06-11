@@ -33,6 +33,9 @@ jobs:
       - name: Check kernel assemblies are clean
         run: ./scripts/check-kernel-gen.sh
 
+      - name: Check daemon templates render clean
+        run: ./scripts/check-daemons-render.sh
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-COMPONENT_ORDER="kernel core-runtime harness skills-md codex-bridge"
+COMPONENT_ORDER="kernel core-runtime harness skills-md codex-bridge daemons"
 
 component_manifest() {
     printf '%s/components.d/%s/component.sh\n' "$SOURCE_DIR" "$1"
