@@ -112,6 +112,59 @@ guard_path() {
     return 0
 }
 
+# Strip Solar-owned hook entries from settings.json, keyed by the
+# "/solar/hooks/" command path segment. User-owned entries and other keys
+# are preserved; if nothing else remains the file is removed (residue-free).
+remove_solar_settings() {
+    settings_file="$CLAUDE_DIR/settings.json"
+    [ -f "$settings_file" ] || return 0
+    python3 - "$settings_file" <<'PY'
+import json
+import os
+import sys
+
+settings_file = sys.argv[1]
+marker = "/solar/hooks/"
+with open(settings_file, encoding="utf-8") as f:
+    text = f.read().strip()
+settings = json.loads(text) if text else {}
+hooks = settings.get("hooks", {}) if isinstance(settings, dict) else {}
+
+
+def is_solar(cmd):
+    return isinstance(cmd, str) and marker in cmd
+
+
+for event in list(hooks.keys()):
+    groups = hooks.get(event) or []
+    new_groups = []
+    for group in groups:
+        if not isinstance(group, dict):
+            new_groups.append(group)
+            continue
+        kept = [h for h in group.get("hooks", []) if not is_solar(h.get("command"))]
+        if kept:
+            g = dict(group)
+            g["hooks"] = kept
+            new_groups.append(g)
+    if new_groups:
+        hooks[event] = new_groups
+    else:
+        del hooks[event]
+if isinstance(settings, dict) and not hooks:
+    settings.pop("hooks", None)
+
+if settings:
+    tmp = settings_file + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(settings, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, settings_file)
+else:
+    os.remove(settings_file)
+PY
+}
+
 uninstall() {
     yes=false
     keep_data=false
@@ -139,6 +192,7 @@ uninstall() {
     fi
 
     remove_sentinel
+    remove_solar_settings
     remove_installed_skills
     if guard_path "$CLAUDE_DIR/solar"; then
         rm -rf "$CLAUDE_DIR/solar"

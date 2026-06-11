@@ -4,6 +4,7 @@
 . "$SOLAR_SOURCE_DIR/lib/installer/paths.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/copy-engine.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/kernel-gen.sh"
+. "$SOLAR_SOURCE_DIR/lib/installer/settings-merge.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/db-init.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/receipt.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/doctor.sh"
@@ -33,6 +34,8 @@ parse_args() {
     DRY_RUN="${SOLAR_DRY_RUN:-false}"
     FAKE_KEYS="${SOLAR_FAKE_KEYS:-false}"
     SKIP_LLM_CLI="${SOLAR_SKIP_LLM_CLI:-false}"
+    NO_HOOKS="${SOLAR_NO_HOOKS:-false}"
+    NO_MCP="${SOLAR_NO_MCP:-false}"
     LIST_COMPONENTS=false
     REQUESTED_COMPONENTS="${SOLAR_COMPONENTS:-}"
 
@@ -46,12 +49,14 @@ parse_args() {
             --dry-run) DRY_RUN=true; shift ;;
             --fake-keys) FAKE_KEYS=true; shift ;;
             --skip-llm-cli) SKIP_LLM_CLI=true; shift ;;
-            --no-hooks|--no-mcp|--no-modify-path|--quiet|--verbose) shift ;;
+            --no-hooks) NO_HOOKS=true; shift ;;
+            --no-mcp) NO_MCP=true; shift ;;
+            --no-modify-path|--quiet|--verbose) shift ;;
             --help|-h) usage; exit 0 ;;
             *) die "unknown option: $1" ;;
         esac
     done
-    export YES DRY_RUN FAKE_KEYS SKIP_LLM_CLI REQUESTED_COMPONENTS
+    export YES DRY_RUN FAKE_KEYS SKIP_LLM_CLI NO_HOOKS NO_MCP REQUESTED_COMPONENTS
 }
 
 confirm_if_needed() {
@@ -87,6 +92,7 @@ main() {
     install_solar_bin
     install_components
     db_init
+    settings_merge
     write_receipt
     if [ "$DRY_RUN" = "true" ]; then
         green "OpenSolar dry-run complete: $SELECTED_COMPONENTS"

@@ -108,6 +108,27 @@ print("db schema assertions passed")
 PY
 }
 
+assert_settings_registered() {
+    SETTINGS="$home_dir/.claude/settings.json" python3 - <<'PY'
+import json
+import os
+
+path = os.environ["SETTINGS"]
+if not os.path.isfile(path):
+    raise SystemExit(f"settings.json was not created: {path}")
+with open(path, encoding="utf-8") as f:
+    data = json.load(f)
+cmds = [
+    h.get("command", "")
+    for group in data.get("hooks", {}).get("UserPromptSubmit", [])
+    for h in group.get("hooks", [])
+]
+if not any("/solar/hooks/intent-engine-hook.sh" in c for c in cmds):
+    raise SystemExit(f"intent-engine-hook not registered in settings.json: {cmds!r}")
+print("settings hook registration: ok")
+PY
+}
+
 assert_no_bun_home_leak() {
     if [ -e "$home_dir/.bun" ]; then
         echo "bun wrote into the sandbox home outside SOLAR_HOME: $home_dir/.bun" >&2
@@ -140,6 +161,7 @@ HOME="$home_dir" "$repo_dir/install.sh" \
 HOME="$home_dir" "$home_dir/.solar/bin/solar" doctor --json > "$doctor_json"
 assert_doctor_ok
 assert_db_schema
+assert_settings_registered
 assert_no_bun_home_leak
 
 HOME="$home_dir" "$repo_dir/install.sh" \
