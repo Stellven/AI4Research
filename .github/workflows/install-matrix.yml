@@ -36,6 +36,25 @@ jobs:
       - name: Check daemon templates render clean
         run: ./scripts/check-daemons-render.sh
 
+  ps1-lint:
+    name: install.ps1 lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+          $issues = Invoke-ScriptAnalyzer -Path ./install.ps1 -Severity Error,Warning
+          $issues | Format-Table -AutoSize
+          if ($issues.Count -gt 0) {
+            Write-Error "PSScriptAnalyzer found $($issues.Count) issue(s)"
+            exit 1
+          }
+          Write-Host "install.ps1 lint clean"
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
