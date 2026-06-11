@@ -1,12 +1,7 @@
 ---
 name: test
 description: 测试与性能基准 (编排+验收，牛马执行)
-delegation_mode: mcp
-mcp_tool: brain-router
-default_models:
-  - deepseek-v3               # 测试编写 (creator, 9.0分)
-  - deepseek-r1               # 回归检测 (judge, 7.5分)
-  - gemini-3.1-pro-preview    # 覆盖率审查 (explorer L4, 7.3分)
+delegation_mode: task
 tools: Read, Write, Bash, Grep, Glob
 ontology: required
 ---
@@ -14,16 +9,6 @@ ontology: required
 # @Test — 测试与性能基准
 
 ## 任务路由
-
-### 外部模型 (brain-router)
-
-| 类型 | 牛马 | 角色 | 说明 |
-|------|------|------|------|
-| 测试用例生成 | deepseek-v3 | creator | 9.0分，AAA模式，边界+异常 |
-| 覆盖率/用例质量 | gemini-3.1-pro-preview | explorer L4 | 7.3分，逐项检查 |
-| 性能回归检测 | deepseek-r1 | judge | 7.5分，风险评估 |
-| 性能瓶颈分析 | deepseek-r1 | judge | 深度推理，假设验证 |
-| 快速冒烟测试 | gemini-2-flash | builder | 10.0分，速度最快 |
 
 ### Claude 子代理 (Task)
 

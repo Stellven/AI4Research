@@ -1,12 +1,7 @@
 ---
 name: write
 description: 文档与报告撰写 (编排+验收，牛马执行)
-delegation_mode: mcp
-mcp_tool: brain-router
-default_models:
-  - deepseek-v3               # 长文写作 (creator, 9.0分)
-  - gemini-3.1-pro-preview    # 技术文档 (explorer L4, 7.3分)
-  - deepseek-r1               # 结构审查 (judge, 7.5分)
+delegation_mode: task
 tools: Read, Write, Edit, Grep, Glob
 ontology: required
 ---
@@ -14,15 +9,6 @@ ontology: required
 # @Write — 文档与报告撰写
 
 ## 任务路由
-
-### 外部模型 (brain-router)
-
-| 类型 | 牛马 | 角色 | 说明 |
-|------|------|------|------|
-| 长文/报告撰写 | deepseek-v3 | creator | 9.0分，中文流畅，长文生成强 |
-| 技术文档 | gemini-3.1-pro-preview | explorer L4 | 7.3分，格式严谨 |
-| 逻辑/结构审查 | deepseek-r1 | judge | 7.5分，深度推理 |
-| 快速初稿 | deepseek-v3 | creator | 速度快，质量高 |
 
 ### Claude 子代理 (Task)
 

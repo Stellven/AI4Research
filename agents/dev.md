@@ -1,12 +1,7 @@
 ---
 name: dev
 description: 开发与设计 (编排+验收，牛马执行)
-delegation_mode: mcp
-mcp_tool: brain-router
-default_models:
-  - deepseek-v3               # 日常编码+架构设计 (creator, 9.0分)
-  - gemini-3.1-pro-preview    # 关键代码 (explorer L4, 7.3分)
-  - deepseek-r1               # 权衡决策 (judge, 7.5分)
+delegation_mode: task
 tools: Read, Write, Edit, Bash, Grep, Glob
 ontology: required
 ---
@@ -14,19 +9,6 @@ ontology: required
 # @Dev — 开发与设计
 
 ## 任务路由
-
-### 外部模型 (brain-router)
-
-| 类型 | 牛马 | 角色 | 说明 |
-|------|------|------|------|
-| 日常编码 | deepseek-v3 | creator | 9.0分，中文好，代码质量高 |
-| 架构/方案设计 | deepseek-v3 | creator | 实际输出最详细、最实用 |
-| 关键/高质量代码 | gemini-3.1-pro-preview | explorer L4 | 7.3分，格式严谨 |
-| 创意实现 | deepseek-v3 | creator | 创意强，中文流畅 |
-| 权衡决策 | deepseek-r1 | judge | 7.5分，深度推理，理性对比 |
-| 代码审查/验证 | deepseek-r1 | judge | 逻辑严密，能找盲点 |
-| 快速原型 | gemini-2-flash | builder | 10.0分，速度最快 |
-| 综合设计 | 见下方 Briefing 流程 | | |
 
 ### Claude 子代理 (Task)
 

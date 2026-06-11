@@ -7,6 +7,30 @@
 COPY_EXCLUDE_DIRS=".git __pycache__ run runs state logs cache venvs vendor quarantine sprints intents"
 COPY_EXCLUDE_FILES=".DS_Store *.pyc *.log *.pid *.port *.tmp *~ .!*!.* .*-probe-cache.json .drafting-notified .intent-hash .last-seen-by-planner .next-last-sid"
 
+# copy_allowlist <src-dir> <dst-dir> <list-file> [suffix]
+# Copy only the files named (one per line, '#' comments / blanks ignored) in
+# the allowlist, appending the optional suffix (default ".md"). Fails loudly
+# if an allowlisted file is missing, so a typo in the list cannot silently
+# ship a smaller kernel.
+copy_allowlist() {
+    src_dir="$1"
+    dst_dir="$2"
+    list_file="$3"
+    suffix="${4:-.md}"
+    [ -f "$list_file" ] || die "allowlist missing: $list_file"
+    dry_run_note "copy allowlisted files from $src_dir to $dst_dir" && return 0
+    mkdir -p "$dst_dir"
+    while IFS= read -r name; do
+        name="$(printf '%s' "$name" | awk '{$1=$1; print}')"
+        case "$name" in
+            ''|'#'*) continue ;;
+        esac
+        src="$src_dir/$name$suffix"
+        [ -f "$src" ] || die "allowlisted file missing: $src"
+        cp "$src" "$dst_dir/$name$suffix"
+    done < "$list_file"
+}
+
 copy_payload() {
     src="$1"
     dst="$2"

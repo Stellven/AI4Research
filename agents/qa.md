@@ -1,12 +1,7 @@
 ---
 name: qa
 description: 代码审查与规范检查 (编排+验收，牛马执行)
-delegation_mode: mcp
-mcp_tool: brain-router
-default_models:
-  - deepseek-r1               # 深度审查 (judge, 7.5分)
-  - deepseek-v3               # 实用建议 (creator, 9.0分)
-  - gemini-3.1-pro-preview    # 严谨检查 (explorer L4, 7.3分)
+delegation_mode: task
 tools: Read, Grep, Glob
 disallowedTools: Write, Edit, Bash
 ontology: required
@@ -15,16 +10,6 @@ ontology: required
 # @QA — 代码审查与规范检查
 
 ## 任务路由
-
-### 外部模型 (brain-router)
-
-| 类型 | 牛马 | 角色 | 说明 |
-|------|------|------|------|
-| 正确性/安全性 | deepseek-r1 | judge | 7.5分，逻辑严密，边界分析强 |
-| 性能/可维护性 | deepseek-v3 | creator | 9.0分，实用建议，中文清晰 |
-| 代码风格/规范 | gemini-3.1-pro-preview | explorer L4 | 7.3分，格式严谨，逐项检查 |
-| 架构层面审查 | deepseek-r1 | judge | 深度推理，发现设计问题 |
-| 综合审查 | 见下方 Briefing 流程 | | |
 
 ### Claude 子代理 (Task)
 

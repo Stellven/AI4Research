@@ -1,12 +1,7 @@
 ---
 name: pm
 description: 项目管理 - 需求分析+任务编排+断点恢复+绩效追踪
-delegation_mode: mcp
-mcp_tool: brain-router
-default_models:
-  - deepseek-r1               # 需求分析/断点恢复 (judge, 7.5分)
-  - deepseek-v3               # 任务编排 (creator, 9.0分)
-  - gemini-3.1-pro-preview    # 进度跟进 (explorer L4, 7.3分)
+delegation_mode: task
 tools: Read, Write, Grep, Glob
 ontology: required
 ---
@@ -14,16 +9,6 @@ ontology: required
 # @PM — 项目管理
 
 ## 任务路由
-
-### 外部模型 (brain-router)
-
-| 类型 | 牛马 | 角色 | 说明 |
-|------|------|------|------|
-| 需求分析 | deepseek-r1 | judge | 7.5分，深度拆解，验收标准 |
-| 任务编排 | deepseek-v3 | creator | 9.0分，清晰规划，依赖检查 |
-| 进度跟进 | gemini-3.1-pro-preview | explorer L4 | 7.3分，格式严谨 |
-| 断点恢复 | deepseek-r1 | judge | 根因分析，恢复策略 |
-| 风险评估 | deepseek-r1 | judge | 深度预判 |
 
 ### Claude 子代理 (Task)
 

@@ -18,9 +18,14 @@ component_install() {
         printf '# Solar Local Notes\n\nUser-owned extension point. The installer does not overwrite this file.\n' > "$CLAUDE_DIR/solar/SOLAR.local.md"
     fi
 
-    [ -d "$SOURCE_DIR/rules" ] && copy_payload "$SOURCE_DIR/rules" "$CLAUDE_DIR/solar/rules"
+    # Rules and agents install from allowlists (WS2): only general-discipline
+    # rules and the 7 base @Agent files ship with the base kernel; rules/agents
+    # whose purpose is an excised/optional component are parked in the repo and
+    # not installed. Hook curation + registration is owned by the settings-merge
+    # workstream.
+    copy_allowlist "$SOURCE_DIR/rules" "$CLAUDE_DIR/solar/rules" "$SOURCE_DIR/kernel/base-rules.txt"
+    copy_allowlist "$SOURCE_DIR/agents" "$CLAUDE_DIR/solar/agents" "$SOURCE_DIR/kernel/base-agents.txt"
     [ -d "$SOURCE_DIR/hooks" ] && copy_payload "$SOURCE_DIR/hooks" "$CLAUDE_DIR/solar/hooks"
-    [ -d "$SOURCE_DIR/agents" ] && copy_payload "$SOURCE_DIR/agents" "$CLAUDE_DIR/solar/agents"
     [ -d "$SOURCE_DIR/.claude/prompts" ] && copy_payload "$SOURCE_DIR/.claude/prompts" "$CLAUDE_DIR/solar/prompts"
 
     python3 - "$CLAUDE_DIR/CLAUDE.md" <<'PY'
