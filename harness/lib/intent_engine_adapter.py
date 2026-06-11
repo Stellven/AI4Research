@@ -57,7 +57,6 @@ DIRECT_RULES: tuple[IntentRule, ...] = (
     IntentRule("intent", "display", 0.90, (r"^(我要看|我想看|给我看|展示|显示|呈现)",), "用户希望查看/展示内容；用可读仪表盘或结构化视图输出。"),
     IntentRule("intent", "insight_quick", 0.95, (r"^洞察分析[：:]",), "用户请求快速洞察分析。"),
     IntentRule("intent", "insight_deep", 0.95, (r"^(深入洞察|深度洞察)\s+",), "用户请求深度洞察分析。"),
-    IntentRule("intent", "xiaoai", 0.95, (r"^(小爱|呼叫小爱)\s+",), "用户请求小爱远程调用。"),
     IntentRule("intent", "plan", 0.95, (r"^/plan( +preview| +metrics)? +",), "用户请求 Plan/Act 流程。"),
     IntentRule("intent", "agent", 0.95, (r"^@[A-Za-z][A-Za-z0-9_]*",), "用户显式触发 @Agent；映射到对应 specialist/subagent。"),
     IntentRule("intent", "show_dashboard", 0.95, (r"dashboard|仪表盘|solar.*状况|solar.*状态|查.*solar.*状态|看指标|solar.*dashboard",), "用户请求查看 Solar 运行状况。"),

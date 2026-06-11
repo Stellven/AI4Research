@@ -40,7 +40,6 @@ SOLAR_TERMS = (
     "brain router",
     "cortex",
     "牛马",
-    "昊哥",
     "宣告",
     "记忆系统",
 )

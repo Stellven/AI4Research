@@ -67,7 +67,7 @@ TELEMETRY_ONLY_FINDINGS = {
 }
 
 
-ASK_BOSS_RE = re.compile(r"拍板|要走哪条|你决定|老板.*决定|昊哥拍板|等.*确认|是否.*继续")
+ASK_BOSS_RE = re.compile(r"拍板|要走哪条|你决定|老板.*决定|等.*确认|是否.*继续")
 COMPACTING_RE = re.compile(r"Compacting conversation|压缩上下文|Compacting", re.I)
 PROMPT_IDLE_RE = re.compile(r"Press up to edit queued messages|❯\s*$|Try \"", re.M)
 SURVEY_PROMPT_RE = re.compile(
