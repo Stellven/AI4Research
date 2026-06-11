@@ -8,10 +8,9 @@ maintainers working in this repo. It is not an installed runtime artifact.
 
 - For public contributors, use the current issue/request, verified git state,
   `README.md`, `INSTALL.md`, and the tracked docs as the source of truth.
-- Maintainer migration checkouts may also include local-only planning/worklog
-  notes. Read them when present and relevant, but never publish them.
 - If task notes conflict with verified repository facts, record the mismatch in
-  the local task notes and stop only when the conflict blocks the current task.
+  the current task handoff and stop only when the conflict blocks the current
+  task.
 
 ## Scope
 
@@ -46,8 +45,8 @@ change to replace them wholesale with upstream originals.
 - Work on `pkg/migration` unless the user asks for a different branch.
 - Local commits are allowed when a scoped task has been verified.
 - Do not push branches, tags, or commits without explicit user approval.
-- Keep local planning/worklog notes out of public commits unless the user
-  explicitly asks to publish them.
+- Keep scratch notes, private plans, and local task records out of public commits
+  unless the user explicitly asks to publish them.
 - One task should map to one commit. Use workstream-prefixed messages such as
   `WS1: repair package manifest`.
 
@@ -65,7 +64,6 @@ change to replace them wholesale with upstream originals.
 ## Verification
 
 - Prefer automated checks over judgment calls.
-- Record meaningful command results and gate status in the local task notes when
-  the task provides them.
+- Record meaningful command results and gate status in the current task handoff.
 - If a required check cannot run, record the reason and keep the task marked as
   unverified until the missing check is addressed.
