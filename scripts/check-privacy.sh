@@ -34,6 +34,7 @@ EXCLUDE=(
     ':(exclude)scripts/check-privacy.sh'
     ':(exclude)scripts/check-kernel-gen.sh'
     ':(exclude)scripts/check-daemons-render.sh'
+    ':(exclude)scripts/release-cut.sh'
 )
 
 if [ "${1:-}" = "--self-test" ]; then
