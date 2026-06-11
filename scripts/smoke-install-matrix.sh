@@ -249,6 +249,20 @@ fi
 
 cleanup
 
+# solar update — no-op round-trip. Completes the P3 exit criterion
+# (doctor/update/uninstall round-trip green IN CI): update re-runs the installer
+# from the receipt's source_dir + components and must leave a healthy install.
+HOME="$home_dir" "$home_dir/.solar/bin/solar" update --fake-keys --skip-llm-cli --skip-py-deps >/dev/null
+HOME="$home_dir" "$home_dir/.solar/bin/solar" doctor --json > "$doctor_json"
+assert_doctor_ok
+sentinel_count="$(grep -c '<!-- BEGIN OPENSOLAR -->' "$home_dir/.claude/CLAUDE.md")"
+if [ "$sentinel_count" != "1" ]; then
+    echo "expected one sentinel block after update, found $sentinel_count" >&2
+    exit 1
+fi
+assert_no_bun_home_leak
+echo "solar update round-trip: ok"
+
 HOME="$home_dir" "$home_dir/.solar/bin/solar" uninstall --yes
 assert_residue_empty
 
