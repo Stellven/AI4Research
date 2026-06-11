@@ -22,6 +22,14 @@ vault="$sandbox/vault"
 mkdir -p "$home_dir" "$vault"
 install_sh="$repo_dir/install.sh"
 
+# Keep ambient toolchain state out of the asserted sandbox HOME. On a GH runner
+# the rust tooling lazily initializes $HOME/.rustup the first time a rustup
+# proxy runs with HOME pointed here; that is a runner artifact, not Solar
+# residue. Redirect it (and cargo) to a scratch dir cleaned with the sandbox so
+# the strict whole-HOME residue assertion stays valid.
+export RUSTUP_HOME="$sandbox/toolchains/rustup"
+export CARGO_HOME="$sandbox/toolchains/cargo"
+
 echo "== (a) requirements resolution =="
 python3 -m pip install --dry-run --ignore-installed --no-deps \
     -r requirements/mempalace.txt >/dev/null
