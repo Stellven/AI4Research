@@ -64,20 +64,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T03:26:48Z",
-        "last_pruned_at": "2026-05-31T03:26:48Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T03:26:48Z",
-        "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
-        "last_pruned_at": "2026-05-31T03:26:48Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -306,20 +302,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T01:57:10Z",
-        "last_pruned_at": "2026-05-31T01:57:10Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T01:57:10Z",
-        "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
-        "last_pruned_at": "2026-05-31T01:57:10Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -396,20 +388,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T03:26:48Z",
-        "last_pruned_at": "2026-05-31T03:26:48Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T03:26:48Z",
-        "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
-        "last_pruned_at": "2026-05-31T03:26:48Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -481,20 +469,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T02:07:41Z",
-        "last_pruned_at": "2026-05-31T03:07:42Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "rate_limit",
-        "last_block_source": "failure_flow_control",
-        "last_block_detected_at": "2026-05-31T02:07:41Z",
-        "last_block_expires_at": "2026-05-31T03:07:41Z",
-        "last_block_excerpt": "operatord: backend=command task=pm-sprint-20260530-需求单-apo-v2-lease-quota-cost-aware-agent-plan-optimizer-s01-requirements-N0-e0644add operatord: local-stub exit 0 [ERROR] missing pm_result: ~/.solar/harness/sprints/sprint-20260530-需求单-apo-v2-lease-quota-cost-aware-agent-plan-optimizer-s01-requirements.N0.pm-result.md",
-        "last_pruned_at": "2026-05-31T03:07:42Z",
-        "last_prune_reason": "expired_operator_block"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "local_mlx_process",
       "compat_maps_to": {
@@ -632,15 +616,11 @@
       "context_tier": "high",
       "max_concurrency": 1,
       "fallback_profile": "builder",
-      "last_smoke_at": "2026-05-31T04:15:00Z",
-      "last_smoke_evidence": "operator_runtime image smoke refused placeholder/non-final output; Antigravity CLI log showed media=0",
       "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
       "state": {
         "availability": "disabled",
-        "runtime_state": "blocked",
-        "cooldown_until": null,
-        "last_error": "failed_nonfinal_or_no_media_image_smoke",
-        "last_error_at": "2026-05-31T04:15:00Z"
+        "runtime_state": "idle",
+        "cooldown_until": null
       },
       "compat_alias_for": "antigravity_managed_env",
       "compat_maps_to": {
@@ -678,8 +658,6 @@
       "enabled_at": "2026-05-22T14:36:00Z",
       "available": true,
       "health_status": "ok",
-      "last_smoke_at": "2026-05-22T14:36:00Z",
-      "last_smoke_evidence": "agy --dangerously-skip-permissions --print \"Reply exactly: SOLAR_PROBE_OK\" succeeded",
       "roles": [
         "planner",
         "evaluator"
@@ -757,20 +735,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T01:07:39Z",
-        "last_pruned_at": "2026-05-31T03:59:25Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "auth_expired",
-        "last_block_reason": "auth_expired",
-        "last_block_source": "failure_flow_control",
-        "last_block_detected_at": "2026-05-31T01:07:39Z",
-        "last_block_expires_at": "2026-05-31T07:07:39Z",
-        "last_block_excerpt": "ERROR: Antigravity auth expired or not logged in; refusing handoff Recovery: run `agy login` and re-authenticate. o Antigravity. W0530 21:07:36.352887 58942 log_context.go:117] Cache(loadCodeAssistResponse): Singleflight refresh failed: error getting token source: You are not logged into Antigravity. W0530 21:07:36.352904 58942 log_context.go:117] Cache(availableModels): Singleflight refresh failed: failed to get load code assist response: error getting token source: You are not logged into Antigravity. E0530 21:07:36.352935 58942 log.go:398] Failed to poll FetchAvailableModels: failed to get load code assist response: error getting token source: You are not logged into Antigravity. I0530 21:07:36.354013 58942 server.go:2274] Auth succeeded, refreshing features and managers E0530 21:07:36.",
-        "last_pruned_at": "2026-05-31T03:59:25Z",
-        "last_prune_reason": "antigravity_auth_probe_success"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "antigravity_managed_env",
       "compat_maps_to": {
@@ -1338,20 +1312,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T03:26:48Z",
-        "last_pruned_at": "2026-05-31T03:26:48Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T03:26:48Z",
-        "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
-        "last_pruned_at": "2026-05-31T03:26:48Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_maps_to": {
         "host_type": "tmux_pane",
@@ -1446,20 +1416,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T01:57:10Z",
-        "last_pruned_at": "2026-05-31T01:57:10Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T01:57:10Z",
-        "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
-        "last_pruned_at": "2026-05-31T01:57:10Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_maps_to": {
         "host_type": "tmux_pane",
@@ -1549,20 +1515,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T03:26:48Z",
-        "last_pruned_at": "2026-05-31T03:26:48Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T03:26:48Z",
-        "last_block_expires_at": "2026-06-01T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/graph_node_idle_assigned:20260530-p0-将-5-条-ai-influence-算子固化为-solar-harness-... 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 ",
-        "last_pruned_at": "2026-05-31T03:26:48Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_maps_to": {
         "host_type": "tmux_pane",
@@ -1654,10 +1616,7 @@
       },
       "state": {
         "availability": "enabled",
-        "runtime_state": "idle",
-        "last_heartbeat_at": null,
-        "last_success_at": null,
-        "last_error": null
+        "runtime_state": "idle"
       },
       "compat_alias_for": "antigravity_managed_env",
       "compat_maps_to": {
@@ -1695,8 +1654,6 @@
       "enabled_at": "2026-05-29T14:00:00Z",
       "available": true,
       "health_status": "ok",
-      "last_smoke_at": "2026-05-29T14:00:00Z",
-      "last_smoke_evidence": "automatic bootstrap successful",
       "roles": [
         "knowledge-extractor"
       ],
@@ -1725,10 +1682,7 @@
       "command": "python3 \"$HARNESS_DIR/tools/gemini_deep_research_operator.py\"",
       "state": {
         "availability": "enabled",
-        "runtime_state": "idle",
-        "last_heartbeat_at": null,
-        "last_success_at": null,
-        "last_error": null
+        "runtime_state": "idle"
       },
       "compat_alias_for": "codex_cloud",
       "compat_maps_to": {
@@ -1814,15 +1768,13 @@
         "rate_limit_cooldown_seconds": 3600,
         "auth_cooldown_seconds": 21600,
         "defer_on_cooldown": true,
-        "defer_on_auth": true
+        "defer_on_auth": true,
+        "last_block_state": "unknown"
       },
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_heartbeat_at": null,
-        "last_success_at": null,
-        "last_error": null
+        "cooldown_until": null
       },
       "compat_alias_for": "ssh_devbox",
       "compat_maps_to": {
@@ -1861,8 +1813,6 @@
       "enabled_at": "2026-05-30T00:00:00Z",
       "available": true,
       "health_status": "pending",
-      "last_smoke_at": null,
-      "last_smoke_evidence": "",
       "roles": [
         "knowledge-extractor"
       ],
@@ -1892,10 +1842,7 @@
       "command": "python3 \"$HARNESS_DIR/tools/youtube_transcript_operator.py\"",
       "state": {
         "availability": "enabled",
-        "runtime_state": "idle",
-        "last_heartbeat_at": null,
-        "last_success_at": null,
-        "last_error": null
+        "runtime_state": "idle"
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -2063,12 +2010,7 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "last_heartbeat_at": null,
-        "last_success_at": null,
-        "last_error": null,
-        "last_error_at": "2026-06-02T02:38:35Z",
-        "cooldown_until": null,
-        "last_pruned_at": "2026-06-02T02:54:09Z"
+        "cooldown_until": null
       },
       "command": "set -a; source \"$HOME/.solar/brain-router/.env\" 2>/dev/null || true; source \"$HARNESS_DIR/model-config.sh\" 2>/dev/null || true; set +a; PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/reasonix_operator.py\"",
       "launch_cmd": "REASONIX_MODEL=deepseek-v4-pro REASONIX_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/reasonix_operator.py\"",
@@ -2078,14 +2020,13 @@
         "disabled_at": "2026-05-31T01:10:53Z"
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "contract_closeout_failed",
-        "last_block_source": "graph_node_dispatcher",
-        "last_block_detected_at": "2026-06-02T02:38:35Z",
-        "last_block_expires_at": "2026-06-02T02:53:35Z",
-        "last_block_excerpt": "{\"pane\": \"operator:mini-reasonix-deepseek-v4-builder\", \"dispatch_id\": \"graph-eval-sprint-20260530-032545-intent-rawintent-8f1b76d6-S4-20260602T023729Z-q1\", \"reason\": \"eval_failed_contract_closeout\", \"operator_status\": \"completed\", \"result_json\": \"~/.solar/harness/run/operator-results/mini-reasonix-deepseek-v4-builder/pm-sprint-20260530-032545-intent-rawintent-8f1b76d6-S4-11c11314/result.json\"}",
-        "last_pruned_at": "2026-06-02T02:54:09Z",
-        "last_prune_reason": "expired_operator_block"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "docker_sandbox",
       "compat_maps_to": {
@@ -2149,10 +2090,7 @@
       },
       "state": {
         "availability": "enabled",
-        "runtime_state": "idle",
-        "last_heartbeat_at": null,
-        "last_success_at": null,
-        "last_error": null
+        "runtime_state": "idle"
       },
       "compat_alias_for": "antigravity_managed_env",
       "compat_maps_to": {
@@ -2201,10 +2139,7 @@
       "fallback_profile": "builder",
       "state": {
         "availability": "enabled",
-        "runtime_state": "idle",
-        "last_heartbeat_at": null,
-        "last_success_at": null,
-        "last_error": null
+        "runtime_state": "idle"
       },
       "compat_alias_for": "antigravity_managed_env",
       "compat_maps_to": {
@@ -2298,20 +2233,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T04:01:21Z",
-        "last_pruned_at": "2026-05-31T04:02:57Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "auth_expired",
-        "last_block_reason": "auth_expired",
-        "last_block_source": "failure_flow_control",
-        "last_block_detected_at": "2026-05-31T04:01:21Z",
-        "last_block_expires_at": "2026-05-31T10:01:21Z",
-        "last_block_excerpt": "ERROR: Antigravity auth expired or not logged in; refusing handoff Recovery: run `agy login` and re-authenticate. to get load code assist response: error getting token source: You are not logged into Antigravity. I0531 00:01:19.907900 91759 server.go:2274] Auth succeeded, refreshing features and managers E0531 00:01:19.907930 91759 log.go:398] Failed to poll ListExperiments: error getting token source: You are not logged into Antigravity. W0531 00:01:19.908049 91759 log_context.go:117] Cache(loadCodeAssistResponse): Singleflight refresh failed: error getting token source: You are not logged into Antigravity. W0531 00:01:19.908058 91759 log_context.go:117] Cache(availableModels): Singleflight refresh failed: failed to get load code assist response: error getting token source: You are not lo",
-        "last_pruned_at": "2026-05-31T04:02:57Z",
-        "last_prune_reason": "antigravity_auth_probe_success"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "antigravity_managed_env",
       "compat_maps_to": {
@@ -2405,20 +2336,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T01:52:56Z",
-        "last_pruned_at": "2026-05-31T03:59:25Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "auth_expired",
-        "last_block_reason": "auth_expired",
-        "last_block_source": "failure_flow_control",
-        "last_block_detected_at": "2026-05-31T01:52:56Z",
-        "last_block_expires_at": "2026-05-31T07:52:56Z",
-        "last_block_excerpt": "ERROR: Antigravity auth expired or not logged in; refusing handoff Recovery: run `agy login` and re-authenticate. avity. W0530 21:52:52.452931 34133 log_context.go:117] Cache(loadCodeAssistResponse): Singleflight refresh failed: error getting token source: You are not logged into Antigravity. W0530 21:52:52.452950 34133 log_context.go:117] Cache(availableModels): Singleflight refresh failed: failed to get load code assist response: error getting token source: You are not logged into Antigravity. E0530 21:52:52.452978 34133 log.go:398] Failed to poll FetchAvailableModels: failed to get load code assist response: error getting token source: You are not logged into Antigravity. I0530 21:52:52.454046 34133 server.go:2274] Auth succeeded, refreshing features and managers E0530 21:52:52.454081 3",
-        "last_pruned_at": "2026-05-31T03:59:25Z",
-        "last_prune_reason": "antigravity_auth_probe_success"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "antigravity_managed_env",
       "compat_maps_to": {
@@ -2504,20 +2431,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T02:00:11Z",
-        "last_pruned_at": "2026-05-31T02:50:02Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "rate_limit",
-        "last_block_source": "failure_flow_control",
-        "last_block_detected_at": "2026-05-31T02:00:11Z",
-        "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "You've hit your limit · resets 10:50pm (America/Toronto)",
-        "last_pruned_at": "2026-05-31T02:50:02Z",
-        "last_prune_reason": "expired_operator_block"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -2605,20 +2528,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T02:00:12Z",
-        "last_pruned_at": "2026-05-31T02:50:02Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "rate_limit",
-        "last_block_source": "failure_flow_control",
-        "last_block_detected_at": "2026-05-31T02:00:12Z",
-        "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "You've hit your limit · resets 10:50pm (America/Toronto)",
-        "last_pruned_at": "2026-05-31T02:50:02Z",
-        "last_prune_reason": "expired_operator_block"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -3433,20 +3352,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T01:57:10Z",
-        "last_pruned_at": "2026-05-31T01:57:10Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T01:57:10Z",
-        "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
-        "last_pruned_at": "2026-05-31T01:57:10Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -3543,20 +3458,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T01:57:10Z",
-        "last_pruned_at": "2026-05-31T01:57:10Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T01:57:10Z",
-        "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
-        "last_pruned_at": "2026-05-31T01:57:10Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -3653,20 +3564,16 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": "2026-05-31T01:57:10Z",
-        "last_pruned_at": "2026-05-31T01:57:10Z"
+        "cooldown_until": null
       },
       "flow_control": {
-        "last_block_state": "cooldown",
-        "last_block_reason": "pane_tui_rate_limit",
-        "last_block_source": "tmux_pane:solar-harness:0.2",
-        "last_block_detected_at": "2026-05-31T01:57:10Z",
-        "last_block_expires_at": "2026-05-31T02:50:00Z",
-        "last_block_excerpt": "Builder 主建设者 | 模型:Opus | 余:N/A | 已用:198.4M tok | 状态:working/ready_for_builder:20260530-p0-修复单-从-pane-lease-升级到-actor-lease-并补齐生命周... ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ Interrupt· What should Claude do ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/sprint-20 260530-p0-修复单-从-pane-lease-升 级到-actor-lease-并补齐生命周期状 态机-s01-requirements.dispatch.md 中的所有步骤 ⎿ You've hit your limit · resets 10:50pm (America/Toronto) ❯ 读取并执行指令文件 ~ /.solar/harness/sprints/spri",
-        "last_pruned_at": "2026-05-31T01:57:10Z",
-        "last_prune_reason": "weak_pane_rate_limit_evidence"
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
@@ -3764,9 +3671,7 @@
       },
       "state": {
         "availability": "disabled",
-        "runtime_state": "idle",
-        "last_error": "disabled_by_policy_remove_deepseek_from_builder_future",
-        "last_error_at": "2026-06-01T20:50:00Z"
+        "runtime_state": "idle"
       },
       "compat_alias_for": "docker_sandbox",
       "compat_maps_to": {
@@ -3862,9 +3767,7 @@
       },
       "state": {
         "availability": "disabled",
-        "runtime_state": "idle",
-        "last_error": "disabled_by_policy_remove_deepseek_from_builder_future",
-        "last_error_at": "2026-06-01T20:50:00Z"
+        "runtime_state": "idle"
       },
       "compat_alias_for": "local_mlx_process",
       "compat_maps_to": {
@@ -4055,14 +3958,13 @@
         "rate_limit_cooldown_seconds": 600,
         "auth_cooldown_seconds": 3600,
         "defer_on_cooldown": true,
-        "defer_on_auth": true
+        "defer_on_auth": true,
+        "last_block_state": "unknown"
       },
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null,
-        "last_error": null,
-        "last_error_at": null
+        "cooldown_until": null
       },
       "compat_alias_for": "tmux_pane",
       "compat_maps_to": {
