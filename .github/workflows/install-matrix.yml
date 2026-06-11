@@ -208,6 +208,19 @@ jobs:
           git checkout -- core/notify/ntfy.ts
           echo "negative test ok: planted personal token correctly caught"
 
+  daemons-lifecycle:
+    name: daemons render + lifecycle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Daemon render + placement + removal (not start)
+        run: ./scripts/check-daemons-lifecycle.sh
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}

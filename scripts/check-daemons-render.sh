@@ -32,7 +32,28 @@ for tpl in solar-daemon.plist.template solar-daemon.service.template; do
     if grep -nE "$FORBIDDEN" "$out"; then echo "FAIL: forbidden token in $tpl" >&2; fail=1; fi
     if grep -nF '{{' "$out"; then echo "FAIL: unresolved {{ in $tpl" >&2; fail=1; fi
     grep -q "$SOLAR_HOME/core/daemon/server.ts" "$out" || { echo "FAIL: $tpl missing daemon entrypoint" >&2; fail=1; }
-    echo "ok: $tpl renders clean"
+    # Structural validity (NOT start): required sections + an absolute exec path.
+    case "$tpl" in
+        *.service.template)
+            for sec in Unit Service Install; do
+                grep -qE "^\[$sec\]" "$out" || { echo "FAIL: $tpl missing [$sec] section" >&2; fail=1; }
+            done
+            grep -qE '^ExecStart=/' "$out" || { echo "FAIL: $tpl ExecStart is not an absolute path" >&2; fail=1; }
+            ;;
+        *.plist.template)
+            plist_rc=0
+            OUT="$out" python3 - <<'PY' || plist_rc=$?
+import os, plistlib
+with open(os.environ["OUT"], "rb") as f:
+    d = plistlib.load(f)
+assert d.get("Label"), "plist missing Label"
+pa = d.get("ProgramArguments")
+assert isinstance(pa, list) and pa and pa[0].startswith("/"), "ProgramArguments[0] not absolute"
+PY
+            [ "$plist_rc" -eq 0 ] || { echo "FAIL: $tpl is not a structurally valid plist" >&2; fail=1; }
+            ;;
+    esac
+    echo "ok: $tpl renders clean and is structurally valid"
 done
 
 [ "$fail" -eq 0 ] || { echo "daemons-render-check FAILED" >&2; exit 1; }
