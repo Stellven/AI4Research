@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # get-solar.sh — curl|bash bootstrap for Solar.
 #
-#   curl -fsSL https://github.com/suraj-subrahmanyan/OpenSolar/releases/latest/download/get-solar.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/get-solar.sh | bash
 #   curl -fsSL <url> | bash -s -- --yes --components kernel,harness
 #
 # Clones the published Solar channel and runs install.sh, forwarding every
@@ -12,10 +12,8 @@
 # Style: functions only, main at the end, bash-3.2-safe (no arrays, no [[ ]]).
 set -eu
 
-# NOTE (owner-finalized at the release cut): SOLAR_CHANNEL defaults to the
-# `stable` release ref and the curl|bash entry URL above is a GitHub Release
-# asset. Both resolve once the public release is cut. Until then, override with
-# SOLAR_CHANNEL (e.g. a branch) and/or SOLAR_REPO.
+# NOTE: SOLAR_CHANNEL defaults to the `stable` branch. For release-candidate
+# testing or local development, override SOLAR_CHANNEL and/or SOLAR_REPO.
 SOLAR_REPO="${SOLAR_REPO:-https://github.com/suraj-subrahmanyan/OpenSolar.git}"
 SOLAR_CHANNEL="${SOLAR_CHANNEL:-stable}"
 SOLAR_SRC="${SOLAR_SRC:-$HOME/.solar-src/OpenSolar}"

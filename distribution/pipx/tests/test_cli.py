@@ -177,14 +177,16 @@ class OpenSolarCliTests(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertIn("source checkout not found", stderr.getvalue())
 
-    def test_help_contains_demo_commands_examples_and_warnings(self) -> None:
+    def test_help_contains_install_commands_examples_and_warnings(self) -> None:
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):
             self.assertEqual(cli.main(["--help"]), 0)
         text = stdout.getvalue()
         self.assertIn("Commands:", text)
         self.assertIn("pipx install ./distribution/pipx", text)
-        self.assertIn("git+https://github.com/suraj-subrahmanyan/OpenSolar.git@demo/pipx-wrapper#subdirectory=distribution/pipx", text)
+        self.assertIn("git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx", text)
+        self.assertIn("git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.2#subdirectory=distribution/pipx", text)
+        self.assertIn("raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/get-solar.sh", text)
         self.assertIn("opensolar install --yes --components kernel,harness", text)
         self.assertIn("opensolar doctor --json", text)
         self.assertIn("opensolar update", text)

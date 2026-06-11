@@ -1,15 +1,14 @@
-# OpenJiuwen Solar pipx Demo Wrapper
+# OpenJiuwen Solar pipx Wrapper
 
 This package is named `openjiuwen-solar` and installs a thin `opensolar`
-console command for demo use. It does not bundle the OpenSolar repository
-payload into the wheel. `opensolar install` delegates to the canonical shell
-path:
+console command. It does not bundle the OpenSolar repository payload into the
+wheel. `opensolar install` delegates to the canonical shell path:
 
 ```text
 get-solar.sh -> clone selected channel into $SOLAR_SRC -> install.sh
 ```
 
-## Demo Install
+## Install
 
 Local checkout:
 
@@ -17,10 +16,16 @@ Local checkout:
 pipx install ./distribution/pipx
 ```
 
-From the demo branch:
+From the stable branch:
 
 ```bash
-pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@demo/pipx-wrapper#subdirectory=distribution/pipx"
+pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx"
+```
+
+From a release candidate tag:
+
+```bash
+pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.2#subdirectory=distribution/pipx"
 ```
 
 ## Commands
@@ -45,8 +50,8 @@ OPENSOLAR_GET_SOLAR_URL
 ```
 
 Use `OPENSOLAR_GET_SOLAR_URL=/path/to/get-solar.sh` or a `file://` URL for
-offline/local tests. Without that override, the wrapper downloads the public
-release `get-solar.sh`.
+offline/local tests. Without that override, the wrapper downloads the
+`stable` branch `get-solar.sh`.
 
 `opensolar source` prints `$SOLAR_SRC/OpenSolar` when present, or the default
 `~/.solar-src/OpenSolar`. If no checkout exists it prints a not-found message

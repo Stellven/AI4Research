@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 PUBLIC_GET_SOLAR_URL = (
-    "https://github.com/suraj-subrahmanyan/OpenSolar/releases/latest/download/"
+    "https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/"
     "get-solar.sh"
 )
 
@@ -27,7 +27,7 @@ PASSTHROUGH_ENV = (
 )
 
 HELP = f"""\
-OpenJiuwen Solar pipx demo wrapper
+OpenJiuwen Solar pipx wrapper
 
 Usage:
   opensolar <command> [args...]
@@ -40,9 +40,10 @@ Commands:
   uninstall [args...]     Delegate to ~/.solar/bin/solar uninstall.
   source                  Print the retained OpenSolar source checkout path.
 
-Demo pipx install:
+Install:
   pipx install ./distribution/pipx
-  pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@demo/pipx-wrapper#subdirectory=distribution/pipx"
+  pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx"
+  pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.2#subdirectory=distribution/pipx"
 
 Package name:
   openjiuwen-solar installs the `opensolar` command.
