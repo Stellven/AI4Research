@@ -15,3 +15,8 @@ state-read-tracker
 context-monitor
 auto-favorites-extract
 sma-session-start-preload
+pre-bash
+pre-edit
+post-edit
+quality-gate
+task-guard

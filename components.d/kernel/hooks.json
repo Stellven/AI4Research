@@ -1,6 +1,7 @@
 {
   "UserPromptSubmit": [
-    "intent-engine-hook.sh"
+    "intent-engine-hook.sh",
+    "task-guard.sh"
   ],
   "SessionStart": [
     "session-resume-hook.sh",
@@ -14,11 +15,17 @@
     "session-end-save.sh"
   ],
   "Stop": [
-    "solar-stop-reminder.sh"
+    "solar-stop-reminder.sh",
+    "quality-gate.sh"
   ],
   "PostToolUse": [
     "state-read-tracker.sh",
     "context-monitor.sh",
-    "auto-favorites-extract.sh"
+    "auto-favorites-extract.sh",
+    "post-edit.sh"
+  ],
+  "PreToolUse": [
+    "pre-bash.sh",
+    "pre-edit.sh"
   ]
 }

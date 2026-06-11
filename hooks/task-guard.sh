@@ -4,7 +4,7 @@
 # 触发: UserPromptSubmit
 # 性能目标: <5ms (纯 bash + grep，无外部依赖)
 
-source "$HOME/.claude/hooks/hook-logger.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/hook-logger.sh"
 _START_MS=$(hook_time_ms)
 
 INPUT=$(cat)
