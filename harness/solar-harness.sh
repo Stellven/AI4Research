@@ -646,6 +646,47 @@ find_live_coordinator_pids() {
   '
 }
 
+find_live_watchdog_pids() {
+  ps ax -o pid= -o args= | awk -v script="$HARNESS_DIR/coordinator-watchdog.sh" '
+    $0 ~ "^[[:space:]]*[0-9]+[[:space:]]+([^[:space:]]*/)?bash[[:space:]]+" script "([[:space:]]|$)" { print $1 }
+  '
+}
+
+terminate_harness_pid() {
+  local pid="$1"
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  kill "$pid" 2>/dev/null || true
+  local waited=0
+  while (( waited < 20 )); do
+    kill -0 "$pid" 2>/dev/null || return 0
+    sleep 0.1
+    ((waited++))
+  done
+  kill -9 "$pid" 2>/dev/null || true
+  return 0
+}
+
+stop_harness_background_processes() {
+  local stopped=0 pidfile pid pids
+  for pidfile in "$HARNESS_DIR/.coordinator.pid" "$HARNESS_DIR/.watchdog.pid"; do
+    if [[ -f "$pidfile" ]]; then
+      pid=$(cat "$pidfile" 2>/dev/null || true)
+      if terminate_harness_pid "$pid"; then
+        stopped=1
+      fi
+      rm -f "$pidfile"
+    fi
+  done
+  pids="$(find_live_coordinator_pids; find_live_watchdog_pids)"
+  for pid in $pids; do
+    if terminate_harness_pid "$pid"; then
+      stopped=1
+    fi
+  done
+  [[ "$stopped" == "1" ]]
+}
+
 start_coordinator_sync() {
   _ensure_bash4 || { err "bash 4+ 不可用，无法启动 coordinator"; return 1; }
 
@@ -964,6 +1005,9 @@ PY
   fi
   if tmux has-session -t "$LAB_SESSION_NAME" 2>/dev/null; then
     tmux kill-session -t "$LAB_SESSION_NAME"
+    killed=1
+  fi
+  if stop_harness_background_processes; then
     killed=1
   fi
   if (( killed == 1 )); then
