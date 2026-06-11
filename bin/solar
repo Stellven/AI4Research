@@ -150,14 +150,41 @@ import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
-begin = "<!-- BEGIN OPENSOLAR -->"
-end = "<!-- END OPENSOLAR -->"
-text = path.read_text(encoding="utf-8")
-if begin in text and end in text:
-    before = text.split(begin, 1)[0].rstrip()
-    after = text.split(end, 1)[1].lstrip()
-    new = (before + "\n\n" if before else "") + after
-    path.write_text(new, encoding="utf-8")
+begin = b"<!-- BEGIN OPENSOLAR -->"
+end = b"<!-- END OPENSOLAR -->"
+prefix_marker = b"<!-- OPENSOLAR-PREFIX: "
+
+
+def find_region(text):
+    start = text.find(begin)
+    if start < 0:
+        return None
+    end_start = text.find(end, start + len(begin))
+    if end_start < 0:
+        return None
+    region_end = end_start + len(end)
+    if text[region_end:region_end + 2] == b"\r\n":
+        region_end += 2
+    elif text[region_end:region_end + 1] == b"\n":
+        region_end += 1
+    body = text[start:region_end]
+    prefix_mode = b"none"
+    marker_at = body.find(prefix_marker)
+    if marker_at >= 0:
+        value_start = marker_at + len(prefix_marker)
+        value_end = body.find(b" -->", value_start)
+        if value_end >= 0:
+            prefix_mode = body[value_start:value_end]
+    return start, region_end, prefix_mode
+
+
+text = path.read_bytes()
+region = find_region(text)
+if region:
+    start, region_end, prefix_mode = region
+    if prefix_mode == b"newline" and start > 0 and text[start - 1:start] == b"\n":
+        start -= 1
+    path.write_bytes(text[:start] + text[region_end:])
 PY
     if [ ! -s "$CLAUDE_DIR/CLAUDE.md" ]; then
         rm -f "$CLAUDE_DIR/CLAUDE.md"

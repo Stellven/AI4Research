@@ -35,21 +35,64 @@ import sys
 from datetime import datetime
 
 path = pathlib.Path(sys.argv[1])
-begin = "<!-- BEGIN OPENSOLAR -->"
-end = "<!-- END OPENSOLAR -->"
-block = f"{begin}\n@~/.claude/solar/SOLAR.md\n{end}\n"
-old = path.read_text(encoding="utf-8") if path.exists() else ""
-if begin in old and end in old:
-    before = old.split(begin, 1)[0].rstrip()
-    after = old.split(end, 1)[1].lstrip()
-    new = (before + "\n\n" if before else "") + block + ("\n" + after if after else "")
+begin = b"<!-- BEGIN OPENSOLAR -->"
+end = b"<!-- END OPENSOLAR -->"
+prefix_marker = b"<!-- OPENSOLAR-PREFIX: "
+
+
+def block(prefix_mode):
+    return (
+        begin
+        + b"\n"
+        + prefix_marker
+        + prefix_mode
+        + b" -->\n"
+        + b"@~/.claude/solar/SOLAR.md\n"
+        + end
+        + b"\n"
+    )
+
+
+def find_region(text):
+    start = text.find(begin)
+    if start < 0:
+        return None
+    end_start = text.find(end, start + len(begin))
+    if end_start < 0:
+        return None
+    region_end = end_start + len(end)
+    if text[region_end:region_end + 2] == b"\r\n":
+        region_end += 2
+    elif text[region_end:region_end + 1] == b"\n":
+        region_end += 1
+    body = text[start:region_end]
+    prefix_mode = b"none"
+    marker_at = body.find(prefix_marker)
+    if marker_at >= 0:
+        value_start = marker_at + len(prefix_marker)
+        value_end = body.find(b" -->", value_start)
+        if value_end >= 0:
+            prefix_mode = body[value_start:value_end]
+    return start, region_end, prefix_mode
+
+
+old = path.read_bytes() if path.exists() else b""
+region = find_region(old)
+if region:
+    start, region_end, prefix_mode = region
+    new = old[:start] + block(prefix_mode) + old[region_end:]
 else:
     if old:
         backup = path.with_name(path.name + ".backup." + datetime.utcnow().strftime("%Y%m%d%H%M%S"))
-        backup.write_text(old, encoding="utf-8")
-    new = (old.rstrip() + "\n\n" if old.strip() else "") + block
+        backup.write_bytes(old)
+    if not old:
+        new = block(b"none")
+    elif old.endswith(b"\n") or old.endswith(b"\r"):
+        new = old + block(b"none")
+    else:
+        new = old + b"\n" + block(b"newline")
 path.parent.mkdir(parents=True, exist_ok=True)
-path.write_text(new, encoding="utf-8")
+path.write_bytes(new)
 PY
     return 0
 }

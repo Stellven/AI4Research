@@ -271,6 +271,116 @@ assert_keep_data_contract() {
     echo "--keep-data contract: ok (kept db+config; removed code/venv/bin/node_modules/cache/receipt)"
 }
 
+write_claude_case() {
+    python3 - "$1" "$2" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+case = sys.argv[2]
+cases = {
+    "one-newline": b"# User notes\n",
+    "no-newline": b"# User notes",
+    "multiple-blank-lines": b"# User notes\n\n\n",
+    "normal-markdown": b"# User notes\n\n- keep this\n  - nested\n\nFinal paragraph.\n",
+    "reinstall-update": b"# User notes\nExisting text\n",
+}
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_bytes(cases[case])
+PY
+}
+
+assert_claude_user_content_preserved_while_installed() {
+    python3 - "$1" "$2" <<'PY'
+import pathlib
+import sys
+
+original_path = pathlib.Path(sys.argv[1])
+installed_path = pathlib.Path(sys.argv[2])
+begin = b"<!-- BEGIN OPENSOLAR -->"
+end = b"<!-- END OPENSOLAR -->"
+prefix_marker = b"<!-- OPENSOLAR-PREFIX: "
+
+
+def find_region(text):
+    start = text.find(begin)
+    if start < 0:
+        raise SystemExit("managed begin marker missing")
+    if text.find(begin, start + len(begin)) >= 0:
+        raise SystemExit("more than one managed begin marker")
+    end_start = text.find(end, start + len(begin))
+    if end_start < 0:
+        raise SystemExit("managed end marker missing")
+    region_end = end_start + len(end)
+    if text[region_end:region_end + 2] == b"\r\n":
+        region_end += 2
+    elif text[region_end:region_end + 1] == b"\n":
+        region_end += 1
+    body = text[start:region_end]
+    prefix_mode = b"none"
+    marker_at = body.find(prefix_marker)
+    if marker_at >= 0:
+        value_start = marker_at + len(prefix_marker)
+        value_end = body.find(b" -->", value_start)
+        if value_end >= 0:
+            prefix_mode = body[value_start:value_end]
+    return start, region_end, prefix_mode
+
+
+def strip_managed(text):
+    start, region_end, prefix_mode = find_region(text)
+    if prefix_mode == b"newline" and start > 0 and text[start - 1:start] == b"\n":
+        start -= 1
+    return text[:start] + text[region_end:]
+
+
+original = original_path.read_bytes()
+installed = installed_path.read_bytes()
+if strip_managed(installed) != original:
+    raise SystemExit("user-owned CLAUDE.md content changed outside managed block")
+if installed.count(b"@~/.claude/solar/SOLAR.md") != 1:
+    raise SystemExit("expected exactly one managed SOLAR.md import")
+PY
+}
+
+assert_claude_md_preservation() {
+    cp_root="$sandbox/claude-preserve"
+    mkdir -p "$cp_root"
+    for case in one-newline no-newline multiple-blank-lines normal-markdown reinstall-update; do
+        ch="$cp_root/$case"
+        claude_file="$ch/.claude/CLAUDE.md"
+        original_file="$ch/original.bin"
+        write_claude_case "$claude_file" "$case"
+        cp "$claude_file" "$original_file"
+
+        HOME="$ch" "$repo_dir/install.sh" --yes --components kernel,harness --fake-keys --skip-llm-cli >/dev/null
+        assert_claude_user_content_preserved_while_installed "$original_file" "$claude_file"
+
+        if [ "$case" = "reinstall-update" ]; then
+            HOME="$ch" "$repo_dir/install.sh" --yes --components kernel,harness --fake-keys --skip-llm-cli >/dev/null
+            assert_claude_user_content_preserved_while_installed "$original_file" "$claude_file"
+            HOME="$ch" "$ch/.solar/bin/solar" update --fake-keys --skip-llm-cli --skip-py-deps >/dev/null
+            assert_claude_user_content_preserved_while_installed "$original_file" "$claude_file"
+        fi
+
+        HOME="$ch" "$ch/.solar/bin/solar" uninstall --yes >/dev/null
+        if ! cmp -s "$original_file" "$claude_file"; then
+            echo "CLAUDE.md was not byte-preserved after uninstall for case: $case" >&2
+            exit 1
+        fi
+    done
+
+    fresh="$cp_root/fresh"
+    mkdir -p "$fresh"
+    HOME="$fresh" "$repo_dir/install.sh" --yes --components kernel,harness --fake-keys --skip-llm-cli >/dev/null
+    [ -f "$fresh/.claude/CLAUDE.md" ] || { echo "fresh install did not create CLAUDE.md" >&2; exit 1; }
+    grep -q '<!-- BEGIN OPENSOLAR -->' "$fresh/.claude/CLAUDE.md" || { echo "fresh install CLAUDE.md missing managed block" >&2; exit 1; }
+    HOME="$fresh" "$fresh/.solar/bin/solar" uninstall --yes >/dev/null
+    [ ! -e "$fresh/.claude/CLAUDE.md" ] || { echo "uninstall left block-only CLAUDE.md behind" >&2; exit 1; }
+
+    echo "CLAUDE.md preservation: ok (byte-identical uninstall across newline/no-newline/multiple-blank/markdown/reinstall-update cases)"
+}
+
 mkdir -p "$home_dir"
 
 echo "profile=$profile"
@@ -375,6 +485,7 @@ echo "solar update round-trip: ok"
 
 assert_hooks_no_crash
 assert_keep_data_contract
+assert_claude_md_preservation
 
 HOME="$home_dir" "$home_dir/.solar/bin/solar" uninstall --yes
 assert_residue_empty
