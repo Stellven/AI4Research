@@ -162,8 +162,10 @@ check_gitleaks_history() {
     work="$1"
     log "check 4: gitleaks over full history"
     if ! command -v gitleaks >/dev/null 2>&1; then
-        printf '  SKIP: gitleaks not on PATH (install it / add to PATH to run this check)\n' >&2
-        return 0
+        printf '  FAIL: gitleaks not found on PATH; release privacy validation requires it.\n' >&2
+        printf '        Remedy: install gitleaks and confirm `gitleaks --version` works.\n' >&2
+        printf '        Local pinned example: PATH="/tmp/solar-gitleaks-8.18.4:$PATH" bash scripts/release-cut.sh ...\n' >&2
+        return 1
     fi
     if ( cd "$work" && gitleaks detect --config "$repo_dir/$GITLEAKS_CONFIG" --redact --log-opts="$ORPHAN_BRANCH" >/dev/null 2>&1 ); then
         log "  ok: gitleaks found no leaks across the orphan history"
