@@ -54,8 +54,12 @@ jobs:
           $exclude = @('PSAvoidUsingWriteHost', 'PSUseShouldProcessForStateChangingFunctions')
           $issues = Invoke-ScriptAnalyzer -Path ./install.ps1 -Severity Error,Warning -ExcludeRule $exclude
           $issues | Format-Table -AutoSize
+          foreach ($i in $issues) {
+            # Surface each issue as a public annotation (job logs are admin-only).
+            Write-Output "::error file=install.ps1,line=$($i.Line)::$($i.RuleName): $($i.Message)"
+          }
           if ($issues.Count -gt 0) {
-            Write-Error "PSScriptAnalyzer found $($issues.Count) issue(s)"
+            Write-Output "::error title=ps1 lint::PSScriptAnalyzer found $($issues.Count) issue(s)"
             exit 1
           }
           Write-Output "install.ps1 lint clean"
