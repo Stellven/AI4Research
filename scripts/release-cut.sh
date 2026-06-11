@@ -189,6 +189,12 @@ run_verification() {
 
 main() {
     parse_args "$@"
+    # Resolve the exclude file to an absolute path NOW (before any cd), since
+    # build_orphan reads it from inside the scratch clone's working directory.
+    if [ -n "$EXCLUDE_FILE" ]; then
+        case "$EXCLUDE_FILE" in /*) : ;; *) EXCLUDE_FILE="$PWD/$EXCLUDE_FILE" ;; esac
+        [ -f "$EXCLUDE_FILE" ] || die "exclude file not found: $EXCLUDE_FILE"
+    fi
     cd "$repo_dir"
     command -v git >/dev/null 2>&1 || die "git is required"
     git rev-parse --verify -q "$SRC_REF" >/dev/null || die "source ref not found: $SRC_REF"
