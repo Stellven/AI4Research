@@ -179,7 +179,7 @@ jobs:
           # WS8 extends this list with INSTALL.md / docs/COMPONENTS.md /
           # docs/UNINSTALL.md as those canonical docs are created.
           lychee --no-progress --max-retries 3 --timeout 20 --accept '200,206,429' \
-            README.md AGENTS.md INSTALL.md \
+            README.md AGENTS.md INSTALL.md USER-GUIDE.md \
             docs/COMPONENTS.md docs/UNINSTALL.md docs/WINDOWS.md \
             docs/UPSTREAM-EXPORT-REQUEST.md
 
