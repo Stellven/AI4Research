@@ -17,21 +17,25 @@ PUBLIC_GET_SOLAR_URL = (
     "https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/"
     "get-solar.sh"
 )
+CLI_NAME = "openjiuwen-solar"
+GET_SOLAR_URL_ENV = "OPENJIUWEN_SOLAR_GET_SOLAR_URL"
+LEGACY_GET_SOLAR_URL_ENV = "OPENSOLAR_GET_SOLAR_URL"
 
 PASSTHROUGH_ENV = (
     "SOLAR_REPO",
     "SOLAR_CHANNEL",
     "SOLAR_SRC",
     "SOLAR_COMPONENTS",
-    "OPENSOLAR_GET_SOLAR_URL",
+    GET_SOLAR_URL_ENV,
+    LEGACY_GET_SOLAR_URL_ENV,
 )
 
 HELP = f"""\
 OpenJiuwen Solar pipx wrapper
 
 Usage:
-  opensolar <command> [args...]
-  opensolar --help
+  openjiuwen-solar <command> [args...]
+  openjiuwen-solar --help
 
 Commands:
   install [args...]       Download/run get-solar.sh; forwards args unchanged.
@@ -45,21 +49,22 @@ Install:
   pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx"
 
 Package name:
-  openjiuwen-solar installs the `opensolar` command.
+  openjiuwen-solar installs the `openjiuwen-solar` command.
 
 Examples:
-  opensolar install --yes --components kernel,harness
-  opensolar doctor --json
-  opensolar update
-  opensolar uninstall --yes
+  openjiuwen-solar install --yes --components kernel,harness
+  openjiuwen-solar doctor --json
+  openjiuwen-solar update
+  openjiuwen-solar uninstall --yes
 
 Installer environment passed through:
   SOLAR_REPO, SOLAR_CHANNEL, SOLAR_SRC, SOLAR_COMPONENTS
 
 Wrapper environment:
-  OPENSOLAR_GET_SOLAR_URL=/path/to/get-solar.sh
-  OPENSOLAR_GET_SOLAR_URL=file:///absolute/path/to/get-solar.sh
-  OPENSOLAR_GET_SOLAR_URL=https://example.invalid/get-solar.sh
+  OPENJIUWEN_SOLAR_GET_SOLAR_URL=/path/to/get-solar.sh
+  OPENJIUWEN_SOLAR_GET_SOLAR_URL=file:///absolute/path/to/get-solar.sh
+  OPENJIUWEN_SOLAR_GET_SOLAR_URL=https://example.invalid/get-solar.sh
+  OPENSOLAR_GET_SOLAR_URL is also accepted for older local scripts.
 
 Defaults:
   get-solar.sh URL: {PUBLIC_GET_SOLAR_URL}
@@ -68,7 +73,7 @@ Defaults:
 
 Warnings:
   pipx uninstalling this wrapper does NOT uninstall OpenSolar.
-  Run `opensolar uninstall --yes` before removing the pipx wrapper.
+  Run `openjiuwen-solar uninstall --yes` before removing the pipx wrapper.
   Native Windows is not supported by this wrapper. Use WSL and the repository
   install.ps1 bootstrapper instead.
 """
@@ -88,7 +93,7 @@ def _native_windows() -> bool:
 
 def _windows_error() -> int:
     _err(
-        "opensolar: native Windows is not supported. Use WSL and run the "
+        f"{CLI_NAME}: native Windows is not supported. Use WSL and run the "
         "repository install.ps1 bootstrapper, or install inside a WSL Linux "
         "distro."
     )
@@ -99,10 +104,10 @@ def _run(command: Sequence[str]) -> int:
     try:
         completed = subprocess.run(command, env=os.environ.copy(), check=False)
     except FileNotFoundError:
-        _err(f"opensolar: command not found: {command[0]}")
+        _err(f"{CLI_NAME}: command not found: {command[0]}")
         return 127
     except PermissionError as exc:
-        _err(f"opensolar: cannot execute {command[0]}: {exc}")
+        _err(f"{CLI_NAME}: cannot execute {command[0]}: {exc}")
         return 126
     return completed.returncode
 
@@ -131,7 +136,7 @@ def _run_local_get_solar(value: str, args: Sequence[str]) -> int:
     if path is None:
         raise ValueError(f"not a local get-solar reference: {value}")
     if not path.is_file():
-        _err(f"opensolar: get-solar.sh not found at {path}")
+        _err(f"{CLI_NAME}: get-solar.sh not found at {path}")
         return 1
     return _run(["bash", str(path), *args])
 
@@ -141,22 +146,22 @@ def _run_remote_get_solar(url: str, args: Sequence[str]) -> int:
         with urllib.request.urlopen(url, timeout=60) as response:
             data = response.read()
     except (OSError, urllib.error.URLError) as exc:
-        _err(f"opensolar: failed to download get-solar.sh from {url}: {exc}")
-        _err("Set OPENSOLAR_GET_SOLAR_URL=/path/to/get-solar.sh for local runs.")
+        _err(f"{CLI_NAME}: failed to download get-solar.sh from {url}: {exc}")
+        _err(f"Set {GET_SOLAR_URL_ENV}=/path/to/get-solar.sh for local runs.")
         return 1
 
     if not data.strip():
-        _err(f"opensolar: downloaded get-solar.sh from {url} was empty")
+        _err(f"{CLI_NAME}: downloaded get-solar.sh from {url} was empty")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="opensolar-get-solar-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="openjiuwen-solar-get-solar-") as tmpdir:
         script = Path(tmpdir) / "get-solar.sh"
         script.write_bytes(data)
         return _run(["bash", str(script), *args])
 
 
 def install(args: Sequence[str]) -> int:
-    override = os.environ.get("OPENSOLAR_GET_SOLAR_URL")
+    override = os.environ.get(GET_SOLAR_URL_ENV) or os.environ.get(LEGACY_GET_SOLAR_URL_ENV)
     get_solar = override or PUBLIC_GET_SOLAR_URL
     local_path = _local_get_solar_path(get_solar)
     if local_path is not None:
@@ -171,8 +176,8 @@ def _solar_bin() -> Path:
 def _delegate_lifecycle(command: str, args: Sequence[str]) -> int:
     solar = _solar_bin()
     if not solar.is_file():
-        _err(f"opensolar: OpenSolar lifecycle command not found: {solar}")
-        _err("Install OpenSolar first with: opensolar install --yes")
+        _err(f"{CLI_NAME}: OpenSolar lifecycle command not found: {solar}")
+        _err(f"Install OpenSolar first with: {CLI_NAME} install --yes")
         return 1
     return _run([str(solar), command, *args])
 
@@ -192,7 +197,7 @@ def _source_candidates() -> list[Path]:
 
 def source(args: Sequence[str]) -> int:
     if args:
-        _err("opensolar: source does not accept arguments")
+        _err(f"{CLI_NAME}: source does not accept arguments")
         return 2
     candidates = _source_candidates()
     for candidate in candidates:
@@ -200,8 +205,8 @@ def source(args: Sequence[str]) -> int:
             print(candidate)
             return 0
     looked = ", ".join(str(path) for path in candidates)
-    _err(f"opensolar: OpenSolar source checkout not found. Looked for: {looked}")
-    _err("Run opensolar install --yes, or set SOLAR_SRC to the checkout path.")
+    _err(f"{CLI_NAME}: OpenSolar source checkout not found. Looked for: {looked}")
+    _err(f"Run {CLI_NAME} install --yes, or set SOLAR_SRC to the checkout path.")
     return 1
 
 
@@ -223,7 +228,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     if command == "source":
         return source(rest)
 
-    _err(f"opensolar: unknown command: {command}")
+    _err(f"{CLI_NAME}: unknown command: {command}")
     _print_help()
     return 2
 

@@ -22,7 +22,7 @@ classifiers = [
 ]
 
 [project.scripts]
-opensolar = "opensolar_cli.cli:main"
+openjiuwen-solar = "opensolar_cli.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -1,8 +1,8 @@
 # OpenJiuwen Solar pipx Wrapper
 
-This package is named `openjiuwen-solar` and installs a thin `opensolar`
+This package is named `openjiuwen-solar` and installs a thin `openjiuwen-solar`
 console command. It does not bundle the OpenSolar repository payload into the
-wheel. `opensolar install` delegates to the canonical shell path:
+wheel. `openjiuwen-solar install` delegates to the canonical shell path:
 
 ```text
 get-solar.sh -> clone selected channel into $SOLAR_SRC -> install.sh
@@ -25,14 +25,14 @@ pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#sub
 ## Commands
 
 ```bash
-opensolar install --yes --components kernel,harness
-opensolar doctor --json
-opensolar update
-opensolar uninstall --yes
-opensolar source
+openjiuwen-solar install --yes --components kernel,harness
+openjiuwen-solar doctor --json
+openjiuwen-solar update
+openjiuwen-solar uninstall --yes
+openjiuwen-solar source
 ```
 
-`opensolar install` forwards every argument after `install` to `get-solar.sh`
+`openjiuwen-solar install` forwards every argument after `install` to `get-solar.sh`
 unchanged. These environment variables are preserved:
 
 ```text
@@ -40,16 +40,17 @@ SOLAR_REPO
 SOLAR_CHANNEL
 SOLAR_SRC
 SOLAR_COMPONENTS
-OPENSOLAR_GET_SOLAR_URL
+OPENJIUWEN_SOLAR_GET_SOLAR_URL
 ```
 
-Use `OPENSOLAR_GET_SOLAR_URL=/path/to/get-solar.sh` or a `file://` URL for
-offline/local tests. Without that override, the wrapper downloads the
-`stable` branch `get-solar.sh`.
+Use `OPENJIUWEN_SOLAR_GET_SOLAR_URL=/path/to/get-solar.sh` or a `file://` URL
+for offline/local tests. Without that override, the wrapper downloads the
+`stable` branch `get-solar.sh`. The older `OPENSOLAR_GET_SOLAR_URL` override
+is still accepted for local compatibility.
 
-`opensolar source` prints `$SOLAR_SRC/OpenSolar` when present, or the default
-`~/.solar-src/OpenSolar`. If no checkout exists it prints a not-found message
-and exits `1`.
+`openjiuwen-solar source` prints `$SOLAR_SRC/OpenSolar` when present, or the
+default `~/.solar-src/OpenSolar`. If no checkout exists it prints a not-found
+message and exits `1`.
 
 ## Warnings
 
@@ -57,7 +58,7 @@ and exits `1`.
 uninstall the OpenSolar runtime. Run this first:
 
 ```bash
-opensolar uninstall --yes
+openjiuwen-solar uninstall --yes
 ```
 
 Native Windows is not supported by this wrapper. Use WSL and the repository
@@ -75,10 +76,10 @@ bash distribution/pipx/smoke.sh
 The smoke runs:
 
 ```bash
-opensolar install --yes --components kernel,harness --fake-keys --skip-llm-cli --skip-py-deps
-opensolar doctor --json
-opensolar update --fake-keys --skip-llm-cli --skip-py-deps
-opensolar uninstall --yes
+openjiuwen-solar install --yes --components kernel,harness --fake-keys --skip-llm-cli --skip-py-deps
+openjiuwen-solar doctor --json
+openjiuwen-solar update --fake-keys --skip-llm-cli --skip-py-deps
+openjiuwen-solar uninstall --yes
 ```
 
 Then it verifies:

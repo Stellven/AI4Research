@@ -40,6 +40,7 @@ class OpenSolarCliTests(unittest.TestCase):
                     "SOLAR_CHANNEL",
                     "SOLAR_SRC",
                     "SOLAR_COMPONENTS",
+                    "OPENJIUWEN_SOLAR_GET_SOLAR_URL",
                     "OPENSOLAR_GET_SOLAR_URL",
                 ]
                 with open(os.environ["CAPTURE"], "w", encoding="utf-8") as f:
@@ -52,11 +53,12 @@ class OpenSolarCliTests(unittest.TestCase):
             )
             env = {
                 "CAPTURE": str(capture),
-                "OPENSOLAR_GET_SOLAR_URL": str(get_solar),
+                "OPENJIUWEN_SOLAR_GET_SOLAR_URL": str(get_solar),
                 "SOLAR_REPO": "file:///repo.git",
                 "SOLAR_CHANNEL": "demo/pipx-wrapper",
                 "SOLAR_SRC": str(tmp_path / "src"),
                 "SOLAR_COMPONENTS": "kernel,harness",
+                "OPENSOLAR_GET_SOLAR_URL": "unused-legacy-value",
             }
             args = [
                 "install",
@@ -100,10 +102,44 @@ class OpenSolarCliTests(unittest.TestCase):
                 os.environ,
                 {
                     "CAPTURE": str(capture),
+                    "OPENJIUWEN_SOLAR_GET_SOLAR_URL": get_solar.as_uri(),
+                },
+                clear=False,
+            ):
+                self.assertEqual(cli.main(["install", "--dry-run"]), 0)
+
+            self.assertEqual(json.loads(capture.read_text(encoding="utf-8")), ["--dry-run"])
+
+    def test_install_accepts_legacy_get_solar_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            capture = tmp_path / "capture.json"
+            get_solar = tmp_path / "get-solar.sh"
+            write_executable(
+                get_solar,
+                """\
+                #!/usr/bin/env bash
+                set -eu
+                python3 - "$@" <<'PY'
+                import json
+                import os
+                import sys
+
+                with open(os.environ["CAPTURE"], "w", encoding="utf-8") as f:
+                    json.dump(sys.argv[1:], f)
+                PY
+                """,
+            )
+
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "CAPTURE": str(capture),
                     "OPENSOLAR_GET_SOLAR_URL": get_solar.as_uri(),
                 },
                 clear=False,
             ):
+                os.environ.pop("OPENJIUWEN_SOLAR_GET_SOLAR_URL", None)
                 self.assertEqual(cli.main(["install", "--dry-run"]), 0)
 
             self.assertEqual(json.loads(capture.read_text(encoding="utf-8")), ["--dry-run"])
@@ -154,7 +190,7 @@ class OpenSolarCliTests(unittest.TestCase):
                 self.assertNotEqual(code, 0)
                 text = stderr.getvalue()
                 self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
-                self.assertIn("opensolar install --yes", text)
+                self.assertIn("openjiuwen-solar install --yes", text)
 
     def test_source_prints_env_checkout_when_present(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -186,10 +222,11 @@ class OpenSolarCliTests(unittest.TestCase):
         self.assertIn("pipx install ./distribution/pipx", text)
         self.assertIn("git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx", text)
         self.assertIn("raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/get-solar.sh", text)
-        self.assertIn("opensolar install --yes --components kernel,harness", text)
-        self.assertIn("opensolar doctor --json", text)
-        self.assertIn("opensolar update", text)
-        self.assertIn("opensolar uninstall --yes", text)
+        self.assertIn("openjiuwen-solar install --yes --components kernel,harness", text)
+        self.assertIn("openjiuwen-solar doctor --json", text)
+        self.assertIn("openjiuwen-solar update", text)
+        self.assertIn("openjiuwen-solar uninstall --yes", text)
+        self.assertIn("OPENJIUWEN_SOLAR_GET_SOLAR_URL", text)
         self.assertIn("pipx uninstalling this wrapper does NOT uninstall OpenSolar", text)
         self.assertIn("Native Windows is not supported", text)
 
