@@ -1,5 +1,0 @@
-# Solar Sprint 自动队列 — 上一个 PASSED 后自动起下一个
-# 格式: 主题|Done 草案 (用 ; 分隔)
-S2|solar-verify CLI: 实现 solar-verify <sid> 自动跑合约 Done 中的 verify 块, 输出 PASS/FAIL 报告;evaluator dispatch 时自动调用 solar-verify 预检
-S6|Evaluator 结构化注入: handle_reviewing dispatch 时自动注入 Done checklist + brain lessons + 历史 FAIL 模式
-S5|Hot Reload 真生效: coordinator.sh 主循环检测自身 md5, 变化自动 exec 重载 (不用手动 SIGKILL)

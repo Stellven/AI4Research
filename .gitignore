@@ -62,9 +62,19 @@ coverage/
 # Solar Harness 运行时/证据产物
 harness/.coverage
 harness/.workdir
+harness/.planner-inbox.md
+harness/.!*.planner-inbox.md
+harness/.brain-router-probe-cache.json
+harness/cache/
 harness/run/
 harness/runs/
+harness/queue/
 harness/state/
+harness/config/*.lock
+harness/integrations/*-state.json
+harness/patch.diff
+harness/rss_public
+harness/test-dispatch-report.txt
 harness/release/artifacts/
 reports/
 harness/intake-requests/
