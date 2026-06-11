@@ -196,7 +196,10 @@ jobs:
 
       - name: Negative test — a planted personal token must fail the gate
         run: |
-          printf '\n# planted sihaoli\n' >> core/notify/ntfy.ts
+          # Construct the token at runtime so this CI config carries no literal
+          # personal token (keeps the public tree / release-cut scan clean).
+          tok="siha"; tok="${tok}oli"
+          printf '\n# planted %s\n' "$tok" >> core/notify/ntfy.ts
           if ./scripts/check-installed-clean.sh >/dev/null 2>&1; then
             git checkout -- core/notify/ntfy.ts
             echo "::error title=installed-clean negative test::gate missed a planted personal token"

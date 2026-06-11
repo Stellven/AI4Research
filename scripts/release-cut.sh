@@ -118,6 +118,7 @@ check_personal_tokens() {
         ':(exclude)LICENSE' \
         ':(exclude)scripts/release-cut.sh' \
         ':(exclude)scripts/check-privacy.sh' \
+        ':(exclude)scripts/check-installed-clean.sh' \
         ':(exclude)scripts/check-kernel-gen.sh' \
         ':(exclude)scripts/check-daemons-render.sh' 2>/dev/null || true)"
     if [ -n "$hits" ]; then
