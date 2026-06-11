@@ -11,7 +11,7 @@
 set -euo pipefail
 
 # 配置
-DB_PATH="$HOME/.solar/solar.db"
+DB_PATH="$HOME/.solar/db/solar.db"
 LIFECYCLE_REPORT="$HOME/.solar/lifecycle-report.log"
 
 # Step 1: 消耗 stdin

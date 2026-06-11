@@ -13,3 +13,5 @@ session-end-save
 solar-stop-reminder
 state-read-tracker
 context-monitor
+auto-favorites-extract
+sma-session-start-preload

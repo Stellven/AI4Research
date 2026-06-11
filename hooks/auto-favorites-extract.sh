@@ -7,7 +7,7 @@
 set -euo pipefail
 
 LOG="$HOME/.solar/logs/auto-favorites.log"
-DB="$HOME/.solar/solar.db"
+DB="$HOME/.solar/db/solar.db"
 
 log_err() {
     echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] [auto-favorites] $1" >> "$LOG" 2>/dev/null || true
