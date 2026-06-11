@@ -14,19 +14,21 @@ pip_install_reqs() {
     [ -f "$reqs" ] || die "python requirements missing: $reqs"
     py="$venv/bin/python"
     [ -x "$py" ] || die "venv python missing: $py"
-    # Pin pip's cache inside SOLAR_HOME so it is removed wholesale on uninstall
-    # and the user's own ~/.cache/pip is never touched (mirrors the bun cache
-    # contract). Without this, pip leaks an HTTP cache into $HOME/.cache/pip.
+    if [ "${SKIP_PY_DEPS:-false}" = "true" ]; then
+        # deps-light (CI): the venv already exists; skip the multi-GB install
+        # entirely. Requirement resolution is validated separately and once
+        # (scripts/mempalace-check.sh step a: pip --dry-run --no-deps), so the
+        # installs need no network and leave no pip cache in the sandbox.
+        info "deps-light: skipping pip install of $reqs (resolution validated separately)"
+        return 0
+    fi
+    # Real install on a user machine. Pin pip's cache inside SOLAR_HOME so it is
+    # removed wholesale on uninstall and the user's own ~/.cache/pip is never
+    # touched (mirrors the bun-cache contract).
     PIP_CACHE_DIR="$SOLAR_HOME/cache/pip"
     export PIP_CACHE_DIR
     mkdir -p "$PIP_CACHE_DIR"
-    if [ "${SKIP_PY_DEPS:-false}" = "true" ]; then
-        info "deps-light: validating $reqs resolution (pip --dry-run --no-deps)"
-        "$py" -m pip install --dry-run --ignore-installed --no-deps -r "$reqs" \
-            || die "python requirements failed to resolve: $reqs"
-    else
-        info "installing python requirements from $reqs"
-        "$py" -m pip install -r "$reqs" \
-            || die "pip install failed for $reqs"
-    fi
+    info "installing python requirements from $reqs"
+    "$py" -m pip install -r "$reqs" \
+        || die "pip install failed for $reqs"
 }
