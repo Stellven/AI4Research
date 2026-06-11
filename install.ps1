@@ -12,16 +12,19 @@
     every forwarded flag, so `--yes` CI/unattended installs behave identically
     to macOS/Linux.
 
-    NOTE (P4 swap): get-solar.sh does not exist until the P4 release cut. Until
-    then this clones the repo inside WSL and execs install.sh. Set
-    -BootstrapUrl to a get-solar.sh URL once published to switch to curl|bash.
+    P4: get-solar.sh now ships in the repo and -BootstrapUrl defaults to the
+    GitHub Release asset URL, so this uses curl|bash by default. That URL
+    resolves once the public release is published (the owner's release cut);
+    until then pass -BootstrapUrl '' to use the clone-and-exec fallback
+    (RepoUrl), or set -BootstrapUrl to any reachable get-solar.sh URL.
 
 .PARAMETER Distro
     WSL distro name. Default Ubuntu-24.04.
 
 .PARAMETER BootstrapUrl
-    Optional get-solar.sh URL (P4+). When set, runs `curl -fsSL <url> | bash -s
-    -- <forwarded>` instead of the clone-and-exec path.
+    get-solar.sh URL. Defaults to the GitHub Release asset; runs
+    `curl -fsSL <url> | bash -s -- <forwarded>`. Pass '' to fall back to the
+    clone-and-exec path (RepoUrl).
 
 .PARAMETER RepoUrl
     Git URL cloned inside WSL when -BootstrapUrl is not set.
@@ -33,7 +36,7 @@
 [CmdletBinding()]
 param(
     [string]$Distro = 'Ubuntu-24.04',
-    [string]$BootstrapUrl = '',
+    [string]$BootstrapUrl = 'https://github.com/suraj-subrahmanyan/OpenSolar/releases/latest/download/get-solar.sh',
     [string]$RepoUrl = 'https://github.com/suraj-subrahmanyan/OpenSolar.git',
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$ForwardArgs = @()

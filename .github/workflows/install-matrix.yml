@@ -147,8 +147,8 @@ jobs:
           tar xJf "$RUNNER_TEMP/sc.tar.xz" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/shellcheck-v0.10.0" >> "$GITHUB_PATH"
 
-      - name: shellcheck install.sh + lib/installer (warning severity)
-        run: shellcheck -S warning install.sh lib/installer/*.sh
+      - name: shellcheck install.sh + get-solar.sh + lib/installer (warning severity)
+        run: shellcheck -S warning install.sh get-solar.sh lib/installer/*.sh
 
   dry-run-check:
     name: dry-run writes nothing
