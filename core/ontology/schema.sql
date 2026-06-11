@@ -189,10 +189,10 @@ VALUES
 
 -- 初始关系 (监护人)
 INSERT OR IGNORE INTO ont_relationships (relationship_id, entity_type, entity_name, relationship_type, importance, context)
-VALUES ('guardian:sihaoli', 'person', 'sihaoli', 'guardian', 1.0, '{"role": "监护人", "first_law": true}');
+VALUES ('guardian:owner', 'person', 'owner', 'guardian', 1.0, '{"role": "监护人", "first_law": true}');
 
 -- 全局规则初始化
 INSERT OR IGNORE INTO ont_global_rules (rule_key, rule_value, source_dimension, confidence)
 VALUES
 ('confirm_external_actions', 'true', 'first_law', 1.0),
-('guardian_name', '"sihaoli"', 'first_law', 1.0);
+('guardian_name', '"owner"', 'first_law', 1.0);

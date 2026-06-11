@@ -41,7 +41,10 @@ echo "0" > "$COUNTER_FILE"
 # 估算上下文使用率
 # ─────────────────────────────────────────────────────────────────
 
-PROJECT_DIR="$HOME/.claude/projects/-Users-sihaoli"
+# Derive the current project's transcript dir from the cwd (Claude Code encodes
+# the project path as ~/.claude/projects/<cwd with '/' -> '-'>). Portable; if it
+# does not exist the readiness check below exits cleanly.
+PROJECT_DIR="$HOME/.claude/projects/$(printf '%s' "$PWD" | sed 's#/#-#g')"
 CURRENT_SESSION=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
 
 if [[ -z "$CURRENT_SESSION" ]]; then
