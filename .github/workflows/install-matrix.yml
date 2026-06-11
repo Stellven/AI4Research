@@ -68,6 +68,24 @@ jobs:
           }
           Write-Output "install.ps1 lint clean"
 
+  mempalace-check:
+    name: mempalace deps-light check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: mempalace deps-light gate
+        shell: bash
+        run: |
+          status=0
+          ./scripts/mempalace-check.sh 2>&1 | tee "$RUNNER_TEMP/mempalace.log" || status=$?
+          if [ "$status" -ne 0 ]; then
+            # Job logs need admin rights on this fork; annotations are public.
+            tail -c 6000 "$RUNNER_TEMP/mempalace.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::error title=mempalace-check failure tail::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+            exit "$status"
+          fi
+          grep -E 'requirements resolve|missing-var gate|config.yaml render|doctor verdict|idempotent reinstall|mcp add|mcp remove|residue-free|mempalace-check passed' "$RUNNER_TEMP/mempalace.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::notice title=mempalace evidence::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
