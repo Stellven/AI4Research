@@ -20,7 +20,7 @@ Usage:
 
 Env:
   SOLAR_MAC_MINI_USER  default: solar
-  SOLAR_MAC_MINI_HOST  default: auto-detect 100.64.0.10 then 192.0.2.189
+  SOLAR_MAC_MINI_HOST  default: auto-detect 203.0.113.10 then 192.0.2.189
   SOLAR_MAC_MINI_PATH  default: remote $HOME
 EOF
 }
@@ -59,13 +59,13 @@ detect_remote() {
     return
   fi
   local host
-  for host in 100.64.0.10 192.0.2.189; do
+  for host in 203.0.113.10 192.0.2.189; do
     if ssh_try "${REMOTE_USER}@${host}" 'printf ok' >/dev/null 2>&1; then
       printf '%s@%s\n' "$REMOTE_USER" "$host"
       return
     fi
   done
-  die "cannot reach Mac mini via 100.64.0.10 or 192.0.2.189"
+  die "cannot reach Mac mini via 203.0.113.10 or 192.0.2.189"
 }
 
 REMOTE="$(detect_remote)"

@@ -17,7 +17,7 @@
 #      new (single-commit) history. (The dev history range ec07779..0e2b431
 #      carried them tracked; the orphan cut drops all that history.)
 #   2. Personal tokens ZERO in the public tree — owner-identifying + persona
-#      proper nouns: /Users/lisihao, haogege1977, LAN IPs, lisihao@/sihaoli@,
+#      proper nouns: /Users/lisihao, haogege1977, private IPs, lisihao@/sihaoli@,
 #      小爱, 昊哥, xiaoai, sihaoli, "Li Sihao", "Sihao Li". (LICENSE is
 #      allowlisted for the author's copyright name; the scanner scripts are
 #      allowlisted for carrying the patterns themselves.)
@@ -111,7 +111,7 @@ check_personal_tokens() {
     work="$1"; fail=0
     log "check 2: personal/persona tokens ZERO in the public tree"
     # Author-identifying + persona proper nouns. NOT architectural names.
-    personal='/Users/lisihao|lisihao@|sihaoli@|haogege1977|192\.168\.|100\.122\.|小爱|昊哥|xiaoai|sihaoli|Li Sihao|Sihao Li'
+    personal='/Users/lisihao|lisihao@|sihaoli@|haogege1977|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|小爱|昊哥|xiaoai|sihaoli|Li Sihao|Sihao Li'
     # Allowlist: LICENSE (author copyright name) + the scanner scripts that
     # legitimately embed the token patterns.
     hits="$(cd "$work" && git grep -nIE "$personal" "$ORPHAN_BRANCH" -- . \

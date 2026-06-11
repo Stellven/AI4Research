@@ -1829,7 +1829,7 @@
         "host_type": "ssh_devbox",
         "carrier_hint": {
           "ssh_meta": {
-            "hostname": "100.64.0.10",
+            "hostname": "203.0.113.10",
             "user": "solar",
             "port": 22
           }

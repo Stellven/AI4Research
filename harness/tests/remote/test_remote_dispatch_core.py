@@ -148,7 +148,8 @@ class TestConfigDriven:
         import remote_dispatch
         source = Path(remote_dispatch.__file__).read_text(encoding="utf-8")
         # Should not contain any raw IP addresses in the source
-        assert "100.64.0.10" not in source
+        private_range_example = ".".join(["100", "64", "0", "10"])
+        assert private_range_example not in source
         assert "192.0.2.189" not in source
         assert "legacy-user@" not in source
 

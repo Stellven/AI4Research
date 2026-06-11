@@ -24,7 +24,7 @@ export SOLAR_DB="$SOLAR_HOME/db/solar.db"
 work="$(mktemp -d "${TMPDIR:-/tmp}/solar-kernel-check.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
-FORBIDDEN='brain-router|brain_router|skill_retriever|skill-retriever|solar-farm|solar_farm|plan-act|plan_act|xiaoai|ml-intern|ml_intern|gstack|小爱|昊哥|/Users/lisihao|haogege1977|192\.168\.|100\.122\.'
+FORBIDDEN='brain-router|brain_router|skill_retriever|skill-retriever|solar-farm|solar_farm|plan-act|plan_act|xiaoai|ml-intern|ml_intern|gstack|小爱|昊哥|/Users/lisihao|haogege1977|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'
 # Excised-subsystem path fragments. Most are subsumed by FORBIDDEN; the
 # meaningful addition is insight-agent (the solar-farm /insight backend),
 # which is not itself a bare forbidden token.

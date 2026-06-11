@@ -7,7 +7,7 @@
 # agents/hooks) and its token list lacked the bare handle, so personal data in
 # core/, harness/, mempalace/, and shipped skills was ungated.
 #
-# PERSONAL TOKENS ONLY — the bare author handle + secretary/guardian persona
+# PERSONAL TOKENS ONLY — the bare author handle + persona proper nouns
 # proper nouns + owner paths/IPs. Architectural names (solar-farm/gstack/
 # brain-router/...) remain TOLERATED in harness/core internals per the ratified
 # WS7 scope and are NOT checked here.
@@ -25,7 +25,7 @@ repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_dir"
 
 # Bare handles cover the path/email/topic forms (/Users/<h>, <h>@, *-<h>-*).
-PERSONAL='lisihao|sihaoli|haogege1977|192\.168\.|100\.122\.|小爱|昊哥|xiaoai|Li Sihao|Sihao Li'
+PERSONAL='lisihao|sihaoli|haogege1977|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|小爱|昊哥|xiaoai|Li Sihao|Sihao Li'
 
 # Print the shipped-payload pathspecs, one per line.
 build_paths() {

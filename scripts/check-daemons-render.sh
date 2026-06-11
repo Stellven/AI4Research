@@ -23,7 +23,7 @@ export SOLAR_DAEMON_BUN="/tmp/solar-daemon-check/.bun/bin/bun"
 work="$(mktemp -d "${TMPDIR:-/tmp}/solar-daemon-check.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
-FORBIDDEN='brain-router|brain_router|skill_retriever|solar-farm|solar_farm|plan-act|plan_act|xiaoai|ml-intern|ml_intern|gstack|小爱|昊哥|/Users/lisihao|haogege1977|192\.168\.|100\.122\.'
+FORBIDDEN='brain-router|brain_router|skill_retriever|solar-farm|solar_farm|plan-act|plan_act|xiaoai|ml-intern|ml_intern|gstack|小爱|昊哥|/Users/lisihao|haogege1977|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'
 fail=0
 
 for tpl in solar-daemon.plist.template solar-daemon.service.template; do

@@ -27,7 +27,7 @@ cd "$repo_dir"
 
 # Unambiguous owner-identifying personal tokens. NOT the architectural names
 # (parked by design; gated in the installed tree by check-kernel-gen.sh).
-PERSONAL='/Users/lisihao|lisihao@|sihaoli@|haogege1977|SihaodeMacBook|192\.168\.|100\.122\.'
+PERSONAL='/Users/lisihao|lisihao@|sihaoli@|haogege1977|SihaodeMacBook|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'
 
 # Scanner scripts legitimately embed the token PATTERNS in their own source.
 EXCLUDE=(
