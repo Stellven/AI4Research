@@ -81,6 +81,16 @@ while IFS= read -r name; do
 done < "$repo_dir/kernel/base-agents.txt"
 echo "ok: base agents scanned"
 
+echo "== allowlisted base hooks"
+while IFS= read -r name; do
+    name="$(printf '%s' "$name" | awk '{$1=$1; print}')"
+    case "$name" in ''|'#'*) continue ;; esac
+    f="$repo_dir/hooks/$name.sh"
+    [ -f "$f" ] || { echo "FAIL: base hook missing: $f" >&2; fail=1; continue; }
+    scan_file "hooks/$name.sh" "$f"
+done < "$repo_dir/kernel/base-hooks.txt"
+echo "ok: base hooks scanned"
+
 if [ "$fail" -ne 0 ]; then
     echo "kernel-gen-check FAILED" >&2
     exit 1

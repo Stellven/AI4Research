@@ -25,7 +25,8 @@ component_install() {
     # workstream.
     copy_allowlist "$SOURCE_DIR/rules" "$CLAUDE_DIR/solar/rules" "$SOURCE_DIR/kernel/base-rules.txt"
     copy_allowlist "$SOURCE_DIR/agents" "$CLAUDE_DIR/solar/agents" "$SOURCE_DIR/kernel/base-agents.txt"
-    [ -d "$SOURCE_DIR/hooks" ] && copy_payload "$SOURCE_DIR/hooks" "$CLAUDE_DIR/solar/hooks"
+    copy_allowlist "$SOURCE_DIR/hooks" "$CLAUDE_DIR/solar/hooks" "$SOURCE_DIR/kernel/base-hooks.txt" ".sh"
+    chmod +x "$CLAUDE_DIR/solar/hooks/"*.sh 2>/dev/null || true
     [ -d "$SOURCE_DIR/.claude/prompts" ] && copy_payload "$SOURCE_DIR/.claude/prompts" "$CLAUDE_DIR/solar/prompts"
 
     python3 - "$CLAUDE_DIR/CLAUDE.md" <<'PY'
