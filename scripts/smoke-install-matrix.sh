@@ -199,6 +199,54 @@ assert_kernel_loadable() {
     echo "kernel loadable: ok (SOLAR.md non-empty, no {{, one import line, no dangling @/agent refs)"
 }
 
+assert_hooks_no_crash() {
+    # (1) every event->hook binding in an installed component's hooks.json is
+    # registered under that SAME event in settings.json; (2) each shipped hook
+    # runs rc=0 on a benign JSON stdin (proves no-crash, NOT correctness). Runs
+    # in its own isolated home (kernel hooks are profile-independent) and from a
+    # non-repo cwd so session-end-save.sh skips its git checkpoint and hook side
+    # effects never reach the main residue assertion.
+    hc="$sandbox/hookcheck"
+    mkdir -p "$hc"
+    HOME="$hc" "$repo_dir/install.sh" --yes --components kernel,harness --fake-keys --skip-llm-cli >/dev/null
+    REPO="$repo_dir" SETTINGS="$hc/.claude/settings.json" COMPONENTS="kernel,harness" python3 - <<'PY'
+import json, os
+repo = os.environ["REPO"]
+comps = [c.strip() for c in os.environ["COMPONENTS"].split(",") if c.strip()]
+expected = []
+for c in comps:
+    f = os.path.join(repo, "components.d", c, "hooks.json")
+    if os.path.isfile(f):
+        for evt, hooks in json.load(open(f)).items():
+            for h in hooks:
+                expected.append((evt, h))
+settings = json.load(open(os.environ["SETTINGS"]))
+actual = set()
+for evt, groups in settings.get("hooks", {}).items():
+    for g in groups:
+        for hk in g.get("hooks", []):
+            cmd = hk.get("command", "")
+            if "/solar/hooks/" in cmd:
+                actual.add((evt, cmd.split("/solar/hooks/")[-1].split()[0]))
+missing = [f"{h} under {e}" for (e, h) in expected if (e, h) not in actual]
+if missing:
+    raise SystemExit("hooks not registered under the right event: " + ", ".join(missing))
+print(f"hook registration: ok ({len(expected)} bindings match hooks.json)")
+PY
+    benign='{"hook_event_name":"PostToolUse","tool_name":"Read","tool_input":{"file_path":"/tmp/x"},"prompt":"hi","cwd":"'"$sandbox"'","transcript_path":"/tmp/none.jsonl"}'
+    for h in "$hc/.claude/solar/hooks/"*.sh; do
+        name="$(basename "$h")"
+        [ "$name" = "hook-logger.sh" ] && continue
+        rc=0
+        ( cd "$sandbox" && printf '%s' "$benign" | HOME="$hc" SOLAR_HOME="$hc/.solar" bash "$h" >/dev/null 2>&1 ) || rc=$?
+        if [ "$rc" != "0" ]; then
+            echo "hook crashed (rc=$rc) on benign stdin: $name" >&2
+            exit 1
+        fi
+    done
+    echo "hook no-crash: ok (all shipped hooks rc=0 on benign stdin; no-crash, not correctness)"
+}
+
 assert_keep_data_contract() {
     # --keep-data must preserve ONLY db/ + config.env + .env and remove
     # everything else (code, venv, bin, node_modules, cache, receipt). Uses a
@@ -325,6 +373,7 @@ fi
 assert_no_bun_home_leak
 echo "solar update round-trip: ok"
 
+assert_hooks_no_crash
 assert_keep_data_contract
 
 HOME="$home_dir" "$home_dir/.solar/bin/solar" uninstall --yes
