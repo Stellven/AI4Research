@@ -147,6 +147,15 @@ jobs:
       - name: shellcheck install.sh + lib/installer (warning severity)
         run: shellcheck -S warning install.sh lib/installer/*.sh
 
+  dry-run-check:
+    name: dry-run writes nothing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assert --dry-run writes zero files
+        run: ./scripts/check-dry-run.sh
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
