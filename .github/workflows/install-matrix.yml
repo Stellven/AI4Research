@@ -24,6 +24,15 @@ jobs:
       - name: Check core import resolution
         run: ./scripts/check-core-imports.sh
 
+  kernel-gen:
+    name: kernel-gen check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check kernel assemblies are clean
+        run: ./scripts/check-kernel-gen.sh
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
