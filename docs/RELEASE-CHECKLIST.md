@@ -1,140 +1,119 @@
-# Solar Public Release Checklist
+# OpenSolar Public Release Checklist
 
-The public release is an **orphan-branch cut**: a single squashed commit of the
-current tree with **no development history** ("show day 100, not the history").
-This checklist is the owner's sign-off for that cut and the fresh-VM
-verification that must pass before it ships.
+The public release is an orphan-branch cut: a single squashed public tree with
+no development history. This document is the owner sign-off checklist for that
+cut. Ordinary cleanup work must not execute the orphan cut, push release refs,
+or create a GitHub Release.
 
-Nothing here is executed automatically. `scripts/release-cut.sh` defaults to a
-dry run that never touches refs and never pushes; the cut and the public
-repo/GitHub Release are manual owner steps.
+`scripts/release-cut.sh` defaults to a dry run. A dry run verifies the public
+tree and history without changing refs.
 
 ---
 
-## Phase A — Pass the release gate (automated, repeatable)
+## 1. Automated Release Gate
 
-Run the dry run (verifies the public tree + history without changing anything):
+Expected dry-run command:
 
 ```bash
-# gitleaks must be on PATH for the history scan
-./scripts/release-cut.sh --source HEAD
+# gitleaks must be installed and on PATH; skipped gitleaks is not verified.
+bash scripts/release-cut.sh --source HEAD --exclude-file release-exclude.txt
 ```
 
-The gate checks:
+Expected result before owner approval:
 
-1. **WORKLOG.md / MIGRATION_PLAN.md** absent from the public tree AND its
-   single-commit history. *(Currently PASS — both are untracked/ignored; the
-   dev range `ec07779..0e2b431` that carried them tracked is dropped by the
-   orphan cut.)*
-2. **Personal/persona tokens ZERO** — owner-identifying home paths and account
-   handles, LAN IPs, and the secretary/guardian persona proper nouns. The exact
-   token set is defined in `scripts/release-cut.sh` (the `LICENSE` copyright
-   name is allowlisted).
-3. **Architectural names** — reported, allowlist-aware (`solar-farm`/`gstack`
-   inside `harness/`+`core/` internals are the tolerated out-of-scope residue).
-4. **gitleaks over full history** clean (uses `harness/gitleaks.toml`).
-   *(Currently PASS.)*
+```text
+RELEASE-GATE VERDICT: PASS
+```
 
-### Current dry-run state (resolve before cutting)
+The exclude file is intentional:
 
-The dry run currently returns **FAIL** on check 2 — by design, it surfaces what
-must be excluded or scrubbed. As of this writing:
+- `release-exclude.txt` excludes the remaining parked, non-installed files that
+  should not ship in the public tree.
+- `release-exclude.txt` also excludes itself, so the public tree does not expose
+  release-engineering internals.
+- Root `CLAUDE.md` is not excluded. It must remain a public, personal-data-free
+  contributor guide.
 
-- **~102 personal/persona token hits** across the dev corpus: the contributor
-  `CLAUDE.md`, `SPRINTS-HIGHLIGHTS.md`, `TRIGGERS.md`, the parked `rules/`
-  (delegate-*, solar-protocol, mempalace-diary, …), parked `agents/`, the
-  `docs/` design reports, and unshipped `hooks/`.
-- **36 files** carry architectural names outside the harness/core allowlist
-  (parked rules/agents/docs, the contributor `CLAUDE.md`, `kernel/base-rules.txt`
-  comment, etc.).
-- **Shipped-code personal residue (decide explicitly — recommend scrubbing):**
-  - `core/notify/ntfy.ts` — a personal default ntfy topic embedded in core
-    runtime code.
-  - `core/ontology/schema.sql` — still seeds the author handle as the guardian
-    identity. *(The installed copy `core/db/schema/59-ontology-v1-compat.sql`
-    was already neutralized to a neutral default; this is the un-consolidated
-    source.)*
-  - `data/usage-stats.json` — the author's personal project paths (dev data;
-    recommend exclude).
-  - `harness/scripts/browser_agent_chatgpt_wrapper.py` — the author's profile
-    name in a UI-detection string.
+The gate must verify:
 
-**Owner decision per item: exclude or scrub.** Two mechanisms:
+- `WORKLOG.md` and `MIGRATION_PLAN.md` are absent from the public tree and the
+  single-commit public history.
+- The privacy scanner finds zero owner-identifying tokens in the release tree.
+- Installed payload checks pass.
+- gitleaks runs over the checked tree/history using `harness/gitleaks.toml`.
+  If gitleaks is not available locally, mark this item **not verified** instead
+  of treating it as a pass.
+- Allowlist references are present; missing required allowlist entries block the
+  cut.
 
-- *Exclude* — list paths/globs in a file and pass `--exclude-file`:
-  ```bash
-  ./scripts/release-cut.sh --source HEAD --exclude-file release-exclude.txt
-  ```
-  Likely exclude candidates for a clean public tree: the parked dev corpus
-  (`docs/` design reports, parked `agents/`, parked `rules/`, unshipped
-  `hooks/`, `data/usage-stats.json`, `SPRINTS-HIGHLIGHTS.md`, `TRIGGERS.md`).
-- *Scrub* — neutralize the token in place (for content that should ship, e.g.
-  `core/notify/ntfy.ts`, and the contributor `CLAUDE.md` if it ships).
-
-Re-run the dry run until it returns **PASS**.
-
----
-
-## Phase B — Cut the orphan branch (owner, after go-ahead)
+Useful supporting checks:
 
 ```bash
-# Creates the local orphan branch only. Refuses unless the gate PASSES.
-# Does NOT push and does NOT create any public repo or release.
-./scripts/release-cut.sh --source HEAD --branch release/v1 \
-    --exclude-file release-exclude.txt --execute
+git diff --check
+bash scripts/check-privacy.sh
+bash scripts/check-installed-clean.sh
+bash scripts/smoke-install-matrix.sh minimal
+bash scripts/check-harness-plumbing.sh
 ```
 
-Then, manually:
-
-1. Review the orphan tree (`git checkout release/v1`).
-2. Finalize the release URLs (currently owner-pending):
-   - `get-solar.sh` channel — set the `stable` tag/branch the bootstrap clones.
-   - `install.ps1` `-BootstrapUrl` — the GitHub Release `get-solar.sh` asset URL.
-3. Push `release/v1` (and a version tag) to the public repo.
-4. Cut the **GitHub Release** with `get-solar.sh` attached as an asset.
+`scripts/check-harness-plumbing.sh` is deterministic harness plumbing smoke,
+not live Claude behavior. It verifies install/layout/preflight/coordinator and
+dispatch artifact plumbing without consuming Claude quota.
 
 ---
 
-## Phase C — Fresh-VM verification (owner sign-off — reduced manual set)
+## 2. Owner Manual Checks
 
-Most of a fresh install is now a CI assertion (see the smoke's coverage banner
-at the end of `scripts/smoke-install-matrix.sh`). The install-matrix smoke +
-sibling gates already verify, on macOS + Ubuntu: install, `solar doctor`
-verdict, DB schema + a live FTS5 probe, config render, **hook registration
-under the right event + per-hook no-crash**, **kernel loadability** (SOLAR.md
-valid + exactly one managed import line + no dangling @/agent refs),
-daemon+dashboard boot gates, **daemon render + install/uninstall lifecycle**,
-idempotent reinstall, `solar update` no-op, the **`--keep-data` contract**, and
-residue-free uninstall. **Do NOT re-verify those by hand.**
+CI and local smoke cover the normal installer lifecycle, generated kernel
+structure, doctor verdicts, uninstall cleanup, and deterministic harness
+plumbing. Do not re-test those manually unless a gate points to a failure.
 
-Only these remain manual — each is irreducibly human or needs hardware/an
-environment CI runners cannot provide. Because CI already proves the
-surrounding machinery, each is a narrow *confirmation*, not a discovery:
+Manual checks that still require a real user environment:
 
-| Manual check | Why it can't run on CI | What CI already proved |
-|---|---|---|
-| **Kernel load** — open `claude`, approve the one-time `@~/.claude/solar/SOLAR.md` import, confirm the kernel loads | interactive approval | SOLAR.md is structurally loadable (valid, one import line, no dangling refs); hooks registered + no-crash |
-| **Daemon start** — on real macOS (`launchctl`) and systemd-user Linux/WSL2, confirm the daemon actually starts and stays up | no user-session bus on runners | unit/plist render structurally valid; install places + uninstall removes the service |
-| **mempalace heavy-deps** — install `mempalace` with deps NOT skipped (full chromadb + sentence-transformers venv) + a venv import smoke | multi-GB; CI is deps-light by ratified policy | requirements resolve; config + MCP wiring; deps-light install/uninstall |
-| **Windows WSL2 E2E** — run `install.ps1` end to end on Win11 incl. the single admin approval + one reboot, then the lifecycle inside the auto-provisioned WSL2 Ubuntu-24.04 | runners have no nested virt | `install.ps1` lints clean; the Linux path it forwards to is fully CI-gated |
+| Check | Required confirmation |
+|---|---|
+| Kernel load | Open `claude`, approve the one-time `@~/.claude/solar/SOLAR.md` import, and confirm the kernel loads. |
+| Product Delivery harness | Run `solar-harness start <workdir>`, confirm the `solar-harness` tmux session has the Product Delivery window and expected panes, start/trust Claude in each pane, and confirm one real delegation result. |
+| Claude quota/auth boundary | If Claude is rate-limited or unauthenticated, record this as manual-blocked/auth-quota-blocked. Do not mark live Claude verified. |
+| Daemon start | On real macOS launchd and systemd-user Linux/WSL2, confirm the daemon starts and stays up. |
+| mempalace heavy deps | Install `mempalace` without deps-light skips and run a venv import smoke. |
+| Windows WSL2 | Run `install.ps1` end to end on Win11, including the one admin approval, reboot if required, and Linux lifecycle inside the provisioned WSL2 distro. |
+| Release URLs | Confirm `get-solar.sh` stable channel and `install.ps1 -BootstrapUrl` point to the final public release asset. |
 
-Run each on macOS, Ubuntu 24.04, and Win11+WSL2 as applicable (sign-off below).
-Also confirm `-BootstrapUrl` resolves once the Release asset exists (Phase B).
+Current manual blockers:
 
-One extra confirmation (CI covers only the fresh-HOME case): on a VM that
-**already had** a `~/.claude/CLAUDE.md`, after `solar uninstall` that file is
-byte-identical to its pre-install backup — i.e. the sentinel surgery preserved
-your existing content. (A recommendation to also gate this in CI is below.)
+- Live Claude panes and real delegation result are not verified while Claude
+  quota/auth is unavailable.
+- The orphan cut, release branch push, tag push, and GitHub Release remain owner
+  actions only.
 
 ---
 
-## Sign-off
+## 3. Owner Cut Procedure
+
+Run only after the automated gate passes and the owner gives go-ahead:
+
+```bash
+bash scripts/release-cut.sh --source HEAD --branch release/v1 \
+  --exclude-file release-exclude.txt --execute
+```
+
+Then the owner reviews the orphan tree, pushes only the intended release branch
+and tag, and creates the GitHub Release with the finalized bootstrap assets.
+
+---
+
+## 4. Sign-Off
 
 | Item | Owner | Date | Result |
 |---|---|---|---|
-| Release gate PASS (`release-cut.sh` dry run) | | | ☐ |
-| Orphan cut created + pushed; GitHub Release with `get-solar.sh` | | | ☐ |
-| macOS fresh-VM matrix | | | ☐ |
-| Ubuntu 24.04 fresh-VM matrix | | | ☐ |
-| Win11 + WSL2 E2E | | | ☐ |
-| **v1 approved for public release** | | | ☐ |
+| Release gate PASS with gitleaks actually run | | | [ ] |
+| Root public docs reviewed | | | [ ] |
+| Kernel load manual check | | | [ ] |
+| Product Delivery live Claude + real delegation manual check | | | [ ] |
+| macOS daemon check | | | [ ] |
+| Linux/WSL2 daemon check | | | [ ] |
+| mempalace heavy-deps check | | | [ ] |
+| Win11 + WSL2 E2E | | | [ ] |
+| Release URLs finalized | | | [ ] |
+| Orphan cut created, reviewed, and published by owner | | | [ ] |
