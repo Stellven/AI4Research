@@ -51,7 +51,11 @@ jobs:
           # Write-Host is intentional CLI output; the internal state-changing
           # helpers do not need ShouldProcess plumbing. All other Error/Warning
           # rules stay active.
-          $exclude = @('PSAvoidUsingWriteHost', 'PSUseShouldProcessForStateChangingFunctions')
+          # PSReviewUnusedParameter is a false positive here: the params are
+          # consumed by script-scoped functions (closures), which PSSA does not
+          # track. The other two are installer idioms (CLI output; internal
+          # state-changing helpers).
+          $exclude = @('PSAvoidUsingWriteHost', 'PSUseShouldProcessForStateChangingFunctions', 'PSReviewUnusedParameter')
           $issues = Invoke-ScriptAnalyzer -Path ./install.ps1 -Severity Error,Warning -ExcludeRule $exclude
           $issues | Format-Table -AutoSize
           foreach ($i in $issues) {

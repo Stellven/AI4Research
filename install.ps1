@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-    OpenSolar Windows bootstrapper — provisions WSL2 and runs the Linux
+    OpenSolar Windows bootstrapper - provisions WSL2 and runs the Linux
     installer inside it with full flag passthrough.
 
 .DESCRIPTION
     Native (non-WSL) Windows is out of scope; WSL2 is the Windows runtime path.
     If WSL2 is absent this self-elevates, installs Ubuntu-24.04, and registers a
-    RunOnce continuation — the one documented manual step is the admin approval
+    RunOnce continuation - the one documented manual step is the admin approval
     plus the single reboot WSL2 install requires. If WSL2 is present it ensures
     the distro + systemd are ready, then runs the Linux installer inside with
     every forwarded flag, so `--yes` CI/unattended installs behave identically
