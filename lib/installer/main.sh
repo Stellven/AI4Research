@@ -5,6 +5,7 @@
 . "$SOLAR_SOURCE_DIR/lib/installer/copy-engine.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/kernel-gen.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/settings-merge.sh"
+. "$SOLAR_SOURCE_DIR/lib/installer/mcp-register.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/db-init.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/receipt.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/doctor.sh"
@@ -93,6 +94,7 @@ main() {
     install_components
     db_init
     settings_merge
+    mcp_register
     write_receipt
     if [ "$DRY_RUN" = "true" ]; then
         green "OpenSolar dry-run complete: $SELECTED_COMPONENTS"
