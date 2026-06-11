@@ -162,6 +162,43 @@ assert_residue_empty() {
     fi
 }
 
+assert_kernel_loadable() {
+    # Proxy for the interactive kernel load: prove the generated kernel is
+    # structurally loadable, so the manual `claude` check only has to confirm
+    # Claude actually loads it (not discover it is broken).
+    solar_md="$home_dir/.claude/solar/SOLAR.md"
+    claude_md="$home_dir/.claude/CLAUDE.md"
+    [ -s "$solar_md" ] || { echo "kernel: SOLAR.md missing or empty: $solar_md" >&2; exit 1; }
+    if grep -q '{{' "$solar_md"; then
+        echo "kernel: SOLAR.md has unresolved template vars:" >&2
+        grep -n '{{' "$solar_md" >&2
+        exit 1
+    fi
+    n_import="$(grep -cE '^@[^[:space:]]*solar/SOLAR\.md$' "$claude_md" 2>/dev/null || true)"
+    if [ "$n_import" != "1" ]; then
+        echo "kernel: expected exactly one managed import line in CLAUDE.md, found $n_import" >&2
+        exit 1
+    fi
+    # No dangling @import inside SOLAR.md (Claude @imports start with @ + a path
+    # char; the @Agent role mentions do not). Read from a file, not a pipe, so a
+    # failure exits the script under set -e.
+    grep -E '^[[:space:]]*@[~/.]' "$solar_md" > "$sandbox/kernel-imports.txt" 2>/dev/null || true
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        p="${line#*@}"; p="${p%%[[:space:]]*}"
+        p="${p/#\~\//$home_dir/}"   # expand a leading ~/ to the sandbox home
+        [ -e "$p" ] || { echo "kernel: SOLAR.md has a dangling @import: $line" >&2; exit 1; }
+    done < "$sandbox/kernel-imports.txt"
+    # No dangling agent refs: every base agent the kernel ships must be installed.
+    while IFS= read -r a; do
+        a="${a%%#*}"; a="$(printf '%s' "$a" | awk '{$1=$1; print}')"
+        [ -n "$a" ] || continue
+        [ -f "$home_dir/.claude/solar/agents/$a.md" ] \
+            || { echo "kernel: base agent referenced but not installed: $a" >&2; exit 1; }
+    done < "$repo_dir/kernel/base-agents.txt"
+    echo "kernel loadable: ok (SOLAR.md non-empty, no {{, one import line, no dangling @/agent refs)"
+}
+
 assert_keep_data_contract() {
     # --keep-data must preserve ONLY db/ + config.env + .env and remove
     # everything else (code, venv, bin, node_modules, cache, receipt). Uses a
@@ -203,6 +240,7 @@ assert_doctor_ok
 assert_db_schema
 assert_config_rendered
 assert_settings_registered
+assert_kernel_loadable
 assert_no_bun_home_leak
 
 HOME="$home_dir" "$repo_dir/install.sh" \
