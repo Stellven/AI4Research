@@ -2556,6 +2556,24 @@ def _normalize_worker_entry(worker: dict[str, Any]) -> dict[str, Any]:
     if pane and not normalized.get("pane"):
         normalized["pane"] = pane
     role = str(normalized.get("role") or "").lower()
+    if role in {"planner", "architect"} and not normalized.get("skills"):
+        normalized["skills"] = [
+            "workflow.planning",
+            "browser.qa",
+            "debug.systematic",
+            "skill.methodology",
+        ]
+    if role in {"planner", "architect"} and not normalized.get("capabilities"):
+        normalized["capabilities"] = [
+            "harness.context_preflight",
+            "harness.dispatch_visibility",
+            "harness.dag",
+            "browser.browse",
+            "code.review",
+            "test.tdd",
+            "guard.secret-leak-guard",
+            "resource.repo-workspace",
+        ]
     if (role in {"builder", "lab", "lab-builder", "evaluator"} or "harness-lab" in pane) and not normalized.get("skills"):
         normalized["skills"] = [
             "bash",

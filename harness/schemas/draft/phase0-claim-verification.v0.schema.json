@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/phase0-claim-verification.schema.json",
+  "title": "Solar Phase 0 Claim Verification Fixture",
+  "type": "object",
+  "required": ["schema_version", "paper", "source_artifacts", "run", "expected_summary", "claims"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "migration_test.fixture.v1"},
+    "paper": {
+      "type": "object",
+      "required": ["paper_id", "title", "source"],
+      "additionalProperties": true,
+      "properties": {
+        "paper_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1}
+      }
+    },
+    "source_artifacts": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "run": {
+      "type": "object",
+      "required": ["run_id", "benchmark", "benchmark_run_result_path", "evidence_ids"],
+      "additionalProperties": true,
+      "properties": {
+        "run_id": {"type": "string", "minLength": 1},
+        "benchmark": {"type": "string", "minLength": 1},
+        "benchmark_run_result_path": {"type": "string", "minLength": 1},
+        "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "expected_summary": {
+      "type": "object",
+      "required": ["paper_level_status", "full_paper_claim_status", "claim_status_counts", "report_path", "key_limitations"],
+      "additionalProperties": false,
+      "properties": {
+        "paper_level_status": {"$ref": "#/$defs/verdict_status"},
+        "full_paper_claim_status": {"$ref": "#/$defs/verdict_status"},
+        "claim_status_counts": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
+        "report_path": {"type": "string", "minLength": 1},
+        "key_limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/claim"}
+    }
+  },
+  "$defs": {
+    "verdict_status": {
+      "type": "string",
+      "enum": ["reproduced", "partially_reproduced", "not_reproduced", "not_testable", "failed_to_run", "blocked", "out_of_scope"]
+    },
+    "readiness_status": {
+      "type": "string",
+      "enum": ["ready", "partially_ready", "not_ready", "blocked", "unknown"]
+    },
+    "claim": {
+      "type": "object",
+      "required": [
+        "claim_id",
+        "paper_location",
+        "metric_name",
+        "dataset",
+        "split",
+        "config",
+        "expected_direction_or_tolerance",
+        "extraction_evidence_ids",
+        "contract",
+        "observed_metrics",
+        "comparison"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "claim_id": {"type": "string", "minLength": 1},
+        "paper_location": {"type": "string", "minLength": 1},
+        "metric_name": {"type": "string", "minLength": 1},
+        "dataset": {"type": "string", "minLength": 1},
+        "split": {"type": "string", "minLength": 1},
+        "config": {"type": "string", "minLength": 1},
+        "expected_direction_or_tolerance": {"type": "string", "minLength": 1},
+        "extraction_evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "contract": {"$ref": "#/$defs/contract"},
+        "observed_metrics": {"type": "array", "items": {"$ref": "#/$defs/observed_metric"}},
+        "comparison": {"$ref": "#/$defs/comparison"}
+      }
+    },
+    "contract": {
+      "type": "object",
+      "required": ["contract_id", "runnable_target", "metric_definition", "aggregation_rule", "comparison_logic", "required_artifacts", "human_approval_state"],
+      "additionalProperties": true,
+      "properties": {
+        "contract_id": {"type": "string", "minLength": 1},
+        "runnable_target": {"type": "string", "minLength": 1},
+        "metric_definition": {"type": "string", "minLength": 1},
+        "aggregation_rule": {"type": "string", "minLength": 1},
+        "comparison_logic": {"type": "string", "minLength": 1},
+        "required_artifacts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "human_approval_state": {"enum": ["approved", "rejected", "needs_clarification", "pending"]},
+        "reconstructed_path": {"type": "boolean"}
+      }
+    },
+    "observed_metric": {
+      "type": "object",
+      "required": ["observed_metric_id", "metric_name", "source_artifact_ids", "parser_confidence"],
+      "additionalProperties": true,
+      "properties": {
+        "observed_metric_id": {"type": "string", "minLength": 1},
+        "metric_name": {"type": "string", "minLength": 1},
+        "source_artifact_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "parser_confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "required": ["claim_verdict_status", "execution_readiness_status", "evidence_ids", "mismatch_summary", "comparison_basis"],
+      "additionalProperties": true,
+      "properties": {
+        "claim_verdict_status": {"$ref": "#/$defs/verdict_status"},
+        "execution_readiness_status": {"$ref": "#/$defs/readiness_status"},
+        "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "mismatch_summary": {"type": "string"},
+        "comparison_basis": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}
+

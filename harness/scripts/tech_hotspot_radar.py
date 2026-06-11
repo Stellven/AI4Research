@@ -53,6 +53,12 @@ from report_evidence import run_chapter_writer as runtime_run_chapter_writer
 from report_ir import compile_report_ir as runtime_compile_report_ir
 from report_ir import create_chapter_jobs as runtime_create_chapter_jobs
 from report_synthesis import synthesize_report as runtime_synthesize_report
+from report_validation import repair_chapter_markdown as runtime_repair_chapter_markdown
+from report_validation import run_chapter_verifier as runtime_run_chapter_verifier
+from report_validation import write_validation_sidecars as runtime_write_validation_sidecars
+
+from ai_influence_youtube_report.pane_surface import build_pane_surface as build_report_pane_surface
+from ai_influence_youtube_report.status_surface import build_status_surface as build_report_status_surface
 
 try:
     import yaml
@@ -14086,7 +14092,9 @@ def call_ai_influence_chapter_writer_with_repair(chapter_prompt: str,
                                                  model_name: str,
                                                  chapter_id: str,
                                                  min_chars: int = 120,
-                                                 max_attempts: int = 3) -> dict[str, Any]:
+                                                 max_attempts: int = 3,
+                                                 operator_kind: str = "chapter_writer",
+                                                 repair_context: dict[str, Any] | None = None) -> dict[str, Any]:
     """Run ChatGPT Report Chapter Writer with a bounded repair loop.
 
     The old flow failed the whole report when one chapter came back as a short
@@ -14097,23 +14105,28 @@ def call_ai_influence_chapter_writer_with_repair(chapter_prompt: str,
     for attempt in range(1, max_attempts + 1):
         prompt = chapter_prompt
         if attempt > 1:
+            repair_context_text = ""
+            if repair_context:
+                repair_context_text = json.dumps(repair_context, ensure_ascii=False, indent=2)[:6000]
             prompt = "\n\n".join([
                 "你正在执行 AI Influence YouTube 报告流的章节修复任务。",
                 f"chapter_id: {chapter_id}",
                 "上一次章节生成失败或输出过短。请只补写当前章节，必须输出完整 Markdown 章节正文。",
                 "不要输出 smoke test、不要解释流程、不要输出 JSON、不要请求人工介入。",
                 "如果证据不足，也要写成“证据不足 / 暂不作为强结论”的完整章节，而不是留空。",
+                "如果 verifier 指出 unsupported claim，必须删除该断言或明确降级为观察项，并保留可追踪证据引用。",
                 "原始章节任务如下：",
                 chapter_prompt,
+                "verifier_context:\n" + repair_context_text if repair_context_text else "",
                 "最近失败原因：\n" + "\n".join(f"- {err}" for err in errors[-3:]),
-            ])
+            ]).strip()
         try:
             result = call_browser_agent_chatgpt_markdown(
                 prompt,
                 config,
                 purpose=purpose if attempt == 1 else f"{purpose}-repair-{attempt}",
                 requested_model=model_name,
-                operator_kind="chapter_writer",
+                operator_kind=operator_kind,
             )
             markdown = str(result.get("markdown") or "").strip()
             if len(markdown) >= min_chars:
@@ -14357,9 +14370,23 @@ def call_browser_agent_chatgpt_text(prompt: str, config: dict[str, Any], *,
     reasoner_cfg = ((config.get("youtube") or {}).get("phase_report_reasoner") or {})
     flow_cfg = ((config.get("youtube") or {}).get("ai_influence_report_flow") or {})
     writer_cfg = (flow_cfg.get("report_writer") or {})
+    deep_writer_cfg = (flow_cfg.get("deep_writer") or {})
     browser_agent_cfg = (flow_cfg.get("browser_agent") or {})
-    model = str(requested_model or writer_cfg.get("model") or reasoner_cfg.get("model") or "chatgpt-5.5")
-    reasoning_effort = str(requested_reasoning_effort or writer_cfg.get("reasoning_effort") or reasoner_cfg.get("reasoning_effort") or "high")
+    is_deep_writer = str(operator_kind or "").strip() == "deep_writer"
+    model = str(
+        requested_model
+        or (deep_writer_cfg.get("model") if is_deep_writer else None)
+        or writer_cfg.get("model")
+        or reasoner_cfg.get("model")
+        or ("chatgpt-pro" if is_deep_writer else "chatgpt-5.5")
+    )
+    reasoning_effort = str(
+        requested_reasoning_effort
+        or (deep_writer_cfg.get("reasoning_effort") if is_deep_writer else None)
+        or writer_cfg.get("reasoning_effort")
+        or reasoner_cfg.get("reasoning_effort")
+        or ("deep_research" if is_deep_writer else "high")
+    )
     timeout = int(requested_timeout_seconds or writer_cfg.get("timeout_seconds") or reasoner_cfg.get("timeout_seconds") or 1800)
     max_chars = int(requested_max_prompt_chars or writer_cfg.get("max_prompt_chars") or reasoner_cfg.get("max_prompt_chars") or 180000)
     if len(prompt) > max_chars:
@@ -14371,7 +14398,7 @@ def call_browser_agent_chatgpt_text(prompt: str, config: dict[str, Any], *,
         "expected": expected,
         "provider": "browser_agent_chatgpt",
         "logical_operator": "DeepResearchChatGPT",
-        "operator_line": "chatgpt_thinking_high",
+        "operator_line": "chatgpt_deep_research" if is_deep_writer else "chatgpt_thinking_high",
         "operator_kind": operator_kind or "auto",
         "model": model,
         "reasoning_effort": reasoning_effort,
@@ -14394,9 +14421,14 @@ def call_browser_agent_chatgpt_text(prompt: str, config: dict[str, Any], *,
         "BROWSER_AGENT_EXPECTED_OUTPUT": expected,
         "BROWSER_AGENT_REQUEST_DIR": str(req_dir),
         "BROWSER_AGENT_PURPOSE": purpose,
-        "BROWSER_AGENT_CHATGPT_MODEL_MODE": "thinking",
-        "BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE": "true",
+        "BROWSER_AGENT_CHATGPT_MODEL_MODE": "pro" if is_deep_writer else "thinking",
+        "BROWSER_AGENT_CHATGPT_TOOL_MODE": "deep_research" if is_deep_writer else "none",
     })
+    if is_deep_writer:
+        env["BROWSER_AGENT_CHATGPT_REQUIRE_DEEP_RESEARCH"] = "true"
+        env.pop("BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE", None)
+    else:
+        env["BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE"] = "true"
     if operator_kind:
         env["CHATGPT_REPORT_OPERATOR_KIND"] = operator_kind
     if target_url:
@@ -16526,6 +16558,130 @@ def _ai_influence_canonical_planned_base(config: dict[str, Any], date_str: str) 
     return raw_base / "ai-influence-planned" / date_str
 
 
+def _load_json_sidecar(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _chapter_deep_proof_bundle(writer_result: dict[str, Any], chapter_id: str) -> dict[str, Any]:
+    """Return traceable Deep Research proof for a deep-writer chapter."""
+    candidates: list[Path] = []
+    explicit_path = str(writer_result.get("deep_proof_path") or "").strip()
+    if explicit_path:
+        candidates.append(Path(explicit_path).expanduser())
+    request_dir = str(writer_result.get("request_dir") or "").strip()
+    if request_dir:
+        candidates.append(Path(request_dir).expanduser() / "deep-research-state.json")
+
+    for proof_path in candidates:
+        if not proof_path.exists():
+            continue
+        proof = _load_json_sidecar(proof_path)
+        if proof.get("ok"):
+            return {
+                "deep_proof_path": str(proof_path),
+                "deep_research_state_proof": proof,
+                "request_dir": request_dir,
+                "chapter_id": chapter_id,
+            }
+    return {}
+
+
+def _write_report_validation_surfaces(
+    report_dir: Path,
+    *,
+    report_id: str,
+    quality: dict[str, Any],
+    chapter_verifications: list[dict[str, Any]],
+    repair_summaries: list[dict[str, Any]],
+    blocked_reasons: list[str],
+) -> dict[str, Any]:
+    validation_dir = report_dir / "validation"
+    validation_dir.mkdir(parents=True, exist_ok=True)
+    sidecar_refs = [
+        str((validation_dir / "chapter-validation-summary.json").relative_to(report_dir)),
+        str((validation_dir / "claim-verification.json").relative_to(report_dir)),
+        str((validation_dir / "quality-score.json").relative_to(report_dir)),
+    ]
+    chapter_state = {
+        str(item.get("chapter_id") or ""): str(item.get("status") or "")
+        for item in chapter_verifications
+        if str(item.get("chapter_id") or "").strip()
+    }
+    run_payload = {
+        "run_id": report_id,
+        "state": "validated" if quality.get("publish_decision") == "publish" and not blocked_reasons else "blocked",
+        "gate_decisions": [{"grade": quality.get("grade"), "score": quality.get("score")}],
+        "groups": [],
+        "validator": {
+            "overall": "PASS" if quality.get("publish_decision") == "publish" and not blocked_reasons else "BLOCKED",
+            "quality_score": quality.get("score"),
+            "publish_decision": quality.get("publish_decision"),
+        },
+        "archive": {"status": "ready" if quality.get("publish_decision") == "publish" else "internal_only"},
+        "blocked_reason": "; ".join(blocked_reasons),
+        "blocked_reasons": blocked_reasons,
+        "capability_usage": [
+            "browser_agent_chatgpt",
+            "chapter_verifier",
+            "deep_writer_proof_policy",
+            "bounded_repair_loop",
+            "quality_gate",
+        ],
+        "artifacts": [
+            {"type": "quality-score", "path": sidecar_refs[2]},
+            {"type": "claim-verification", "path": sidecar_refs[1]},
+            {"type": "chapter-validation-summary", "path": sidecar_refs[0]},
+        ],
+        "chapter_state": chapter_state,
+        "chapter_verifications": [
+            {
+                "chapter_ref": item.get("chapter_id"),
+                "status": item.get("status"),
+                "repair_reasons": item.get("repair_reasons") or [],
+                "grounded_claim_ratio": (item.get("checks") or {}).get("grounded_claim_ratio"),
+            }
+            for item in chapter_verifications
+        ],
+        "repair_summaries": [
+            {
+                "chapter_ref": item.get("chapter_id"),
+                "attempt": item.get("attempt"),
+                "verifier_status": item.get("verifier_status"),
+                "repair_reasons": item.get("repair_reasons") or [],
+                "deterministic_repair": item.get("deterministic_repair") or {},
+            }
+            for item in repair_summaries
+        ],
+        "quality": quality,
+        "sidecar_refs": sidecar_refs,
+    }
+    status_surface = build_report_status_surface(run_payload)
+    pane_surface = build_report_pane_surface(
+        {
+            **run_payload,
+            "step_log": [
+                {"phase": "chapter_verification", "state": chapter_state},
+                {"phase": "quality_gate", "decision": quality.get("publish_decision"), "grade": quality.get("grade")},
+            ],
+            "handoff": {"quality_score": str(validation_dir / "quality-score.json")},
+            "eval_sidecars": sidecar_refs,
+        }
+    )
+    (validation_dir / "status-surface.json").write_text(
+        json.dumps(status_surface, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (validation_dir / "pane-surface.json").write_text(
+        json.dumps(pane_surface, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return {"status_surface": status_surface, "pane_surface": pane_surface}
+
+
 def publish_ai_influence_planned_report_to_status(
     config: dict[str, Any],
     *,
@@ -16861,7 +17017,9 @@ def cmd_run_ai_influence_planned_reports(args: argparse.Namespace) -> int:
     video_groups = json.loads(video_groups_path.read_text(encoding="utf-8")) if video_groups_path.exists() else {}
     flow_cfg = ((config.get("youtube") or {}).get("ai_influence_report_flow") or {})
     writer_cfg = flow_cfg.get("report_writer") or {}
+    deep_writer_cfg = flow_cfg.get("deep_writer") or {}
     model_name = str(getattr(args, "model", None) or writer_cfg.get("model") or "chatgpt-5.5")
+    deep_model_name = str(deep_writer_cfg.get("model") or model_name)
     selected_id = str(getattr(args, "report_id", None) or "").strip()
     reports = [r for r in (plan.get("reports") or []) if isinstance(r, dict)]
     if selected_id:
@@ -16911,22 +17069,10 @@ def cmd_run_ai_influence_planned_reports(args: argparse.Namespace) -> int:
             aggregate_tokens_in = 0
             aggregate_tokens_out = 0
             aggregate_latency_ms = 0
-
-            def writer_callable(chapter_spec: dict[str, Any], chapter_evidence_pack: dict[str, Any], writer_model: str) -> dict[str, Any]:
-                chapter_id = str(chapter_spec.get("chapter_id") or "chapter")
-                prompt = build_planned_report_chapter_prompt(
-                    report_ir,
-                    chapter_spec,
-                    chapter_evidence_pack,
-                    model_name=writer_model,
-                )
-                return call_ai_influence_chapter_writer_with_repair(
-                    prompt,
-                    config,
-                    purpose=f"ai-influence-report-chapter-{date_str}-{report_id}-{chapter_id}",
-                    model_name=writer_model,
-                    chapter_id=chapter_id,
-                )
+            chapter_verifications: list[dict[str, Any]] = []
+            repair_summaries: list[dict[str, Any]] = []
+            blocked_reasons: list[str] = []
+            max_verification_attempts = max(1, int(writer_cfg.get("verification_repair_max_attempts") or 3))
 
             for job in jobs:
                 chapter_id = str(job.get("chapter_id") or "")
@@ -16937,22 +17083,155 @@ def cmd_run_ai_influence_planned_reports(args: argparse.Namespace) -> int:
                 chapter_evidence_pack = runtime_build_chapter_evidence_pack(evidence_pack, chapter_spec, report_ir.get("quality_targets") or {})
                 if chapter_spec.get("chapter_type") != "open_questions" and not (chapter_evidence_pack.get("core_evidence") or chapter_evidence_pack.get("support_evidence") or chapter_evidence_pack.get("selected_videos")):
                     raise ValueError(f"ai_influence_chapter_evidence_empty:{chapter_id}")
-                writer_result = runtime_run_chapter_writer(
+                deep_required = bool(job.get("deep_writer_required") or chapter_spec.get("deep_writer_required"))
+                operator_kind = "deep_writer" if deep_required else "chapter_writer"
+                writer_model = deep_model_name if deep_required else model_name
+                repair_context: dict[str, Any] | None = None
+                final_verification: dict[str, Any] | None = None
+                final_writer_result: dict[str, Any] = {}
+
+                for attempt in range(1, max_verification_attempts + 1):
+                    if attempt > 1:
+                        runtime_append_chapter_event(
+                            events_path,
+                            chapter_id=chapter_id,
+                            from_status="verifying",
+                            to_status="writing",
+                            reason=f"chapter_verifier_repair_attempt_{attempt}",
+                        )
+
+                    def writer_callable(chapter_spec_arg: dict[str, Any], chapter_evidence_pack_arg: dict[str, Any], writer_model_arg: str) -> dict[str, Any]:
+                        prompt = build_planned_report_chapter_prompt(
+                            report_ir,
+                            chapter_spec_arg,
+                            chapter_evidence_pack_arg,
+                            model_name=writer_model_arg,
+                        )
+                        return call_ai_influence_chapter_writer_with_repair(
+                            prompt,
+                            config,
+                            purpose=f"ai-influence-report-chapter-{date_str}-{report_id}-{chapter_id}-v{attempt}",
+                            model_name=writer_model_arg,
+                            chapter_id=chapter_id,
+                            operator_kind=operator_kind,
+                            repair_context=repair_context,
+                        )
+
+                    writer_result = runtime_run_chapter_writer(
+                        report_dir,
+                        job,
+                        chapter_spec,
+                        chapter_evidence_pack,
+                        model_name=writer_model,
+                        writer_callable=writer_callable,
+                    )
+                    final_writer_result = writer_result
+                    runtime_append_chapter_event(events_path, chapter_id=chapter_id, from_status="writing", to_status="verifying", reason="chapter_writer_completed")
+                    request_dir = str(writer_result.get("request_dir") or "")
+                    if request_dir:
+                        request_dirs.append(request_dir)
+                    aggregate_tokens_in += int(writer_result.get("input_token_count") or 0)
+                    aggregate_tokens_out += int(writer_result.get("output_token_count") or 0)
+                    aggregate_latency_ms += int(writer_result.get("latency_ms") or 0)
+
+                    proof_bundle = _chapter_deep_proof_bundle(writer_result, chapter_id) if deep_required else {}
+                    verification = runtime_run_chapter_verifier(job, str(writer_result.get("markdown") or ""), chapter_evidence_pack, proof_bundle)
+                    verification["attempt"] = attempt
+                    verification["operator_kind"] = operator_kind
+                    if proof_bundle:
+                        verification["deep_proof_path"] = proof_bundle.get("deep_proof_path")
+                    chapter_validation_dir = report_dir / "validation" / "chapters"
+                    chapter_validation_dir.mkdir(parents=True, exist_ok=True)
+                    (chapter_validation_dir / f"{chapter_id}.attempt-{attempt}.json").write_text(
+                        json.dumps(verification, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    (chapter_validation_dir / f"{chapter_id}.json").write_text(
+                        json.dumps(verification, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+
+                    if verification.get("status") == "passed":
+                        final_verification = verification
+                        runtime_append_chapter_event(events_path, chapter_id=chapter_id, from_status="verifying", to_status="passed", reason="chapter_verifier_passed")
+                        break
+
+                    deterministic_repair = runtime_repair_chapter_markdown(str(writer_result.get("markdown") or ""), verification, chapter_evidence_pack)
+                    repair_summary = {
+                        "chapter_id": chapter_id,
+                        "attempt": attempt,
+                        "verifier_status": verification.get("status"),
+                        "repair_reasons": verification.get("repair_reasons") or [],
+                        "deterministic_repair": {k: v for k, v in deterministic_repair.items() if k != "markdown"},
+                    }
+                    repairs_dir = report_dir / "validation" / "repairs"
+                    repairs_dir.mkdir(parents=True, exist_ok=True)
+                    (repairs_dir / f"{chapter_id}.attempt-{attempt}.json").write_text(
+                        json.dumps(repair_summary, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    repair_summaries.append(repair_summary)
+                    if deterministic_repair.get("changed"):
+                        repaired_markdown = str(deterministic_repair.get("markdown") or "")
+                        final_path = report_dir / "chapters" / f"{chapter_id}.final.md"
+                        final_path.write_text(repaired_markdown.strip() + "\n", encoding="utf-8")
+                        repaired_verification = runtime_run_chapter_verifier(job, repaired_markdown, chapter_evidence_pack, proof_bundle)
+                        repaired_verification["attempt"] = attempt
+                        repaired_verification["operator_kind"] = operator_kind
+                        repaired_verification["deterministic_repair_applied"] = True
+                        if proof_bundle:
+                            repaired_verification["deep_proof_path"] = proof_bundle.get("deep_proof_path")
+                        (chapter_validation_dir / f"{chapter_id}.json").write_text(
+                            json.dumps(repaired_verification, ensure_ascii=False, indent=2) + "\n",
+                            encoding="utf-8",
+                        )
+                        verification = repaired_verification
+                        if repaired_verification.get("status") == "passed":
+                            final_verification = repaired_verification
+                            runtime_append_chapter_event(events_path, chapter_id=chapter_id, from_status="verifying", to_status="passed", reason="chapter_deterministic_repair_passed")
+                            break
+
+                    repair_context = {"verification": verification, "repair_summary": repair_summary}
+                    final_verification = verification
+
+                if not final_verification or final_verification.get("status") != "passed":
+                    runtime_append_chapter_event(events_path, chapter_id=chapter_id, from_status="verifying", to_status="failed", reason="chapter_verifier_failed")
+                    reason = f"{chapter_id}:{','.join(final_verification.get('repair_reasons') or ['verification_failed']) if final_verification else 'verification_failed'}"
+                    blocked_reasons.append(reason)
+                    chapter_verifications.append(final_verification or {"chapter_id": chapter_id, "status": "failed", "repair_reasons": ["verification_failed"]})
+                    quality = runtime_write_validation_sidecars(report_dir, report_ir, chapter_verifications)
+                    _write_report_validation_surfaces(
+                        report_dir,
+                        report_id=report_id,
+                        quality=quality,
+                        chapter_verifications=chapter_verifications,
+                        repair_summaries=repair_summaries,
+                        blocked_reasons=blocked_reasons,
+                    )
+                    raise ValueError(f"ai_influence_chapter_validation_failed:{reason}")
+
+                chapter_verifications.append(final_verification)
+
+            quality = runtime_write_validation_sidecars(report_dir, report_ir, chapter_verifications)
+            if quality.get("publish_decision") != "publish":
+                blocked_reasons.append(f"quality_gate:{quality.get('grade')}:{quality.get('publish_decision')}")
+                _write_report_validation_surfaces(
                     report_dir,
-                    job,
-                    chapter_spec,
-                    chapter_evidence_pack,
-                    model_name=model_name,
-                    writer_callable=writer_callable,
+                    report_id=report_id,
+                    quality=quality,
+                    chapter_verifications=chapter_verifications,
+                    repair_summaries=repair_summaries,
+                    blocked_reasons=blocked_reasons,
                 )
-                runtime_append_chapter_event(events_path, chapter_id=chapter_id, from_status="writing", to_status="verifying", reason="chapter_writer_completed")
-                runtime_append_chapter_event(events_path, chapter_id=chapter_id, from_status="verifying", to_status="passed", reason="chapter_runtime_verified")
-                request_dir = str(writer_result.get("request_dir") or "")
-                if request_dir:
-                    request_dirs.append(request_dir)
-                aggregate_tokens_in += int(writer_result.get("input_token_count") or 0)
-                aggregate_tokens_out += int(writer_result.get("output_token_count") or 0)
-                aggregate_latency_ms += int(writer_result.get("latency_ms") or 0)
+                raise ValueError(f"ai_influence_quality_gate_blocked:{quality.get('grade')}:{quality.get('publish_decision')}")
+            surfaces = _write_report_validation_surfaces(
+                report_dir,
+                report_id=report_id,
+                quality=quality,
+                chapter_verifications=chapter_verifications,
+                repair_summaries=repair_summaries,
+                blocked_reasons=blocked_reasons,
+            )
 
             synthesis = runtime_synthesize_report(report_ir, report_dir)
             markdown = normalize_ai_influence_markdown_report(
@@ -16988,6 +17267,10 @@ def cmd_run_ai_influence_planned_reports(args: argparse.Namespace) -> int:
                 "pipeline": "report_ir_chapter_runtime",
                 "chapter_count": len(jobs),
                 "chapter_state": runtime_rebuild_chapter_state(events_path),
+                "quality_score": quality,
+                "status_surface_path": str(report_dir / "validation" / "status-surface.json"),
+                "pane_surface_path": str(report_dir / "validation" / "pane-surface.json"),
+                "status_surface_state": (surfaces.get("status_surface") or {}).get("state"),
                 "synthesis_path": synthesis.get("path"),
                 "request_dirs": request_dirs,
                 "request_dir": request_dirs[-1] if request_dirs else "",

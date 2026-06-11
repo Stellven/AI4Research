@@ -1,0 +1,16 @@
+capsules:
+  capability:
+    - capability_capsule_id: cap.phase0-claim-verification
+      version: 0.1.0
+      capsule_kind: capability
+      status: draft
+      schema_ref: schemas/draft/capability-capsule.v1.draft.json
+      manifest_path: capability-capsules/cap.phase0-claim-verification.yaml
+      tags:
+        - paper
+        - claim-verification
+        - phase0
+        - benchmark
+      owner: migration_test
+      default_operator_profile: mini-codex-gpt55-medium-evaluator-1
+

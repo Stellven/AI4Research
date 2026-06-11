@@ -23,8 +23,26 @@ def test_status_surface_has_required_categories() -> None:
     assert surface["group_counts"]["keynote"] == 1
     assert "validator" in surface
     assert "archive" in surface
+    assert surface["chapter_state"] == {}
 
 
 def test_status_surface_blocks_internal_field_leak() -> None:
     with pytest.raises(ValueError, match="video_id"):
         build_status_surface({"artifacts": [{"video_id": "abc"}]})
+
+
+def test_status_surface_exposes_quality_and_repair_sidecars() -> None:
+    surface = build_status_surface({
+        "run_id": "run-2",
+        "state": "blocked",
+        "blocked_reasons": ["ch_01:grounded_claim_ratio_below_target"],
+        "chapter_state": {"ch_01": "failed"},
+        "quality": {"grade": "C", "publish_decision": "internal_only"},
+        "repair_summaries": [{"chapter_ref": "ch_01", "attempt": 1}],
+        "sidecar_refs": ["validation/quality-score.json"],
+    })
+
+    assert surface["blocked_reasons"] == ["ch_01:grounded_claim_ratio_below_target"]
+    assert surface["chapter_state"]["ch_01"] == "failed"
+    assert surface["quality"]["publish_decision"] == "internal_only"
+    assert surface["sidecar_refs"] == ["validation/quality-score.json"]

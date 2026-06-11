@@ -191,7 +191,21 @@ def test_cli_default_pipeline_and_legacy_branch(monkeypatch, tmp_path: Path) -> 
     monkeypatch.setattr(mod, "render_ai_influence_report_html_anything", lambda markdown, evidence, report: f"<html>{markdown}</html>")
     monkeypatch.setattr(mod, "build_planned_report_evidence_pack", lambda *a, **k: {**_sample_evidence(), "skipped_material_refs": []})
     monkeypatch.setenv("SOLAR_REPORT_CHAPTER_WRITER_MOCK", "1")
-    monkeypatch.setattr(mod, "call_ai_influence_chapter_writer_with_repair", lambda *a, **k: {"markdown": "## Mock Chapter\n\nSome mock text with length more than 120 characters to satisfy the character count validation requirement in the cli logic.", "model": "test-model"})
+    def fake_chapter_writer(*args, **kwargs):
+        chapter_id = str(kwargs.get("chapter_id") or "chapter")
+        request_dir = tmp_path / "requests" / chapter_id
+        request_dir.mkdir(parents=True, exist_ok=True)
+        if kwargs.get("operator_kind") == "deep_writer":
+            (request_dir / "deep-research-state.json").write_text(json.dumps({"ok": True, "mode": "deep_research"}), encoding="utf-8")
+        markdown = (
+            f"## Mock Chapter {chapter_id}\n\n"
+            "判断：V001 显示 agent runtime 正在从演示走向可执行工作流，V002 提供了模型路由的辅助证据。"
+            "这意味着团队下一步应优先观察调度、权限和失败恢复。"
+            "证据不足的部分暂不作为强结论，并保留为后续观察项。"
+        )
+        return {"markdown": markdown, "model": "test-model", "request_dir": str(request_dir)}
+
+    monkeypatch.setattr(mod, "call_ai_influence_chapter_writer_with_repair", fake_chapter_writer)
 
     args = argparse.Namespace(
         date="2026-06-01",
@@ -212,6 +226,11 @@ def test_cli_default_pipeline_and_legacy_branch(monkeypatch, tmp_path: Path) -> 
     assert (report_dir / "events.jsonl").exists()
     assert mod.runtime_rebuild_chapter_state(report_dir / "events.jsonl") == {"ch_01": "passed", "ch_02": "passed"}
     assert (report_dir / "synthesis" / "report.synthesized.md").exists()
+    assert (report_dir / "validation" / "quality-score.json").exists()
+    assert (report_dir / "validation" / "status-surface.json").exists()
+    status_surface = json.loads((report_dir / "validation" / "status-surface.json").read_text(encoding="utf-8"))
+    assert status_surface["quality"]["publish_decision"] == "publish"
+    assert status_surface["chapter_state"] == {"ch_01": "passed", "ch_02": "passed"}
 
     monkeypatch.setattr(mod, "_cmd_run_ai_influence_planned_reports_legacy", lambda legacy_args: 7)
     args.legacy = True
