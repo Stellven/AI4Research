@@ -14,40 +14,77 @@ wizard_read() {
     IFS= read -r WIZARD_ANSWER </dev/tty || WIZARD_ANSWER=""
 }
 
+wizard_rule() {
+    printf '│  ──────────────────────────────────────────────────────────  │\n' >&2
+}
+
+wizard_heading() {
+    title="$1"
+    printf '\n' >&2
+    printf '╭─ %s ─────────────────────────────────────────────────────╮\n' "$title" >&2
+}
+
+wizard_footer() {
+    printf '╰──────────────────────────────────────────────────────────────╯\n' >&2
+}
+
+wizard_kv() {
+    label="$1"
+    value="$2"
+    printf '│  %-11s %s\n' "$label" "$value" >&2
+}
+
 wizard_tool_line() {
     tool="$1"
     note="$2"
     path="$(command_path "$tool")"
     if [ -n "$path" ]; then
-        printf '  %-10s found    %s\n' "$tool" "$path" >&2
+        printf '│  %-10s ok       %s\n' "$tool" "$path" >&2
     else
-        printf '  %-10s missing  %s\n' "$tool" "$note" >&2
+        printf '│  %-10s missing  %s\n' "$tool" "$note" >&2
     fi
 }
 
 wizard_banner() {
-    printf '\nOpenSolar installer\n' >&2
-    printf '===================\n' >&2
+    printf '\n' >&2
+    printf '  ██████╗  ██████╗ ██╗      █████╗ ██████╗\n' >&2
+    printf '  ██╔════╝ ██╔═══██╗██║     ██╔══██╗██╔══██╗\n' >&2
+    printf '  ███████╗ ██║   ██║██║     ███████║██████╔╝\n' >&2
+    printf '  ╚════██║ ██║   ██║██║     ██╔══██║██╔══██╗\n' >&2
+    printf '  ██████╔╝ ╚██████╔╝███████╗██║  ██║██║  ██║\n' >&2
+    printf '  ╚═════╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝\n' >&2
+    printf '\n' >&2
+    printf '╭──────────────────────────────────────────────────────────────╮\n' >&2
+    printf '│                                                              │\n' >&2
+    printf '│    ☀  S O L A R        ·        OpenJiuwen Solar            │\n' >&2
+    printf '│                                                              │\n' >&2
+    printf '│    component runtime   ·   Claude overlay   ·   harness     │\n' >&2
+    printf '│                                                              │\n' >&2
+    printf '╰──────────────────────────────────────────────────────────────╯\n' >&2
 }
 
 wizard_preflight_summary() {
-    printf '\nPreflight summary\n' >&2
-    printf '  OS         %s\n' "$OS_KIND" >&2
-    printf '  Source     %s\n' "$SOURCE_DIR" >&2
-    printf '  Solar home %s\n' "$SOLAR_HOME" >&2
-    printf '  Claude dir %s\n' "$CLAUDE_DIR" >&2
-    printf '\nTool status\n' >&2
+    wizard_heading "Preflight"
+    wizard_kv "OS" "$OS_KIND"
+    wizard_kv "Source" "$SOURCE_DIR"
+    wizard_kv "Solar home" "$SOLAR_HOME"
+    wizard_kv "Claude dir" "$CLAUDE_DIR"
+    wizard_footer
+
+    wizard_heading "Tools"
     wizard_tool_line python3 "required"
     wizard_tool_line git "optional receipt metadata"
     wizard_tool_line bun "enables core-runtime"
     wizard_tool_line cargo "enables skills-browser"
     wizard_tool_line claude "optional MCP registration"
+    wizard_footer
 }
 
 wizard_component_summary() {
     title="$1"
-    printf '\n%s\n' "$title" >&2
-    printf '  %s\n' "$SELECTED_COMPONENTS" >&2
+    wizard_heading "$title"
+    printf '│  %s\n' "$SELECTED_COMPONENTS" >&2
+    wizard_footer
 }
 
 wizard_component_by_number() {
@@ -65,18 +102,19 @@ wizard_component_by_number() {
 
 wizard_show_available_components() {
     idx=1
-    printf '\nAvailable components\n' >&2
+    wizard_heading "Available components"
     for name in $COMPONENT_ORDER; do
         load_component "$name"
         mark=" "
         contains_word "$name" "$SELECTED_COMPONENTS" && mark="*"
         platforms="${COMPONENT_PLATFORMS:-all}"
         req_bins="${COMPONENT_REQUIRES_BINS:-none}"
-        printf '  %2s. [%s] %-15s default=%-4s platforms=%-16s requires=%s\n' \
+        printf '│  %2s. [%s] %-15s default=%-4s platforms=%-16s requires=%s\n' \
             "$idx" "$mark" "$COMPONENT_NAME" "$COMPONENT_DEFAULT" "$platforms" "$req_bins" >&2
-        printf '      %s\n' "$COMPONENT_DESC" >&2
+        printf '│      %s\n' "$COMPONENT_DESC" >&2
         idx=$((idx + 1))
     done
+    wizard_footer
 }
 
 wizard_parse_component_selection() {
@@ -109,8 +147,8 @@ wizard_parse_component_selection() {
 wizard_customize_components() {
     while :; do
         wizard_show_available_components
-        printf '\nEnter numbers or names separated by commas/spaces.\n' >&2
-        printf 'Press Enter to keep the default selection, or type cancel.\n' >&2
+        printf '\n  Enter numbers or names separated by commas/spaces.\n' >&2
+        printf '  Press Enter to keep the default selection, or type cancel.\n' >&2
         wizard_read "Selection: "
         [ -n "$WIZARD_ANSWER" ] || {
             wizard_component_summary "Keeping default components"
@@ -136,10 +174,12 @@ run_component_wizard_if_needed() {
     wizard_component_summary "Default components"
 
     while :; do
-        printf '\nChoose an option\n' >&2
-        printf '  1. Proceed\n' >&2
-        printf '  2. Customize\n' >&2
-        printf '  3. Cancel\n' >&2
+        wizard_heading "Choose an option"
+        printf '│  1. Proceed\n' >&2
+        printf '│  2. Customize\n' >&2
+        printf '│  3. Cancel\n' >&2
+        wizard_rule
+        wizard_footer
         wizard_read "Choice [1-3]: "
         case "$WIZARD_ANSWER" in
             1|p|P|proceed|Proceed|PROCEED)
@@ -160,13 +200,14 @@ run_component_wizard_if_needed() {
 }
 
 print_final_summary() {
-    printf '\nFinal summary\n' >&2
-    printf '  Components %s\n' "$SELECTED_COMPONENTS" >&2
-    printf '  Solar home %s\n' "$SOLAR_HOME" >&2
-    printf '  Claude dir %s\n' "$CLAUDE_DIR" >&2
+    wizard_heading "Final summary"
+    wizard_kv "Components" "$SELECTED_COMPONENTS"
+    wizard_kv "Solar home" "$SOLAR_HOME"
+    wizard_kv "Claude dir" "$CLAUDE_DIR"
     if [ "$DRY_RUN" = "true" ]; then
-        printf '  Mode       dry-run (zero writes)\n' >&2
+        wizard_kv "Mode" "dry-run (zero writes)"
     else
-        printf '  Mode       install\n' >&2
+        wizard_kv "Mode" "install"
     fi
+    wizard_footer
 }
