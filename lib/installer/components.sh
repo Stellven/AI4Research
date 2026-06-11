@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-COMPONENT_ORDER="kernel core-runtime harness skills-md codex-bridge daemons"
+COMPONENT_ORDER="kernel core-runtime harness skills-md skills-office skills-obsidian skills-calendar skills-browser codex-bridge daemons"
 
 component_manifest() {
     printf '%s/components.d/%s/component.sh\n' "$SOURCE_DIR" "$1"
@@ -15,6 +15,7 @@ load_component() {
     COMPONENT_DEFAULT="off"
     COMPONENT_REQUIRES_BINS=""
     COMPONENT_MCP_SERVERS=""
+    COMPONENT_PLATFORMS=""
     # shellcheck source=/dev/null
     . "$manifest"
 }
@@ -54,6 +55,13 @@ resolve_components() {
     for name in $COMPONENT_ORDER; do
         if contains_word "$name" "$requested"; then
             load_component "$name"
+            if [ -n "$COMPONENT_PLATFORMS" ]; then
+                norm="$OS_KIND"; [ "$norm" = "wsl" ] && norm="linux"
+                if ! contains_word "$OS_KIND" "$COMPONENT_PLATFORMS" \
+                    && ! contains_word "$norm" "$COMPONENT_PLATFORMS"; then
+                    die "component '$name' is not supported on $OS_KIND (platforms: $COMPONENT_PLATFORMS)"
+                fi
+            fi
             for bin in $COMPONENT_REQUIRES_BINS; do
                 require_bin "$bin" "Install it or remove '$name' from --components."
             done

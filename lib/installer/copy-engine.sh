@@ -31,6 +31,21 @@ copy_allowlist() {
     done < "$list_file"
 }
 
+# copy_skills <skill-name>... — copy named skill dirs into ~/.claude/skills
+# and record each in installed-skills.txt (idempotent) so uninstall removes
+# exactly the skills Solar installed.
+copy_skills() {
+    dry_run_note "install skills: $*" && return 0
+    manifest="$CLAUDE_DIR/solar/installed-skills.txt"
+    mkdir -p "$CLAUDE_DIR/skills" "$CLAUDE_DIR/solar"
+    for name in "$@"; do
+        src="$SOURCE_DIR/skills/$name"
+        [ -d "$src" ] || die "skill not found: $src"
+        copy_payload "$src" "$CLAUDE_DIR/skills/$name"
+        grep -qxF "$name" "$manifest" 2>/dev/null || printf '%s\n' "$name" >> "$manifest"
+    done
+}
+
 copy_payload() {
     src="$1"
     dst="$2"
