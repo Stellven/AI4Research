@@ -13,6 +13,7 @@
 . "$SOLAR_SOURCE_DIR/lib/installer/receipt.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/doctor.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/components.sh"
+. "$SOLAR_SOURCE_DIR/lib/installer/wizard.sh"
 
 usage() {
     cat <<'EOF'
@@ -80,15 +81,13 @@ parse_args() {
 confirm_if_needed() {
     [ "$YES" = "true" ] && return 0
     if [ -t 0 ]; then
-        echo "Components: $SELECTED_COMPONENTS"
-        echo "Solar home: $SOLAR_HOME"
-        echo "Claude dir: $CLAUDE_DIR"
-        printf 'Proceed? [y/N] '
-        read ans
+        print_final_summary
+        wizard_read "Confirm install? [y/N] "
+        ans="$WIZARD_ANSWER"
         case "$ans" in
             y|Y|yes|YES) return 0 ;;
         esac
-        die "cancelled"
+        cancel_install
     fi
     die "non-interactive input detected; rerun with --yes"
 }
@@ -105,6 +104,7 @@ main() {
     fi
 
     resolve_components
+    run_component_wizard_if_needed
     resolve_config_vars
     confirm_if_needed
     ensure_base_dirs

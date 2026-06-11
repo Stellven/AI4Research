@@ -159,6 +159,18 @@ jobs:
       - name: Assert --dry-run writes zero files
         run: ./scripts/check-dry-run.sh
 
+  installer-contract:
+    name: installer contract + wizard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Deterministic installer contract checks
+        run: ./scripts/check-installer-contract.sh
+
+      - name: PTY wizard smoke
+        run: ./scripts/smoke-installer-wizard-pty.py
+
   docs-links:
     name: docs link check
     runs-on: ubuntu-latest

@@ -59,8 +59,11 @@ cd OpenSolar
 ./install.sh
 ```
 
-On a terminal (TTY) this runs interactively: it detects your OS, resolves a
-component selection, prints what it will do, and asks you to proceed.
+On a terminal (TTY) this runs interactively: it shows a banner, OS/tool
+summary, default components, and a numbered choice to proceed, customize, or
+cancel. After any required component config prompts, it prints a final summary
+and asks for confirmation. Cancelling exits cleanly with code `130` and writes
+nothing.
 
 ### Unattended / CI install
 
@@ -136,7 +139,8 @@ In non-interactive mode a missing required value fails loudly with the exact
 ```
 
 Every flag has a `SOLAR_*` environment-variable twin. `--dry-run` is fully
-side-effect-free: it prints the planned actions and writes nothing.
+side-effect-free: it may run the TTY wizard so choices shape the plan, but it
+writes nothing.
 
 ---
 

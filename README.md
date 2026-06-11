@@ -254,9 +254,9 @@ cd OpenSolar
 ./install.sh
 ```
 
-On a terminal this runs interactively — it detects your OS, resolves a
-component selection, shows what it will do, and asks to proceed. For an
-unattended install:
+On a terminal this runs an interactive TTY wizard — it detects your OS, shows
+the default components, lets you customize, then asks for final confirmation.
+For an unattended install:
 
 ```bash
 ./install.sh --yes --components kernel,harness
