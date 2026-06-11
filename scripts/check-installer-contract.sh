@@ -7,6 +7,13 @@ repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
 sandbox="$(mktemp -d "${TMPDIR:-/tmp}/solar-contract.XXXXXX")"
 trap 'rm -rf "$sandbox"' EXIT
 
+# GitHub-hosted runners can lazily initialize rustup when HOME points at a
+# strict residue-check sandbox, even though this contract is not testing Rust.
+# Keep runner toolchain state in the outer scratch dir, matching
+# scripts/mempalace-check.sh.
+export RUSTUP_HOME="$sandbox/toolchains/rustup"
+export CARGO_HOME="$sandbox/toolchains/cargo"
+
 snapshot_home() {
     home="$1"
     out="$2"
