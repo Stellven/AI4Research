@@ -380,3 +380,20 @@ HOME="$home_dir" "$home_dir/.solar/bin/solar" uninstall --yes
 assert_residue_empty
 
 echo "smoke profile passed: $profile"
+
+cat <<'COVERAGE'
+
+== verification coverage ==
+CI-COVERED (this smoke + sibling gates): install; doctor verdict; DB schema +
+  live FTS5 probe; config render; settings hook registration; kernel loadability
+  (SOLAR.md valid + one managed import line + no dangling @/agent refs); per-hook
+  registration under the right event + no-crash; daemon + dashboard boot gates;
+  daemon render + install/uninstall lifecycle; idempotent reinstall; solar update
+  no-op; --keep-data contract; residue-free uninstall; no bun-home leak; plus the
+  privacy / installed-clean / shellcheck / kernel-gen / dry-run / docs-links gates.
+MANUAL ONLY (cannot run on CI runners — see docs/RELEASE-CHECKLIST.md):
+  1. interactive `claude` kernel-load @import approval (loadability is proven)
+  2. real daemon START on launchd/systemd-user (render + lifecycle are proven)
+  3. Windows WSL2 end-to-end (no nested virt on runners)
+  4. mempalace heavy-deps install (chromadb + sentence-transformers; CI deps-light)
+COVERAGE

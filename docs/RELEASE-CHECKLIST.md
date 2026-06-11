@@ -95,35 +95,36 @@ Then, manually:
 
 ---
 
-## Phase C — Fresh-VM verification matrix (owner sign-off)
+## Phase C — Fresh-VM verification (owner sign-off — reduced manual set)
 
-Run the full lifecycle on each clean target. Each row must pass end to end.
+Most of a fresh install is now a CI assertion (see the smoke's coverage banner
+at the end of `scripts/smoke-install-matrix.sh`). The install-matrix smoke +
+sibling gates already verify, on macOS + Ubuntu: install, `solar doctor`
+verdict, DB schema + a live FTS5 probe, config render, **hook registration
+under the right event + per-hook no-crash**, **kernel loadability** (SOLAR.md
+valid + exactly one managed import line + no dangling @/agent refs),
+daemon+dashboard boot gates, **daemon render + install/uninstall lifecycle**,
+idempotent reinstall, `solar update` no-op, the **`--keep-data` contract**, and
+residue-free uninstall. **Do NOT re-verify those by hand.**
 
-| Step | macOS | Ubuntu 24.04 | Win11 + auto-provisioned WSL2 |
-|---|---|---|---|
-| Clone the public release / `curl get-solar.sh` | ☐ | ☐ | ☐ (`install.ps1`) |
-| Interactive install (defaults) | ☐ | ☐ | ☐ |
-| `solar doctor` → verdict ok | ☐ | ☐ | ☐ |
-| Open `claude`, **kernel-load**: approve the one-time `@~/.claude/solar/SOLAR.md` import; confirm kernel content loads | ☐ | ☐ | ☐ |
-| Trigger a session-start hook | ☐ | ☐ | ☐ |
-| **Web dashboard** serves (core-runtime) | ☐ | ☐ | ☐ |
-| **daemon-start**: real `launchctl` (macOS) / `systemctl --user` (Linux/WSL2) loads + runs the daemon | ☐ | ☐ | ☐ |
-| **mempalace heavy-deps**: install `mempalace` with deps NOT skipped (full chromadb + sentence-transformers venv) + a venv import smoke | ☐ | ☐ | ☐ |
-| `solar update` no-op round-trip | ☐ | ☐ | ☐ |
-| `solar uninstall` | ☐ | ☐ | ☐ |
-| `~/.claude/CLAUDE.md` byte-identical to pre-install backup; no `~/.solar`; `launchctl list` / `systemctl --user` clean | ☐ | ☐ | ☐ |
+Only these remain manual — each is irreducibly human or needs hardware/an
+environment CI runners cannot provide. Because CI already proves the
+surrounding machinery, each is a narrow *confirmation*, not a discovery:
 
-Windows-specific (covered by the WSL2 column, called out for the owner):
+| Manual check | Why it can't run on CI | What CI already proved |
+|---|---|---|
+| **Kernel load** — open `claude`, approve the one-time `@~/.claude/solar/SOLAR.md` import, confirm the kernel loads | interactive approval | SOLAR.md is structurally loadable (valid, one import line, no dangling refs); hooks registered + no-crash |
+| **Daemon start** — on real macOS (`launchctl`) and systemd-user Linux/WSL2, confirm the daemon actually starts and stays up | no user-session bus on runners | unit/plist render structurally valid; install places + uninstall removes the service |
+| **mempalace heavy-deps** — install `mempalace` with deps NOT skipped (full chromadb + sentence-transformers venv) + a venv import smoke | multi-GB; CI is deps-light by ratified policy | requirements resolve; config + MCP wiring; deps-light install/uninstall |
+| **Windows WSL2 E2E** — run `install.ps1` end to end on Win11 incl. the single admin approval + one reboot, then the lifecycle inside the auto-provisioned WSL2 Ubuntu-24.04 | runners have no nested virt | `install.ps1` lints clean; the Linux path it forwards to is fully CI-gated |
 
-- **Windows E2E**: run `install.ps1` end to end on Win11, including the single
-  admin approval + one reboot (RunOnce continuation), then the lifecycle above
-  inside the auto-provisioned WSL2 Ubuntu-24.04.
-- Confirm `-BootstrapUrl` resolves (the GitHub Release `get-solar.sh` asset must
-  exist — Phase B step 4).
+Run each on macOS, Ubuntu 24.04, and Win11+WSL2 as applicable (sign-off below).
+Also confirm `-BootstrapUrl` resolves once the Release asset exists (Phase B).
 
-> CI cannot perform these: GitHub runners lack nested virt (no live WSL2),
-> have no interactive `claude` import, no user-session `launchctl`/`systemd`,
-> and mempalace deps are multi-GB (CI is deps-light by ratified policy).
+One extra confirmation (CI covers only the fresh-HOME case): on a VM that
+**already had** a `~/.claude/CLAUDE.md`, after `solar uninstall` that file is
+byte-identical to its pre-install backup — i.e. the sentinel surgery preserved
+your existing content. (A recommendation to also gate this in CI is below.)
 
 ---
 
