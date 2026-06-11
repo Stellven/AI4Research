@@ -68,21 +68,30 @@ parse_args() {
     done
 }
 
+exclude_entry() {
+    printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+apply_excludes() {
+    work="$1"
+    [ -n "$EXCLUDE_FILE" ] && [ -f "$EXCLUDE_FILE" ] || return 0
+    ( cd "$work"
+      while IFS= read -r raw || [ -n "$raw" ]; do
+          pat="$(exclude_entry "$raw")"
+          case "$pat" in ''|'#'*) continue ;; esac
+          git rm -rfq --ignore-unmatch -- "$pat" 2>/dev/null || true
+          rm -rf -- "$pat" 2>/dev/null || true
+      done < "$EXCLUDE_FILE"
+    )
+}
+
 # Build the orphan branch (single commit of SRC_REF's tracked tree, minus the
-# exclude list) inside the given git working directory, which must already be a
-# clone/worktree of this repo checked out at SRC_REF.
+# exclude list) inside the given git working directory.
 build_orphan() {
     work="$1"
     ( cd "$work"
-      git checkout -q --orphan "$ORPHAN_BRANCH"
-      # Apply the cut-time exclude list, if any.
-      if [ -n "$EXCLUDE_FILE" ] && [ -f "$EXCLUDE_FILE" ]; then
-          while IFS= read -r pat; do
-              case "$pat" in ''|'#'*) continue ;; esac
-              git rm -rq --ignore-unmatch -- "$pat" 2>/dev/null || true
-              rm -rf -- "$pat" 2>/dev/null || true
-          done < "$EXCLUDE_FILE"
-      fi
+      git checkout -q --orphan "$ORPHAN_BRANCH" "$SRC_REF"
+      apply_excludes "$work"
       git add -A
       git commit -q -m "Solar — public release
 
@@ -90,6 +99,26 @@ A clean, single-commit snapshot of Solar (no development history)." )
 }
 
 # ---- verification checks (run inside the scratch orphan repo) ----
+
+check_excluded_paths_absent() {
+    work="$1"; fail=0
+    [ -n "$EXCLUDE_FILE" ] && [ -f "$EXCLUDE_FILE" ] || return 0
+    log "check 0: exclude-file entries absent from the public tree"
+    while IFS= read -r raw || [ -n "$raw" ]; do
+        pat="$(exclude_entry "$raw")"
+        case "$pat" in ''|'#'*) continue ;; esac
+        hits="$(cd "$work" && git ls-tree -r --name-only "$ORPHAN_BRANCH" -- "$pat" 2>/dev/null || true)"
+        if [ -n "$hits" ]; then
+            printf '  FAIL: exclude entry still present in orphan tree: %s\n' "$pat" >&2
+            printf '%s\n' "$hits" | sed 's/^/    /' | head -20 >&2
+            fail=1
+        fi
+    done < "$EXCLUDE_FILE"
+    if [ "$fail" -eq 0 ]; then
+        log "  ok: all exclude-file entries absent"
+    fi
+    return $fail
+}
 
 check_working_files() {
     work="$1"; fail=0
@@ -178,6 +207,8 @@ check_gitleaks_history() {
 run_verification() {
     work="$1"; rc=0
     rule
+    check_excluded_paths_absent "$work" || rc=1
+    rule
     check_working_files "$work"        || rc=1
     rule
     check_personal_tokens "$work"      || rc=1
@@ -191,8 +222,9 @@ run_verification() {
 
 main() {
     parse_args "$@"
-    # Resolve the exclude file to an absolute path NOW (before any cd), since
-    # build_orphan reads it from inside the scratch clone's working directory.
+    # Resolve the exclude file to an absolute path NOW (before any cd). It is
+    # copied into scratch below so executed cuts can still verify excludes even
+    # when the exclude file excludes itself from the orphan worktree.
     if [ -n "$EXCLUDE_FILE" ]; then
         case "$EXCLUDE_FILE" in /*) : ;; *) EXCLUDE_FILE="$PWD/$EXCLUDE_FILE" ;; esac
         [ -f "$EXCLUDE_FILE" ] || die "exclude file not found: $EXCLUDE_FILE"
@@ -205,11 +237,14 @@ main() {
     if [ "$KEEP_SCRATCH" != "true" ]; then
         trap 'rm -rf "$scratch"' EXIT
     fi
+    if [ -n "$EXCLUDE_FILE" ]; then
+        cp "$EXCLUDE_FILE" "$scratch/exclude-file"
+        EXCLUDE_FILE="$scratch/exclude-file"
+    fi
     log "scratch: $scratch"
     log "cutting orphan '$ORPHAN_BRANCH' from '$SRC_REF' (clone is local; refs untouched)"
     git clone -q --no-local --branch "$(git rev-parse --abbrev-ref "$SRC_REF" 2>/dev/null || echo HEAD)" . "$scratch/repo" 2>/dev/null \
         || git clone -q . "$scratch/repo"
-    ( cd "$scratch/repo" && git checkout -q "$SRC_REF" 2>/dev/null || true )
     build_orphan "$scratch/repo"
 
     log "verifying the public tree + history"
@@ -223,21 +258,18 @@ main() {
         [ "$verdict" = "PASS" ] || die "verification FAILED — refusing to create the orphan branch. Resolve the findings (exclude/scrub) and re-run."
         log "creating local orphan branch '$ORPHAN_BRANCH' in this repo (NO push)"
         git rev-parse --verify -q "$ORPHAN_BRANCH" >/dev/null && die "branch '$ORPHAN_BRANCH' already exists; delete it first"
-        # Recreate the verified orphan in the real repo.
-        git checkout -q --orphan "$ORPHAN_BRANCH" "$SRC_REF"
-        if [ -n "$EXCLUDE_FILE" ] && [ -f "$EXCLUDE_FILE" ]; then
-            while IFS= read -r pat; do
-                case "$pat" in ''|'#'*) continue ;; esac
-                git rm -rq --ignore-unmatch -- "$pat" 2>/dev/null || true
-            done < "$EXCLUDE_FILE"
+        previous_ref="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git rev-parse --short HEAD)"
+        # Recreate the verified orphan in the real repo using the same path as
+        # the dry-run scratch build, then verify the created local branch too.
+        build_orphan "$repo_dir"
+        log "verifying the executed local orphan branch"
+        if ! run_verification "$repo_dir"; then
+            git checkout -q "$previous_ref" 2>/dev/null || true
+            die "executed orphan verification FAILED — branch '$ORPHAN_BRANCH' was created locally but is not release-ready"
         fi
-        git add -A
-        git commit -q -m "Solar — public release
-
-A clean, single-commit snapshot of Solar (no development history)."
         log "DONE (local only): orphan branch '$ORPHAN_BRANCH' created. NOTHING pushed."
         log "Next (manual, owner): review, then push to the public repo and cut the GitHub Release."
-        git checkout -q -
+        git checkout -q "$previous_ref"
     fi
 
     rule
