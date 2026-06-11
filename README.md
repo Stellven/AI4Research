@@ -14,6 +14,30 @@ Solar is an AI-native execution fabric for long-running, evidence-driven softwar
 
 ---
 
+## Phase 0 status
+
+Solar is currently an **alpha Phase 0 package**. The public `stable` channel is
+a release-gated moving orphan branch used for early installation and demo
+validation.
+
+Verified today:
+
+- Linux and macOS CI install, doctor, update, uninstall, privacy, release-cut,
+  kernel, daemon-render, dashboard, and installer-contract gates.
+- Public `stable` bootstrap through `get-solar.sh`.
+- `openjiuwen-solar` pipx wrapper install path.
+- Deterministic harness preflight, layout, coordinator, and dispatch-file
+  plumbing.
+
+Not yet verified on clean owner hardware:
+
+- Windows WSL2 end-to-end install through `install.ps1`.
+- Full `mempalace` heavy-dependency install.
+- Live multi-agent delegation with real Claude pane responses and accepted
+  results.
+
+---
+
 ## Solar 是什么
 
 Solar 当前由三层组成：
