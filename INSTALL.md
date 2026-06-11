@@ -30,7 +30,20 @@ component when its requirements are met, or tells you what is missing):
 
 - `bun` — for the `core-runtime` component (TypeScript core, daemon, web dashboard)
 - `cargo` — for the `skills-browser` component
-- `tmux` — optional, for some harness workflows
+
+Runtime launch tools for `solar-harness start <workdir>`:
+
+- Bash 4 or newer — on macOS, install Homebrew Bash if `/bin/bash` is 3.2
+- `python3`
+- `tmux`
+- `jq`
+- Claude Code CLI (`claude`) on `PATH`
+
+Run `~/.solar/bin/solar-harness preflight` to check these before opening tmux
+panes. Preflight is deterministic: it proves launch dependencies and filesystem
+plumbing, not live Claude behavior. After `solar-harness start`, live Claude
+pane behavior and real delegation are owner-manual until Claude starts,
+responds, and any trust/auth/quota prompts are resolved.
 
 No root/`sudo` is needed. Nothing is written outside your home directory.
 
@@ -214,6 +227,19 @@ Claude Code and confirm the kernel loads:
 claude
 # On first run, approve the one-time @~/.claude/solar/SOLAR.md import prompt.
 ```
+
+For Product Delivery harness runtime readiness:
+
+```bash
+~/.solar/bin/solar-harness preflight
+~/.solar/bin/solar-harness start "$(pwd)"
+~/.solar/bin/solar-harness status
+```
+
+`status` reports required failures, manual-pending/auth-quota blocked Claude
+panes, and optional warnings separately. It should say "ready for manual Claude
+start" only when launch plumbing is ready; it must not claim live Claude is
+verified unless Claude actually launched and responded.
 
 ---
 

@@ -479,44 +479,99 @@ _ensure_bash4() {
   BASH4=$(resolve_bash4) || return 1
 }
 
+install_hint_for_required_dep() {
+  case "$1" in
+    bash4)
+      printf '%s\n' "macOS: brew install bash; Ubuntu/Debian: sudo apt-get install bash"
+      ;;
+    python3)
+      printf '%s\n' "macOS: brew install python; Ubuntu/Debian: sudo apt-get install python3"
+      ;;
+    tmux)
+      printf '%s\n' "macOS: brew install tmux; Ubuntu/Debian: sudo apt-get install tmux"
+      ;;
+    claude)
+      printf '%s\n' "Install the Claude Code CLI and confirm 'claude --version' works before launching panes"
+      ;;
+    jq)
+      printf '%s\n' "macOS: brew install jq; Ubuntu/Debian: sudo apt-get install jq"
+      ;;
+    *)
+      printf '%s\n' "Install '$1' and ensure it is on PATH"
+      ;;
+  esac
+}
+
+harness_launch_preflight() {
+  local failed=0 bash4 cmd path
+
+  echo "Solar Harness launch preflight"
+  if bash4=$(resolve_bash4); then
+    local bash_version
+    bash_version=$("$bash4" --version 2>/dev/null | head -1 || printf 'bash version unknown')
+    echo "required ok: bash>=4 path=${bash4} (${bash_version})"
+  else
+    echo "required fail: bash>=4 not found"
+    echo "  install hint: $(install_hint_for_required_dep bash4)"
+    failed=$((failed + 1))
+  fi
+
+  for cmd in python3 tmux claude jq; do
+    if path=$(command -v "$cmd" 2>/dev/null); then
+      echo "required ok: ${cmd} path=${path}"
+    else
+      echo "required fail: ${cmd} not found on PATH"
+      echo "  install hint: $(install_hint_for_required_dep "$cmd")"
+      failed=$((failed + 1))
+    fi
+  done
+
+  if [[ -w "$HARNESS_DIR" ]]; then
+    echo "required ok: harness dir writable (${HARNESS_DIR})"
+  else
+    echo "required fail: harness dir is not writable (${HARNESS_DIR})"
+    echo "  install hint: fix ownership/permissions for ${HARNESS_DIR}; do not run Solar as root"
+    failed=$((failed + 1))
+  fi
+
+  if (( failed == 0 )); then
+    echo "manual-pending: live Claude pane behavior is not verified by preflight; after tmux opens, press Enter in each pane and resolve Claude trust/auth/quota prompts."
+    return 0
+  fi
+
+  echo "preflight failed: ${failed} required launch check(s) failed"
+  return 1
+}
+
 # ---- Doctor 自检 ----
 
 do_doctor() {
   local failed=0
 
+  harness_launch_preflight || failed=$((failed + 1))
+
   # (a) bash 4+ 可用
   local bash4=""
   bash4=$(resolve_bash4) || {
-    echo "❌ bash 4+ 不可用 (当前 /bin/bash: ${BASH_VERSINFO[0]})"
-    echo "   修复: brew install bash"
-    ((failed++))
+    :
   }
-
-  # (b) tmux/claude/python3/jq 在 PATH
-  for cmd in tmux claude python3 jq; do
-    command -v "$cmd" &>/dev/null || {
-      echo "❌ $cmd 不在 PATH"
-      echo "   修复: brew install $cmd"
-      ((failed++))
-    }
-  done
 
   # (c) coordinator.sh bash -n 通过
   if [[ -n "$bash4" ]]; then
     "$bash4" -n "$HARNESS_DIR/coordinator.sh" 2>/dev/null || {
-      echo "❌ coordinator.sh 语法错误 (bash -n 失败)"
-      echo "   修复: $bash4 -n $HARNESS_DIR/coordinator.sh 查看详情"
+      echo "required fail: coordinator.sh syntax check failed"
+      echo "  inspect: $bash4 -n $HARNESS_DIR/coordinator.sh"
       ((failed++))
     }
     "$bash4" -n "$HARNESS_DIR/lib/persona-config.sh" 2>/dev/null || {
-      echo "❌ persona-config.sh 语法错误 (bash -n 失败)"
-      echo "   修复: $bash4 -n $HARNESS_DIR/lib/persona-config.sh 查看详情"
+      echo "required fail: persona-config.sh syntax check failed"
+      echo "  inspect: $bash4 -n $HARNESS_DIR/lib/persona-config.sh"
       ((failed++))
     }
     if [[ -x "$HARNESS_DIR/test-gateway-compat.sh" ]]; then
       "$bash4" "$HARNESS_DIR/test-gateway-compat.sh" >/dev/null 2>&1 || {
-        echo "❌ 第三方网关兼容配置检查失败"
-        echo "   修复: $bash4 $HARNESS_DIR/test-gateway-compat.sh 查看详情"
+        echo "required fail: third-party gateway compatibility check failed"
+        echo "  inspect: $bash4 $HARNESS_DIR/test-gateway-compat.sh"
         ((failed++))
       }
     fi
@@ -524,7 +579,7 @@ do_doctor() {
 
   # (d) 关键目录可写
   [[ -w "$HARNESS_DIR" ]] || {
-    echo "❌ $HARNESS_DIR 不可写"
+    echo "required fail: $HARNESS_DIR is not writable"
     ((failed++))
   }
 
@@ -533,7 +588,7 @@ do_doctor() {
     local cpid
     cpid=$(cat "$HARNESS_DIR/.coordinator.pid" 2>/dev/null)
     if [[ -n "$cpid" ]] && ! kill -0 "$cpid" 2>/dev/null; then
-      echo "⚠ coordinator pidfile 指向死进程 (PID=$cpid, 启动时会自愈)"
+      echo "optional warning: coordinator pidfile points at a dead process (PID=$cpid); start will self-heal"
     fi
   fi
 
@@ -546,17 +601,17 @@ do_doctor() {
     local qmd_bin_check=""
     qmd_bin_check="$(env -i HOME="$HOME" PATH="/usr/bin:/bin:/usr/sbin:/sbin" QMD_BIN="${QMD_BIN:-}" bash "$HARNESS_DIR/lib/qmd-resolver.sh" --print 2>/dev/null || true)"
     if [[ -z "$qmd_bin_check" ]]; then
-      echo "⚠ qmd resolver stripped-PATH 检查未找到 qmd"
-      echo "   修复: 安装 qmd/mineru-document-explorer 或设置 QMD_BIN"
+      echo "optional warning: qmd resolver stripped-PATH check found no qmd executable"
+      echo "  install hint: install qmd/mineru-document-explorer or set QMD_BIN"
     fi
     local qmd_repair_out qmd_repair_rc
     qmd_repair_out="$("$HARNESS_DIR/lib/qmd-launcher-repair.sh" --check 2>&1)" || qmd_repair_rc=$?
     qmd_repair_rc="${qmd_repair_rc:-0}"
     if [[ "$qmd_repair_rc" == "2" ]]; then
-      echo "⚠ qmd launcher 存在 Node ABI 风险"
-      echo "   修复: $0 wiki qmd-repair --apply"
+      echo "optional warning: qmd launcher has Node ABI risk"
+      echo "  repair: $0 wiki qmd-repair --apply"
     elif [[ "$qmd_repair_rc" != "0" ]]; then
-      echo "⚠ qmd launcher 检查异常: $qmd_repair_out"
+      echo "optional warning: qmd launcher check failed: $qmd_repair_out"
     fi
   fi
 
@@ -568,16 +623,17 @@ do_doctor() {
     case "$st" in
       drafting|queued|active|planning|approved|reviewing|ready_for_review|failed_review|passed|done|failed|eval_pass|cancelled|interrupted|superseded|needs_human_review|blocked) ;;
       *)
-        echo "⚠ $(basename "$f") 非法状态: $st"
+        echo "optional warning: $(basename "$f") has nonstandard sprint status: $st"
         ;;
     esac
   done
 
   if (( failed == 0 )); then
-    echo "✅ Solar Harness doctor: 全部通过"
+    echo "Solar Harness doctor: required checks passed"
+    echo "manual-pending: live Claude panes and real delegation are verified only after Claude starts and responds in the tmux panes."
     return 0
   else
-    echo "❌ ${failed} 项检查失败"
+    echo "Solar Harness doctor: ${failed} required check group(s) failed"
     return 1
   fi
 }
@@ -688,6 +744,9 @@ start_harness() {
   if [[ "$skip_doctor" != "--skip-doctor" ]]; then
     log "运行启动自检..."
     do_doctor || { err "启动前自检失败，修复后再试 (或用 --skip-doctor 跳过)"; exit 1; }
+  else
+    log "运行启动必需依赖预检..."
+    harness_launch_preflight || { err "启动必需依赖缺失，拒绝创建部分 tmux session"; exit 1; }
   fi
 
   command -v tmux &>/dev/null || { err "tmux 未安装: brew install tmux"; exit 1; }
@@ -875,6 +934,7 @@ show_status() {
     fi
   fi
   echo ""
+  bash "$HARNESS_DIR/doctor.sh" --summary 2>/dev/null || true
 }
 
 # ---- Kill ----
@@ -2851,6 +2911,7 @@ case "${1:-start}" in
   status)    show_status ;;
   main-status) do_main_status ;;
   lab-status) do_lab_status "${2:-}" ;;
+  preflight|launch-preflight) harness_launch_preflight ;;
   refresh)   shift || true; do_refresh "$@" ;;
   doctor)    bash "$HARNESS_DIR/doctor.sh" "${2:-}" ;;
   session)
@@ -4001,6 +4062,7 @@ PY
     echo "  $0 main-status         查看主屏 runtime + assignment + artifact 状态"
     echo "  $0 actorhost-status [--json] [--host-type TYPE]  查看 actor/host/lease taxonomy"
     echo "  $0 lab-status          查看 lab pane runtime + handoff artifact 状态"
+    echo "  $0 preflight           检查启动必需依赖；不启动 tmux/Claude"
     echo "  $0 doctor              环境自检"
     echo "  $0 kill                关闭"
     echo "  $0 扩展 | extend       启动独立第二四分屏 (solar-harness-lab)"

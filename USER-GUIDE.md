@@ -41,6 +41,20 @@ cd OpenSolar
 claude                               # 首次打开时，批准一次性的 @~/.claude/solar/SOLAR.md 导入
 ```
 
+Product Delivery harness 启动前先做确定性预检：
+
+```bash
+~/.solar/bin/solar-harness preflight
+~/.solar/bin/solar-harness start "$(pwd)"
+~/.solar/bin/solar-harness status
+```
+
+`solar-harness start` 需要 Bash 4+、`python3`、`tmux`、`jq` 和 `claude`
+CLI 在 `PATH` 上。`preflight` 和 `status` 只能证明安装、依赖、tmux 布局、
+coordinator/dispatch plumbing 等外围运行层；它们不会假装验证 live Claude。
+Claude pane 是否真的启动、是否通过 quota/auth、以及真实 delegation 结果，
+必须由 owner 在 Claude 可用后手动确认。
+
 ---
 
 ## 4. 生命周期
