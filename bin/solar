@@ -11,9 +11,82 @@ solar - OpenSolar lifecycle command
 
 Usage:
   solar doctor [--json]
+  solar update [extra install flags]
+  solar backup [--out FILE]
+  solar restore <archive>
   solar uninstall [--yes] [--keep-data] [--dry-run]
   solar components list
 EOF
+}
+
+receipt_field() {
+    [ -f "$RECEIPT_PATH" ] || return 1
+    RECEIPT_PATH="$RECEIPT_PATH" python3 - "$1" <<'PY'
+import json
+import os
+import sys
+
+with open(os.environ["RECEIPT_PATH"], encoding="utf-8") as f:
+    receipt = json.load(f)
+value = receipt.get(sys.argv[1], "")
+if isinstance(value, list):
+    print(",".join(value))
+else:
+    print(value)
+PY
+}
+
+# Data paths under SOLAR_HOME that backup/restore and --keep-data treat as
+# user data (config + secrets + receipt + database).
+SOLAR_DATA_PATHS="install-receipt.json config.env .env db"
+
+do_backup() {
+    out=""
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --out) out="$2"; shift 2 ;;
+            *) echo "unknown backup option: $1" >&2; exit 2 ;;
+        esac
+    done
+    [ -d "$SOLAR_HOME" ] || { echo "no Solar home at $SOLAR_HOME" >&2; exit 1; }
+    set --
+    for p in $SOLAR_DATA_PATHS; do
+        [ -e "$SOLAR_HOME/$p" ] && set -- "$@" "$p"
+    done
+    [ "$#" -gt 0 ] || { echo "nothing to back up in $SOLAR_HOME" >&2; exit 1; }
+    if [ -z "$out" ]; then
+        mkdir -p "$SOLAR_HOME/backups"
+        out="$SOLAR_HOME/backups/solar-backup-$(date -u +%Y%m%d%H%M%S).tar.gz"
+    fi
+    tar czf "$out" -C "$SOLAR_HOME" "$@"
+    echo "backup written: $out"
+}
+
+do_restore() {
+    archive="${1:-}"
+    [ -n "$archive" ] || { echo "usage: solar restore <archive>" >&2; exit 2; }
+    [ -f "$archive" ] || { echo "archive not found: $archive" >&2; exit 1; }
+    mkdir -p "$SOLAR_HOME"
+    tar xzf "$archive" -C "$SOLAR_HOME"
+    echo "restored from $archive into $SOLAR_HOME"
+}
+
+do_update() {
+    if [ ! -f "$RECEIPT_PATH" ]; then
+        echo "no install receipt at $RECEIPT_PATH; run install.sh first" >&2
+        exit 1
+    fi
+    src="$(receipt_field source_dir)"
+    comps="$(receipt_field components)"
+    [ -n "$src" ] || { echo "receipt has no source_dir" >&2; exit 1; }
+    [ -n "$comps" ] || { echo "receipt has no components" >&2; exit 1; }
+    if [ ! -f "$src/install.sh" ]; then
+        echo "installer not found at $src/install.sh; re-clone the source to update" >&2
+        exit 1
+    fi
+    echo "updating from $src (components: $comps)"
+    "$src/install.sh" --yes --components "$comps" \
+        --solar-home "$SOLAR_HOME" --claude-dir "$CLAUDE_DIR" "$@"
 }
 
 doctor_json() {
@@ -236,6 +309,9 @@ PY
 cmd="${1:-}"
 case "$cmd" in
     doctor) shift; doctor "$@" ;;
+    update) shift; do_update "$@" ;;
+    backup) shift; do_backup "$@" ;;
+    restore) shift; do_restore "$@" ;;
     uninstall) shift; uninstall "$@" ;;
     components)
         shift
