@@ -86,6 +86,52 @@ jobs:
           fi
           grep -E 'requirements resolve|missing-var gate|config.yaml render|doctor verdict|idempotent reinstall|mcp add|mcp remove|residue-free|mempalace-check passed' "$RUNNER_TEMP/mempalace.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::notice title=mempalace evidence::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
 
+  privacy-gate:
+    name: privacy gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install gitleaks
+        run: |
+          mkdir -p "$RUNNER_TEMP/gl"
+          curl -fsSL -o "$RUNNER_TEMP/gl.tgz" https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz
+          tar xzf "$RUNNER_TEMP/gl.tgz" -C "$RUNNER_TEMP/gl" gitleaks
+          echo "$RUNNER_TEMP/gl" >> "$GITHUB_PATH"
+
+      - name: Privacy gate (secrets + personal-token scan + negative tests)
+        shell: bash
+        run: |
+          # Repo-wide PRIVACY gate. Architectural-name excision is gated
+          # separately and strictly in the INSTALLED tree by check-kernel-gen.sh;
+          # this job covers real secrets (gitleaks) + owner-identifying personal
+          # tokens (scripts/check-privacy.sh). See WORKLOG "privacy-gate scope".
+          status=0
+          {
+            set -e
+            echo "== gitleaks secret scan (repo-wide working tree)"
+            gitleaks detect --no-git --source . --config harness/gitleaks.toml --redact
+            echo "== personal-token negative self-test"
+            ./scripts/check-privacy.sh --self-test
+            echo "== personal-token live scan (tracked files)"
+            ./scripts/check-privacy.sh
+            echo "== negative test: a planted non-allowlisted secret must fail gitleaks"
+            mkdir -p "$RUNNER_TEMP/negtest"
+            python3 -c "print('LEAK=' + 'sk-ant-api03-' + 'A'*95)" > "$RUNNER_TEMP/negtest/planted.txt"
+            if gitleaks detect --no-git --source "$RUNNER_TEMP/negtest" --config harness/gitleaks.toml --redact; then
+              echo "FAIL: gitleaks did not flag a planted non-allowlisted secret"
+              exit 1
+            fi
+            echo "negative test ok: planted secret flagged (allowlist not over-broad)"
+            echo "privacy-gate passed"
+          } 2>&1 | tee "$RUNNER_TEMP/privacy.log" || status=$?
+          if [ "$status" -ne 0 ]; then
+            # Job logs need admin rights on this fork; annotations are public.
+            tail -c 6000 "$RUNNER_TEMP/privacy.log" | python3 -c 'import sys; d = sys.stdin.read(); print("::error title=privacy-gate failure tail::" + d.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+            exit "$status"
+          fi
+          grep -E 'gitleaks secret scan|negative self-test|live scan|negative test ok|privacy-gate passed' "$RUNNER_TEMP/privacy.log" | python3 -c 'import sys; d = sys.stdin.read(); print("::notice title=privacy-gate evidence::" + d.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+
   install:
     name: ${{ matrix.os }} / ${{ matrix.profile }}
     runs-on: ${{ matrix.os }}
