@@ -108,6 +108,22 @@ print("db schema assertions passed")
 PY
 }
 
+assert_config_rendered() {
+    cfg="$home_dir/.solar/config.env"
+    [ -f "$cfg" ] || { echo "config.env was not generated: $cfg" >&2; exit 1; }
+    if grep -q '{{' "$cfg"; then
+        echo "config.env has unresolved template vars:" >&2
+        grep -n '{{' "$cfg" >&2
+        exit 1
+    fi
+    grep -q "^SOLAR_HOME=$home_dir/.solar$" "$cfg" || {
+        echo "config.env SOLAR_HOME not rendered to the sandbox path" >&2
+        cat "$cfg" >&2
+        exit 1
+    }
+    echo "config.env rendered: ok"
+}
+
 assert_settings_registered() {
     SETTINGS="$home_dir/.claude/settings.json" python3 - <<'PY'
 import json
@@ -161,6 +177,7 @@ HOME="$home_dir" "$repo_dir/install.sh" \
 HOME="$home_dir" "$home_dir/.solar/bin/solar" doctor --json > "$doctor_json"
 assert_doctor_ok
 assert_db_schema
+assert_config_rendered
 assert_settings_registered
 assert_no_bun_home_leak
 

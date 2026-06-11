@@ -4,6 +4,7 @@
 . "$SOLAR_SOURCE_DIR/lib/installer/paths.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/copy-engine.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/kernel-gen.sh"
+. "$SOLAR_SOURCE_DIR/lib/installer/render-template.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/settings-merge.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/mcp-register.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/db-init.sh"
@@ -20,6 +21,9 @@ Usage: ./install.sh [options]
 Options:
   --yes, --non-interactive    Accept resolved defaults
   --components LIST           Comma-separated component list
+  --set KEY=VALUE             Set a config var (repeatable; highest precedence)
+  --no-hooks                  Skip settings.json hook registration
+  --no-mcp                    Skip MCP server registration
   --list-components           Show component manifests
   --solar-home PATH           Runtime root (default: ~/.solar)
   --claude-dir PATH           Claude user dir (default: ~/.claude)
@@ -39,11 +43,19 @@ parse_args() {
     NO_MCP="${SOLAR_NO_MCP:-false}"
     LIST_COMPONENTS=false
     REQUESTED_COMPONENTS="${SOLAR_COMPONENTS:-}"
+    SOLAR_SET_VARS=""
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --yes|--non-interactive) YES=true; shift ;;
             --components) REQUESTED_COMPONENTS="$2"; shift 2 ;;
+            --set)
+                case "$2" in
+                    *=*) SOLAR_SET_VARS="$SOLAR_SET_VARS$2
+" ;;
+                    *) die "--set expects KEY=VALUE, got: $2" ;;
+                esac
+                shift 2 ;;
             --list-components) LIST_COMPONENTS=true; shift ;;
             --solar-home) SOLAR_HOME="$2"; shift 2 ;;
             --claude-dir) CLAUDE_DIR="$2"; shift 2 ;;
@@ -57,7 +69,7 @@ parse_args() {
             *) die "unknown option: $1" ;;
         esac
     done
-    export YES DRY_RUN FAKE_KEYS SKIP_LLM_CLI NO_HOOKS NO_MCP REQUESTED_COMPONENTS
+    export YES DRY_RUN FAKE_KEYS SKIP_LLM_CLI NO_HOOKS NO_MCP REQUESTED_COMPONENTS SOLAR_SET_VARS
 }
 
 confirm_if_needed() {
@@ -91,6 +103,7 @@ main() {
     confirm_if_needed
     ensure_base_dirs
     install_solar_bin
+    config_init
     install_components
     db_init
     settings_merge
