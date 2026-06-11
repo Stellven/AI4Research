@@ -28,13 +28,28 @@ require_git() {
 }
 
 fetch_source() {
+    clone_log="${TMPDIR:-/tmp}/get-solar-clone.$$.log"
     rm -rf "$SOLAR_SRC"
     mkdir -p "$(dirname "$SOLAR_SRC")"
     log "cloning $SOLAR_REPO (channel: $SOLAR_CHANNEL) -> $SOLAR_SRC"
-    if ! git clone --depth 1 --branch "$SOLAR_CHANNEL" "$SOLAR_REPO" "$SOLAR_SRC" 2>/dev/null; then
-        die "could not clone channel '$SOLAR_CHANNEL' from $SOLAR_REPO.
-  The public release may not be published yet, or the channel is wrong.
+    if git clone --depth 1 --branch "$SOLAR_CHANNEL" "$SOLAR_REPO" "$SOLAR_SRC" 2>"$clone_log"; then
+        rm -f "$clone_log"
+    else
+        first_status=$?
+        log "clone attempt 1 failed (exit $first_status); retrying once"
+        sed 's/^/[get-solar] git: /' "$clone_log" >&2 || true
+        rm -rf "$SOLAR_SRC"
+        if git clone --depth 1 --branch "$SOLAR_CHANNEL" "$SOLAR_REPO" "$SOLAR_SRC" 2>"$clone_log"; then
+            rm -f "$clone_log"
+        else
+            status=$?
+            sed 's/^/[get-solar] git: /' "$clone_log" >&2 || true
+            rm -f "$clone_log"
+            die "could not clone channel '$SOLAR_CHANNEL' from $SOLAR_REPO.
+  Git clone failed after 2 attempts (exit $status). The release may not be published,
+  the channel may be wrong, or the network may be unavailable.
   Override with: SOLAR_CHANNEL=<tag-or-branch> SOLAR_REPO=<url> before re-running."
+        fi
     fi
     [ -f "$SOLAR_SRC/install.sh" ] || die "install.sh not found in the cloned channel ($SOLAR_SRC)"
 }
