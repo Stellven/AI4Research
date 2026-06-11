@@ -7,10 +7,12 @@
  */
 
 import Database from "bun:sqlite";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { ReplySender } from "../reply/reply-sender";
 
-const STATE_FILE = import.meta.dir + "/state.json";
+const SOLAR_HOME = process.env.SOLAR_HOME || (process.env.HOME ? `${process.env.HOME}/.solar` : "/tmp/solar");
+const STATE_FILE = process.env.SOLAR_DASHBOARD_STATE_PATH || `${SOLAR_HOME}/dashboard/state.json`;
 const DASHBOARD_FILE = Bun.file(import.meta.dir + "/assets/solar-dashboard.html");
 const ORCH_DASHBOARD_FILE = Bun.file(
   import.meta.dir + "/assets/orchestrator-dashboard.html",
@@ -21,6 +23,20 @@ const SOLAR_DB_PATH = process.env.SOLAR_DB_PATH || `${process.env.HOME || ""}/.s
 const HEALTH_CONFIG_ID = 1;
 const HEALTH_ALERT_COOLDOWN_MINUTES_DEFAULT = 15;
 const HEALTH_MONITOR_INTERVAL_SECONDS_DEFAULT = 60;
+const DEFAULT_STATE = {
+  lastUpdate: null,
+  status: {
+    phase: "idle",
+    phaseName: "Idle",
+    activeAgent: null,
+    rateLimit: null,
+    rateLimitStatus: "unknown",
+  },
+  tasks: [],
+  conversations: [],
+  agents: [],
+  activity: [],
+};
 
 type HealthThresholdBand = { warn: number; bad: number };
 type HealthThresholdConfig = {
@@ -730,14 +746,19 @@ async function getState() {
   if (await file.exists()) {
     return await file.json();
   }
-  return { error: 'State file not found' };
+  return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+
+async function writeState(state: any) {
+  mkdirSync(dirname(STATE_FILE), { recursive: true });
+  await Bun.write(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
 // 更新状态
 async function updateState(updates: any) {
   const state = await getState();
   const newState = { ...state, ...updates, lastUpdate: new Date().toISOString() };
-  await Bun.write(STATE_FILE, JSON.stringify(newState, null, 2));
+  await writeState(newState);
   return newState;
 }
 
@@ -745,22 +766,24 @@ async function updateState(updates: any) {
 async function addConversation(role: string, content: string) {
   const state = await getState();
   const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const conversations = Array.isArray(state.conversations) ? state.conversations : [];
 
   state.conversations = [
     { role, content: content.slice(0, 100) + (content.length > 100 ? '...' : ''), time },
-    ...(state.conversations || []).slice(0, 19)
+    ...conversations.slice(0, 19)
   ];
 
-  await Bun.write(STATE_FILE, JSON.stringify(state, null, 2));
+  await writeState(state);
   return state;
 }
 
 // 添加/更新任务
 async function updateTask(task: any) {
   const state = await getState();
+  const tasks = Array.isArray(state.tasks) ? state.tasks : [];
 
   // 将其他 in_progress 任务标记为 completed
-  state.tasks = state.tasks.map((t: any) =>
+  state.tasks = tasks.map((t: any) =>
     t.status === 'in_progress' && t.id !== task.id
       ? { ...t, status: 'completed' }
       : t
@@ -775,7 +798,7 @@ async function updateTask(task: any) {
   }
 
   state.lastUpdate = new Date().toISOString();
-  await Bun.write(STATE_FILE, JSON.stringify(state, null, 2));
+  await writeState(state);
   return state;
 }
 

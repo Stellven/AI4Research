@@ -65,6 +65,10 @@ harness/.workdir
 harness/.planner-inbox.md
 harness/.!*.planner-inbox.md
 harness/.brain-router-probe-cache.json
+harness/.intent-hash
+harness/.drafting-notified
+harness/.next-last-sid
+harness/.last-seen-by-planner
 harness/cache/
 harness/run/
 harness/runs/
@@ -84,6 +88,8 @@ harness/sprints/
 harness/sprints/**
 insight-reports/
 insight-reports/**
+core/dashboard/state.json
+docs/.report-checkpoint-*.json
 harness/handovers/*.md
 harness/sprints/*-eval.json
 harness/sprints/*-handoff.md
