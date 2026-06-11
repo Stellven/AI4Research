@@ -22,12 +22,6 @@ From the stable branch:
 pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx"
 ```
 
-From a release candidate tag:
-
-```bash
-pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.2#subdirectory=distribution/pipx"
-```
-
 ## Commands
 
 ```bash

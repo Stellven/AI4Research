@@ -185,7 +185,6 @@ class OpenSolarCliTests(unittest.TestCase):
         self.assertIn("Commands:", text)
         self.assertIn("pipx install ./distribution/pipx", text)
         self.assertIn("git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx", text)
-        self.assertIn("git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.2#subdirectory=distribution/pipx", text)
         self.assertIn("raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/get-solar.sh", text)
         self.assertIn("opensolar install --yes --components kernel,harness", text)
         self.assertIn("opensolar doctor --json", text)
