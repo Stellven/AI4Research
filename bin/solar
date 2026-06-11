@@ -310,9 +310,16 @@ uninstall() {
     fi
     rmdir "$CLAUDE_DIR" 2>/dev/null || true
     if [ "$keep_data" = "true" ]; then
-        rm -rf "$SOLAR_HOME/bin" "$SOLAR_HOME/harness" "$SOLAR_HOME/core" "$SOLAR_HOME/codex-bridge" \
-               "$SOLAR_HOME/mempalace" "$SOLAR_HOME/venv"
-        rm -f "$RECEIPT_PATH"
+        # --keep-data contract: preserve ONLY the user's data (db/ + config.env
+        # + .env) and remove EVERYTHING else under SOLAR_HOME (code, venv, bin,
+        # node_modules, cache, logs, receipt, registered-*.txt, ...). Enumerate
+        # what to KEEP (not what to remove) so new derived artifacts can never
+        # silently survive a --keep-data uninstall.
+        if guard_path "$SOLAR_HOME" && [ -d "$SOLAR_HOME" ]; then
+            find "$SOLAR_HOME" -mindepth 1 -maxdepth 1 \
+                ! -name db ! -name config.env ! -name .env \
+                -exec rm -rf {} +
+        fi
     elif guard_path "$SOLAR_HOME"; then
         rm -rf "$SOLAR_HOME"
     fi

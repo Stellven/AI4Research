@@ -162,6 +162,30 @@ assert_residue_empty() {
     fi
 }
 
+assert_keep_data_contract() {
+    # --keep-data must preserve ONLY db/ + config.env + .env and remove
+    # everything else (code, venv, bin, node_modules, cache, receipt). Uses a
+    # self-contained minimal install and pre-seeds node_modules/cache so the
+    # core-runtime-residue removal is proven without a bun install here.
+    kd="$sandbox/keepdata"
+    mkdir -p "$kd"
+    HOME="$kd" "$repo_dir/install.sh" --yes --components kernel,harness --fake-keys --skip-llm-cli >/dev/null
+    sh="$kd/.solar"
+    mkdir -p "$sh/node_modules/pkg" "$sh/cache/bun"
+    HOME="$kd" "$sh/bin/solar" uninstall --yes --keep-data
+    for keep in db config.env .env; do
+        [ -e "$sh/$keep" ] || { echo "--keep-data dropped data it must preserve: $keep" >&2; exit 1; }
+    done
+    for gone in bin harness core codex-bridge mempalace venv node_modules cache install-receipt.json; do
+        if [ -e "$sh/$gone" ]; then
+            echo "--keep-data left an artifact it must remove: $gone" >&2
+            ls -la "$sh" >&2
+            exit 1
+        fi
+    done
+    echo "--keep-data contract: ok (kept db+config; removed code/venv/bin/node_modules/cache/receipt)"
+}
+
 mkdir -p "$home_dir"
 
 echo "profile=$profile"
@@ -262,6 +286,8 @@ if [ "$sentinel_count" != "1" ]; then
 fi
 assert_no_bun_home_leak
 echo "solar update round-trip: ok"
+
+assert_keep_data_contract
 
 HOME="$home_dir" "$home_dir/.solar/bin/solar" uninstall --yes
 assert_residue_empty
