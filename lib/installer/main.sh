@@ -5,6 +5,7 @@
 . "$SOLAR_SOURCE_DIR/lib/installer/copy-engine.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/kernel-gen.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/render-template.sh"
+. "$SOLAR_SOURCE_DIR/lib/installer/config-vars.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/settings-merge.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/mcp-register.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/db-init.sh"
@@ -100,6 +101,7 @@ main() {
     fi
 
     resolve_components
+    resolve_config_vars
     confirm_if_needed
     ensure_base_dirs
     install_solar_bin

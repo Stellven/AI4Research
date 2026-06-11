@@ -16,6 +16,7 @@ load_component() {
     COMPONENT_REQUIRES_BINS=""
     COMPONENT_MCP_SERVERS=""
     COMPONENT_PLATFORMS=""
+    COMPONENT_CONFIG_VARS=""
     # shellcheck source=/dev/null
     . "$manifest"
 }
