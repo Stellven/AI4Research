@@ -20,7 +20,7 @@ You'll see something like:
 ```
 Here's my suggested configuration (change any you disagree with):
 
-1. Gmail Account: toni@gmail.com ← (detected)
+1. Gmail Account: alex@example.com ← (detected)
 2. Calendar: primary ← (detected)
 3. Email Mode: Direct (scan your inbox) ← (guessed: personal email)
 4. Attendees: Disabled

@@ -1,13 +1,14 @@
 # PROPOSED orphan-cut exclude list — OWNER TO REVIEW + RATIFY before any cut.
 # Consumed by: scripts/release-cut.sh --exclude-file release-exclude.txt
 #
-# These are the parked, NON-INSTALLED files that still carry personal/persona
-# tokens (18 files). CLAUDE.md is NOT here: per owner decision it is scrubbed
-# personal-data-free and KEPT as public contributor docs. Each was confirmed NOT in
-# the shipped allowlists (kernel/base-rules.txt, base-hooks.txt, base-agents.txt),
-# so excluding it per-file drops NO installer-required file. Exclude-vs-scrub is
-# your call PER FILE — e.g. you may prefer to keep a SCRUBBED CLAUDE.md as public
-# contributor docs rather than exclude it.
+# These are parked, NON-INSTALLED files that still carry personal/persona tokens,
+# maintainer-only release workflow notes, or excised-system design narratives.
+# CLAUDE.md is NOT here: per owner decision it is scrubbed personal-data-free and
+# KEPT as public contributor docs. Each was confirmed NOT in the shipped allowlists
+# (kernel/base-rules.txt, base-hooks.txt, base-agents.txt), so excluding it
+# per-file drops NO installer-required file. Exclude-vs-scrub is your call PER
+# FILE — e.g. you may prefer to keep a SCRUBBED CLAUDE.md as public contributor
+# docs rather than exclude it.
 #
 # NOT decided here (separate, larger owner decision): the architectural-name
 # residue (solar-farm/gstack/brain-router/... that the gate tolerates
@@ -32,6 +33,11 @@ docs/SOLAR_DATA_AGENT_DESIGN.md
 docs/SOLAR_DATA_AGENT_DESIGN_V2.md
 docs/SOLAR_TECHNICAL_REPORT_OUTLINE.md
 docs/SOLAR_TECHNICAL_REPORT_V2.md
+docs/COMMUNITY_NEURAL_NETWORK_DESIGN.md
+docs/DISTRIBUTED_DEPLOYMENT_ANALYSIS.md
+docs/SOLAR_RESOURCE_INVENTORY.md
+docs/SOLAR_UNIQUENESS_ANALYSIS.md
+docs/RELEASE-CHECKLIST.md
 
 # --- parked rules (confirmed NOT in kernel/base-rules.txt) ---
 rules/delegate-first.md

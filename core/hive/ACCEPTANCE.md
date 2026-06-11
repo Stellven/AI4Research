@@ -9,13 +9,13 @@
 $ bun core/hive/cli/node.ts start --name="节点1"
 [HIVE] ✓ 节点启动成功: node-001
 [HIVE] ✓ mDNS 服务已启动: _solar-hive._tcp.local:9876
-[HIVE] ✓ 发现 1 个节点: 节点2 (10.0.1.5:9876)
+[HIVE] ✓ 发现 1 个节点: 节点2 (192.0.2.5:9876)
 [HIVE] ✓ Coordinator 选举: 节点2 (score: 85.3)
 
 # 终端2
 $ bun core/hive/cli/node.ts start --name="节点2"
 [HIVE] ✓ 节点启动成功: node-002
-[HIVE] ✓ 发现 1 个节点: 节点1 (10.0.1.4:9876)
+[HIVE] ✓ 发现 1 个节点: 节点1 (192.0.2.4:9876)
 [HIVE] ✓ 当选 Coordinator
 ```
 

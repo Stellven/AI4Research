@@ -112,7 +112,7 @@ Restores state from `.autoresearch/workflows/issue-N/` log files: iteration coun
 
 ### Git / GitHub Failure Paths
 
-- The final PR flow in [`run.sh`](/Users/chaoyuepan/ai/autoresearch/run.sh) is still `set -e` sensitive; `gh pr merge` must be wrapped with explicit failure handling rather than called bare.
+- The final PR flow in [`run.sh`](run.sh) is still `set -e` sensitive; `gh pr merge` must be wrapped with explicit failure handling rather than called bare.
 - When merge/cleanup operations are non-fatal by design, tests should mock `gh`/`git` failures and assert both `log.md` side effects and that later cleanup steps still execute.
 
 ## Key Design Constraints
