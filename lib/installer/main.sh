@@ -3,6 +3,7 @@
 . "$SOLAR_SOURCE_DIR/lib/installer/common.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/paths.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/copy-engine.sh"
+. "$SOLAR_SOURCE_DIR/lib/installer/kernel-gen.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/db-init.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/receipt.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/doctor.sh"

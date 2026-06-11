@@ -9,20 +9,10 @@ component_install() {
     dry_run_note "install kernel assets into $CLAUDE_DIR/solar" && return 0
     mkdir -p "$CLAUDE_DIR/solar"
 
-    python3 - "$SOURCE_DIR/CLAUDE.md" "$CLAUDE_DIR/solar/SOLAR.md" <<'PY'
-import pathlib
-import sys
-
-source = pathlib.Path(sys.argv[1])
-target = pathlib.Path(sys.argv[2])
-body = source.read_text(encoding="utf-8")
-target.write_text(
-    "# OpenSolar Kernel\n\n"
-    "<!-- GENERATED - do not edit directly. Re-run the installer instead. -->\n\n"
-    + body,
-    encoding="utf-8",
-)
-PY
+    # Generate the kernel from kernel/ fragments per selected components,
+    # excising the unshipped externals (WS2). Replaces the P1 alpha behavior
+    # of copying the monolithic CLAUDE.md verbatim.
+    kernel_gen
 
     if [ ! -f "$CLAUDE_DIR/solar/SOLAR.local.md" ]; then
         printf '# Solar Local Notes\n\nUser-owned extension point. The installer does not overwrite this file.\n' > "$CLAUDE_DIR/solar/SOLAR.local.md"
