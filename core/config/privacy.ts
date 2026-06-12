@@ -12,19 +12,31 @@ function splitList(value: string | undefined): string[] {
 }
 
 export function getFromEmail(): string {
-  return process.env.SOLAR_FROM_EMAIL || process.env.EMAIL_FROM || "solar@example.invalid";
+  return (
+    process.env.SOLAR_FROM_EMAIL ||
+    process.env.EMAIL_FROM ||
+    "solar@example.invalid"
+  );
 }
 
 export function getNotificationEmail(): string {
-  return process.env.SOLAR_NOTIFICATION_EMAIL || process.env.NOTIFICATION_EMAIL || getFromEmail();
+  return (
+    process.env.SOLAR_NOTIFICATION_EMAIL ||
+    process.env.NOTIFICATION_EMAIL ||
+    getFromEmail()
+  );
 }
 
 export function getGuardianEmails(): string[] {
-  return splitList(process.env.SOLAR_GUARDIAN_EMAILS || process.env.GUARDIAN_EMAILS);
+  return splitList(
+    process.env.SOLAR_GUARDIAN_EMAILS || process.env.GUARDIAN_EMAILS,
+  );
 }
 
 export function getGuardianImessageHandle(): string {
-  return process.env.SOLAR_GUARDIAN_IMESSAGE || process.env.GUARDIAN_IMESSAGE || "";
+  return (
+    process.env.SOLAR_GUARDIAN_IMESSAGE || process.env.GUARDIAN_IMESSAGE || ""
+  );
 }
 
 export function getGuardianIdentifiers(): string[] {

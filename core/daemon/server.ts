@@ -359,7 +359,14 @@ export class SolarDaemon {
       const taskId = url.searchParams.get("taskId") || undefined;
       const eventType = url.searchParams.get("type") || undefined;
       const since = url.searchParams.get("since") || undefined;
-      return Response.json(this.messageExecutor.getOrchestrationEvents(limit, taskId, eventType, since));
+      return Response.json(
+        this.messageExecutor.getOrchestrationEvents(
+          limit,
+          taskId,
+          eventType,
+          since,
+        ),
+      );
     }
 
     if (path === "/orchestrator/state" && method === "GET") {
@@ -374,7 +381,10 @@ export class SolarDaemon {
     if (path === "/orchestrator/graph" && method === "GET") {
       const taskId = url.searchParams.get("taskId");
       if (!taskId) {
-        return Response.json({ ok: false, error: "taskId is required" }, { status: 400 });
+        return Response.json(
+          { ok: false, error: "taskId is required" },
+          { status: 400 },
+        );
       }
       const graph = this.messageExecutor.getTaskGraph(taskId);
       return Response.json({ ok: true, graph });
@@ -383,17 +393,26 @@ export class SolarDaemon {
     if (path === "/orchestrator/diagnostics" && method === "GET") {
       const taskId = url.searchParams.get("taskId");
       if (!taskId) {
-        return Response.json({ ok: false, error: "taskId is required" }, { status: 400 });
+        return Response.json(
+          { ok: false, error: "taskId is required" },
+          { status: 400 },
+        );
       }
-      return Response.json({ ok: true, diagnostics: this.messageExecutor.getTaskDiagnostics(taskId) });
+      return Response.json({
+        ok: true,
+        diagnostics: this.messageExecutor.getTaskDiagnostics(taskId),
+      });
     }
 
     if (path === "/orchestrator/retry-policy" && method === "GET") {
-      return Response.json({ ok: true, policy: this.messageExecutor.getRetryPolicy() });
+      return Response.json({
+        ok: true,
+        policy: this.messageExecutor.getRetryPolicy(),
+      });
     }
 
     if (path === "/orchestrator/retry-policy" && method === "POST") {
-      const body = await req.json() as {
+      const body = (await req.json()) as {
         baseDelayMs?: number;
         maxDelayMs?: number;
         maxAttempts?: number;
@@ -405,8 +424,15 @@ export class SolarDaemon {
     }
 
     if (path === "/orchestrator/control" && method === "POST") {
-      const body = await req.json() as {
-        action: "pause" | "resume" | "reroute" | "debate" | "policy" | "retry" | "repair";
+      const body = (await req.json()) as {
+        action:
+          | "pause"
+          | "resume"
+          | "reroute"
+          | "debate"
+          | "policy"
+          | "retry"
+          | "repair";
         taskId: string;
         nodeId?: string;
         target?: string;
@@ -418,7 +444,10 @@ export class SolarDaemon {
       };
 
       if (body.action !== "policy" && !body.taskId) {
-        return Response.json({ ok: false, error: "taskId is required" }, { status: 400 });
+        return Response.json(
+          { ok: false, error: "taskId is required" },
+          { status: 400 },
+        );
       }
 
       switch (body.action) {
@@ -430,15 +459,32 @@ export class SolarDaemon {
           return Response.json({ ok: true });
         case "reroute":
           if (!body.nodeId || !body.target) {
-            return Response.json({ ok: false, error: "nodeId and target are required for reroute" }, { status: 400 });
+            return Response.json(
+              {
+                ok: false,
+                error: "nodeId and target are required for reroute",
+              },
+              { status: 400 },
+            );
           }
-          this.messageExecutor.rerouteNode(body.taskId, body.nodeId, body.target);
+          this.messageExecutor.rerouteNode(
+            body.taskId,
+            body.nodeId,
+            body.target,
+          );
           return Response.json({ ok: true });
         case "debate":
           if (!body.rounds || body.rounds < 1) {
-            return Response.json({ ok: false, error: "rounds >= 1 is required for debate" }, { status: 400 });
+            return Response.json(
+              { ok: false, error: "rounds >= 1 is required for debate" },
+              { status: 400 },
+            );
           }
-          this.messageExecutor.setDebateRounds(body.taskId, body.rounds, body.nodeId);
+          this.messageExecutor.setDebateRounds(
+            body.taskId,
+            body.rounds,
+            body.nodeId,
+          );
           return Response.json({ ok: true });
         case "policy":
           this.messageExecutor.updateOrchestrationPolicy({
@@ -449,12 +495,20 @@ export class SolarDaemon {
           return Response.json({ ok: true });
         case "retry":
           if (!body.nodeId) {
-            return Response.json({ ok: false, error: "nodeId is required for retry" }, { status: 400 });
+            return Response.json(
+              { ok: false, error: "nodeId is required for retry" },
+              { status: 400 },
+            );
           }
-          return Response.json(this.messageExecutor.retryNode(body.taskId, body.nodeId));
+          return Response.json(
+            this.messageExecutor.retryNode(body.taskId, body.nodeId),
+          );
         case "repair":
           if (!body.nodeId) {
-            return Response.json({ ok: false, error: "nodeId is required for repair" }, { status: 400 });
+            return Response.json(
+              { ok: false, error: "nodeId is required for repair" },
+              { status: 400 },
+            );
           }
           return Response.json(
             this.messageExecutor.createRepairTask(body.taskId, body.nodeId, {
@@ -463,7 +517,10 @@ export class SolarDaemon {
             }),
           );
         default:
-          return Response.json({ ok: false, error: "unknown action" }, { status: 400 });
+          return Response.json(
+            { ok: false, error: "unknown action" },
+            { status: 400 },
+          );
       }
     }
 

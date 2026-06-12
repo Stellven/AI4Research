@@ -19,11 +19,16 @@ export class SkillDispatcher {
     this.roots = roots || this.defaultRoots();
   }
 
-  async execute(skillName: string, content: string): Promise<SkillDispatchResult> {
+  async execute(
+    skillName: string,
+    content: string,
+  ): Promise<SkillDispatchResult> {
     const safeName = this.normalizeSkillName(skillName);
     const entry = this.findSkillEntry(safeName);
     if (!entry) {
-      throw new Error(`skill not found: ${safeName}; searched: ${this.roots.join(", ")}`);
+      throw new Error(
+        `skill not found: ${safeName}; searched: ${this.roots.join(", ")}`,
+      );
     }
 
     const instructions = readFileSync(entry, "utf-8");
@@ -45,8 +50,10 @@ export class SkillDispatcher {
   private defaultRoots(): string[] {
     const roots = [];
     if (process.env.SOLAR_SKILLS_DIR) roots.push(process.env.SOLAR_SKILLS_DIR);
-    if (process.env.HOME) roots.push(join(process.env.HOME, ".claude", "skills"));
-    if (process.env.SOLAR_HOME) roots.push(join(process.env.SOLAR_HOME, "skills"));
+    if (process.env.HOME)
+      roots.push(join(process.env.HOME, ".claude", "skills"));
+    if (process.env.SOLAR_HOME)
+      roots.push(join(process.env.SOLAR_HOME, "skills"));
     return roots.map((root) => resolve(root));
   }
 

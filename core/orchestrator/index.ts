@@ -60,10 +60,18 @@ export class Orchestrator {
   async executeGraph(
     graph: TaskGraph,
     handler: NodeHandler,
-  ): Promise<{ output: string; tokensUsed: number; nodeResults: NodeExecutionResult[] }> {
+  ): Promise<{
+    output: string;
+    tokensUsed: number;
+    nodeResults: NodeExecutionResult[];
+  }> {
     graph.status = "running";
     graph.updatedAt = new Date().toISOString();
-    this.emit({ type: "task_started", taskId: graph.taskId, payload: { nodes: graph.nodes.length } });
+    this.emit({
+      type: "task_started",
+      taskId: graph.taskId,
+      payload: { nodes: graph.nodes.length },
+    });
 
     const nodeResults: NodeExecutionResult[] = [];
     const outputs: string[] = [];
@@ -73,7 +81,11 @@ export class Orchestrator {
       if (this.pausedTasks.has(graph.taskId)) {
         graph.status = "paused";
         node.status = "paused";
-        this.emit({ type: "task_paused", taskId: graph.taskId, nodeId: node.id });
+        this.emit({
+          type: "task_paused",
+          taskId: graph.taskId,
+          nodeId: node.id,
+        });
         break;
       }
 
@@ -117,7 +129,12 @@ export class Orchestrator {
         node.status = "failed";
         node.error = message;
         graph.status = "failed";
-        nodeResults.push({ nodeId: node.id, status: "failed", error: message, durationMs });
+        nodeResults.push({
+          nodeId: node.id,
+          status: "failed",
+          error: message,
+          durationMs,
+        });
         this.emit({
           type: "node_failed",
           taskId: graph.taskId,
@@ -172,7 +189,14 @@ export class Orchestrator {
     });
   }
 
-  updatePolicy(policy: Partial<Pick<OrchestratorOptions, "defaultDebateRounds" | "highRiskThreshold" | "voteMode">>): void {
+  updatePolicy(
+    policy: Partial<
+      Pick<
+        OrchestratorOptions,
+        "defaultDebateRounds" | "highRiskThreshold" | "voteMode"
+      >
+    >,
+  ): void {
     this.options = { ...this.options, ...policy };
   }
 
