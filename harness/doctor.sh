@@ -521,7 +521,10 @@ PYEOF
 # --- Summary 模式 (人类可读) ---
 doctor_summary() {
   local json_output
-  json_output=$(doctor_json)
+  # Reuse a JSON sweep the caller already computed (DOCTOR_JSON_CACHE) so the
+  # entry point can render the summary and decide the exit code from one sweep
+  # instead of running the expensive doctor_json twice.
+  json_output="${DOCTOR_JSON_CACHE:-$(doctor_json)}"
 
   SOLAR_DOCTOR_JSON="$json_output" python3 <<'PY'
 import json
@@ -579,13 +582,37 @@ print("")
 PY
 }
 
+# Exit nonzero when any REQUIRED check failed, so callers (solar-harness doctor,
+# migrate import gate) can branch on the exit code instead of always passing.
+# Optional/manual warnings do not change the exit. A malformed JSON body is left
+# to the JSON validity of the output, not masked here.
+doctor_required_exit() {
+  if printf '%s' "$1" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+req = d.get("required_checks", [])
+sys.exit(1 if any(c.get("status") != "ok" for c in req) else 0)
+'; then
+    :
+  else
+    exit 1
+  fi
+}
+
 # --- 入口 ---
 case "${1:-}" in
   --summary|-s)
-    doctor_summary
+    _out="$(doctor_json)"
+    DOCTOR_JSON_CACHE="$_out" doctor_summary
+    doctor_required_exit "$_out"
     ;;
   --json|"")
-    doctor_json
+    _out="$(doctor_json)"
+    printf '%s\n' "$_out"
+    doctor_required_exit "$_out"
     ;;
   --help|-h)
     echo "solar-harness doctor — 纯只读健康诊断"
@@ -598,6 +625,6 @@ case "${1:-}" in
     ;;
   *)
     echo "未知参数: $1" >&2
-    exit 1
+    exit 2
     ;;
 esac

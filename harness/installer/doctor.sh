@@ -322,7 +322,10 @@ PYEOF
 # ── Summary mode ──────────────────────────────────────────────────────────
 doctor_summary() {
   local json_output
-  json_output=$(doctor_json)
+  # Reuse the entry point's single sweep when provided (DOCTOR_JSON_CACHE), so
+  # the --summary path does not run the expensive doctor_json (bin probes +
+  # bun TVS render) a second time just to recompute the verdict for the exit.
+  json_output="${DOCTOR_JSON_CACHE:-$(doctor_json)}"
 
   local verdict os_kind os_ver bins_ok bins_total paths_ok paths_total
   verdict=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin)['verdict'])" 2>/dev/null)
@@ -405,8 +408,9 @@ case "${1:-}" in
     doctor_exit_for "$_out"
     ;;
   --summary|-s)
-    doctor_summary
-    doctor_exit_for "$(doctor_json)"
+    _out="$(doctor_json)"
+    DOCTOR_JSON_CACHE="$_out" doctor_summary
+    doctor_exit_for "$_out"
     ;;
   --help|-h)
     echo "Solar Product Doctor — Design §2.2 schema"
