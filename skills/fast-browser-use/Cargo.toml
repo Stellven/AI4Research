@@ -66,7 +66,7 @@ axum = { version = "0.8", optional = true }
 tokio-util = { version = "0.7", optional = true }
 log = "0.4"
 env_logger = { version = "0.11", optional = true }
-html2md = "0.2"
+htmd = "0.5"
 rand = { version = "0.8", optional = true }
 image = "0.24"
 imageproc = "0.23"

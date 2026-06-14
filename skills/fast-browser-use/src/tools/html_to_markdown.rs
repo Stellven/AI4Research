@@ -1,11 +1,10 @@
 /// HTML to Markdown conversion utilities
 ///
 /// This module provides functionality to convert HTML content to clean Markdown format.
-use html2md;
 
 /// Convert HTML content to Markdown format
 ///
-/// This function uses the html2md library to convert HTML to Markdown.
+/// This function uses the htmd library (Apache-2.0) to convert HTML to Markdown.
 /// It handles common HTML elements like headings, lists, tables, code blocks, etc.
 ///
 /// # Arguments
@@ -14,14 +13,16 @@ use html2md;
 ///
 /// # Returns
 ///
-/// A String containing the Markdown representation of the HTML
+/// A String containing the Markdown representation of the HTML. Conversion
+/// errors fall back to an empty string (matching the previous infallible API).
 pub fn convert_html_to_markdown(html: &str) -> String {
     if html.is_empty() {
         return String::new();
     }
 
-    // Use html2md to parse and convert
-    html2md::parse_html(html)
+    // htmd::convert returns Result<String, htmd::Error>; keep this wrapper
+    // infallible by falling back to empty on the rare error path.
+    htmd::convert(html).unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -37,7 +38,7 @@ mod tests {
     fn test_simple_heading() {
         let html = "<h1>Test Title</h1>";
         let md = convert_html_to_markdown(html);
-        // html2md may format headings differently, just check the text is present
+        // htmd may format headings differently, just check the text is present
         assert!(md.contains("Test Title"), "Markdown should contain the title text");
     }
 
