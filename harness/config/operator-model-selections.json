@@ -1,4 +1,5 @@
 {
+  "_README": "DEAD CONFIG — NOT READ AT RUNTIME. The loader harness/lib/operator_model_selection.py has no importer anywhere, so these per-operator selections are never applied. Live model selection: config/solar-user-config.json (panes) and config/physical-operators.json (operators); aliases resolve via config/model-registry.json. Kept for reference / future wiring, not as an active knob.",
   "version": 1,
   "updated_at": "2026-05-28T20:02:43Z",
   "selections": {

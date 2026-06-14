@@ -1,6 +1,12 @@
-# ─── Solar Product Platform: default configuration ───
-# This file ships with the product. User overrides go in config/user.yaml
-# or via the first-run wizard. NEVER include real secrets here.
+# ─── Solar Product Platform: default configuration (NOT READ AT RUNTIME) ───
+# NOTE: this is a legacy harness-installer artifact. The installer and doctor
+# only check that this file EXISTS; nothing in the running product parses these
+# provider/model/vault values, so editing them here has NO effect. The live
+# knobs are:
+#   model selection : config/model-registry.json + config/solar-user-config.json
+#   operators       : config/physical-operators.json
+# Kept so existence checks pass; values are illustrative only. NEVER put real
+# secrets here.
 version: 1
 generated_by: installer
 
