@@ -7,6 +7,23 @@ cancel_install() {
     exit "$SOLAR_CANCEL_EXIT"
 }
 
+# True when we may interactively prompt the user.
+#
+# The interactive surfaces (wizard_read) talk to /dev/tty directly, so a real
+# terminal is reachable even when stdin is a pipe -- which is exactly the
+# `curl -fsSL ... | bash` case. Testing `[ -t 0 ]` there is wrong: stdin is the
+# curl pipe, so the wizard self-skips and the install dies asking for --yes.
+# We instead test whether /dev/tty itself can be opened, and honor explicit
+# non-interactive signals first so CI/automation never blocks:
+#   CI (any non-empty value, set by GitHub Actions et al.) -> non-interactive
+#   SOLAR_NONINTERACTIVE=true                               -> non-interactive
+#   /dev/tty not openable (cron, no controlling terminal)   -> non-interactive
+solar_can_prompt() {
+    [ -n "${CI:-}" ] && return 1
+    [ "${SOLAR_NONINTERACTIVE:-false}" = "true" ] && return 1
+    ( exec </dev/tty ) 2>/dev/null
+}
+
 wizard_read() {
     prompt="$1"
     WIZARD_ANSWER=""
@@ -167,7 +184,7 @@ wizard_customize_components() {
 run_component_wizard_if_needed() {
     [ "$YES" = "true" ] && return 0
     [ -n "$REQUESTED_COMPONENTS" ] && return 0
-    [ -t 0 ] || return 0
+    solar_can_prompt || return 0
 
     wizard_banner
     wizard_preflight_summary

@@ -80,7 +80,7 @@ parse_args() {
 
 confirm_if_needed() {
     [ "$YES" = "true" ] && return 0
-    if [ -t 0 ]; then
+    if solar_can_prompt; then
         print_final_summary
         wizard_read "Confirm install? [y/N] "
         ans="$WIZARD_ANSWER"
