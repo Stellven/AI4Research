@@ -92,6 +92,35 @@ confirm_if_needed() {
     die "non-interactive input detected; rerun with --yes"
 }
 
+# Human-facing "what now" after a successful install. Replaces the raw
+# doctor JSON that used to be dumped here -- that JSON was never consumed by
+# anything (all gates run `solar doctor --json` separately), and a wall of
+# JSON is not an onboarding step. Printed to stderr to match green()/the
+# wizard and keep stdout clean.
+print_get_started() {
+    bindir="$SOLAR_HOME/bin"
+    {
+        printf '\n'
+        printf 'Get started\n'
+        printf '  1. Put solar on your PATH (or call it by full path %s/solar):\n' "$bindir"
+        printf '       export PATH="%s:$PATH"\n' "$bindir"
+        printf '  2. Check the install:\n'
+        printf '       solar doctor\n'
+    } >&2
+    case " $SELECTED_COMPONENTS " in
+        *" kernel "*)
+            {
+                printf '  3. Start Claude Code and approve the one-time Solar import:\n'
+                printf '       claude\n'
+                printf '       (approve the prompt to import @~/.claude/solar/SOLAR.md)\n'
+                printf '  4. In that session, describe what you want done --\n'
+                printf '       Solar plans, delegates, and gates the work.\n'
+            } >&2
+            ;;
+    esac
+    printf '\nMore in INSTALL.md. Re-check health anytime with `solar doctor`.\n' >&2
+}
+
 main() {
     parse_args "$@"
     init_paths
@@ -124,6 +153,6 @@ main() {
         green "OpenSolar dry-run complete: $SELECTED_COMPONENTS"
         return 0
     fi
-    doctor_json
     green "OpenSolar install complete: $SELECTED_COMPONENTS"
+    print_get_started
 }
