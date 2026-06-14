@@ -16,8 +16,8 @@ Linux, and WSL2.
 | Component | Default | Platforms | Requires (bins) | Requires (components) | MCP | Description |
 |---|---|---|---|---|---|---|
 | `kernel` | on | all | `python3` | — | no | Claude Code kernel overlay with namespaced rules, hooks, and agents |
-| `core-runtime` | auto | all | `bun` | — | no | TypeScript core runtime, daemon, and web dashboard |
-| `harness` | on | all | `python3` | — | no | Python harness runtime payload |
+| `core-runtime` | auto | all | `bun` | `kernel` | no | TypeScript core runtime, daemon, and web dashboard |
+| `harness` | on | all | `python3` | `kernel` | no | Python harness runtime payload |
 | `skills-md` | off | all | — | — | no | Generic markdown skills for Claude Code discovery |
 | `skills-office` | off | all | — | — | no | Office productivity skills (email, notes, tasks, notion, trello) |
 | `skills-obsidian` | off | all | — | — | no | Obsidian vault skills |
