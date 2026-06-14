@@ -8,11 +8,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/hook-logger.sh"
 _START_MS=$(hook_time_ms)
 
 INPUT=$(cat)
-USER_PROMPT=$(echo "$INPUT" | sed -n 's/.*"user_prompt"[[:space:]]*:[[:space:]]*"\(.*\)"/\1/p' 2>/dev/null)
+# Claude Code's UserPromptSubmit hook sends the prompt under `.prompt`; this
+# hook read `.user_prompt` (nonexistent) and silently no-op'd on every prompt.
+USER_PROMPT=$(echo "$INPUT" | sed -n 's/.*"prompt"[[:space:]]*:[[:space:]]*"\(.*\)"/\1/p' 2>/dev/null)
 
 # 如果没有提取到用户提示，尝试 jq（备用，仅 macOS 自带）
 if [ -z "$USER_PROMPT" ]; then
-    USER_PROMPT=$(echo "$INPUT" | jq -r '.user_prompt // ""' 2>/dev/null)
+    USER_PROMPT=$(echo "$INPUT" | jq -r '.prompt // .user_prompt // ""' 2>/dev/null)
 fi
 
 [ -z "$USER_PROMPT" ] && exit 0

@@ -8,7 +8,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/hook-logger.sh"
 _START_MS=$(hook_time_ms)
 
 INPUT=$(cat)
-USER_PROMPT=$(echo "$INPUT" | jq -r '.user_prompt // ""' 2>/dev/null)
+# Claude Code's UserPromptSubmit hook sends the prompt under `.prompt`. This
+# hook used to read `.user_prompt`, which never exists, so it silently no-op'd
+# on every prompt. Read `.prompt` (keep `.user_prompt` as a fallback).
+USER_PROMPT=$(echo "$INPUT" | jq -r '.prompt // .user_prompt // ""' 2>/dev/null)
 
 # 如果没有用户提示，直接退出
 [ -z "$USER_PROMPT" ] && exit 0
