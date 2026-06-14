@@ -21,8 +21,22 @@ REPO = Path(__file__).resolve().parents[1]
 INSTALL = REPO / "install.sh"
 
 
+# Signals that force the installer non-interactive regardless of a TTY
+# (solar_can_prompt honors these before testing /dev/tty). The interactive
+# wizard tests below provide a real PTY, which models a human terminal --
+# mutually exclusive with a CI runner -- so these must be cleared, or the
+# installer correctly refuses to prompt. CI is inherited from the GitHub
+# Actions environment; SOLAR_NONINTERACTIVE/SOLAR_* are dropped by the prefix
+# filter. (test_ci_forces_noninteractive re-adds CI to prove the guard.)
+NONINTERACTIVE_SIGNALS = ("CI",)
+
+
 def clean_env(home: Path) -> dict:
-    env = {k: v for k, v in os.environ.items() if not k.startswith("SOLAR_")}
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("SOLAR_") and k not in NONINTERACTIVE_SIGNALS
+    }
     env["HOME"] = str(home)
     env["PATH"] = path_without_bun()
     return env
