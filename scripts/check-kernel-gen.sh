@@ -56,7 +56,7 @@ scan_file "min SOLAR.md" "$work/min.md"
 echo "ok: min assembly built ($(wc -l < "$work/min.md") lines)"
 
 echo "== max assembly (all P1 components)"
-SELECTED_COMPONENTS="kernel core-runtime harness skills-md codex-bridge"
+SELECTED_COMPONENTS="kernel core-runtime harness skills-md codex-bridge solar-max"
 kernel_assemble "$work/max.md"
 scan_file "max SOLAR.md" "$work/max.md"
 echo "ok: max assembly built ($(wc -l < "$work/max.md") lines)"
