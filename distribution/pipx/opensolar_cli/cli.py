@@ -170,7 +170,11 @@ def install(args: Sequence[str]) -> int:
 
 
 def _solar_bin() -> Path:
-    return Path.home() / ".solar" / "bin" / "solar"
+    # Honor SOLAR_HOME so the wrapper delegates to a non-default install instead
+    # of always assuming ~/.solar (bin/solar itself honors SOLAR_HOME).
+    home = os.environ.get("SOLAR_HOME")
+    base = Path(home) if home else Path.home() / ".solar"
+    return base / "bin" / "solar"
 
 
 def _delegate_lifecycle(command: str, args: Sequence[str]) -> int:

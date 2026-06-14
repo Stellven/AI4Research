@@ -2948,8 +2948,8 @@ do_models_command() {
 
 # ---- Main ----
 
-case "${1:-start}" in
-  start|"")  start_harness 3 "${2:-$(pwd)}" "${3:-}" ;;
+case "${1:-help}" in
+  start)     start_harness 3 "${2:-$(pwd)}" "${3:-}" ;;
   2)         start_harness 2 "${2:-$(pwd)}" "${3:-}" ;;
   3)         start_harness 3 "${2:-$(pwd)}" "${3:-}" ;;
   status)    show_status ;;
@@ -3164,7 +3164,7 @@ print(json.dumps({
           warn "未运行"
         fi
         ;;
-      *) err "用法: $0 webhook [start|stop|status]" ;;
+      *) err "用法: $0 webhook [start|stop|status]"; exit 2 ;;
     esac
     ;;
   status-server)
@@ -5400,11 +5400,9 @@ PY
     ;;
 
   *)
-    # If arg looks like a directory, use it as work dir
-    if [[ -d "$1" ]]; then
-      start_harness 3 "$1"
-    else
-      err "未知命令: $1"; log "运行 '$0 help'"; exit 1
-    fi
+    # Unknown command -> error and exit. (Previously a directory-shaped arg
+    # here silently launched tmux + 3 Claude panes, so a typo that happened to
+    # name a directory burned quota. An explicit work dir goes to `start <dir>`.)
+    err "未知命令: $1"; log "运行 '$0 help'"; exit 1
     ;;
 esac
