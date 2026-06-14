@@ -10,6 +10,10 @@ export type SkillDispatchResult = {
   output: string;
   mode: "markdown";
   entry: string;
+  // This dispatcher RESOLVES and returns a skill's instruction text; it does
+  // not run the skill. `executed` stays false until an agent-execution path is
+  // wired in. Consumers must not present `output` as an execution result.
+  executed: false;
 };
 
 export class SkillDispatcher {
@@ -35,9 +39,13 @@ export class SkillDispatcher {
     return {
       mode: "markdown",
       entry,
+      executed: false,
       output: [
         `Skill: ${safeName}`,
         `Entry: ${entry}`,
+        "",
+        "NOTE: the text below is this skill's INSTRUCTIONS, not the result of",
+        "running it. Skill execution is not wired in this build.",
         "",
         instructions,
         "",

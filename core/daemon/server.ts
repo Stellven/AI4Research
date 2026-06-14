@@ -36,6 +36,14 @@ const DEFAULT_CONFIG: DaemonConfig = {
   healthCheckInterval: 5000,
 };
 
+// The risk-gated debate/vote orchestration is scaffolding, not a working
+// feature: estimateRisk() returns 0 and the graph is single-node, so these
+// knobs never fire. They stay in the code (and behind this flag) for future
+// wiring, but the API reports them honestly as not-implemented by default
+// instead of accepting settings that do nothing.
+const ORCHESTRATOR_EXPERIMENTAL =
+  process.env.SOLAR_ORCHESTRATOR_EXPERIMENTAL === "true";
+
 // ==================== Daemon 主类 ====================
 
 export class SolarDaemon {
@@ -348,9 +356,14 @@ export class SolarDaemon {
     // ========== 渲染 API ==========
 
     if (path === "/render" && method === "POST") {
-      const { template, context } = await req.json();
-      // TODO: 调用渲染引擎
-      return Response.json({ output: `Rendered: ${template}` });
+      // Render engine is not wired yet. The route is reserved (kept as a stub
+      // so the contract is stable for later), but it must not return a fake
+      // `Rendered: <template>` string as if it had rendered anything.
+      await req.json().catch(() => ({}));
+      return Response.json(
+        { ok: false, error: "render is not implemented" },
+        { status: 501 },
+      );
     }
 
     // ========== Orchestrator API ==========
@@ -474,6 +487,18 @@ export class SolarDaemon {
           );
           return Response.json({ ok: true });
         case "debate":
+          // Risk/debate orchestration never fires (single-node graph,
+          // estimateRisk()=0). Report honestly unless explicitly enabled for
+          // development; the executor call is kept for future wiring.
+          if (!ORCHESTRATOR_EXPERIMENTAL) {
+            return Response.json(
+              {
+                ok: false,
+                error: "debate orchestration is not implemented in this build",
+              },
+              { status: 501 },
+            );
+          }
           if (!body.rounds || body.rounds < 1) {
             return Response.json(
               { ok: false, error: "rounds >= 1 is required for debate" },
@@ -487,6 +512,18 @@ export class SolarDaemon {
           );
           return Response.json({ ok: true });
         case "policy":
+          // Same: the risk/debate policy knobs do nothing today. Honest 501
+          // by default; the update call is preserved behind the flag.
+          if (!ORCHESTRATOR_EXPERIMENTAL) {
+            return Response.json(
+              {
+                ok: false,
+                error:
+                  "orchestration risk/debate policy is not implemented in this build",
+              },
+              { status: 501 },
+            );
+          }
           this.messageExecutor.updateOrchestrationPolicy({
             defaultDebateRounds: body.defaultDebateRounds,
             highRiskThreshold: body.highRiskThreshold,
