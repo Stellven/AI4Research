@@ -23,7 +23,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-db = Path.home() / ".solar" / "solar.db"
+db = Path.home() / ".solar" / "db" / "solar.db"
 session_id = os.environ.get("SESSION_ID") or "unknown"
 project_dir = os.environ.get("PROJECT_DIR") or ""
 memory_id = f"session_end_{session_id}"
