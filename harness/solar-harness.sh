@@ -156,7 +156,7 @@ PY
 }
 
 mkdir -p "\$TASK_DIR"
-cd "\$WORK_DIR" || exit 78
+cd "\$WORK_DIR" || exit 1
 write_status running
 {
   echo "[solar-harness bg] id=\$ID mode=\$MODE start=\$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -229,7 +229,7 @@ PY
     logs|log)
       shift || true
       local id="${1:-}"
-      [[ -n "$id" ]] || { err "Usage: $0 bg logs <id>"; return 1; }
+      [[ -n "$id" ]] || { err "Usage: $0 bg logs <id>"; return 2; }
       local log_file="$BG_TASKS_DIR/$id/output.log"
       [[ -f "$log_file" ]] || { err "log not found: $log_file"; return 1; }
       tail -200 "$log_file"
@@ -238,7 +238,7 @@ PY
     attach)
       shift || true
       local id="${1:-}"
-      [[ -n "$id" ]] || { err "Usage: $0 bg attach <id>"; return 1; }
+      [[ -n "$id" ]] || { err "Usage: $0 bg attach <id>"; return 2; }
       local status_file="$BG_TASKS_DIR/$id/status.json"
       [[ -f "$status_file" ]] || { err "status not found: $status_file"; return 1; }
       local window
@@ -258,7 +258,7 @@ PY
     cancel)
       shift || true
       local id="${1:-}"
-      [[ -n "$id" ]] || { err "Usage: $0 bg cancel <id>"; return 1; }
+      [[ -n "$id" ]] || { err "Usage: $0 bg cancel <id>"; return 2; }
       local status_file="$BG_TASKS_DIR/$id/status.json"
       [[ -f "$status_file" ]] || { err "status not found: $status_file"; return 1; }
       local window task_dir
@@ -306,7 +306,7 @@ PY
     shift || true
   done
   [[ -d "$work_dir" ]] || { err "bg cwd not found: $work_dir"; return 1; }
-  [[ -n "$task_text" ]] || { err "Usage: $0 bg \"任务\" 或 $0 bg run -- <command>"; return 1; }
+  [[ -n "$task_text" ]] || { err "Usage: $0 bg \"任务\" 或 $0 bg run -- <command>"; return 2; }
 
   id="$(bg_task_id)"
   title="$(bg_short_title "$task_text")"
@@ -2312,7 +2312,7 @@ do_update_contract() {
     [[ -z "$usid" ]] && { err "无活跃 Sprint"; exit 1; }
     err "用法: $0 update-contract <sprint-id> done \"- [ ] 条件1\n- [ ] 条件2\""
     log "当前 Sprint: $usid"
-    exit 1
+    exit 2
   fi
   local cfile="$SPRINTS_DIR/${usid}.contract.md"
   [[ -f "$cfile" ]] || { err "合约不存在: $cfile"; exit 1; }
@@ -2464,7 +2464,7 @@ PY
 
 do_stats_topology() {
   local name="$1"
-  [[ -z "$name" ]] && { err "用法: solar-harness stats topology <name>"; exit 1; }
+  [[ -z "$name" ]] && { err "用法: solar-harness stats topology <name>"; exit 2; }
   [[ -f "$TELEMETRY_FILE" ]] || { echo "无 telemetry 数据"; return 0; }
   python3 - "$TELEMETRY_FILE" "$name" <<'PY'
 import json, sys
@@ -2498,7 +2498,7 @@ PY
 
 do_stats_sprint() {
   local sid="$1"
-  [[ -z "$sid" ]] && { err "用法: solar-harness stats sprint <sid>"; exit 1; }
+  [[ -z "$sid" ]] && { err "用法: solar-harness stats sprint <sid>"; exit 2; }
   [[ -f "$TELEMETRY_FILE" ]] || { echo "无 telemetry 数据"; return 0; }
   python3 - "$TELEMETRY_FILE" "$sid" <<'PY'
 import json, sys
@@ -2856,7 +2856,7 @@ do_models_command() {
       ;;
     set-main)
       local alias="${1:-}"
-      [[ -n "$alias" ]] || { err "用法: $0 models set-main <opus|anthropic-sonnet> [--apply]"; exit 1; }
+      [[ -n "$alias" ]] || { err "用法: $0 models set-main <opus|anthropic-sonnet> [--apply]"; exit 2; }
       solar_set_main_model "$alias"
       ok "已写入主屏模型: pm/planner/builder/evaluator -> $alias"
       if [[ "${2:-}" == "--apply" ]]; then
@@ -2871,7 +2871,7 @@ do_models_command() {
       ;;
     set-lab-matrix)
       local matrix="${1:-}"
-      [[ -n "$matrix" ]] || { err "用法: $0 models set-lab-matrix <matrix> [--apply]"; exit 1; }
+      [[ -n "$matrix" ]] || { err "用法: $0 models set-lab-matrix <matrix> [--apply]"; exit 2; }
       solar_set_lab_builder_matrix "$matrix"
       ok "已写入 lab builder 模型矩阵: $matrix"
       if [[ "${2:-}" == "--apply" ]]; then
@@ -2941,7 +2941,7 @@ do_models_command() {
       echo "  $0 models refresh-labels"
       ;;
     *)
-      err "Unknown models subcommand: $subcmd"; exit 1
+      err "Unknown models subcommand: $subcmd"; exit 2
       ;;
   esac
 }
@@ -3095,7 +3095,7 @@ print(json.dumps({
         echo "  $0 tvs render [--mode auto|v1|v2] [--style NAME] [--width N] < payload.json"
         ;;
       *)
-        err "Unknown tvs subcommand: $_tvs_subcmd"; exit 1
+        err "Unknown tvs subcommand: $_tvs_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -3105,7 +3105,7 @@ print(json.dumps({
     ;;
   sprint)
     shift || true
-    [[ "$#" -eq 0 ]] && { err "用法: $0 sprint \"需求描述\""; exit 1; }
+    [[ "$#" -eq 0 ]] && { err "用法: $0 sprint \"需求描述\""; exit 2; }
     intake_request --no-dispatch "$@"
     ;;
   attach)
@@ -3476,7 +3476,7 @@ print(json.dumps({
         ;;
       *)
         err "用法: $0 integrations [status|plugins|install|disable|list|validate|capabilities|sync-caps|benchmark|platform-benchmark|heavy-proof|agent-arena|certify|activation-proof|ruflo-status|ruflo-runtime-status|ruflo-runtime-bootstrap|ruflo-runtime-smoke|autoresearch-status|autoresearch-doctor|autoresearch-vendor|autoresearch-run-local|meta-harness-status|meta-harness-doctor] [--json]"
-        exit 1
+        exit 2
         ;;
     esac
     ;;
@@ -3496,7 +3496,7 @@ print(json.dumps({
         ;;
       *)
         err "用法: $0 meta-harness [status|doctor|init|run|propose|evaluate|apply|history] [--json] [--execute]"
-        exit 1
+        exit 2
         ;;
     esac
     ;;
@@ -3528,7 +3528,7 @@ print(json.dumps({
         ;;
       *)
         err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run] [--json]"
-        exit 1
+        exit 2
         ;;
     esac
     ;;
@@ -3549,7 +3549,7 @@ print(json.dumps({
             ;;
           *)
             err "用法: $0 everything-claude-code install --dry-run [--json]"
-            exit 1
+            exit 2
             ;;
         esac
         ;;
@@ -3566,7 +3566,7 @@ print(json.dumps({
             *) shift ;;
           esac
         done
-        [[ -n "$_al" ]] || { err "用法: $0 everything-claude-code sync --allowlist <path> [--dry-run] [--json]"; exit 1; }
+        [[ -n "$_al" ]] || { err "用法: $0 everything-claude-code sync --allowlist <path> [--dry-run] [--json]"; exit 2; }
         python3 "$_ecc_adapter" sync-allowlisted --allowlist "$_al" $_dr "$@"
         ;;
       rollback)
@@ -3578,7 +3578,7 @@ print(json.dumps({
         ;;
       *)
         err "用法: $0 everything-claude-code [doctor|inventory|report|install --dry-run|sync --allowlist <path>|rollback] [--json]"
-        exit 1
+        exit 2
         ;;
     esac
     ;;
@@ -3599,7 +3599,7 @@ print(json.dumps({
         echo "用法: $0 agent-rules-books [doctor|inventory|report|vendor|prove|sync|install] [--json] [--dry-run] [--version mini|nano|full]" ;;
       *)
         err "用法: $0 agent-rules-books [doctor|inventory|report|vendor|prove|sync|install] [--json] [--dry-run] [--version mini|nano|full]"
-        exit 1 ;;
+        exit 2 ;;
     esac
     ;;
   notes)
@@ -3619,7 +3619,7 @@ print(json.dumps({
         shift; python3 "$_notes_adapter" uninstall-scheduler --json "$@" ;;
       *)
         err "用法: $0 notes [doctor|scan|status|install-scheduler|uninstall-scheduler] [--dry-run] [--force-dispatch] [--interval N] [--json]"
-        exit 1 ;;
+        exit 2 ;;
     esac
     ;;
   data-plane)
@@ -3630,7 +3630,7 @@ print(json.dumps({
       audit)        shift; python3 "$_dp_audit" audit "$@" ;;
       repair-state) shift; python3 "$_dp_audit" repair-state "$@" ;;
       refresh-ledger) shift; python3 "$_dp_audit" refresh-ledger "$@" ;;
-      *) err "用法: solar-harness data-plane <audit|repair-state|refresh-ledger> [--json] [--dry-run] [--verbose]"; exit 1 ;;
+      *) err "用法: solar-harness data-plane <audit|repair-state|refresh-ledger> [--json] [--dry-run] [--verbose]"; exit 2 ;;
     esac
     ;;
   skills)
@@ -3653,7 +3653,7 @@ print(json.dumps({
       promote)       shift; type solar_capability_prefix >/dev/null 2>&1 && solar_capability_prefix "skills" "promote"; python3 "$_skills_py" promote "$@" ;;
       rollback)      shift; type solar_capability_prefix >/dev/null 2>&1 && solar_capability_prefix "skills" "rollback"; python3 "$_skills_py" rollback "$@" ;;
       export)        shift; type solar_capability_prefix >/dev/null 2>&1 && solar_capability_prefix "skills" "export"; python3 "$_skills_py" export "$@" ;;
-      *) err "用法: solar-harness skills <inventory|doctor|readiness|certify|inject|effect-scan|healthcheck|evolve|export|eval|promote|rollback|registry> [opts]"; exit 1 ;;
+      *) err "用法: solar-harness skills <inventory|doctor|readiness|certify|inject|effect-scan|healthcheck|evolve|export|eval|promote|rollback|registry> [opts]"; exit 2 ;;
     esac
     ;;
   intent)
@@ -3665,7 +3665,7 @@ print(json.dumps({
       learn) shift; type solar_capability_prefix >/dev/null 2>&1 && solar_capability_prefix "intent" "learn"; python3 "$_intent_py" learn "$@" ;;
       audit) shift; type solar_capability_prefix >/dev/null 2>&1 && solar_capability_prefix "intent" "audit"; python3 "$_intent_py" audit "$@" ;;
       summarize) shift; type solar_capability_prefix >/dev/null 2>&1 && solar_capability_prefix "intent" "summarize"; python3 "$_intent_py" summarize "$@" ;;
-      *) err "用法: solar-harness intent <match|learn|audit|summarize> [opts]"; exit 1 ;;
+      *) err "用法: solar-harness intent <match|learn|audit|summarize> [opts]"; exit 2 ;;
     esac
     ;;
   graph)
@@ -3825,30 +3825,30 @@ PY
         echo "  stop     停止 launchd 巡逻器"
         echo "  queue    查看因 pane lease/assignment/busy 被排队的动作"
         ;;
-      *) err "用法: $0 autopilot [status|apply|dispatch|loop|start|stop|service-status|queue]" ; exit 1 ;;
+      *) err "用法: $0 autopilot [status|apply|dispatch|loop|start|stop|service-status|queue]" ; exit 2 ;;
     esac
     ;;
   plan-verdict)
-    [[ -z "${2:-}" ]] && { err "用法: solar-harness plan-verdict <sid> approve|reject [reason]"; exit 1; }
+    [[ -z "${2:-}" ]] && { err "用法: solar-harness plan-verdict <sid> approve|reject [reason]"; exit 2; }
     do_plan_verdict "$2" "${3:-}" "${4:-}"
     ;;
   handoff-submit)
-    [[ -z "${2:-}" ]] && { err "用法: solar-harness handoff-submit <sid>"; exit 1; }
+    [[ -z "${2:-}" ]] && { err "用法: solar-harness handoff-submit <sid>"; exit 2; }
     do_handoff_submit "$2"
     ;;
   parallel-integrate)
-    [[ -z "${2:-}" ]] && { err "用法: solar-harness parallel-integrate <sid> [repo-root]"; exit 1; }
+    [[ -z "${2:-}" ]] && { err "用法: solar-harness parallel-integrate <sid> [repo-root]"; exit 2; }
     bash "$HARNESS_DIR/lib/parallel-integrate.sh" "$2" "${3:-}"
     ;;
   eval-verdict)
-    [[ -z "${2:-}" ]] && { err "用法: solar-harness eval-verdict <sid> pass|fail [reason]"; exit 1; }
+    [[ -z "${2:-}" ]] && { err "用法: solar-harness eval-verdict <sid> pass|fail [reason]"; exit 2; }
     do_eval_verdict "$2" "${3:-}" "${4:-}"
     ;;
   capsule)
     shift
     case "${1:-}" in
       show)
-        [[ -z "${2:-}" ]] && { err "用法: solar-harness capsule show <sid>"; exit 1; }
+        [[ -z "${2:-}" ]] && { err "用法: solar-harness capsule show <sid>"; exit 2; }
         do_capsule_show "$2"
         ;;
       *)
@@ -3861,7 +3861,7 @@ PY
     shift
     case "${1:-}" in
       show)
-        [[ -z "${2:-}" ]] && { err "用法: solar-harness ledger show <sid>"; exit 1; }
+        [[ -z "${2:-}" ]] && { err "用法: solar-harness ledger show <sid>"; exit 2; }
         do_ledger_show "$2"
         ;;
       *)
@@ -3871,7 +3871,7 @@ PY
     esac
     ;;
   verify-events)
-    [[ -z "${2:-}" ]] && { err "用法: solar-harness verify-events <sid>"; exit 1; }
+    [[ -z "${2:-}" ]] && { err "用法: solar-harness verify-events <sid>"; exit 2; }
     do_verify_events "$2"
     ;;
   stats)
@@ -3909,7 +3909,7 @@ PY
     # Sprint 20260423-151839 D8: 一键部署
     DEPLOY_TARGET="${2:-}"
     DEPLOY_FORCE="${3:-}"
-    [[ -z "$DEPLOY_TARGET" ]] && { err "用法: $0 deploy <user@host> [--force]"; exit 1; }
+    [[ -z "$DEPLOY_TARGET" ]] && { err "用法: $0 deploy <user@host> [--force]"; exit 2; }
 
     SSH_OPTS="-o BatchMode=yes -o StrictHostKeyChecking=accept-new"
     BUNDLE_OUT="/tmp/solar-deploy-$$"
@@ -4066,7 +4066,7 @@ PY
               shift ;;
           esac
         done
-        [[ -n "$_query" ]] || { err "Usage: $0 context inject --query \"<text>\" [--format hook|markdown|--json]"; exit 1; }
+        [[ -n "$_query" ]] || { err "Usage: $0 context inject --query \"<text>\" [--format hook|markdown|--json]"; exit 2; }
         if [[ "$_format" != "hook" && "$_json_requested" != "1" ]]; then
           type solar_capability_prefix >/dev/null 2>&1 && solar_capability_prefix "knowledge" "context inject query=${_query:0:80}"
         fi
@@ -4077,7 +4077,7 @@ PY
         ;;
       *)
         err "Usage: $0 context [inject|status] --query \"<text>\""
-        exit 1
+        exit 2
         ;;
     esac
     ;;
@@ -4471,7 +4471,7 @@ PY
             ;;
           *)
             err "Usage: $0 wiki reingest-scheduler [start [interval]|stop|status|run-once]"
-            exit 1
+            exit 2
             ;;
         esac
         ;;
@@ -4508,7 +4508,7 @@ PY
         solar_export_qmd_runtime_path "$_QMD_BIN"
         if [[ $# -lt 1 ]]; then
           err "Usage: $0 wiki qmd-search \"<query>\" [qmd search args]"
-          exit 1
+          exit 2
         fi
         "$_QMD_BIN" search "$1" -c "${QMD_WIKI_COLLECTION:-solar-wiki}" "${@:2}"
         ;;
@@ -4611,7 +4611,7 @@ PY
             ;;
           *)
             err "Usage: $0 wiki qmd-mcp [status|start|stop-proxy]"
-            exit 1
+            exit 2
             ;;
         esac
         ;;
@@ -4711,7 +4711,7 @@ EOF
             ;;
           *)
             err "Usage: $0 wiki qmd-embed [start|status|stop|run-once|run-idle|run-gentle|run-now]"
-            exit 1
+            exit 2
             ;;
         esac
         ;;
@@ -4920,7 +4920,7 @@ PLIST
                 ;;
               *)
                 err "Usage: $0 wiki ai-influence-digest schedule [start|stop|status]"
-                exit 1
+                exit 2
                 ;;
             esac
             ;;
@@ -4962,7 +4962,7 @@ PLIST
         ;;
       workspace)
         shift
-        [[ -z "${1:-}" ]] && { err "Usage: $0 symphony workspace <sprint-id>"; exit 1; }
+        [[ -z "${1:-}" ]] && { err "Usage: $0 symphony workspace <sprint-id>"; exit 2; }
         bash "$HARNESS_DIR/lib/symphony/workspace-manager.sh" show "$1"
         ;;
       *)
@@ -5002,7 +5002,7 @@ PLIST
         echo "  $0 product list     [--out-dir DIR]"
         ;;
       *)
-        err "Unknown product subcommand: $_prod_subcmd"; exit 1
+        err "Unknown product subcommand: $_prod_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5029,7 +5029,7 @@ PLIST
         echo "  $0 s6-autopilot resolve-deadlock --pane P --sprint SID --dispatch-id DID"
         ;;
       *)
-        err "Unknown s6-autopilot subcommand: $_ap_subcmd"; exit 1
+        err "Unknown s6-autopilot subcommand: $_ap_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5065,7 +5065,7 @@ PLIST
         echo "  $0 graph-scheduler parent-check   --graph sprint.task_graph.json"
         ;;
       *)
-        err "Unknown graph-scheduler subcommand: $_graph_subcmd"; exit 1
+        err "Unknown graph-scheduler subcommand: $_graph_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5089,7 +5089,7 @@ PLIST
         echo "  $0 architecture-guard validate --graph sprint.task_graph.json [--strict]"
         ;;
       *)
-        err "Unknown architecture-guard subcommand: $_arch_guard_subcmd"; exit 1
+        err "Unknown architecture-guard subcommand: $_arch_guard_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5113,7 +5113,7 @@ PLIST
         echo "  $0 workflow-guard route <sprint-id> [--json] [--field route_role|stage|violations]"
         ;;
       *)
-        err "Unknown workflow-guard subcommand: $_workflow_guard_subcmd"; exit 1
+        err "Unknown workflow-guard subcommand: $_workflow_guard_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5149,7 +5149,7 @@ PLIST
         echo "  $0 epic show EPIC_ID [--json]"
         ;;
       *)
-        err "Unknown epic subcommand: $_epic_subcmd"; exit 1
+        err "Unknown epic subcommand: $_epic_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5176,7 +5176,7 @@ PLIST
         echo "  $0 graph-dispatch drain-queue    --sprint SID [--dry-run] [--max-items N]"
         ;;
       *)
-        err "Unknown graph-dispatch subcommand: $_graph_dispatch_subcmd"; exit 1
+        err "Unknown graph-dispatch subcommand: $_graph_dispatch_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5325,7 +5325,7 @@ PY
         echo "  $0 concurrency set --level low|normal|high|burst"
         ;;
       *)
-        err "Unknown pm-fleet subcommand: $_pm_subcmd"; exit 1
+        err "Unknown pm-fleet subcommand: $_pm_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5359,7 +5359,7 @@ PY
         _runtime_extra="${1:-{}}"; shift || true
         if [[ -z "$_runtime_sid" || -z "$_runtime_status" ]]; then
           err "用法: $0 runtime status <sid> <new_status> [event] [actor] [extra_json] [--bump-round]"
-          exit 1
+          exit 2
         fi
         python3 "$_runtime_py_dir/runtime_status.py" "$SPRINTS_DIR/${_runtime_sid}.status.json" "$_runtime_status" "$_runtime_event" "$_runtime_actor" "$_runtime_extra" "$@"
         ;;
@@ -5375,7 +5375,7 @@ PY
         echo "  $0 runtime status <sid> <new_status> [event] [actor] [extra_json] [--bump-round]"
         ;;
       *)
-        err "Unknown runtime subcommand: $_runtime_subcmd"; exit 1
+        err "Unknown runtime subcommand: $_runtime_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5404,7 +5404,7 @@ PY
         echo "  $0 leases reap"
         ;;
       *)
-        err "Unknown leases subcommand: $_lease_subcmd"; exit 1
+        err "Unknown leases subcommand: $_lease_subcmd"; exit 2
         ;;
     esac
     ;;
@@ -5413,6 +5413,6 @@ PY
     # Unknown command -> error and exit. (Previously a directory-shaped arg
     # here silently launched tmux + 3 Claude panes, so a typo that happened to
     # name a directory burned quota. An explicit work dir goes to `start <dir>`.)
-    err "未知命令: $1"; log "运行 '$0 help'"; exit 1
+    err "未知命令: $1"; log "运行 '$0 help'"; exit 2
     ;;
 esac
