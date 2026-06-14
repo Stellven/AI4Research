@@ -124,22 +124,37 @@ do_update() {
         --solar-home "$SOLAR_HOME" --claude-dir "$CLAUDE_DIR" "$@"
 }
 
-doctor_json() {
-    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" python3 - <<'PY'
+# Health check. Exits 0 only when the verdict is "ok"; exits 1 on any failure
+# (missing install, missing critical path, or drift) so callers can branch on
+# the exit code. Default output is a human checklist with per-line remedies;
+# `--json` emits the machine-readable report (a superset of the old schema).
+doctor() {
+    mode="text"
+    [ "${1:-}" = "--json" ] && mode="json"
+    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" \
+    DOCTOR_MODE="$mode" python3 - <<'PY'
 import json
 import os
+import sqlite3
+import sys
 from datetime import datetime, timezone
 
 solar_home = os.environ["SOLAR_HOME"]
 claude_dir = os.environ["CLAUDE_DIR"]
 receipt_path = os.environ["RECEIPT_PATH"]
+mode = os.environ.get("DOCTOR_MODE", "text")
+
 result = {
     "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "verdict": "ok",
     "components": [],
     "paths": {},
+    "drift": [],
+    "schema_version": None,
     "warnings": [],
 }
+
+receipt = None
 if os.path.isfile(receipt_path):
     with open(receipt_path, encoding="utf-8") as f:
         receipt = json.load(f)
@@ -156,6 +171,14 @@ checks = {
     "db": os.path.join(solar_home, "db", "solar.db"),
     "solar_bin": os.path.join(solar_home, "bin", "solar"),
 }
+remedies = {
+    "solar_home": "reinstall: run install.sh (or get-solar.sh)",
+    "receipt": "no install receipt found; run install.sh",
+    "claude_dir": "create it, or pass --claude-dir to point at your Claude user dir",
+    "kernel": "reinstall the kernel: install.sh --components kernel",
+    "db": "reinstall to initialize the database",
+    "solar_bin": "reinstall to restore the solar launcher",
+}
 fail_keys = {"solar_home", "receipt", "solar_bin"}
 if "kernel" in result["components"] or not result["components"]:
     fail_keys.add("kernel")
@@ -166,16 +189,52 @@ for key, path in checks.items():
         result["verdict"] = "fail"
         result["warnings"].append("path missing: " + key)
 
-print(json.dumps(result, indent=2, sort_keys=True))
-PY
-}
+# Drift check: every component root the receipt recorded must still exist.
+# Catches a removed install tree (e.g. rm -rf ~/.solar/harness) that the fixed
+# checks above do not cover.
+if receipt:
+    for name, roots in (receipt.get("component_roots") or {}).items():
+        for root in roots:
+            if not os.path.exists(root):
+                result["drift"].append({"component": name, "path": root})
+                result["verdict"] = "fail"
+                result["warnings"].append("drift: %s root missing: %s" % (name, root))
 
-doctor() {
-    if [ "${1:-}" = "--json" ]; then
-        doctor_json
-    else
-        doctor_json
-    fi
+# schema_version (informational): surfaces the migrations state recorded by the
+# schema runner; never changes the verdict.
+db_path = checks["db"]
+if os.path.exists(db_path):
+    try:
+        conn = sqlite3.connect(db_path)
+        row = conn.execute(
+            "SELECT value FROM solar_meta WHERE key='schema_version'"
+        ).fetchone()
+        conn.close()
+        if row:
+            result["schema_version"] = row[0]
+    except sqlite3.Error:
+        pass
+
+if mode == "json":
+    print(json.dumps(result, indent=2, sort_keys=True))
+else:
+    print("OpenSolar doctor")
+    for key, path in checks.items():
+        ok = result["paths"][key] == "ok"
+        print("  [%7s] %-11s %s" % ("ok" if ok else "MISSING", key, path))
+        if not ok:
+            print("            -> %s" % remedies.get(key, "reinstall"))
+    if result["drift"]:
+        print("  drift (tracked install paths now missing):")
+        for d in result["drift"]:
+            print("  [MISSING] %-11s %s" % (d["component"], d["path"]))
+        print("            -> run `solar repair` to restore tracked files")
+    if result["schema_version"] is not None:
+        print("  schema_version: %s" % result["schema_version"])
+    print("Verdict: %s" % result["verdict"])
+
+sys.exit(0 if result["verdict"] == "ok" else 1)
+PY
 }
 
 remove_sentinel() {

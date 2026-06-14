@@ -31,7 +31,9 @@ grep -q "smoke=ok" <<<"$SUMMARY_OUT" || { echo "FAIL: summary missing TVS smoke 
 
 BAD_ROOT="$(mktemp -d)"
 trap 'rm -rf "$BAD_ROOT"' EXIT
-BAD_JSON="$(HARNESS_DIR="$HARNESS_DIR_REAL" SOLAR_TVS_ROOT="$BAD_ROOT" bash "$HARNESS_DIR_REAL/installer/doctor.sh" --json)"
+# doctor.sh now exits nonzero on a failing verdict (this BAD_ROOT case is a
+# deliberate "fail"); tolerate that so we can still inspect the JSON body.
+BAD_JSON="$(HARNESS_DIR="$HARNESS_DIR_REAL" SOLAR_TVS_ROOT="$BAD_ROOT" bash "$HARNESS_DIR_REAL/installer/doctor.sh" --json || true)"
 BAD_JSON="$BAD_JSON" python3 - <<'PY'
 import json
 import os

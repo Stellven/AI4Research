@@ -388,12 +388,25 @@ for w in json.load(sys.stdin).get('warnings', []):
 }
 
 # ── entry ─────────────────────────────────────────────────────────────────
+# Exit nonzero unless the verdict is "ok", so callers can branch on the exit
+# code (matches `solar doctor`). Output is unchanged.
+doctor_exit_for() {
+  _verdict="$(printf '%s' "$1" | python3 -c \
+    "import json,sys
+try: print(json.load(sys.stdin).get('verdict','fail'))
+except Exception: print('fail')" 2>/dev/null || echo fail)"
+  [ "$_verdict" = "ok" ] || exit 1
+}
+
 case "${1:-}" in
   --json|"")
-    doctor_json
+    _out="$(doctor_json)"
+    printf '%s\n' "$_out"
+    doctor_exit_for "$_out"
     ;;
   --summary|-s)
     doctor_summary
+    doctor_exit_for "$(doctor_json)"
     ;;
   --help|-h)
     echo "Solar Product Doctor — Design §2.2 schema"
