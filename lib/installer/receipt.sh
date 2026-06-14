@@ -28,6 +28,49 @@ try:
 except Exception:
     sha = "unknown"
 
+
+def compute_version(src):
+    # Real release identity, most-specific first:
+    #   1. an ancestor git tag (e.g. v1.0.0-rc.2-13-gabc123) -- only when the
+    #      install source is a full checkout whose history carries the tag;
+    #   2. the tracked VERSION file -- the release-controlled baseline that
+    #      ships in every channel, including shallow/tagless `stable` clones
+    #      and git-less tarballs;
+    #   3. "unknown" -- never the old hardcoded "p1-alpha" lie.
+    try:
+        described = subprocess.check_output(
+            # Only real release tags (v1.2.3 / v1.0.0-rc.2). --match excludes
+            # junk ancestors like archive/* so a dev branch with no version-tag
+            # ancestor falls through to the VERSION file instead of reporting a
+            # misleading nearest-tag string.
+            ["git", "-C", src, "describe", "--tags", "--match", "v[0-9]*"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if described:
+            return described[1:] if described.startswith("v") else described
+    except Exception:
+        pass
+    try:
+        with open(os.path.join(src, "VERSION"), encoding="utf-8") as vf:
+            text = vf.read().strip()
+            if text:
+                return text
+    except Exception:
+        pass
+    return "unknown"
+
+
+version = compute_version(source)
+# Channel + source repo the install tracks, so `solar update` knows where to
+# fetch from. get-solar.sh exports these; a direct install.sh run falls back to
+# the published defaults (kept in sync with get-solar.sh).
+channel = os.environ.get("SOLAR_CHANNEL") or "stable"
+repo = (
+    os.environ.get("SOLAR_REPO")
+    or "https://github.com/suraj-subrahmanyan/OpenSolar.git"
+)
+
 components = [c for c in os.environ.get("SELECTED_COMPONENTS", "").split() if c]
 all_roots = {
     "kernel": [os.path.join(os.environ["CLAUDE_DIR"], "solar")],
@@ -42,8 +85,10 @@ all_roots = {
 }
 receipt = {
     "schema": 1,
-    "version": "p1-alpha",
+    "version": version,
     "git_sha": sha,
+    "channel": channel,
+    "repo": repo,
     "source_dir": source,
     "os": os.environ.get("OS_KIND", "unknown"),
     "installed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

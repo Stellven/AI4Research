@@ -10,6 +10,7 @@ usage() {
 solar - OpenSolar lifecycle command
 
 Usage:
+  solar version [--json]
   solar doctor [--json]
   solar update [extra install flags]
   solar backup [--out FILE]
@@ -40,6 +41,39 @@ PY
 # Data paths under SOLAR_HOME that backup/restore and --keep-data treat as
 # user data (config + secrets + receipt + database).
 SOLAR_DATA_PATHS="install-receipt.json config.env .env db"
+
+do_version() {
+    json=false
+    [ "${1:-}" = "--json" ] && json=true
+    if [ ! -f "$RECEIPT_PATH" ]; then
+        echo "no install receipt at $RECEIPT_PATH; run install.sh first" >&2
+        exit 1
+    fi
+    ver="$(receipt_field version)"; [ -n "$ver" ] || ver="unknown"
+    sha="$(receipt_field git_sha)"
+    chan="$(receipt_field channel)"
+    repo="$(receipt_field repo)"
+    if [ "$json" = "true" ]; then
+        RV="$ver" RS="$sha" RC="$chan" RR="$repo" python3 - <<'PY'
+import json
+import os
+
+print(json.dumps({
+    "version": os.environ.get("RV", ""),
+    "git_sha": os.environ.get("RS", ""),
+    "channel": os.environ.get("RC", ""),
+    "repo": os.environ.get("RR", ""),
+}, indent=2, sort_keys=True))
+PY
+    else
+        printf 'OpenSolar %s' "$ver"
+        if [ -n "$sha" ] && [ "$sha" != "unknown" ]; then
+            printf ' (git %s)' "$sha"
+        fi
+        printf '\n'
+        [ -n "$chan" ] && printf 'channel: %s\n' "$chan"
+    fi
+}
 
 do_backup() {
     out=""
@@ -397,6 +431,7 @@ do_ui() {
 
 cmd="${1:-}"
 case "$cmd" in
+    version) shift; do_version "$@" ;;
     doctor) shift; doctor "$@" ;;
     update) shift; do_update "$@" ;;
     backup) shift; do_backup "$@" ;;
