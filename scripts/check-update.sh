@@ -43,7 +43,10 @@ git -C "$channel" checkout -q -B testchan
 git -C "$channel" -c user.email=t@example.com -c user.name=t \
     commit -q --allow-empty -m "channel baseline"
 
-HOME="$home" SOLAR_REPO="$channel" SOLAR_CHANNEL="testchan" SOLAR_SRC="$src" \
+# file:// (not a bare path) so git honors --depth 1 and produces a genuine
+# shallow clone -- exercising the abbreviation-length divergence the sha
+# prefix-match in do_update defends against.
+HOME="$home" SOLAR_REPO="file://$channel" SOLAR_CHANNEL="testchan" SOLAR_SRC="$src" \
     bash "$channel/get-solar.sh" \
     --yes --components kernel,harness --fake-keys --skip-llm-cli --skip-py-deps \
     >"$sandbox/install.log" 2>&1 \

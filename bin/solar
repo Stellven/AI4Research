@@ -170,6 +170,10 @@ do_update() {
 
     fetch_dir="${SOLAR_SRC:-$HOME/.solar-src/OpenSolar}"
     tmp_fetch="$fetch_dir.update.$$"
+    # Clean any stale temp clones a previously interrupted update left behind.
+    for stale in "$fetch_dir".update.*; do
+        [ -e "$stale" ] && rm -rf "$stale"
+    done
     echo "fetching $repo (channel: $channel)" >&2
     if ! fetch_channel "$repo" "$channel" "$tmp_fetch"; then
         rm -rf "$tmp_fetch"
@@ -183,11 +187,20 @@ do_update() {
         exit 1
     fi
     new_sha="$(git -C "$tmp_fetch" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    new_full="$(git -C "$tmp_fetch" rev-parse HEAD 2>/dev/null || echo unknown)"
 
-    if [ -n "$cur_sha" ] && [ "$cur_sha" != "unknown" ] && [ "$new_sha" = "$cur_sha" ]; then
-        echo "already up to date ($cur_sha on $channel)"
-        rm -rf "$tmp_fetch"
-        return 0
+    # cur_sha (from the receipt) is an abbreviation whose length depends on the
+    # repo it was resolved in, which may differ from the shallow fetch's. Treat
+    # "up to date" when it is a prefix of the fetched full sha, rather than
+    # requiring equal short strings.
+    if [ -n "$cur_sha" ] && [ "$cur_sha" != "unknown" ] && [ "$new_full" != "unknown" ]; then
+        case "$new_full" in
+            "$cur_sha"*)
+                echo "already up to date ($cur_sha on $channel)"
+                rm -rf "$tmp_fetch"
+                return 0
+                ;;
+        esac
     fi
 
     echo "updating $cur_sha -> $new_sha (channel: $channel, components: $comps)" >&2
