@@ -10,6 +10,7 @@
 . "$SOLAR_SOURCE_DIR/lib/installer/settings-merge.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/mcp-register.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/db-init.sh"
+. "$SOLAR_SOURCE_DIR/lib/installer/migrate.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/receipt.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/doctor.sh"
 . "$SOLAR_SOURCE_DIR/lib/installer/components.sh"
@@ -145,6 +146,10 @@ main() {
     # db_init reads schema from SOURCE_DIR, so it has no dependency on the
     # component copy step.
     db_init
+    # Apply pending schema migrations on top of the freshly-applied baseline.
+    # On update this catches an older database up; on a fresh install it just
+    # stamps the baseline schema_version (no migrations exist yet).
+    db_migrate
     install_components
     settings_merge
     mcp_register
