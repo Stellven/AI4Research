@@ -2948,8 +2948,8 @@ do_models_command() {
 
 # ---- Main ----
 
-case "${1:-start}" in
-  start|"")  start_harness 3 "${2:-$(pwd)}" "${3:-}" ;;
+case "${1:-help}" in
+  start)     start_harness 3 "${2:-$(pwd)}" "${3:-}" ;;
   2)         start_harness 2 "${2:-$(pwd)}" "${3:-}" ;;
   3)         start_harness 3 "${2:-$(pwd)}" "${3:-}" ;;
   status)    show_status ;;
@@ -3164,7 +3164,7 @@ print(json.dumps({
           warn "未运行"
         fi
         ;;
-      *) err "用法: $0 webhook [start|stop|status]" ;;
+      *) err "用法: $0 webhook [start|stop|status]"; exit 2 ;;
     esac
     ;;
   status-server)
@@ -4097,57 +4097,67 @@ PY
     python3 "$_exp_runner" "$@"
     ;;
   help|--help|-h)
-    echo "Solar Harness — 多化身协同环境"
+    echo "Solar Harness — multi-agent cockpit runtime"
     echo ""
-    echo "用法:"
-    echo "  $0 [start] [工作目录] [--skip-doctor]  启动3化身"
-    echo "  $0 2 [工作目录]        启动2化身"
-    echo "  $0 status              查看状态"
-    echo "  $0 main-status         查看主屏 runtime + assignment + artifact 状态"
-    echo "  $0 actorhost-status [--json] [--host-type TYPE]  查看 actor/host/lease taxonomy"
-    echo "  $0 lab-status          查看 lab pane runtime + handoff artifact 状态"
-    echo "  $0 preflight           检查启动必需依赖；不启动 tmux/Claude"
-    echo "  $0 doctor              环境自检"
-    echo "  $0 kill                关闭"
-    echo "  $0 扩展 | extend       启动独立第二四分屏 (solar-harness-lab)"
-    echo "  $0 intake \"需求\"       默认需求入口：创建 sprint/epic + raw 记录 + 触发 autopilot"
-    echo "  $0 bg \"任务\"           在 tmux 后台窗口执行任务；支持 status/logs/attach/cancel"
-    echo "  $0 tvs render < payload.json  使用 TVS 确定性渲染结构化输出"
-    echo "  $0 multi-task [screen|start|status|profiles|doctor|logs|attach|foreground|cancel]  tmux 后台 DAG worker 池"
-    echo "  $0 monitor [--host HOST] [--apply|--dry-run] [--json|--loop]  远端 Mac mini multi-task 巡检/安全推进"
-    echo "  $0 monitor tui          打开旧版 tmux monitor 窗口"
-    echo "  $0 sprint \"需求\"       创建 Sprint/Epic（不主动 dispatch，兼容旧命令）"
-    echo "  $0 wake [sprint-id]  列出未完成 Sprint 或恢复指定 Sprint"
-    echo "  $0 wake --help       显示 wake 帮助"
-    echo "  $0 reload              热加载 coordinator (kill + watchdog 拉新)"
-    echo "  $0 update-contract <id> <section> <content>  更新合约"
-    echo "  $0 migrate <export|import|verify|rollback|deploy|bootstrap>  跨机迁移"
-    echo "  $0 deploy <user@host> [--force]  一键部署"
-    echo "  $0 plan-verdict <sid> approve|reject [reason]  原子审批计划"
-    echo "  $0 parallel-integrate <sid> [repo-root]  集成并行 builder worktree"
-    echo "  $0 eval-verdict <sid> pass|fail [reason]  原子评审判定"
-    echo "  $0 verify-events <sid>  事件一致性校验"
-    echo "  $0 capsule show <sid>   查看 State Capsule 摘要"
-    echo "  $0 ledger show <sid>    查看 Bridge Ledger 事件流"
-    echo "  $0 attach              重新接入 tmux"
-    echo "  $0 monitor             在独立窗口打开 monitor (回退)"
-    echo "  $0 webhook [start|stop|status]  管理 Webhook server"
-    echo "  $0 status-server [start|stop|restart|status]  管理 HTTP 状态面板 (port 8765)"
-    echo "  $0 mermaid [--open] [file.mmd]  打开 Mermaid .mmd 架构图浏览器"
-    echo "  $0 integrations status [--json]  外部开源集成六态健康检查"
-    echo "  $0 verify-integrations  端到端验证 Drive/OWL/MarkItDown/agency + 两个四分屏 dispatch 能力"
-    echo "  $0 everything-claude-code [doctor|inventory|report|install --dry-run]  Everything Claude Code 候选集成审计"
-    echo "  $0 meta-harness [status|doctor|run|apply|history]  Meta-Harness 自优化外循环入口（默认 dry-run）"
-    echo "  $0 context inject --query \"问题\" [--format hook|markdown|--json]  默认知识上下文注入"
-    echo "  $0 ragflow [doctor|config|search|evidence-pack|export-manifest]  RAGFlow raw evidence / retrieval adapter"
-    echo "  $0 autopilot [status|apply|dispatch|loop|start|stop|service-status|queue]  自动监控断头 sprint/pane 并安全推进"
-    echo "  $0 symphony [status|dry-run|workspace <sid>]  Symphony 调度"
-    echo "  $0 graph-scheduler [validate|ready|batches|enrich-capabilities|enrich-backlog|assign|enqueue-ready|mark|parent-check]  DAG 并行调度"
-    echo "  $0 architecture-guard validate --graph sprint.task_graph.json [--strict]  package-first 架构门禁"
-    echo "  $0 workflow-guard route <sid> [--json]  PM→Planner→DAG Builder 门禁判定"
-    echo "  $0 graph-dispatch [dispatch-ready|drain-queue]  DAG 节点级 pane 派发"
-    echo "  $0 mirage [search|doctor|workspace|mounts|exec|provision]  Mirage 统一虚拟文件系统"
-    echo "  $0 wiki [install|status|export-sprint|update|query|ingest|chatgpt-import|vault-status|lint|rebuild|export-graph|colorize|history|run-dispatch|dispatch-watch|dispatch-maintenance|import-solar-db|capture-server|audit-uploads|backfill-uploads|quality-gate|reingest-quarantine|reingest-scheduler|qmd-status|qmd-repair|qmd-search|qmd-update|qmd-mcp|qmd-embed|ai-influence-digest|tech-hotspot-radar|help]  Obsidian Wiki 集成"
+    echo "Usage: $0 <command> [args]"
+    echo ""
+    echo "Cockpit & status:"
+    echo "  $0 start [workdir] [--skip-doctor]   start the 3-pane cockpit (tmux + Claude panes)"
+    echo "  $0 2 [workdir]                        start the 2-pane cockpit"
+    echo "  $0 status                            show cockpit status"
+    echo "  $0 main-status                       main screen: runtime + assignment + artifact status"
+    echo "  $0 lab-status                        lab pane: runtime + handoff artifact status"
+    echo "  $0 actorhost-status [--json] [--host-type TYPE]  actor/host/lease taxonomy"
+    echo "  $0 preflight                         check launch dependencies (does not start tmux/Claude)"
+    echo "  $0 doctor                            environment self-check"
+    echo "  $0 attach                            re-attach to the tmux session"
+    echo "  $0 extend                            start the separate second quad-pane (solar-harness-lab)"
+    echo "  $0 reload                            hot-reload the coordinator (kill + watchdog respawn)"
+    echo "  $0 kill                              stop the cockpit"
+    echo ""
+    echo "Intake & sprint lifecycle:"
+    echo "  $0 intake \"request\"                  main entry: create sprint/epic + raw record + trigger autopilot"
+    echo "  $0 sprint \"request\"                  create a Sprint/Epic (no auto-dispatch; legacy-compatible)"
+    echo "  $0 bg \"task\"                         run a task in a background tmux window (status/logs/attach/cancel)"
+    echo "  $0 wake [sprint-id]                  list unfinished Sprints, or resume one (see: $0 wake --help)"
+    echo "  $0 plan-verdict <sid> approve|reject [reason]   atomic plan approval"
+    echo "  $0 eval-verdict <sid> pass|fail [reason]        atomic evaluation verdict"
+    echo "  $0 parallel-integrate <sid> [repo-root]         integrate parallel builder worktrees"
+    echo "  $0 verify-events <sid>               event-consistency check"
+    echo "  $0 capsule show <sid>                show the State Capsule summary"
+    echo "  $0 ledger show <sid>                 show the Bridge Ledger event stream"
+    echo "  $0 update-contract <id> <section> <content>     update a contract"
+    echo ""
+    echo "Scheduling & multi-task:"
+    echo "  $0 multi-task [screen|start|status|profiles|doctor|logs|attach|foreground|cancel]  background DAG worker pool"
+    echo "  $0 monitor [--host HOST] [--apply|--dry-run] [--json|--loop]  multi-task monitor / safe-advance (optionally across hosts)"
+    echo "  $0 monitor tui                       open the legacy tmux monitor window"
+    echo "  $0 autopilot [status|apply|dispatch|loop|start|stop|service-status|queue]  auto-advance stalled sprints/panes"
+    echo "  $0 symphony [status|dry-run|workspace <sid>]    Symphony scheduling"
+    echo "  $0 graph-scheduler [validate|ready|batches|...|parent-check]  DAG parallel scheduling"
+    echo "  $0 graph-dispatch [dispatch-ready|drain-queue]  DAG node-level pane dispatch"
+    echo "  $0 workflow-guard route <sid> [--json]          PM->Planner->DAG-Builder gate"
+    echo "  $0 architecture-guard validate --graph sprint.task_graph.json [--strict]  package-first architecture gate"
+    echo ""
+    echo "Servers & output:"
+    echo "  $0 webhook [start|stop|status]                  manage the webhook server"
+    echo "  $0 status-server [start|stop|restart|status]    manage the HTTP status panel (port 8765)"
+    echo "  $0 tvs render < payload.json                    deterministic structured-output rendering (TVS)"
+    echo "  $0 mermaid [--open] [file.mmd]                  open a Mermaid .mmd architecture diagram"
+    echo ""
+    echo "Knowledge & integrations (advanced):"
+    echo "  $0 context inject --query \"q\" [--format hook|markdown|--json]  knowledge context injection"
+    echo "  $0 wiki [install|status|query|ingest|...|help]  Obsidian wiki integration"
+    echo "  $0 ragflow [doctor|config|search|evidence-pack|export-manifest]  RAGFlow retrieval adapter"
+    echo "  $0 mirage [search|doctor|workspace|mounts|exec|provision]  Mirage unified virtual filesystem"
+    echo "  $0 integrations status [--json]                 external integration health check"
+    echo "  $0 verify-integrations                          end-to-end integration + dispatch verification"
+    echo "  $0 everything-claude-code [doctor|inventory|report|install --dry-run]  ECC integration audit"
+    echo "  $0 meta-harness [status|doctor|run|apply|history]  self-optimization outer loop (default dry-run)"
+    echo ""
+    echo "Cross-machine:"
+    echo "  $0 migrate <export|import|verify|rollback|deploy|bootstrap>  cross-machine migration"
+    echo "  $0 deploy <user@host> [--force]                 one-shot deploy to another machine"
     ;;
   mirage)
     # Mirage unified virtual filesystem — sprint-20260508-mirage-unified-vfs
@@ -5400,11 +5410,9 @@ PY
     ;;
 
   *)
-    # If arg looks like a directory, use it as work dir
-    if [[ -d "$1" ]]; then
-      start_harness 3 "$1"
-    else
-      err "未知命令: $1"; log "运行 '$0 help'"; exit 1
-    fi
+    # Unknown command -> error and exit. (Previously a directory-shaped arg
+    # here silently launched tmux + 3 Claude panes, so a typo that happened to
+    # name a directory burned quota. An explicit work dir goes to `start <dir>`.)
+    err "未知命令: $1"; log "运行 '$0 help'"; exit 1
     ;;
 esac

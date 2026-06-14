@@ -332,7 +332,7 @@ fn test_table_conversion() {
     assert!(markdown.contains("Alice"), "Should contain table data");
     assert!(markdown.contains("Bob"), "Should contain table data");
 
-    // Table should be formatted (exact format depends on html2md library)
+    // Table should be formatted (exact format depends on the htmd library)
     assert!(markdown.contains("30"), "Should contain age data");
     assert!(markdown.contains("London"), "Should contain city data");
 }

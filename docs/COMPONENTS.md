@@ -24,6 +24,7 @@ Linux, and WSL2.
 | `skills-calendar` | off | darwin | — | — | no | macOS Calendar skills (darwin only) |
 | `skills-browser` | off | all | `cargo` | — | no | Browser automation skills (cargo-gated at runtime) |
 | `codex-bridge` | off | all | — | — | no | Optional file-based handoff bridge for external coding agents |
+| `solar-max` | off | all | — | `kernel` | no | Opt-in Solar-Max project mode (Gate-driven workflow over a personal ~/Solar-MAX dir) |
 | `mempalace` | off | darwin linux wsl | `python3` | `kernel` | yes | Semantic memory MCP server (off by default) |
 | `daemons` | off | darwin linux wsl | `bun` | `core-runtime` | no | User-level daemon for the Solar runtime (off by default) |
 
