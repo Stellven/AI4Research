@@ -60,6 +60,10 @@ run_installer() {
 
 main() {
     require_git
+    # Export the resolved channel/repo so install.sh records the real fetch
+    # source in the receipt (powers `solar update`); without this the defaulted
+    # values would not reach the installer's environment.
+    export SOLAR_REPO SOLAR_CHANNEL
     fetch_source
     run_installer "$@"
 }

@@ -179,10 +179,10 @@ test_d4_doctor_json() {
   echo -e "${C}[D4]${N} doctor JSON 输出"
 
   local json_output
-  json_output=$(bash "$HARNESS_DIR/doctor.sh" 2>/dev/null) || {
-    fail "doctor.sh 执行失败"
-    return
-  }
+  # doctor.sh now exits nonzero when a REQUIRED check fails, but still prints the
+  # JSON body; capture it regardless and validate the body below, so a fail
+  # verdict is not misreported as an execution crash.
+  json_output=$(bash "$HARNESS_DIR/doctor.sh" 2>/dev/null) || true
 
   # 验证 JSON 可解析
   if echo "$json_output" | python3 -m json.tool &>/dev/null; then
@@ -220,10 +220,8 @@ sys.exit(1)
 
   # 验证 --summary 模式
   local summary
-  summary=$(bash "$HARNESS_DIR/doctor.sh" --summary 2>/dev/null) || {
-    fail "doctor --summary 执行失败"
-    return
-  }
+  # As above: a fail verdict exits nonzero but still prints the summary body.
+  summary=$(bash "$HARNESS_DIR/doctor.sh" --summary 2>/dev/null) || true
   if echo "$summary" | grep -q 'Doctor Summary'; then
     ok "doctor --summary 输出含 Doctor Summary"
   else

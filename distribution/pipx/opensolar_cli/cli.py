@@ -39,8 +39,10 @@ Usage:
 
 Commands:
   install [args...]       Download/run get-solar.sh; forwards args unchanged.
+  version [args...]       Delegate to ~/.solar/bin/solar version.
   doctor [args...]        Delegate to ~/.solar/bin/solar doctor.
-  update [args...]        Delegate to ~/.solar/bin/solar update.
+  update [args...]        Delegate to ~/.solar/bin/solar update (fetch channel).
+  repair [args...]        Delegate to ~/.solar/bin/solar repair (reinstall in place).
   uninstall [args...]     Delegate to ~/.solar/bin/solar uninstall.
   source                  Print the retained OpenSolar source checkout path.
 
@@ -227,7 +229,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     if command == "install":
         return install(rest)
-    if command in {"doctor", "update", "uninstall"}:
+    if command in {"version", "doctor", "update", "repair", "uninstall"}:
         return _delegate_lifecycle(command, rest)
     if command == "source":
         return source(rest)

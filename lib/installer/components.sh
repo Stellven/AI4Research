@@ -35,6 +35,31 @@ list_components() {
     done
 }
 
+# Generically expand the requested set with transitive
+# COMPONENT_REQUIRES_COMPONENTS until a fixpoint, so selecting a component pulls
+# in everything it needs (e.g. daemons -> core-runtime -> kernel). Operates on
+# the `requested` variable set by resolve_components. Terminates: every pass
+# that adds a dependency adds a name from the finite COMPONENT_ORDER, and a
+# pass that adds nothing ends the loop (cycles converge once both members are
+# present).
+expand_requires() {
+    changed=1
+    while [ "$changed" = "1" ]; do
+        changed=0
+        for name in $requested; do
+            load_component "$name"
+            for dep in $COMPONENT_REQUIRES_COMPONENTS; do
+                if ! contains_word "$dep" "$requested"; then
+                    contains_word "$dep" "$COMPONENT_ORDER" \
+                        || die "component '$name' requires unknown component '$dep'"
+                    requested="$requested $dep"
+                    changed=1
+                fi
+            done
+        done
+    done
+}
+
 resolve_components() {
     if [ -n "$REQUESTED_COMPONENTS" ]; then
         requested="$(printf '%s' "$REQUESTED_COMPONENTS" | tr ',' ' ')"
@@ -52,12 +77,7 @@ resolve_components() {
             || die "unknown component: $name (known: $(printf '%s' "$COMPONENT_ORDER" | tr ' ' ','))"
     done
 
-    if contains_word "harness" "$requested" && ! contains_word "kernel" "$requested"; then
-        requested="kernel $requested"
-    fi
-    if contains_word "core-runtime" "$requested" && ! contains_word "kernel" "$requested"; then
-        requested="kernel $requested"
-    fi
+    expand_requires
 
     selected=""
     for name in $COMPONENT_ORDER; do

@@ -4,6 +4,7 @@ COMPONENT_NAME="harness"
 COMPONENT_DESC="Python harness runtime payload"
 COMPONENT_DEFAULT="on"
 COMPONENT_REQUIRES_BINS="python3"
+COMPONENT_REQUIRES_COMPONENTS="kernel"
 
 component_install() {
     copy_payload "$SOURCE_DIR/harness" "$SOLAR_HOME/harness"

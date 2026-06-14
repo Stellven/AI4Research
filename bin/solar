@@ -10,8 +10,10 @@ usage() {
 solar - OpenSolar lifecycle command
 
 Usage:
+  solar version [--json]
   solar doctor [--json]
   solar update [extra install flags]
+  solar repair [extra install flags]
   solar backup [--out FILE]
   solar restore <archive>
   solar ui [--once] [--watch N] [--no-color]
@@ -40,6 +42,43 @@ PY
 # Data paths under SOLAR_HOME that backup/restore and --keep-data treat as
 # user data (config + secrets + receipt + database).
 SOLAR_DATA_PATHS="install-receipt.json config.env .env db"
+
+do_version() {
+    json=false
+    [ "${1:-}" = "--json" ] && json=true
+    if [ ! -f "$RECEIPT_PATH" ]; then
+        echo "no install receipt at $RECEIPT_PATH; run install.sh first" >&2
+        exit 1
+    fi
+    ver="$(receipt_field version)"; [ -n "$ver" ] || ver="unknown"
+    sha="$(receipt_field git_sha)"
+    chan="$(receipt_field channel)"
+    repo="$(receipt_field repo)"
+    if [ "$json" = "true" ]; then
+        RV="$ver" RS="$sha" RC="$chan" RR="$repo" python3 - <<'PY'
+import json
+import os
+
+print(json.dumps({
+    "version": os.environ.get("RV", ""),
+    "git_sha": os.environ.get("RS", ""),
+    "channel": os.environ.get("RC", ""),
+    "repo": os.environ.get("RR", ""),
+}, indent=2, sort_keys=True))
+PY
+    else
+        printf 'OpenSolar %s' "$ver"
+        if [ -n "$sha" ] && [ "$sha" != "unknown" ]; then
+            printf ' (git %s)' "$sha"
+        fi
+        printf '\n'
+        # A channel-less (pre-batch-2) receipt must not make the last command
+        # false; that would propagate exit 1 under set -e despite valid output.
+        if [ -n "$chan" ]; then
+            printf 'channel: %s\n' "$chan"
+        fi
+    fi
+}
 
 do_backup() {
     out=""
@@ -72,7 +111,10 @@ do_restore() {
     echo "restored from $archive into $SOLAR_HOME"
 }
 
-do_update() {
+# Reinstall in place from the source checkout the receipt recorded -- no fetch.
+# Useful when an install is locally damaged; this is the old `update` behavior,
+# which never actually fetched anything, kept under an honest name.
+do_repair() {
     if [ ! -f "$RECEIPT_PATH" ]; then
         echo "no install receipt at $RECEIPT_PATH; run install.sh first" >&2
         exit 1
@@ -82,30 +124,133 @@ do_update() {
     [ -n "$src" ] || { echo "receipt has no source_dir" >&2; exit 1; }
     [ -n "$comps" ] || { echo "receipt has no components" >&2; exit 1; }
     if [ ! -f "$src/install.sh" ]; then
-        echo "installer not found at $src/install.sh; re-clone the source to update" >&2
+        echo "installer not found at $src/install.sh; re-clone the source (or run solar update) to repair" >&2
         exit 1
     fi
-    echo "updating from $src (components: $comps)"
+    echo "repairing from $src (components: $comps)"
     "$src/install.sh" --yes --components "$comps" \
         --solar-home "$SOLAR_HOME" --claude-dir "$CLAUDE_DIR" "$@"
 }
 
-doctor_json() {
-    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" python3 - <<'PY'
+# Clone <repo>@<channel> into <dest> (shallow), with one retry. Mirrors
+# get-solar.sh fetch_source. Returns nonzero if both attempts fail.
+fetch_channel() {
+    _repo="$1"; _channel="$2"; _dest="$3"
+    rm -rf "$_dest"
+    mkdir -p "$(dirname "$_dest")"
+    if git clone --depth 1 --branch "$_channel" "$_repo" "$_dest" >/dev/null 2>&1; then
+        return 0
+    fi
+    rm -rf "$_dest"
+    git clone --depth 1 --branch "$_channel" "$_repo" "$_dest" >/dev/null 2>&1
+}
+
+# Real update: fetch the recorded channel, compare against the installed sha,
+# and either report up-to-date or reinstall from the fetched source (which runs
+# db_init + migrations + rewrites the receipt), then gate on doctor.
+do_update() {
+    if [ ! -f "$RECEIPT_PATH" ]; then
+        echo "no install receipt at $RECEIPT_PATH; run install.sh first" >&2
+        exit 1
+    fi
+    comps="$(receipt_field components)"
+    repo="$(receipt_field repo)"
+    channel="$(receipt_field channel)"
+    cur_sha="$(receipt_field git_sha)"
+    [ -n "$comps" ] || { echo "receipt has no components" >&2; exit 1; }
+    # Pre-channel receipts fall back to the published defaults (kept in sync
+    # with get-solar.sh and receipt.sh).
+    [ -n "$repo" ] || repo="https://github.com/suraj-subrahmanyan/OpenSolar.git"
+    [ -n "$channel" ] || channel="stable"
+
+    command -v git >/dev/null 2>&1 || {
+        echo "git is required for solar update; install git, or use solar repair to reinstall in place" >&2
+        exit 1
+    }
+
+    fetch_dir="${SOLAR_SRC:-$HOME/.solar-src/OpenSolar}"
+    tmp_fetch="$fetch_dir.update.$$"
+    # Clean any stale temp clones a previously interrupted update left behind.
+    for stale in "$fetch_dir".update.*; do
+        [ -e "$stale" ] && rm -rf "$stale"
+    done
+    echo "fetching $repo (channel: $channel)" >&2
+    if ! fetch_channel "$repo" "$channel" "$tmp_fetch"; then
+        rm -rf "$tmp_fetch"
+        echo "update failed: could not fetch channel '$channel' from $repo" >&2
+        echo "  check the network and channel, or run solar repair to reinstall from the recorded source." >&2
+        exit 1
+    fi
+    if [ ! -f "$tmp_fetch/install.sh" ]; then
+        rm -rf "$tmp_fetch"
+        echo "update failed: install.sh not found in the fetched channel ($channel)" >&2
+        exit 1
+    fi
+    new_sha="$(git -C "$tmp_fetch" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    new_full="$(git -C "$tmp_fetch" rev-parse HEAD 2>/dev/null || echo unknown)"
+
+    # cur_sha (from the receipt) is an abbreviation whose length depends on the
+    # repo it was resolved in, which may differ from the shallow fetch's. Treat
+    # "up to date" when it is a prefix of the fetched full sha, rather than
+    # requiring equal short strings.
+    if [ -n "$cur_sha" ] && [ "$cur_sha" != "unknown" ] && [ "$new_full" != "unknown" ]; then
+        case "$new_full" in
+            "$cur_sha"*)
+                echo "already up to date ($cur_sha on $channel)"
+                rm -rf "$tmp_fetch"
+                return 0
+                ;;
+        esac
+    fi
+
+    echo "updating $cur_sha -> $new_sha (channel: $channel, components: $comps)" >&2
+    # Promote the fetch to the canonical source dir so future update/repair find
+    # it, then reinstall from it.
+    rm -rf "$fetch_dir"
+    mkdir -p "$(dirname "$fetch_dir")"
+    mv "$tmp_fetch" "$fetch_dir"
+    SOLAR_REPO="$repo" SOLAR_CHANNEL="$channel" \
+        "$fetch_dir/install.sh" --yes --components "$comps" \
+        --solar-home "$SOLAR_HOME" --claude-dir "$CLAUDE_DIR" "$@"
+    # Gate on doctor: a broken update must surface as a nonzero exit.
+    if ! doctor --json >/dev/null 2>&1; then
+        echo "update applied but doctor reports problems; run: solar doctor" >&2
+        exit 1
+    fi
+    echo "update complete: now at $new_sha ($channel)"
+}
+
+# Health check. Exits 0 only when the verdict is "ok"; exits 1 on any failure
+# (missing install, missing critical path, or drift) so callers can branch on
+# the exit code. Default output is a human checklist with per-line remedies;
+# `--json` emits the machine-readable report (a superset of the old schema).
+doctor() {
+    mode="text"
+    [ "${1:-}" = "--json" ] && mode="json"
+    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" \
+    DOCTOR_MODE="$mode" python3 - <<'PY'
 import json
 import os
+import sqlite3
+import sys
 from datetime import datetime, timezone
 
 solar_home = os.environ["SOLAR_HOME"]
 claude_dir = os.environ["CLAUDE_DIR"]
 receipt_path = os.environ["RECEIPT_PATH"]
+mode = os.environ.get("DOCTOR_MODE", "text")
+
 result = {
     "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "verdict": "ok",
     "components": [],
     "paths": {},
+    "drift": [],
+    "schema_version": None,
     "warnings": [],
 }
+
+receipt = None
 if os.path.isfile(receipt_path):
     with open(receipt_path, encoding="utf-8") as f:
         receipt = json.load(f)
@@ -122,6 +267,14 @@ checks = {
     "db": os.path.join(solar_home, "db", "solar.db"),
     "solar_bin": os.path.join(solar_home, "bin", "solar"),
 }
+remedies = {
+    "solar_home": "reinstall: run install.sh (or get-solar.sh)",
+    "receipt": "no install receipt found; run install.sh",
+    "claude_dir": "create it, or pass --claude-dir to point at your Claude user dir",
+    "kernel": "reinstall the kernel: install.sh --components kernel",
+    "db": "reinstall to initialize the database",
+    "solar_bin": "reinstall to restore the solar launcher",
+}
 fail_keys = {"solar_home", "receipt", "solar_bin"}
 if "kernel" in result["components"] or not result["components"]:
     fail_keys.add("kernel")
@@ -132,16 +285,52 @@ for key, path in checks.items():
         result["verdict"] = "fail"
         result["warnings"].append("path missing: " + key)
 
-print(json.dumps(result, indent=2, sort_keys=True))
-PY
-}
+# Drift check: every component root the receipt recorded must still exist.
+# Catches a removed install tree (e.g. rm -rf ~/.solar/harness) that the fixed
+# checks above do not cover.
+if receipt:
+    for name, roots in (receipt.get("component_roots") or {}).items():
+        for root in roots:
+            if not os.path.exists(root):
+                result["drift"].append({"component": name, "path": root})
+                result["verdict"] = "fail"
+                result["warnings"].append("drift: %s root missing: %s" % (name, root))
 
-doctor() {
-    if [ "${1:-}" = "--json" ]; then
-        doctor_json
-    else
-        doctor_json
-    fi
+# schema_version (informational): surfaces the migrations state recorded by the
+# schema runner; never changes the verdict.
+db_path = checks["db"]
+if os.path.exists(db_path):
+    try:
+        conn = sqlite3.connect(db_path)
+        row = conn.execute(
+            "SELECT value FROM solar_meta WHERE key='schema_version'"
+        ).fetchone()
+        conn.close()
+        if row:
+            result["schema_version"] = row[0]
+    except sqlite3.Error:
+        pass
+
+if mode == "json":
+    print(json.dumps(result, indent=2, sort_keys=True))
+else:
+    print("OpenSolar doctor")
+    for key, path in checks.items():
+        ok = result["paths"][key] == "ok"
+        print("  [%7s] %-11s %s" % ("ok" if ok else "MISSING", key, path))
+        if not ok:
+            print("            -> %s" % remedies.get(key, "reinstall"))
+    if result["drift"]:
+        print("  drift (tracked install paths now missing):")
+        for d in result["drift"]:
+            print("  [MISSING] %-11s %s" % (d["component"], d["path"]))
+        print("            -> run `solar repair` to restore tracked files")
+    if result["schema_version"] is not None:
+        print("  schema_version: %s" % result["schema_version"])
+    print("Verdict: %s" % result["verdict"])
+
+sys.exit(0 if result["verdict"] == "ok" else 1)
+PY
 }
 
 remove_sentinel() {
@@ -397,8 +586,10 @@ do_ui() {
 
 cmd="${1:-}"
 case "$cmd" in
+    version) shift; do_version "$@" ;;
     doctor) shift; doctor "$@" ;;
     update) shift; do_update "$@" ;;
+    repair) shift; do_repair "$@" ;;
     backup) shift; do_backup "$@" ;;
     restore) shift; do_restore "$@" ;;
     ui) shift; do_ui "$@" ;;

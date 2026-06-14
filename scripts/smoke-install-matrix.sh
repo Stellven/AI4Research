@@ -359,7 +359,7 @@ assert_claude_md_preservation() {
         if [ "$case" = "reinstall-update" ]; then
             HOME="$ch" "$repo_dir/install.sh" --yes --components kernel,harness --fake-keys --skip-llm-cli >/dev/null
             assert_claude_user_content_preserved_while_installed "$original_file" "$claude_file"
-            HOME="$ch" "$ch/.solar/bin/solar" update --fake-keys --skip-llm-cli --skip-py-deps >/dev/null
+            HOME="$ch" "$ch/.solar/bin/solar" repair --fake-keys --skip-llm-cli --skip-py-deps >/dev/null
             assert_claude_user_content_preserved_while_installed "$original_file" "$claude_file"
         fi
 
@@ -469,19 +469,20 @@ fi
 
 cleanup
 
-# solar update — no-op round-trip. Completes the P3 exit criterion
-# (doctor/update/uninstall round-trip green IN CI): update re-runs the installer
-# from the receipt's source_dir + components and must leave a healthy install.
-HOME="$home_dir" "$home_dir/.solar/bin/solar" update --fake-keys --skip-llm-cli --skip-py-deps >/dev/null
+# solar repair — in-place reinstall round-trip. Reinstalls from the receipt's
+# source_dir + components (no fetch) and must leave a healthy install with a
+# single sentinel block. The real fetch-based `solar update` is covered offline
+# by scripts/check-update.sh.
+HOME="$home_dir" "$home_dir/.solar/bin/solar" repair --fake-keys --skip-llm-cli --skip-py-deps >/dev/null
 HOME="$home_dir" "$home_dir/.solar/bin/solar" doctor --json > "$doctor_json"
 assert_doctor_ok
 sentinel_count="$(grep -c '<!-- BEGIN OPENSOLAR -->' "$home_dir/.claude/CLAUDE.md")"
 if [ "$sentinel_count" != "1" ]; then
-    echo "expected one sentinel block after update, found $sentinel_count" >&2
+    echo "expected one sentinel block after repair, found $sentinel_count" >&2
     exit 1
 fi
 assert_no_bun_home_leak
-echo "solar update round-trip: ok"
+echo "solar repair round-trip: ok"
 
 assert_hooks_no_crash
 assert_keep_data_contract
@@ -499,8 +500,9 @@ CI-COVERED (this smoke + sibling gates): install; doctor verdict; DB schema +
   live FTS5 probe; config render; settings hook registration; kernel loadability
   (SOLAR.md valid + one managed import line + no dangling @/agent refs); per-hook
   registration under the right event + no-crash; daemon + dashboard boot gates;
-  daemon render + install/uninstall lifecycle; idempotent reinstall; solar update
-  no-op; --keep-data contract; residue-free uninstall; no bun-home leak; plus the
+  daemon render + install/uninstall lifecycle; idempotent reinstall; solar repair
+  round-trip (fetch-based solar update is covered offline by check-update.sh);
+  --keep-data contract; residue-free uninstall; no bun-home leak; plus the
   privacy / installed-clean / shellcheck / kernel-gen / dry-run / docs-links gates.
 MANUAL ONLY (cannot run on CI runners — see docs/RELEASE-CHECKLIST.md):
   1. interactive `claude` kernel-load @import approval (loadability is proven)

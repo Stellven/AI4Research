@@ -4,6 +4,7 @@ COMPONENT_NAME="core-runtime"
 COMPONENT_DESC="TypeScript core runtime, daemon, and web dashboard"
 COMPONENT_DEFAULT="auto"
 COMPONENT_REQUIRES_BINS="bun"
+COMPONENT_REQUIRES_COMPONENTS="kernel"
 
 component_install() {
     copy_payload "$SOURCE_DIR/core" "$SOLAR_HOME/core"
