@@ -21,8 +21,22 @@ REPO = Path(__file__).resolve().parents[1]
 INSTALL = REPO / "install.sh"
 
 
+# Signals that force the installer non-interactive regardless of a TTY
+# (solar_can_prompt honors these before testing /dev/tty). The interactive
+# wizard tests below provide a real PTY, which models a human terminal --
+# mutually exclusive with a CI runner -- so these must be cleared, or the
+# installer correctly refuses to prompt. CI is inherited from the GitHub
+# Actions environment; SOLAR_NONINTERACTIVE/SOLAR_* are dropped by the prefix
+# filter. (test_ci_forces_noninteractive re-adds CI to prove the guard.)
+NONINTERACTIVE_SIGNALS = ("CI",)
+
+
 def clean_env(home: Path) -> dict:
-    env = {k: v for k, v in os.environ.items() if not k.startswith("SOLAR_")}
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("SOLAR_") and k not in NONINTERACTIVE_SIGNALS
+    }
     env["HOME"] = str(home)
     env["PATH"] = path_without_bun()
     return env
@@ -56,11 +70,13 @@ def run_pty(
     responses: list[tuple[str, str]],
     expect_exit: int,
     timeout: float = 45.0,
+    env: dict | None = None,
 ) -> str:
+    child_env = env if env is not None else clean_env(home)
     pid, fd = pty.fork()
     if pid == 0:
         os.chdir(str(REPO))
-        os.execvpe("bash", ["bash", str(INSTALL)] + args, clean_env(home))
+        os.execvpe("bash", ["bash", str(INSTALL)] + args, child_env)
 
     output = bytearray()
     sent = 0
@@ -212,6 +228,36 @@ def test_dry_run_wizard_writes_nothing(root: Path) -> None:
     print("wizard dry-run zero-write path: ok")
 
 
+def test_ci_forces_noninteractive(root: Path) -> None:
+    """Production guarantee: CI wins over a present TTY.
+
+    Even with a real controlling PTY, CI=true (and no --yes) must keep the
+    installer non-interactive -- it must NOT prompt and must exit non-zero
+    asking for --yes. This is the exact rule solar_can_prompt enforces; the
+    other tests clear CI to reach the wizard, so this one re-adds it to prove
+    the guard is intact (a real CI runner never hangs on a prompt).
+    """
+    home = root / "ci-noninteractive"
+    home.mkdir()
+    env = clean_env(home)
+    env["CI"] = "true"
+    before = snapshot(home)
+    output = run_pty(
+        home,
+        ["--fake-keys", "--skip-llm-cli"],
+        [],  # send nothing: a prompt here would be the bug
+        1,
+        env=env,
+    )
+    if "Choice [1-3]:" in output or "Confirm install? [y/N]" in output:
+        raise AssertionError("CI=true reached an interactive prompt; output:\n" + output)
+    if "non-interactive input detected" not in output:
+        raise AssertionError("CI=true did not emit the non-interactive die; output:\n" + output)
+    if snapshot(home) != before:
+        raise AssertionError("CI=true non-interactive refusal still wrote to HOME")
+    print("wizard CI-forces-non-interactive guard: ok")
+
+
 def main() -> int:
     root = Path(tempfile.mkdtemp(prefix="solar-wizard-pty."))
     try:
@@ -220,6 +266,7 @@ def main() -> int:
         test_customize_kernel_only(root)
         test_cancel_writes_nothing(root)
         test_dry_run_wizard_writes_nothing(root)
+        test_ci_forces_noninteractive(root)
         print("smoke-installer-wizard-pty passed")
     finally:
         shutil.rmtree(root, ignore_errors=True)
