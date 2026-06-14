@@ -13,6 +13,7 @@ Usage:
   solar version [--json]
   solar doctor [--json]
   solar update [extra install flags]
+  solar repair [extra install flags]
   solar backup [--out FILE]
   solar restore <archive>
   solar ui [--once] [--watch N] [--no-color]
@@ -106,7 +107,10 @@ do_restore() {
     echo "restored from $archive into $SOLAR_HOME"
 }
 
-do_update() {
+# Reinstall in place from the source checkout the receipt recorded -- no fetch.
+# Useful when an install is locally damaged; this is the old `update` behavior,
+# which never actually fetched anything, kept under an honest name.
+do_repair() {
     if [ ! -f "$RECEIPT_PATH" ]; then
         echo "no install receipt at $RECEIPT_PATH; run install.sh first" >&2
         exit 1
@@ -116,12 +120,87 @@ do_update() {
     [ -n "$src" ] || { echo "receipt has no source_dir" >&2; exit 1; }
     [ -n "$comps" ] || { echo "receipt has no components" >&2; exit 1; }
     if [ ! -f "$src/install.sh" ]; then
-        echo "installer not found at $src/install.sh; re-clone the source to update" >&2
+        echo "installer not found at $src/install.sh; re-clone the source (or run solar update) to repair" >&2
         exit 1
     fi
-    echo "updating from $src (components: $comps)"
+    echo "repairing from $src (components: $comps)"
     "$src/install.sh" --yes --components "$comps" \
         --solar-home "$SOLAR_HOME" --claude-dir "$CLAUDE_DIR" "$@"
+}
+
+# Clone <repo>@<channel> into <dest> (shallow), with one retry. Mirrors
+# get-solar.sh fetch_source. Returns nonzero if both attempts fail.
+fetch_channel() {
+    _repo="$1"; _channel="$2"; _dest="$3"
+    rm -rf "$_dest"
+    mkdir -p "$(dirname "$_dest")"
+    if git clone --depth 1 --branch "$_channel" "$_repo" "$_dest" >/dev/null 2>&1; then
+        return 0
+    fi
+    rm -rf "$_dest"
+    git clone --depth 1 --branch "$_channel" "$_repo" "$_dest" >/dev/null 2>&1
+}
+
+# Real update: fetch the recorded channel, compare against the installed sha,
+# and either report up-to-date or reinstall from the fetched source (which runs
+# db_init + migrations + rewrites the receipt), then gate on doctor.
+do_update() {
+    if [ ! -f "$RECEIPT_PATH" ]; then
+        echo "no install receipt at $RECEIPT_PATH; run install.sh first" >&2
+        exit 1
+    fi
+    comps="$(receipt_field components)"
+    repo="$(receipt_field repo)"
+    channel="$(receipt_field channel)"
+    cur_sha="$(receipt_field git_sha)"
+    [ -n "$comps" ] || { echo "receipt has no components" >&2; exit 1; }
+    # Pre-channel receipts fall back to the published defaults (kept in sync
+    # with get-solar.sh and receipt.sh).
+    [ -n "$repo" ] || repo="https://github.com/suraj-subrahmanyan/OpenSolar.git"
+    [ -n "$channel" ] || channel="stable"
+
+    command -v git >/dev/null 2>&1 || {
+        echo "git is required for solar update; install git, or use solar repair to reinstall in place" >&2
+        exit 1
+    }
+
+    fetch_dir="${SOLAR_SRC:-$HOME/.solar-src/OpenSolar}"
+    tmp_fetch="$fetch_dir.update.$$"
+    echo "fetching $repo (channel: $channel)" >&2
+    if ! fetch_channel "$repo" "$channel" "$tmp_fetch"; then
+        rm -rf "$tmp_fetch"
+        echo "update failed: could not fetch channel '$channel' from $repo" >&2
+        echo "  check the network and channel, or run solar repair to reinstall from the recorded source." >&2
+        exit 1
+    fi
+    if [ ! -f "$tmp_fetch/install.sh" ]; then
+        rm -rf "$tmp_fetch"
+        echo "update failed: install.sh not found in the fetched channel ($channel)" >&2
+        exit 1
+    fi
+    new_sha="$(git -C "$tmp_fetch" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+
+    if [ -n "$cur_sha" ] && [ "$cur_sha" != "unknown" ] && [ "$new_sha" = "$cur_sha" ]; then
+        echo "already up to date ($cur_sha on $channel)"
+        rm -rf "$tmp_fetch"
+        return 0
+    fi
+
+    echo "updating $cur_sha -> $new_sha (channel: $channel, components: $comps)" >&2
+    # Promote the fetch to the canonical source dir so future update/repair find
+    # it, then reinstall from it.
+    rm -rf "$fetch_dir"
+    mkdir -p "$(dirname "$fetch_dir")"
+    mv "$tmp_fetch" "$fetch_dir"
+    SOLAR_REPO="$repo" SOLAR_CHANNEL="$channel" \
+        "$fetch_dir/install.sh" --yes --components "$comps" \
+        --solar-home "$SOLAR_HOME" --claude-dir "$CLAUDE_DIR" "$@"
+    # Gate on doctor: a broken update must surface as a nonzero exit.
+    if ! doctor --json >/dev/null 2>&1; then
+        echo "update applied but doctor reports problems; run: solar doctor" >&2
+        exit 1
+    fi
+    echo "update complete: now at $new_sha ($channel)"
 }
 
 # Health check. Exits 0 only when the verdict is "ok"; exits 1 on any failure
@@ -493,6 +572,7 @@ case "$cmd" in
     version) shift; do_version "$@" ;;
     doctor) shift; doctor "$@" ;;
     update) shift; do_update "$@" ;;
+    repair) shift; do_repair "$@" ;;
     backup) shift; do_backup "$@" ;;
     restore) shift; do_restore "$@" ;;
     ui) shift; do_ui "$@" ;;
