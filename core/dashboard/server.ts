@@ -17,9 +17,6 @@ const SOLAR_HOME =
 const STATE_FILE =
   process.env.SOLAR_DASHBOARD_STATE_PATH ||
   `${SOLAR_HOME}/dashboard/state.json`;
-const DASHBOARD_FILE = Bun.file(
-  import.meta.dir + "/assets/solar-dashboard.html",
-);
 const ORCH_DASHBOARD_FILE = Bun.file(
   import.meta.dir + "/assets/orchestrator-dashboard.html",
 );
@@ -1494,15 +1491,16 @@ const server = Bun.serve({
       }
     }
 
-    // 主页面（旧）
-    if (url.pathname === "/" || url.pathname === "/dashboard") {
-      return new Response(DASHBOARD_FILE, {
-        headers: { "Content-Type": "text/html" },
-      });
-    }
-
-    // 新 Orchestrator 页面
-    if (url.pathname === "/orchestrator") {
+    // Root, legacy /dashboard, and /orchestrator all serve the real,
+    // data-bound orchestrator page. The old "/" page (solar-dashboard.html)
+    // shipped hardcoded demo metrics (-91% token usage, "13 Agents", a
+    // competitor table) over otherwise-empty state; it was a placeholder, not
+    // a real surface, so it has been removed rather than fronted as live.
+    if (
+      url.pathname === "/" ||
+      url.pathname === "/dashboard" ||
+      url.pathname === "/orchestrator"
+    ) {
       return new Response(ORCH_DASHBOARD_FILE, {
         headers: { "Content-Type": "text/html" },
       });
