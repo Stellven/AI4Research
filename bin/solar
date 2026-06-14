@@ -72,7 +72,11 @@ PY
             printf ' (git %s)' "$sha"
         fi
         printf '\n'
-        [ -n "$chan" ] && printf 'channel: %s\n' "$chan"
+        # A channel-less (pre-batch-2) receipt must not make the last command
+        # false; that would propagate exit 1 under set -e despite valid output.
+        if [ -n "$chan" ]; then
+            printf 'channel: %s\n' "$chan"
+        fi
     fi
 }
 
