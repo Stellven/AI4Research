@@ -480,7 +480,9 @@ doctor() {
     DOCTOR_MODE="$mode" python3 - <<'PY'
 import json
 import os
+import shutil
 import sqlite3
+import subprocess
 import sys
 from datetime import datetime, timezone
 
@@ -494,10 +496,75 @@ result = {
     "verdict": "ok",
     "components": [],
     "paths": {},
+    "python": {},
+    "system": {},
+    "models": {},
     "drift": [],
     "schema_version": None,
     "warnings": [],
 }
+
+
+def run_cmd(argv, timeout=5):
+    try:
+        proc = subprocess.run(
+            argv,
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+        return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
+    except FileNotFoundError as exc:
+        return 127, "", str(exc)
+    except subprocess.TimeoutExpired as exc:
+        out = exc.stdout if isinstance(exc.stdout, str) else ""
+        err = exc.stderr if isinstance(exc.stderr, str) else ""
+        return 124, out.strip(), (err or f"timed out after {timeout}s").strip()
+
+
+def first_bash4():
+    checked = set()
+    for name in ("bash", "bash5", "bash4", "/opt/homebrew/bin/bash", "/usr/local/bin/bash", "/usr/bin/bash", "/bin/bash"):
+        path = name if os.path.isabs(name) and os.path.exists(name) else shutil.which(name)
+        if not path or path in checked:
+            continue
+        checked.add(path)
+        rc, out, _ = run_cmd([path, "-c", 'printf "%s" "${BASH_VERSINFO[0]:-0}"'])
+        try:
+            if rc == 0 and int(out or "0") >= 4:
+                return path
+        except ValueError:
+            pass
+    return ""
+
+
+def env_file_has_key(path, keys):
+    try:
+        with open(path, encoding="utf-8") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                if key.startswith("export "):
+                    key = key[len("export "):].strip()
+                if key in keys and value.strip().strip('"').strip("'"):
+                    return True
+    except OSError:
+        return False
+    return False
+
+
+def credential_present(keys):
+    if any(os.environ.get(k) for k in keys):
+        return True
+    secrets_dir = os.path.join(solar_home, "secrets")
+    for name in ("zhipu.env", "solar-user-secrets.env", "anthropic.env"):
+        if env_file_has_key(os.path.join(secrets_dir, name), keys):
+            return True
+    return False
 
 receipt = None
 if os.path.isfile(receipt_path):
@@ -533,6 +600,83 @@ for key, path in checks.items():
     if not ok and key in fail_keys:
         result["verdict"] = "fail"
         result["warnings"].append("path missing: " + key)
+
+py_path = shutil.which("python3") or ""
+py_version = ""
+py_min_ok = False
+if py_path:
+    rc, out, err = run_cmd([py_path, "-c", 'import sys; print("%d.%d.%d" % sys.version_info[:3]); raise SystemExit(0 if sys.version_info >= (3, 11) else 1)'])
+    py_version = out.splitlines()[0] if out else ""
+    py_min_ok = rc == 0
+    if not py_min_ok:
+        result["verdict"] = "fail"
+        result["warnings"].append("python3 must be 3.11+; current: %s %s" % (py_path, py_version or err))
+else:
+    result["verdict"] = "fail"
+    result["warnings"].append("python3 missing")
+
+imports = {}
+if "harness" in result["components"]:
+    for mod in ("yaml", "jsonschema", "pydantic", "rich"):
+        if py_path:
+            rc, _, err = run_cmd([py_path, "-c", "import " + mod])
+            imports[mod] = "ok" if rc == 0 else "missing"
+            if rc != 0:
+                result["verdict"] = "fail"
+                result["warnings"].append("harness python dependency missing: %s (%s)" % (mod, err or py_path))
+        else:
+            imports[mod] = "missing"
+result["python"] = {
+    "path": py_path,
+    "version": py_version,
+    "requires": ">=3.11",
+    "min_ok": py_min_ok,
+    "harness_imports": imports,
+}
+
+bash4 = first_bash4()
+system = {
+    "tmux": {"state": "ok" if shutil.which("tmux") else "missing", "path": shutil.which("tmux") or ""},
+    "jq": {"state": "ok" if shutil.which("jq") else "missing", "path": shutil.which("jq") or ""},
+    "bash>=4": {"state": "ok" if bash4 else "missing", "path": bash4},
+}
+result["system"] = system
+for name, item in system.items():
+    if item["state"] != "ok":
+        result["warnings"].append("system dependency missing: " + name)
+
+lab_matrix = ""
+user_config = os.path.join(solar_home, "harness", "config", "solar-user-config.json")
+try:
+    with open(user_config, encoding="utf-8") as f:
+        cfg = json.load(f)
+    lab_matrix = str(((cfg.get("models") or {}).get("lab_builder_matrix")) or "")
+except Exception:
+    pass
+if not lab_matrix:
+    lab_matrix = "unknown"
+
+zhipu_ready = credential_present({"ZHIPU_AUTH_TOKEN", "ZHIPU_API_KEY"})
+anthropic_ready = credential_present({"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"})
+claude_cli = shutil.which("claude") or ""
+uses_glm = "glm" in lab_matrix.lower() or "zhipu" in lab_matrix.lower()
+all_claude_hint = "solar-harness models set-lab-matrix anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet"
+result["models"] = {
+    "lab_matrix": lab_matrix,
+    "zhipu_credentials": "present" if zhipu_ready else "missing",
+    "anthropic_credentials": "present" if anthropic_ready else "missing",
+    "claude_cli": "present" if claude_cli else "missing",
+    "claude_cli_path": claude_cli,
+    "guidance": (
+        "Provide ZHIPU_AUTH_TOKEN in ~/.solar/secrets/zhipu.env or ~/.solar/secrets/solar-user-secrets.env, "
+        "or run: " + all_claude_hint
+    ),
+    "claude_auth_note": "Claude Code must be authenticated once with `claude`; after login, panes self-initialize.",
+}
+if uses_glm and not zhipu_ready:
+    result["warnings"].append("lab matrix uses GLM/Zhipu but no ZHIPU credentials were found")
+if not claude_cli:
+    result["warnings"].append("claude CLI missing; install/authenticate Claude Code before launching panes")
 
 # Drift check: every component root the receipt recorded must still exist.
 # Catches a removed install tree (e.g. rm -rf ~/.solar/harness) that the fixed
@@ -574,8 +718,38 @@ else:
         for d in result["drift"]:
             print("  [MISSING] %-11s %s" % (d["component"], d["path"]))
         print("            -> run `solar repair` to restore tracked files")
+    py = result["python"]
+    print("  [%7s] %-11s %s %s" % (
+        "ok" if py.get("min_ok") else "MISSING",
+        "python3",
+        py.get("path") or "(missing)",
+        py.get("version") or "",
+    ))
+    if py.get("harness_imports"):
+        for mod, state in py["harness_imports"].items():
+            print("  [%7s] %-11s %s" % ("ok" if state == "ok" else "MISSING", "py:" + mod, state))
+    for name, item in result["system"].items():
+        print("  [%7s] %-11s %s" % (
+            "ok" if item.get("state") == "ok" else "MISSING",
+            name,
+            item.get("path") or item.get("state"),
+        ))
+    models = result["models"]
+    if models:
+        print("  model lab matrix: %s" % models.get("lab_matrix", "unknown"))
+        print("  credentials: zhipu=%s anthropic=%s claude_cli=%s" % (
+            models.get("zhipu_credentials", "missing"),
+            models.get("anthropic_credentials", "missing"),
+            models.get("claude_cli", "missing"),
+        ))
+        print("  guidance: %s" % models.get("guidance", ""))
+        print("  claude: %s" % models.get("claude_auth_note", ""))
     if result["schema_version"] is not None:
         print("  schema_version: %s" % result["schema_version"])
+    if result["warnings"]:
+        print("  warnings:")
+        for warning in result["warnings"]:
+            print("    - %s" % warning)
     print("Verdict: %s" % result["verdict"])
 
 sys.exit(0 if result["verdict"] == "ok" else 1)

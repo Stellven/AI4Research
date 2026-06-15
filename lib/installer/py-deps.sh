@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 
-# py-deps.sh — install a component's Python requirements into its venv.
+# py-deps.sh — install a component's Python requirements.
 #
-# On a user machine this is the REAL install. CI sets --skip-py-deps /
-# SOLAR_SKIP_PY_DEPS to validate resolution only (pip --dry-run --no-deps),
-# avoiding the multi-GB embedding/runtime download — the ratified deps-light
-# CI policy for heavy components like mempalace (chromadb + sentence-
-# transformers). The full venv install + import smoke is a manual/nightly
-# check, documented in the mempalace handoff.
+# Targets may be a component venv (mempalace) or the existing interpreter the
+# unchanged harness calls (`python3`). CI sets --skip-py-deps /
+# SOLAR_SKIP_PY_DEPS to avoid heavy dependency installs where a separate gate
+# validates resolution.
 pip_install_reqs() {
-    venv="$1"
+    target="$1"
     reqs="$2"
     [ -f "$reqs" ] || die "python requirements missing: $reqs"
-    py="$venv/bin/python"
-    [ -x "$py" ] || die "venv python missing: $py"
+    if [ -x "$target/bin/python" ]; then
+        py="$target/bin/python"
+        install_scope="venv"
+    elif [ -x "$target" ]; then
+        py="$target"
+        install_scope="interpreter"
+    else
+        die "python target missing: $target"
+    fi
     if [ "${SKIP_PY_DEPS:-false}" = "true" ]; then
         # deps-light (CI): the venv already exists; skip the multi-GB install
         # entirely. Requirement resolution is validated separately and once
@@ -29,6 +34,21 @@ pip_install_reqs() {
     export PIP_CACHE_DIR
     mkdir -p "$PIP_CACHE_DIR"
     info "installing python requirements from $reqs"
-    "$py" -m pip install -r "$reqs" \
-        || die "pip install failed for $reqs"
+    if [ "$install_scope" = "venv" ]; then
+        "$py" -m pip install -r "$reqs" \
+            || die "pip install failed for $reqs"
+        return 0
+    fi
+
+    # Harness runs the existing `python3` interpreter directly. For externally
+    # managed Python installs, user-site + break-system-packages is the least
+    # invasive way to make that same interpreter import the required modules.
+    if "$py" -m pip install --user -r "$reqs"; then
+        return 0
+    fi
+    if "$py" -m pip install --user --break-system-packages -r "$reqs"; then
+        return 0
+    fi
+    die "pip install failed for $reqs using $py. Install these requirements into that interpreter and re-run:
+  $py -m pip install --user -r $reqs"
 }

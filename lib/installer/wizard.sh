@@ -86,10 +86,18 @@ wizard_preflight_summary() {
     wizard_kv "Source" "$SOURCE_DIR"
     wizard_kv "Solar home" "$SOLAR_HOME"
     wizard_kv "Claude dir" "$CLAUDE_DIR"
+    wizard_kv "Python" "${SOLAR_PYTHON:-python3} ${SOLAR_PYTHON_VERSION:-}"
     wizard_footer
 
     wizard_heading "Tools"
-    wizard_tool_line python3 "required"
+    wizard_tool_line python3 "required: Python 3.11+"
+    wizard_tool_line tmux "harness dependency"
+    wizard_tool_line jq "harness dependency"
+    if bash4_path="$(find_bash4 2>/dev/null)"; then
+        printf '│  %-10s ok       %s\n' "bash>=4" "$bash4_path" >&2
+    else
+        printf '│  %-10s missing  %s\n' "bash>=4" "harness dependency" >&2
+    fi
     wizard_tool_line git "optional receipt metadata"
     wizard_tool_line bun "enables core-runtime"
     wizard_tool_line cargo "enables skills-browser"

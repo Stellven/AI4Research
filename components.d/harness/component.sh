@@ -5,6 +5,7 @@ COMPONENT_DESC="Python harness runtime payload"
 COMPONENT_DEFAULT="on"
 COMPONENT_REQUIRES_BINS="python3"
 COMPONENT_REQUIRES_COMPONENTS="kernel"
+COMPONENT_PYTHON_REQS="requirements/harness.txt"
 
 component_install() {
     copy_payload "$SOURCE_DIR/harness" "$SOLAR_HOME/harness"
@@ -17,6 +18,7 @@ component_install() {
     if [ -f "$SOLAR_HOME/harness/solar-harness.sh" ]; then
         ln -sf "$SOLAR_HOME/harness/solar-harness.sh" "$SOLAR_HOME/bin/solar-harness"
     fi
+    pip_install_reqs "$SOLAR_PYTHON" "$SOURCE_DIR/$COMPONENT_PYTHON_REQS"
     {
         printf 'source=%s\n' "$SOURCE_DIR/harness"
         printf 'destination=%s\n' "$SOLAR_HOME/harness"
@@ -42,4 +44,8 @@ component_install() {
 
 component_verify() {
     [ -f "$SOLAR_HOME/harness/solar-harness.sh" ] || die "harness verify failed: solar-harness.sh missing"
+    if [ "${SKIP_PY_DEPS:-false}" != "true" ]; then
+        "$SOLAR_PYTHON" -c 'import yaml, jsonschema, pydantic, rich' \
+            || die "harness verify failed: requirements/harness.txt is not importable by $SOLAR_PYTHON"
+    fi
 }
