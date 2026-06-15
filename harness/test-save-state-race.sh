@@ -13,6 +13,8 @@ COORD_STATE="$HARNESS_DIR/.coordinator-state"
 TEST_STATE="$HARNESS_DIR/.test-race-state"
 CONCURRENT=100
 
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
+
 echo "[test] save_state 竞态测试: ${CONCURRENT} 并发写"
 
 # 备份原始 state
@@ -30,7 +32,7 @@ atomic_write() {
     return 1
   fi
   local encoded
-  encoded=$(printf '%s' "$value" | base64)
+  encoded=$(printf '%s' "$value" | solar_base64_one_line)
   python3 -c "
 import tempfile, os, base64
 value = base64.b64decode('$encoded').decode('utf-8')
@@ -107,6 +109,16 @@ fi
 # 检查 5: 文件不是空的
 if [[ ! -s "$TEST_STATE" ]]; then
   echo "FAIL: state 文件为空"
+  FAILS=$((FAILS + 1))
+fi
+
+# 检查 6: GNU base64 默认 76 字符换行，长 coordinator fingerprint 仍必须可写
+LONG_STATE="sprint-20260615-long-base64-fingerprint:drafting:prd_ready:planner:1234567890abcdef1234567890abcdef1234567890abcdef"
+if ! atomic_write "$LONG_STATE"; then
+  echo "FAIL: 长 fingerprint 写入失败"
+  FAILS=$((FAILS + 1))
+elif [[ "$(head -1 "$TEST_STATE")" != "$LONG_STATE" ]]; then
+  echo "FAIL: 长 fingerprint 写入后内容不一致"
   FAILS=$((FAILS + 1))
 fi
 

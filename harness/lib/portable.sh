@@ -84,3 +84,7 @@ solar_parse_epoch() {
   echo 0
   return 1
 }
+
+solar_base64_one_line() {
+  base64 | tr -d '\n'
+}

@@ -736,7 +736,7 @@ rollback_state_cache() {
   done
   local value="${kept%|}"
   local encoded
-  encoded=$(printf '%s' "$value" | base64)
+  encoded=$(printf '%s' "$value" | solar_base64_one_line)
   python3 -c "
 import tempfile, os, base64
 value = base64.b64decode('$encoded').decode('utf-8')
@@ -976,7 +976,7 @@ sanitize_last_state() {
   if (( removed > 0 )); then
     local value="${updated%|}"
     local encoded
-    encoded=$(printf '%s' "$value" | base64)
+    encoded=$(printf '%s' "$value" | solar_base64_one_line)
     python3 -c "
 import tempfile, os, base64
 value = base64.b64decode('$encoded').decode('utf-8')
@@ -1057,7 +1057,7 @@ save_state() {
   local value="${updated%|}"
 
   local encoded
-  encoded=$(printf '%s' "$value" | base64)
+  encoded=$(printf '%s' "$value" | solar_base64_one_line)
   python3 -c "
 import tempfile, os, base64
 value = base64.b64decode('$encoded').decode('utf-8')

@@ -2322,7 +2322,7 @@ do_update_contract() {
     done)
       # D7: 用 base64 编码避免 HEREDOC 特殊字符吞参数 (Sprint 20260423-062851)
       local encoded
-      encoded=$(printf '%s' "$content" | base64)
+      encoded=$(printf '%s' "$content" | solar_base64_one_line)
       python3 -c "
 import re, base64, sys
 content = open('$cfile').read()
@@ -2341,7 +2341,7 @@ print('Done 定义已更新')
       ;;
     scope)
       local encoded
-      encoded=$(printf '%s' "$content" | base64)
+      encoded=$(printf '%s' "$content" | solar_base64_one_line)
       python3 -c "
 import re, base64
 content = open('$cfile').read()
@@ -2356,7 +2356,7 @@ open('$cfile', 'w').write(result)
       ;;
     constraints)
       local encoded
-      encoded=$(printf '%s' "$content" | base64)
+      encoded=$(printf '%s' "$content" | solar_base64_one_line)
       python3 -c "
 import re, base64
 content = open('$cfile').read()
