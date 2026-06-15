@@ -9,9 +9,9 @@ HARNESS_DIR="$HOME/.solar/harness"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
 
 pass=0 fail=0 total=0
-run_test() { local n="$1"; ((total++)); echo ""; echo "=== Test $n: $2 ==="; }
-ok()   { ((pass++)); echo "  PASS: $1"; }
-fail() { ((fail++)); echo "  FAIL: $1"; }
+run_test() { local n="$1"; total=$((total + 1)); echo ""; echo "=== Test $n: $2 ==="; }
+ok()   { pass=$((pass + 1)); echo "  PASS: $1"; }
+fail() { fail=$((fail + 1)); echo "  FAIL: $1"; }
 cleanup=""
 
 make_sprint() {

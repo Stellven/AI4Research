@@ -13,9 +13,9 @@ SPRINTS_DIR="$HARNESS_DIR/sprints"
 COORD_STATE="$HARNESS_DIR/.coordinator-state"
 
 pass=0 fail=0 total=0
-run_test() { local n="$1"; ((total++)); echo ""; echo "=== Test $n: $2 ==="; }
-ok()   { ((pass++)); echo "  PASS: $1"; }
-fail() { ((fail++)); echo "  FAIL: $1"; }
+run_test() { local n="$1"; total=$((total + 1)); echo ""; echo "=== Test $n: $2 ==="; }
+ok()   { pass=$((pass + 1)); echo "  PASS: $1"; }
+fail() { fail=$((fail + 1)); echo "  FAIL: $1"; }
 
 get_st() { python3 -c "import json; print(json.load(open('$1')).get('status',''))" 2>/dev/null; }
 
