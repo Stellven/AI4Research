@@ -1,119 +1,203 @@
-# OpenSolar Public Release Checklist
+# OpenSolar Release Checklist
 
-The public release is an orphan-branch cut: a single squashed public tree with
-no development history. This document is the owner sign-off checklist for that
-cut. Ordinary cleanup work must not execute the orphan cut, push release refs,
-or create a GitHub Release.
+This is the owner-only checklist for publishing `openjiuwen-solar` and the
+public OpenSolar release. Implementers may run the build, local checks, and
+sandbox install verification. Implementers must not upload to PyPI, push tags,
+push release branches, or create a GitHub Release.
 
-`scripts/release-cut.sh` defaults to a dry run. A dry run verifies the public
-tree and history without changing refs.
-
----
-
-## 1. Automated Release Gate
-
-Expected dry-run command:
+Current release candidate:
 
 ```bash
-# gitleaks must be installed and on PATH; skipped gitleaks is not verified.
+VERSION=1.0.0-rc.2
+PYPI_VERSION=1.0.0rc2
+TAG=v1.0.0-rc.2
+RELEASE_BRANCH=release/v1.0.0-rc.2
+RELEASE_TITLE="OpenJiuwen Solar v1.0.0-rc.2"
+```
+
+## 1. Start From The Reviewed Candidate
+
+Run from the owner-reviewed release candidate commit after all implementation
+branches are merged locally:
+
+```bash
+git switch pkg/migration
+git status --short
+test "$(cat VERSION)" = "$VERSION"
+```
+
+`git status --short` must show no tracked release changes except any local
+owner-only files that are intentionally untracked or ignored.
+
+## 2. Local Gates
+
+Run the repository checks before building artifacts:
+
+```bash
+bash scripts/check-privacy.sh
+bash scripts/check-installed-clean.sh
+bash scripts/check-kernel-gen.sh
+bash scripts/check-daemons-render.sh
+bash scripts/check-daemons-lifecycle.sh
+bash scripts/check-core-imports.sh
+bash scripts/check-harness-plumbing.sh
+bash scripts/check-solar-version.sh
+bash scripts/check-solar-update.sh
+bash scripts/check-solar-status.sh
+bash scripts/check-solar-harness-front-door.sh
+bash scripts/smoke-install-matrix.sh minimal
+```
+
+If a WSL2/local runner cannot execute a gate, record the exact command and
+failure. Do not mark that gate verified.
+
+## 3. Build The PyPI Package
+
+Build from a clean package worktree:
+
+```bash
+cd distribution/pipx
+rm -rf dist build openjiuwen_solar.egg-info
+python3 -m build --sdist --wheel
+python3 -m twine check dist/*
+cd ../..
+```
+
+Expected artifacts:
+
+```text
+distribution/pipx/dist/openjiuwen_solar-1.0.0rc2-py3-none-any.whl
+distribution/pipx/dist/openjiuwen_solar-1.0.0rc2.tar.gz
+```
+
+## 4. Verify The Built Wheel In A Sandbox
+
+Install only into throwaway directories:
+
+```bash
+tmp="$(mktemp -d /tmp/openjiuwen-solar-release.XXXXXX)"
+python3 -m venv "$tmp/venv"
+"$tmp/venv/bin/python" -m pip install --no-index \
+  --find-links "$PWD/distribution/pipx/dist" "openjiuwen-solar==$PYPI_VERSION"
+"$tmp/venv/bin/openjiuwen-solar" --help
+```
+
+Then verify the installed wrapper can install and delegate to the local Solar
+lifecycle without touching the real home directory:
+
+```bash
+sandbox_home="$tmp/home"
+mkdir -p "$sandbox_home"
+HOME="$sandbox_home" \
+SOLAR_REPO="file://$PWD" \
+SOLAR_CHANNEL="$(git branch --show-current)" \
+SOLAR_SRC="$tmp/src" \
+OPENJIUWEN_SOLAR_GET_SOLAR_URL="$PWD/get-solar.sh" \
+"$tmp/venv/bin/openjiuwen-solar" install --yes \
+  --components kernel,harness --fake-keys --skip-llm-cli --skip-py-deps
+
+HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" status
+HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" doctor --json
+HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" harness preflight
+HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" uninstall --yes
+```
+
+## 5. Verify The Public Orphan Cut
+
+Dry-run the public release tree. This does not change refs:
+
+```bash
 bash scripts/release-cut.sh --source HEAD --exclude-file release-exclude.txt
 ```
 
-Expected result before owner approval:
+Expected result:
 
 ```text
 RELEASE-GATE VERDICT: PASS
 ```
 
-The exclude file is intentional:
+`gitleaks` must be installed and must actually run. If `gitleaks` is missing,
+install it and rerun the gate; do not treat a skipped secret scan as verified.
 
-- `release-exclude.txt` excludes the remaining parked, non-installed files that
-  should not ship in the public tree.
-- `release-exclude.txt` also excludes itself, so the public tree does not expose
-  release-engineering internals.
-- Root `CLAUDE.md` is not excluded. It must remain a public, personal-data-free
-  contributor guide.
+## 6. Owner-Only Public Cut
 
-The gate must verify:
-
-- `WORKLOG.md` and `MIGRATION_PLAN.md` are absent from the public tree and the
-  single-commit public history.
-- The privacy scanner finds zero owner-identifying tokens in the release tree.
-- Installed payload checks pass.
-- gitleaks runs over the checked tree/history using `harness/gitleaks.toml`.
-  If gitleaks is not available locally, mark this item **not verified** instead
-  of treating it as a pass.
-- Allowlist references are present; missing required allowlist entries block the
-  cut.
-
-Useful supporting checks:
+Only the owner runs this after reviewing the dry-run output:
 
 ```bash
-git diff --check
-bash scripts/check-privacy.sh
-bash scripts/check-installed-clean.sh
-bash scripts/smoke-install-matrix.sh minimal
-bash scripts/check-harness-plumbing.sh
+bash scripts/release-cut.sh --source HEAD \
+  --branch "$RELEASE_BRANCH" \
+  --exclude-file release-exclude.txt \
+  --execute
 ```
 
-`scripts/check-harness-plumbing.sh` is deterministic harness plumbing smoke,
-not live Claude behavior. It verifies install/layout/preflight/coordinator and
-dispatch artifact plumbing without consuming Claude quota.
+Review the generated orphan branch before pushing:
 
----
+```bash
+git switch "$RELEASE_BRANCH"
+git log --oneline --decorate -3
+git status --short
+bash scripts/check-privacy.sh
+bash scripts/check-installed-clean.sh
+```
 
-## 2. Owner Manual Checks
+## 7. Owner-Only Checksums, Tag, Upload, Release
 
-CI and local smoke cover the normal installer lifecycle, generated kernel
-structure, doctor verdicts, uninstall cleanup, and deterministic harness
-plumbing. Do not re-test those manually unless a gate points to a failure.
+Create checksums for the exact files that will be attached:
+
+```bash
+mkdir -p release-artifacts
+cp get-solar.sh install.ps1 distribution/pipx/dist/openjiuwen_solar-"$PYPI_VERSION"* release-artifacts/
+(cd release-artifacts && sha256sum * > SHA256SUMS)
+```
+
+Create release notes for the GitHub Release:
+
+```bash
+cat > release-artifacts/RELEASE_NOTES.md <<'EOF'
+OpenJiuwen Solar v1.0.0-rc.2
+
+Release candidate for the public OpenJiuwen Solar package.
+
+See README.md for install paths and docs/FIRST-SESSION.md for the first-session walkthrough.
+EOF
+```
+
+Create and push the release tag only after the public cut is reviewed:
+
+```bash
+git tag -a "$TAG" -m "$RELEASE_TITLE"
+git push origin "$RELEASE_BRANCH"
+git push origin "$TAG"
+```
+
+Upload the package to PyPI only after `twine check` and sandbox install pass:
+
+```bash
+python3 -m twine upload distribution/pipx/dist/openjiuwen_solar-"$PYPI_VERSION"*
+```
+
+Create the GitHub Release and upload assets:
+
+```bash
+gh release create "$TAG" \
+  --repo suraj-subrahmanyan/OpenSolar \
+  --target "$RELEASE_BRANCH" \
+  --title "$RELEASE_TITLE" \
+  --notes-file release-artifacts/RELEASE_NOTES.md \
+  release-artifacts/*
+```
+
+If `get-solar.sh` stable/default-channel cutover is still pending, perform it
+only after the owner confirms the final tag and release asset URLs.
+
+## 8. Manual Checks
 
 Manual checks that still require a real user environment:
 
 | Check | Required confirmation |
 |---|---|
 | Kernel load | Open `claude`, approve the one-time `@~/.claude/solar/SOLAR.md` import, and confirm the kernel loads. |
-| Product Delivery harness | Run `solar-harness start <workdir>`, confirm the `solar-harness` tmux session has the Product Delivery window and expected panes, start/trust Claude in each pane, and confirm one real delegation result. |
-| Claude quota/auth boundary | If Claude is rate-limited or unauthenticated, record this as manual-blocked/auth-quota-blocked. Do not mark live Claude verified. |
+| Harness cockpit | Run `solar harness start <workdir>`, confirm the tmux session opens, start/trust Claude in each pane, and confirm one real delegation result. |
+| Claude quota/auth | If Claude is rate-limited or unauthenticated, record manual-blocked/auth-quota-blocked. |
 | Daemon start | On real macOS launchd and systemd-user Linux/WSL2, confirm the daemon starts and stays up. |
-| mempalace heavy deps | Install `mempalace` without deps-light skips and run a venv import smoke. |
-| Windows WSL2 | Run `install.ps1` end to end on Win11, including the one admin approval, reboot if required, and Linux lifecycle inside the provisioned WSL2 distro. |
-| Release URLs | Confirm `get-solar.sh` stable channel and `install.ps1 -BootstrapUrl` point to the final public release asset. |
-
-Current manual blockers:
-
-- Live Claude panes and real delegation result are not verified while Claude
-  quota/auth is unavailable.
-- The orphan cut, release branch push, tag push, and GitHub Release remain owner
-  actions only.
-
----
-
-## 3. Owner Cut Procedure
-
-Run only after the automated gate passes and the owner gives go-ahead:
-
-```bash
-bash scripts/release-cut.sh --source HEAD --branch release/v1 \
-  --exclude-file release-exclude.txt --execute
-```
-
-Then the owner reviews the orphan tree, pushes only the intended release branch
-and tag, and creates the GitHub Release with the finalized bootstrap assets.
-
----
-
-## 4. Sign-Off
-
-| Item | Owner | Date | Result |
-|---|---|---|---|
-| Release gate PASS with gitleaks actually run | | | [ ] |
-| Root public docs reviewed | | | [ ] |
-| Kernel load manual check | | | [ ] |
-| Product Delivery live Claude + real delegation manual check | | | [ ] |
-| macOS daemon check | | | [ ] |
-| Linux/WSL2 daemon check | | | [ ] |
-| mempalace heavy-deps check | | | [ ] |
-| Win11 + WSL2 E2E | | | [ ] |
-| Release URLs finalized | | | [ ] |
-| Orphan cut created, reviewed, and published by owner | | | [ ] |
+| Windows WSL2 | Run `install.ps1` end to end on Win11 if this release claims WSL2 support. |

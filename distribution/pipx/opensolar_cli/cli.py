@@ -20,6 +20,19 @@ PUBLIC_GET_SOLAR_URL = (
 CLI_NAME = "openjiuwen-solar"
 GET_SOLAR_URL_ENV = "OPENJIUWEN_SOLAR_GET_SOLAR_URL"
 LEGACY_GET_SOLAR_URL_ENV = "OPENSOLAR_GET_SOLAR_URL"
+SOLAR_DELEGATE_COMMANDS = {
+    "version",
+    "status",
+    "doctor",
+    "update",
+    "repair",
+    "ui",
+    "harness",
+    "backup",
+    "restore",
+    "components",
+    "uninstall",
+}
 
 PASSTHROUGH_ENV = (
     "SOLAR_REPO",
@@ -40,9 +53,15 @@ Usage:
 Commands:
   install [args...]       Download/run get-solar.sh; forwards args unchanged.
   version [args...]       Delegate to ~/.solar/bin/solar version.
+  status [args...]        Delegate to ~/.solar/bin/solar status.
   doctor [args...]        Delegate to ~/.solar/bin/solar doctor.
   update [args...]        Delegate to ~/.solar/bin/solar update (fetch channel).
   repair [args...]        Delegate to ~/.solar/bin/solar repair (reinstall in place).
+  ui [args...]            Delegate to ~/.solar/bin/solar ui.
+  harness [args...]       Delegate to ~/.solar/bin/solar harness.
+  backup [args...]        Delegate to ~/.solar/bin/solar backup.
+  restore [args...]       Delegate to ~/.solar/bin/solar restore.
+  components [args...]    Delegate to ~/.solar/bin/solar components.
   uninstall [args...]     Delegate to ~/.solar/bin/solar uninstall.
   source                  Print the retained OpenSolar source checkout path.
 
@@ -55,7 +74,9 @@ Package name:
 
 Examples:
   openjiuwen-solar install --yes --components kernel,harness
+  openjiuwen-solar status
   openjiuwen-solar doctor --json
+  openjiuwen-solar harness preflight
   openjiuwen-solar update
   openjiuwen-solar uninstall --yes
 
@@ -229,7 +250,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     if command == "install":
         return install(rest)
-    if command in {"version", "doctor", "update", "repair", "uninstall"}:
+    if command in SOLAR_DELEGATE_COMMANDS:
         return _delegate_lifecycle(command, rest)
     if command == "source":
         return source(rest)

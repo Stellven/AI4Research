@@ -144,7 +144,7 @@ class OpenSolarCliTests(unittest.TestCase):
 
             self.assertEqual(json.loads(capture.read_text(encoding="utf-8")), ["--dry-run"])
 
-    def test_doctor_update_uninstall_delegate_to_installed_solar(self) -> None:
+    def test_installed_solar_commands_delegate_to_lifecycle(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / "home"
             solar_bin = home / ".solar" / "bin" / "solar"
@@ -170,17 +170,27 @@ class OpenSolarCliTests(unittest.TestCase):
             )
 
             with mock.patch.dict(os.environ, {"HOME": str(home), "CAPTURE": str(capture)}, clear=False):
+                self.assertEqual(cli.main(["status", "--json"]), 0)
                 self.assertEqual(cli.main(["doctor", "--json"]), 0)
+                self.assertEqual(cli.main(["harness", "preflight"]), 0)
+                self.assertEqual(cli.main(["components", "list"]), 0)
                 self.assertEqual(cli.main(["update"]), 0)
                 self.assertEqual(cli.main(["uninstall", "--yes"]), 0)
 
             self.assertEqual(
                 json.loads(capture.read_text(encoding="utf-8")),
-                [["doctor", "--json"], ["update"], ["uninstall", "--yes"]],
+                [
+                    ["status", "--json"],
+                    ["doctor", "--json"],
+                    ["harness", "preflight"],
+                    ["components", "list"],
+                    ["update"],
+                    ["uninstall", "--yes"],
+                ],
             )
 
     def test_missing_installed_solar_has_clear_error_for_lifecycle_commands(self) -> None:
-        for command in ("doctor", "update", "uninstall"):
+        for command in ("status", "doctor", "harness", "components", "update", "uninstall"):
             with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
                 home = Path(tmp) / "home"
                 stderr = io.StringIO()
@@ -223,7 +233,9 @@ class OpenSolarCliTests(unittest.TestCase):
         self.assertIn("git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx", text)
         self.assertIn("raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/get-solar.sh", text)
         self.assertIn("openjiuwen-solar install --yes --components kernel,harness", text)
+        self.assertIn("openjiuwen-solar status", text)
         self.assertIn("openjiuwen-solar doctor --json", text)
+        self.assertIn("openjiuwen-solar harness preflight", text)
         self.assertIn("openjiuwen-solar update", text)
         self.assertIn("openjiuwen-solar uninstall --yes", text)
         self.assertIn("OPENJIUWEN_SOLAR_GET_SOLAR_URL", text)
