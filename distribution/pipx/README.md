@@ -23,7 +23,7 @@ pipx install ./distribution/pipx
 From the rc.3 tag:
 
 ```bash
-pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.3#subdirectory=distribution/pipx"
+pipx install "git+https://github.com/Stellven/OpenSolar.git@v1.0.0-rc.3#subdirectory=distribution/pipx"
 ```
 
 ## Commands

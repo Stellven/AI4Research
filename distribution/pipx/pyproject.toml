@@ -27,9 +27,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/suraj-subrahmanyan/OpenSolar"
-Source = "https://github.com/suraj-subrahmanyan/OpenSolar"
-Issues = "https://github.com/suraj-subrahmanyan/OpenSolar/issues"
+Homepage = "https://github.com/Stellven/OpenSolar"
+Source = "https://github.com/Stellven/OpenSolar"
+Issues = "https://github.com/Stellven/OpenSolar/issues"
 
 [project.scripts]
 openjiuwen-solar = "opensolar_cli.cli:main"

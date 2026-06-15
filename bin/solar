@@ -475,7 +475,7 @@ do_update() {
     [ -n "$comps" ] || { echo "receipt has no components" >&2; exit 1; }
     # Pre-channel receipts fall back to the published defaults (kept in sync
     # with get-solar.sh and receipt.sh).
-    [ -n "$repo" ] || repo="https://github.com/suraj-subrahmanyan/OpenSolar.git"
+    [ -n "$repo" ] || repo="https://github.com/Stellven/OpenSolar.git"
     [ -n "$channel" ] || channel="v1.0.0-rc.3"
 
     command -v git >/dev/null 2>&1 || {

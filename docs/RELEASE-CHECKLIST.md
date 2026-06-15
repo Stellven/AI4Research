@@ -217,7 +217,7 @@ Create the GitHub Release and upload assets:
 
 ```bash
 gh release create "$TAG" \
-  --repo suraj-subrahmanyan/OpenSolar \
+  --repo Stellven/OpenSolar \
   --target "$RELEASE_BRANCH" \
   --title "$RELEASE_TITLE" \
   --notes-file release-artifacts/RELEASE_NOTES.md \
