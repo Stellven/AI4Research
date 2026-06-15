@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 PUBLIC_GET_SOLAR_URL = (
-    "https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/"
+    "https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.3/"
     "get-solar.sh"
 )
 CLI_NAME = "openjiuwen-solar"
@@ -70,7 +70,7 @@ Commands:
 
 Install:
   pipx install ./distribution/pipx
-  pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx"
+  pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.3#subdirectory=distribution/pipx"
   openjiuwen-solar install --yes --components kernel,harness
 
 Package name:

@@ -15,14 +15,14 @@ installer/lifecycle tooling around it.
 Shell installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/get-solar.sh | bash -s -- --yes --components kernel,harness
+curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.3/get-solar.sh | bash -s -- --yes --components kernel,harness
 ~/.solar/bin/solar doctor
 ```
 
 Python wrapper from the current release branch:
 
 ```bash
-pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx"
+pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.3#subdirectory=distribution/pipx"
 openjiuwen-solar install --yes --components kernel,harness
 openjiuwen-solar doctor
 ```
@@ -38,7 +38,7 @@ openjiuwen-solar install --yes --components kernel,harness
 Interactive install is also supported:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/stable/get-solar.sh | bash
+curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.3/get-solar.sh | bash
 ```
 
 The installer writes only under `~/.solar` and `~/.claude/solar`, records an

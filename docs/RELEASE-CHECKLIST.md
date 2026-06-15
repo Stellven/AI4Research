@@ -224,8 +224,8 @@ gh release create "$TAG" \
   release-artifacts/*
 ```
 
-If `get-solar.sh` stable/default-channel cutover is still pending, perform it
-only after the owner confirms the final tag and release asset URLs.
+If `get-solar.sh` default-channel cutover is still pending, perform it only
+after the owner confirms the final tag and release asset URLs.
 
 ## 8. Manual Checks
 

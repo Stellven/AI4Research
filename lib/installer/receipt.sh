@@ -65,7 +65,7 @@ version = compute_version(source)
 # Channel + source repo the install tracks, so `solar update` knows where to
 # fetch from. get-solar.sh exports these; a direct install.sh run falls back to
 # the published defaults (kept in sync with get-solar.sh).
-channel = os.environ.get("SOLAR_CHANNEL") or "stable"
+channel = os.environ.get("SOLAR_CHANNEL") or "v1.0.0-rc.3"
 repo = (
     os.environ.get("SOLAR_REPO")
     or "https://github.com/suraj-subrahmanyan/OpenSolar.git"

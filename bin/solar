@@ -476,7 +476,7 @@ do_update() {
     # Pre-channel receipts fall back to the published defaults (kept in sync
     # with get-solar.sh and receipt.sh).
     [ -n "$repo" ] || repo="https://github.com/suraj-subrahmanyan/OpenSolar.git"
-    [ -n "$channel" ] || channel="stable"
+    [ -n "$channel" ] || channel="v1.0.0-rc.3"
 
     command -v git >/dev/null 2>&1 || {
         echo "git is required for solar update; install git, or use solar repair to reinstall in place" >&2
