@@ -40,6 +40,10 @@ pip_install_reqs() {
         return 0
     fi
 
+    before_user_dists="$SOLAR_HOME/cache/python-user-dists-before.$$"
+    after_user_dists="$SOLAR_HOME/cache/python-user-dists-after.$$"
+    snapshot_python_user_dists "$py" "$before_user_dists"
+
     # Harness runs the existing `python3` interpreter directly. For externally
     # managed Python installs, user-site + break-system-packages is the least
     # invasive way to make that same interpreter import the required modules.
@@ -51,11 +55,14 @@ Upgrade pip for this interpreter or install these requirements manually:
         fi
         "$py" -m pip install --user --break-system-packages -r "$reqs" \
             || die "pip install failed for $reqs using $py"
-        return 0
-    fi
-    "$py" -m pip install --user -r "$reqs" \
-        || die "pip install failed for $reqs using $py. Install these requirements into that interpreter and re-run:
+    else
+        "$py" -m pip install --user -r "$reqs" \
+            || die "pip install failed for $reqs using $py. Install these requirements into that interpreter and re-run:
   $py -m pip install --user -r $reqs"
+    fi
+    snapshot_python_user_dists "$py" "$after_user_dists"
+    record_python_user_deps_delta "$py" "$reqs" "$before_user_dists" "$after_user_dists"
+    rm -f "$before_user_dists" "$after_user_dists"
 }
 
 python_is_externally_managed() {
@@ -64,4 +71,107 @@ python_is_externally_managed() {
 
 pip_supports_break_system_packages() {
     "$1" -m pip install --help 2>/dev/null | grep -q -- '--break-system-packages'
+}
+
+snapshot_python_user_dists() {
+    py="$1"
+    out="$2"
+    "$py" - "$out" <<'PY'
+import importlib.metadata as metadata
+import re
+import site
+import sys
+from pathlib import Path
+
+
+def normalize(name):
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+user_site = site.getusersitepackages()
+names = set()
+for dist in metadata.distributions(path=[user_site]):
+    name = dist.metadata.get("Name")
+    if name:
+        names.add(normalize(name))
+Path(sys.argv[1]).write_text(
+    "".join(f"{name}\n" for name in sorted(names)),
+    encoding="utf-8",
+)
+PY
+}
+
+record_python_user_deps_delta() {
+    py="$1"
+    reqs="$2"
+    before="$3"
+    after="$4"
+    PY_DEPS_MANIFEST="$SOLAR_HOME/python-user-deps.json" \
+    PY_DEPS_REQS="$reqs" \
+    "$py" - "$before" "$after" <<'PY'
+import json
+import os
+import site
+import sys
+from pathlib import Path
+
+
+def read_names(path):
+    try:
+        return {line.strip() for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()}
+    except FileNotFoundError:
+        return set()
+
+
+before = read_names(sys.argv[1])
+after = read_names(sys.argv[2])
+added = sorted(after - before)
+if not added:
+    raise SystemExit(0)
+
+manifest_path = Path(os.environ["PY_DEPS_MANIFEST"])
+reqs = os.environ["PY_DEPS_REQS"]
+user_site = site.getusersitepackages()
+user_base = site.getuserbase()
+python_executable = sys.executable
+
+if manifest_path.exists():
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        manifest = {}
+else:
+    manifest = {}
+
+entries = manifest.get("entries")
+if not isinstance(entries, list):
+    entries = []
+
+entry = None
+for candidate in entries:
+    if isinstance(candidate, dict) and candidate.get("user_site") == user_site:
+        entry = candidate
+        break
+if entry is None:
+    entry = {
+        "python": python_executable,
+        "user_base": user_base,
+        "user_site": user_site,
+        "requirements": [],
+        "packages": [],
+    }
+    entries.append(entry)
+
+entry["python"] = python_executable
+entry["user_base"] = user_base
+entry["user_site"] = user_site
+entry["packages"] = sorted(set(entry.get("packages") or []) | set(added))
+entry["requirements"] = sorted(set(entry.get("requirements") or []) | {reqs})
+
+manifest = {"schema": 1, "entries": entries}
+tmp = manifest_path.with_name(f"{manifest_path.name}.tmp")
+manifest_path.parent.mkdir(parents=True, exist_ok=True)
+tmp.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+tmp.replace(manifest_path)
+PY
 }

@@ -914,6 +914,146 @@ else:
 PY
 }
 
+remove_python_user_deps() {
+    manifest="$SOLAR_HOME/python-user-deps.json"
+    [ -f "$manifest" ] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    if ! python3 - "$manifest" <<'PY'
+import importlib.metadata as metadata
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+
+def normalize(name):
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def resolved(path):
+    return Path(path).expanduser().resolve(strict=False)
+
+
+def under(path, root):
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def unlink_path(path):
+    try:
+        if path.is_dir() and not path.is_symlink():
+            return
+        path.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def unlink_generated_cache(source_path, allowed_root, dirs):
+    if source_path.suffix != ".py":
+        return
+    cache_dir = source_path.parent / "__pycache__"
+    if not cache_dir.is_dir():
+        return
+    prefix = source_path.stem + "."
+    for cache_path in cache_dir.glob(prefix + "*.pyc"):
+        cache_path = resolved(cache_path)
+        if under(cache_path, allowed_root):
+            unlink_path(cache_path)
+            dirs.add(cache_path.parent)
+
+
+def prune_empty_dirs(dirs, allowed_root):
+    for path in sorted(dirs, key=lambda item: len(item.parts), reverse=True):
+        if not under(path, allowed_root):
+            continue
+        try:
+            path.rmdir()
+        except OSError:
+            pass
+
+
+def prune_to_root(start, root):
+    path = start
+    while under(path, root):
+        try:
+            path.rmdir()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            break
+        if path == root:
+            break
+        path = path.parent
+
+
+def prune_ancestors_to_home(start):
+    home = os.environ.get("HOME")
+    if not home:
+        return
+    home_root = resolved(home)
+    path = start
+    while under(path, home_root) and path != home_root:
+        try:
+            path.rmdir()
+        except OSError:
+            break
+        path = path.parent
+
+
+manifest_path = Path(sys.argv[1])
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+entries = manifest.get("entries")
+if not isinstance(entries, list):
+    entries = []
+
+for entry in entries:
+    if not isinstance(entry, dict):
+        continue
+    packages = {normalize(name) for name in entry.get("packages", []) if isinstance(name, str)}
+    if not packages:
+        continue
+    user_site = entry.get("user_site")
+    if not user_site:
+        continue
+    site_root = resolved(user_site)
+    if not site_root.exists():
+        continue
+    user_base = resolved(entry.get("user_base") or site_root)
+    dirs = set()
+    dists = list(metadata.distributions(path=[str(site_root)]))
+    for dist in dists:
+        name = dist.metadata.get("Name")
+        if not name or normalize(name) not in packages:
+            continue
+        dist_files = dist.files or []
+        paths = []
+        for rel_path in dist_files:
+            target = resolved(dist.locate_file(rel_path))
+            if not under(target, user_base):
+                continue
+            paths.append(target)
+            dirs.add(target.parent)
+        dist_path = getattr(dist, "_path", None)
+        if dist_path is not None:
+            dist_path = resolved(dist_path)
+            if under(dist_path, user_base):
+                dirs.add(dist_path)
+        for path in sorted(set(paths), key=lambda item: len(item.parts), reverse=True):
+            unlink_generated_cache(path, user_base, dirs)
+            unlink_path(path)
+    prune_empty_dirs(dirs, user_base)
+    prune_to_root(site_root, user_base)
+    prune_ancestors_to_home(user_base.parent)
+PY
+    then
+        echo "warning: could not remove recorded Python user-site dependencies" >&2
+    fi
+}
+
 uninstall() {
     yes=false
     keep_data=false
@@ -942,6 +1082,7 @@ uninstall() {
 
     remove_sentinel
     remove_solar_settings
+    remove_python_user_deps
     remove_daemons
     remove_mcp_servers
     remove_installed_skills
