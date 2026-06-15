@@ -127,6 +127,16 @@ assert "state_change in types" 'echo "$TYPES" | grep -q "state_change"'
 assert "dispatch_sent in types" 'echo "$TYPES" | grep -q "dispatch_sent"'
 echo ""
 
+# ── TC8: events_emit remains stable if a caller wraps emit_event ──
+echo "TC8: events_emit does not recurse when emit_event is overridden"
+emit_event() {
+  events_emit "$@"
+}
+events_emit "coordinator" "shim_state_changed" "info" "sprint-shim" '{"ok":true}'
+assert "shim event written once" '[[ "$(grep -c "\"event\":\"shim_state_changed\"" "$TEST_TMP/events/all.jsonl")" -eq 1 ]]'
+assert "shim per-sprint event written" '[[ -f "$TEST_TMP/sprints/sprint-shim.events.jsonl" ]]'
+echo ""
+
 # ── Summary ──
 echo "=== Results: PASS=$PASS FAIL=$FAIL ==="
 [[ "$FAIL" -eq 0 ]] && exit 0 || exit 1
