@@ -11,6 +11,7 @@ solar - OpenSolar lifecycle command
 
 Usage:
   solar version [--json]
+  solar status [--json]
   solar doctor [--json]
   solar update [extra install flags]
   solar repair [extra install flags]
@@ -100,6 +101,253 @@ do_backup() {
     fi
     tar czf "$out" -C "$SOLAR_HOME" "$@"
     echo "backup written: $out"
+}
+
+do_status() {
+    json=false
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --json) json=true; shift ;;
+            --help|-h) echo "usage: solar status [--json]"; return 0 ;;
+            *) echo "unknown status option: $1" >&2; exit 2 ;;
+        esac
+    done
+    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" \
+    STATUS_JSON="$json" python3 - <<'PY'
+import http.client
+import json
+import os
+import socket
+import subprocess
+import sys
+from pathlib import Path
+
+
+def load_json(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def run_cmd(argv, timeout=5):
+    try:
+        proc = subprocess.run(
+            argv,
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+    except FileNotFoundError as exc:
+        return 127, "", str(exc)
+    except subprocess.TimeoutExpired as exc:
+        out = exc.stdout if isinstance(exc.stdout, str) else ""
+        err = exc.stderr if isinstance(exc.stderr, str) else ""
+        return 124, out, err or f"timed out after {timeout}s"
+
+
+def path_state(path, want_dir=False):
+    ok = path.is_dir() if want_dir else path.exists()
+    return "ok" if ok else "missing"
+
+
+def live_pid(raw):
+    text = str(raw or "").strip()
+    if not text.isdigit():
+        return False
+    try:
+        os.kill(int(text), 0)
+        return True
+    except OSError:
+        return False
+
+
+def tmux_session(name):
+    rc, _, err = run_cmd(["tmux", "has-session", "-t", name], timeout=2)
+    if rc == 0:
+        return {"state": "present", "detail": name}
+    if rc == 127:
+        return {"state": "unavailable", "detail": "tmux not on PATH"}
+    detail = (err or "").strip()
+    return {"state": "absent", "detail": detail or name}
+
+
+def recent_runtime_files(harness_dir):
+    roots = [
+        harness_dir / "run" / "operator-inbox",
+        harness_dir / "run" / "operator-results",
+        harness_dir / "run" / "operator-status",
+        harness_dir / "run" / "queue",
+        harness_dir / "sprints",
+    ]
+    found = []
+    for root in roots:
+        if not root.exists():
+            continue
+        for pattern in ("*.json", "*.jsonl", "*.status.json"):
+            found.extend(p for p in root.rglob(pattern) if p.is_file())
+    found.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
+    out = []
+    for path in found[:5]:
+        try:
+            out.append(str(path.relative_to(harness_dir)))
+        except ValueError:
+            out.append(str(path))
+    return out
+
+
+def daemon_health(socket_path):
+    if not socket_path.exists():
+        return {"state": "not-running", "detail": f"socket missing: {socket_path}"}
+    try:
+        conn = http.client.HTTPConnection("localhost", timeout=1)
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        sock.connect(str(socket_path))
+        conn.sock = sock
+        conn.request("GET", "/health")
+        resp = conn.getresponse()
+        body = resp.read().decode("utf-8", "replace")
+        conn.close()
+        if resp.status == 200:
+            try:
+                payload = json.loads(body)
+            except Exception:
+                payload = {"raw": body.strip()}
+            return {"state": "running", "detail": payload}
+        return {"state": "error", "detail": f"HTTP {resp.status}: {body.strip()}"}
+    except Exception as exc:
+        return {"state": "error", "detail": str(exc)}
+
+
+solar_home = Path(os.environ["SOLAR_HOME"]).expanduser()
+claude_dir = Path(os.environ["CLAUDE_DIR"]).expanduser()
+receipt_path = Path(os.environ["RECEIPT_PATH"]).expanduser()
+json_mode = os.environ.get("STATUS_JSON") == "true"
+
+receipt = load_json(receipt_path) if receipt_path.exists() else {}
+components = receipt.get("components", []) if isinstance(receipt.get("components"), list) else []
+solar_bin = solar_home / "bin" / "solar"
+harness_bin = solar_home / "bin" / "solar-harness"
+harness_dir = solar_home / "harness"
+db_path = Path(receipt.get("db") or solar_home / "db" / "solar.db")
+
+doctor = {}
+doctor_error = ""
+if solar_bin.exists():
+    rc, out, err = run_cmd([str(solar_bin), "doctor", "--json"], timeout=8)
+    if out.strip():
+        try:
+            doctor = json.loads(out)
+        except Exception:
+            doctor_error = out.strip()
+    if rc != 0 and not doctor_error:
+        doctor_error = (err or out).strip()
+
+install_verdict = doctor.get("verdict")
+if not install_verdict:
+    install_verdict = "ok" if receipt_path.exists() and solar_bin.exists() else "fail"
+if not receipt_path.exists() or not solar_bin.exists():
+    install_verdict = "fail"
+
+coordinator = "not-installed"
+pidfile = harness_dir / ".coordinator.pid"
+if harness_dir.exists():
+    coordinator = "not-running"
+    if pidfile.exists():
+        pid = pidfile.read_text(encoding="utf-8", errors="replace").strip()
+        coordinator = f"alive pid={pid}" if live_pid(pid) else f"stale pid={pid or 'unknown'}"
+
+daemon_bin = solar_home / "bin" / "solar-daemon"
+daemon_core = solar_home / "core" / "daemon" / "server.ts"
+registered_daemons = solar_home / "registered-daemons.txt"
+daemon_installed = (
+    "core-runtime" in components
+    or "daemons" in components
+    or daemon_core.exists()
+)
+daemon = {
+    "component": "installed" if daemon_installed else "not-installed",
+    "service_component": "installed" if "daemons" in components else "not-installed",
+    "binary": str(daemon_bin) if daemon_bin.exists() else "",
+    "registered_daemons": str(registered_daemons) if registered_daemons.exists() else "",
+    "socket": "/tmp/solar.sock",
+}
+daemon.update(daemon_health(Path("/tmp/solar.sock")) if daemon_installed else {
+    "state": "not-installed",
+    "detail": "core-runtime/daemons component not installed",
+})
+
+status = {
+    "install": {
+        "verdict": install_verdict,
+        "version": receipt.get("version") or "unknown",
+        "git_sha": receipt.get("git_sha") or "",
+        "channel": receipt.get("channel") or "",
+        "repo": receipt.get("repo") or "",
+        "components": components,
+        "schema_version": doctor.get("schema_version"),
+        "receipt": str(receipt_path),
+        "doctor_error": doctor_error,
+        "paths": {
+            "solar_home": {"state": path_state(solar_home, True), "path": str(solar_home)},
+            "receipt": {"state": path_state(receipt_path), "path": str(receipt_path)},
+            "solar_bin": {"state": path_state(solar_bin), "path": str(solar_bin)},
+            "kernel": {"state": path_state(claude_dir / "solar" / "SOLAR.md"), "path": str(claude_dir / "solar" / "SOLAR.md")},
+            "db": {"state": path_state(db_path), "path": str(db_path)},
+        },
+    },
+    "runtime": {
+        "harness": "installed" if harness_bin.exists() or harness_dir.exists() else "not-installed",
+        "harness_bin": str(harness_bin) if harness_bin.exists() else "",
+        "product_delivery_session": tmux_session("solar-harness"),
+        "builder_lab_session": tmux_session("solar-harness-lab"),
+        "coordinator": coordinator,
+        "recent_artifacts": recent_runtime_files(harness_dir),
+    },
+    "daemon": daemon,
+}
+
+if json_mode:
+    print(json.dumps(status, indent=2, sort_keys=True))
+else:
+    print("OpenSolar status")
+    print("Install")
+    print(f"  health: {status['install']['verdict']}")
+    print(f"  version: {status['install']['version']}")
+    if status["install"]["git_sha"]:
+        print(f"  git: {status['install']['git_sha']}")
+    if status["install"]["channel"]:
+        print(f"  channel: {status['install']['channel']}")
+    print("  components: " + (",".join(components) if components else "(none recorded)"))
+    if status["install"]["schema_version"] is not None:
+        print(f"  schema_version: {status['install']['schema_version']}")
+    print(f"  receipt: {receipt_path} ({status['install']['paths']['receipt']['state']})")
+    if doctor_error:
+        print(f"  doctor detail: {doctor_error}")
+    print("Runtime")
+    print(f"  harness: {status['runtime']['harness']}")
+    if status["runtime"]["harness_bin"]:
+        print(f"  harness_bin: {status['runtime']['harness_bin']}")
+    print("  tmux product_delivery: {state} ({detail})".format(**status["runtime"]["product_delivery_session"]))
+    print("  tmux builder_lab: {state} ({detail})".format(**status["runtime"]["builder_lab_session"]))
+    print(f"  coordinator: {status['runtime']['coordinator']}")
+    recent = status["runtime"]["recent_artifacts"]
+    print("  recent artifacts: " + (", ".join(recent[:3]) if recent else "none found"))
+    print("Daemon")
+    print(f"  component: {status['daemon']['component']}")
+    print(f"  service component: {status['daemon']['service_component']}")
+    print(f"  state: {status['daemon']['state']}")
+    detail = status["daemon"]["detail"]
+    if isinstance(detail, dict):
+        detail = json.dumps(detail, sort_keys=True)
+    print(f"  detail: {detail}")
+
+sys.exit(0 if install_verdict == "ok" else 1)
+PY
 }
 
 do_restore() {
@@ -587,6 +835,7 @@ do_ui() {
 cmd="${1:-}"
 case "$cmd" in
     version) shift; do_version "$@" ;;
+    status) shift; do_status "$@" ;;
     doctor) shift; doctor "$@" ;;
     update) shift; do_update "$@" ;;
     repair) shift; do_repair "$@" ;;
