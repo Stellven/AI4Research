@@ -43,12 +43,25 @@ pip_install_reqs() {
     # Harness runs the existing `python3` interpreter directly. For externally
     # managed Python installs, user-site + break-system-packages is the least
     # invasive way to make that same interpreter import the required modules.
-    if "$py" -m pip install --user -r "$reqs"; then
+    if python_is_externally_managed "$py"; then
+        if ! pip_supports_break_system_packages "$py"; then
+            die "pip for $py reports an externally managed Python but does not support --break-system-packages.
+Upgrade pip for this interpreter or install these requirements manually:
+  $py -m pip install --user --break-system-packages -r $reqs"
+        fi
+        "$py" -m pip install --user --break-system-packages -r "$reqs" \
+            || die "pip install failed for $reqs using $py"
         return 0
     fi
-    if "$py" -m pip install --user --break-system-packages -r "$reqs"; then
-        return 0
-    fi
-    die "pip install failed for $reqs using $py. Install these requirements into that interpreter and re-run:
+    "$py" -m pip install --user -r "$reqs" \
+        || die "pip install failed for $reqs using $py. Install these requirements into that interpreter and re-run:
   $py -m pip install --user -r $reqs"
+}
+
+python_is_externally_managed() {
+    "$1" -c 'import os, sysconfig; stdlib = sysconfig.get_path("stdlib"); raise SystemExit(0 if stdlib and os.path.exists(os.path.join(stdlib, "EXTERNALLY-MANAGED")) else 1)' >/dev/null 2>&1
+}
+
+pip_supports_break_system_packages() {
+    "$1" -m pip install --help 2>/dev/null | grep -q -- '--break-system-packages'
 }
