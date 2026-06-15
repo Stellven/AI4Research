@@ -51,6 +51,27 @@ bash scripts/smoke-install-matrix.sh minimal
 If a WSL2/local runner cannot execute a gate, record the exact command and
 failure. Do not mark that gate verified.
 
+Before building the PyPI wrapper, confirm the installer bootstrap contract:
+
+```bash
+python3 - <<'PY'
+import sys
+assert sys.version_info >= (3, 11), sys.version
+PY
+bash install.sh --help | grep -- --bootstrap-system-deps
+```
+
+The shell installer, not pip, owns OS package bootstrap. On a first-time
+machine the owner may run:
+
+```bash
+./install.sh --yes --components kernel,harness --bootstrap-system-deps
+```
+
+For local release verification, use a sandbox `HOME` and do not pass
+`--bootstrap-system-deps` unless you intentionally want the package manager
+prompt/command path exercised.
+
 ## 3. Build The PyPI Package
 
 Build from a clean package worktree:
@@ -80,6 +101,12 @@ python3 -m venv "$tmp/venv"
 "$tmp/venv/bin/python" -m pip install --no-index \
   --find-links "$PWD/distribution/pipx/dist" "openjiuwen-solar==$PYPI_VERSION"
 "$tmp/venv/bin/openjiuwen-solar" --help
+METADATA="$("$tmp/venv/bin/python" - <<'PY'
+from importlib.metadata import metadata
+print(metadata("openjiuwen-solar")["Requires-Python"])
+PY
+)"
+test "$METADATA" = ">=3.11"
 ```
 
 Then verify the installed wrapper can install and delegate to the local Solar
@@ -94,12 +121,22 @@ SOLAR_CHANNEL="$(git branch --show-current)" \
 SOLAR_SRC="$tmp/src" \
 OPENJIUWEN_SOLAR_GET_SOLAR_URL="$PWD/get-solar.sh" \
 "$tmp/venv/bin/openjiuwen-solar" install --yes \
-  --components kernel,harness --fake-keys --skip-llm-cli --skip-py-deps
+  --components kernel,harness --fake-keys --skip-llm-cli
 
 HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" status
 HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" doctor --json
 HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" harness preflight
 HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" uninstall --yes
+```
+
+`doctor --json` must include:
+
+```text
+python.version >= 3.11
+python.harness_imports.yaml == ok
+system.tmux / system.jq / system["bash>=4"]
+models.guidance
+models.claude_auth_note
 ```
 
 ## 5. Verify The Public Orphan Cut

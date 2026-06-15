@@ -52,6 +52,9 @@ Usage:
 
 Commands:
   install [args...]       Download/run get-solar.sh; forwards args unchanged.
+                         This is the shell bootstrap that checks Python 3.11+,
+                         installs harness Python deps, and can bootstrap
+                         tmux/jq/bash with --bootstrap-system-deps.
   version [args...]       Delegate to ~/.solar/bin/solar version.
   status [args...]        Delegate to ~/.solar/bin/solar status.
   doctor [args...]        Delegate to ~/.solar/bin/solar doctor.
@@ -68,6 +71,7 @@ Commands:
 Install:
   pipx install ./distribution/pipx
   pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#subdirectory=distribution/pipx"
+  openjiuwen-solar install --yes --components kernel,harness
 
 Package name:
   openjiuwen-solar installs the `openjiuwen-solar` command.
@@ -93,6 +97,7 @@ Defaults:
   get-solar.sh URL: {PUBLIC_GET_SOLAR_URL}
   source path: $SOLAR_SRC/OpenSolar when present, otherwise ~/.solar-src/OpenSolar
   source not found exit: 1
+  Python: >=3.11; the shell installer checks the python3 used by the harness.
 
 Warnings:
   pipx uninstalling this wrapper does NOT uninstall OpenSolar.

@@ -10,6 +10,10 @@ get-solar.sh -> clone selected channel into $SOLAR_SRC -> install.sh
 
 ## Install
 
+This package requires Python 3.11+. It installs only the `openjiuwen-solar`
+wrapper. The real runtime bootstrap happens when you run
+`openjiuwen-solar install`, which delegates to the shell installer.
+
 Local checkout:
 
 ```bash
@@ -26,6 +30,7 @@ pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#sub
 
 ```bash
 openjiuwen-solar install --yes --components kernel,harness
+openjiuwen-solar install --yes --components kernel,harness --bootstrap-system-deps
 openjiuwen-solar status
 openjiuwen-solar doctor --json
 openjiuwen-solar harness preflight
@@ -49,6 +54,17 @@ Use `OPENJIUWEN_SOLAR_GET_SOLAR_URL=/path/to/get-solar.sh` or a `file://` URL
 for offline/local tests. Without that override, the wrapper downloads the
 `stable` branch `get-solar.sh`. The older `OPENSOLAR_GET_SOLAR_URL` override
 is still accepted for local compatibility.
+
+Pip/pipx cannot install system binaries. For a first-time machine, run the
+install command with `--bootstrap-system-deps` or install the shell
+dependencies yourself:
+
+```text
+macOS: brew install tmux jq bash
+Ubuntu/Debian: sudo apt-get update && sudo apt-get install -y tmux jq bash
+Fedora: sudo dnf install -y tmux jq bash
+Arch: sudo pacman -S --needed tmux jq bash
+```
 
 `openjiuwen-solar source` prints `$SOLAR_SRC/OpenSolar` when present, or the
 default `~/.solar-src/OpenSolar`. If no checkout exists it prints a not-found

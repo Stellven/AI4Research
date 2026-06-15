@@ -1,3 +1,3 @@
-"""OpenJiuwen Solar pipx demo wrapper."""
+"""OpenJiuwen Solar pipx wrapper."""
 
 __version__ = "1.0.0rc2"
