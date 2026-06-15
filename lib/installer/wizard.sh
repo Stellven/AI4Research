@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 SOLAR_CANCEL_EXIT=130
+WIZARD_PANEL_DEFAULT_WIDTH=64
+WIZARD_PANEL_MIN_WIDTH=40
 
 cancel_install() {
     printf 'cancelled\n' >&2
@@ -31,24 +33,94 @@ wizard_read() {
     IFS= read -r WIZARD_ANSWER </dev/tty || WIZARD_ANSWER=""
 }
 
+wizard_terminal_width() {
+    case "${COLUMNS:-}" in
+        ''|*[!0-9]*) ;;
+        *) [ "$COLUMNS" -gt 0 ] && { printf '%s' "$COLUMNS"; return 0; } ;;
+    esac
+
+    cols="$(tput cols 2>/dev/null || true)"
+    case "$cols" in
+        ''|*[!0-9]*) printf '80' ;;
+        *) [ "$cols" -gt 0 ] && printf '%s' "$cols" || printf '80' ;;
+    esac
+}
+
+wizard_panel_width() {
+    cols="$(wizard_terminal_width)"
+    width="$WIZARD_PANEL_DEFAULT_WIDTH"
+    if [ "$cols" -lt "$width" ]; then
+        width="$cols"
+    fi
+    if [ "$width" -lt "$WIZARD_PANEL_MIN_WIDTH" ]; then
+        width="$WIZARD_PANEL_MIN_WIDTH"
+    fi
+    printf '%s' "$width"
+}
+
+wizard_repeat() {
+    char="$1"
+    count="$2"
+    out=""
+    while [ "$count" -gt 0 ]; do
+        out="$out$char"
+        count=$((count - 1))
+    done
+    printf '%s' "$out"
+}
+
+wizard_fit_text() {
+    text="$1"
+    width="$2"
+    [ "$width" -gt 0 ] || return 0
+    if [ "${#text}" -le "$width" ]; then
+        printf '%s' "$text"
+    elif [ "$width" -le 3 ]; then
+        printf '%s' "${text:0:$width}"
+    else
+        printf '%s...' "${text:0:$((width - 3))}"
+    fi
+}
+
+wizard_line() {
+    content="$(wizard_fit_text "$1" "$(( $(wizard_panel_width) - 2 ))")"
+    pad_count=$(( $(wizard_panel_width) - 2 - ${#content} ))
+    printf '│%s%s│\n' "$content" "$(wizard_repeat ' ' "$pad_count")" >&2
+}
+
+wizard_top() {
+    printf '╭%s╮\n' "$(wizard_repeat '─' "$(( $(wizard_panel_width) - 2 ))")" >&2
+}
+
 wizard_rule() {
-    printf '│  ──────────────────────────────────────────────────────────  │\n' >&2
+    inner_width=$(( $(wizard_panel_width) - 2 ))
+    wizard_line "  $(wizard_repeat '─' "$((inner_width - 4))")  "
 }
 
 wizard_heading() {
     title="$1"
+    inner_width=$(( $(wizard_panel_width) - 2 ))
+    title="$(wizard_fit_text "$title" "$((inner_width - 4))")"
+    rule_count=$((inner_width - ${#title} - 3))
     printf '\n' >&2
-    printf '╭─ %s ─────────────────────────────────────────────────────╮\n' "$title" >&2
+    printf '╭─ %s %s╮\n' "$title" "$(wizard_repeat '─' "$rule_count")" >&2
 }
 
 wizard_footer() {
-    printf '╰──────────────────────────────────────────────────────────────╯\n' >&2
+    printf '╰%s╯\n' "$(wizard_repeat '─' "$(( $(wizard_panel_width) - 2 ))")" >&2
 }
 
 wizard_kv() {
     label="$1"
     value="$2"
-    printf '│  %-11s %s\n' "$label" "$value" >&2
+    wizard_line "$(printf '  %-11s %s' "$label" "$value")"
+}
+
+wizard_status_line() {
+    item="$1"
+    status="$2"
+    detail="$3"
+    wizard_line "$(printf '  %-10s %-9s%s' "$item" "$status" "$detail")"
 }
 
 wizard_tool_line() {
@@ -56,9 +128,9 @@ wizard_tool_line() {
     note="$2"
     path="$(command_path "$tool")"
     if [ -n "$path" ]; then
-        printf '│  %-10s ok       %s\n' "$tool" "$path" >&2
+        wizard_status_line "$tool" "ok" "$path"
     else
-        printf '│  %-10s missing  %s\n' "$tool" "$note" >&2
+        wizard_status_line "$tool" "missing" "$note"
     fi
 }
 
@@ -71,13 +143,13 @@ wizard_banner() {
     printf '  ██████╔╝ ╚██████╔╝███████╗██║  ██║██║  ██║\n' >&2
     printf '  ╚═════╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝\n' >&2
     printf '\n' >&2
-    printf '╭──────────────────────────────────────────────────────────────╮\n' >&2
-    printf '│                                                              │\n' >&2
-    printf '│    ☀  S O L A R        ·        OpenJiuwen Solar            │\n' >&2
-    printf '│                                                              │\n' >&2
-    printf '│    component runtime   ·   Claude overlay   ·   harness     │\n' >&2
-    printf '│                                                              │\n' >&2
-    printf '╰──────────────────────────────────────────────────────────────╯\n' >&2
+    wizard_top
+    wizard_line ""
+    wizard_line "    ☀  S O L A R        ·        OpenJiuwen Solar"
+    wizard_line ""
+    wizard_line "    component runtime   ·   Claude overlay   ·   harness"
+    wizard_line ""
+    wizard_footer
 }
 
 wizard_preflight_summary() {
@@ -94,9 +166,9 @@ wizard_preflight_summary() {
     wizard_tool_line tmux "harness dependency"
     wizard_tool_line jq "harness dependency"
     if bash4_path="$(find_bash4 2>/dev/null)"; then
-        printf '│  %-10s ok       %s\n' "bash>=4" "$bash4_path" >&2
+        wizard_status_line "bash>=4" "ok" "$bash4_path"
     else
-        printf '│  %-10s missing  %s\n' "bash>=4" "harness dependency" >&2
+        wizard_status_line "bash>=4" "missing" "harness dependency"
     fi
     wizard_tool_line git "optional receipt metadata"
     wizard_tool_line bun "enables core-runtime"
@@ -108,7 +180,7 @@ wizard_preflight_summary() {
 wizard_component_summary() {
     title="$1"
     wizard_heading "$title"
-    printf '│  %s\n' "$SELECTED_COMPONENTS" >&2
+    wizard_line "  $SELECTED_COMPONENTS"
     wizard_footer
 }
 
@@ -134,9 +206,9 @@ wizard_show_available_components() {
         contains_word "$name" "$SELECTED_COMPONENTS" && mark="*"
         platforms="${COMPONENT_PLATFORMS:-all}"
         req_bins="${COMPONENT_REQUIRES_BINS:-none}"
-        printf '│  %2s. [%s] %-15s default=%-4s platforms=%-16s requires=%s\n' \
-            "$idx" "$mark" "$COMPONENT_NAME" "$COMPONENT_DEFAULT" "$platforms" "$req_bins" >&2
-        printf '│      %s\n' "$COMPONENT_DESC" >&2
+        wizard_line "$(printf '  %2s. [%s] %-15s default=%-4s platforms=%-16s requires=%s' \
+            "$idx" "$mark" "$COMPONENT_NAME" "$COMPONENT_DEFAULT" "$platforms" "$req_bins")"
+        wizard_line "      $COMPONENT_DESC"
         idx=$((idx + 1))
     done
     wizard_footer
@@ -200,9 +272,9 @@ run_component_wizard_if_needed() {
 
     while :; do
         wizard_heading "Choose an option"
-        printf '│  1. Proceed\n' >&2
-        printf '│  2. Customize\n' >&2
-        printf '│  3. Cancel\n' >&2
+        wizard_line "  1. Proceed"
+        wizard_line "  2. Customize"
+        wizard_line "  3. Cancel"
         wizard_rule
         wizard_footer
         wizard_read "Choice [1-3]: "
