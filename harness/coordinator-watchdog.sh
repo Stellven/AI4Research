@@ -29,6 +29,7 @@ LAB_SESSION_NAME="solar-harness-lab"
 WATCHDOG_PID_FILE="$HARNESS_DIR/.watchdog.pid"
 WATCHDOG_STATE="$HARNESS_DIR/.watchdog-state"
 COORD_PID_FILE="$HARNESS_DIR/.coordinator.pid"
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 # 熔断阈值
 MAX_CONSECUTIVE_FAILURES=3
@@ -471,8 +472,8 @@ check_panes() {
     _esc_w=$(printf '%q' "$_respawn_workdir")
     # sprint-20260502-200424 D2: 用绝对路径 bash + 注入完整 PATH
     # 根因: tmux respawn-pane 不继承用户 shell profile, ~/n/bin/claude 找不到 → exit 127
-    local _restart_bash="/opt/homebrew/bin/bash"
-    [[ -x "$_restart_bash" ]] || _restart_bash="/bin/bash"
+    local _restart_bash
+    _restart_bash=$(resolve_bash4 2>/dev/null || command -v bash 2>/dev/null || echo /bin/bash)
     local _user_path="${PATH}"
     for _p in /opt/homebrew/bin /usr/local/bin "$HOME/n/bin" "$HOME/.local/bin" "$HOME/.npm-global/bin" "$HOME/.bun/bin"; do
       [[ -d "$_p" ]] && case ":${_user_path}:" in *":$_p:"*) ;; *) _user_path="$_p:${_user_path}" ;; esac
@@ -552,8 +553,8 @@ launchd_domain() {
 write_launchd_plist() {
   local plist_path="$1"
   local script_path="$HARNESS_DIR/coordinator-watchdog.sh"
-  local bash_path="/opt/homebrew/bin/bash"
-  [[ -x "$bash_path" ]] || bash_path="/bin/bash"
+  local bash_path
+  bash_path=$(resolve_bash4 2>/dev/null || command -v bash 2>/dev/null || echo /bin/bash)
   mkdir -p "$(dirname "$plist_path")"
   cat > "$plist_path" << PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -662,7 +663,8 @@ case "${1:-help}" in
       fi
       warn "launchd 启动失败，回退到后台进程模式"
     fi
-    nohup /opt/homebrew/bin/bash "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
+    bash_path=$(resolve_bash4 2>/dev/null || command -v bash 2>/dev/null || echo /bin/bash)
+    nohup "$bash_path" "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
     echo $! > "$WATCHDOG_PID_FILE"
     ok "Watchdog 启动完成 (PID: $!)"
     ;;
@@ -826,7 +828,8 @@ case "${1:-help}" in
         if [[ "$current_md5" != "$INIT_MD5" ]]; then
           log "[hot-reload] watchdog md5 changed: ${INIT_MD5} → ${current_md5}, exec restart"
           cleanup_watchdog_pid
-          exec /opt/homebrew/bin/bash "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon
+          bash_path=$(resolve_bash4 2>/dev/null || command -v bash 2>/dev/null || echo /bin/bash)
+          exec "$bash_path" "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon
         fi
       fi
     done

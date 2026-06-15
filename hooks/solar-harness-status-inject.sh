@@ -5,8 +5,14 @@
 
 set -uo pipefail
 
-HARNESS_DIR="${HOME}/.solar/harness"
+HARNESS_DIR="${HARNESS_DIR:-${HOME}/.solar/harness}"
 SEEN_MARKER="${HARNESS_DIR}/.last-seen-by-planner"
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
+if ! type solar_file_mtime >/dev/null 2>&1; then
+  solar_file_mtime() {
+    stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0
+  }
+fi
 
 # 非 solar 项目直接静默退出
 [[ -d "$HARNESS_DIR" ]] || { exit 0; }
@@ -26,9 +32,9 @@ now_epoch=$(date +%s)
 last_notice_content=""
 last_notice_unread=false
 if [[ -f "${HARNESS_DIR}/.planner-last-notice" ]]; then
-  notice_mtime=$(stat -f %m "${HARNESS_DIR}/.planner-last-notice" 2>/dev/null || echo 0)
+  notice_mtime=$(solar_file_mtime "${HARNESS_DIR}/.planner-last-notice" 2>/dev/null || echo 0)
   seen_mtime=0
-  [[ -f "$SEEN_MARKER" ]] && seen_mtime=$(stat -f %m "$SEEN_MARKER" 2>/dev/null || echo 0)
+  [[ -f "$SEEN_MARKER" ]] && seen_mtime=$(solar_file_mtime "$SEEN_MARKER" 2>/dev/null || echo 0)
   if (( notice_mtime > seen_mtime )); then
     last_notice_content=$(cat "${HARNESS_DIR}/.planner-last-notice" 2>/dev/null | head -c 300)
     last_notice_unread=true
@@ -50,7 +56,7 @@ fi
 # 3) 未读 inbox count (finalized 文件比 seen_marker 新的数目)
 unread_inbox=0
 if [[ -f "$SEEN_MARKER" ]]; then
-  seen_epoch=$(stat -f %m "$SEEN_MARKER" 2>/dev/null || echo 0)
+  seen_epoch=$(solar_file_mtime "$SEEN_MARKER" 2>/dev/null || echo 0)
   unread_inbox=$(find "${HARNESS_DIR}/sprints" -name '*.finalized' -newer "$SEEN_MARKER" 2>/dev/null | wc -l | tr -d ' ')
 else
   unread_inbox=$(find "${HARNESS_DIR}/sprints" -name '*.finalized' -mmin -60 2>/dev/null | wc -l | tr -d ' ')

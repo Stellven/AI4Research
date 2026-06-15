@@ -68,6 +68,7 @@ export LC_ALL="en_US.UTF-8"
 [[ -f "$HARNESS_DIR/lib/pane-lease.sh" ]] && . "$HARNESS_DIR/lib/pane-lease.sh"
 [[ -f "$HARNESS_DIR/lib/ack-watcher.sh" ]] && . "$HARNESS_DIR/lib/ack-watcher.sh"
 [[ -f "$HARNESS_DIR/lib/prompt-quarantine.sh" ]] && . "$HARNESS_DIR/lib/prompt-quarantine.sh"
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 # Coordinator predates strict-mode helper libs and intentionally treats corrupt
 # sprint files as data-plane warnings. Do not let sourced libs' shell options
@@ -817,7 +818,7 @@ get_latest_sprint_file() {
 
     # 取修改时间最新的 sprint (不管状态)
     local mtime
-    mtime=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo 0)
+    mtime=$(solar_file_mtime "$f" 2>/dev/null || echo 0)
     if [[ "$mtime" -gt "$best_mtime" ]]; then
       best_mtime="$mtime"
       best="$f"
@@ -1432,8 +1433,8 @@ check_planner_notice() {
 
   local read_marker="$HARNESS_DIR/.planner-last-notice.read"
   local notice_mtime=0 read_mtime=0
-  notice_mtime=$(stat -f %m "$notice_file" 2>/dev/null || echo 0)
-  [[ -f "$read_marker" ]] && read_mtime=$(stat -f %m "$read_marker" 2>/dev/null || echo 0)
+  notice_mtime=$(solar_file_mtime "$notice_file" 2>/dev/null || echo 0)
+  [[ -f "$read_marker" ]] && read_mtime=$(solar_file_mtime "$read_marker" 2>/dev/null || echo 0)
   (( notice_mtime <= read_mtime )) && return 0
 
   # 取 pane 最后 10 行检测空闲 (Sprint 20260422-222017 D1)
@@ -2300,7 +2301,11 @@ detect_stuck_state() {
         event_ts=$(echo "$last_plan_event" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['ts'])" 2>/dev/null)
         if [[ -n "$event_ts" ]]; then
           local age_s
-          age_s=$(( $(date -u +%s) - $(date -j -f "%Y-%m-%dT%H:%M:%SZ" "${event_ts%%.*}Z" +%s 2>/dev/null || echo 999999) ))
+          event_ts="${event_ts%%.*}"
+          event_ts="${event_ts%Z}Z"
+          event_epoch=$(solar_parse_epoch "%Y-%m-%dT%H:%M:%SZ" "$event_ts" 2>/dev/null || echo 0)
+          [[ "$event_epoch" -gt 0 ]] || event_epoch=$(( $(date -u +%s) - 999999 ))
+          age_s=$(( $(date -u +%s) - event_epoch ))
           if (( age_s > 60 )); then
             log "[heal] detect_stuck: $sid status=planning but plan_reviewed ${age_s}s ago"
             handle_planning "$sid" "$sf"
@@ -2318,7 +2323,11 @@ detect_stuck_state() {
         event_ts=$(echo "$last_eval_event" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['ts'])" 2>/dev/null)
         if [[ -n "$event_ts" ]]; then
           local age_s
-          age_s=$(( $(date -u +%s) - $(date -j -f "%Y-%m-%dT%H:%M:%SZ" "${event_ts%%.*}Z" +%s 2>/dev/null || echo 999999) ))
+          event_ts="${event_ts%%.*}"
+          event_ts="${event_ts%Z}Z"
+          event_epoch=$(solar_parse_epoch "%Y-%m-%dT%H:%M:%SZ" "$event_ts" 2>/dev/null || echo 0)
+          [[ "$event_epoch" -gt 0 ]] || event_epoch=$(( $(date -u +%s) - 999999 ))
+          age_s=$(( $(date -u +%s) - event_epoch ))
           if (( age_s > 60 )); then
             log "[heal] detect_stuck: $sid status=reviewing but eval_completed ${age_s}s ago"
             handle_reviewing "$sid" "$sf"
@@ -4932,7 +4941,7 @@ with open('$patches_file','w') as f:
     for f in "$SPRINTS_DIR"/sprint-*.status.json; do
       [[ -f "$f" ]] || continue
       local fmtime
-      fmtime=$(stat -f %m "$f" 2>/dev/null || echo 0)
+      fmtime=$(solar_file_mtime "$f" 2>/dev/null || echo 0)
       (( fmtime > max_file_mtime )) && max_file_mtime=$fmtime
     done
     # Sprint sprint-20260502-182804: skip_sprint 标志替代 continue
@@ -5168,7 +5177,8 @@ PY
         log "[hot-reload] md5 changed: ${INIT_MD5} → ${current_md5}, exec restart"
         # D4 兜底: exec 失败时告警 + 更新 INIT_MD5 防死循环
         clean_my_pidfile
-        if ! exec /opt/homebrew/bin/bash "$0" "$@" 2>>"$COORD_LOG"; then
+        restart_bash=$(resolve_bash4 2>/dev/null || command -v bash 2>/dev/null || echo /bin/bash)
+        if ! exec "$restart_bash" "$0" "$@" 2>>"$COORD_LOG"; then
           log "[HOT-RELOAD-FAILED] exec restart failed at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           echo "- [ ] [HOT-RELOAD-FAILED] exec restart failed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$HARNESS_DIR/PLANNER-INBOX.md" 2>/dev/null || true
           echo "[HOT-RELOAD-FAILED]" > "$HARNESS_DIR/.planner-last-notice" 2>/dev/null || true

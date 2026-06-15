@@ -8,6 +8,7 @@ HARNESS_DIR="$HOME/.solar/harness"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
 FIXTURE_SID="test-refine-fixture-$$"
 PASS=0 FAIL=0
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 cleanup() {
   rm -f "$SPRINTS_DIR/${FIXTURE_SID}"*.md "$SPRINTS_DIR/${FIXTURE_SID}"*.json 2>/dev/null || true
@@ -156,13 +157,13 @@ echo ""
 echo "--- T5: Verify plan.md mtime can be checked ---"
 
 # Record mtime before round 2
-plan_mtime_before=$(stat -f %m "$SPRINTS_DIR/${FIXTURE_SID}.plan.md" 2>/dev/null || echo 0)
+plan_mtime_before=$(solar_file_mtime "$SPRINTS_DIR/${FIXTURE_SID}.plan.md" 2>/dev/null || echo 0)
 
 # Simulate round 2 — builder should NOT modify plan.md
 sleep 1
 
 # Check plan.mtime hasn't changed (it shouldn't have — we didn't touch it)
-plan_mtime_after=$(stat -f %m "$SPRINTS_DIR/${FIXTURE_SID}.plan.md" 2>/dev/null || echo 0)
+plan_mtime_after=$(solar_file_mtime "$SPRINTS_DIR/${FIXTURE_SID}.plan.md" 2>/dev/null || echo 0)
 
 if [[ "$plan_mtime_before" == "$plan_mtime_after" ]]; then
   pass "T5a: plan.md mtime unchanged after round 2 (as expected)"

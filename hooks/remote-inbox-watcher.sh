@@ -9,6 +9,12 @@ INBOX="$STATE_DIR/remote-inbox.jsonl"
 LAST_SEEN="$STATE_DIR/.remote-inbox-last-seen"
 LOCK="$STATE_DIR/.remote-inbox.lock"
 EXEC_MODE_FILE="$STATE_DIR/exec-mode.json"
+[[ -f "$HOME/.solar/harness/lib/portable.sh" ]] && . "$HOME/.solar/harness/lib/portable.sh"
+if ! type solar_file_mtime >/dev/null 2>&1; then
+    solar_file_mtime() {
+        stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0
+    }
+fi
 
 # 只在远程模式激活时运行
 if [[ ! -f "$EXEC_MODE_FILE" ]]; then exit 0; fi
@@ -17,7 +23,7 @@ if [[ "$MODE" != "remote" ]]; then exit 0; fi
 
 # 频率控制: 最多每 60s 轮询一次
 if [[ -f "$LAST_SEEN" ]]; then
-    LAST_TS=$(stat -f%m "$LAST_SEEN" 2>/dev/null || echo 0)
+    LAST_TS=$(solar_file_mtime "$LAST_SEEN" 2>/dev/null || echo 0)
     NOW=$(date +%s)
     AGE=$(( NOW - LAST_TS ))
     if (( AGE < 60 )); then exit 0; fi
@@ -25,7 +31,7 @@ fi
 
 # 避免并发
 if [[ -f "$LOCK" ]]; then
-    LOCK_AGE=$(($(date +%s) - $(stat -f%m "$LOCK" 2>/dev/null || echo 0)))
+    LOCK_AGE=$(($(date +%s) - $(solar_file_mtime "$LOCK" 2>/dev/null || echo 0)))
     if (( LOCK_AGE < 120 )); then exit 0; fi
     rm -f "$LOCK"
 fi

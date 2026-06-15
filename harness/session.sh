@@ -18,6 +18,7 @@ set -eu
 HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
 ARCHIVE_DIR="$SPRINTS_DIR/archive"
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 # --- 检查归档 sprint ---
 check_archived() {
@@ -73,7 +74,7 @@ json.dump(d, sys.stdout, ensure_ascii=False)
     if [[ $waited -ge $((max_wait * 10)) ]]; then
       # 超时：检查锁是否是旧的 (>30s)
       local lock_age
-      lock_age=$(stat -f %m "$lock_dir" 2>/dev/null || stat -c %Y "$lock_dir" 2>/dev/null || echo 0)
+      lock_age=$(solar_file_mtime "$lock_dir" 2>/dev/null || echo 0)
       local now
       now=$(date +%s)
       if [[ $((now - lock_age)) -gt 30 ]]; then
