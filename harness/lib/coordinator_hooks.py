@@ -15,12 +15,16 @@ from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = os.environ.get("HARNESS_DIR", os.path.expanduser("~/.solar/harness"))
 DECISIONS_LOG = os.path.join(HARNESS_DIR, "experience", "decisions.jsonl")
 TIMEOUT_MS = 50
 
 TERMINAL_STATUSES = {"passed", "failed", "cancelled", "quarantined"}
 TERMINAL_PHASES = {"passed", "finalized", "cancelled", "quarantined"}
+LEGAL_STATUS_TRANSITIONS = {
+    "planning": {"approved", "active"},
+    "reviewing": {"passed", "failed_review"},
+}
 
 
 class Decision:
@@ -182,6 +186,83 @@ def pre_dispatch(sid: str, action: str) -> Decision:
         decision = Decision(action="allow", reason=f"error_fail_open: {e}")
 
     _append_decision(sid, action, decision)
+    return decision
+
+
+def gate_status_transition(sid: str, expected_from: str, target_status: str) -> Decision:
+    """Fail-closed guard for human-gated status transitions.
+
+    The shell command performs the actual atomic write through run-state.sh.
+    This hook only verifies that the transition still matches the coordinator
+    state machine before a terminal PASS can be recorded.
+    """
+    action_name = f"status_transition:{expected_from}->{target_status}"
+
+    if os.environ.get("EXPERIENCE_HOOK", "1") == "0":
+        decision = Decision(action="allow", reason="hook_disabled")
+        _append_decision(sid, action_name, decision)
+        return decision
+
+    status_data = _load_sprint_status(sid)
+    current_status = str(status_data.get("status", ""))
+    current_phase = str(status_data.get("phase", ""))
+    allowed_targets = LEGAL_STATUS_TRANSITIONS.get(str(expected_from), set())
+
+    if not status_data:
+        decision = Decision(
+            action="abort",
+            reason="status_missing",
+            advisory=(
+                f"Sprint {sid} has no status file. Refusing "
+                f"{expected_from}->{target_status}."
+            ),
+            pattern="status_transition_guard",
+            confidence=0.95,
+        )
+    elif current_status != expected_from:
+        terminal = current_status in TERMINAL_STATUSES or current_phase in TERMINAL_PHASES
+        decision = Decision(
+            action="abort",
+            reason="terminal_phase_wake_detected" if terminal else "status_transition_from_mismatch",
+            advisory=(
+                f"Sprint {sid} is status={current_status}, phase={current_phase}; "
+                f"expected status={expected_from} before {target_status}."
+            ),
+            pattern="terminal_phase_wake" if terminal else "status_transition_guard",
+            confidence=0.95,
+        )
+    elif current_phase in TERMINAL_PHASES:
+        decision = Decision(
+            action="abort",
+            reason="terminal_phase_wake_detected",
+            advisory=(
+                f"Sprint {sid} has terminal phase={current_phase}; "
+                f"refusing {expected_from}->{target_status}."
+            ),
+            pattern="terminal_phase_wake",
+            confidence=0.95,
+        )
+    elif target_status not in allowed_targets:
+        decision = Decision(
+            action="abort",
+            reason="invalid_status_transition",
+            advisory=(
+                f"Invalid status transition for {sid}: "
+                f"{expected_from}->{target_status}."
+            ),
+            pattern="status_transition_guard",
+            confidence=0.95,
+        )
+    else:
+        decision = Decision(
+            action="allow",
+            reason="status_transition_allowed",
+            advisory=f"Allowing {sid}: {expected_from}->{target_status}.",
+            pattern="status_transition_guard",
+            confidence=0.95,
+        )
+
+    _append_decision(sid, action_name, decision)
     return decision
 
 
