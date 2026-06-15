@@ -39,7 +39,9 @@ fi
 [ -x "$opensolar_cmd" ] || die "openjiuwen-solar command was not installed at $opensolar_cmd"
 
 "$opensolar_cmd" install --yes --components kernel,harness --fake-keys --skip-llm-cli --skip-py-deps
+"$opensolar_cmd" status
 "$opensolar_cmd" doctor --json
+"$opensolar_cmd" harness preflight
 "$opensolar_cmd" update --fake-keys --skip-llm-cli --skip-py-deps
 "$opensolar_cmd" uninstall --yes
 

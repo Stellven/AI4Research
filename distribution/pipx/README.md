@@ -26,7 +26,9 @@ pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@stable#sub
 
 ```bash
 openjiuwen-solar install --yes --components kernel,harness
+openjiuwen-solar status
 openjiuwen-solar doctor --json
+openjiuwen-solar harness preflight
 openjiuwen-solar update
 openjiuwen-solar uninstall --yes
 openjiuwen-solar source
@@ -77,7 +79,9 @@ The smoke runs:
 
 ```bash
 openjiuwen-solar install --yes --components kernel,harness --fake-keys --skip-llm-cli --skip-py-deps
+openjiuwen-solar status
 openjiuwen-solar doctor --json
+openjiuwen-solar harness preflight
 openjiuwen-solar update --fake-keys --skip-llm-cli --skip-py-deps
 openjiuwen-solar uninstall --yes
 ```

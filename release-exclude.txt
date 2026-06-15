@@ -50,3 +50,30 @@ rules/sprint-rhythm.md
 # --- unshipped hooks (confirmed NOT in kernel/base-hooks.txt) ---
 hooks/memory-auto-updater.sh
 hooks/whisper-hook-v2.sh
+
+# --- harness development notes (not installed/runtime documentation) ---
+harness/BUG5-ROOT-CAUSE.md
+harness/TODO-next-session.md
+harness/needs-improvement.md
+
+# --- legacy/internal LaunchAgent plists ---
+# The shipped daemons component uses templates/daemons/solar-daemon.*.template.
+# These static com.solar.* plists belong to parked/internal jobs or legacy
+# installers and are not required by components.d/daemons.
+core/evolver/com.solar.evolver.plist
+core/evolver/com.solar.native-evolver.plist
+core/evolver/com.solar.task-executor.plist
+core/ontology/com.solar.ontology-reflector.plist
+deploy/com.solar.daemon.plist
+deploy/com.solar.message-executor.plist
+deploy/com.solar.security.plist
+deploy/launchd/com.solar.resource.scores.plist
+deploy/launchd/com.solar.security.access.plist
+deploy/launchd/com.solar.security.daily.plist
+deploy/launchd/com.solar.security.quota.plist
+deploy/launchd/com.solar.security.system.plist
+harness/com.solar.ai-influence-daily-digest.plist
+harness/com.solar.github-trends-digest.plist
+harness/com.solar.mineru-idle.plist
+harness/com.solar.youtube-influence-digest.plist
+harness/launchd/com.solar.tech-hotspot-radar.daemon.plist
