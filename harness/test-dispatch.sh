@@ -16,6 +16,7 @@ SPRINTS_DIR="$HARNESS_DIR/sprints"
 SESSION_NAME="solar-harness"
 TEST_SID="test-$(date +%s)"
 REPORT_FILE="$HARNESS_DIR/test-dispatch-report.txt"
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 # 颜色
 G='\033[0;32m'; Y='\033[1;33m'; R='\033[0;31m'; C='\033[0;36m'; N='\033[0m'
@@ -106,7 +107,7 @@ log "T2: D2 文件级 mtime 检测"
 create_test_sprint "drafting"
 sleep 1
 if [[ -f "$SPRINTS_DIR/${TEST_SID}.status.json" ]]; then
-  local_mtime=$(stat -f %m "$SPRINTS_DIR/${TEST_SID}.status.json" 2>/dev/null || echo 0)
+  local_mtime=$(solar_file_mtime "$SPRINTS_DIR/${TEST_SID}.status.json" 2>/dev/null || echo 0)
   if [[ "$local_mtime" -gt 0 ]]; then
     pass "status.json mtime 可读: ${local_mtime}"
   else

@@ -3,7 +3,9 @@
 # Phase A.2: extend rs_transition to also manage phase field
 [[ -n "${RS_LOADED:-}" ]] && return 0
 RS_LOADED=1
+HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
 SPRINTS_DIR="${SPRINTS_DIR:-$HOME/.solar/harness/sprints}"
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 # ─── 读 ───
 
@@ -67,7 +69,7 @@ rs_list_recent() {
   for f in "$SPRINTS_DIR"/sprint-*.status.json; do
     [[ -f "$f" ]] || continue
     local mt
-    mt=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo 0)
+    mt=$(solar_file_mtime "$f" 2>/dev/null || echo 0)
     echo "$mt $(basename "$f" .status.json)"
   done | sort -rn | head -n "$n" | awk '{print $2}'
 }

@@ -40,6 +40,7 @@ export HARNESS_DIR SPRINTS_DIR
 
 # Human-facing capability visibility prefixes.
 [[ -f "$HARNESS_DIR/lib/capability-prefix.sh" ]] && . "$HARNESS_DIR/lib/capability-prefix.sh"
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 # ---- Colors ----
 G='\033[0;32m'; Y='\033[1;33m'; R='\033[0;31m'; C='\033[0;36m'; B='\033[0;34m'; N='\033[0m'
@@ -1759,8 +1760,8 @@ else:
     if [[ "$last_event" == "already_waked" ]]; then
       # 检查 events.jsonl 最后修改时间 vs status.json
       local ev_mtime sf_mtime
-      ev_mtime=$(stat -f %m "$events_file" 2>/dev/null || echo 0)
-      sf_mtime=$(stat -f %m "$sf" 2>/dev/null || echo 0)
+      ev_mtime=$(solar_file_mtime "$events_file" 2>/dev/null || echo 0)
+      sf_mtime=$(solar_file_mtime "$sf" 2>/dev/null || echo 0)
       if [[ "$sf_mtime" -le "$ev_mtime" ]]; then
         ok "Sprint ${sid} 已 wake 且无新活动，跳过 (幂等)"
         return 0
@@ -2033,7 +2034,7 @@ do_handoff_submit() {
   [[ -f "$hf" ]] || { err "handoff.md not found for $sid — 先写 handoff 再提交"; exit 1; }
 
   local handoff_mtime
-  handoff_mtime=$(stat -f %m "$hf" 2>/dev/null || echo 0)
+  handoff_mtime=$(solar_file_mtime "$hf" 2>/dev/null || echo 0)
 
   # Idempotent: same handoff mtime = already submitted
   python3 -c "
@@ -2321,7 +2322,7 @@ do_update_contract() {
     done)
       # D7: 用 base64 编码避免 HEREDOC 特殊字符吞参数 (Sprint 20260423-062851)
       local encoded
-      encoded=$(printf '%s' "$content" | base64)
+      encoded=$(printf '%s' "$content" | solar_base64_one_line)
       python3 -c "
 import re, base64, sys
 content = open('$cfile').read()
@@ -2340,7 +2341,7 @@ print('Done 定义已更新')
       ;;
     scope)
       local encoded
-      encoded=$(printf '%s' "$content" | base64)
+      encoded=$(printf '%s' "$content" | solar_base64_one_line)
       python3 -c "
 import re, base64
 content = open('$cfile').read()
@@ -2355,7 +2356,7 @@ open('$cfile', 'w').write(result)
       ;;
     constraints)
       local encoded
-      encoded=$(printf '%s' "$content" | base64)
+      encoded=$(printf '%s' "$content" | solar_base64_one_line)
       python3 -c "
 import re, base64
 content = open('$cfile').read()
@@ -2684,7 +2685,7 @@ do_main_status() {
         Evaluator) file="$SPRINTS_DIR/${sid}.eval.md" ;;
       esac
       if [[ -f "$file" ]]; then
-        artifact=$(stat -f '%Sm' -t '%Y-%m-%d %H:%M:%S' "$file" 2>/dev/null || echo "present")
+        artifact=$(solar_file_mtime_human "$file" 2>/dev/null || echo "present")
       else
         artifact="missing"
       fi
@@ -2740,7 +2741,7 @@ do_lab_status() {
     latest=$(ls -t "$lab_dir"/lab-builder-$((i+1))*handoff.md 2>/dev/null | head -1 || true)
     if [[ -n "$latest" && -f "$latest" ]]; then
       artifact="present"
-      latest_ts=$(stat -f '%Sm' -t '%Y-%m-%d %H:%M:%S' "$latest" 2>/dev/null || echo "N/A")
+      latest_ts=$(solar_file_mtime_human "$latest" 2>/dev/null || echo "N/A")
     fi
     printf '│ %-13s │ %-12s │ %-12s │ %-19s │ %-26s │\n' \
       "lab-builder-$((i+1))" "$runtime" "$artifact" "$latest_ts" "$(printf '%.26s' "$title")"
@@ -2989,7 +2990,8 @@ case "${1:-help}" in
         # 计算运行时间
         start_ts=$(ps -p "$pid" -o lstart= 2>/dev/null)
         if [[ -n "$start_ts" ]]; then
-          uptime_s=$(( $(date +%s) - $(date -j -f "%a %b %d %H:%M:%S %Y" "$start_ts" +%s 2>/dev/null || echo $(date +%s)) ))
+          start_epoch=$(solar_parse_epoch "%a %b %d %H:%M:%S %Y" "$start_ts" 2>/dev/null || date +%s)
+          uptime_s=$(( $(date +%s) - start_epoch ))
         fi
       else
         stale_lock=true

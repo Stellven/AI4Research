@@ -46,7 +46,7 @@ _atomic_append() {
   rmdir "$lock_dir" 2>/dev/null || true
 }
 
-emit_event() {
+_events_emit_impl() {
   local actor="${1:?emit_event: actor required}"
   local event_name="${2:?emit_event: event required}"
   local severity="${3:-info}"
@@ -95,6 +95,8 @@ emit_event() {
   fi
 }
 
+emit_event() { _events_emit_impl "$@"; }
+
 # query_events [sprint_id] [limit] [event_type] — filter events
 query_events() {
   local sprint_id="${1:-}"
@@ -134,5 +136,8 @@ for e in sorted(seen):
 " 2>/dev/null
 }
 
-# Also export as events_emit for callers that need to avoid name collision
-events_emit() { emit_event "$@"; }
+# Also export as events_emit for callers that need to avoid name collision.
+# Keep this bound to the private implementation: coordinator.sh defines its own
+# legacy emit_event shim after sourcing this file, and events_emit must not
+# resolve back to that shim recursively.
+events_emit() { _events_emit_impl "$@"; }
