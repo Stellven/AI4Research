@@ -18,6 +18,7 @@ Usage:
   solar backup [--out FILE]
   solar restore <archive>
   solar ui [--once] [--watch N] [--no-color]
+  solar harness [verb] [args...]
   solar uninstall [--yes] [--keep-data] [--dry-run]
   solar components list
 EOF
@@ -832,6 +833,38 @@ do_ui() {
     SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" exec python3 "$helper" "$@"
 }
 
+do_harness() {
+    script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+    helper=""
+    harness_dir=""
+    for candidate in \
+        "$SOLAR_HOME/bin/solar-harness" \
+        "$SOLAR_HOME/harness/solar-harness.sh" \
+        "$script_dir/../harness/solar-harness.sh"
+    do
+        if [ -f "$candidate" ]; then
+            helper="$candidate"
+            case "$candidate" in
+                "$SOLAR_HOME/bin/solar-harness"|"$SOLAR_HOME/harness/solar-harness.sh")
+                    harness_dir="$SOLAR_HOME/harness"
+                    ;;
+                *)
+                    harness_dir="$(CDPATH= cd -- "$(dirname -- "$candidate")" && pwd)"
+                    ;;
+            esac
+            break
+        fi
+    done
+    if [ -z "$helper" ]; then
+        echo "solar harness backend not found; reinstall with the harness component." >&2
+        exit 1
+    fi
+    if [ "$#" -eq 0 ]; then
+        set -- help
+    fi
+    HARNESS_DIR="${HARNESS_DIR:-$harness_dir}" exec "$helper" "$@"
+}
+
 cmd="${1:-}"
 case "$cmd" in
     version) shift; do_version "$@" ;;
@@ -842,6 +875,7 @@ case "$cmd" in
     backup) shift; do_backup "$@" ;;
     restore) shift; do_restore "$@" ;;
     ui) shift; do_ui "$@" ;;
+    harness) shift; do_harness "$@" ;;
     uninstall) shift; uninstall "$@" ;;
     components)
         shift
