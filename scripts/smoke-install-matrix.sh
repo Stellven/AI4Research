@@ -11,6 +11,12 @@ dashboard_log="$sandbox/dashboard.log"
 daemon_pid=""
 dashboard_pid=""
 
+# Keep ambient GitHub runner toolchain state out of the asserted sandbox HOME.
+# Rustup shims can lazily initialize settings.toml the first time any Rust tool
+# is touched, even in non-Rust profiles.
+export RUSTUP_HOME="$sandbox/toolchains/rustup"
+export CARGO_HOME="$sandbox/toolchains/cargo"
+
 case "$profile" in
     minimal)
         components="kernel,harness"
@@ -150,6 +156,15 @@ assert_no_bun_home_leak() {
         echo "bun wrote into the sandbox home outside SOLAR_HOME: $home_dir/.bun" >&2
         exit 1
     fi
+}
+
+assert_no_toolchain_home_leak() {
+    for path in "$home_dir/.rustup" "$home_dir/.cargo"; do
+        if [ -e "$path" ]; then
+            echo "toolchain state leaked into the sandbox home outside SOLAR_HOME: $path" >&2
+            exit 1
+        fi
+    done
 }
 
 assert_residue_empty() {
@@ -400,6 +415,7 @@ assert_config_rendered
 assert_settings_registered
 assert_kernel_loadable
 assert_no_bun_home_leak
+assert_no_toolchain_home_leak
 
 HOME="$home_dir" "$repo_dir/install.sh" \
     --yes \
@@ -482,6 +498,7 @@ if [ "$sentinel_count" != "1" ]; then
     exit 1
 fi
 assert_no_bun_home_leak
+assert_no_toolchain_home_leak
 echo "solar repair round-trip: ok"
 
 assert_hooks_no_crash

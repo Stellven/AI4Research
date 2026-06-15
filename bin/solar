@@ -952,6 +952,15 @@ def unlink_path(path):
         pass
 
 
+def add_prune_ancestors(start, root, dirs):
+    path = start
+    while under(path, root):
+        dirs.add(path)
+        if path == root:
+            break
+        path = path.parent
+
+
 def unlink_generated_cache(source_path, allowed_root, dirs):
     if source_path.suffix != ".py":
         return
@@ -963,7 +972,7 @@ def unlink_generated_cache(source_path, allowed_root, dirs):
         cache_path = resolved(cache_path)
         if under(cache_path, allowed_root):
             unlink_path(cache_path)
-            dirs.add(cache_path.parent)
+            add_prune_ancestors(cache_path.parent, allowed_root, dirs)
 
 
 def prune_empty_dirs(dirs, allowed_root):
@@ -1036,12 +1045,12 @@ for entry in entries:
             if not under(target, user_base):
                 continue
             paths.append(target)
-            dirs.add(target.parent)
+            add_prune_ancestors(target.parent, user_base, dirs)
         dist_path = getattr(dist, "_path", None)
         if dist_path is not None:
             dist_path = resolved(dist_path)
             if under(dist_path, user_base):
-                dirs.add(dist_path)
+                add_prune_ancestors(dist_path, user_base, dirs)
         for path in sorted(set(paths), key=lambda item: len(item.parts), reverse=True):
             unlink_generated_cache(path, user_base, dirs)
             unlink_path(path)
