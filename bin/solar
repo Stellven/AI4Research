@@ -1,9 +1,75 @@
 #!/usr/bin/env bash
 set -e
 
-SOLAR_HOME="${SOLAR_HOME:-$HOME/.solar}"
-CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
+config_value() {
+    key="$1"
+    file="$2"
+    [ -f "$file" ] || return 1
+    while IFS= read -r line; do
+        case "$line" in
+            "$key="*) printf '%s\n' "${line#*=}"; return 0 ;;
+            "export $key="*) printf '%s\n' "${line#*=}"; return 0 ;;
+        esac
+    done < "$file"
+    return 1
+}
+
+receipt_value() {
+    file="$1"
+    key="$2"
+    [ -f "$file" ] || return 1
+    command -v python3 >/dev/null 2>&1 || return 1
+    python3 - "$file" "$key" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    value = json.load(f).get(sys.argv[2], "")
+if value:
+    print(value)
+else:
+    raise SystemExit(1)
+PY
+}
+
+resolve_script_dir() {
+    script="$0"
+    case "$script" in
+        */*) ;;
+        *)
+            found="$(command -v -- "$script" 2>/dev/null || true)"
+            [ -n "$found" ] && script="$found"
+            ;;
+    esac
+    while [ -L "$script" ]; do
+        script_dir="$(CDPATH= cd -- "$(dirname -- "$script")" && pwd -P)"
+        link="$(readlink "$script")" || break
+        case "$link" in
+            /*) script="$link" ;;
+            *) script="$script_dir/$link" ;;
+        esac
+    done
+    CDPATH= cd -- "$(dirname -- "$script")" && pwd -P
+}
+
+SCRIPT_DIR="$(resolve_script_dir)"
+SCRIPT_SOLAR_HOME=""
+if [ "$(basename -- "$SCRIPT_DIR")" = "bin" ]; then
+    candidate_home="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd -P)"
+    if [ -f "$candidate_home/install-receipt.json" ] || [ -f "$candidate_home/config.env" ]; then
+        SCRIPT_SOLAR_HOME="$candidate_home"
+    fi
+fi
+
+SOLAR_HOME="${SOLAR_HOME:-${SCRIPT_SOLAR_HOME:-$HOME/.solar}}"
 RECEIPT_PATH="$SOLAR_HOME/install-receipt.json"
+if [ -z "${CLAUDE_DIR:-}" ]; then
+    CLAUDE_DIR="$(config_value CLAUDE_DIR "$SOLAR_HOME/config.env" 2>/dev/null || true)"
+fi
+if [ -z "${CLAUDE_DIR:-}" ]; then
+    CLAUDE_DIR="$(receipt_value "$RECEIPT_PATH" claude_dir 2>/dev/null || true)"
+fi
+CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
 
 usage() {
     cat <<'EOF'

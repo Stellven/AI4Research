@@ -6,16 +6,18 @@ if ! command -v bun >/dev/null 2>&1; then
     exit 127
 fi
 
+script_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)"
 if [ -n "${SOLAR_HOME:-}" ] && [ -f "$SOLAR_HOME/core/daemon/server.ts" ]; then
     cd "$SOLAR_HOME"
-elif [ -f "$(cd "$(dirname "$0")/.." && pwd)/core/daemon/server.ts" ]; then
-    cd "$(cd "$(dirname "$0")/.." && pwd)"
+elif [ -f "$script_root/core/daemon/server.ts" ]; then
+    SOLAR_HOME="$script_root"
+    cd "$SOLAR_HOME"
 else
     echo "core runtime not found. Re-run install.sh with --components core-runtime." >&2
     exit 1
 fi
 
-export SOLAR_HOME="${SOLAR_HOME:-$HOME/.solar}"
+export SOLAR_HOME
 export SOLAR_DB_PATH="${SOLAR_DB_PATH:-$SOLAR_HOME/db/solar.db}"
 
 exec bun run core/daemon/server.ts "$@"

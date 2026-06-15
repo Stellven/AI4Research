@@ -53,6 +53,19 @@ run_uninstall() {
     assert_empty_home "$home" "uninstall"
 }
 
+assert_doctor_ok() {
+    doctor_json="$1"
+    python3 - "$doctor_json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+if data.get("verdict") != "ok":
+    raise SystemExit(f"doctor verdict is not ok: {data!r}")
+PY
+}
+
 echo "== --yes path remains non-prompting =="
 home="$sandbox/yes"
 mkdir -p "$home"
@@ -80,6 +93,45 @@ HOME="$home" "$repo_dir/install.sh" \
 assert_components "$home" "kernel,harness"
 run_uninstall "$home"
 echo "--components path: ok"
+
+echo "== full-path solar discovers custom install roots =="
+home="$sandbox/custom-root-home"
+solar_root="$sandbox/custom root/solar home"
+claude_root="$sandbox/custom root/claude dir"
+mkdir -p "$home"
+HOME="$home" "$repo_dir/install.sh" \
+    --yes --components kernel \
+    --solar-home "$solar_root" \
+    --claude-dir "$claude_root" \
+    --fake-keys --skip-llm-cli --skip-py-deps \
+    </dev/null >/dev/null
+(unset SOLAR_HOME CLAUDE_DIR RECEIPT_PATH; HOME="$home" "$solar_root/bin/solar" doctor --json > "$sandbox/custom-root-doctor.json")
+assert_doctor_ok "$sandbox/custom-root-doctor.json"
+
+override_home="$sandbox/custom-root-override-home"
+override_solar="$sandbox/custom override/solar home"
+override_claude="$sandbox/custom override/claude dir"
+mkdir -p "$override_home"
+HOME="$override_home" "$repo_dir/install.sh" \
+    --yes --components kernel \
+    --solar-home "$override_solar" \
+    --claude-dir "$override_claude" \
+    --fake-keys --skip-llm-cli --skip-py-deps \
+    </dev/null >/dev/null
+HOME="$home" SOLAR_HOME="$override_solar" CLAUDE_DIR="$override_claude" \
+    "$solar_root/bin/solar" doctor --json > "$sandbox/custom-root-override-doctor.json"
+assert_doctor_ok "$sandbox/custom-root-override-doctor.json"
+
+(unset SOLAR_HOME CLAUDE_DIR RECEIPT_PATH; HOME="$home" "$solar_root/bin/solar" uninstall --yes >/dev/null)
+HOME="$override_home" SOLAR_HOME="$override_solar" CLAUDE_DIR="$override_claude" \
+    "$override_solar/bin/solar" uninstall --yes >/dev/null
+[ ! -e "$solar_root" ] || { echo "custom-root FAILED: self-located uninstall left $solar_root" >&2; exit 1; }
+[ ! -e "$claude_root" ] || { echo "custom-root FAILED: self-located uninstall left $claude_root" >&2; exit 1; }
+[ ! -e "$override_solar" ] || { echo "custom-root FAILED: env override uninstall left $override_solar" >&2; exit 1; }
+[ ! -e "$override_claude" ] || { echo "custom-root FAILED: env override uninstall left $override_claude" >&2; exit 1; }
+assert_empty_home "$home" "custom-root-home"
+assert_empty_home "$override_home" "custom-root-override-home"
+echo "custom-root full-path discovery: ok"
 
 echo "== --set required vars remain pre-provided =="
 home="$sandbox/set-vars"
