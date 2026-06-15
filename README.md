@@ -137,6 +137,8 @@ See:
 
 - [INSTALL.md](INSTALL.md) for components, flags, install layout, and lifecycle
   commands.
+- [docs/FIRST-SESSION.md](docs/FIRST-SESSION.md) for the first install,
+  cockpit, intake, and model-selection walkthrough.
 - [docs/COMPONENTS.md](docs/COMPONENTS.md) for the generated component list.
 - [docs/UNINSTALL.md](docs/UNINSTALL.md) for residue-free uninstall behavior.
 - [docs/WINDOWS.md](docs/WINDOWS.md) for the deferred WSL2 bootstrap path.
