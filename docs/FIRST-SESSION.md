@@ -37,7 +37,7 @@ Expected `solar status` output:
 OpenSolar status
 Install
   health: ok
-  version: 1.0.0-rc.2
+  version: 1.0.0-rc.3
   channel: stable
   components: kernel,harness
 Runtime

@@ -31,7 +31,7 @@ except Exception:
 
 def compute_version(src):
     # Real release identity, most-specific first:
-    #   1. an ancestor git tag (e.g. v1.0.0-rc.2-13-gabc123) -- only when the
+    #   1. an ancestor git tag (e.g. v1.0.0-rc.3-13-gabc123) -- only when the
     #      install source is a full checkout whose history carries the tag;
     #   2. the tracked VERSION file -- the release-controlled baseline that
     #      ships in every channel, including shallow/tagless `stable` clones
@@ -39,7 +39,7 @@ def compute_version(src):
     #   3. "unknown" -- never the old hardcoded "p1-alpha" lie.
     try:
         described = subprocess.check_output(
-            # Only real release tags (v1.2.3 / v1.0.0-rc.2). --match excludes
+            # Only real release tags (v1.2.3 / v1.0.0-rc.3). --match excludes
             # junk ancestors like archive/* so a dev branch with no version-tag
             # ancestor falls through to the VERSION file instead of reporting a
             # misleading nearest-tag string.

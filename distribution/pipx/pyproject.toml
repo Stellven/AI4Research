@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openjiuwen-solar"
-version = "1.0.0rc2"
+version = "1.0.0rc3"
 description = "OpenJiuwen Solar installer wrapper for the shell bootstrap and lifecycle command"
 readme = "README.md"
 requires-python = ">=3.11"

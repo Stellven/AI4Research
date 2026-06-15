@@ -8,11 +8,11 @@ push release branches, or create a GitHub Release.
 Current release candidate:
 
 ```bash
-VERSION=1.0.0-rc.2
-PYPI_VERSION=1.0.0rc2
-TAG=v1.0.0-rc.2
-RELEASE_BRANCH=release/v1.0.0-rc.2
-RELEASE_TITLE="OpenJiuwen Solar v1.0.0-rc.2"
+VERSION=1.0.0-rc.3
+PYPI_VERSION=1.0.0rc3
+TAG=v1.0.0-rc.3
+RELEASE_BRANCH=release/v1.0.0-rc.3
+RELEASE_TITLE="OpenJiuwen Solar v1.0.0-rc.3"
 ```
 
 ## 1. Start From The Reviewed Candidate
@@ -87,8 +87,8 @@ cd ../..
 Expected artifacts:
 
 ```text
-distribution/pipx/dist/openjiuwen_solar-1.0.0rc2-py3-none-any.whl
-distribution/pipx/dist/openjiuwen_solar-1.0.0rc2.tar.gz
+distribution/pipx/dist/openjiuwen_solar-1.0.0rc3-py3-none-any.whl
+distribution/pipx/dist/openjiuwen_solar-1.0.0rc3.tar.gz
 ```
 
 ## 4. Verify The Built Wheel In A Sandbox
@@ -191,7 +191,7 @@ Create release notes for the GitHub Release:
 
 ```bash
 cat > release-artifacts/RELEASE_NOTES.md <<'EOF'
-OpenJiuwen Solar v1.0.0-rc.2
+OpenJiuwen Solar v1.0.0-rc.3
 
 Release candidate for the public OpenJiuwen Solar package.
 
