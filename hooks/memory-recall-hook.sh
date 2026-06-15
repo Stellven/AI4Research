@@ -189,27 +189,29 @@ fi
 
 HONCHO_BASE="${HONCHO_BASE_URL:-http://localhost:8900}"
 HONCHO_WORKSPACE="${HONCHO_WORKSPACE_ID:-solar-farm}"
-HONCHO_USER_PEER="haoge"
+HONCHO_USER_PEER="${HONCHO_USER_PEER_ID:-${HONCHO_PEER_ID:-}}"
 
 # Honcho Dialectic provides REASONED recall (complementary to Mem0's keyword recall)
-# Always runs — Mem0 gives keyword matches, Honcho gives reasoned analysis
-(
-    HONCHO_RESULT=$(curl -s --connect-timeout 3 --max-time 10 -X POST \
-        "${HONCHO_BASE}/v3/workspaces/${HONCHO_WORKSPACE}/peers/${HONCHO_USER_PEER}/chat" \
-        -H "Content-Type: application/json" \
-        -d "$(jq -n --arg query "$PROMPT" '{
-            query: $query,
-            stream: false,
-            level: "low"
-        }')" 2>/dev/null)
+# Runs when HONCHO_USER_PEER_ID or HONCHO_PEER_ID is configured.
+if [[ -n "$HONCHO_USER_PEER" ]]; then
+    (
+        HONCHO_RESULT=$(curl -s --connect-timeout 3 --max-time 10 -X POST \
+            "${HONCHO_BASE}/v3/workspaces/${HONCHO_WORKSPACE}/peers/${HONCHO_USER_PEER}/chat" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg query "$PROMPT" '{
+                query: $query,
+                stream: false,
+                level: "low"
+            }')" 2>/dev/null)
 
-    if [[ -n "$HONCHO_RESULT" ]]; then
-        HONCHO_CONTENT=$(echo "$HONCHO_RESULT" | jq -r '.content // ""' 2>/dev/null)
-        if [[ -n "$HONCHO_CONTENT" && ${#HONCHO_CONTENT} -gt 20 ]]; then
-            echo "[Honcho记忆] ${HONCHO_CONTENT}"
+        if [[ -n "$HONCHO_RESULT" ]]; then
+            HONCHO_CONTENT=$(echo "$HONCHO_RESULT" | jq -r '.content // ""' 2>/dev/null)
+            if [[ -n "$HONCHO_CONTENT" && ${#HONCHO_CONTENT} -gt 20 ]]; then
+                echo "[Honcho记忆] ${HONCHO_CONTENT}"
+            fi
         fi
-    fi
-) &
+    ) &
+fi
 
 # Wait for background Honcho (max 10s)
 wait

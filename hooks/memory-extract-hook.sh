@@ -152,19 +152,21 @@ echo $((COUNT + 1)) > "$COUNTER_FILE"
     HONCHO_BASE="${HONCHO_BASE_URL:-http://localhost:8900}"
     HONCHO_WS="${HONCHO_WORKSPACE_ID:-solar-farm}"
     HONCHO_SESSION="session-$(date +%Y%m%d)"
-    HONCHO_PEER="haoge"
+    HONCHO_PEER="${HONCHO_PEER_ID:-}"
 
-    # Write content as message to Honcho (Deriver will process it async)
-    curl -s --connect-timeout 3 --max-time 10 -X POST \
-        "${HONCHO_BASE}/v3/workspaces/${HONCHO_WS}/sessions/${HONCHO_SESSION}/messages" \
-        -H "Content-Type: application/json" \
-        -d "$(jq -n --arg content "$CONTENT" --arg peer "$HONCHO_PEER" '{
-            messages: [{
-                content: $content,
-                peer_id: $peer,
-                sender: $peer
-            }]
-        }')" >/dev/null 2>&1 || true
+    if [[ -n "$HONCHO_PEER" ]]; then
+        # Write content as message to Honcho (Deriver will process it async)
+        curl -s --connect-timeout 3 --max-time 10 -X POST \
+            "${HONCHO_BASE}/v3/workspaces/${HONCHO_WS}/sessions/${HONCHO_SESSION}/messages" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg content "$CONTENT" --arg peer "$HONCHO_PEER" '{
+                messages: [{
+                    content: $content,
+                    peer_id: $peer,
+                    sender: $peer
+                }]
+            }')" >/dev/null 2>&1 || true
+    fi
 
     # ============================================================
     # MemPalace Drawer Write (parallel, fire-and-forget)
