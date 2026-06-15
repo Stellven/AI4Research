@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any, Generator
@@ -47,7 +48,7 @@ except ModuleNotFoundError:  # status-server.py uses the pure builders without F
     Blueprint = _NoopBlueprint  # type: ignore[assignment]
     request = _Request()  # type: ignore[assignment]
 
-HARNESS_DIR = Path.home() / ".solar" / "harness"
+HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", str(Path.home() / ".solar" / "harness"))).expanduser()
 SCRIPT_HARNESS_DIR = Path(__file__).resolve().parents[2]
 SPRINTS_DIR = HARNESS_DIR / "sprints"
 STATE_DIR = HARNESS_DIR / "state"
@@ -109,9 +110,97 @@ def _load_status_by_sprint(sid: str) -> dict:
     return data if ok and isinstance(data, dict) else {}
 
 
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    seen: set[str] = set()
+    out: list[Path] = []
+    for path in paths:
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(path)
+    return out
+
+
+def _task_graph_candidate_paths(sid: str) -> list[Path]:
+    """Return supported sprint DAG artifact paths, newest and legacy names.
+
+    Sprint artifacts have not used one stable filename across all harness
+    sprints. Keep this read-only dashboard tolerant: prefer canonical graph
+    files, then state/closure/spec fallbacks, then narrow same-sprint globs.
+    """
+    sid = str(sid or "").strip()
+    if not sid:
+        return []
+    top_level_names = [
+        f"{sid}.task_graph.json",
+        f"{sid}.task_graph.state.json",
+        f"{sid}.task_graph.spec.json",
+        f"{sid}.task_dag.json",
+        f"{sid}.task_dag.state.json",
+        f"{sid}.task_dag.closure.json",
+        f"{sid}.closure.json",
+    ]
+    nested_names = [
+        "task_graph.json",
+        "task_graph.state.json",
+        "task_graph.spec.json",
+        "task_dag.json",
+        "task_dag.state.json",
+        "task_dag.closure.json",
+        "closure.json",
+    ]
+    candidates = [SPRINTS_DIR / name for name in top_level_names]
+    for root in (SPRINTS_DIR / sid, SPRINTS_DIR / sid / ".pm", SPRINTS_DIR / sid / "state"):
+        candidates.extend(root / name for name in nested_names)
+    for pattern in (
+        f"{sid}*task_graph*.json",
+        f"{sid}*task_dag*.json",
+        f"{sid}*closure*.json",
+    ):
+        try:
+            candidates.extend(sorted(SPRINTS_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True))
+        except OSError:
+            continue
+    return _dedupe_paths(candidates)
+
+
+def _normalize_task_graph_payload(data: Any) -> dict:
+    if not isinstance(data, dict):
+        return {}
+    if isinstance(data.get("nodes"), list):
+        return data
+    for key in ("task_graph", "task_dag", "graph", "dag"):
+        nested = data.get(key)
+        if isinstance(nested, dict) and isinstance(nested.get("nodes"), list):
+            out = dict(nested)
+            for inherited in ("sprint_id", "required_gates", "runtime_state"):
+                if inherited not in out and inherited in data:
+                    out[inherited] = data[inherited]
+            return out
+    if isinstance(data.get("node_results"), dict) or isinstance(data.get("gate_results"), dict):
+        out = dict(data)
+        out.setdefault("runtime_state", {
+            "nodes": data.get("node_results") or {},
+            "gates": data.get("gate_results") or {},
+        })
+        return out
+    return data
+
+
+def _existing_task_graph_path(sid: str) -> Path:
+    for path in _task_graph_candidate_paths(sid):
+        if path.exists() and path.is_file():
+            return path
+    return SPRINTS_DIR / f"{sid}.task_graph.json"
+
+
 def _load_task_graph(sid: str) -> tuple[dict, bool]:
-    data, ok = _read_json(SPRINTS_DIR / f"{sid}.task_graph.json")
-    return (data if ok and isinstance(data, dict) else {}, ok)
+    for path in _task_graph_candidate_paths(sid):
+        data, ok = _read_json(path)
+        if ok and isinstance(data, dict):
+            return _normalize_task_graph_payload(data), True
+    return {}, False
 
 
 def _display_path(path: Path) -> str:
@@ -373,7 +462,7 @@ def _diagnostic_guidance(kind: str, subject: str) -> list[str]:
         ]
     if kind == "task_graph":
         return [
-            "Restore or regenerate the sprint .task_graph.json artifact.",
+            "Restore or regenerate the sprint DAG artifact (task_graph/task_dag/closure variants are accepted).",
             "Run solar-harness graph-scheduler validate --graph <task_graph.json>.",
             "Do not dispatch implementation work until the graph validates.",
         ]
@@ -390,7 +479,7 @@ def _build_blocker_diagnostics(sid: str, status: dict, nodes: list[dict], node_c
             "severity": "error",
             "kind": "task_graph",
             "title": "Task graph missing",
-            "detail": f"{sid}.task_graph.json is missing or invalid.",
+            "detail": f"No supported task graph artifact was found for {sid}.",
             "guidance": _diagnostic_guidance("task_graph", sid),
         })
 
@@ -468,7 +557,7 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
         "phase": status.get("phase", ""),
         "generated_from": {
             "status_json": _display_path(SPRINTS_DIR / f"{sid}.status.json") if sid else "",
-            "task_graph_json": _display_path(SPRINTS_DIR / f"{sid}.task_graph.json") if sid else "",
+            "task_graph_json": _display_path(_existing_task_graph_path(sid)) if sid else "",
             "autopilot_state": _display_path(STATE_DIR / "autopilot-state.json"),
             "pane_state": _display_path(STATE_DIR / "pane-state.json"),
         },
@@ -635,10 +724,20 @@ def list_epics():
     return jsonify(_envelope({"epics": epics}, degraded))
 
 
+def _template_path(name: str) -> Path | None:
+    for root in (HARNESS_DIR / "status-server" / "templates", SCRIPT_HARNESS_DIR / "status-server" / "templates"):
+        path = root / name
+        if path.exists() and path.is_file():
+            return path
+    return None
+
+
 @orchestration_bp.route("", methods=["GET"])
 @orchestration_bp.route("/", methods=["GET"])
 def dashboard_page():
-    template_path = HARNESS_DIR / "status-server" / "templates" / "orchestration_panel.html"
+    template_path = _template_path("orchestration_panel.html")
+    if template_path is None:
+        return jsonify({"ok": False, "error": "orchestration template missing"}), 500
     try:
         return Response(template_path.read_text(encoding="utf-8"), mimetype="text/html")
     except OSError:

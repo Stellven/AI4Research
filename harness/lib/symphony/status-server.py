@@ -64,6 +64,12 @@ PANE_ASSIGNMENTS = HARNESS_DIR / ".pane-assignments"
 PANE_ASSIGNMENTS_JSON = HARNESS_DIR / ".pane-assignments.json"
 PANE_HYGIENE_JSON = HARNESS_DIR / "run" / "pane-hygiene.json"
 MERMAID_DIST = HARNESS_DIR / "vendor" / "mermaid-viewer" / "node_modules" / "mermaid" / "dist"
+STATUS_SERVER_DIR = HARNESS_DIR / "status-server"
+STATUS_SERVER_STATIC_DIR = STATUS_SERVER_DIR / "static"
+STATUS_SERVER_TEMPLATES_DIR = STATUS_SERVER_DIR / "templates"
+SOURCE_STATUS_SERVER_DIR = Path(__file__).resolve().parents[2] / "status-server"
+SOURCE_STATUS_SERVER_STATIC_DIR = SOURCE_STATUS_SERVER_DIR / "static"
+SOURCE_STATUS_SERVER_TEMPLATES_DIR = SOURCE_STATUS_SERVER_DIR / "templates"
 INTEGRATIONS_HEALTH = HARNESS_DIR / "lib" / "external-integrations-health.py"
 KNOWLEDGE_PROBE_HEALTH = HARNESS_DIR / "state" / "knowledge-probe-health.json"
 KNOWLEDGE_DIR = Path(os.environ.get("OBSIDIAN_VAULT_PATH", str(Path.home() / "Knowledge")))
@@ -209,11 +215,22 @@ def _read_jsonl(path: Path, limit: int = 50, sprint_id: str = "", filter_synthet
 
 
 def _runtime_events_path(sprint_id: str) -> Path:
-    """Prefer session-log v2 events, fall back to legacy sprint events."""
+    """Prefer session-log v2 events, fall back to legacy sprint/global events."""
     session_path = SESSIONS_DIR / sprint_id / "events.jsonl"
     if session_path.exists():
         return session_path
-    return SPRINTS_DIR / f"{sprint_id}.events.jsonl"
+    sprint_path = SPRINTS_DIR / f"{sprint_id}.events.jsonl"
+    if sprint_path.exists():
+        return sprint_path
+    return ALL_EVENTS
+
+
+def _events_for_request(sprint_id: str, limit: int = 50) -> list:
+    """Read recent events using the same session-first source order as /status."""
+    sid = str(sprint_id or "").strip()
+    src = _runtime_events_path(sid) if sid else ALL_EVENTS
+    filter_sid = sid if src == ALL_EVENTS else ""
+    return _read_jsonl(src, limit=limit, sprint_id=filter_sid)
 
 
 def _safe_rel(path: Path, root: Path) -> str:
@@ -323,6 +340,364 @@ def _asset_path(raw: str):
     if path.exists() and path.is_file():
         return path
     return None
+
+
+def _status_server_path(kind: str, rel: str) -> Path | None:
+    rel = urllib.parse.unquote(rel or "").lstrip("/")
+    if not rel:
+        return None
+    if kind == "static":
+        roots = [STATUS_SERVER_STATIC_DIR, SOURCE_STATUS_SERVER_STATIC_DIR]
+    elif kind == "templates":
+        roots = [STATUS_SERVER_TEMPLATES_DIR, SOURCE_STATUS_SERVER_TEMPLATES_DIR]
+    elif kind == "routes":
+        roots = [STATUS_SERVER_DIR / "routes", SOURCE_STATUS_SERVER_DIR / "routes"]
+    else:
+        return None
+    for root in roots:
+        try:
+            path = (root / rel).resolve()
+        except OSError:
+            continue
+        if _is_within(path, root) and path.exists() and path.is_file():
+            return path
+    return None
+
+
+def _static_content_type(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix == ".css":
+        return "text/css; charset=utf-8"
+    if suffix == ".js":
+        return "application/javascript; charset=utf-8"
+    if suffix == ".html":
+        return "text/html; charset=utf-8"
+    if suffix == ".json":
+        return "application/json; charset=utf-8"
+    if suffix == ".svg":
+        return "image/svg+xml"
+    if suffix == ".png":
+        return "image/png"
+    if suffix in (".jpg", ".jpeg"):
+        return "image/jpeg"
+    return "application/octet-stream"
+
+
+def _p0_dashboard_html() -> str:
+    template = _status_server_path("templates", "p0_dashboard.html")
+    if template:
+        return template.read_text(encoding="utf-8")
+    return """<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar Harness Status</title></head>
+<body><h1>Solar Harness Status</h1><p>P0 dashboard template missing.</p></body></html>"""
+
+
+def _load_orchestration_routes_module():
+    routes_path = _status_server_path("routes", "orchestration_routes.py")
+    if not routes_path:
+        raise FileNotFoundError("orchestration_routes.py missing")
+    spec = importlib.util.spec_from_file_location("solar_orchestration_routes_status", str(routes_path))
+    if spec is None or spec.loader is None:
+        raise RuntimeError("unable to load orchestration_routes.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    # Keep dynamically imported route builders aligned with this server's root.
+    mod.HARNESS_DIR = HARNESS_DIR
+    mod.SPRINTS_DIR = SPRINTS_DIR
+    mod.STATE_DIR = HARNESS_DIR / "state"
+    return mod
+
+
+def _orchestration_dashboard_payload(sprint_id: str = "") -> dict:
+    mod = _load_orchestration_routes_module()
+    data, degraded = mod.build_dashboard_payload(sprint_id or None)
+    return {
+        "ok": True,
+        "schema_version": getattr(mod, "SCHEMA_VERSION", "solar.orchestration.v1"),
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "degraded_sources": degraded or [],
+        "data": data,
+    }
+
+
+def _extract_intake_id(text: str) -> str:
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", text or "")
+    patterns = (
+        r"Sprint created:\s*(\S+)",
+        r"Epic:\s*(\S+)",
+        r'"sprint_id"\s*:\s*"([^"]+)"',
+        r'"epic_id"\s*:\s*"([^"]+)"',
+    )
+    for pattern in patterns:
+        match = re.search(pattern, clean)
+        if match:
+            return match.group(1).strip()
+    return ""
+
+
+def _latest_sprint_id_after(after_ts: float) -> str:
+    rows: list[tuple[float, str]] = []
+    try:
+        paths = list(SPRINTS_DIR.glob("*.status.json"))
+    except OSError:
+        paths = []
+    for path in paths:
+        try:
+            mtime = path.stat().st_mtime
+            if mtime + 2.0 < after_ts:
+                continue
+            data = json.loads(path.read_text(encoding="utf-8"))
+            sid = str(data.get("sprint_id") or data.get("id") or path.name.removesuffix(".status.json"))
+            rows.append((mtime, sid))
+        except Exception:
+            continue
+    rows.sort(reverse=True)
+    return rows[0][1] if rows else ""
+
+
+def _intake_command(task: str) -> list[str]:
+    solar = shutil.which("solar")
+    if solar:
+        return [solar, "harness", "intake", "--request", task]
+    local_solar = Path.home() / ".solar" / "bin" / "solar"
+    if local_solar.exists():
+        return [str(local_solar), "harness", "intake", "--request", task]
+    harness = shutil.which("solar-harness")
+    if harness:
+        return [harness, "intake", "--request", task]
+    harness_sh = HARNESS_DIR / "solar-harness.sh"
+    return [str(harness_sh), "intake", "--request", task]
+
+
+def _intake_payload(data: dict) -> dict:
+    task = str(data.get("task") or data.get("request") or "").strip()
+    if not task:
+        return {"ok": False, "status": "error", "error": "missing_task"}
+    if len(task) > 12000:
+        return {"ok": False, "status": "error", "error": "task_too_long", "max_chars": 12000}
+    cmd = _intake_command(task)
+    if not Path(cmd[0]).exists() and shutil.which(cmd[0]) is None:
+        return {"ok": False, "status": "error", "error": "intake_cli_not_found", "command": cmd[0]}
+    before = time.time()
+    env = dict(os.environ)
+    env["HARNESS_DIR"] = str(HARNESS_DIR)
+    try:
+        proc = subprocess.run(
+            cmd,
+            text=True,
+            capture_output=True,
+            timeout=180,
+            cwd=os.getcwd(),
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        output = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") + "\n" + ((exc.stderr or "") if isinstance(exc.stderr, str) else "")
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "intake_timeout",
+            "sprint_id": _extract_intake_id(output) or _latest_sprint_id_after(before),
+            "stdout_tail": output[-4000:],
+        }
+    output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
+    sprint_id = _extract_intake_id(output) or _latest_sprint_id_after(before)
+    return {
+        "ok": proc.returncode == 0,
+        "status": "ok" if proc.returncode == 0 else "error",
+        "sprint_id": sprint_id,
+        "returncode": proc.returncode,
+        "command": " ".join(cmd[:3]),
+        "stdout_tail": output[-4000:],
+    }
+
+
+def _compact_number(value: int) -> str:
+    try:
+        number = int(value)
+    except Exception:
+        return "N/A"
+    if number >= 1_000_000:
+        return f"{number / 1_000_000:.1f}M"
+    if number >= 1_000:
+        return f"{number / 1_000:.1f}K"
+    return str(number)
+
+
+def _quota_footer_cache_rows() -> list[dict]:
+    cache_dir = HARNESS_DIR / "state" / "quota-footer"
+    today = datetime.datetime.now().astimezone().date().isoformat()
+    rows = []
+    try:
+        paths = sorted(cache_dir.glob("*.json"))
+    except OSError:
+        paths = []
+    for path in paths:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if str(data.get("date") or "") != today:
+            continue
+        tokens = int(data.get("used_tokens") or 0)
+        rows.append({
+            "model_key": str(data.get("model_key") or path.stem),
+            "date": data.get("date") or today,
+            "used_tokens": tokens,
+            "used_tokens_label": _compact_number(tokens),
+            "cache_path": _safe_rel(path, HARNESS_DIR),
+            "mtime": path.stat().st_mtime if path.exists() else 0,
+        })
+    rows.sort(key=lambda item: (-int(item.get("used_tokens") or 0), str(item.get("model_key") or "")))
+    return rows
+
+
+def _refresh_quota_footer_cache() -> list[dict]:
+    script = HARNESS_DIR / "quota-footer.sh"
+    if not script.exists():
+        return [{"ok": False, "error": "quota-footer.sh missing", "path": str(script)}]
+    attempts = []
+    for persona in ("pm", "planner", "builder", "evaluator"):
+        try:
+            proc = subprocess.run(
+                ["bash", str(script), persona, persona],
+                text=True,
+                capture_output=True,
+                timeout=12,
+                env={**os.environ, "HARNESS_DIR": str(HARNESS_DIR)},
+            )
+            attempts.append({"persona": persona, "ok": proc.returncode == 0, "returncode": proc.returncode})
+        except Exception as exc:
+            attempts.append({"persona": persona, "ok": False, "error": f"{type(exc).__name__}: {exc}"})
+    return attempts
+
+
+def _usage_payload(refresh: bool = False) -> dict:
+    rows = _quota_footer_cache_rows()
+    refresh_attempts = []
+    if refresh or not rows:
+        refresh_attempts = _refresh_quota_footer_cache()
+        rows = _quota_footer_cache_rows()
+    total = sum(int(row.get("used_tokens") or 0) for row in rows)
+    return {
+        "ok": True,
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "source": "Claude log scan / quota-footer",
+        "source_path": _safe_rel(HARNESS_DIR / "quota-footer.sh", HARNESS_DIR),
+        "scope": "model-day estimate",
+        "not_per_sprint": True,
+        "not_per_agent": True,
+        "label": "source: Claude log scan / quota-footer; scope: model-day estimate; not per-sprint or per-agent",
+        "total_used_tokens": total,
+        "total_used_tokens_label": _compact_number(total),
+        "models": rows,
+        "refresh_attempts": refresh_attempts,
+    }
+
+
+def _valid_sprint_id(sid: str) -> bool:
+    return bool(re.match(r"^[A-Za-z0-9._-]+$", sid or ""))
+
+
+def _deliverable_content_type(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in (".html", ".htm"):
+        return "text/html; charset=utf-8"
+    if suffix in (".md", ".markdown"):
+        return "text/markdown; charset=utf-8"
+    if suffix == ".json":
+        return "application/json; charset=utf-8"
+    if suffix in (".txt", ".log"):
+        return "text/plain; charset=utf-8"
+    if suffix == ".pdf":
+        return "application/pdf"
+    if suffix == ".png":
+        return "image/png"
+    if suffix in (".jpg", ".jpeg"):
+        return "image/jpeg"
+    return "application/octet-stream"
+
+
+def _discover_sprint_deliverables(sid: str) -> list[dict]:
+    if not _valid_sprint_id(sid):
+        return []
+    allowed_suffixes = {".html", ".htm", ".md", ".markdown", ".json", ".txt", ".log", ".pdf", ".png", ".jpg", ".jpeg"}
+    candidates: list[Path] = []
+    try:
+        for pattern in (f"{sid}*.html", f"{sid}*.htm", f"{sid}*.md", f"{sid}*.json"):
+            candidates.extend(SPRINTS_DIR.glob(pattern))
+    except OSError:
+        pass
+    roots = [
+        SPRINTS_DIR / sid / ".research",
+        SPRINTS_DIR / f"{sid}.research",
+        SPRINTS_DIR / sid,
+        REPORTS_DIR / sid,
+    ]
+    for root in roots:
+        if not root.exists() or not root.is_dir():
+            continue
+        try:
+            for path in root.rglob("*"):
+                if path.is_file() and path.suffix.lower() in allowed_suffixes:
+                    candidates.append(path)
+        except OSError:
+            continue
+    rows = []
+    seen: set[str] = set()
+    for path in candidates:
+        try:
+            resolved = path.resolve()
+            if not any(_is_within(resolved, root) for root in (SPRINTS_DIR, REPORTS_DIR)):
+                continue
+            if resolved.suffix.lower() not in allowed_suffixes:
+                continue
+            key = _safe_rel(resolved, HARNESS_DIR)
+            if key in seen:
+                continue
+            seen.add(key)
+            stat = resolved.stat()
+            rows.append({
+                "name": resolved.name,
+                "rel_path": key,
+                "kind": resolved.suffix.lower().lstrip(".") or "file",
+                "size": stat.st_size,
+                "mtime": stat.st_mtime,
+                "view_url": f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(key)}",
+            })
+        except OSError:
+            continue
+    rows.sort(key=lambda item: (-float(item.get("mtime") or 0), str(item.get("name") or "")))
+    return rows
+
+
+def _resolve_sprint_deliverable(sid: str, raw_path: str) -> Path | None:
+    if not _valid_sprint_id(sid):
+        return None
+    raw = urllib.parse.unquote(raw_path or "").strip()
+    if not raw:
+        return None
+    candidate = Path(raw)
+    if not candidate.is_absolute():
+        candidate = HARNESS_DIR / candidate
+    try:
+        candidate = candidate.resolve()
+    except OSError:
+        return None
+    allowed = {item["rel_path"] for item in _discover_sprint_deliverables(sid)}
+    if _safe_rel(candidate, HARNESS_DIR) not in allowed:
+        return None
+    return candidate if candidate.exists() and candidate.is_file() else None
+
+
+def _sprint_deliverables_payload(sid: str) -> dict:
+    return {
+        "ok": _valid_sprint_id(sid),
+        "sprint_id": sid,
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "items": _discover_sprint_deliverables(sid),
+    }
 
 
 def _read_text_prefix(path: Path, limit_bytes: int = 8192) -> str:
@@ -8558,12 +8933,42 @@ def _collector_scheduler_update(data: dict) -> dict:
     return {"ok": True, "status": "ok", "task": _collector_task_payload(defn), "operations": operations}
 
 
+def _status_payload_signature(sprint_id: str) -> tuple[int, int]:
+    sid = str(sprint_id or "").strip()
+    if sid:
+        path = SPRINTS_DIR / f"{sid}.status.json"
+        try:
+            stat = path.stat()
+            return (1, stat.st_mtime_ns)
+        except OSError:
+            return (0, 0)
+    count = 0
+    newest = 0
+    try:
+        paths = list(SPRINTS_DIR.glob("*.status.json"))
+    except OSError:
+        paths = []
+    for path in paths:
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        count += 1
+        newest = max(newest, stat.st_mtime_ns)
+    return (count, newest)
+
+
 def _status_payload(limit: int = 50, sprint_id: str = "") -> dict:
     requested_sid = str(sprint_id or "").strip()
     cache_key = f"{requested_sid}|{limit}"
     now = time.monotonic()
+    status_signature = _status_payload_signature(requested_sid)
     cached = _STATUS_PAYLOAD_CACHE.get(cache_key)
-    if cached and now - cached.get("ts", 0.0) <= _STATUS_PAYLOAD_CACHE_TTL_SECONDS:
+    if (
+        cached
+        and now - cached.get("ts", 0.0) <= _STATUS_PAYLOAD_CACHE_TTL_SECONDS
+        and cached.get("status_signature") == status_signature
+    ):
         payload = dict(cached.get("value") or {})
         payload["status_cache"] = "hit"
         return payload
@@ -8616,7 +9021,7 @@ def _status_payload(limit: int = 50, sprint_id: str = "") -> dict:
         "requirement_coverage": _requirement_coverage_summary(requested_sid or current.get("sprint_id", "")),
         "status_cache": "miss",
     }
-    _STATUS_PAYLOAD_CACHE[cache_key] = {"ts": time.monotonic(), "value": dict(payload)}
+    _STATUS_PAYLOAD_CACHE[cache_key] = {"ts": time.monotonic(), "status_signature": status_signature, "value": dict(payload)}
     return payload
 
 
@@ -11925,6 +12330,50 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_sse_events(self, sprint_id: str, limit: int):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        seen_queue: deque[str] = deque(maxlen=max(100, limit * 4))
+        seen_set: set[str] = set()
+        last_heartbeat = 0.0
+
+        def _remember(key: str) -> bool:
+            if key in seen_set:
+                return False
+            if len(seen_queue) == seen_queue.maxlen:
+                old = seen_queue.popleft()
+                seen_set.discard(old)
+            seen_queue.append(key)
+            seen_set.add(key)
+            return True
+
+        def _event_key(event: dict) -> str:
+            return hashlib.sha256(json.dumps(event, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+        try:
+            while True:
+                for event in _events_for_request(sprint_id, limit=limit):
+                    if not isinstance(event, dict):
+                        continue
+                    if not _remember(_event_key(event)):
+                        continue
+                    body = json.dumps(event, ensure_ascii=False, default=str)
+                    self.wfile.write(f"event: solar-event\ndata: {body}\n\n".encode("utf-8"))
+                now = time.monotonic()
+                if now - last_heartbeat > 15:
+                    self.wfile.write(b": heartbeat\n\n")
+                    last_heartbeat = now
+                self.wfile.flush()
+                time.sleep(1.0)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            return
+
     def _read_json_body(self) -> dict:
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -11940,7 +12389,10 @@ class StatusHandler(BaseHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
         try:
             data = self._read_json_body()
-            if path == "/knowledge/subscriptions/youtube":
+            if path == "/intake":
+                payload = _intake_payload(data)
+                self._send_json(payload, status=200 if payload.get("ok") else 400)
+            elif path == "/knowledge/subscriptions/youtube":
                 self._send_json(_append_youtube_subscription(data))
             elif path == "/knowledge/subscriptions/social":
                 self._send_json(_append_social_subscription(data))
@@ -11978,7 +12430,14 @@ class StatusHandler(BaseHTTPRequestHandler):
         params = urllib.parse.parse_qs(parsed.query)
         path = parsed.path.rstrip("/") or "/"
 
-        if path == "/healthz":
+        if path.startswith("/static/"):
+            asset = _status_server_path("static", path.removeprefix("/static/"))
+            if not asset:
+                self._send_json({"error": "asset not found"}, status=404)
+            else:
+                self._send_file(asset, _static_content_type(asset))
+
+        elif path == "/healthz":
             self._send_text("ok")
 
         elif path == "/status":
@@ -12000,6 +12459,13 @@ class StatusHandler(BaseHTTPRequestHandler):
         elif path == "/contract-summary":
             self._send_text(_final_contract_summary_html(), content_type="text/html; charset=utf-8")
 
+        elif path == "/orchestration/dashboard":
+            sprint_id = params.get("sprint_id", [""])[0]
+            try:
+                self._send_json(_orchestration_dashboard_payload(sprint_id))
+            except Exception as exc:
+                self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
+
         elif path.startswith("/research/"):
             sid = path.split("/research/", 1)[1].strip("/")
             routes_path = HARNESS_DIR / "status-server" / "research_routes.py"
@@ -12016,6 +12482,10 @@ class StatusHandler(BaseHTTPRequestHandler):
             except Exception as exc:
                 self._send_json({"error": f"{type(exc).__name__}: {exc}", "sid": sid}, status=500)
 
+        elif path == "/usage":
+            refresh = params.get("refresh", ["0"])[0].lower() in ("1", "true", "yes")
+            self._send_json(_usage_payload(refresh=refresh))
+
         elif path == "/events":
             sprint_id = params.get("sprint_id", [""])[0]
             try:
@@ -12023,12 +12493,14 @@ class StatusHandler(BaseHTTPRequestHandler):
                 limit = max(1, min(limit, 500))
             except ValueError:
                 limit = 50
-            if sprint_id:
-                src = _runtime_events_path(sprint_id)
+            wants_sse = (
+                params.get("stream", ["0"])[0].lower() in ("1", "true", "yes")
+                or "text/event-stream" in str(self.headers.get("Accept", ""))
+            )
+            if wants_sse:
+                self._send_sse_events(sprint_id, limit)
             else:
-                src = ALL_EVENTS
-            events = _read_jsonl(src, limit=limit, sprint_id="")
-            self._send_json(events)
+                self._send_json(_events_for_request(sprint_id, limit=limit))
 
         elif path == "/integrations":
             refresh = params.get("refresh", ["0"])[0].lower() in ("1", "true", "yes")
@@ -12190,6 +12662,22 @@ class StatusHandler(BaseHTTPRequestHandler):
                     content_type = "text/html; charset=utf-8"
                 self._send_text(target.read_text(encoding="utf-8", errors="ignore"), content_type=content_type)
 
+        elif re.match(r"^/sprints/[^/]+/deliverables$", path):
+            sid = urllib.parse.unquote(path.split("/sprints/", 1)[1].split("/deliverables", 1)[0])
+            raw_artifact = params.get("path", [""])[0]
+            if raw_artifact:
+                target = _resolve_sprint_deliverable(sid, raw_artifact)
+                if not target:
+                    self._send_json({"ok": False, "status": "error", "error": "deliverable not found or not allowed"}, status=404)
+                else:
+                    content_type = _deliverable_content_type(target)
+                    if content_type.startswith("text/") or content_type.startswith("application/json"):
+                        self._send_text(target.read_text(encoding="utf-8", errors="ignore"), content_type=content_type)
+                    else:
+                        self._send_file(target, content_type)
+            else:
+                self._send_json(_sprint_deliverables_payload(sid))
+
         elif path.startswith("/mermaid/assets/"):
             asset = _asset_path(path.removeprefix("/mermaid/assets/"))
             if not asset:
@@ -12225,9 +12713,7 @@ class StatusHandler(BaseHTTPRequestHandler):
                 self._send_json({"status": "no_runs", "benchmark": "terminal-bench@2.0"})
 
         elif path == "/":
-            # _HTML_TEMPLATE is not formatted with str.format(), so collapse the
-            # doubled braces used by earlier template-style escaping.
-            self._send_text(_HTML_TEMPLATE.replace("{{", "{").replace("}}", "}"), content_type="text/html; charset=utf-8")
+            self._send_text(_p0_dashboard_html(), content_type="text/html; charset=utf-8")
 
         else:
             self._send_json({"error": "not found"}, status=404)
