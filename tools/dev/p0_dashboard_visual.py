@@ -61,6 +61,7 @@ def node(node_id: str, goal: str, status: str, depends_on: list[str], capabiliti
 
 def seed_harness(harness: Path) -> Path:
     sid = "rich-sprint-001"
+    running_sid = "rich-sprint-running"
     done_sid = "rich-sprint-002"
     sprints = harness / "sprints"
     state = harness / "state"
@@ -72,6 +73,16 @@ def seed_harness(harness: Path) -> Path:
         {
             "sprint_id": sid,
             "title": "Build Codex-style dashboard observability",
+            "status": "active",
+            "phase": "planning_complete",
+            "epic_id": "visual-demo",
+        },
+    )
+    write_json(
+        sprints / f"{running_sid}.status.json",
+        {
+            "sprint_id": running_sid,
+            "title": "Live build sprint with active agents",
             "status": "active",
             "phase": "planning_complete",
             "epic_id": "visual-demo",
@@ -116,10 +127,35 @@ def seed_harness(harness: Path) -> Path:
         },
     )
     write_json(
+        sprints / f"{running_sid}.closure.json",
+        {
+            "sprint_id": running_sid,
+            "runtime_state": {
+                "nodes": {
+                    "spec": {"status": "passed"},
+                    "prd": {"status": "passed"},
+                    "plan": {"status": "passed"},
+                    "build": {"status": "active"},
+                    "review": {"status": "pending"},
+                }
+            },
+            "nodes": [
+                node("spec", "Capture the developer observability task.", "passed", [], ["product"]),
+                node("prd", "Shape the app shell acceptance path.", "passed", ["spec"], ["planning"]),
+                node("plan", "Prepare the implementation DAG.", "passed", ["prd"], ["planning"]),
+                node("build", "Build the React app shell and live views.", "active", ["plan"], ["frontend", "status-server"]),
+                node("review", "Review screenshots and run gates.", "pending", ["build"], ["evaluation"]),
+            ],
+        },
+    )
+    write_json(
         sprints / f"{done_sid}.task_graph.json",
         {
             "sprint_id": done_sid,
-            "nodes": [node("report", "Generate finished HTML report.", "passed", [], ["research", "writing"])],
+            "nodes": [
+                node("report", "Generate finished HTML report.", "passed", [], ["research", "writing"]),
+                node("review", "Accept final report evidence.", "passed", ["report"], ["evaluation"]),
+            ],
         },
     )
     write_json(
@@ -140,6 +176,13 @@ def seed_harness(harness: Path) -> Path:
                     "target_pane": "",
                     "blocked_reason": "no_matching_worker: required capability nonexistent-skill",
                     "provided_capabilities": ["frontend"],
+                },
+                {
+                    "sprint_id": running_sid,
+                    "node_id": "build",
+                    "decision": "dispatched",
+                    "target_pane": "%1:0.2",
+                    "provided_capabilities": ["frontend", "status-server"],
                 },
             ]
         },
@@ -169,14 +212,37 @@ def seed_harness(harness: Path) -> Path:
         sessions / sid / "events.jsonl",
         "".join(json.dumps({"ts": ts, "sprint_id": sid, "type": typ, "actor": actor, "payload": payload}) + "\n" for ts, typ, actor, payload in events),
     )
+    running_events = [
+        ("2026-06-16T11:00:00Z", "intake_created", "PM", {"message": "Live app shell sprint accepted", "phase": "spec"}),
+        ("2026-06-16T11:01:00Z", "phase_transition", "Planner", {"phase": "planning_complete", "status": "active"}),
+        ("2026-06-16T11:02:00Z", "dispatch_decision", "Planner", {"node_id": "build", "target_pane": "%1:0.2", "decision": "dispatched"}),
+        ("2026-06-16T11:03:00Z", "model_session_started", "Builder", {"model": "claude-sonnet", "node_id": "build"}),
+    ]
+    write_text(
+        sessions / running_sid / "events.jsonl",
+        "".join(json.dumps({"ts": ts, "sprint_id": running_sid, "type": typ, "actor": actor, "payload": payload}) + "\n" for ts, typ, actor, payload in running_events),
+    )
+    done_events = [
+        ("2026-06-16T12:00:00Z", "phase_transition", "Evaluator", {"phase": "build_complete", "status": "completed"}),
+        ("2026-06-16T12:02:00Z", "milestone_completed", "Evaluator", {"node_id": "review", "message": "Final artifact accepted"}),
+    ]
+    write_text(
+        sessions / done_sid / "events.jsonl",
+        "".join(json.dumps({"ts": ts, "sprint_id": done_sid, "type": typ, "actor": actor, "payload": payload}) + "\n" for ts, typ, actor, payload in done_events),
+    )
     write_text(harness / "events" / "all.jsonl", "")
     write_json(state / "quota-footer" / "claude-sonnet.json", {"date": today(), "model_key": "claude-sonnet", "used_tokens": 44100000})
     write_json(state / "quota-footer" / "claude-opus.json", {"date": today(), "model_key": "claude-opus", "used_tokens": 8200000})
+    write_text(harness / "config.env", "LAB_MODEL_MATRIX=all-claude-default\nSOLAR_PLANNER_MODEL=claude-sonnet\n")
     write_text(
         sprints / sid / ".research" / "dashboard-report.html",
         "<!doctype html><html><body><h1>Visual Mock Report</h1><p>Generated by dev-only dashboard visual harness.</p></body></html>",
     )
     write_text(sprints / sid / ".research" / "notes.md", "# Visual mock notes\n")
+    write_text(
+        sprints / done_sid / ".research" / "final-report.html",
+        "<!doctype html><html><body><h1>Completed Report</h1><p>Finished sprint artifact.</p></body></html>",
+    )
 
     fake_solar = bin_dir / "solar"
     write_text(
@@ -294,19 +360,19 @@ def audit(page) -> dict:
             const s = getComputedStyle(el);
             return s.borderStyle !== 'none' && parseFloat(s.borderWidth) > 0;
           });
-          const boxes = Array.from(document.querySelectorAll('.panel,.metric,.brand,.composer,.sprint-picker,.stall-callout,.agent-card,.node-card,.event-row,.deliverable-item,.usage-total'));
+          const boxes = Array.from(document.querySelectorAll('.panel,.metric,.agent-card,.dag-node,.event-row,.primary-deliverable,.hero-status'));
           const clickables = Array.from(document.querySelectorAll('button,select,textarea,a')).map((el) => {
             const r = el.getBoundingClientRect();
             return { tag: el.tagName.toLowerCase(), width: Math.round(r.width), height: Math.round(r.height) };
           });
           return {
             tokens: {
-              bg: token('--bg'), surface: token('--surface'), surface2: token('--surface-2'),
+              bg: token('--bg'), panel: token('--panel'), panel2: token('--panel-2'),
               text: token('--text'), muted: token('--muted'), green: token('--green'),
-              cyan: token('--cyan'), amber: token('--amber'), red: token('--red')
+              blue: token('--blue'), amber: token('--amber'), red: token('--red')
             },
             fontSizes: {
-              h1: size('h1'), h2: size('h2'), metric: size('.metric strong'),
+              h1: size('h1'), h2: size('h2'), metric: size('.metric span'),
               agentActivity: size('.agent-activity'), event: size('.event-row p')
             },
             borderedCount: bordered.length,
@@ -320,16 +386,16 @@ def audit(page) -> dict:
     ratios = {
         "text_on_bg": contrast(raw["tokens"]["text"], raw["tokens"]["bg"]),
         "muted_on_bg": contrast(raw["tokens"]["muted"], raw["tokens"]["bg"]),
-        "text_on_surface": contrast(raw["tokens"]["text"], raw["tokens"]["surface"]),
+        "text_on_panel": contrast(raw["tokens"]["text"], raw["tokens"]["panel"]),
         "amber_on_bg": contrast(raw["tokens"]["amber"], raw["tokens"]["bg"]),
         "green_on_bg": contrast(raw["tokens"]["green"], raw["tokens"]["bg"]),
-        "cyan_on_bg": contrast(raw["tokens"]["cyan"], raw["tokens"]["bg"]),
+        "blue_on_bg": contrast(raw["tokens"]["blue"], raw["tokens"]["bg"]),
     }
     flags = []
     h1_size = float(str(raw["fontSizes"]["h1"]).replace("px", "") or 0)
     if h1_size < 22:
         flags.append("Primary heading is below 22px; hierarchy may read flat.")
-    if raw["borderedCount"] >= 72 and raw["majorBoxCount"] >= 24:
+    if raw["borderedCount"] >= 110 and raw["majorBoxCount"] >= 34:
         flags.append("Many major regions render as bordered boxes; reduce div-soup with whitespace/dividers.")
     if any(item["height"] < 36 for item in raw["clickables"] if item["tag"] in {"button", "select", "textarea"}):
         flags.append("One or more controls are below a comfortable desktop hit target.")
@@ -343,11 +409,74 @@ def audit(page) -> dict:
 
 def screenshot(page, output_dir: Path, name: str, selector: str | None = None) -> None:
     path = output_dir / f"{name}.png"
+    if not selector:
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(100)
     if selector:
         loc = page.locator(selector).first
         loc.screenshot(path=str(path))
     else:
         page.screenshot(path=str(path), full_page=True)
+
+
+def wait_for_hero_title(page, title_fragment: str) -> None:
+    page.wait_for_function(
+        """fragment => {
+          const loading = document.querySelector(".loading-panel,.loading-workbench");
+          const heroes = Array.from(document.querySelectorAll("[data-testid='hero-status'] h1"));
+          const hero = heroes.find((el) => {
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && el.textContent && el.textContent.includes(fragment);
+          });
+          return !loading && Boolean(hero);
+        }""",
+        arg=title_fragment,
+        timeout=9000,
+    )
+
+
+def stop_proc(proc: subprocess.Popen[str]) -> None:
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=5)
+
+
+def start_server(harness: Path, env: dict[str, str]) -> subprocess.Popen[str]:
+    return subprocess.Popen(
+        [sys.executable, str(STATUS_SERVER)],
+        cwd=str(ROOT),
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+
+def screenshot_empty_state(base: Path, screenshots: Path, width: int, height: int) -> int:
+    empty_harness = base / "empty-harness"
+    write_text(empty_harness / "events" / "all.jsonl", "")
+    env = dict(os.environ)
+    env["HARNESS_DIR"] = str(empty_harness)
+    proc = start_server(empty_harness, env)
+    try:
+        port = wait_for_server(empty_harness, proc)
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            context = browser.new_context(viewport={"width": width, "height": height}, device_scale_factor=1)
+            page = context.new_page()
+            page.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+            page.wait_for_selector("[data-testid='empty-state']", timeout=9000)
+            screenshot(page, screenshots, "empty-state")
+            context.close()
+            browser.close()
+        return port
+    finally:
+        stop_proc(proc)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -360,14 +489,7 @@ def run(args: argparse.Namespace) -> int:
     env = dict(os.environ)
     env["HARNESS_DIR"] = str(harness)
     env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
-    proc = subprocess.Popen(
-        [sys.executable, str(STATUS_SERVER)],
-        cwd=str(ROOT),
-        env=env,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
+    proc = start_server(harness, env)
     try:
         port = wait_for_server(harness, proc)
         from playwright.sync_api import sync_playwright
@@ -377,52 +499,51 @@ def run(args: argparse.Namespace) -> int:
             context = browser.new_context(viewport={"width": args.width, "height": args.height}, device_scale_factor=1)
             page = context.new_page()
             page.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
-            try:
-                page.wait_for_function(
-                    """() => {
-                      const sprint = document.querySelector('#current-sprint')?.textContent?.trim();
-                      const phase = document.querySelector('#current-phase')?.textContent?.trim();
-                      const deliverables = document.querySelector('#deliverable-count')?.textContent?.trim();
-                      const usage = document.querySelector('#usage-refresh')?.textContent?.trim();
-                      return sprint && sprint !== 'N/A' && phase && phase !== 'N/A'
-                        && deliverables && deliverables !== '0 files' && usage && usage !== 'pending';
-                    }""",
-                    timeout=9000,
-                )
-            except Exception:
-                page.wait_for_timeout(2200)
-            screenshot(page, screenshots, "full-page")
+            page.wait_for_selector("[data-testid='agent-panel']", timeout=10000)
+            page.wait_for_selector("[data-testid='activity-stream']", timeout=10000)
+            page.get_by_role("link", name="Build Codex-style dashboard").click()
+            wait_for_hero_title(page, "Build Codex-style")
+            screenshot(page, screenshots, "blocked-full-page")
             sections = {
-                "task-bar": ".task-bar",
-                "sprint-controls": ".control-strip",
-                "topline": ".topline",
-                "agents": ".agents-panel",
-                "dag": ".dag-panel",
-                "activity-stream": ".stream-panel",
-                "deliverables": ".deliverables-panel",
-                "usage": ".usage-panel",
+                "hero-status": "[data-testid='hero-status']",
+                "agent-cards": "[data-testid='agent-panel']",
+                "dag": "[data-testid='dag-panel']",
+                "activity-stream": "[data-testid='activity-stream']",
+                "deliverables": "[data-testid='deliverables-panel']",
+                "usage": "[data-testid='usage-panel']",
             }
             for name, selector in sections.items():
                 screenshot(page, screenshots, name, selector)
             audit_before = audit(page)
             write_json(base / f"audit-{args.label}.json", audit_before)
 
-            page.fill("#task-input", args.task)
+            page.get_by_role("link", name="Live build sprint with active").click()
+            wait_for_hero_title(page, "Live build sprint")
+            screenshot(page, screenshots, "running-session")
+
+            page.get_by_role("link", name="Completed report sprint").click()
+            wait_for_hero_title(page, "Completed report sprint")
+            screenshot(page, screenshots, "complete-session")
+
+            page.get_by_role("link", name="Settings").click()
+            page.wait_for_selector("[data-testid='settings-view']", timeout=5000)
+            page.wait_for_selector("text=Lab matrix", timeout=9000)
+            screenshot(page, screenshots, "settings")
+
+            page.get_by_role("button", name="New task").first.click()
+            page.get_by_placeholder("Build, investigate, verify, or produce an artifact...").fill(args.task)
             page.get_by_role("button", name="Start work").click()
-            page.wait_for_timeout(1400)
+            page.wait_for_selector("text=visual-intake-", timeout=8000)
+            page.wait_for_timeout(800)
             screenshot(page, screenshots, "intake-interaction")
             context.close()
             browser.close()
 
-        print(json.dumps({"output_dir": str(base), "screenshots": str(screenshots), "port": port, "audit": audit_before}, indent=2))
+        empty_port = screenshot_empty_state(base, screenshots, args.width, args.height)
+        print(json.dumps({"output_dir": str(base), "screenshots": str(screenshots), "port": port, "empty_port": empty_port, "audit": audit_before}, indent=2))
         return 0
     finally:
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait(timeout=5)
+        stop_proc(proc)
 
 
 def main() -> int:
