@@ -1,0 +1,87 @@
+{
+  "schema_version": "solar.coverage_report.v1",
+  "sprint_id": "sprint-20260616-194507-intent-kllmk-b01a0a0b",
+  "requirement_ir_id": "req-ca659ce1116b",
+  "summary": {
+    "total": 4,
+    "done": 0,
+    "partial": 0,
+    "missing": 4,
+    "coverage_ratio": 0.0,
+    "graph_complete": false
+  },
+  "items": [
+    {
+      "requirement_id": "REQ-000",
+      "source_text": "kllmk",
+      "success_criteria": [
+        "kllmk"
+      ],
+      "verification_method": "task_graph_closeout",
+      "mapped_nodes": [
+        "S3"
+      ],
+      "expected_artifacts": [
+        "review_decision.yaml"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-001",
+      "source_text": "目标变更在声明范围内完成。",
+      "success_criteria": [
+        "目标变更在声明范围内完成。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "expected_artifacts": [
+        "patch.diff",
+        "review_decision.yaml",
+        "test_report.md"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-002",
+      "source_text": "至少一条测试/执行证据被记录。",
+      "success_criteria": [
+        "至少一条测试/执行证据被记录。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "expected_artifacts": [
+        "patch.diff",
+        "review_decision.yaml",
+        "test_report.md"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-003",
+      "source_text": "存在独立 verifier 决策。",
+      "success_criteria": [
+        "存在独立 verifier 决策。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "expected_artifacts": [
+        "patch.diff",
+        "review_decision.yaml",
+        "test_report.md"
+      ],
+      "final_status": "missing"
+    }
+  ]
+}
