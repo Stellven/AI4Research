@@ -180,6 +180,8 @@
     if (["blocked", "gate_blocked", "prompt_residue", "error", "failed"].includes(normalized)) return normalized;
     if (["gate", "error"].includes(category)) return category === "gate" ? "blocked" : "error";
     if (["active", "running"].includes(normalized)) return "working";
+    if (["missing", "unknown", "not_attached"].includes(normalized) && ["dispatch", "model"].includes(category)) return "working";
+    if (["missing", "unknown", "not_attached"].includes(normalized) && ["phase", "milestone"].includes(category)) return "observing";
     if (["dispatch", "model", "phase", "milestone"].includes(category)) return normalized === "idle" ? "observing" : normalized;
     return normalized || "unknown";
   }

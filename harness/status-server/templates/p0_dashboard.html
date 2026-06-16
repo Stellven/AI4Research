@@ -17,7 +17,8 @@
         </div>
       </div>
       <form id="intake-form" class="composer">
-        <textarea id="task-input" name="task" rows="3" placeholder="Describe what you want done"></textarea>
+        <label class="sr-only" for="task-input">Describe what you want done</label>
+        <textarea id="task-input" name="task" rows="3" placeholder="Describe what you want done" aria-label="Describe what you want done"></textarea>
         <div class="composer-actions">
           <span id="intake-state">Ready</span>
           <button type="submit">Start work</button>
