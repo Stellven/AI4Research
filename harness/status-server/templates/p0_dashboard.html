@@ -25,6 +25,19 @@
       </form>
     </section>
 
+    <section class="control-strip" aria-label="Sprint controls">
+      <label class="sprint-picker" for="sprint-select">
+        <span>Sprint history</span>
+        <select id="sprint-select">
+          <option value="">Loading sprints</option>
+        </select>
+      </label>
+      <div id="stall-callout" class="stall-callout ok">
+        <strong>No explicit stall reported</strong>
+        <p>Waiting for current sprint evidence.</p>
+      </div>
+    </section>
+
     <section class="topline" aria-label="Sprint summary">
       <div class="metric">
         <span>Current sprint</span>
@@ -69,6 +82,7 @@
             <strong id="status-counts">N/A</strong>
           </div>
         </div>
+        <div id="node-graph" class="node-graph"></div>
         <div id="blocked-nodes" class="blocked-list"></div>
       </section>
 

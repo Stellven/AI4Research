@@ -422,6 +422,29 @@ def _orchestration_dashboard_payload(sprint_id: str = "") -> dict:
     }
 
 
+def _sprint_index_payload(limit: int = 80) -> dict:
+    mod = _load_orchestration_routes_module()
+    builder = getattr(mod, "build_sprint_index_payload", None)
+    if not callable(builder):
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "build_sprint_index_payload unavailable",
+            "schema_version": getattr(mod, "SCHEMA_VERSION", "solar.orchestration.v1"),
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "degraded_sources": ["sprint_index_builder:missing"],
+            "data": {"sprints": [], "count": 0, "active_sprints": []},
+        }
+    data, degraded = builder(limit=limit)
+    return {
+        "ok": True,
+        "schema_version": getattr(mod, "SCHEMA_VERSION", "solar.orchestration.v1"),
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "degraded_sources": degraded or [],
+        "data": data,
+    }
+
+
 def _extract_intake_id(text: str) -> str:
     clean = re.sub(r"\x1b\[[0-9;]*m", "", text or "")
     patterns = (
@@ -12463,6 +12486,17 @@ class StatusHandler(BaseHTTPRequestHandler):
             sprint_id = params.get("sprint_id", [""])[0]
             try:
                 self._send_json(_orchestration_dashboard_payload(sprint_id))
+            except Exception as exc:
+                self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
+
+        elif path == "/sprints":
+            try:
+                limit = int(params.get("limit", ["80"])[0])
+                limit = max(1, min(limit, 300))
+            except ValueError:
+                limit = 80
+            try:
+                self._send_json(_sprint_index_payload(limit=limit))
             except Exception as exc:
                 self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
 

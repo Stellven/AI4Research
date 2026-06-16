@@ -87,22 +87,46 @@ def _read_json(path: Path) -> tuple[Any, bool]:
         return None, False
 
 
-def _active_sprint_ids(limit: int = 8) -> list[str]:
+def _sprint_status_rows(limit: int = 80) -> list[dict]:
     active = {"active", "dispatched", "reviewing", "ready_for_review", "failed_review"}
-    rows: list[tuple[float, str]] = []
+    rows: list[dict] = []
     for sf in SPRINTS_DIR.glob("*.status.json"):
         data, ok = _read_json(sf)
         if not ok or not isinstance(data, dict):
             continue
-        if data.get("status") in active:
-            sid = data.get("sprint_id") or sf.name.removesuffix(".status.json")
-            try:
-                mtime = sf.stat().st_mtime
-            except OSError:
-                mtime = 0.0
-            rows.append((mtime, sid))
-    rows.sort(reverse=True)
-    return [sid for _, sid in rows[:limit]]
+        sid = str(data.get("sprint_id") or data.get("id") or sf.name.removesuffix(".status.json"))
+        try:
+            mtime = sf.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        status = str(data.get("status") or "")
+        phase = str(data.get("phase") or "")
+        tg, tg_ok = _load_task_graph(sid)
+        nodes = tg.get("nodes") if isinstance(tg.get("nodes"), list) else []
+        node_counts: dict[str, int] = {}
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            st = _node_status(node, tg.get("runtime_state") or {})
+            node_counts[st] = node_counts.get(st, 0) + 1
+        rows.append({
+            "sprint_id": sid,
+            "title": data.get("title") or sid,
+            "status": status,
+            "phase": phase,
+            "is_active": status.lower() in active,
+            "mtime": mtime,
+            "node_count": len(nodes),
+            "node_status_counts": node_counts,
+            "task_graph_present": tg_ok,
+        })
+    rows.sort(key=lambda item: (not bool(item.get("is_active")), -float(item.get("mtime") or 0), str(item.get("sprint_id") or "")))
+    return rows[:limit]
+
+
+def _active_sprint_ids(limit: int = 8) -> list[str]:
+    active = {"active", "dispatched", "reviewing", "ready_for_review", "failed_review"}
+    return [str(row.get("sprint_id") or "") for row in _sprint_status_rows(limit=limit * 3) if str(row.get("status") or "").lower() in active][:limit]
 
 
 def _load_status_by_sprint(sid: str) -> dict:
@@ -238,10 +262,14 @@ def _node_status(node: dict, status_state: dict | None = None) -> str:
 
 def _load_routing_decisions() -> list[dict]:
     data, ok = _read_json(STATE_DIR / "autopilot-state.json")
-    if not ok or not isinstance(data, dict):
+    if not ok:
+        return []
+    if isinstance(data, list):
+        return [item for item in data if isinstance(item, dict)]
+    if not isinstance(data, dict):
         return []
     decisions = data.get("routing_decisions", [])
-    return decisions if isinstance(decisions, list) else []
+    return [item for item in decisions if isinstance(item, dict)] if isinstance(decisions, list) else []
 
 
 def _capability_counts(nodes: list[dict]) -> dict[str, int]:
@@ -515,6 +543,61 @@ def _build_blocker_diagnostics(sid: str, status: dict, nodes: list[dict], node_c
     return diagnostics
 
 
+def _build_stall_summary(status: dict, node_cards: list[dict], diagnostics: list[dict], tg_ok: bool) -> dict:
+    sprint_status = str(status.get("status") or "").strip().lower()
+    phase = str(status.get("phase") or "").strip().lower()
+    blocked = [card for card in node_cards if str(card.get("status") or "").lower() in {"blocked", "gate_blocked", "failed"} or card.get("blocked_reason")]
+    active = [card for card in node_cards if str(card.get("status") or "").lower() in {"active", "running", "dispatched", "in_progress"}]
+    pending = [card for card in node_cards if str(card.get("status") or "").lower() in {"pending", "queued", "planned"}]
+    reasons = sorted({str(card.get("blocked_reason") or card.get("decision") or "").strip() for card in blocked if str(card.get("blocked_reason") or card.get("decision") or "").strip()})
+
+    if not tg_ok:
+        return {
+            "is_stalled": True,
+            "state": "task_graph_missing",
+            "severity": "error",
+            "title": "DAG evidence missing",
+            "detail": "The status file exists, but no supported task graph artifact was found.",
+            "reasons": [],
+        }
+    if sprint_status in {"gate_blocked", "blocked", "failed_review"} or "gate_blocked" in phase:
+        return {
+            "is_stalled": True,
+            "state": sprint_status or phase,
+            "severity": "warn",
+            "title": "Sprint is blocked at a gate",
+            "detail": "Solar reported a blocked gate. The dashboard is showing the stall rather than treating the sprint as complete.",
+            "reasons": reasons,
+        }
+    if "planning_complete" in phase and not active and (blocked or pending):
+        state = "no_matching_worker" if any("no_matching_worker" in reason for reason in reasons) else "planning_complete_stalled"
+        return {
+            "is_stalled": True,
+            "state": state,
+            "severity": "warn",
+            "title": "Planning is complete, dispatch is stalled",
+            "detail": "The DAG exists, but no node is actively running. This often means capability labels or worker matching blocked dispatch.",
+            "reasons": reasons,
+        }
+    if blocked:
+        return {
+            "is_stalled": True,
+            "state": "node_blocked",
+            "severity": "warn",
+            "title": "One or more DAG nodes are blocked",
+            "detail": "At least one node is blocked or failed. Check node details before expecting completion.",
+            "reasons": reasons,
+        }
+    return {
+        "is_stalled": False,
+        "state": "flowing" if active else "idle_or_waiting",
+        "severity": "ok",
+        "title": "No explicit stall reported",
+        "detail": "No blocked gate or blocked DAG node is visible in the current status artifacts.",
+        "reasons": [],
+    }
+
+
 def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[str]]:
     degraded: list[str] = []
     active = _active_sprint_ids()
@@ -537,6 +620,7 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
     registry = _capability_registry()
     node_cards = _build_node_cards(sid, nodes, tg.get("runtime_state") or {}, routing)
     diagnostics = _build_blocker_diagnostics(sid, status, nodes, node_cards, tg_ok)
+    stall = _build_stall_summary(status, node_cards, diagnostics, tg_ok)
 
     status_counts: dict[str, int] = {}
     cost_by_status: dict[str, float] = {}
@@ -565,7 +649,7 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
             "total_nodes": len(node_cards),
             "status_counts": status_counts,
             "passed_nodes": status_counts.get("passed", 0),
-            "blocked_nodes": status_counts.get("blocked", 0),
+            "blocked_nodes": status_counts.get("blocked", 0) + status_counts.get("gate_blocked", 0) + status_counts.get("failed", 0),
             "active_nodes": status_counts.get("active", 0),
         },
         "dag": {
@@ -590,6 +674,19 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
             "busy_panes": sorted({r.get("target_pane") for r in all_routing if r.get("decision") == "dispatched" and r.get("target_pane")}),
         },
         "blocker_diagnostics": diagnostics,
+        "stall": stall,
+    }, degraded
+
+
+def build_sprint_index_payload(limit: int = 80) -> tuple[dict, list[str]]:
+    degraded: list[str] = []
+    if not SPRINTS_DIR.exists():
+        degraded.append("sprints_dir:missing")
+    rows = _sprint_status_rows(limit=limit)
+    return {
+        "sprints": rows,
+        "count": len(rows),
+        "active_sprints": [row["sprint_id"] for row in rows if row.get("is_active")],
     }, degraded
 
 
@@ -687,18 +784,28 @@ def _load_autopilot_routing(sprint_id: str) -> list[dict]:
     data, ok = _read_json(ap_path)
     if not ok or not data:
         return []
+    if isinstance(data, list):
+        return [d for d in data if isinstance(d, dict) and d.get("sprint_id") == sprint_id]
+    if not isinstance(data, dict):
+        return []
     decisions = data.get("routing_decisions", [])
-    return [d for d in decisions if d.get("sprint_id") == sprint_id]
+    return [d for d in decisions if isinstance(d, dict) and d.get("sprint_id") == sprint_id] if isinstance(decisions, list) else []
 
 
 def _load_pane_state() -> list[dict]:
     ps, ok = _read_json(STATE_DIR / "pane-state.json")
     if not ok:
         return []
+    if isinstance(ps, list):
+        return [pane for pane in ps if isinstance(pane, dict)]
+    if not isinstance(ps, dict):
+        return []
     panes = ps.get("panes", [])
     if isinstance(panes, list):
-        return panes
-    return [{"id": k, **v} for k, v in panes.items()]
+        return [pane for pane in panes if isinstance(pane, dict)]
+    if isinstance(panes, dict):
+        return [{"id": k, **v} for k, v in panes.items() if isinstance(v, dict)]
+    return []
 
 
 def _capability_registry() -> dict[str, list[str]]:
