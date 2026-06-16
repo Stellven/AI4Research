@@ -6,12 +6,17 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Boxes,
+  Bot,
+  ChevronDown,
+  ChevronRight,
   CheckCircle2,
   Circle,
   Clock3,
   Command,
+  FileCheck2,
   FileText,
   GitBranch,
+  ListTree,
   Loader2,
   MessageSquarePlus,
   PanelLeft,
@@ -23,6 +28,7 @@ import {
   ShieldCheck,
   Sparkles,
   SquareTerminal,
+  Workflow,
   Zap
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -91,6 +97,22 @@ type SessionData = {
   error: string;
   streamState: "connecting" | "live" | "retrying" | "off";
   refresh: () => Promise<void>;
+};
+
+type ProcessStepState = "active" | "blocked" | "completed" | "pending";
+
+type ProcessStep = {
+  id: string;
+  actor: string;
+  title: string;
+  summary: string;
+  detail: string;
+  timestamp: string;
+  state: ProcessStepState;
+  tone: "working" | "blocked" | "complete" | "idle";
+  defaultExpanded: boolean;
+  facts: Array<{ label: string; value: string }>;
+  result?: Deliverable;
 };
 
 function App() {
@@ -461,6 +483,10 @@ function SessionView({
   const phase = asString(data?.phase || currentSprint.phase || currentSprint.status);
   const isBlocked = Boolean(stall?.is_stalled);
   const isComplete = statusTone(asString(currentSprint.status || phase)) === "complete";
+  const processSteps = useMemo(
+    () => buildProcessSteps(dashboard, session.events, session.deliverables, phase),
+    [dashboard, session.deliverables, session.events, phase]
+  );
 
   return (
     <div className="workspace-scroll">
@@ -469,19 +495,12 @@ function SessionView({
         {session.state === "loading" && <LoadingWorkbench key="loading" />}
         {session.state === "error" && <ErrorWorkbench key="error" message={session.error} onRetry={session.refresh} />}
         {session.state === "ready" && (
-          <motion.div key="ready" className="workbench" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <HeroStatus sprint={currentSprint} phase={phase} isBlocked={isBlocked} isComplete={isComplete} stallText={stallCopy(stall)} dashboard={dashboard} />
-            <AgentPanel agents={agents} />
-            <div className="two-column-grid">
-              <SprintProgress phase={phase} dashboard={dashboard} />
-              <DagPanel dashboard={dashboard} />
-            </div>
-            <div className="two-column-grid lower">
-              <ActivityStream events={session.events} streamState={session.streamState} />
-              <div className="stacked-panels">
-                <DeliverablesPanel deliverables={session.deliverables} />
-                <UsagePanel usage={session.usage} />
-              </div>
+          <motion.div key="ready" className="process-workbench" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <CompactSessionHeader sprint={currentSprint} phase={phase} isBlocked={isBlocked} isComplete={isComplete} stallText={stallCopy(stall)} dashboard={dashboard} />
+            <AgentPresenceStrip agents={agents} />
+            <div className="process-results-layout">
+              <ProcessStream steps={processSteps} streamState={session.streamState} />
+              <ResultsRail dashboard={dashboard} deliverables={session.deliverables} usage={session.usage} />
             </div>
           </motion.div>
         )}
@@ -495,6 +514,358 @@ function dashboardForSprint(dashboard: DashboardResponse | undefined, sprintId: 
   const focus = asString(dashboard.data?.focus_sprint_id || dashboard.data?.sprint?.sprint_id);
   if (focus && focus !== sprintId) return undefined;
   return dashboard;
+}
+
+function CompactSessionHeader({
+  sprint,
+  phase,
+  isBlocked,
+  isComplete,
+  stallText,
+  dashboard
+}: {
+  sprint: SprintSummary;
+  phase: string;
+  isBlocked: boolean;
+  isComplete: boolean;
+  stallText: string;
+  dashboard?: DashboardResponse;
+}) {
+  const progress = dashboard?.data?.progress;
+  const total = Number(progress?.total_nodes || 0);
+  const done = Number(progress?.completed_nodes || progress?.passed_nodes || progress?.status_counts?.passed || 0);
+  const percentage = total > 0 ? Math.round((done / total) * 100) : isComplete ? 100 : 0;
+  const label = isBlocked ? "Stalled" : isComplete ? "Complete" : asString(sprint.status || phase, "Active").replace(/_/g, " ");
+
+  return (
+    <section className={`compact-session-header ${isBlocked ? "is-blocked" : ""} ${isComplete ? "is-complete" : ""}`} data-testid="process-header">
+      <div className="compact-title-block">
+        <div className="eyebrow-row">
+          <span className={`state-orb tone-${isBlocked ? "blocked" : isComplete ? "complete" : "working"}`} />
+          <span>{label}</span>
+          <span>{phase.replace(/_/g, " ") || "phase unknown"}</span>
+        </div>
+        <h1>{titleForSprint(sprint)}</h1>
+        {isBlocked && <p>{stallText}</p>}
+      </div>
+      <div className="compact-progress" aria-label={`Sprint progress ${percentage}%`}>
+        <div className="progress-text">
+          <strong>{percentage}%</strong>
+          <span>{total ? `${done}/${total} nodes` : "waiting for DAG"}</span>
+        </div>
+        <div className="progress-track">
+          <span style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AgentPresenceStrip({ agents }: { agents: AgentCardModel[] }) {
+  return (
+    <section className="agent-presence-strip" data-testid="agent-presence">
+      {agents.map((agent) => (
+        <div className={`agent-presence tone-${agent.state}`} key={agent.role}>
+          <span className={`state-dot tone-${agent.state === "complete" ? "complete" : agent.state === "blocked" ? "blocked" : agent.state === "working" ? "working" : "idle"}`} />
+          <strong>{ROLE_META[agent.role].title.split(" ")[0]}</strong>
+          <span>{agent.state === "idle" ? "waiting" : agent.activity}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function ProcessStream({ steps, streamState }: { steps: ProcessStep[]; streamState: string }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const signature = steps.map((step) => `${step.id}:${step.defaultExpanded ? "1" : "0"}`).join("|");
+
+  useEffect(() => {
+    setExpanded(Object.fromEntries(steps.map((step) => [step.id, step.defaultExpanded])));
+  }, [signature, steps]);
+
+  function toggle(id: string) {
+    setExpanded((current) => ({ ...current, [id]: !current[id] }));
+  }
+
+  return (
+    <section className="process-stream-panel" data-testid="process-stream">
+      <SectionHeader icon={<Workflow size={17} />} title="Process stream" detail={streamState === "live" ? "live" : streamState} />
+      <div className="process-step-list">
+        {steps.length === 0 && <EmptyInline label="Waiting for agent process events" />}
+        {steps.map((step) => (
+          <ProcessStepItem key={step.id} step={step} expanded={Boolean(expanded[step.id])} onToggle={() => toggle(step.id)} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProcessStepItem({ step, expanded, onToggle }: { step: ProcessStep; expanded: boolean; onToggle: () => void }) {
+  const icon = step.state === "blocked" ? <AlertTriangle size={16} /> : step.state === "completed" ? <CheckCircle2 size={16} /> : step.state === "active" ? <Loader2 className="spin-soft" size={16} /> : <Circle size={15} />;
+  return (
+    <article className={`process-step process-step-${step.state}`} data-testid={`process-step-${step.state}`}>
+      <button className="process-step-summary" type="button" onClick={onToggle} aria-expanded={expanded}>
+        <span className="process-step-icon">{icon}</span>
+        <span className="process-step-main">
+          <span className="process-step-kicker">
+            {step.actor} · {formatDateTime(step.timestamp)}
+          </span>
+          <strong>{step.title}</strong>
+          <span>{step.summary}</span>
+        </span>
+        <span className="process-step-toggle">{expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            className="process-step-detail"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <p>{step.detail}</p>
+            {step.facts.length > 0 && (
+              <div className="process-facts">
+                {step.facts.map((fact) => (
+                  <span key={`${fact.label}-${fact.value}`}>
+                    <small>{fact.label}</small>
+                    <strong>{fact.value}</strong>
+                  </span>
+                ))}
+              </div>
+            )}
+            {step.result && (
+              <a className="step-result-link" href={step.result.view_url} target="_blank" rel="noreferrer">
+                <FileCheck2 size={15} />
+                <span>Open {step.result.name}</span>
+                <ArrowUpRight size={13} />
+              </a>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </article>
+  );
+}
+
+function ResultsRail({
+  dashboard,
+  deliverables,
+  usage
+}: {
+  dashboard?: DashboardResponse;
+  deliverables: Deliverable[];
+  usage?: UsagePayload;
+}) {
+  return (
+    <aside className="results-rail" data-testid="results-rail">
+      <DeliverablesPanel deliverables={deliverables} />
+      <GraphSummaryPanel dashboard={dashboard} />
+      <UsagePanel usage={usage} />
+    </aside>
+  );
+}
+
+function GraphSummaryPanel({ dashboard }: { dashboard?: DashboardResponse }) {
+  const nodes = dashboard?.data?.dag?.nodes || [];
+  const active = nodes.find((node) => statusTone(asString(node.status)) === "working");
+  const blocked = nodes.filter((node) => statusTone(asString(node.status)) === "blocked");
+  return (
+    <section className="panel graph-summary-panel" data-testid="graph-summary">
+      <SectionHeader icon={<ListTree size={17} />} title="Plan" detail={`${nodes.length} nodes`} />
+      {nodes.length === 0 && <EmptyInline label="No DAG available" />}
+      {active && (
+        <div className="plan-focus">
+          <span className="state-dot tone-working" />
+          <div>
+            <strong>{nodeId(active)}</strong>
+            <p>{nodeTitle(active)}</p>
+          </div>
+        </div>
+      )}
+      {blocked.length > 0 && (
+        <div className="plan-focus blocked">
+          <span className="state-dot tone-blocked" />
+          <div>
+            <strong>{blocked.length} blocked</strong>
+            <p>{shortText(blocked.map((node) => nodeId(node)).join(", "), 96)}</p>
+          </div>
+        </div>
+      )}
+      <div className="mini-node-list">
+        {nodes.slice(0, 6).map((node) => (
+          <div key={nodeId(node)}>
+            <span className={`state-dot tone-${statusTone(asString(node.status))}`} />
+            <span>{nodeId(node)}</span>
+            <strong>{asString(node.status, "pending").replace(/_/g, " ")}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function buildProcessSteps(dashboard: DashboardResponse | undefined, events: EventRecord[], deliverables: Deliverable[], phase: string): ProcessStep[] {
+  const steps: ProcessStep[] = [];
+  const orderedEvents = [...events].sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
+
+  orderedEvents.forEach((event, index) => {
+    steps.push(processStepFromEvent(event, index === orderedEvents.length - 1));
+  });
+
+  const nodes = dashboard?.data?.dag?.nodes || [];
+  if (steps.length === 0 && nodes.length > 0) {
+    nodes.forEach((node, index) => {
+      steps.push(processStepFromNode(node, index === nodes.length - 1, phase));
+    });
+  }
+
+  const stall = dashboard?.data?.stall;
+  if (stall?.is_stalled && !steps.some((step) => step.state === "blocked")) {
+    steps.push({
+      id: "stall-summary",
+      actor: "Harness",
+      title: "Dispatch is blocked",
+      summary: stallCopy(stall),
+      detail: stallCopy(stall) || "The sprint is waiting on a dispatch gate or missing worker capability.",
+      timestamp: dashboard?.generated_at || "",
+      state: "blocked",
+      tone: "blocked",
+      defaultExpanded: true,
+      facts: [
+        { label: "state", value: asString(stall.state, "stalled").replace(/_/g, " ") },
+        { label: "phase", value: phase.replace(/_/g, " ") }
+      ]
+    });
+  }
+
+  const primaryDeliverable = deliverables.find((item) => item.kind === "html" || item.name.endsWith(".html"));
+  if (primaryDeliverable) {
+    steps.push({
+      id: `deliverable-${primaryDeliverable.rel_path}`,
+      actor: "Harness",
+      title: "Result is available",
+      summary: `${primaryDeliverable.name} is ready to open.`,
+      detail: "The output is separated from the process stream so review can happen without digging through agent telemetry.",
+      timestamp: primaryDeliverable.mtime ? new Date(primaryDeliverable.mtime * 1000).toISOString() : dashboard?.generated_at || "",
+      state: "completed",
+      tone: "complete",
+      defaultExpanded: false,
+      facts: [
+        { label: "kind", value: primaryDeliverable.kind.toUpperCase() },
+        { label: "size", value: `${compactNumber(primaryDeliverable.size || 0)}B` }
+      ],
+      result: primaryDeliverable
+    });
+  }
+
+  if (steps.length === 0) {
+    return [];
+  }
+
+  const sorted = steps.sort((a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp));
+  return sorted.map((step, index) => ({
+    ...step,
+    defaultExpanded: step.defaultExpanded || step.state === "blocked" || (index === 0 && step.state === "active")
+  }));
+}
+
+function processStepFromEvent(event: EventRecord, latest: boolean): ProcessStep {
+  const body = payload(event);
+  const type = event.type || event.event || "event";
+  const actor = eventActor(event);
+  const node = asString(body.node_id || body.node || event.node_id);
+  const phase = asString(body.phase || event.phase);
+  const decision = asString(body.decision || event.decision);
+  const target = asString(body.target_pane || body.pane || event.target_pane);
+  const reason = asString(body.reason || body.blocked_reason || event.reason);
+  const model = asString(body.model || event.model);
+  const thought = asString(body.thought || body.summary || body.message || event.message);
+  const readable = humanEvent(event);
+  const blocked = readable.tone === "blocked" || String(type).includes("blocked") || decision.includes("no_matching");
+  const completed = readable.tone === "complete" || String(type).includes("completed") || String(type).includes("ended") || String(type).includes("passed");
+  const state: ProcessStepState = blocked ? "blocked" : latest && !completed ? "active" : completed ? "completed" : "completed";
+  const title = processTitle(type, actor, { node, phase, decision, target });
+  const summary = processSummary(type, { node, phase, decision, target, reason, thought }) || readable.detail || readable.title;
+  const facts = [
+    node && { label: "node", value: node },
+    phase && { label: "phase", value: phase.replace(/_/g, " ") },
+    decision && { label: "decision", value: decision.replace(/_/g, " ") },
+    target && { label: "target", value: target },
+    model && { label: "model", value: model },
+    reason && { label: "reason", value: shortText(reason, 80) }
+  ].filter(Boolean) as Array<{ label: string; value: string }>;
+
+  return {
+    id: `${eventTimestamp(event) || "event"}-${type}-${actor}-${node || facts.length}`,
+    actor,
+    title,
+    summary,
+    detail: thought || readable.detail || "The harness recorded this process step from the live event stream.",
+    timestamp: eventTimestamp(event),
+    state,
+    tone: blocked ? "blocked" : completed ? "complete" : "working",
+    defaultExpanded: blocked || (latest && !completed),
+    facts
+  };
+}
+
+function processStepFromNode(node: { [key: string]: unknown }, latest: boolean, phase: string): ProcessStep {
+  const status = asString(node.status, "pending");
+  const tone = statusTone(status);
+  const state: ProcessStepState = tone === "blocked" ? "blocked" : tone === "working" ? "active" : tone === "complete" ? "completed" : "pending";
+  return {
+    id: `node-${nodeId(node)}`,
+    actor: "Planner",
+    title: `${nodeId(node)} is ${status.replace(/_/g, " ")}`,
+    summary: nodeTitle(node),
+    detail: `Planner DAG node ${nodeId(node)} is currently ${status.replace(/_/g, " ")}.`,
+    timestamp: "",
+    state,
+    tone: tone === "complete" ? "complete" : tone === "blocked" ? "blocked" : tone === "working" ? "working" : "idle",
+    defaultExpanded: state === "blocked" || state === "active",
+    facts: [
+      { label: "phase", value: phase.replace(/_/g, " ") },
+      { label: "status", value: status.replace(/_/g, " ") }
+    ]
+  };
+}
+
+function processTitle(type: unknown, actor: string, values: { node: string; phase: string; decision: string; target: string }): string {
+  const eventType = asString(type);
+  if (eventType.includes("intake")) return `${actor} scoped the request`;
+  if (eventType.includes("phase")) return `${actor} moved the sprint to ${values.phase.replace(/_/g, " ") || "the next phase"}`;
+  if (eventType.includes("dispatch") && values.decision.includes("dispatched")) return `${actor} routed ${values.node || "work"}${values.target ? ` to ${values.target}` : ""}`;
+  if (eventType.includes("dispatch")) return `${actor} made a dispatch decision`;
+  if (eventType.includes("model_session_started")) return `${actor} started work${values.node ? ` on ${values.node}` : ""}`;
+  if (eventType.includes("model_session_ended")) return `${actor} finished a model session`;
+  if (eventType.includes("gate") || eventType.includes("blocked")) return `Dispatch blocked${values.node ? ` for ${values.node}` : ""}`;
+  if (eventType.includes("milestone") || eventType.includes("complete")) return `${actor} recorded a result`;
+  return humanizeToken(eventType);
+}
+
+function processSummary(type: unknown, values: { node: string; phase: string; decision: string; target: string; reason: string; thought: string }): string {
+  const eventType = asString(type);
+  if (values.reason) return shortText(values.reason, 120);
+  if (values.thought) return shortText(values.thought, 120);
+  if (eventType.includes("phase")) return `Sprint phase is now ${values.phase.replace(/_/g, " ")}.`;
+  if (eventType.includes("dispatch")) return [values.node && `node ${values.node}`, values.decision && values.decision.replace(/_/g, " "), values.target && `target ${values.target}`].filter(Boolean).join(" · ");
+  if (eventType.includes("model_session_started")) return values.node ? `The agent is working on ${values.node}.` : "An agent model session started.";
+  return "";
+}
+
+function humanizeToken(value: string): string {
+  return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function eventTimeValue(event: EventRecord): number {
+  return timestampValue(eventTimestamp(event));
+}
+
+function timestampValue(value: string): number {
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function TopBar({

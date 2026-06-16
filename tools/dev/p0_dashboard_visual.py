@@ -197,15 +197,58 @@ def seed_harness(harness: Path) -> Path:
         ],
     )
     events = [
-        ("2026-06-16T10:00:00Z", "intake_created", "PM", {"message": "Sprint created from dashboard input", "phase": "spec"}),
-        ("2026-06-16T10:01:00Z", "phase_transition", "PM", {"phase": "prd_ready", "status": "active"}),
-        ("2026-06-16T10:02:00Z", "dispatch_decision", "Planner", {"node_id": "plan", "target_pane": "%1:0.1", "decision": "dispatched"}),
-        ("2026-06-16T10:03:00Z", "model_session_started", "Planner", {"model": "claude-sonnet", "node_id": "plan"}),
+        (
+            "2026-06-16T10:00:00Z",
+            "intake_created",
+            "PM",
+            {
+                "message": "PM scoped the dashboard request into a Phase-0 app-shell sprint.",
+                "thought": "The owner wants observability that feels like an agent workspace, not an admin panel.",
+                "phase": "spec",
+            },
+        ),
+        (
+            "2026-06-16T10:01:00Z",
+            "phase_transition",
+            "PM",
+            {
+                "phase": "prd_ready",
+                "status": "active",
+                "summary": "Acceptance path is clear: intake, live process stream, deliverables, usage, and honest stalls.",
+            },
+        ),
+        (
+            "2026-06-16T10:02:00Z",
+            "dispatch_decision",
+            "Planner",
+            {
+                "node_id": "plan",
+                "target_pane": "%1:0.1",
+                "decision": "dispatched",
+                "thought": "Planner built a four-node DAG and routed planning to the available pane.",
+            },
+        ),
+        (
+            "2026-06-16T10:03:00Z",
+            "model_session_started",
+            "Planner",
+            {
+                "model": "claude-sonnet",
+                "node_id": "plan",
+                "summary": "Planner is resolving dependencies and matching required capabilities to pane supply.",
+            },
+        ),
         (
             "2026-06-16T10:04:00Z",
             "gate_blocked",
             "Builder",
-            {"node_id": "build", "decision": "no_matching_worker", "reason": "required capability nonexistent-skill", "phase": "planning_complete"},
+            {
+                "node_id": "build",
+                "decision": "no_matching_worker",
+                "reason": "required capability nonexistent-skill",
+                "phase": "planning_complete",
+                "thought": "Builder cannot start because the DAG requires a capability no registered worker advertises.",
+            },
         ),
     ]
     write_text(
@@ -213,18 +256,18 @@ def seed_harness(harness: Path) -> Path:
         "".join(json.dumps({"ts": ts, "sprint_id": sid, "type": typ, "actor": actor, "payload": payload}) + "\n" for ts, typ, actor, payload in events),
     )
     running_events = [
-        ("2026-06-16T11:00:00Z", "intake_created", "PM", {"message": "Live app shell sprint accepted", "phase": "spec"}),
-        ("2026-06-16T11:01:00Z", "phase_transition", "Planner", {"phase": "planning_complete", "status": "active"}),
-        ("2026-06-16T11:02:00Z", "dispatch_decision", "Planner", {"node_id": "build", "target_pane": "%1:0.2", "decision": "dispatched"}),
-        ("2026-06-16T11:03:00Z", "model_session_started", "Builder", {"model": "claude-sonnet", "node_id": "build"}),
+        ("2026-06-16T11:00:00Z", "intake_created", "PM", {"message": "PM accepted the app shell sprint and summarized the owner intent.", "phase": "spec"}),
+        ("2026-06-16T11:01:00Z", "phase_transition", "Planner", {"phase": "planning_complete", "status": "active", "summary": "Planner converted the scope into a buildable DAG."}),
+        ("2026-06-16T11:02:00Z", "dispatch_decision", "Planner", {"node_id": "build", "target_pane": "%1:0.2", "decision": "dispatched", "thought": "The build node matches the Builder pane capabilities."}),
+        ("2026-06-16T11:03:00Z", "model_session_started", "Builder", {"model": "claude-sonnet", "node_id": "build", "summary": "Builder is replacing the card grid with a process stream and separate results rail."}),
     ]
     write_text(
         sessions / running_sid / "events.jsonl",
         "".join(json.dumps({"ts": ts, "sprint_id": running_sid, "type": typ, "actor": actor, "payload": payload}) + "\n" for ts, typ, actor, payload in running_events),
     )
     done_events = [
-        ("2026-06-16T12:00:00Z", "phase_transition", "Evaluator", {"phase": "build_complete", "status": "completed"}),
-        ("2026-06-16T12:02:00Z", "milestone_completed", "Evaluator", {"node_id": "review", "message": "Final artifact accepted"}),
+        ("2026-06-16T12:00:00Z", "phase_transition", "Evaluator", {"phase": "build_complete", "status": "completed", "summary": "Evaluator moved the sprint into build complete after artifact review."}),
+        ("2026-06-16T12:02:00Z", "milestone_completed", "Evaluator", {"node_id": "review", "message": "Final artifact accepted", "summary": "Evaluator accepted the HTML report and evidence package."}),
     ]
     write_text(
         sessions / done_sid / "events.jsonl",
@@ -360,7 +403,7 @@ def audit(page) -> dict:
             const s = getComputedStyle(el);
             return s.borderStyle !== 'none' && parseFloat(s.borderWidth) > 0;
           });
-          const boxes = Array.from(document.querySelectorAll('.panel,.metric,.agent-card,.dag-node,.event-row,.primary-deliverable,.hero-status'));
+          const boxes = Array.from(document.querySelectorAll('.panel,.metric,.process-step,.primary-deliverable,.compact-session-header,.process-stream-panel'));
           const clickables = Array.from(document.querySelectorAll('button,select,textarea,a')).map((el) => {
             const r = el.getBoundingClientRect();
             return { tag: el.tagName.toLowerCase(), width: Math.round(r.width), height: Math.round(r.height) };
@@ -423,7 +466,7 @@ def wait_for_hero_title(page, title_fragment: str) -> None:
     page.wait_for_function(
         """fragment => {
           const loading = document.querySelector(".loading-panel,.loading-workbench");
-          const heroes = Array.from(document.querySelectorAll("[data-testid='hero-status'] h1"));
+          const heroes = Array.from(document.querySelectorAll("[data-testid='process-header'] h1, [data-testid='hero-status'] h1"));
           const hero = heroes.find((el) => {
             const rect = el.getBoundingClientRect();
             return rect.width > 0 && rect.height > 0 && el.textContent && el.textContent.includes(fragment);
@@ -499,21 +542,26 @@ def run(args: argparse.Namespace) -> int:
             context = browser.new_context(viewport={"width": args.width, "height": args.height}, device_scale_factor=1)
             page = context.new_page()
             page.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
-            page.wait_for_selector("[data-testid='agent-panel']", timeout=10000)
-            page.wait_for_selector("[data-testid='activity-stream']", timeout=10000)
+            page.wait_for_selector("[data-testid='process-stream']", timeout=10000)
+            page.wait_for_selector("[data-testid='results-rail']", timeout=10000)
             page.get_by_role("link", name="Build Codex-style dashboard").click()
             wait_for_hero_title(page, "Build Codex-style")
             screenshot(page, screenshots, "blocked-full-page")
             sections = {
-                "hero-status": "[data-testid='hero-status']",
-                "agent-cards": "[data-testid='agent-panel']",
-                "dag": "[data-testid='dag-panel']",
-                "activity-stream": "[data-testid='activity-stream']",
+                "process-header": "[data-testid='process-header']",
+                "agent-presence": "[data-testid='agent-presence']",
+                "process-stream": "[data-testid='process-stream']",
+                "results-rail": "[data-testid='results-rail']",
                 "deliverables": "[data-testid='deliverables-panel']",
                 "usage": "[data-testid='usage-panel']",
             }
             for name, selector in sections.items():
                 screenshot(page, screenshots, name, selector)
+            collapsed_step = page.locator("[data-testid='process-step-completed']:has(button[aria-expanded='false'])").first
+            collapsed_step.screenshot(path=str(screenshots / "completed-step-collapsed.png"))
+            collapsed_step.locator("button").click()
+            page.wait_for_timeout(350)
+            page.locator("[data-testid='process-step-completed']:has(button[aria-expanded='true'])").first.screenshot(path=str(screenshots / "completed-step-expanded.png"))
             audit_before = audit(page)
             write_json(base / f"audit-{args.label}.json", audit_before)
 
