@@ -148,6 +148,11 @@ echo "Sprint created: $sid"
         assert usage["not_per_agent"] is True
         assert usage["models"][0]["used_tokens_label"] == "44.1M"
 
+        settings = mod._settings_payload()
+        assert settings["ok"] is True
+        assert settings["write_supported"] is False
+        assert settings["source"] == "status-server read-only config scan"
+
         deliverables = mod._sprint_deliverables_payload(sid)
         names = {item["name"] for item in deliverables["items"]}
         assert f"{sid}.report.html" in names
@@ -162,7 +167,7 @@ echo "Sprint created: $sid"
 
         html = mod._p0_dashboard_html()
         assert "Solar Harness Status" in html
-        assert "/static/p0.js" in html
+        assert "/static/p0.js" in html or "/static/p0-app/" in html
 
     print("PASS status-server p0 dashboard")
 

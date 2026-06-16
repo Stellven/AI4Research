@@ -384,6 +384,9 @@ def _static_content_type(path: Path) -> str:
 
 
 def _p0_dashboard_html() -> str:
+    app_index = _status_server_path("static", "p0-app/index.html")
+    if app_index:
+        return app_index.read_text(encoding="utf-8")
     template = _status_server_path("templates", "p0_dashboard.html")
     if template:
         return template.read_text(encoding="utf-8")
@@ -616,6 +619,72 @@ def _usage_payload(refresh: bool = False) -> dict:
         "total_used_tokens_label": _compact_number(total),
         "models": rows,
         "refresh_attempts": refresh_attempts,
+    }
+
+
+def _read_config_env(path: Path) -> dict:
+    if not path.exists() or not path.is_file():
+        return {}
+    rows = {}
+    try:
+        for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            if not key:
+                continue
+            rows[key] = value.strip().strip('"').strip("'")
+    except OSError:
+        return {}
+    return rows
+
+
+def _settings_payload() -> dict:
+    """Read-only model/lab settings surface for the P0 app shell."""
+    config_env = _read_config_env(HARNESS_DIR / "config.env")
+    role_model_keys = {
+        "pm": ("SOLAR_PM_MODEL", "PM_MODEL", "CLAUDE_PM_MODEL"),
+        "planner": ("SOLAR_PLANNER_MODEL", "PLANNER_MODEL", "CLAUDE_PLANNER_MODEL"),
+        "builder": ("SOLAR_BUILDER_MODEL", "BUILDER_MODEL", "CLAUDE_BUILDER_MODEL"),
+        "evaluator": ("SOLAR_EVALUATOR_MODEL", "EVALUATOR_MODEL", "CLAUDE_EVALUATOR_MODEL"),
+    }
+    role_models = {}
+    for role, keys in role_model_keys.items():
+        for key in keys:
+            value = os.environ.get(key) or config_env.get(key)
+            if value:
+                role_models[role] = {"model": value, "source": key}
+                break
+
+    lab_keys = ("SOLAR_LAB_MODEL_MATRIX", "LAB_MODEL_MATRIX", "SOLAR_MODEL_LAB_MATRIX")
+    lab_matrix = ""
+    lab_source = ""
+    for key in lab_keys:
+        value = os.environ.get(key) or config_env.get(key)
+        if value:
+            lab_matrix = value
+            lab_source = key
+            break
+
+    physical = _physical_operator_summary()
+    return {
+        "ok": True,
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "source": "status-server read-only config scan",
+        "sources": {
+            "config_env": _safe_rel(HARNESS_DIR / "config.env", HARNESS_DIR),
+            "physical_operators": _safe_rel(HARNESS_DIR / "config" / "physical-operators.json", HARNESS_DIR),
+        },
+        "write_supported": False,
+        "write_note": "P0 settings are read-only. Use existing solar-harness model/config commands for writes.",
+        "model_lab_matrix": {
+            "value": lab_matrix,
+            "source": lab_source,
+        },
+        "role_models": role_models,
+        "physical_operators": physical,
     }
 
 
@@ -12519,6 +12588,9 @@ class StatusHandler(BaseHTTPRequestHandler):
         elif path == "/usage":
             refresh = params.get("refresh", ["0"])[0].lower() in ("1", "true", "yes")
             self._send_json(_usage_payload(refresh=refresh))
+
+        elif path == "/settings":
+            self._send_json(_settings_payload())
 
         elif path == "/events":
             sprint_id = params.get("sprint_id", [""])[0]
