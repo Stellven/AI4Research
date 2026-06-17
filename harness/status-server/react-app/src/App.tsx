@@ -1693,11 +1693,15 @@ function SettingsView() {
   const [agentOn, setAgentOn] = useState<Record<string, boolean>>({});
   const [labMode, setLabMode] = useState("all-claude");
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [usage, setUsage] = useState<UsagePayload>();
 
   const refresh = useCallback(async () => {
     try {
       const response = await fetchSettings();
       setSettings(response);
+      void fetchUsage()
+        .then(setUsage)
+        .catch(() => undefined);
       const models: Record<string, string> = {};
       const on: Record<string, boolean> = {};
       ROLE_ORDER.forEach((role) => {
@@ -1883,6 +1887,32 @@ function SettingsView() {
                         }))
                       }
                     />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="settings-block">
+              <SectionHeader
+                icon={<Clock3 size={17} />}
+                title="Account token usage"
+                detail={usage?.total_used_tokens_label || "—"}
+              />
+              <p className="settings-help">
+                Total across all sprints, per model, today — the account-wide
+                quota signal. (Per-sprint usage shows on each session.)
+              </p>
+              <div className="usage-models">
+                {(usage?.models || []).length === 0 && (
+                  <EmptyInline label="No usage signal available" />
+                )}
+                {(usage?.models || []).map((model) => (
+                  <div
+                    className="usage-model"
+                    key={`${model.model_key}-${model.date ?? ""}`}
+                  >
+                    <span>{model.model_key}</span>
+                    <strong>{model.used_tokens_label}</strong>
                   </div>
                 ))}
               </div>
