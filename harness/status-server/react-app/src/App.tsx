@@ -850,6 +850,11 @@ function CompactSessionHeader({
       : asString(sprint.status || phase, "Active").replace(/_/g, " ");
   const phaseLabel = phase.replace(/_/g, " ");
   const tone = isBlocked ? "blocked" : isComplete ? "complete" : "working";
+  const reason = isBlocked
+    ? stalledPlainLanguage(dashboard, stallText)
+    : isComplete
+      ? "Build phase is marked complete by the harness."
+      : `Working through the ${phaseLabel || "current"} phase.`;
   const technicalDetails = technicalDetailsForStall(dashboard, stallText);
 
   return (
@@ -860,19 +865,20 @@ function CompactSessionHeader({
       <div className="compact-title-block">
         <div className="task-eyebrow">
           <span className="task-kicker">Task</span>
-          <span className={`status-chip status-${tone}`}>
-            {isBlocked ? (
-              <AlertTriangle size={13} />
-            ) : isComplete ? (
-              <CheckCircle2 size={13} />
-            ) : (
-              <Loader2 className="spin-soft" size={13} />
-            )}
-            <span>{label}</span>
-          </span>
           {phaseLabel && <span className="phase-tag">{phaseLabel} phase</span>}
         </div>
         <h1>{titleForSprint(sprint)}</h1>
+        <div className={`task-status tone-${tone}`}>
+          {isBlocked ? (
+            <AlertTriangle size={15} />
+          ) : isComplete ? (
+            <CheckCircle2 size={15} />
+          ) : (
+            <Loader2 className="spin-soft" size={15} />
+          )}
+          <span className="task-status-label">{label}</span>
+          <span className="task-status-reason">{reason}</span>
+        </div>
         {isBlocked && technicalDetails.length > 0 && (
           <details className="technical-details">
             <summary>Technical details</summary>
@@ -943,29 +949,22 @@ function AgentSignature({
               <span className={`state-dot tone-${agent.state}`} />
               <strong>{agentShortName(agent.role)}</strong>
               <span className="relay-activity">
-                {agent.state === "idle" ? "waiting" : agent.activity}
+                {agent.state === "idle"
+                  ? "waiting"
+                  : agent.state === "complete"
+                    ? "done"
+                    : agent.state}
               </span>
             </div>
             {index < agents.length - 1 && (
               <span
                 className={`relay-link ${breakAfter === index ? "is-broken" : ""}`}
                 aria-hidden="true"
-              >
-                {breakAfter === index && gate.capability && (
-                  <span className="relay-gap">needs {gate.capability}</span>
-                )}
-              </span>
+              />
             )}
           </div>
         ))}
       </div>
-      {isBlocked && (
-        <p className="relay-break-note">
-          The handoff can&rsquo;t be made: no agent provides{" "}
-          <code>{gate.capability || "the required capability"}</code> for{" "}
-          <strong>{gate.nodeTitle || "the blocked node"}</strong>.
-        </p>
-      )}
     </section>
   );
 }
@@ -1049,7 +1048,7 @@ function ProcessStepItem({
         <span className="process-step-icon">{icon}</span>
         <span className="process-step-main">
           <span className="process-step-kicker">
-            {step.actor} · {formatDateTime(step.timestamp)}
+            {formatDateTime(step.timestamp)}
           </span>
           <strong>{step.title}</strong>
           <span>{step.summary}</span>

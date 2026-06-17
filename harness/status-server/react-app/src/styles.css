@@ -55,7 +55,7 @@
   --solar-control: #1d1d20;
   --solar-control-hover: #303035;
 
-  --solar-radius-control: 8px;
+  --solar-radius-control: 999px;
   --solar-radius-pill: 999px;
   --solar-radius-small: 6px;
   --solar-radius-modal: 10px;
@@ -173,9 +173,7 @@ summary:focus-visible,
   height: 100vh;
   padding: var(--solar-space-8) var(--solar-space-5) var(--solar-space-5);
   border-right: 1px solid var(--solar-line-soft);
-  background: rgba(250, 249, 246, 0.6);
-  backdrop-filter: blur(12px) saturate(1.05);
-  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+  background: rgba(249, 248, 245, 0.72);
 }
 
 .brand-row {
@@ -728,8 +726,8 @@ summary:focus-visible,
 .process-step-main strong {
   display: block;
   color: var(--solar-ink);
-  font-size: var(--solar-type-lg);
-  font-weight: 680;
+  font-size: var(--solar-type-base);
+  font-weight: var(--solar-weight-strong);
   transition: color var(--solar-duration-fast) var(--solar-ease);
 }
 
@@ -737,8 +735,8 @@ summary:focus-visible,
   display: block;
   margin-top: var(--solar-space-1);
   color: var(--solar-muted);
-  font-size: var(--solar-type-base);
-  line-height: 1.58;
+  font-size: var(--solar-type-sm);
+  line-height: 1.55;
 }
 
 .process-step-toggle {
@@ -2163,6 +2161,43 @@ summary:focus-visible,
 
 .artifact-row svg {
   color: var(--solar-subtle);
+}
+
+/* Single, explicit stall/status statement under the task title. */
+.task-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--solar-space-2) var(--solar-space-3);
+  margin-top: var(--solar-space-5);
+  font-size: var(--solar-type-lg);
+  line-height: 1.4;
+}
+
+.task-status svg {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.task-status.tone-blocked {
+  color: var(--solar-warning);
+}
+
+.task-status.tone-complete {
+  color: var(--solar-success);
+}
+
+.task-status.tone-working {
+  color: var(--solar-accent-ink);
+}
+
+.task-status-label {
+  font-weight: var(--solar-weight-strong);
+}
+
+.task-status-reason {
+  color: var(--solar-ink);
+  font-weight: 400;
 }
 
 @keyframes spin {
