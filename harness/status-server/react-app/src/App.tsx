@@ -29,7 +29,7 @@ import {
   Sparkles,
   SquareTerminal,
   Workflow,
-  Zap
+  Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -40,7 +40,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
-  useParams
+  useParams,
 } from "react-router-dom";
 import {
   fetchDashboard,
@@ -51,7 +51,7 @@ import {
   fetchStatus,
   fetchUsage,
   openEventStream,
-  submitIntake
+  submitIntake,
 } from "./api";
 import {
   AgentCardModel,
@@ -73,7 +73,7 @@ import {
   shortText,
   stallCopy,
   statusTone,
-  titleForSprint
+  titleForSprint,
 } from "./format";
 import type {
   DashboardResponse,
@@ -82,7 +82,7 @@ import type {
   SettingsPayload,
   SprintSummary,
   StatusPayload,
-  UsagePayload
+  UsagePayload,
 } from "./types";
 
 type LoadState = "loading" | "ready" | "error";
@@ -98,6 +98,13 @@ type SessionData = {
   streamState: "connecting" | "live" | "retrying" | "off";
   refresh: () => Promise<void>;
 };
+
+type SessionCacheEntry = Pick<
+  SessionData,
+  "status" | "dashboard" | "events" | "usage" | "deliverables"
+>;
+
+const sessionDataCache = new Map<string, SessionCacheEntry>();
 
 type ProcessStepState = "active" | "blocked" | "completed" | "pending";
 
@@ -151,7 +158,9 @@ function Shell() {
 
   useEffect(() => {
     if (location.pathname === "/" && sprints.length > 0) {
-      navigate(`/sessions/${encodeURIComponent(sprints[0].sprint_id)}`, { replace: true });
+      navigate(`/sessions/${encodeURIComponent(sprints[0].sprint_id)}`, {
+        replace: true,
+      });
     }
   }, [location.pathname, navigate, sprints]);
 
@@ -160,7 +169,7 @@ function Shell() {
       await refreshSprints();
       navigate(`/sessions/${encodeURIComponent(sprintId)}`);
     },
-    [navigate, refreshSprints]
+    [navigate, refreshSprints],
   );
 
   return (
@@ -172,13 +181,34 @@ function Shell() {
         error={error}
         onCreated={onCreated}
       />
-      <main className="main-workspace" aria-label="Solar Harness session workspace">
+      <main
+        className="main-workspace"
+        aria-label="Solar Harness session workspace"
+      >
         <Routes>
           <Route
             path="/"
-            element={sprints.length ? <Navigate to={`/sessions/${encodeURIComponent(sprints[0].sprint_id)}`} replace /> : <EmptyState onCreated={onCreated} />}
+            element={
+              sprints.length ? (
+                <Navigate
+                  to={`/sessions/${encodeURIComponent(sprints[0].sprint_id)}`}
+                  replace
+                />
+              ) : (
+                <EmptyState onCreated={onCreated} />
+              )
+            }
           />
-          <Route path="/sessions/:sprintId" element={<SessionRoute sprints={sprints} onCreated={onCreated} onSprintChanged={refreshSprints} />} />
+          <Route
+            path="/sessions/:sprintId"
+            element={
+              <SessionRoute
+                sprints={sprints}
+                onCreated={onCreated}
+                onSprintChanged={refreshSprints}
+              />
+            }
+          />
           <Route path="/settings" element={<SettingsView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -197,7 +227,7 @@ function Sidebar({
   selectedSprintId,
   state,
   error,
-  onCreated
+  onCreated,
 }: {
   sprints: SprintSummary[];
   selectedSprintId: string;
@@ -227,18 +257,25 @@ function Sidebar({
         <div className="session-list" data-testid="session-list">
           {state === "loading" && <SidebarSkeleton />}
           {state === "error" && <div className="sidebar-error">{error}</div>}
-          {state === "ready" && sprints.length === 0 && <div className="sidebar-empty">No sessions yet</div>}
+          {state === "ready" && sprints.length === 0 && (
+            <div className="sidebar-empty">No sessions yet</div>
+          )}
           {sprints.map((sprint) => (
             <NavLink
               key={sprint.sprint_id}
               to={`/sessions/${encodeURIComponent(sprint.sprint_id)}`}
-              className={({ isActive }) => `session-link ${isActive || selectedSprintId === sprint.sprint_id ? "is-active" : ""}`}
+              className={({ isActive }) =>
+                `session-link ${isActive || selectedSprintId === sprint.sprint_id ? "is-active" : ""}`
+              }
             >
               <span className={`session-dot tone-${sessionTone(sprint)}`} />
               <span className="session-copy">
                 <span className="session-title">{titleForSprint(sprint)}</span>
                 <span className="session-meta">
-                  {asString(sprint.phase || sprint.status, "unknown").replace(/_/g, " ")}
+                  {asString(sprint.phase || sprint.status, "unknown").replace(
+                    /_/g,
+                    " ",
+                  )}
                 </span>
               </span>
             </NavLink>
@@ -247,7 +284,12 @@ function Sidebar({
       </div>
 
       <div className="sidebar-footer">
-        <NavLink to="/settings" className={({ isActive }) => `settings-link ${isActive ? "is-active" : ""}`}>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `settings-link ${isActive ? "is-active" : ""}`
+          }
+        >
           <Settings size={16} />
           <span>Settings</span>
         </NavLink>
@@ -272,7 +314,9 @@ function SidebarSkeleton() {
   );
 }
 
-function sessionTone(sprint: SprintSummary): "idle" | "working" | "blocked" | "complete" {
+function sessionTone(
+  sprint: SprintSummary,
+): "idle" | "working" | "blocked" | "complete" {
   if (sprint.stall?.is_stalled) return "blocked";
   return statusTone(asString(sprint.status || sprint.phase));
 }
@@ -280,7 +324,7 @@ function sessionTone(sprint: SprintSummary): "idle" | "working" | "blocked" | "c
 function NewTaskDialog({
   onCreated,
   buttonClassName,
-  compact = false
+  compact = false,
 }: {
   onCreated: (sprintId: string) => Promise<void>;
   buttonClassName?: string;
@@ -300,7 +344,11 @@ function NewTaskDialog({
     try {
       const response = await submitIntake(cleanTask);
       if (!response.ok || !response.sprint_id) {
-        throw new Error(response.error || response.stdout_tail || "Intake did not return a sprint id");
+        throw new Error(
+          response.error ||
+            response.stdout_tail ||
+            "Intake did not return a sprint id",
+        );
       }
       setTask("");
       setOpen(false);
@@ -323,7 +371,9 @@ function NewTaskDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content">
-          <Dialog.Title className="dialog-title">Describe what you want done</Dialog.Title>
+          <Dialog.Title className="dialog-title">
+            Describe what you want done
+          </Dialog.Title>
           <Dialog.Description className="dialog-description">
             This starts a real Solar Harness intake via the existing CLI.
           </Dialog.Description>
@@ -338,12 +388,24 @@ function NewTaskDialog({
             {error && <div className="form-error">{error}</div>}
             <div className="dialog-actions">
               <Dialog.Close asChild>
-                <button type="button" className="ghost-button" disabled={submitting}>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={submitting}
+                >
                   Cancel
                 </button>
               </Dialog.Close>
-              <button type="submit" className="primary-button" disabled={!task.trim() || submitting}>
-                {submitting ? <Loader2 className="spin" size={16} /> : <Play size={16} />}
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={!task.trim() || submitting}
+              >
+                {submitting ? (
+                  <Loader2 className="spin" size={16} />
+                ) : (
+                  <Play size={16} />
+                )}
                 <span>{submitting ? "Starting" : "Start work"}</span>
               </button>
             </div>
@@ -357,7 +419,7 @@ function NewTaskDialog({
 function SessionRoute({
   sprints,
   onCreated,
-  onSprintChanged
+  onSprintChanged,
 }: {
   sprints: SprintSummary[];
   onCreated: (sprintId: string) => Promise<void>;
@@ -366,16 +428,28 @@ function SessionRoute({
   const { sprintId = "" } = useParams();
   const decodedSprintId = decodeURIComponent(sprintId);
   const session = useSessionData(decodedSprintId, onSprintChanged);
-  const sprint = sprints.find((item) => item.sprint_id === decodedSprintId) || session.dashboard?.data?.sprint;
+  const sprint =
+    sprints.find((item) => item.sprint_id === decodedSprintId) ||
+    session.dashboard?.data?.sprint;
 
   if (!decodedSprintId) {
     return <EmptyState onCreated={onCreated} />;
   }
 
-  return <SessionView sprint={sprint as SprintSummary | undefined} sprintId={decodedSprintId} session={session} onCreated={onCreated} />;
+  return (
+    <SessionView
+      sprint={sprint as SprintSummary | undefined}
+      sprintId={decodedSprintId}
+      session={session}
+      onCreated={onCreated}
+    />
+  );
 }
 
-function useSessionData(sprintId: string, onSprintChanged: () => Promise<void>): SessionData {
+function useSessionData(
+  sprintId: string,
+  onSprintChanged: () => Promise<void>,
+): SessionData {
   const [status, setStatus] = useState<StatusPayload>();
   const [dashboard, setDashboard] = useState<DashboardResponse>();
   const [events, setEvents] = useState<EventRecord[]>([]);
@@ -383,7 +457,9 @@ function useSessionData(sprintId: string, onSprintChanged: () => Promise<void>):
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState("");
-  const [streamState, setStreamState] = useState<"connecting" | "live" | "retrying" | "off">("connecting");
+  const [streamState, setStreamState] = useState<
+    "connecting" | "live" | "retrying" | "off"
+  >("connecting");
   const selectedSprintRef = useRef(sprintId);
 
   useEffect(() => {
@@ -393,22 +469,46 @@ function useSessionData(sprintId: string, onSprintChanged: () => Promise<void>):
   const refresh = useCallback(async () => {
     if (!sprintId) return;
     try {
-      const [statusResponse, dashboardResponse, eventsResponse, usageResponse, deliverablesResponse] = await Promise.all([
+      const [
+        statusResponse,
+        dashboardResponse,
+        eventsResponse,
+        usageResponse,
+        deliverablesResponse,
+      ] = await Promise.all([
         fetchStatus(sprintId),
         fetchDashboard(sprintId),
         fetchEvents(sprintId, 140),
         fetchUsage(),
-        fetchDeliverables(sprintId)
+        fetchDeliverables(sprintId),
       ]);
       if (selectedSprintRef.current !== sprintId) {
         return;
       }
       setStatus(statusResponse);
       setDashboard(dashboardResponse);
-      const scopedEvents = eventsResponse.filter((event) => !event.sprint_id || event.sprint_id === sprintId);
-      setEvents((existing) => mergeEvents(existing.filter((event) => !event.sprint_id || event.sprint_id === sprintId), scopedEvents));
+      const scopedEvents = eventsResponse.filter(
+        (event) => !event.sprint_id || event.sprint_id === sprintId,
+      );
+      const nextDeliverables = deliverablesResponse.items || [];
+      setEvents((existing) => {
+        const merged = mergeEvents(
+          existing.filter(
+            (event) => !event.sprint_id || event.sprint_id === sprintId,
+          ),
+          scopedEvents,
+        );
+        sessionDataCache.set(sprintId, {
+          status: statusResponse,
+          dashboard: dashboardResponse,
+          events: merged,
+          usage: usageResponse,
+          deliverables: nextDeliverables,
+        });
+        return merged;
+      });
       setUsage(usageResponse);
-      setDeliverables(deliverablesResponse.items || []);
+      setDeliverables(nextDeliverables);
       setState("ready");
       setError("");
     } catch (err) {
@@ -418,12 +518,24 @@ function useSessionData(sprintId: string, onSprintChanged: () => Promise<void>):
   }, [sprintId]);
 
   useEffect(() => {
-    setState("loading");
-    setStatus(undefined);
-    setDashboard(undefined);
-    setUsage(undefined);
-    setDeliverables([]);
-    setEvents([]);
+    const cached = sessionDataCache.get(sprintId);
+    if (cached) {
+      setStatus(cached.status);
+      setDashboard(cached.dashboard);
+      setEvents(cached.events);
+      setUsage(cached.usage);
+      setDeliverables(cached.deliverables);
+      setState("ready");
+      setError("");
+    } else {
+      setStatus(undefined);
+      setDashboard(undefined);
+      setUsage(undefined);
+      setDeliverables([]);
+      setEvents([]);
+      setState("ready");
+      setError("");
+    }
     setStreamState("connecting");
     void refresh();
   }, [refresh]);
@@ -449,9 +561,19 @@ function useSessionData(sprintId: string, onSprintChanged: () => Promise<void>):
           return;
         }
         setStreamState("live");
-        setEvents((existing) => mergeEvents(existing, [event]));
+        setEvents((existing) => {
+          const merged = mergeEvents(existing, [event]);
+          const cached = sessionDataCache.get(selectedSprintRef.current);
+          if (cached) {
+            sessionDataCache.set(selectedSprintRef.current, {
+              ...cached,
+              events: merged,
+            });
+          }
+          return merged;
+        });
       },
-      () => setStreamState("retrying")
+      () => setStreamState("retrying"),
     );
     if (!source) {
       setStreamState("off");
@@ -461,14 +583,24 @@ function useSessionData(sprintId: string, onSprintChanged: () => Promise<void>):
     return () => source.close();
   }, [sprintId]);
 
-  return { status, dashboard, events, usage, deliverables, state, error, streamState, refresh };
+  return {
+    status,
+    dashboard,
+    events,
+    usage,
+    deliverables,
+    state,
+    error,
+    streamState,
+    refresh,
+  };
 }
 
 function SessionView({
   sprint,
   sprintId,
   session,
-  onCreated
+  onCreated,
 }: {
   sprint?: SprintSummary;
   sprintId: string;
@@ -477,30 +609,69 @@ function SessionView({
 }) {
   const dashboard = dashboardForSprint(session.dashboard, sprintId);
   const data = dashboard?.data;
-  const currentSprint = (data?.sprint || sprint || { sprint_id: sprintId }) as SprintSummary;
+  const currentSprint = (data?.sprint ||
+    sprint || { sprint_id: sprintId }) as SprintSummary;
   const stall = data?.stall || sprint?.stall;
-  const agents = useMemo(() => buildAgents(session.status, dashboard, session.events), [session.status, dashboard, session.events]);
-  const phase = asString(data?.phase || currentSprint.phase || currentSprint.status);
+  const agents = useMemo(
+    () => buildAgents(session.status, dashboard, session.events),
+    [session.status, dashboard, session.events],
+  );
+  const phase = asString(
+    data?.phase || currentSprint.phase || currentSprint.status,
+  );
   const isBlocked = Boolean(stall?.is_stalled);
-  const isComplete = statusTone(asString(currentSprint.status || phase)) === "complete";
+  const isComplete =
+    statusTone(asString(currentSprint.status || phase)) === "complete";
   const processSteps = useMemo(
-    () => buildProcessSteps(dashboard, session.events, session.deliverables, phase),
-    [dashboard, session.deliverables, session.events, phase]
+    () =>
+      buildProcessSteps(dashboard, session.events, session.deliverables, phase),
+    [dashboard, session.deliverables, session.events, phase],
   );
 
   return (
     <div className="workspace-scroll">
-      <TopBar sprint={currentSprint} usage={session.usage} streamState={session.streamState} onCreated={onCreated} />
+      <TopBar
+        sprint={currentSprint}
+        usage={session.usage}
+        streamState={session.streamState}
+        onCreated={onCreated}
+      />
       <AnimatePresence mode="popLayout">
         {session.state === "loading" && <LoadingWorkbench key="loading" />}
-        {session.state === "error" && <ErrorWorkbench key="error" message={session.error} onRetry={session.refresh} />}
+        {session.state === "error" && (
+          <ErrorWorkbench
+            key="error"
+            message={session.error}
+            onRetry={session.refresh}
+          />
+        )}
         {session.state === "ready" && (
-          <motion.div key="ready" className="process-workbench" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <CompactSessionHeader sprint={currentSprint} phase={phase} isBlocked={isBlocked} isComplete={isComplete} stallText={stallCopy(stall)} dashboard={dashboard} />
+          <motion.div
+            key="ready"
+            className="process-workbench"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <CompactSessionHeader
+              sprint={currentSprint}
+              phase={phase}
+              isBlocked={isBlocked}
+              isComplete={isComplete}
+              stallText={stallCopy(stall)}
+              dashboard={dashboard}
+            />
             <AgentPresenceStrip agents={agents} />
             <div className="process-results-layout">
-              <ProcessStream steps={processSteps} streamState={session.streamState} />
-              <ResultsRail dashboard={dashboard} deliverables={session.deliverables} usage={session.usage} />
+              <ProcessStream
+                steps={processSteps}
+                streamState={session.streamState}
+              />
+              <ResultsRail
+                dashboard={dashboard}
+                deliverables={session.deliverables}
+                usage={session.usage}
+              />
             </div>
           </motion.div>
         )}
@@ -509,9 +680,14 @@ function SessionView({
   );
 }
 
-function dashboardForSprint(dashboard: DashboardResponse | undefined, sprintId: string): DashboardResponse | undefined {
+function dashboardForSprint(
+  dashboard: DashboardResponse | undefined,
+  sprintId: string,
+): DashboardResponse | undefined {
   if (!dashboard) return undefined;
-  const focus = asString(dashboard.data?.focus_sprint_id || dashboard.data?.sprint?.sprint_id);
+  const focus = asString(
+    dashboard.data?.focus_sprint_id || dashboard.data?.sprint?.sprint_id,
+  );
   if (focus && focus !== sprintId) return undefined;
   return dashboard;
 }
@@ -522,7 +698,7 @@ function CompactSessionHeader({
   isBlocked,
   isComplete,
   stallText,
-  dashboard
+  dashboard,
 }: {
   sprint: SprintSummary;
   phase: string;
@@ -533,28 +709,48 @@ function CompactSessionHeader({
 }) {
   const progress = dashboard?.data?.progress;
   const total = Number(progress?.total_nodes || 0);
-  const done = Number(progress?.completed_nodes || progress?.passed_nodes || progress?.status_counts?.passed || 0);
-  const percentage = total > 0 ? Math.round((done / total) * 100) : isComplete ? 100 : 0;
-  const label = isBlocked ? "Stalled" : isComplete ? "Complete" : asString(sprint.status || phase, "Active").replace(/_/g, " ");
+  const done = Number(
+    progress?.completed_nodes ||
+      progress?.passed_nodes ||
+      progress?.status_counts?.passed ||
+      0,
+  );
+  const percentage =
+    total > 0 ? Math.round((done / total) * 100) : isComplete ? 100 : 0;
+  const label = isBlocked
+    ? "Stalled"
+    : isComplete
+      ? "Complete"
+      : asString(sprint.status || phase, "Active").replace(/_/g, " ");
 
   return (
-    <section className={`compact-session-header ${isBlocked ? "is-blocked" : ""} ${isComplete ? "is-complete" : ""}`} data-testid="process-header">
+    <section
+      className={`compact-session-header ${isBlocked ? "is-blocked" : ""} ${isComplete ? "is-complete" : ""}`}
+      data-testid="process-header"
+    >
       <div className="compact-title-block">
         <div className="eyebrow-row">
-          <span className={`state-orb tone-${isBlocked ? "blocked" : isComplete ? "complete" : "working"}`} />
+          <span
+            className={`state-orb tone-${isBlocked ? "blocked" : isComplete ? "complete" : "working"}`}
+          />
           <span>{label}</span>
           <span>{phase.replace(/_/g, " ") || "phase unknown"}</span>
         </div>
         <h1>{titleForSprint(sprint)}</h1>
         {isBlocked && <p>{stallText}</p>}
       </div>
-      <div className="compact-progress" aria-label={`Sprint progress ${percentage}%`}>
+      <div
+        className="compact-progress"
+        aria-label={`Sprint progress ${percentage}%`}
+      >
         <div className="progress-text">
           <strong>{percentage}%</strong>
           <span>{total ? `${done}/${total} nodes` : "waiting for DAG"}</span>
         </div>
         <div className="progress-track">
-          <span style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }} />
+          <span
+            style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
+          />
         </div>
       </div>
     </section>
@@ -566,7 +762,9 @@ function AgentPresenceStrip({ agents }: { agents: AgentCardModel[] }) {
     <section className="agent-presence-strip" data-testid="agent-presence">
       {agents.map((agent) => (
         <div className={`agent-presence tone-${agent.state}`} key={agent.role}>
-          <span className={`state-dot tone-${agent.state === "complete" ? "complete" : agent.state === "blocked" ? "blocked" : agent.state === "working" ? "working" : "idle"}`} />
+          <span
+            className={`state-dot tone-${agent.state === "complete" ? "complete" : agent.state === "blocked" ? "blocked" : agent.state === "working" ? "working" : "idle"}`}
+          />
           <strong>{ROLE_META[agent.role].title.split(" ")[0]}</strong>
           <span>{agent.state === "idle" ? "waiting" : agent.activity}</span>
         </div>
@@ -575,12 +773,22 @@ function AgentPresenceStrip({ agents }: { agents: AgentCardModel[] }) {
   );
 }
 
-function ProcessStream({ steps, streamState }: { steps: ProcessStep[]; streamState: string }) {
+function ProcessStream({
+  steps,
+  streamState,
+}: {
+  steps: ProcessStep[];
+  streamState: string;
+}) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const signature = steps.map((step) => `${step.id}:${step.defaultExpanded ? "1" : "0"}`).join("|");
+  const signature = steps
+    .map((step) => `${step.id}:${step.defaultExpanded ? "1" : "0"}`)
+    .join("|");
 
   useEffect(() => {
-    setExpanded(Object.fromEntries(steps.map((step) => [step.id, step.defaultExpanded])));
+    setExpanded(
+      Object.fromEntries(steps.map((step) => [step.id, step.defaultExpanded])),
+    );
   }, [signature, steps]);
 
   function toggle(id: string) {
@@ -589,22 +797,58 @@ function ProcessStream({ steps, streamState }: { steps: ProcessStep[]; streamSta
 
   return (
     <section className="process-stream-panel" data-testid="process-stream">
-      <SectionHeader icon={<Workflow size={17} />} title="Process stream" detail={streamState === "live" ? "live" : streamState} />
+      <SectionHeader
+        icon={<Workflow size={17} />}
+        title="Process stream"
+        detail={streamState === "live" ? "live" : streamState}
+      />
       <div className="process-step-list">
-        {steps.length === 0 && <EmptyInline label="Waiting for agent process events" />}
+        {steps.length === 0 && (
+          <EmptyInline label="Waiting for agent process events" />
+        )}
         {steps.map((step) => (
-          <ProcessStepItem key={step.id} step={step} expanded={Boolean(expanded[step.id])} onToggle={() => toggle(step.id)} />
+          <ProcessStepItem
+            key={step.id}
+            step={step}
+            expanded={Boolean(expanded[step.id])}
+            onToggle={() => toggle(step.id)}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function ProcessStepItem({ step, expanded, onToggle }: { step: ProcessStep; expanded: boolean; onToggle: () => void }) {
-  const icon = step.state === "blocked" ? <AlertTriangle size={16} /> : step.state === "completed" ? <CheckCircle2 size={16} /> : step.state === "active" ? <Loader2 className="spin-soft" size={16} /> : <Circle size={15} />;
+function ProcessStepItem({
+  step,
+  expanded,
+  onToggle,
+}: {
+  step: ProcessStep;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const icon =
+    step.state === "blocked" ? (
+      <AlertTriangle size={16} />
+    ) : step.state === "completed" ? (
+      <CheckCircle2 size={16} />
+    ) : step.state === "active" ? (
+      <Loader2 className="spin-soft" size={16} />
+    ) : (
+      <Circle size={15} />
+    );
   return (
-    <article className={`process-step process-step-${step.state}`} data-testid={`process-step-${step.state}`}>
-      <button className="process-step-summary" type="button" onClick={onToggle} aria-expanded={expanded}>
+    <article
+      className={`process-step process-step-${step.state}`}
+      data-testid={`process-step-${step.state}`}
+    >
+      <button
+        className="process-step-summary"
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
         <span className="process-step-icon">{icon}</span>
         <span className="process-step-main">
           <span className="process-step-kicker">
@@ -613,7 +857,9 @@ function ProcessStepItem({ step, expanded, onToggle }: { step: ProcessStep; expa
           <strong>{step.title}</strong>
           <span>{step.summary}</span>
         </span>
-        <span className="process-step-toggle">{expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</span>
+        <span className="process-step-toggle">
+          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </span>
       </button>
       <AnimatePresence initial={false}>
         {expanded && (
@@ -636,7 +882,12 @@ function ProcessStepItem({ step, expanded, onToggle }: { step: ProcessStep; expa
               </div>
             )}
             {step.result && (
-              <a className="step-result-link" href={step.result.view_url} target="_blank" rel="noreferrer">
+              <a
+                className="step-result-link"
+                href={step.result.view_url}
+                target="_blank"
+                rel="noreferrer"
+              >
                 <FileCheck2 size={15} />
                 <span>Open {step.result.name}</span>
                 <ArrowUpRight size={13} />
@@ -652,7 +903,7 @@ function ProcessStepItem({ step, expanded, onToggle }: { step: ProcessStep; expa
 function ResultsRail({
   dashboard,
   deliverables,
-  usage
+  usage,
 }: {
   dashboard?: DashboardResponse;
   deliverables: Deliverable[];
@@ -669,11 +920,19 @@ function ResultsRail({
 
 function GraphSummaryPanel({ dashboard }: { dashboard?: DashboardResponse }) {
   const nodes = dashboard?.data?.dag?.nodes || [];
-  const active = nodes.find((node) => statusTone(asString(node.status)) === "working");
-  const blocked = nodes.filter((node) => statusTone(asString(node.status)) === "blocked");
+  const active = nodes.find(
+    (node) => statusTone(asString(node.status)) === "working",
+  );
+  const blocked = nodes.filter(
+    (node) => statusTone(asString(node.status)) === "blocked",
+  );
   return (
     <section className="panel graph-summary-panel" data-testid="graph-summary">
-      <SectionHeader icon={<ListTree size={17} />} title="Plan" detail={`${nodes.length} nodes`} />
+      <SectionHeader
+        icon={<ListTree size={17} />}
+        title="Plan"
+        detail={`${nodes.length} nodes`}
+      />
       {nodes.length === 0 && <EmptyInline label="No DAG available" />}
       {active && (
         <div className="plan-focus">
@@ -689,16 +948,22 @@ function GraphSummaryPanel({ dashboard }: { dashboard?: DashboardResponse }) {
           <span className="state-dot tone-blocked" />
           <div>
             <strong>{blocked.length} blocked</strong>
-            <p>{shortText(blocked.map((node) => nodeId(node)).join(", "), 96)}</p>
+            <p>
+              {shortText(blocked.map((node) => nodeId(node)).join(", "), 96)}
+            </p>
           </div>
         </div>
       )}
       <div className="mini-node-list">
         {nodes.slice(0, 6).map((node) => (
           <div key={nodeId(node)}>
-            <span className={`state-dot tone-${statusTone(asString(node.status))}`} />
+            <span
+              className={`state-dot tone-${statusTone(asString(node.status))}`}
+            />
             <span>{nodeId(node)}</span>
-            <strong>{asString(node.status, "pending").replace(/_/g, " ")}</strong>
+            <strong>
+              {asString(node.status, "pending").replace(/_/g, " ")}
+            </strong>
           </div>
         ))}
       </div>
@@ -706,9 +971,16 @@ function GraphSummaryPanel({ dashboard }: { dashboard?: DashboardResponse }) {
   );
 }
 
-function buildProcessSteps(dashboard: DashboardResponse | undefined, events: EventRecord[], deliverables: Deliverable[], phase: string): ProcessStep[] {
+function buildProcessSteps(
+  dashboard: DashboardResponse | undefined,
+  events: EventRecord[],
+  deliverables: Deliverable[],
+  phase: string,
+): ProcessStep[] {
   const steps: ProcessStep[] = [];
-  const orderedEvents = [...events].sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
+  const orderedEvents = [...events].sort(
+    (a, b) => eventTimeValue(a) - eventTimeValue(b),
+  );
 
   orderedEvents.forEach((event, index) => {
     steps.push(processStepFromEvent(event, index === orderedEvents.length - 1));
@@ -728,35 +1000,48 @@ function buildProcessSteps(dashboard: DashboardResponse | undefined, events: Eve
       actor: "Harness",
       title: "Dispatch is blocked",
       summary: stallCopy(stall),
-      detail: stallCopy(stall) || "The sprint is waiting on a dispatch gate or missing worker capability.",
+      detail:
+        stallCopy(stall) ||
+        "The sprint is waiting on a dispatch gate or missing worker capability.",
       timestamp: dashboard?.generated_at || "",
       state: "blocked",
       tone: "blocked",
       defaultExpanded: true,
       facts: [
-        { label: "state", value: asString(stall.state, "stalled").replace(/_/g, " ") },
-        { label: "phase", value: phase.replace(/_/g, " ") }
-      ]
+        {
+          label: "state",
+          value: asString(stall.state, "stalled").replace(/_/g, " "),
+        },
+        { label: "phase", value: phase.replace(/_/g, " ") },
+      ],
     });
   }
 
-  const primaryDeliverable = deliverables.find((item) => item.kind === "html" || item.name.endsWith(".html"));
-  if (primaryDeliverable) {
+  const primaryDeliverable = deliverables.find(
+    (item) => item.kind === "html" || item.name.endsWith(".html"),
+  );
+  if (primaryDeliverable && !stall?.is_stalled) {
     steps.push({
       id: `deliverable-${primaryDeliverable.rel_path}`,
       actor: "Harness",
       title: "Result is available",
       summary: `${primaryDeliverable.name} is ready to open.`,
-      detail: "The output is separated from the process stream so review can happen without digging through agent telemetry.",
-      timestamp: primaryDeliverable.mtime ? new Date(primaryDeliverable.mtime * 1000).toISOString() : dashboard?.generated_at || "",
+      detail:
+        "The output is separated from the process stream so review can happen without digging through agent telemetry.",
+      timestamp: primaryDeliverable.mtime
+        ? new Date(primaryDeliverable.mtime * 1000).toISOString()
+        : dashboard?.generated_at || "",
       state: "completed",
       tone: "complete",
       defaultExpanded: false,
       facts: [
         { label: "kind", value: primaryDeliverable.kind.toUpperCase() },
-        { label: "size", value: `${compactNumber(primaryDeliverable.size || 0)}B` }
+        {
+          label: "size",
+          value: `${compactNumber(primaryDeliverable.size || 0)}B`,
+        },
       ],
-      result: primaryDeliverable
+      result: primaryDeliverable,
     });
   }
 
@@ -764,14 +1049,22 @@ function buildProcessSteps(dashboard: DashboardResponse | undefined, events: Eve
     return [];
   }
 
-  const sorted = steps.sort((a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp));
+  const sorted = steps.sort(
+    (a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp),
+  );
   return sorted.map((step, index) => ({
     ...step,
-    defaultExpanded: step.defaultExpanded || step.state === "blocked" || (index === 0 && step.state === "active")
+    defaultExpanded:
+      step.defaultExpanded ||
+      step.state === "blocked" ||
+      (index === 0 && step.state === "active"),
   }));
 }
 
-function processStepFromEvent(event: EventRecord, latest: boolean): ProcessStep {
+function processStepFromEvent(
+  event: EventRecord,
+  latest: boolean,
+): ProcessStep {
   const body = payload(event);
   const type = event.type || event.event || "event";
   const actor = eventActor(event);
@@ -781,20 +1074,38 @@ function processStepFromEvent(event: EventRecord, latest: boolean): ProcessStep 
   const target = asString(body.target_pane || body.pane || event.target_pane);
   const reason = asString(body.reason || body.blocked_reason || event.reason);
   const model = asString(body.model || event.model);
-  const thought = asString(body.thought || body.summary || body.message || event.message);
+  const thought = asString(
+    body.thought || body.summary || body.message || event.message,
+  );
   const readable = humanEvent(event);
-  const blocked = readable.tone === "blocked" || String(type).includes("blocked") || decision.includes("no_matching");
-  const completed = readable.tone === "complete" || String(type).includes("completed") || String(type).includes("ended") || String(type).includes("passed");
-  const state: ProcessStepState = blocked ? "blocked" : latest && !completed ? "active" : completed ? "completed" : "completed";
+  const blocked =
+    readable.tone === "blocked" ||
+    String(type).includes("blocked") ||
+    decision.includes("no_matching");
+  const completed =
+    readable.tone === "complete" ||
+    String(type).includes("completed") ||
+    String(type).includes("ended") ||
+    String(type).includes("passed");
+  const state: ProcessStepState = blocked
+    ? "blocked"
+    : latest && !completed
+      ? "active"
+      : completed
+        ? "completed"
+        : "completed";
   const title = processTitle(type, actor, { node, phase, decision, target });
-  const summary = processSummary(type, { node, phase, decision, target, reason, thought }) || readable.detail || readable.title;
+  const summary =
+    processSummary(type, { node, phase, decision, target, reason, thought }) ||
+    readable.detail ||
+    readable.title;
   const facts = [
     node && { label: "node", value: node },
     phase && { label: "phase", value: phase.replace(/_/g, " ") },
     decision && { label: "decision", value: decision.replace(/_/g, " ") },
     target && { label: "target", value: target },
     model && { label: "model", value: model },
-    reason && { label: "reason", value: shortText(reason, 80) }
+    reason && { label: "reason", value: shortText(reason, 80) },
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
   return {
@@ -802,19 +1113,33 @@ function processStepFromEvent(event: EventRecord, latest: boolean): ProcessStep 
     actor,
     title,
     summary,
-    detail: thought || readable.detail || "The harness recorded this process step from the live event stream.",
+    detail:
+      thought ||
+      readable.detail ||
+      "The harness recorded this process step from the live event stream.",
     timestamp: eventTimestamp(event),
     state,
     tone: blocked ? "blocked" : completed ? "complete" : "working",
     defaultExpanded: blocked || (latest && !completed),
-    facts
+    facts,
   };
 }
 
-function processStepFromNode(node: { [key: string]: unknown }, latest: boolean, phase: string): ProcessStep {
+function processStepFromNode(
+  node: { [key: string]: unknown },
+  latest: boolean,
+  phase: string,
+): ProcessStep {
   const status = asString(node.status, "pending");
   const tone = statusTone(status);
-  const state: ProcessStepState = tone === "blocked" ? "blocked" : tone === "working" ? "active" : tone === "complete" ? "completed" : "pending";
+  const state: ProcessStepState =
+    tone === "blocked"
+      ? "blocked"
+      : tone === "working"
+        ? "active"
+        : tone === "complete"
+          ? "completed"
+          : "pending";
   return {
     id: `node-${nodeId(node)}`,
     actor: "Planner",
@@ -823,40 +1148,81 @@ function processStepFromNode(node: { [key: string]: unknown }, latest: boolean, 
     detail: `Planner DAG node ${nodeId(node)} is currently ${status.replace(/_/g, " ")}.`,
     timestamp: "",
     state,
-    tone: tone === "complete" ? "complete" : tone === "blocked" ? "blocked" : tone === "working" ? "working" : "idle",
+    tone:
+      tone === "complete"
+        ? "complete"
+        : tone === "blocked"
+          ? "blocked"
+          : tone === "working"
+            ? "working"
+            : "idle",
     defaultExpanded: state === "blocked" || state === "active",
     facts: [
       { label: "phase", value: phase.replace(/_/g, " ") },
-      { label: "status", value: status.replace(/_/g, " ") }
-    ]
+      { label: "status", value: status.replace(/_/g, " ") },
+    ],
   };
 }
 
-function processTitle(type: unknown, actor: string, values: { node: string; phase: string; decision: string; target: string }): string {
+function processTitle(
+  type: unknown,
+  actor: string,
+  values: { node: string; phase: string; decision: string; target: string },
+): string {
   const eventType = asString(type);
   if (eventType.includes("intake")) return `${actor} scoped the request`;
-  if (eventType.includes("phase")) return `${actor} moved the sprint to ${values.phase.replace(/_/g, " ") || "the next phase"}`;
-  if (eventType.includes("dispatch") && values.decision.includes("dispatched")) return `${actor} routed ${values.node || "work"}${values.target ? ` to ${values.target}` : ""}`;
-  if (eventType.includes("dispatch")) return `${actor} made a dispatch decision`;
-  if (eventType.includes("model_session_started")) return `${actor} started work${values.node ? ` on ${values.node}` : ""}`;
-  if (eventType.includes("model_session_ended")) return `${actor} finished a model session`;
-  if (eventType.includes("gate") || eventType.includes("blocked")) return `Dispatch blocked${values.node ? ` for ${values.node}` : ""}`;
-  if (eventType.includes("milestone") || eventType.includes("complete")) return `${actor} recorded a result`;
+  if (eventType.includes("phase"))
+    return `${actor} moved the sprint to ${values.phase.replace(/_/g, " ") || "the next phase"}`;
+  if (eventType.includes("dispatch") && values.decision.includes("dispatched"))
+    return `${actor} routed ${values.node || "work"}${values.target ? ` to ${values.target}` : ""}`;
+  if (eventType.includes("dispatch"))
+    return `${actor} made a dispatch decision`;
+  if (eventType.includes("model_session_started"))
+    return `${actor} started work${values.node ? ` on ${values.node}` : ""}`;
+  if (eventType.includes("model_session_ended"))
+    return `${actor} finished a model session`;
+  if (eventType.includes("gate") || eventType.includes("blocked"))
+    return `Dispatch blocked${values.node ? ` for ${values.node}` : ""}`;
+  if (eventType.includes("milestone") || eventType.includes("complete"))
+    return `${actor} recorded a result`;
   return humanizeToken(eventType);
 }
 
-function processSummary(type: unknown, values: { node: string; phase: string; decision: string; target: string; reason: string; thought: string }): string {
+function processSummary(
+  type: unknown,
+  values: {
+    node: string;
+    phase: string;
+    decision: string;
+    target: string;
+    reason: string;
+    thought: string;
+  },
+): string {
   const eventType = asString(type);
   if (values.reason) return shortText(values.reason, 120);
   if (values.thought) return shortText(values.thought, 120);
-  if (eventType.includes("phase")) return `Sprint phase is now ${values.phase.replace(/_/g, " ")}.`;
-  if (eventType.includes("dispatch")) return [values.node && `node ${values.node}`, values.decision && values.decision.replace(/_/g, " "), values.target && `target ${values.target}`].filter(Boolean).join(" · ");
-  if (eventType.includes("model_session_started")) return values.node ? `The agent is working on ${values.node}.` : "An agent model session started.";
+  if (eventType.includes("phase"))
+    return `Sprint phase is now ${values.phase.replace(/_/g, " ")}.`;
+  if (eventType.includes("dispatch"))
+    return [
+      values.node && `node ${values.node}`,
+      values.decision && values.decision.replace(/_/g, " "),
+      values.target && `target ${values.target}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  if (eventType.includes("model_session_started"))
+    return values.node
+      ? `The agent is working on ${values.node}.`
+      : "An agent model session started.";
   return "";
 }
 
 function humanizeToken(value: string): string {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function eventTimeValue(event: EventRecord): number {
@@ -872,7 +1238,7 @@ function TopBar({
   sprint,
   usage,
   streamState,
-  onCreated
+  onCreated,
 }: {
   sprint: SprintSummary;
   usage?: UsagePayload;
@@ -894,7 +1260,11 @@ function TopBar({
           <Zap size={14} />
           <span>{usage?.total_used_tokens_label || "0 tok"}</span>
         </div>
-        <NewTaskDialog onCreated={onCreated} buttonClassName="icon-text-button" compact />
+        <NewTaskDialog
+          onCreated={onCreated}
+          buttonClassName="icon-text-button"
+          compact
+        />
       </div>
     </header>
   );
@@ -906,7 +1276,7 @@ function HeroStatus({
   isBlocked,
   isComplete,
   stallText,
-  dashboard
+  dashboard,
 }: {
   sprint: SprintSummary;
   phase: string;
@@ -917,31 +1287,63 @@ function HeroStatus({
 }) {
   const progress = dashboard?.data?.progress;
   const total = Number(progress?.total_nodes || 0);
-  const done = Number(progress?.completed_nodes || progress?.passed_nodes || progress?.status_counts?.passed || 0);
+  const done = Number(
+    progress?.completed_nodes ||
+      progress?.passed_nodes ||
+      progress?.status_counts?.passed ||
+      0,
+  );
   const percentage = total > 0 ? Math.round((done / total) * 100) : 0;
-  const status = isBlocked ? "Stalled" : isComplete ? "Complete" : asString(sprint.status || phase, "Active").replace(/_/g, " ");
+  const status = isBlocked
+    ? "Stalled"
+    : isComplete
+      ? "Complete"
+      : asString(sprint.status || phase, "Active").replace(/_/g, " ");
 
   return (
-    <section className={`hero-status ${isBlocked ? "is-blocked" : ""} ${isComplete ? "is-complete" : ""}`} data-testid="hero-status">
+    <section
+      className={`hero-status ${isBlocked ? "is-blocked" : ""} ${isComplete ? "is-complete" : ""}`}
+      data-testid="hero-status"
+    >
       <div className="hero-main">
         <div className="eyebrow-row">
-          <span className={`state-orb tone-${isBlocked ? "blocked" : isComplete ? "complete" : "working"}`} />
+          <span
+            className={`state-orb tone-${isBlocked ? "blocked" : isComplete ? "complete" : "working"}`}
+          />
           <span>{status}</span>
           <span>{asString(sprint.sprint_id)}</span>
         </div>
         <h1>{titleForSprint(sprint)}</h1>
-        <p>{isBlocked ? stallText : isComplete ? "Build phase is marked complete by the harness." : `Current phase: ${phase.replace(/_/g, " ") || "detecting"}`}</p>
+        <p>
+          {isBlocked
+            ? stallText
+            : isComplete
+              ? "Build phase is marked complete by the harness."
+              : `Current phase: ${phase.replace(/_/g, " ") || "detecting"}`}
+        </p>
       </div>
       <div className="hero-metrics">
         <Metric value={`${percentage}%`} label="DAG progress" />
         <Metric value={compactNumber(total)} label="nodes" />
-        <Metric value={compactNumber(progress?.blocked_nodes || 0)} label="blocked" tone={isBlocked ? "blocked" : "default"} />
+        <Metric
+          value={compactNumber(progress?.blocked_nodes || 0)}
+          label="blocked"
+          tone={isBlocked ? "blocked" : "default"}
+        />
       </div>
     </section>
   );
 }
 
-function Metric({ value, label, tone = "default" }: { value: string; label: string; tone?: "default" | "blocked" }) {
+function Metric({
+  value,
+  label,
+  tone = "default",
+}: {
+  value: string;
+  label: string;
+  tone?: "default" | "blocked";
+}) {
   return (
     <div className={`metric tone-${tone}`}>
       <span>{value}</span>
@@ -953,10 +1355,18 @@ function Metric({ value, label, tone = "default" }: { value: string; label: stri
 function AgentPanel({ agents }: { agents: AgentCardModel[] }) {
   return (
     <section className="agent-panel" data-testid="agent-panel">
-      <SectionHeader icon={<Activity size={17} />} title="Agents" detail="PM, planner, builder, evaluator" />
+      <SectionHeader
+        icon={<Activity size={17} />}
+        title="Agents"
+        detail="PM, planner, builder, evaluator"
+      />
       <div className="agent-grid">
         {agents.map((agent) => (
-          <motion.article layout className={`agent-card agent-${agent.state}`} key={agent.role}>
+          <motion.article
+            layout
+            className={`agent-card agent-${agent.state}`}
+            key={agent.role}
+          >
             <div className="agent-card-top">
               <div>
                 <h2>{agent.title}</h2>
@@ -978,7 +1388,16 @@ function AgentPanel({ agents }: { agents: AgentCardModel[] }) {
 }
 
 function AgentState({ state }: { state: AgentCardModel["state"] }) {
-  const icon = state === "blocked" ? <AlertTriangle size={14} /> : state === "complete" ? <CheckCircle2 size={14} /> : state === "working" ? <Loader2 className="spin-soft" size={14} /> : <Circle size={12} />;
+  const icon =
+    state === "blocked" ? (
+      <AlertTriangle size={14} />
+    ) : state === "complete" ? (
+      <CheckCircle2 size={14} />
+    ) : state === "working" ? (
+      <Loader2 className="spin-soft" size={14} />
+    ) : (
+      <Circle size={12} />
+    );
   return (
     <div className={`agent-state tone-${state}`}>
       {icon}
@@ -987,7 +1406,11 @@ function AgentState({ state }: { state: AgentCardModel["state"] }) {
   );
 }
 
-function buildAgents(status?: StatusPayload, dashboard?: DashboardResponse, events: EventRecord[] = []): AgentCardModel[] {
+function buildAgents(
+  status?: StatusPayload,
+  dashboard?: DashboardResponse,
+  events: EventRecord[] = [],
+): AgentCardModel[] {
   const panes = [
     ...(status?.panes || []),
     ...((dashboard?.data?.capabilities?.pane_supply || []).map((pane) => ({
@@ -997,52 +1420,90 @@ function buildAgents(status?: StatusPayload, dashboard?: DashboardResponse, even
       state: pane.state,
       status: pane.state,
       current_activity: "",
-      model: pane.model
-    })) || [])
+      model: pane.model,
+    })) || []),
   ];
 
   return ROLE_ORDER.map((role) => {
     const meta = ROLE_META[role];
     const pane = panes.find((item) => normalizeRole(item.role) === role);
-    const recent = events.find((event) => normalizeRole(eventActor(event)) === role);
+    const recent = events.find(
+      (event) => normalizeRole(eventActor(event)) === role,
+    );
     const readable = recent ? humanEvent(recent) : undefined;
     const paneState = asString(pane?.state || pane?.status);
     const eventState = readable?.tone || "";
-    const state = eventState === "blocked" ? "blocked" : eventState === "complete" ? "complete" : statusTone(paneState || eventState);
+    const state =
+      eventState === "blocked"
+        ? "blocked"
+        : eventState === "complete"
+          ? "complete"
+          : statusTone(paneState || eventState);
     return {
       role,
       title: meta.title,
       subtitle: meta.subtitle,
       state,
-      activity: asString(pane?.current_activity) || readable?.title || "Waiting for harness activity",
+      activity:
+        asString(pane?.current_activity) ||
+        readable?.title ||
+        "Waiting for harness activity",
       model: asString(pane?.model),
       pane: asString(pane?.id || pane?.pane_id),
-      lastEvent: readable ? `${formatTime(eventTimestamp(recent as EventRecord))} · ${readable.detail || readable.title}` : "No recent event"
+      lastEvent: readable
+        ? `${formatTime(eventTimestamp(recent as EventRecord))} · ${readable.detail || readable.title}`
+        : "No recent event",
     };
   });
 }
 
-function SprintProgress({ phase, dashboard }: { phase: string; dashboard?: DashboardResponse }) {
+function SprintProgress({
+  phase,
+  dashboard,
+}: {
+  phase: string;
+  dashboard?: DashboardResponse;
+}) {
   const progress = dashboard?.data?.progress;
   const counts = progress?.status_counts || {};
-  const currentIndex = Math.max(0, PHASES.findIndex((item) => phase.includes(item)));
+  const currentIndex = Math.max(
+    0,
+    PHASES.findIndex((item) => phase.includes(item)),
+  );
 
   return (
     <section className="panel phase-panel" data-testid="phase-panel">
-      <SectionHeader icon={<GitBranch size={17} />} title="Sprint journey" detail="Spec to build" />
+      <SectionHeader
+        icon={<GitBranch size={17} />}
+        title="Sprint journey"
+        detail="Spec to build"
+      />
       <div className="phase-line">
         {PHASES.map((item, index) => {
-          const state = index < currentIndex ? "done" : index === currentIndex ? "current" : "pending";
+          const state =
+            index < currentIndex
+              ? "done"
+              : index === currentIndex
+                ? "current"
+                : "pending";
           return (
             <div className={`phase-step phase-${state}`} key={item}>
-              <span>{index < currentIndex ? <CheckCircle2 size={16} /> : <Circle size={14} />}</span>
+              <span>
+                {index < currentIndex ? (
+                  <CheckCircle2 size={16} />
+                ) : (
+                  <Circle size={14} />
+                )}
+              </span>
               <div>{item.replace(/_/g, " ")}</div>
             </div>
           );
         })}
       </div>
       <div className="status-counts">
-        {Object.entries(counts).length === 0 && <EmptyInline label="No node counts yet" />}
+        {Object.entries(counts).length === 0 && (
+          <EmptyInline label="No node counts yet" />
+        )}
         {Object.entries(counts).map(([key, value]) => (
           <div key={key} className={`count-row tone-${statusTone(key)}`}>
             <span>{key.replace(/_/g, " ")}</span>
@@ -1058,13 +1519,20 @@ function DagPanel({ dashboard }: { dashboard?: DashboardResponse }) {
   const nodes = dashboard?.data?.dag?.nodes || [];
   return (
     <section className="panel dag-panel" data-testid="dag-panel">
-      <SectionHeader icon={<Boxes size={17} />} title="DAG" detail={`${nodes.length} nodes`} />
+      <SectionHeader
+        icon={<Boxes size={17} />}
+        title="DAG"
+        detail={`${nodes.length} nodes`}
+      />
       <div className="dag-list">
         {nodes.length === 0 && <EmptyInline label="No task graph available" />}
         {nodes.map((node) => {
           const status = asString(node.status, "pending");
           return (
-            <article className={`dag-node tone-${statusTone(status)}`} key={nodeId(node)}>
+            <article
+              className={`dag-node tone-${statusTone(status)}`}
+              key={nodeId(node)}
+            >
               <div className="dag-node-line">
                 <span className={`state-dot tone-${statusTone(status)}`} />
                 <div>
@@ -1080,7 +1548,11 @@ function DagPanel({ dashboard }: { dashboard?: DashboardResponse }) {
                 {(node.required_capabilities || []).slice(0, 4).map((cap) => (
                   <span key={cap}>{cap}</span>
                 ))}
-                {node.route_decision && <span>{asString(node.route_decision).replace(/_/g, " ")}</span>}
+                {node.route_decision && (
+                  <span>
+                    {asString(node.route_decision).replace(/_/g, " ")}
+                  </span>
+                )}
               </div>
             </article>
           );
@@ -1090,12 +1562,24 @@ function DagPanel({ dashboard }: { dashboard?: DashboardResponse }) {
   );
 }
 
-function ActivityStream({ events, streamState }: { events: EventRecord[]; streamState: string }) {
+function ActivityStream({
+  events,
+  streamState,
+}: {
+  events: EventRecord[];
+  streamState: string;
+}) {
   return (
     <section className="panel activity-panel" data-testid="activity-stream">
-      <SectionHeader icon={<Radio size={17} />} title="Activity stream" detail={streamState} />
+      <SectionHeader
+        icon={<Radio size={17} />}
+        title="Activity stream"
+        detail={streamState}
+      />
       <div className="event-list">
-        {events.length === 0 && <EmptyInline label="Waiting for runtime events" />}
+        {events.length === 0 && (
+          <EmptyInline label="Waiting for runtime events" />
+        )}
         {events.map((event, index) => {
           const readable = humanEvent(event);
           return (
@@ -1105,7 +1589,9 @@ function ActivityStream({ events, streamState }: { events: EventRecord[]; stream
               className={`event-row tone-${readable.tone}`}
               key={`${eventTimestamp(event)}-${eventActor(event)}-${index}`}
             >
-              <div className="event-time">{formatTime(eventTimestamp(event))}</div>
+              <div className="event-time">
+                {formatTime(eventTimestamp(event))}
+              </div>
               <div className="event-body">
                 <div className="event-title-row">
                   <strong>{readable.title}</strong>
@@ -1122,28 +1608,55 @@ function ActivityStream({ events, streamState }: { events: EventRecord[]; stream
 }
 
 function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
-  const primary = deliverables.find((item) => item.kind === "html" || item.name.endsWith(".html")) || deliverables[0];
+  const primary =
+    deliverables.find(
+      (item) => item.kind === "html" || item.name.endsWith(".html"),
+    ) || deliverables[0];
   return (
-    <section className="panel deliverables-panel" data-testid="deliverables-panel">
-      <SectionHeader icon={<FileText size={17} />} title="Deliverables" detail={`${deliverables.length} artifacts`} />
-      {deliverables.length === 0 && <EmptyInline label="No artifacts produced yet" />}
+    <section
+      className="panel deliverables-panel"
+      data-testid="deliverables-panel"
+    >
+      <SectionHeader
+        icon={<FileText size={17} />}
+        title="Deliverables"
+        detail={`${deliverables.length} artifacts`}
+      />
+      {deliverables.length === 0 && (
+        <EmptyInline label="No artifacts produced yet" />
+      )}
       {primary && (
-        <a className="primary-deliverable" href={primary.view_url} target="_blank" rel="noreferrer">
+        <a
+          className="primary-deliverable"
+          href={primary.view_url}
+          target="_blank"
+          rel="noreferrer"
+        >
           <FileText size={18} />
           <span>
             <strong>{primary.name}</strong>
-            <small>{primary.kind.toUpperCase()} · {compactNumber(primary.size || 0)}B</small>
+            <small>
+              {primary.kind.toUpperCase()} · {compactNumber(primary.size || 0)}B
+            </small>
           </span>
           <ArrowUpRight size={16} />
         </a>
       )}
       <div className="deliverable-list">
-        {deliverables.filter((item) => item !== primary).slice(0, 5).map((item) => (
-          <a href={item.view_url} target="_blank" rel="noreferrer" key={item.rel_path}>
-            <span>{item.name}</span>
-            <ArrowUpRight size={13} />
-          </a>
-        ))}
+        {deliverables
+          .filter((item) => item !== primary)
+          .slice(0, 5)
+          .map((item) => (
+            <a
+              href={item.view_url}
+              target="_blank"
+              rel="noreferrer"
+              key={item.rel_path}
+            >
+              <span>{item.name}</span>
+              <ArrowUpRight size={13} />
+            </a>
+          ))}
       </div>
     </section>
   );
@@ -1152,8 +1665,15 @@ function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
 function UsagePanel({ usage }: { usage?: UsagePayload }) {
   return (
     <section className="panel usage-panel" data-testid="usage-panel">
-      <SectionHeader icon={<Zap size={17} />} title="Usage" detail={usage?.total_used_tokens_label || "0 tok"} />
-      <p className="usage-label">{usage?.label || "source: Claude log scan / quota-footer; scope: model-day estimate; not per-sprint or per-agent"}</p>
+      <SectionHeader
+        icon={<Zap size={17} />}
+        title="Usage"
+        detail={usage?.total_used_tokens_label || "0 tok"}
+      />
+      <p className="usage-label">
+        {usage?.label ||
+          "source: Claude log scan / quota-footer; scope: model-day estimate; not per-sprint or per-agent"}
+      </p>
       <div className="usage-models">
         {(usage?.models || []).slice(0, 4).map((model) => (
           <div className="usage-model" key={`${model.model_key}-${model.date}`}>
@@ -1174,7 +1694,10 @@ function SettingsView() {
 
   const refresh = useCallback(async () => {
     try {
-      const [settingsResponse, statusResponse] = await Promise.all([fetchSettings(), fetchStatus()]);
+      const [settingsResponse, statusResponse] = await Promise.all([
+        fetchSettings(),
+        fetchStatus(),
+      ]);
       setSettings(settingsResponse);
       setStatus(statusResponse);
       setState("ready");
@@ -1189,7 +1712,8 @@ function SettingsView() {
     void refresh();
   }, [refresh]);
 
-  const physical = settings?.physical_operators || status?.physical_operators || {};
+  const physical =
+    settings?.physical_operators || status?.physical_operators || {};
   const roleModels = Object.entries(settings?.role_models || {});
 
   return (
@@ -1199,7 +1723,11 @@ function SettingsView() {
           <Settings size={17} />
           <span>Settings</span>
         </div>
-        <button type="button" className="icon-text-button" onClick={() => void refresh()}>
+        <button
+          type="button"
+          className="icon-text-button"
+          onClick={() => void refresh()}
+        >
           <RefreshCw size={15} />
           <span>Refresh</span>
         </button>
@@ -1213,33 +1741,61 @@ function SettingsView() {
               <span>{settings?.source || "status-server"}</span>
             </div>
             <h1>Model and lab configuration</h1>
-            <p>{settings?.write_note || "P0 exposes current configuration without inventing a new write path."}</p>
+            <p>
+              {settings?.write_note ||
+                "P0 exposes current configuration without inventing a new write path."}
+            </p>
           </div>
           <div className="hero-metrics">
-            <Metric value={compactNumber(physical.count || 0)} label="operators" />
-            <Metric value={compactNumber(physical.available || 0)} label="available" />
+            <Metric
+              value={compactNumber(physical.count || 0)}
+              label="operators"
+            />
+            <Metric
+              value={compactNumber(physical.available || 0)}
+              label="available"
+            />
             <Metric value={compactNumber(physical.busy || 0)} label="busy" />
           </div>
         </section>
 
         {state === "loading" && <LoadingWorkbench />}
-        {state === "error" && <ErrorWorkbench message={error} onRetry={refresh} />}
+        {state === "error" && (
+          <ErrorWorkbench message={error} onRetry={refresh} />
+        )}
         {state === "ready" && (
           <div className="two-column-grid">
             <section className="panel">
-              <SectionHeader icon={<SquareTerminal size={17} />} title="Lab matrix" detail={settings?.model_lab_matrix?.source || "unset"} />
+              <SectionHeader
+                icon={<SquareTerminal size={17} />}
+                title="Lab matrix"
+                detail={settings?.model_lab_matrix?.source || "unset"}
+              />
               <div className="setting-row">
                 <span>All-Claude / GLM lab matrix</span>
-                <Switch.Root className="switch-root" checked={Boolean(settings?.model_lab_matrix?.value)} disabled>
+                <Switch.Root
+                  className="switch-root"
+                  checked={Boolean(settings?.model_lab_matrix?.value)}
+                  disabled
+                >
                   <Switch.Thumb className="switch-thumb" />
                 </Switch.Root>
               </div>
-              <code className="code-block">{settings?.model_lab_matrix?.value || "No lab matrix value found in env/config scan."}</code>
+              <code className="code-block">
+                {settings?.model_lab_matrix?.value ||
+                  "No lab matrix value found in env/config scan."}
+              </code>
             </section>
             <section className="panel">
-              <SectionHeader icon={<ShieldCheck size={17} />} title="Role models" detail={`${roleModels.length} configured`} />
+              <SectionHeader
+                icon={<ShieldCheck size={17} />}
+                title="Role models"
+                detail={`${roleModels.length} configured`}
+              />
               <div className="settings-list">
-                {roleModels.length === 0 && <EmptyInline label="No role model overrides found" />}
+                {roleModels.length === 0 && (
+                  <EmptyInline label="No role model overrides found" />
+                )}
                 {roleModels.map(([role, info]) => (
                   <div className="setting-row" key={role}>
                     <span>{role}</span>
@@ -1255,14 +1811,21 @@ function SettingsView() {
   );
 }
 
-function EmptyState({ onCreated }: { onCreated: (sprintId: string) => Promise<void> }) {
+function EmptyState({
+  onCreated,
+}: {
+  onCreated: (sprintId: string) => Promise<void>;
+}) {
   return (
     <div className="empty-page" data-testid="empty-state">
       <div className="empty-mark">
         <Sparkles size={28} />
       </div>
       <h1>No harness sessions</h1>
-      <p>Start a real intake to create a sprint and watch agents, events, DAG progress, deliverables, and usage populate here.</p>
+      <p>
+        Start a real intake to create a sprint and watch agents, events, DAG
+        progress, deliverables, and usage populate here.
+      </p>
       <NewTaskDialog onCreated={onCreated} buttonClassName="primary-button" />
     </div>
   );
@@ -1270,7 +1833,11 @@ function EmptyState({ onCreated }: { onCreated: (sprintId: string) => Promise<vo
 
 function LoadingWorkbench() {
   return (
-    <motion.div className="loading-workbench" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <motion.div
+      className="loading-workbench"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
       {Array.from({ length: 4 }, (_, index) => (
         <div className="loading-panel" key={index} />
       ))}
@@ -1278,7 +1845,13 @@ function LoadingWorkbench() {
   );
 }
 
-function ErrorWorkbench({ message, onRetry }: { message: string; onRetry: () => Promise<void> }) {
+function ErrorWorkbench({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => Promise<void>;
+}) {
   return (
     <div className="error-panel">
       <AlertTriangle size={20} />
@@ -1286,7 +1859,11 @@ function ErrorWorkbench({ message, onRetry }: { message: string; onRetry: () => 
         <h2>Unable to load this view</h2>
         <p>{message}</p>
       </div>
-      <button type="button" className="icon-text-button" onClick={() => void onRetry()}>
+      <button
+        type="button"
+        className="icon-text-button"
+        onClick={() => void onRetry()}
+      >
         <RefreshCw size={15} />
         <span>Retry</span>
       </button>
@@ -1303,7 +1880,15 @@ function EmptyInline({ label }: { label: string }) {
   );
 }
 
-function SectionHeader({ icon, title, detail }: { icon: React.ReactNode; title: string; detail?: string }) {
+function SectionHeader({
+  icon,
+  title,
+  detail,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  detail?: string;
+}) {
   return (
     <div className="section-header">
       <div>

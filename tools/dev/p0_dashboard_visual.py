@@ -412,7 +412,9 @@ def audit(page) -> dict:
             tokens: {
               bg: token('--bg'), panel: token('--panel'), panel2: token('--panel-2'),
               text: token('--text'), muted: token('--muted'), green: token('--green'),
-              blue: token('--blue'), amber: token('--amber'), red: token('--red')
+              blue: token('--blue'), amber: token('--amber'), red: token('--red'),
+              accent: token('--accent'), line: token('--line'), focusRing: token('--focus-ring'),
+              radius: token('--radius'), display: token('--type-display')
             },
             fontSizes: {
               h1: size('h1'), h2: size('h2'), metric: size('.metric span'),
@@ -420,9 +422,24 @@ def audit(page) -> dict:
             },
             borderedCount: bordered.length,
             majorBoxCount: boxes.length,
+            gradientCount: Array.from(document.querySelectorAll('*')).filter((el) => {
+              const s = getComputedStyle(el);
+              return s.backgroundImage && s.backgroundImage.includes('gradient');
+            }).length,
             clickables,
             viewport: { width: window.innerWidth, height: window.innerHeight },
-            bodyScrollHeight: document.body.scrollHeight
+            bodyScrollHeight: document.body.scrollHeight,
+            performance: (() => {
+              const nav = performance.getEntriesByType('navigation')[0];
+              const fcp = performance.getEntriesByName('first-contentful-paint')[0];
+              const fp = performance.getEntriesByName('first-paint')[0];
+              return {
+                firstPaint: fp ? Math.round(fp.startTime) : null,
+                firstContentfulPaint: fcp ? Math.round(fcp.startTime) : null,
+                domContentLoaded: nav ? Math.round(nav.domContentLoadedEventEnd) : null,
+                loadEventEnd: nav ? Math.round(nav.loadEventEnd) : null
+              };
+            })()
           };
         }"""
     )
@@ -450,6 +467,30 @@ def audit(page) -> dict:
     return raw
 
 
+def measure_session_switch(page, link_name: str, title_fragment: str) -> dict:
+    started = time.perf_counter()
+    saw_skeleton = False
+    page.get_by_role("link", name=link_name).click()
+    deadline = time.perf_counter() + 6
+    while time.perf_counter() < deadline:
+        if page.locator(".loading-workbench,.loading-panel").count() > 0:
+            saw_skeleton = True
+        titles = page.locator("[data-testid='process-header'] h1")
+        if titles.count() > 0 and title_fragment in titles.first.inner_text(timeout=500):
+            return {
+                "target": title_fragment,
+                "elapsed_ms": round((time.perf_counter() - started) * 1000),
+                "saw_skeleton": saw_skeleton,
+            }
+        page.wait_for_timeout(50)
+    return {
+        "target": title_fragment,
+        "elapsed_ms": round((time.perf_counter() - started) * 1000),
+        "saw_skeleton": saw_skeleton,
+        "timeout": True,
+    }
+
+
 def screenshot(page, output_dir: Path, name: str, selector: str | None = None) -> None:
     path = output_dir / f"{name}.png"
     if not selector:
@@ -474,6 +515,14 @@ def wait_for_hero_title(page, title_fragment: str) -> None:
           return !loading && Boolean(hero);
         }""",
         arg=title_fragment,
+        timeout=9000,
+    )
+
+
+def wait_for_text(page, text: str) -> None:
+    page.wait_for_function(
+        """needle => document.body && document.body.textContent && document.body.textContent.includes(needle)""",
+        arg=text,
         timeout=9000,
     )
 
@@ -546,6 +595,7 @@ def run(args: argparse.Namespace) -> int:
             page.wait_for_selector("[data-testid='results-rail']", timeout=10000)
             page.get_by_role("link", name="Build Codex-style dashboard").click()
             wait_for_hero_title(page, "Build Codex-style")
+            wait_for_text(page, "3/4 nodes")
             screenshot(page, screenshots, "blocked-full-page")
             sections = {
                 "process-header": "[data-testid='process-header']",
@@ -557,21 +607,38 @@ def run(args: argparse.Namespace) -> int:
             }
             for name, selector in sections.items():
                 screenshot(page, screenshots, name, selector)
+            page.locator(".new-task-button").hover()
+            page.locator("[data-testid='process-step-blocked'] button").first.focus()
+            screenshot(page, screenshots, "hover-focus-microstates")
+            screenshot(page, screenshots, "focused-process-stream", "[data-testid='process-stream']")
             collapsed_step = page.locator("[data-testid='process-step-completed']:has(button[aria-expanded='false'])").first
             collapsed_step.screenshot(path=str(screenshots / "completed-step-collapsed.png"))
             collapsed_step.locator("button").click()
             page.wait_for_timeout(350)
-            page.locator("[data-testid='process-step-completed']:has(button[aria-expanded='true'])").first.screenshot(path=str(screenshots / "completed-step-expanded.png"))
+            collapsed_step.screenshot(path=str(screenshots / "completed-step-expanded.png"))
             audit_before = audit(page)
-            write_json(base / f"audit-{args.label}.json", audit_before)
 
-            page.get_by_role("link", name="Live build sprint with active").click()
+            first_switch = measure_session_switch(page, "Live build sprint with active", "Live build sprint")
             wait_for_hero_title(page, "Live build sprint")
+            wait_for_text(page, "3/5 nodes")
             screenshot(page, screenshots, "running-session")
 
-            page.get_by_role("link", name="Completed report sprint").click()
+            second_switch = measure_session_switch(page, "Completed report sprint", "Completed report sprint")
             wait_for_hero_title(page, "Completed report sprint")
+            wait_for_text(page, "2/2 nodes")
             screenshot(page, screenshots, "complete-session")
+
+            repeat_switch = measure_session_switch(page, "Build Codex-style dashboard", "Build Codex-style")
+            wait_for_hero_title(page, "Build Codex-style")
+            wait_for_text(page, "3/4 nodes")
+            screenshot(page, screenshots, "revisited-session")
+
+            audit_before["sessionSwitch"] = {
+                "first_uncached": first_switch,
+                "second_uncached": second_switch,
+                "repeat_cached": repeat_switch,
+            }
+            write_json(base / f"audit-{args.label}.json", audit_before)
 
             page.get_by_role("link", name="Settings").click()
             page.wait_for_selector("[data-testid='settings-view']", timeout=5000)
