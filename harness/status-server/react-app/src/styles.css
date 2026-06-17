@@ -155,8 +155,14 @@ summary:focus-visible,
   flex-direction: column;
   height: 100vh;
   padding: var(--solar-space-8) var(--solar-space-5) var(--solar-space-5);
-  border-right: 1px solid var(--solar-line-soft);
-  background: rgba(244, 244, 246, 0.82);
+  border-right: 1px solid rgba(20, 21, 23, 0.08);
+  background: rgba(252, 252, 253, 0.82);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset -1px 0 0 rgba(255, 255, 255, 0.35),
+    1px 0 24px rgba(20, 21, 23, 0.04);
 }
 
 .brand-row {
@@ -211,10 +217,14 @@ summary:focus-visible,
 
 .new-task-button,
 .primary-button {
-  color: var(--solar-surface);
-  background: var(--solar-control);
+  color: #ffffff;
+  background: linear-gradient(180deg, #2a2b2f 0%, var(--solar-control) 100%);
   font-size: var(--solar-type-sm);
   font-weight: 680;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 1px 2px rgba(20, 21, 23, 0.2),
+    0 4px 12px -2px rgba(20, 21, 23, 0.16);
 }
 
 .new-task-button {
@@ -294,52 +304,52 @@ summary:focus-visible,
   padding-right: var(--solar-space-1);
 }
 
-.session-link,
-.session-skeleton {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr);
-  gap: var(--solar-space-3);
-  align-items: center;
-  min-height: 64px;
-  padding: var(--solar-space-3) 0 var(--solar-space-3) var(--solar-space-3);
-  border-top: 1px solid var(--solar-line-soft);
-  color: var(--solar-muted);
-  transition:
-    background var(--solar-duration-fast) var(--solar-ease),
-    color var(--solar-duration-fast) var(--solar-ease);
+.session-link {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding: var(--solar-space-3);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-ink);
+  transition: background var(--solar-duration-fast) var(--solar-ease);
 }
 
+.session-skeleton {
+  display: grid;
+  gap: var(--solar-space-2);
+  min-height: 52px;
+  padding: var(--solar-space-3);
+}
+
+/* Selection/state via a fill ladder (not motion); selected gets a red left tick. */
 .session-link:hover {
-  color: var(--solar-ink);
-  background: var(--solar-surface);
+  background: rgba(26, 27, 29, 0.04);
 }
 
 .session-link.is-active {
-  position: relative;
-  color: var(--solar-ink);
-  background: var(--solar-surface);
+  background: rgba(26, 27, 29, 0.07);
+}
+
+.session-link.is-active:hover {
+  background: rgba(26, 27, 29, 0.09);
 }
 
 .session-link.is-active::before {
   position: absolute;
-  top: -1px;
+  top: 50%;
   left: 0;
-  width: var(--solar-rule-accent-width);
-  height: 1px;
+  width: 2px;
+  height: 20px;
   content: "";
   background: var(--solar-accent);
+  border-radius: 1px;
+  transform: translateY(-50%);
 }
 
-.session-dot,
 .state-dot,
 .state-orb {
   display: block;
   border-radius: 999px;
-}
-
-.session-dot {
-  width: 8px;
-  height: 8px;
 }
 
 .session-copy {
@@ -349,11 +359,15 @@ summary:focus-visible,
 .session-title {
   display: block;
   overflow: hidden;
-  color: inherit;
+  color: var(--solar-ink);
   font-size: var(--solar-type-sm);
-  font-weight: 620;
+  font-weight: var(--solar-weight-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.session-link.is-active .session-title {
+  font-weight: 700;
 }
 
 .session-meta {
@@ -364,6 +378,10 @@ summary:focus-visible,
   font-size: var(--solar-type-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.session-meta.is-stalled {
+  color: var(--solar-warning);
 }
 
 .session-skeleton span,
@@ -1777,20 +1795,21 @@ summary:focus-visible,
 
 .home-recent-row {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--solar-space-3);
   align-items: center;
-  padding: var(--solar-space-3) 0;
-  border-top: 1px solid var(--solar-line-soft);
-  color: var(--solar-muted);
-  transition:
-    color var(--solar-duration-fast) var(--solar-ease),
-    padding-left var(--solar-duration-fast) var(--solar-ease);
+  padding: var(--solar-space-3);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-ink);
+  transition: background var(--solar-duration-fast) var(--solar-ease);
 }
 
 .home-recent-row:hover {
-  padding-left: var(--solar-space-2);
-  color: var(--solar-ink);
+  background: rgba(26, 27, 29, 0.04);
+}
+
+.home-recent-meta.is-stalled {
+  color: var(--solar-warning);
 }
 
 .home-recent-title {
@@ -2293,6 +2312,26 @@ summary:focus-visible,
 
 .stall-callout .technical-details {
   margin-top: var(--solar-space-3);
+}
+
+/* Settings legible on the glass sidebar: real ink + hover fill, no faint border. */
+.settings-link {
+  color: var(--solar-ink);
+  border-color: transparent;
+  font-weight: var(--solar-weight-medium);
+}
+
+.settings-link:hover,
+.settings-link.is-active {
+  border-color: transparent;
+  background: rgba(26, 27, 29, 0.05);
+}
+
+/* Topbar 'New task': same black recognition, compact + lighter elevation. */
+.topbar-new-task {
+  min-height: 34px;
+  padding: 0 var(--solar-space-3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 @keyframes spin {

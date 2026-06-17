@@ -287,14 +287,17 @@ function Sidebar({
                 `session-link ${isActive || selectedSprintId === sprint.sprint_id ? "is-active" : ""}`
               }
             >
-              <span className={`session-dot tone-${sessionTone(sprint)}`} />
               <span className="session-copy">
                 <span className="session-title">{titleForSprint(sprint)}</span>
-                <span className="session-meta">
-                  {asString(sprint.phase || sprint.status, "unknown").replace(
-                    /_/g,
-                    " ",
-                  )}
+                <span
+                  className={`session-meta ${sprint.stall?.is_stalled ? "is-stalled" : ""}`}
+                >
+                  {sprint.stall?.is_stalled
+                    ? "Stalled"
+                    : asString(
+                        sprint.phase || sprint.status,
+                        "unknown",
+                      ).replace(/_/g, " ")}
                 </span>
               </span>
             </NavLink>
@@ -701,26 +704,12 @@ function SessionView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <CompactSessionHeader
-              sprint={currentSprint}
-              phase={phase}
-              isBlocked={isBlocked}
-              isComplete={isComplete}
-            />
             <AgentSignature agents={agents} gate={gate} isBlocked={isBlocked} />
             <div className="process-results-layout">
-              <div className="stream-column">
-                {isBlocked && (
-                  <StallCallout
-                    dashboard={dashboard}
-                    stallText={stallCopy(stall)}
-                  />
-                )}
-                <ProcessStream
-                  steps={processSteps}
-                  streamState={session.streamState}
-                />
-              </div>
+              <ProcessStream
+                steps={processSteps}
+                streamState={session.streamState}
+              />
               <ResultsRail
                 deliverables={session.deliverables}
                 usage={session.usage}
@@ -1007,11 +996,6 @@ function ProcessStream({
 
   return (
     <section className="process-stream-panel" data-testid="process-stream">
-      <SectionHeader
-        icon={<Workflow size={17} />}
-        title="Process stream"
-        detail={streamState === "live" ? "live" : streamState}
-      />
       <div className="process-step-list">
         {steps.length === 0 && (
           <EmptyInline label="Waiting for agent process events" />
@@ -1325,15 +1309,17 @@ function buildProcessSteps(
     return [];
   }
 
+  // Oldest -> newest: read the run as a narrative top-down (the relay carries
+  // the current state, so the stream doesn't need newest-first).
   const sorted = steps.sort(
-    (a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp),
+    (a, b) => timestampValue(a.timestamp) - timestampValue(b.timestamp),
   );
   return sorted.map((step, index) => ({
     ...step,
     defaultExpanded:
       step.defaultExpanded ||
       step.state === "blocked" ||
-      (index === 0 && step.state === "active"),
+      (index === sorted.length - 1 && step.state === "active"),
   }));
 }
 
@@ -1541,7 +1527,7 @@ function TopBar({
         )}
         <NewTaskDialog
           onCreated={onCreated}
-          buttonClassName="icon-text-button"
+          buttonClassName="primary-button topbar-new-task"
           compact
         />
       </div>
@@ -2050,15 +2036,18 @@ function HomeLanding({
                   to={`/sessions/${encodeURIComponent(sprint.sprint_id)}`}
                   className="home-recent-row"
                 >
-                  <span className={`session-dot tone-${sessionTone(sprint)}`} />
                   <span className="home-recent-title">
                     {titleForSprint(sprint)}
                   </span>
-                  <span className="home-recent-meta">
-                    {asString(sprint.phase || sprint.status, "unknown").replace(
-                      /_/g,
-                      " ",
-                    )}
+                  <span
+                    className={`home-recent-meta ${sprint.stall?.is_stalled ? "is-stalled" : ""}`}
+                  >
+                    {sprint.stall?.is_stalled
+                      ? "Stalled"
+                      : asString(
+                          sprint.phase || sprint.status,
+                          "unknown",
+                        ).replace(/_/g, " ")}
                   </span>
                 </NavLink>
               ))}
