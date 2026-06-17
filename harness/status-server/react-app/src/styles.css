@@ -29,31 +29,31 @@
   --solar-font-sans: "Schibsted Grotesk", "Geist", sans-serif;
   --solar-font-mono: "Geist Mono", ui-monospace, monospace;
 
-  /* Neutral warm paper — deliberately stepped off the cream/terracotta default. */
-  --solar-canvas: #f3f2ee;
-  --solar-surface: #faf9f6;
-  --solar-surface-quiet: #ecebe6;
-  --solar-ink: #17171a;
-  --solar-muted: #56555a;
-  --solar-subtle: #6e6d66;
-  --solar-faint: #d7d5ce;
-  --solar-line: rgba(20, 19, 24, 0.12);
-  --solar-line-soft: rgba(20, 19, 24, 0.06);
-  --solar-line-strong: rgba(20, 19, 24, 0.2);
+  /* Huawei-derived black / white / red. Red is a signal (<=~10%), never a field. */
+  --solar-canvas: #ffffff;
+  --solar-surface: #fafafb;
+  --solar-surface-quiet: #f4f4f6;
+  --solar-ink: #1a1b1d;
+  --solar-muted: #54565c;
+  --solar-subtle: #74767d;
+  --solar-faint: #d8d9dd;
+  --solar-line: #e6e6ea;
+  --solar-line-soft: #efeff1;
+  --solar-line-strong: #d3d4d9;
 
-  /* One accent, used like punctuation. Overridden per variant (relay/dispatch/console). */
-  --solar-accent: #b23a1e;
-  --solar-accent-ink: #8f2d14;
-  --solar-accent-wash: rgba(178, 58, 30, 0.09);
+  /* The one accent: Huawei red #CF0A2C (PANTONE 186 C) — active / now / brand only. */
+  --solar-accent: #cf0a2c;
+  --solar-accent-ink: #a60822; /* darker red for small/dense red text (AA on white) */
+  --solar-accent-wash: rgba(207, 10, 44, 0.07);
 
-  /* Semantic state only — never brand decoration. */
-  --solar-success: #3f6150;
-  --solar-warning: #8f5a10;
-  --solar-danger: #9e3a2d;
-  --solar-warning-fill: #f1e4c9;
-  --solar-danger-fill: #efd7d0;
-  --solar-control: #1d1d20;
-  --solar-control-hover: #303035;
+  /* Semantic state — amber owns 'stalled' (hue-separated from brand red); done = quiet ink. */
+  --solar-success: #3a3b40;
+  --solar-warning: #b26a00;
+  --solar-danger: #a60822;
+  --solar-warning-fill: #fbefd0;
+  --solar-danger-fill: #f7dfe3;
+  --solar-control: #1a1b1d;
+  --solar-control-hover: #34353a;
 
   --solar-radius-control: 999px;
   --solar-radius-pill: 999px;
@@ -90,23 +90,6 @@
   --solar-duration-fast: 120ms;
   --solar-duration: 180ms;
   --solar-rule-accent-width: 28px;
-}
-
-/* Per-variant accent identity (the one signature color each). */
-[data-variant="relay"] {
-  --solar-accent: #b23a1e;
-  --solar-accent-ink: #8f2d14;
-  --solar-accent-wash: rgba(178, 58, 30, 0.09);
-}
-[data-variant="dispatch"] {
-  --solar-accent: #1f6f5c;
-  --solar-accent-ink: #155244;
-  --solar-accent-wash: rgba(31, 111, 92, 0.1);
-}
-[data-variant="console"] {
-  --solar-accent: #b5790d;
-  --solar-accent-ink: #875a08;
-  --solar-accent-wash: rgba(181, 121, 13, 0.1);
 }
 
 * {
@@ -173,7 +156,7 @@ summary:focus-visible,
   height: 100vh;
   padding: var(--solar-space-8) var(--solar-space-5) var(--solar-space-5);
   border-right: 1px solid var(--solar-line-soft);
-  background: rgba(249, 248, 245, 0.72);
+  background: rgba(244, 244, 246, 0.82);
 }
 
 .brand-row {
