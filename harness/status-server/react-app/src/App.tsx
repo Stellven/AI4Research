@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Circle,
   Clock3,
-  Command,
   FileCheck2,
   FileText,
   ListTree,
@@ -127,6 +126,32 @@ type PlanStage = {
   detail: string;
 };
 
+// Original lotus mark — five petals fanning from a common base. Uses
+// currentColor so it inherits the brand accent. Not a reproduction of any
+// existing trademark; inspired by the fanned-petal flower silhouette.
+function BrandMark({ size = 22 }: { size?: number }) {
+  const petal = "M12 20.5C9.6 15.5 9.9 10 12 7C14.1 10 14.4 15.5 12 20.5Z";
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {[0, -28, 28, -53, 53].map((angle) => (
+        <path
+          key={angle}
+          d={petal}
+          fill="currentColor"
+          transform={`rotate(${angle} 12 20.5)`}
+        />
+      ))}
+    </svg>
+  );
+}
+
 function App() {
   return (
     <Tooltip.Provider delayDuration={220}>
@@ -233,7 +258,7 @@ function Sidebar({
     <aside className="sidebar">
       <NavLink to="/" className="brand-row" aria-label="AI4Research home">
         <div className="brand-mark" aria-hidden="true">
-          <Command size={18} />
+          <BrandMark size={24} />
         </div>
         <div>
           <div className="brand-name">AI4Research</div>
@@ -630,8 +655,6 @@ function SessionView({
   session: SessionData;
   onCreated: (sprintId: string) => Promise<void>;
 }) {
-  const location = useLocation();
-  const designVariant = designVariantFromSearch(location.search);
   const dashboard = dashboardForSprint(session.dashboard, sprintId);
   const data = dashboard?.data;
   const currentSprint = (data?.sprint ||
@@ -655,7 +678,7 @@ function SessionView({
   );
 
   return (
-    <div className="workspace-scroll" data-variant={designVariant}>
+    <div className="workspace-scroll">
       <TopBar
         sprint={currentSprint}
         streamState={session.streamState}
@@ -686,13 +709,7 @@ function SessionView({
               stallText={stallCopy(stall)}
               dashboard={dashboard}
             />
-            <AgentSignature
-              agents={agents}
-              variant={designVariant}
-              gate={gate}
-              isBlocked={isBlocked}
-              isComplete={isComplete}
-            />
+            <AgentSignature agents={agents} gate={gate} isBlocked={isBlocked} />
             <div className="process-results-layout">
               <ProcessStream
                 steps={processSteps}
@@ -700,7 +717,7 @@ function SessionView({
               />
               <ResultsRail
                 deliverables={session.deliverables}
-                usage={session.usage}
+                dashboard={dashboard}
               />
             </div>
           </motion.div>
@@ -901,15 +918,12 @@ function agentShortName(role: AgentCardModel["role"]): string {
 // differently — a handoff spine, a supply/demand ledger, or an operator log.
 function AgentSignature({
   agents,
-  variant,
   gate,
   isBlocked,
 }: {
   agents: AgentCardModel[];
-  variant: DesignVariant;
   gate: GateInfo;
   isBlocked: boolean;
-  isComplete: boolean;
 }) {
   // The relay breaks after the last agent that actually advanced the work.
   const lastActive = agents.reduce(
@@ -918,87 +932,6 @@ function AgentSignature({
     -1,
   );
   const breakAfter = isBlocked ? Math.max(lastActive, 0) : -1;
-
-  if (variant === "dispatch") {
-    return (
-      <section
-        className="agent-signature sig-dispatch"
-        data-testid="agent-presence"
-      >
-        {isBlocked && (
-          <div className="gate-headline">
-            <span className="gate-tag">Dispatch held</span>
-            <p>
-              <strong>{gate.nodeTitle || "A build node"}</strong> needs{" "}
-              <code>{gate.capability || "a capability"}</code> — no connected
-              agent advertises it.
-            </p>
-          </div>
-        )}
-        <div className="supply-ledger" aria-label="Agent capability supply">
-          {agents.map((agent) => (
-            <div className={`supply-row tone-${agent.state}`} key={agent.role}>
-              <span className={`state-dot tone-${agent.state}`} />
-              <strong>{agentShortName(agent.role)}</strong>
-              <div className="cap-chips">
-                {agent.provides.length === 0 && (
-                  <code className="cap-none">—</code>
-                )}
-                {agent.provides.map((cap) => (
-                  <code key={cap}>{cap}</code>
-                ))}
-              </div>
-            </div>
-          ))}
-          {isBlocked && (
-            <div className="supply-row supply-demand">
-              <span className="state-dot tone-blocked" />
-              <strong>Required</strong>
-              <div className="cap-chips">
-                <code className="cap-missing">
-                  {gate.capability || "unknown"}
-                </code>
-                <span className="cap-missing-note">provided by no agent</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-    );
-  }
-
-  if (variant === "console") {
-    return (
-      <section
-        className="agent-signature sig-console"
-        data-testid="agent-presence"
-      >
-        <div className="console-agents">
-          {agents.map((agent) => (
-            <div
-              className={`console-agent tone-${agent.state}`}
-              key={agent.role}
-            >
-              <span className={`state-dot tone-${agent.state}`} />
-              <code className="console-role">{agent.role}</code>
-              <code className="console-model">{agent.model || "—"}</code>
-              <span className="console-activity">
-                {agent.state === "idle" ? "waiting" : agent.activity}
-              </span>
-            </div>
-          ))}
-        </div>
-        {isBlocked && (
-          <div className="console-held" role="status">
-            <code>⊘ dispatch held</code>
-            <code>node={gate.nodeId || "?"}</code>
-            <code>needs={gate.capability || "?"}</code>
-            <code>decision=no_matching_worker</code>
-          </div>
-        )}
-      </section>
-    );
-  }
 
   return (
     <section className="agent-signature sig-relay" data-testid="agent-presence">
@@ -1165,15 +1098,15 @@ function ProcessStepItem({
 
 function ResultsRail({
   deliverables,
-  usage,
+  dashboard,
 }: {
   deliverables: Deliverable[];
-  usage?: UsagePayload;
+  dashboard?: DashboardResponse;
 }) {
   return (
     <aside className="results-rail" data-testid="results-rail">
       <DeliverablesPanel deliverables={deliverables} />
-      <UsagePanel usage={usage} />
+      <SprintCostPanel dashboard={dashboard} />
     </aside>
   );
 }
@@ -1578,10 +1511,18 @@ function TopBar({
         </div>
       </div>
       <div className="topbar-actions">
-        <div className={`stream-chip stream-${streamState}`}>
-          <Radio size={14} />
-          <span>{streamState}</span>
-        </div>
+        {streamState !== "live" && (
+          <div className={`stream-chip stream-${streamState}`}>
+            <Radio size={14} />
+            <span>
+              {streamState === "retrying"
+                ? "reconnecting"
+                : streamState === "off"
+                  ? "offline"
+                  : streamState}
+            </span>
+          </div>
+        )}
         <NewTaskDialog
           onCreated={onCreated}
           buttonClassName="icon-text-button"
@@ -1648,84 +1589,70 @@ function buildAgents(
 }
 
 function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
-  const primary =
-    deliverables.find(
-      (item) => item.kind === "html" || item.name.endsWith(".html"),
-    ) || deliverables[0];
   return (
     <section
       className="panel deliverables-panel"
       data-testid="deliverables-panel"
     >
-      <SectionHeader
-        icon={<FileText size={17} />}
-        title="Deliverables"
-        detail={`${deliverables.length} artifacts`}
-      />
-      {deliverables.length === 0 && (
+      <div className="panel-head">
+        <h2>Deliverables</h2>
+        <span>{deliverables.length}</span>
+      </div>
+      {deliverables.length === 0 ? (
         <EmptyInline label="No artifacts produced yet" />
-      )}
-      {primary && (
-        <a
-          className="primary-deliverable"
-          href={primary.view_url}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <FileText size={18} />
-          <span>
-            <strong>{primary.name}</strong>
-            <small>
-              {primary.kind.toUpperCase()} · {compactNumber(primary.size || 0)}B
-            </small>
-          </span>
-          <ArrowUpRight size={16} />
-        </a>
-      )}
-      <div className="deliverable-list">
-        {deliverables
-          .filter((item) => item !== primary)
-          .slice(0, 5)
-          .map((item) => (
+      ) : (
+        <div className="artifact-list">
+          {deliverables.slice(0, 6).map((item) => (
             <a
+              className="artifact-row"
               href={item.view_url}
               target="_blank"
               rel="noreferrer"
               key={item.rel_path}
             >
-              <span>{item.name}</span>
-              <ArrowUpRight size={13} />
+              <span className="artifact-name">{item.name}</span>
+              <span className="artifact-meta">
+                {item.kind.toUpperCase()} · {compactNumber(item.size || 0)}B
+              </span>
+              <ArrowUpRight size={14} />
             </a>
           ))}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
 
-function usageScopeCopy(usage?: UsagePayload): string {
-  const source = asString(usage?.source, "local quota/log signals")
-    .replace(/[_-]/g, " ")
-    .trim();
-  return `Token usage is estimated per-model/day from ${source}; it is not scoped to a single agent or sprint.`;
-}
-
-function UsagePanel({ usage }: { usage?: UsagePayload }) {
+function SprintCostPanel({ dashboard }: { dashboard?: DashboardResponse }) {
+  const resources = dashboard?.data?.resources;
+  const progress = dashboard?.data?.progress;
+  const cost =
+    typeof resources?.estimated_total_cost === "number"
+      ? resources.estimated_total_cost
+      : undefined;
+  const routing = resources?.routing_records_for_sprint;
   return (
     <section className="panel usage-panel" data-testid="usage-panel">
       <div className="usage-head">
-        <span>Usage</span>
-        <strong>{usage?.total_used_tokens_label || "0 tok"}</strong>
+        <span>This sprint</span>
+        <strong>{cost !== undefined ? `$${cost.toFixed(2)}` : "—"}</strong>
       </div>
       <div className="usage-models">
-        {(usage?.models || []).slice(0, 4).map((model) => (
-          <div className="usage-model" key={`${model.model_key}-${model.date}`}>
-            <span>{model.model_key}</span>
-            <strong>{model.used_tokens_label}</strong>
+        {typeof progress?.total_nodes === "number" && (
+          <div className="usage-model">
+            <span>plan nodes</span>
+            <strong>{progress.total_nodes}</strong>
           </div>
-        ))}
+        )}
+        {typeof routing === "number" && (
+          <div className="usage-model">
+            <span>routing decisions</span>
+            <strong>{routing}</strong>
+          </div>
+        )}
       </div>
       <p className="usage-foot">
-        per model · per day · not per-agent or per-sprint
+        Planner&rsquo;s cost estimate for this sprint — not metered billing.
       </p>
     </section>
   );
@@ -2013,7 +1940,7 @@ function HomeLanding({
     <div className="home-landing" data-testid="home-landing">
       <div className="home-inner">
         <div className="home-mark" aria-hidden="true">
-          <Command size={20} />
+          <BrandMark size={30} />
         </div>
         <h1>What do you want done?</h1>
         <p className="home-sub">

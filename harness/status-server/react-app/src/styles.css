@@ -187,12 +187,9 @@ summary:focus-visible,
 .empty-mark {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-small);
-  background: transparent;
-  color: var(--solar-ink);
+  width: 32px;
+  height: 32px;
+  color: var(--solar-accent);
 }
 
 .brand-name {
@@ -1464,7 +1461,7 @@ summary:focus-visible,
   font-weight: var(--solar-weight-strong);
 }
 
-[data-variant="relay"] .compact-title-block h1 {
+.compact-title-block h1 {
   letter-spacing: -0.014em;
 }
 
@@ -1708,12 +1705,10 @@ summary:focus-visible,
 .home-mark {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   margin-bottom: var(--solar-space-6);
-  border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-modal);
-  color: var(--solar-ink);
+  color: var(--solar-accent);
 }
 
 .home-landing h1 {
@@ -2098,6 +2093,74 @@ summary:focus-visible,
 .settings-actions-note {
   color: var(--solar-subtle);
   font-size: var(--solar-type-xs);
+}
+
+/* Deliverables — clean artifact list (no redundant doc icons). */
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-3);
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.panel-head > span {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.artifact-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.artifact-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 14px;
+  gap: var(--solar-space-3);
+  align-items: center;
+  padding: var(--solar-space-3) 0;
+  border-top: 1px solid var(--solar-line-soft);
+  color: var(--solar-muted);
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    padding-left var(--solar-duration-fast) var(--solar-ease);
+}
+
+.artifact-row:first-child {
+  border-top: 0;
+}
+
+.artifact-row:hover {
+  padding-left: var(--solar-space-2);
+  color: var(--solar-ink);
+}
+
+.artifact-name {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifact-meta {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  white-space: nowrap;
+}
+
+.artifact-row svg {
+  color: var(--solar-subtle);
 }
 
 @keyframes spin {
