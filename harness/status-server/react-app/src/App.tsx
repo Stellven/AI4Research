@@ -167,14 +167,6 @@ function Shell() {
     return () => window.clearInterval(id);
   }, [refreshSprints]);
 
-  useEffect(() => {
-    if (location.pathname === "/" && sprints.length > 0) {
-      navigate(`/sessions/${encodeURIComponent(sprints[0].sprint_id)}`, {
-        replace: true,
-      });
-    }
-  }, [location.pathname, navigate, sprints]);
-
   const onCreated = useCallback(
     async (sprintId: string) => {
       await refreshSprints();
@@ -194,21 +186,12 @@ function Shell() {
       />
       <main
         className="main-workspace"
-        aria-label="Solar Harness session workspace"
+        aria-label="AI4Research session workspace"
       >
         <Routes>
           <Route
             path="/"
-            element={
-              sprints.length ? (
-                <Navigate
-                  to={`/sessions/${encodeURIComponent(sprints[0].sprint_id)}`}
-                  replace
-                />
-              ) : (
-                <EmptyState onCreated={onCreated} />
-              )
-            }
+            element={<HomeLanding sprints={sprints} onCreated={onCreated} />}
           />
           <Route
             path="/sessions/:sprintId"
@@ -254,15 +237,15 @@ function Sidebar({
 }) {
   return (
     <aside className="sidebar">
-      <div className="brand-row">
+      <NavLink to="/" className="brand-row" aria-label="AI4Research home">
         <div className="brand-mark" aria-hidden="true">
           <Command size={18} />
         </div>
         <div>
-          <div className="brand-name">Solar Harness</div>
-          <div className="brand-subtitle">Agent runtime</div>
+          <div className="brand-name">AI4Research</div>
+          <div className="brand-subtitle">Multi-agent runtime</div>
         </div>
-      </div>
+      </NavLink>
 
       <NewTaskDialog onCreated={onCreated} buttonClassName="new-task-button" />
 
@@ -392,7 +375,7 @@ function NewTaskDialog({
             Describe what you want done
           </Dialog.Title>
           <Dialog.Description className="dialog-description">
-            This starts a real Solar Harness intake via the existing CLI.
+            This starts a real AI4Research intake via the existing CLI.
           </Dialog.Description>
           <form onSubmit={onSubmit} className="intake-form">
             <textarea
@@ -450,7 +433,7 @@ function SessionRoute({
     session.dashboard?.data?.sprint;
 
   if (!decodedSprintId) {
-    return <EmptyState onCreated={onCreated} />;
+    return <HomeLanding sprints={sprints} onCreated={onCreated} />;
   }
 
   return (
@@ -723,12 +706,8 @@ function SessionView({
                 streamState={session.streamState}
               />
               <ResultsRail
-                dashboard={dashboard}
                 deliverables={session.deliverables}
                 usage={session.usage}
-                phase={phase}
-                isBlocked={isBlocked}
-                isComplete={isComplete}
               />
             </div>
           </motion.div>
@@ -858,11 +837,8 @@ function CompactSessionHeader({
     : isComplete
       ? "Complete"
       : asString(sprint.status || phase, "Active").replace(/_/g, " ");
-  const statusLine = isBlocked
-    ? stalledPlainLanguage(dashboard, stallText)
-    : isComplete
-      ? "Build phase is marked complete by the harness."
-      : `Current phase: ${phase.replace(/_/g, " ") || "detecting"}.`;
+  const phaseLabel = phase.replace(/_/g, " ");
+  const tone = isBlocked ? "blocked" : isComplete ? "complete" : "working";
   const technicalDetails = technicalDetailsForStall(dashboard, stallText);
 
   return (
@@ -871,15 +847,21 @@ function CompactSessionHeader({
       data-testid="process-header"
     >
       <div className="compact-title-block">
-        <div className="eyebrow-row">
-          <span
-            className={`state-orb tone-${isBlocked ? "blocked" : isComplete ? "complete" : "working"}`}
-          />
-          <span>{label}</span>
-          <span>{phase.replace(/_/g, " ") || "phase unknown"}</span>
+        <div className="task-eyebrow">
+          <span className="task-kicker">Task</span>
+          <span className={`status-chip status-${tone}`}>
+            {isBlocked ? (
+              <AlertTriangle size={13} />
+            ) : isComplete ? (
+              <CheckCircle2 size={13} />
+            ) : (
+              <Loader2 className="spin-soft" size={13} />
+            )}
+            <span>{label}</span>
+          </span>
+          {phaseLabel && <span className="phase-tag">{phaseLabel} phase</span>}
         </div>
         <h1>{titleForSprint(sprint)}</h1>
-        <p>{statusLine}</p>
         {isBlocked && technicalDetails.length > 0 && (
           <details className="technical-details">
             <summary>Technical details</summary>
@@ -1189,29 +1171,15 @@ function ProcessStepItem({
 }
 
 function ResultsRail({
-  dashboard,
   deliverables,
   usage,
-  phase,
-  isBlocked,
-  isComplete,
 }: {
-  dashboard?: DashboardResponse;
   deliverables: Deliverable[];
   usage?: UsagePayload;
-  phase: string;
-  isBlocked: boolean;
-  isComplete: boolean;
 }) {
   return (
     <aside className="results-rail" data-testid="results-rail">
       <DeliverablesPanel deliverables={deliverables} />
-      <GraphSummaryPanel
-        dashboard={dashboard}
-        phase={phase}
-        isBlocked={isBlocked}
-        isComplete={isComplete}
-      />
       <UsagePanel usage={usage} />
     </aside>
   );
@@ -1758,12 +1726,10 @@ function usageScopeCopy(usage?: UsagePayload): string {
 function UsagePanel({ usage }: { usage?: UsagePayload }) {
   return (
     <section className="panel usage-panel" data-testid="usage-panel">
-      <SectionHeader
-        icon={<Zap size={17} />}
-        title="Usage"
-        detail={usage?.total_used_tokens_label || "0 tok"}
-      />
-      <p className="usage-label">{usageScopeCopy(usage)}</p>
+      <div className="usage-head">
+        <span>Usage</span>
+        <strong>{usage?.total_used_tokens_label || "0 tok"}</strong>
+      </div>
       <div className="usage-models">
         {(usage?.models || []).slice(0, 4).map((model) => (
           <div className="usage-model" key={`${model.model_key}-${model.date}`}>
@@ -1772,6 +1738,9 @@ function UsagePanel({ usage }: { usage?: UsagePayload }) {
           </div>
         ))}
       </div>
+      <p className="usage-foot">
+        per model · per day · not per-agent or per-sprint
+      </p>
     </section>
   );
 }
@@ -1904,22 +1873,120 @@ function SettingsView() {
   );
 }
 
-function EmptyState({
+function HomeLanding({
+  sprints,
   onCreated,
 }: {
+  sprints: SprintSummary[];
   onCreated: (sprintId: string) => Promise<void>;
 }) {
+  const [task, setTask] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function start() {
+    const clean = task.trim();
+    if (!clean || submitting) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const response = await submitIntake(clean);
+      if (!response.ok || !response.sprint_id) {
+        throw new Error(
+          response.error ||
+            response.stdout_tail ||
+            "Intake did not return a sprint id",
+        );
+      }
+      setTask("");
+      await onCreated(response.sprint_id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to start work");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const recent = sprints.slice(0, 6);
+
   return (
-    <div className="empty-page" data-testid="empty-state">
-      <div className="empty-mark">
-        <Sparkles size={28} />
+    <div className="home-landing" data-testid="home-landing">
+      <div className="home-inner">
+        <div className="home-mark" aria-hidden="true">
+          <Command size={20} />
+        </div>
+        <h1>What do you want done?</h1>
+        <p className="home-sub">
+          Describe a task. AI4Research routes it through PM, Planner, Builder,
+          and Evaluator agents — and tells you plainly when it stalls.
+        </p>
+        <form
+          className="home-prompt"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void start();
+          }}
+        >
+          <textarea
+            value={task}
+            onChange={(event) => setTask(event.target.value)}
+            placeholder="Build, investigate, verify, or produce an artifact…"
+            rows={3}
+            autoFocus
+            onKeyDown={(event) => {
+              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                event.preventDefault();
+                void start();
+              }
+            }}
+          />
+          <div className="home-prompt-foot">
+            <span className="home-hint">
+              Starts a real intake via the existing CLI
+              <kbd>⌘ ↵</kbd>
+            </span>
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={!task.trim() || submitting}
+            >
+              {submitting ? (
+                <Loader2 className="spin" size={16} />
+              ) : (
+                <Play size={16} />
+              )}
+              <span>{submitting ? "Starting" : "Start work"}</span>
+            </button>
+          </div>
+          {error && <div className="form-error">{error}</div>}
+        </form>
+
+        {recent.length > 0 && (
+          <div className="home-recent">
+            <div className="home-recent-head">Recent sessions</div>
+            <div className="home-recent-list">
+              {recent.map((sprint) => (
+                <NavLink
+                  key={sprint.sprint_id}
+                  to={`/sessions/${encodeURIComponent(sprint.sprint_id)}`}
+                  className="home-recent-row"
+                >
+                  <span className={`session-dot tone-${sessionTone(sprint)}`} />
+                  <span className="home-recent-title">
+                    {titleForSprint(sprint)}
+                  </span>
+                  <span className="home-recent-meta">
+                    {asString(sprint.phase || sprint.status, "unknown").replace(
+                      /_/g,
+                      " ",
+                    )}
+                  </span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      <h1>No harness sessions</h1>
-      <p>
-        Start a real intake to create a sprint and watch agents, events, DAG
-        progress, deliverables, and usage populate here.
-      </p>
-      <NewTaskDialog onCreated={onCreated} buttonClassName="primary-button" />
     </div>
   );
 }

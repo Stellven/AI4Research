@@ -620,7 +620,7 @@ summary:focus-visible,
 
 .process-results-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  grid-template-columns: minmax(0, 1fr) minmax(248px, 300px);
   gap: var(--solar-space-10);
   align-items: start;
 }
@@ -1677,6 +1677,232 @@ summary:focus-visible,
   .sig-relay .relay-link {
     display: none;
   }
+}
+
+/* ======================================================================
+   Home landing (chatbox) · explicit task header · compact usage.
+   ====================================================================== */
+
+.brand-row {
+  text-decoration: none;
+  border-radius: var(--solar-radius-small);
+  transition: opacity var(--solar-duration-fast) var(--solar-ease);
+}
+
+.brand-row:hover {
+  opacity: 0.72;
+}
+
+.home-landing {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: clamp(56px, 13vh, 168px) var(--solar-space-8) var(--solar-space-10);
+}
+
+.home-inner {
+  width: 100%;
+  max-width: 680px;
+}
+
+.home-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--solar-space-6);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-modal);
+  color: var(--solar-ink);
+}
+
+.home-landing h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  font-weight: var(--solar-weight-display);
+  letter-spacing: -0.018em;
+  line-height: 1.04;
+}
+
+.home-sub {
+  max-width: 56ch;
+  margin: var(--solar-space-4) 0 var(--solar-space-7);
+  color: var(--solar-muted);
+  font-size: var(--solar-type-base);
+  line-height: 1.55;
+}
+
+.home-prompt {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--solar-line-strong);
+  border-radius: var(--solar-radius-modal);
+  background: var(--solar-surface);
+  transition: border-color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.home-prompt:focus-within {
+  border-color: var(--solar-accent);
+}
+
+.home-prompt textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: var(--solar-space-4) var(--solar-space-4) var(--solar-space-2);
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  color: var(--solar-ink);
+  background: transparent;
+  font: inherit;
+  line-height: 1.5;
+}
+
+.home-prompt-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+  padding: var(--solar-space-2) var(--solar-space-3) var(--solar-space-3)
+    var(--solar-space-4);
+}
+
+.home-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.home-hint kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--solar-line);
+  border-radius: 4px;
+  color: var(--solar-muted);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.home-recent {
+  margin-top: var(--solar-space-9);
+}
+
+.home-recent-head {
+  margin-bottom: var(--solar-space-2);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-recent-row {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: var(--solar-space-3);
+  align-items: center;
+  padding: var(--solar-space-3) 0;
+  border-top: 1px solid var(--solar-line-soft);
+  color: var(--solar-muted);
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    padding-left var(--solar-duration-fast) var(--solar-ease);
+}
+
+.home-recent-row:hover {
+  padding-left: var(--solar-space-2);
+  color: var(--solar-ink);
+}
+
+.home-recent-title {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-recent-meta {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.task-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-4);
+}
+
+.task-kicker {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-pill);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-medium);
+}
+
+.status-chip.status-blocked {
+  border-color: var(--solar-warning);
+  color: var(--solar-warning);
+}
+
+.status-chip.status-working {
+  border-color: var(--solar-accent);
+  color: var(--solar-accent-ink);
+}
+
+.status-chip.status-complete {
+  border-color: var(--solar-success);
+  color: var(--solar-success);
+}
+
+.phase-tag {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.usage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-3);
+}
+
+.usage-head span {
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.usage-head strong {
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-foot {
+  margin: var(--solar-space-3) 0 0;
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-micro);
 }
 
 @keyframes spin {
