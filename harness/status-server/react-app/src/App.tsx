@@ -2,10 +2,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as Switch from "@radix-ui/react-switch";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
-  Activity,
   AlertTriangle,
   ArrowUpRight,
-  Boxes,
   Bot,
   ChevronDown,
   ChevronRight,
@@ -15,21 +13,17 @@ import {
   Command,
   FileCheck2,
   FileText,
-  GitBranch,
   ListTree,
   Loader2,
   MessageSquarePlus,
-  PanelLeft,
   Play,
   Radio,
   RefreshCw,
   Search,
   Settings,
   ShieldCheck,
-  Sparkles,
   SquareTerminal,
   Workflow,
-  Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -664,7 +658,6 @@ function SessionView({
     <div className="workspace-scroll" data-variant={designVariant}>
       <TopBar
         sprint={currentSprint}
-        usage={session.usage}
         streamState={session.streamState}
         onCreated={onCreated}
       />
@@ -1570,12 +1563,10 @@ function timestampValue(value: string): number {
 
 function TopBar({
   sprint,
-  usage,
   streamState,
   onCreated,
 }: {
   sprint: SprintSummary;
-  usage?: UsagePayload;
   streamState: string;
   onCreated: (sprintId: string) => Promise<void>;
 }) {
@@ -1583,7 +1574,6 @@ function TopBar({
     <header className="topbar">
       <div className="topbar-title-block">
         <div className="topbar-title">
-          <PanelLeft size={17} />
           <span>{titleForSprint(sprint)}</span>
         </div>
       </div>
@@ -1591,10 +1581,6 @@ function TopBar({
         <div className={`stream-chip stream-${streamState}`}>
           <Radio size={14} />
           <span>{streamState}</span>
-        </div>
-        <div className="usage-chip" aria-label="Tokens per model per day">
-          <Zap size={14} />
-          <span>{usage?.total_used_tokens_label || "0 tok"} per model/day</span>
         </div>
         <NewTaskDialog
           onCreated={onCreated}
