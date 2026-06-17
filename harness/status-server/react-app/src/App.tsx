@@ -122,6 +122,17 @@ type ProcessStep = {
   result?: Deliverable;
 };
 
+type DesignVariant = "contrast" | "technical" | "editorial";
+
+type StageState = "passed" | "active" | "blocked" | "pending";
+
+type PlanStage = {
+  id: string;
+  label: string;
+  state: StageState;
+  detail: string;
+};
+
 function App() {
   return (
     <Tooltip.Provider delayDuration={220}>
@@ -220,6 +231,12 @@ function Shell() {
 function selectedSprintFromPath(pathname: string): string {
   const match = pathname.match(/^\/sessions\/(.+)$/);
   return match ? decodeURIComponent(match[1]) : "";
+}
+
+function designVariantFromSearch(search: string): DesignVariant {
+  const value = new URLSearchParams(search).get("variant");
+  if (value === "technical" || value === "editorial") return value;
+  return "contrast";
 }
 
 function Sidebar({
@@ -607,6 +624,8 @@ function SessionView({
   session: SessionData;
   onCreated: (sprintId: string) => Promise<void>;
 }) {
+  const location = useLocation();
+  const designVariant = designVariantFromSearch(location.search);
   const dashboard = dashboardForSprint(session.dashboard, sprintId);
   const data = dashboard?.data;
   const currentSprint = (data?.sprint ||
@@ -629,7 +648,7 @@ function SessionView({
   );
 
   return (
-    <div className="workspace-scroll">
+    <div className={`workspace-scroll design-${designVariant}`}>
       <TopBar
         sprint={currentSprint}
         usage={session.usage}
@@ -671,6 +690,9 @@ function SessionView({
                 dashboard={dashboard}
                 deliverables={session.deliverables}
                 usage={session.usage}
+                phase={phase}
+                isBlocked={isBlocked}
+                isComplete={isComplete}
               />
             </div>
           </motion.div>
@@ -692,6 +714,96 @@ function dashboardForSprint(
   return dashboard;
 }
 
+function stalledPlainLanguage(
+  dashboard: DashboardResponse | undefined,
+  stallText: string,
+): string {
+  const raw = [
+    stallText,
+    ...(dashboard?.data?.stall?.reasons || []),
+    dashboard?.data?.stall?.reason,
+    dashboard?.data?.stall?.explanation,
+  ]
+    .map((item) => asString(item))
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    raw.includes("no_matching_worker") ||
+    raw.includes("no matching worker") ||
+    raw.includes("missing worker")
+  ) {
+    const capability = missingCapability(dashboard);
+    return capability
+      ? `No agent provides ${capability}.`
+      : "No agent provides the required capability.";
+  }
+
+  const capability = missingCapability(dashboard);
+  if (capability && dashboard?.data?.stall?.is_stalled) {
+    return `No agent provides ${capability}.`;
+  }
+
+  return (
+    stallText
+      .replace(/\bno_matching_worker\b/g, "")
+      .replace(/\s*:\s*$/g, "")
+      .trim() || "The sprint is waiting on a dispatch gate."
+  );
+}
+
+function missingCapability(
+  dashboard: DashboardResponse | undefined,
+): string {
+  const blockedNode = dashboard?.data?.blocked_nodes?.[0];
+  const nodeCapability = blockedNode?.required_capabilities?.[0];
+  if (nodeCapability) return nodeCapability;
+  const demand = dashboard?.data?.capabilities?.demand || {};
+  const demanded = Object.keys(demand).find((key) => key.trim());
+  if (demanded) return demanded;
+  const nodes = dashboard?.data?.dag?.nodes || [];
+  const blockedDagNode = nodes.find(
+    (node) => statusTone(asString(node.status)) === "blocked",
+  );
+  return blockedDagNode?.required_capabilities?.[0] || "";
+}
+
+function technicalDetailsForStall(
+  dashboard: DashboardResponse | undefined,
+  stallText: string,
+): string[] {
+  const stall = dashboard?.data?.stall;
+  if (!stall?.is_stalled) return [];
+  const details = [
+    asString(stall.state) && `state: ${asString(stall.state)}`,
+    stallText && `summary: ${stallText}`,
+    ...((stall.reasons || []).map((reason) => `reason: ${reason}`) || []),
+    ...((stall.blocked_nodes || []).map((node) => `blocked node: ${node}`) ||
+      []),
+  ].filter(Boolean) as string[];
+
+  const blockedNodes = [
+    ...(dashboard?.data?.blocked_nodes || []),
+    ...((dashboard?.data?.dag?.nodes || []).filter(
+      (node) => statusTone(asString(node.status)) === "blocked",
+    ) || []),
+  ];
+  blockedNodes.slice(0, 4).forEach((node) => {
+    const id = nodeId(node);
+    if (node.route_decision) {
+      details.push(`route decision ${id}: ${asString(node.route_decision)}`);
+    }
+    if (node.blocked_reason) {
+      details.push(`blocked reason ${id}: ${asString(node.blocked_reason)}`);
+    }
+    (node.required_capabilities || []).slice(0, 3).forEach((capability) => {
+      details.push(`required capability ${id}: ${capability}`);
+    });
+  });
+
+  return Array.from(new Set(details)).slice(0, 10);
+}
+
 function CompactSessionHeader({
   sprint,
   phase,
@@ -707,21 +819,17 @@ function CompactSessionHeader({
   stallText: string;
   dashboard?: DashboardResponse;
 }) {
-  const progress = dashboard?.data?.progress;
-  const total = Number(progress?.total_nodes || 0);
-  const done = Number(
-    progress?.completed_nodes ||
-      progress?.passed_nodes ||
-      progress?.status_counts?.passed ||
-      0,
-  );
-  const percentage =
-    total > 0 ? Math.round((done / total) * 100) : isComplete ? 100 : 0;
   const label = isBlocked
     ? "Stalled"
     : isComplete
       ? "Complete"
       : asString(sprint.status || phase, "Active").replace(/_/g, " ");
+  const statusLine = isBlocked
+    ? stalledPlainLanguage(dashboard, stallText)
+    : isComplete
+      ? "Build phase is marked complete by the harness."
+      : `Current phase: ${phase.replace(/_/g, " ") || "detecting"}.`;
+  const technicalDetails = technicalDetailsForStall(dashboard, stallText);
 
   return (
     <section
@@ -737,21 +845,17 @@ function CompactSessionHeader({
           <span>{phase.replace(/_/g, " ") || "phase unknown"}</span>
         </div>
         <h1>{titleForSprint(sprint)}</h1>
-        {isBlocked && <p>{stallText}</p>}
-      </div>
-      <div
-        className="compact-progress"
-        aria-label={`Sprint progress ${percentage}%`}
-      >
-        <div className="progress-text">
-          <strong>{percentage}%</strong>
-          <span>{total ? `${done}/${total} nodes` : "waiting for DAG"}</span>
-        </div>
-        <div className="progress-track">
-          <span
-            style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
-          />
-        </div>
+        <p>{statusLine}</p>
+        {isBlocked && technicalDetails.length > 0 && (
+          <details className="technical-details">
+            <summary>Technical details</summary>
+            <ul>
+              {technicalDetails.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
     </section>
   );
@@ -904,21 +1008,83 @@ function ResultsRail({
   dashboard,
   deliverables,
   usage,
+  phase,
+  isBlocked,
+  isComplete,
 }: {
   dashboard?: DashboardResponse;
   deliverables: Deliverable[];
   usage?: UsagePayload;
+  phase: string;
+  isBlocked: boolean;
+  isComplete: boolean;
 }) {
   return (
     <aside className="results-rail" data-testid="results-rail">
       <DeliverablesPanel deliverables={deliverables} />
-      <GraphSummaryPanel dashboard={dashboard} />
+      <GraphSummaryPanel
+        dashboard={dashboard}
+        phase={phase}
+        isBlocked={isBlocked}
+        isComplete={isComplete}
+      />
       <UsagePanel usage={usage} />
     </aside>
   );
 }
 
-function GraphSummaryPanel({ dashboard }: { dashboard?: DashboardResponse }) {
+function buildPlanStages(
+  phase: string,
+  isBlocked: boolean,
+  isComplete: boolean,
+): PlanStage[] {
+  const currentIndex = PHASES.findIndex((item) => phase.includes(item));
+  const normalizedIndex = currentIndex >= 0 ? currentIndex : 0;
+  const blockedIndex = isBlocked
+    ? Math.min(
+        PHASES.length - 1,
+        phase.includes("build_complete") ? normalizedIndex : normalizedIndex + 1,
+      )
+    : -1;
+
+  return [
+    { id: "spec", label: "Spec", complete: "Request accepted" },
+    { id: "prd_ready", label: "PRD", complete: "Requirements shaped" },
+    { id: "planning_complete", label: "Plan", complete: "DAG prepared" },
+    { id: "build_complete", label: "Build", complete: "Output produced" },
+  ].map((stage, index) => {
+    let state: StageState = "pending";
+    if (isComplete || index < normalizedIndex) state = "passed";
+    if (!isComplete && index === normalizedIndex) state = "active";
+    if (index === blockedIndex) state = "blocked";
+    if (isBlocked && index < blockedIndex) state = "passed";
+    return {
+      id: stage.id,
+      label: stage.label,
+      state,
+      detail:
+        state === "passed"
+          ? stage.complete
+          : state === "blocked"
+            ? "Blocked by dispatch capability"
+            : state === "active"
+              ? "Current stage"
+              : "Waiting",
+    };
+  });
+}
+
+function GraphSummaryPanel({
+  dashboard,
+  phase,
+  isBlocked,
+  isComplete,
+}: {
+  dashboard?: DashboardResponse;
+  phase: string;
+  isBlocked: boolean;
+  isComplete: boolean;
+}) {
   const nodes = dashboard?.data?.dag?.nodes || [];
   const active = nodes.find(
     (node) => statusTone(asString(node.status)) === "working",
@@ -926,6 +1092,7 @@ function GraphSummaryPanel({ dashboard }: { dashboard?: DashboardResponse }) {
   const blocked = nodes.filter(
     (node) => statusTone(asString(node.status)) === "blocked",
   );
+  const stages = buildPlanStages(phase, isBlocked, isComplete);
   return (
     <section className="panel graph-summary-panel" data-testid="graph-summary">
       <SectionHeader
@@ -933,6 +1100,19 @@ function GraphSummaryPanel({ dashboard }: { dashboard?: DashboardResponse }) {
         title="Plan"
         detail={`${nodes.length} nodes`}
       />
+      <div className="stage-list" aria-label="Discrete sprint stages">
+        {stages.map((stage) => (
+          <div className={`stage-row stage-${stage.state}`} key={stage.id}>
+            <span className="stage-marker" aria-hidden="true">
+              {stage.state === "passed" ? <CheckCircle2 size={14} /> : null}
+            </span>
+            <div>
+              <strong>{stage.label}</strong>
+              <p>{stage.detail}</p>
+            </div>
+          </div>
+        ))}
+      </div>
       {nodes.length === 0 && <EmptyInline label="No DAG available" />}
       {active && (
         <div className="plan-focus">
@@ -1024,7 +1204,7 @@ function buildProcessSteps(
     steps.push({
       id: `deliverable-${primaryDeliverable.rel_path}`,
       actor: "Harness",
-      title: "Result is available",
+      title: "Deliverable is ready",
       summary: `${primaryDeliverable.name} is ready to open.`,
       detail:
         "The output is separated from the process stream so review can happen without digging through agent telemetry.",
@@ -1247,18 +1427,20 @@ function TopBar({
 }) {
   return (
     <header className="topbar">
-      <div className="topbar-title">
-        <PanelLeft size={17} />
-        <span>{titleForSprint(sprint)}</span>
+      <div className="topbar-title-block">
+        <div className="topbar-title">
+          <PanelLeft size={17} />
+          <span>{titleForSprint(sprint)}</span>
+        </div>
       </div>
       <div className="topbar-actions">
         <div className={`stream-chip stream-${streamState}`}>
           <Radio size={14} />
           <span>{streamState}</span>
         </div>
-        <div className="usage-chip">
+        <div className="usage-chip" aria-label="Tokens per model per day">
           <Zap size={14} />
-          <span>{usage?.total_used_tokens_label || "0 tok"}</span>
+          <span>{usage?.total_used_tokens_label || "0 tok"} per model/day</span>
         </div>
         <NewTaskDialog
           onCreated={onCreated}
@@ -1267,142 +1449,6 @@ function TopBar({
         />
       </div>
     </header>
-  );
-}
-
-function HeroStatus({
-  sprint,
-  phase,
-  isBlocked,
-  isComplete,
-  stallText,
-  dashboard,
-}: {
-  sprint: SprintSummary;
-  phase: string;
-  isBlocked: boolean;
-  isComplete: boolean;
-  stallText: string;
-  dashboard?: DashboardResponse;
-}) {
-  const progress = dashboard?.data?.progress;
-  const total = Number(progress?.total_nodes || 0);
-  const done = Number(
-    progress?.completed_nodes ||
-      progress?.passed_nodes ||
-      progress?.status_counts?.passed ||
-      0,
-  );
-  const percentage = total > 0 ? Math.round((done / total) * 100) : 0;
-  const status = isBlocked
-    ? "Stalled"
-    : isComplete
-      ? "Complete"
-      : asString(sprint.status || phase, "Active").replace(/_/g, " ");
-
-  return (
-    <section
-      className={`hero-status ${isBlocked ? "is-blocked" : ""} ${isComplete ? "is-complete" : ""}`}
-      data-testid="hero-status"
-    >
-      <div className="hero-main">
-        <div className="eyebrow-row">
-          <span
-            className={`state-orb tone-${isBlocked ? "blocked" : isComplete ? "complete" : "working"}`}
-          />
-          <span>{status}</span>
-          <span>{asString(sprint.sprint_id)}</span>
-        </div>
-        <h1>{titleForSprint(sprint)}</h1>
-        <p>
-          {isBlocked
-            ? stallText
-            : isComplete
-              ? "Build phase is marked complete by the harness."
-              : `Current phase: ${phase.replace(/_/g, " ") || "detecting"}`}
-        </p>
-      </div>
-      <div className="hero-metrics">
-        <Metric value={`${percentage}%`} label="DAG progress" />
-        <Metric value={compactNumber(total)} label="nodes" />
-        <Metric
-          value={compactNumber(progress?.blocked_nodes || 0)}
-          label="blocked"
-          tone={isBlocked ? "blocked" : "default"}
-        />
-      </div>
-    </section>
-  );
-}
-
-function Metric({
-  value,
-  label,
-  tone = "default",
-}: {
-  value: string;
-  label: string;
-  tone?: "default" | "blocked";
-}) {
-  return (
-    <div className={`metric tone-${tone}`}>
-      <span>{value}</span>
-      <small>{label}</small>
-    </div>
-  );
-}
-
-function AgentPanel({ agents }: { agents: AgentCardModel[] }) {
-  return (
-    <section className="agent-panel" data-testid="agent-panel">
-      <SectionHeader
-        icon={<Activity size={17} />}
-        title="Agents"
-        detail="PM, planner, builder, evaluator"
-      />
-      <div className="agent-grid">
-        {agents.map((agent) => (
-          <motion.article
-            layout
-            className={`agent-card agent-${agent.state}`}
-            key={agent.role}
-          >
-            <div className="agent-card-top">
-              <div>
-                <h2>{agent.title}</h2>
-                <span>{agent.subtitle}</span>
-              </div>
-              <AgentState state={agent.state} />
-            </div>
-            <p className="agent-activity">{agent.activity}</p>
-            <div className="agent-meta">
-              <span>{agent.model || "model unknown"}</span>
-              <span>{agent.pane || "no pane"}</span>
-            </div>
-            <div className="last-event">{agent.lastEvent}</div>
-          </motion.article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function AgentState({ state }: { state: AgentCardModel["state"] }) {
-  const icon =
-    state === "blocked" ? (
-      <AlertTriangle size={14} />
-    ) : state === "complete" ? (
-      <CheckCircle2 size={14} />
-    ) : state === "working" ? (
-      <Loader2 className="spin-soft" size={14} />
-    ) : (
-      <Circle size={12} />
-    );
-  return (
-    <div className={`agent-state tone-${state}`}>
-      {icon}
-      <span>{state}</span>
-    </div>
   );
 }
 
@@ -1455,156 +1501,6 @@ function buildAgents(
         : "No recent event",
     };
   });
-}
-
-function SprintProgress({
-  phase,
-  dashboard,
-}: {
-  phase: string;
-  dashboard?: DashboardResponse;
-}) {
-  const progress = dashboard?.data?.progress;
-  const counts = progress?.status_counts || {};
-  const currentIndex = Math.max(
-    0,
-    PHASES.findIndex((item) => phase.includes(item)),
-  );
-
-  return (
-    <section className="panel phase-panel" data-testid="phase-panel">
-      <SectionHeader
-        icon={<GitBranch size={17} />}
-        title="Sprint journey"
-        detail="Spec to build"
-      />
-      <div className="phase-line">
-        {PHASES.map((item, index) => {
-          const state =
-            index < currentIndex
-              ? "done"
-              : index === currentIndex
-                ? "current"
-                : "pending";
-          return (
-            <div className={`phase-step phase-${state}`} key={item}>
-              <span>
-                {index < currentIndex ? (
-                  <CheckCircle2 size={16} />
-                ) : (
-                  <Circle size={14} />
-                )}
-              </span>
-              <div>{item.replace(/_/g, " ")}</div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="status-counts">
-        {Object.entries(counts).length === 0 && (
-          <EmptyInline label="No node counts yet" />
-        )}
-        {Object.entries(counts).map(([key, value]) => (
-          <div key={key} className={`count-row tone-${statusTone(key)}`}>
-            <span>{key.replace(/_/g, " ")}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function DagPanel({ dashboard }: { dashboard?: DashboardResponse }) {
-  const nodes = dashboard?.data?.dag?.nodes || [];
-  return (
-    <section className="panel dag-panel" data-testid="dag-panel">
-      <SectionHeader
-        icon={<Boxes size={17} />}
-        title="DAG"
-        detail={`${nodes.length} nodes`}
-      />
-      <div className="dag-list">
-        {nodes.length === 0 && <EmptyInline label="No task graph available" />}
-        {nodes.map((node) => {
-          const status = asString(node.status, "pending");
-          return (
-            <article
-              className={`dag-node tone-${statusTone(status)}`}
-              key={nodeId(node)}
-            >
-              <div className="dag-node-line">
-                <span className={`state-dot tone-${statusTone(status)}`} />
-                <div>
-                  <h3>{nodeId(node)}</h3>
-                  <p>{nodeTitle(node)}</p>
-                </div>
-                <strong>{status.replace(/_/g, " ")}</strong>
-              </div>
-              <div className="dag-node-meta">
-                {(node.depends_on || []).slice(0, 4).map((dep) => (
-                  <span key={dep}>after {dep}</span>
-                ))}
-                {(node.required_capabilities || []).slice(0, 4).map((cap) => (
-                  <span key={cap}>{cap}</span>
-                ))}
-                {node.route_decision && (
-                  <span>
-                    {asString(node.route_decision).replace(/_/g, " ")}
-                  </span>
-                )}
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function ActivityStream({
-  events,
-  streamState,
-}: {
-  events: EventRecord[];
-  streamState: string;
-}) {
-  return (
-    <section className="panel activity-panel" data-testid="activity-stream">
-      <SectionHeader
-        icon={<Radio size={17} />}
-        title="Activity stream"
-        detail={streamState}
-      />
-      <div className="event-list">
-        {events.length === 0 && (
-          <EmptyInline label="Waiting for runtime events" />
-        )}
-        {events.map((event, index) => {
-          const readable = humanEvent(event);
-          return (
-            <motion.article
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`event-row tone-${readable.tone}`}
-              key={`${eventTimestamp(event)}-${eventActor(event)}-${index}`}
-            >
-              <div className="event-time">
-                {formatTime(eventTimestamp(event))}
-              </div>
-              <div className="event-body">
-                <div className="event-title-row">
-                  <strong>{readable.title}</strong>
-                  <span>{eventActor(event)}</span>
-                </div>
-                {readable.detail && <p>{readable.detail}</p>}
-              </div>
-            </motion.article>
-          );
-        })}
-      </div>
-    </section>
-  );
 }
 
 function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
@@ -1662,6 +1558,13 @@ function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
   );
 }
 
+function usageScopeCopy(usage?: UsagePayload): string {
+  const source = asString(usage?.source, "local quota/log signals")
+    .replace(/[_-]/g, " ")
+    .trim();
+  return `Token usage is estimated per-model/day from ${source}; it is not scoped to a single agent or sprint.`;
+}
+
 function UsagePanel({ usage }: { usage?: UsagePayload }) {
   return (
     <section className="panel usage-panel" data-testid="usage-panel">
@@ -1671,8 +1574,7 @@ function UsagePanel({ usage }: { usage?: UsagePayload }) {
         detail={usage?.total_used_tokens_label || "0 tok"}
       />
       <p className="usage-label">
-        {usage?.label ||
-          "source: Claude log scan / quota-footer; scope: model-day estimate; not per-sprint or per-agent"}
+        {usageScopeCopy(usage)}
       </p>
       <div className="usage-models">
         {(usage?.models || []).slice(0, 4).map((model) => (
@@ -1746,16 +1648,19 @@ function SettingsView() {
                 "P0 exposes current configuration without inventing a new write path."}
             </p>
           </div>
-          <div className="hero-metrics">
-            <Metric
-              value={compactNumber(physical.count || 0)}
-              label="operators"
-            />
-            <Metric
-              value={compactNumber(physical.available || 0)}
-              label="available"
-            />
-            <Metric value={compactNumber(physical.busy || 0)} label="busy" />
+          <div className="settings-stats">
+            <span>
+              <strong>{compactNumber(physical.count || 0)}</strong>
+              operators
+            </span>
+            <span>
+              <strong>{compactNumber(physical.available || 0)}</strong>
+              available
+            </span>
+            <span>
+              <strong>{compactNumber(physical.busy || 0)}</strong>
+              busy
+            </span>
           </div>
         </section>
 
