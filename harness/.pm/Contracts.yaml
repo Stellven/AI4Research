@@ -4,7 +4,7 @@ source_of_truth: requirement_ir.json
 contracts:
   product:
     enabled: true
-    goal: kllmk
+    goal: asdad
     success_metrics: &id001
     - 目标变更在声明范围内完成。
     - 至少一条测试/执行证据被记录。
@@ -63,12 +63,12 @@ contracts:
     stop_conditions: *id002
   research:
     enabled: false
-    hypothesis: kllmk
+    hypothesis: asdad
     source_papers: []
     experiments: []
     adoption_threshold: {}
     rejection_criteria: []
-request_excerpt: "# RawIntent Consumer Request - kllmk\n\n## Source\n\n- intent_id:\
-  \ intent-20260616-194507-b01a0a0be9\n- channel: cli_intake\n- actor: user\n- device:\
-  \ \n- thread_ref: \n\n## Rewritten Objective\n\nkllmk\n\n## Problem\n\nkllmk\n\n\
+request_excerpt: "# RawIntent Consumer Request - asdad\n\n## Source\n\n- intent_id:\
+  \ intent-20260617-165134-3abfab76c5\n- channel: cli_intake\n- actor: user\n- device:\
+  \ \n- thread_ref: \n\n## Rewritten Objective\n\nasdad\n\n## Problem\n\nasdad\n\n\
   ## Constraints\n\n- All execution"

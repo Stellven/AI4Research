@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.acceptance_verdict.v1",
-  "sprint_id": "sprint-20260616-194507-intent-kllmk-b01a0a0b",
-  "requirement_ir_id": "req-ca659ce1116b",
+  "sprint_id": "sprint-20260617-165134-intent-asdad-3abfab76",
+  "requirement_ir_id": "req-60f1f91026a7",
   "requested_verdict": "PASS",
   "coverage_summary": {
     "total": 4,

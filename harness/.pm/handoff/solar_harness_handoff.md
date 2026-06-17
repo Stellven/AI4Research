@@ -1,4 +1,4 @@
-# solar-harness Handoff — kllmk
+# solar-harness Handoff — asdad
 
 ## Goal
 
@@ -6,11 +6,11 @@ Read compiled PRD / contract / task graph proposal, then produce planner artifac
 
 ## Read First
 
-- sprint-20260616-194507-intent-kllmk-b01a0a0b.requirement_ir.json
-- sprint-20260616-194507-intent-kllmk-b01a0a0b.prd.md
-- sprint-20260616-194507-intent-kllmk-b01a0a0b.Contracts.yaml
-- sprint-20260616-194507-intent-kllmk-b01a0a0b.task_graph.json
-- sprint-20260616-194507-intent-kllmk-b01a0a0b.handoff.md
+- sprint-20260617-165134-intent-asdad-3abfab76.requirement_ir.json
+- sprint-20260617-165134-intent-asdad-3abfab76.prd.md
+- sprint-20260617-165134-intent-asdad-3abfab76.Contracts.yaml
+- sprint-20260617-165134-intent-asdad-3abfab76.task_graph.json
+- sprint-20260617-165134-intent-asdad-3abfab76.handoff.md
 
 ## Constraints
 

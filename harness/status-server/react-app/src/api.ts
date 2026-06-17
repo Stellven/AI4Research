@@ -6,7 +6,7 @@ import type {
   SettingsPayload,
   SprintIndexResponse,
   StatusPayload,
-  UsagePayload
+  UsagePayload,
 } from "./types";
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -15,12 +15,15 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       Accept: "application/json",
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...(init?.headers || {})
-    }
+      ...(init?.headers || {}),
+    },
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = typeof payload?.error === "string" ? payload.error : `HTTP ${response.status}`;
+    const message =
+      typeof payload?.error === "string"
+        ? payload.error
+        : `HTTP ${response.status}`;
     throw new Error(message);
   }
   return payload as T;
@@ -40,7 +43,10 @@ export function fetchDashboard(sprintId?: string): Promise<DashboardResponse> {
   return requestJson<DashboardResponse>(`/orchestration/dashboard${query}`);
 }
 
-export function fetchEvents(sprintId?: string, limit = 120): Promise<EventRecord[]> {
+export function fetchEvents(
+  sprintId?: string,
+  limit = 120,
+): Promise<EventRecord[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (sprintId) {
     params.set("sprint_id", sprintId);
@@ -52,8 +58,12 @@ export function fetchUsage(): Promise<UsagePayload> {
   return requestJson<UsagePayload>("/usage");
 }
 
-export function fetchDeliverables(sprintId: string): Promise<DeliverablesPayload> {
-  return requestJson<DeliverablesPayload>(`/sprints/${encodeURIComponent(sprintId)}/deliverables`);
+export function fetchDeliverables(
+  sprintId: string,
+): Promise<DeliverablesPayload> {
+  return requestJson<DeliverablesPayload>(
+    `/sprints/${encodeURIComponent(sprintId)}/deliverables`,
+  );
 }
 
 export function fetchSettings(): Promise<SettingsPayload> {
@@ -63,11 +73,15 @@ export function fetchSettings(): Promise<SettingsPayload> {
 export function submitIntake(task: string): Promise<IntakeResponse> {
   return requestJson<IntakeResponse>("/intake", {
     method: "POST",
-    body: JSON.stringify({ task })
+    body: JSON.stringify({ task }),
   });
 }
 
-export function openEventStream(sprintId: string | undefined, onEvent: (event: EventRecord) => void, onError: () => void): EventSource | null {
+export function openEventStream(
+  sprintId: string | undefined,
+  onEvent: (event: EventRecord) => void,
+  onError: () => void,
+): EventSource | null {
   if (typeof EventSource === "undefined") {
     return null;
   }

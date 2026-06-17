@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.coverage_report.v1",
-  "sprint_id": "sprint-20260616-194507-intent-kllmk-b01a0a0b",
-  "requirement_ir_id": "req-ca659ce1116b",
+  "sprint_id": "sprint-20260617-165134-intent-asdad-3abfab76",
+  "requirement_ir_id": "req-60f1f91026a7",
   "summary": {
     "total": 4,
     "done": 0,
@@ -13,9 +13,9 @@
   "items": [
     {
       "requirement_id": "REQ-000",
-      "source_text": "kllmk",
+      "source_text": "asdad",
       "success_criteria": [
-        "kllmk"
+        "asdad"
       ],
       "verification_method": "task_graph_closeout",
       "mapped_nodes": [

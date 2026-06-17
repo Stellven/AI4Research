@@ -1,5 +1,5 @@
 enabled: true
-goal: kllmk
+goal: asdad
 success_metrics: &id001
 - 目标变更在声明范围内完成。
 - 至少一条测试/执行证据被记录。
