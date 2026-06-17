@@ -717,7 +717,7 @@ function SessionView({
               />
               <ResultsRail
                 deliverables={session.deliverables}
-                dashboard={dashboard}
+                usage={session.usage}
               />
             </div>
           </motion.div>
@@ -1098,15 +1098,15 @@ function ProcessStepItem({
 
 function ResultsRail({
   deliverables,
-  dashboard,
+  usage,
 }: {
   deliverables: Deliverable[];
-  dashboard?: DashboardResponse;
+  usage?: UsagePayload;
 }) {
   return (
     <aside className="results-rail" data-testid="results-rail">
       <DeliverablesPanel deliverables={deliverables} />
-      <SprintCostPanel dashboard={dashboard} />
+      <UsagePanel usage={usage} />
     </aside>
   );
 }
@@ -1610,10 +1610,9 @@ function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
               rel="noreferrer"
               key={item.rel_path}
             >
+              <FileText className="artifact-icon" size={15} />
               <span className="artifact-name">{item.name}</span>
-              <span className="artifact-meta">
-                {item.kind.toUpperCase()} · {compactNumber(item.size || 0)}B
-              </span>
+              <span className="artifact-meta">{item.kind.toUpperCase()}</span>
               <ArrowUpRight size={14} />
             </a>
           ))}
@@ -1623,36 +1622,23 @@ function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
   );
 }
 
-function SprintCostPanel({ dashboard }: { dashboard?: DashboardResponse }) {
-  const resources = dashboard?.data?.resources;
-  const progress = dashboard?.data?.progress;
-  const cost =
-    typeof resources?.estimated_total_cost === "number"
-      ? resources.estimated_total_cost
-      : undefined;
-  const routing = resources?.routing_records_for_sprint;
+function UsagePanel({ usage }: { usage?: UsagePayload }) {
   return (
     <section className="panel usage-panel" data-testid="usage-panel">
       <div className="usage-head">
-        <span>This sprint</span>
-        <strong>{cost !== undefined ? `$${cost.toFixed(2)}` : "—"}</strong>
+        <span>Usage</span>
+        <strong>{usage?.total_used_tokens_label || "0 tok"}</strong>
       </div>
       <div className="usage-models">
-        {typeof progress?.total_nodes === "number" && (
-          <div className="usage-model">
-            <span>plan nodes</span>
-            <strong>{progress.total_nodes}</strong>
+        {(usage?.models || []).slice(0, 4).map((model) => (
+          <div className="usage-model" key={`${model.model_key}-${model.date}`}>
+            <span>{model.model_key}</span>
+            <strong>{model.used_tokens_label}</strong>
           </div>
-        )}
-        {typeof routing === "number" && (
-          <div className="usage-model">
-            <span>routing decisions</span>
-            <strong>{routing}</strong>
-          </div>
-        )}
+        ))}
       </div>
       <p className="usage-foot">
-        Planner&rsquo;s cost estimate for this sprint — not metered billing.
+        per model · per day · not per-agent or per-sprint
       </p>
     </section>
   );

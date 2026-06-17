@@ -2123,7 +2123,7 @@ summary:focus-visible,
 
 .artifact-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 14px;
+  grid-template-columns: 16px minmax(0, 1fr) auto 14px;
   gap: var(--solar-space-3);
   align-items: center;
   padding: var(--solar-space-3) 0;
