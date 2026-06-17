@@ -2183,6 +2183,118 @@ summary:focus-visible,
   font-weight: 400;
 }
 
+/* Process-as-hero: a thin context bar (title lives once, small); the stream
+   owns the center; the stall is a focal callout at the head of the stream. */
+.context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solar-space-3) var(--solar-space-5);
+  padding-bottom: var(--solar-space-5);
+  border-bottom: 1px solid var(--solar-line);
+}
+
+.context-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--solar-space-3);
+  min-width: 0;
+}
+
+.context-title {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--solar-type-lg);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-facts {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-3);
+}
+
+.context-fact {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px var(--solar-space-3);
+  border: 1px solid var(--solar-line-strong);
+  border-radius: var(--solar-radius-pill);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-medium);
+}
+
+.status-badge.tone-blocked {
+  border-color: var(--solar-warning);
+  color: var(--solar-warning);
+}
+
+.status-badge.tone-working {
+  border-color: var(--solar-accent);
+  color: var(--solar-accent-ink);
+}
+
+.status-badge.tone-complete {
+  color: var(--solar-success);
+}
+
+.stream-column {
+  min-width: 0;
+}
+
+.stall-callout {
+  display: flex;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-7);
+  padding: var(--solar-space-4) var(--solar-space-5);
+  border: 1px solid var(--solar-line);
+  border-left: 3px solid var(--solar-warning);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-surface);
+}
+
+.stall-callout > svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--solar-warning);
+}
+
+.stall-callout-body {
+  min-width: 0;
+}
+
+.stall-callout-body strong {
+  display: block;
+  color: var(--solar-warning);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stall-callout-body p {
+  max-width: 60ch;
+  margin: var(--solar-space-2) 0 0;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-lg);
+  line-height: 1.4;
+}
+
+.stall-callout .technical-details {
+  margin-top: var(--solar-space-3);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

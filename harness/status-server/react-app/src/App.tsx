@@ -706,15 +706,21 @@ function SessionView({
               phase={phase}
               isBlocked={isBlocked}
               isComplete={isComplete}
-              stallText={stallCopy(stall)}
-              dashboard={dashboard}
             />
             <AgentSignature agents={agents} gate={gate} isBlocked={isBlocked} />
             <div className="process-results-layout">
-              <ProcessStream
-                steps={processSteps}
-                streamState={session.streamState}
-              />
+              <div className="stream-column">
+                {isBlocked && (
+                  <StallCallout
+                    dashboard={dashboard}
+                    stallText={stallCopy(stall)}
+                  />
+                )}
+                <ProcessStream
+                  steps={processSteps}
+                  streamState={session.streamState}
+                />
+              </div>
               <ResultsRail
                 deliverables={session.deliverables}
                 usage={session.usage}
@@ -833,15 +839,11 @@ function CompactSessionHeader({
   phase,
   isBlocked,
   isComplete,
-  stallText,
-  dashboard,
 }: {
   sprint: SprintSummary;
   phase: string;
   isBlocked: boolean;
   isComplete: boolean;
-  stallText: string;
-  dashboard?: DashboardResponse;
 }) {
   const label = isBlocked
     ? "Stalled"
@@ -850,36 +852,48 @@ function CompactSessionHeader({
       : asString(sprint.status || phase, "Active").replace(/_/g, " ");
   const phaseLabel = phase.replace(/_/g, " ");
   const tone = isBlocked ? "blocked" : isComplete ? "complete" : "working";
-  const reason = isBlocked
-    ? stalledPlainLanguage(dashboard, stallText)
-    : isComplete
-      ? "Build phase is marked complete by the harness."
-      : `Working through the ${phaseLabel || "current"} phase.`;
-  const technicalDetails = technicalDetailsForStall(dashboard, stallText);
 
   return (
-    <section
-      className={`compact-session-header ${isBlocked ? "is-blocked" : ""} ${isComplete ? "is-complete" : ""}`}
-      data-testid="process-header"
-    >
-      <div className="compact-title-block">
-        <div className="task-eyebrow">
-          <span className="task-kicker">Task</span>
-          {phaseLabel && <span className="phase-tag">{phaseLabel} phase</span>}
-        </div>
-        <h1>{titleForSprint(sprint)}</h1>
-        <div className={`task-status tone-${tone}`}>
+    <section className="context-bar" data-testid="process-header">
+      <div className="context-main">
+        <span className="task-kicker">Task</span>
+        <h2 className="context-title">{titleForSprint(sprint)}</h2>
+      </div>
+      <div className="context-facts">
+        <span className={`status-badge tone-${tone}`}>
           {isBlocked ? (
-            <AlertTriangle size={15} />
+            <AlertTriangle size={13} />
           ) : isComplete ? (
-            <CheckCircle2 size={15} />
+            <CheckCircle2 size={13} />
           ) : (
-            <Loader2 className="spin-soft" size={15} />
+            <Loader2 className="spin-soft" size={13} />
           )}
-          <span className="task-status-label">{label}</span>
-          <span className="task-status-reason">{reason}</span>
-        </div>
-        {isBlocked && technicalDetails.length > 0 && (
+          <span>{label}</span>
+        </span>
+        {phaseLabel && <span className="context-fact">{phaseLabel} phase</span>}
+      </div>
+    </section>
+  );
+}
+
+// The single most-important state, pinned at the head of the stream (the hero
+// zone) — not a giant title. Amber owns 'stalled' so brand red stays the signal.
+function StallCallout({
+  dashboard,
+  stallText,
+}: {
+  dashboard?: DashboardResponse;
+  stallText: string;
+}) {
+  const reason = stalledPlainLanguage(dashboard, stallText);
+  const technicalDetails = technicalDetailsForStall(dashboard, stallText);
+  return (
+    <div className="stall-callout" role="status">
+      <AlertTriangle size={18} />
+      <div className="stall-callout-body">
+        <strong>Stalled</strong>
+        <p>{reason}</p>
+        {technicalDetails.length > 0 && (
           <details className="technical-details">
             <summary>Technical details</summary>
             <ul>
@@ -890,7 +904,7 @@ function CompactSessionHeader({
           </details>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
