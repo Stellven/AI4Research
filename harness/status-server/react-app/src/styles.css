@@ -1,8 +1,8 @@
 @font-face {
-  font-family: "Geist";
-  src: url("./assets/fonts/Geist-Variable.woff2") format("woff2");
+  font-family: "Schibsted Grotesk";
+  src: url("./assets/fonts/SchibstedGrotesk-Variable.woff2") format("woff2");
   font-display: swap;
-  font-weight: 100 900;
+  font-weight: 400 900;
   font-style: normal;
 }
 
@@ -19,39 +19,47 @@
   font-family: var(--solar-font-sans);
   font-size: 16px;
   line-height: 1.5;
-  font-weight: 300;
+  font-weight: var(--solar-weight-body);
   color: var(--solar-ink);
   background: var(--solar-canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  --solar-font-sans: "Geist", sans-serif;
-  --solar-font-mono: "Geist Mono", monospace;
+  --solar-font-sans: "Schibsted Grotesk", "Geist", sans-serif;
+  --solar-font-mono: "Geist Mono", ui-monospace, monospace;
 
-  --solar-canvas: #f6f4ef;
-  --solar-surface: #fbfaf7;
-  --solar-surface-quiet: #f1eee7;
-  --solar-ink: #171714;
-  --solar-muted: #5d5b55;
-  --solar-subtle: #8d8981;
-  --solar-faint: #d8d4cb;
-  --solar-line: rgba(23, 23, 20, 0.12);
-  --solar-line-soft: rgba(23, 23, 20, 0.07);
-  --solar-line-strong: rgba(23, 23, 20, 0.22);
-  --solar-accent: #d85f1f;
-  --solar-accent-ink: #8f3512;
-  --solar-success: #2f6f4e;
-  --solar-warning: #a36518;
-  --solar-danger: #a64235;
-  --solar-warning-fill: #f2e4cb;
-  --solar-danger-fill: #f0d9d2;
-  --solar-control: #24231f;
-  --solar-control-hover: #33312c;
+  /* Neutral warm paper — deliberately stepped off the cream/terracotta default. */
+  --solar-canvas: #f3f2ee;
+  --solar-surface: #faf9f6;
+  --solar-surface-quiet: #ecebe6;
+  --solar-ink: #17171a;
+  --solar-muted: #56555a;
+  --solar-subtle: #6e6d66;
+  --solar-faint: #d7d5ce;
+  --solar-line: rgba(20, 19, 24, 0.12);
+  --solar-line-soft: rgba(20, 19, 24, 0.06);
+  --solar-line-strong: rgba(20, 19, 24, 0.2);
 
-  --solar-radius-control: 999px;
+  /* One accent, used like punctuation. Overridden per variant (relay/dispatch/console). */
+  --solar-accent: #b23a1e;
+  --solar-accent-ink: #8f2d14;
+  --solar-accent-wash: rgba(178, 58, 30, 0.09);
+
+  /* Semantic state only — never brand decoration. */
+  --solar-success: #3f6150;
+  --solar-warning: #8f5a10;
+  --solar-danger: #9e3a2d;
+  --solar-warning-fill: #f1e4c9;
+  --solar-danger-fill: #efd7d0;
+  --solar-control: #1d1d20;
+  --solar-control-hover: #303035;
+
+  --solar-radius-control: 8px;
+  --solar-radius-pill: 999px;
   --solar-radius-small: 6px;
-  --solar-radius-modal: 8px;
+  --solar-radius-modal: 10px;
+  --solar-focus-radius: 4px;
 
   --solar-space-1: 4px;
   --solar-space-2: 8px;
@@ -70,12 +78,35 @@
   --solar-type-base: 1rem;
   --solar-type-lg: 1.25rem;
   --solar-type-xl: 1.5rem;
-  --solar-type-display: clamp(2rem, 3.2vw, 3.35rem);
+  --solar-type-display: clamp(2rem, 3vw, 3.05rem);
+
+  /* Extreme weight contrast (Schibsted axis is 400-900): quiet body, decisive display. */
+  --solar-weight-body: 400;
+  --solar-weight-medium: 500;
+  --solar-weight-strong: 660;
+  --solar-weight-display: 770;
 
   --solar-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --solar-duration-fast: 120ms;
   --solar-duration: 180ms;
   --solar-rule-accent-width: 28px;
+}
+
+/* Per-variant accent identity (the one signature color each). */
+[data-variant="relay"] {
+  --solar-accent: #b23a1e;
+  --solar-accent-ink: #8f2d14;
+  --solar-accent-wash: rgba(178, 58, 30, 0.09);
+}
+[data-variant="dispatch"] {
+  --solar-accent: #1f6f5c;
+  --solar-accent-ink: #155244;
+  --solar-accent-wash: rgba(31, 111, 92, 0.1);
+}
+[data-variant="console"] {
+  --solar-accent: #b5790d;
+  --solar-accent-ink: #875a08;
+  --solar-accent-wash: rgba(181, 121, 13, 0.1);
 }
 
 * {
@@ -1319,37 +1350,333 @@ summary:focus-visible,
   animation-duration: 1.4s;
 }
 
-.design-technical {
-  --solar-type-display: clamp(1.6rem, 2.4vw, 2.45rem);
+/* ======================================================================
+   Signature element — the multi-agent relay, expressed three ways.
+   ====================================================================== */
+
+.agent-signature {
+  padding-bottom: var(--solar-space-6);
+  border-bottom: 1px solid var(--solar-line-soft);
 }
 
-.design-technical .compact-title-block h1,
-.design-technical .process-step-main strong,
-.design-technical .section-header h2 {
+.agent-signature .state-dot {
+  margin: 0;
+}
+
+/* Default display weight: quiet body, decisive heading (extreme contrast). */
+.compact-title-block h1 {
+  font-weight: var(--solar-weight-display);
+}
+
+/* --- relay: the agent baton with a broken handoff at the gate ---------- */
+.sig-relay .relay-track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: var(--solar-space-3);
+}
+
+.sig-relay .relay-cell {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+}
+
+.sig-relay .relay-cell:last-child {
+  flex: 0 0 auto;
+}
+
+.relay-agent {
+  display: grid;
+  grid-template-columns: 9px auto;
+  column-gap: var(--solar-space-2);
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.relay-agent .state-dot {
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+.relay-agent strong {
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+  color: var(--solar-ink);
+}
+
+.relay-activity {
+  grid-column: 2;
+  max-width: 17ch;
+  overflow: hidden;
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relay-link {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 36px;
+  height: 1px;
+  margin: 0 var(--solar-space-4);
+  background: var(--solar-line-strong);
+}
+
+.relay-link.is-broken {
+  min-width: 132px;
+  height: 0;
+  background: transparent;
+  border-top: 1px dashed var(--solar-warning);
+}
+
+.relay-gap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 2px var(--solar-space-2);
+  transform: translate(-50%, -50%);
+  background: var(--solar-canvas);
+  color: var(--solar-warning);
   font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  white-space: nowrap;
+}
+
+.relay-break-note {
+  max-width: 720px;
+  margin: var(--solar-space-5) 0 0;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+  line-height: 1.6;
+}
+
+.relay-break-note code {
+  color: var(--solar-warning);
+  font-family: var(--solar-font-mono);
+  font-size: 0.92em;
+}
+
+.relay-break-note strong {
+  color: var(--solar-ink);
+  font-weight: var(--solar-weight-strong);
+}
+
+[data-variant="relay"] .compact-title-block h1 {
+  letter-spacing: -0.014em;
+}
+
+/* --- dispatch: the capability supply/demand gate ----------------------- */
+.sig-dispatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-5);
+}
+
+.gate-headline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--solar-space-3);
+}
+
+.gate-tag {
+  padding: 3px var(--solar-space-3);
+  border: 1px solid var(--solar-warning);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-warning);
+  font-size: var(--solar-type-micro);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gate-headline p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-lg);
+  line-height: 1.45;
+}
+
+.gate-headline code,
+.supply-ledger code {
+  font-family: var(--solar-font-mono);
+  font-size: 0.9em;
+}
+
+.gate-headline code {
+  color: var(--solar-accent-ink);
+}
+
+.supply-ledger {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+}
+
+.supply-row {
+  display: grid;
+  grid-template-columns: 10px 116px minmax(0, 1fr);
+  gap: var(--solar-space-3);
+  align-items: center;
+  padding: var(--solar-space-3) 0;
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.supply-row:first-child {
+  border-top: 0;
+}
+
+.supply-row > strong {
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.cap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--solar-space-2);
+  align-items: center;
+}
+
+.cap-chips code {
+  padding: 2px var(--solar-space-2);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-muted);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.cap-none {
+  border-style: dashed;
+  color: var(--solar-subtle);
+}
+
+.supply-demand {
+  border-top: 1px solid var(--solar-line);
+}
+
+.supply-demand > strong {
+  color: var(--solar-warning);
+}
+
+.cap-missing {
+  border-color: var(--solar-warning);
+  color: var(--solar-warning);
+  background: var(--solar-warning-fill);
+}
+
+.cap-missing-note {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+/* --- console: the operator log + a held dispatch line ------------------ */
+.sig-console {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-4);
+}
+
+.console-agents {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--solar-space-8);
+}
+
+.console-agent {
+  display: grid;
+  grid-template-columns: 10px 84px 116px minmax(0, 1fr);
+  gap: var(--solar-space-2);
+  align-items: center;
+  padding: var(--solar-space-2) 0;
+  border-top: 1px solid var(--solar-line-soft);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+}
+
+.console-role {
+  color: var(--solar-ink);
   font-weight: 560;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.design-technical .process-results-layout {
-  grid-template-columns: minmax(0, 1.16fr) minmax(360px, 0.84fr);
+.console-model {
+  overflow: hidden;
+  color: var(--solar-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.design-editorial .compact-session-header {
-  margin-left: min(8vw, 96px);
-  max-width: 920px;
+.console-activity {
+  overflow: hidden;
+  color: var(--solar-muted);
+  font-family: var(--solar-font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.design-editorial .compact-title-block h1 {
-  max-width: 780px;
-  font-weight: 300;
+.console-held {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--solar-space-2) var(--solar-space-5);
+  padding: var(--solar-space-3) var(--solar-space-4);
+  border-left: 2px solid var(--solar-warning);
+  background: var(--solar-warning-fill);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
 }
 
-.design-editorial .compact-title-block p {
-  font-size: var(--solar-type-xl);
+.console-held code {
+  color: var(--solar-warning);
 }
 
-.design-editorial .process-results-layout {
-  grid-template-columns: minmax(0, 0.95fr) minmax(380px, 0.88fr);
+[data-variant="console"] .compact-title-block h1 {
+  font-family: var(--solar-font-mono);
+  font-size: clamp(1.6rem, 2.2vw, 2.3rem);
+  font-weight: 540;
+  letter-spacing: -0.01em;
+}
+
+[data-variant="console"] .process-step-summary {
+  padding: var(--solar-space-4) 0;
+}
+
+[data-variant="console"] .process-step-main strong {
+  font-size: var(--solar-type-base);
+  font-weight: var(--solar-weight-strong);
+}
+
+[data-variant="console"] .process-results-layout {
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+}
+
+[data-variant="dispatch"] .compact-title-block h1 {
+  font-weight: var(--solar-weight-strong);
+}
+
+/* True toggles stay pills even though controls default to a small radius. */
+.switch-root {
+  border-radius: var(--solar-radius-pill);
+}
+
+@media (max-width: 900px) {
+  .console-agents {
+    grid-template-columns: 1fr;
+  }
+
+  .sig-relay .relay-cell {
+    flex: 1 1 100%;
+  }
+
+  .sig-relay .relay-link {
+    display: none;
+  }
 }
 
 @keyframes spin {

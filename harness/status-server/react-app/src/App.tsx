@@ -122,7 +122,7 @@ type ProcessStep = {
   result?: Deliverable;
 };
 
-type DesignVariant = "contrast" | "technical" | "editorial";
+type DesignVariant = "relay" | "dispatch" | "console";
 
 type StageState = "passed" | "active" | "blocked" | "pending";
 
@@ -235,8 +235,8 @@ function selectedSprintFromPath(pathname: string): string {
 
 function designVariantFromSearch(search: string): DesignVariant {
   const value = new URLSearchParams(search).get("variant");
-  if (value === "technical" || value === "editorial") return value;
-  return "contrast";
+  if (value === "dispatch" || value === "console") return value;
+  return "relay";
 }
 
 function Sidebar({
@@ -670,6 +670,7 @@ function SessionView({
   const isBlocked = Boolean(stall?.is_stalled);
   const isComplete =
     statusTone(asString(currentSprint.status || phase)) === "complete";
+  const gate = useMemo(() => buildGate(dashboard), [dashboard]);
   const processSteps = useMemo(
     () =>
       buildProcessSteps(dashboard, session.events, session.deliverables, phase),
@@ -677,7 +678,7 @@ function SessionView({
   );
 
   return (
-    <div className={`workspace-scroll design-${designVariant}`}>
+    <div className="workspace-scroll" data-variant={designVariant}>
       <TopBar
         sprint={currentSprint}
         usage={session.usage}
@@ -709,7 +710,13 @@ function SessionView({
               stallText={stallCopy(stall)}
               dashboard={dashboard}
             />
-            <AgentPresenceStrip agents={agents} />
+            <AgentSignature
+              agents={agents}
+              variant={designVariant}
+              gate={gate}
+              isBlocked={isBlocked}
+              isComplete={isComplete}
+            />
             <div className="process-results-layout">
               <ProcessStream
                 steps={processSteps}
@@ -888,18 +895,168 @@ function CompactSessionHeader({
   );
 }
 
-function AgentPresenceStrip({ agents }: { agents: AgentCardModel[] }) {
-  return (
-    <section className="agent-presence-strip" data-testid="agent-presence">
-      {agents.map((agent) => (
-        <div className={`agent-presence tone-${agent.state}`} key={agent.role}>
-          <span
-            className={`state-dot tone-${agent.state === "complete" ? "complete" : agent.state === "blocked" ? "blocked" : agent.state === "working" ? "working" : "idle"}`}
-          />
-          <strong>{ROLE_META[agent.role].title.split(" ")[0]}</strong>
-          <span>{agent.state === "idle" ? "waiting" : agent.activity}</span>
+type GateInfo = {
+  nodeId: string;
+  nodeTitle: string;
+  capability: string;
+  reason: string;
+};
+
+function buildGate(dashboard?: DashboardResponse): GateInfo {
+  const nodes = dashboard?.data?.dag?.nodes || [];
+  const blocked =
+    dashboard?.data?.blocked_nodes?.[0] ||
+    nodes.find((node) => statusTone(asString(node.status)) === "blocked");
+  return {
+    nodeId: blocked ? nodeId(blocked) : "",
+    nodeTitle: blocked ? nodeTitle(blocked) : "",
+    capability: missingCapability(dashboard),
+    reason:
+      asString(blocked?.blocked_reason) ||
+      asString(dashboard?.data?.stall?.reason),
+  };
+}
+
+function agentShortName(role: AgentCardModel["role"]): string {
+  return ROLE_META[role].title.split(" ")[0];
+}
+
+// The signature element: the multi-agent relay. Each variant expresses the
+// same subject (who acted, and where the capability gate held the work)
+// differently — a handoff spine, a supply/demand ledger, or an operator log.
+function AgentSignature({
+  agents,
+  variant,
+  gate,
+  isBlocked,
+}: {
+  agents: AgentCardModel[];
+  variant: DesignVariant;
+  gate: GateInfo;
+  isBlocked: boolean;
+  isComplete: boolean;
+}) {
+  // The relay breaks after the last agent that actually advanced the work.
+  const lastActive = agents.reduce(
+    (acc, agent, index) =>
+      agent.state === "complete" || agent.state === "working" ? index : acc,
+    -1,
+  );
+  const breakAfter = isBlocked ? Math.max(lastActive, 0) : -1;
+
+  if (variant === "dispatch") {
+    return (
+      <section
+        className="agent-signature sig-dispatch"
+        data-testid="agent-presence"
+      >
+        {isBlocked && (
+          <div className="gate-headline">
+            <span className="gate-tag">Dispatch held</span>
+            <p>
+              <strong>{gate.nodeTitle || "A build node"}</strong> needs{" "}
+              <code>{gate.capability || "a capability"}</code> — no connected
+              agent advertises it.
+            </p>
+          </div>
+        )}
+        <div className="supply-ledger" aria-label="Agent capability supply">
+          {agents.map((agent) => (
+            <div className={`supply-row tone-${agent.state}`} key={agent.role}>
+              <span className={`state-dot tone-${agent.state}`} />
+              <strong>{agentShortName(agent.role)}</strong>
+              <div className="cap-chips">
+                {agent.provides.length === 0 && (
+                  <code className="cap-none">—</code>
+                )}
+                {agent.provides.map((cap) => (
+                  <code key={cap}>{cap}</code>
+                ))}
+              </div>
+            </div>
+          ))}
+          {isBlocked && (
+            <div className="supply-row supply-demand">
+              <span className="state-dot tone-blocked" />
+              <strong>Required</strong>
+              <div className="cap-chips">
+                <code className="cap-missing">
+                  {gate.capability || "unknown"}
+                </code>
+                <span className="cap-missing-note">provided by no agent</span>
+              </div>
+            </div>
+          )}
         </div>
-      ))}
+      </section>
+    );
+  }
+
+  if (variant === "console") {
+    return (
+      <section
+        className="agent-signature sig-console"
+        data-testid="agent-presence"
+      >
+        <div className="console-agents">
+          {agents.map((agent) => (
+            <div
+              className={`console-agent tone-${agent.state}`}
+              key={agent.role}
+            >
+              <span className={`state-dot tone-${agent.state}`} />
+              <code className="console-role">{agent.role}</code>
+              <code className="console-model">{agent.model || "—"}</code>
+              <span className="console-activity">
+                {agent.state === "idle" ? "waiting" : agent.activity}
+              </span>
+            </div>
+          ))}
+        </div>
+        {isBlocked && (
+          <div className="console-held" role="status">
+            <code>⊘ dispatch held</code>
+            <code>node={gate.nodeId || "?"}</code>
+            <code>needs={gate.capability || "?"}</code>
+            <code>decision=no_matching_worker</code>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className="agent-signature sig-relay" data-testid="agent-presence">
+      <div className="relay-track">
+        {agents.map((agent, index) => (
+          <div className="relay-cell" key={agent.role}>
+            <div className={`relay-agent tone-${agent.state}`}>
+              <span className={`state-dot tone-${agent.state}`} />
+              <strong>{agentShortName(agent.role)}</strong>
+              <span className="relay-activity">
+                {agent.state === "idle" ? "waiting" : agent.activity}
+              </span>
+            </div>
+            {index < agents.length - 1 && (
+              <span
+                className={`relay-link ${breakAfter === index ? "is-broken" : ""}`}
+                aria-hidden="true"
+              >
+                {breakAfter === index && gate.capability && (
+                  <span className="relay-gap">needs {gate.capability}</span>
+                )}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      {isBlocked && (
+        <p className="relay-break-note">
+          The handoff can&rsquo;t be made: no agent provides{" "}
+          <code>{gate.capability || "the required capability"}</code> for{" "}
+          <strong>{gate.nodeTitle || "the blocked node"}</strong>.
+        </p>
+      )}
     </section>
   );
 }
@@ -1496,6 +1653,7 @@ function buildAgents(
       status: pane.state,
       current_activity: "",
       model: pane.model,
+      provided_capabilities: pane.provided_capabilities,
     })) || []),
   ];
 
@@ -1528,6 +1686,9 @@ function buildAgents(
       lastEvent: readable
         ? `${formatTime(eventTimestamp(recent as EventRecord))} · ${readable.detail || readable.title}`
         : "No recent event",
+      provides: Array.isArray(pane?.provided_capabilities)
+        ? (pane?.provided_capabilities as string[])
+        : [],
     };
   });
 }

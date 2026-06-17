@@ -26,6 +26,7 @@ export type AgentCardModel = {
   model: string;
   pane: string;
   lastEvent: string;
+  provides: string[];
 };
 
 export const ROLE_META: Record<AgentRole, { title: string; subtitle: string }> =
