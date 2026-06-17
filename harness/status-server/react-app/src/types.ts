@@ -117,6 +117,11 @@ export type DashboardData = {
   };
   blocker_diagnostics?: JsonRecord;
   stall?: StallSummary;
+  sprint_usage?: {
+    total_tokens?: number;
+    total_tokens_label?: string;
+    models?: UsageModel[];
+  };
   [key: string]: unknown;
 };
 

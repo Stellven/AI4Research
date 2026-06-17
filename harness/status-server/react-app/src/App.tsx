@@ -718,6 +718,7 @@ function SessionView({
               <ResultsRail
                 deliverables={session.deliverables}
                 usage={session.usage}
+                dashboard={dashboard}
               />
             </div>
           </motion.div>
@@ -1099,14 +1100,16 @@ function ProcessStepItem({
 function ResultsRail({
   deliverables,
   usage,
+  dashboard,
 }: {
   deliverables: Deliverable[];
   usage?: UsagePayload;
+  dashboard?: DashboardResponse;
 }) {
   return (
     <aside className="results-rail" data-testid="results-rail">
       <DeliverablesPanel deliverables={deliverables} />
-      <UsagePanel usage={usage} />
+      <UsagePanel usage={usage} dashboard={dashboard} />
     </aside>
   );
 }
@@ -1622,23 +1625,43 @@ function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
   );
 }
 
-function UsagePanel({ usage }: { usage?: UsagePayload }) {
+function UsagePanel({
+  usage,
+  dashboard,
+}: {
+  usage?: UsagePayload;
+  dashboard?: DashboardResponse;
+}) {
+  const sprintUsage = dashboard?.data?.sprint_usage;
+  const scoped = Boolean(
+    sprintUsage &&
+    (sprintUsage.total_tokens_label || sprintUsage.models?.length),
+  );
+  const total = scoped
+    ? sprintUsage?.total_tokens_label || "0 tok"
+    : usage?.total_used_tokens_label || "0 tok";
+  const models = (scoped ? sprintUsage?.models : usage?.models) || [];
   return (
     <section className="panel usage-panel" data-testid="usage-panel">
       <div className="usage-head">
-        <span>Usage</span>
-        <strong>{usage?.total_used_tokens_label || "0 tok"}</strong>
+        <span>{scoped ? "This sprint" : "Usage"}</span>
+        <strong>{total}</strong>
       </div>
       <div className="usage-models">
-        {(usage?.models || []).slice(0, 4).map((model) => (
-          <div className="usage-model" key={`${model.model_key}-${model.date}`}>
+        {models.slice(0, 4).map((model) => (
+          <div
+            className="usage-model"
+            key={`${model.model_key}-${model.date ?? ""}`}
+          >
             <span>{model.model_key}</span>
             <strong>{model.used_tokens_label}</strong>
           </div>
         ))}
       </div>
       <p className="usage-foot">
-        per model · per day · not per-agent or per-sprint
+        {scoped
+          ? "Tokens used by this sprint, per model."
+          : "Per model, per day (account-wide) — runtime does not report per-sprint tokens."}
       </p>
     </section>
   );

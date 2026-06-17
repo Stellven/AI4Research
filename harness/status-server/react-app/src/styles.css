@@ -172,8 +172,10 @@ summary:focus-visible,
   flex-direction: column;
   height: 100vh;
   padding: var(--solar-space-8) var(--solar-space-5) var(--solar-space-5);
-  border-right: 1px solid var(--solar-line);
-  background: var(--solar-surface-quiet);
+  border-right: 1px solid var(--solar-line-soft);
+  background: rgba(250, 249, 246, 0.6);
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
 }
 
 .brand-row {
