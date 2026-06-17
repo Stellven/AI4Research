@@ -11,22 +11,22 @@ tokens:
     surface: "#faf9f6"        # quiet raised surface
     surface_quiet: "#ecebe6"  # sidebar / inset
     muted: "#56555a"          # secondary text
-    subtle: "#88877f"         # tertiary text / metadata
+    subtle: "#6e6d66"         # tertiary text / metadata (AA 4.6:1 on canvas)
     faint: "#d7d5ce"          # disabled / skeleton
     line: "rgba(20,19,24,0.12)"
     line_soft: "rgba(20,19,24,0.06)"
     line_strong: "rgba(20,19,24,0.22)"
     primary: "#b23a1e"        # THE single accent: now/active/primary-action/focus. <5% of viewport.
-    blocked: "#9a6212"        # honest stall — rendered HOLLOW/amber, calm, never alarming
+    blocked: "#8f5a10"        # honest stall — hollow/amber, calm; AA on canvas and amber fill
     complete: "#3f6150"       # quiet de-emphasized "done"; success is calm, not celebratory
     danger: "#9e3a2d"         # hard errors only
   typography:
-    display:   { family: "Schibsted Grotesk", weights: [620, 720], tracking: "-0.012em" }
-    body:      { family: "Schibsted Grotesk", weight: 320 }
+    display:   { family: "Schibsted Grotesk", weights: [660, 770], tracking: "-0.014em" }
+    body:      { family: "Schibsted Grotesk", weight: 400 }
     technical: { family: "Geist Mono", weight: 460, features: "tabular-nums" }
     scale_px: [11, 12, 14, 16, 20, 26]
     display_size: "clamp(2rem, 3vw, 3.05rem)"
-    weight_contrast: "300/320 body vs 620-720 display — never the 400/700 default"
+    weight_contrast: "quiet 400 body vs 660-770 display (Schibsted axis is 400-900); 500/660 mids — not a flat 400/700"
   space: { base: 4, major: [32, 48, 64] }
   radius: { control: 8, pill: 999, modal: 10, region: 0 }
   motion:
@@ -89,8 +89,9 @@ A view has exactly one signature move. Resist adding a second.
 - **Display / UI / body: Schibsted Grotesk** (SIL OFL, self-hosted variable
   woff2). A UI-purpose neo-grotesk with more editorial character than Inter or
   Geist — and notably *not* Geist, which has itself become a Vercel/AI tell.
-  Use **extreme weight contrast**: 300/320 for most text, 620–720 for headings
-  and critical labels. Never the default 400/700 pairing.
+  Use **extreme weight contrast**: a quiet 400 for most text and 660–770 for
+  headings and critical labels, with 500/660 mids — a wide jump, not the flat
+  400/700 default pairing. (Schibsted's variable axis is 400–900.)
 - **Technical: Geist Mono** (SIL OFL). Reserved strictly for IDs, timestamps,
   capability names, node ids, decisions, file paths, code, and tabular numbers
   (`font-variant-numeric: tabular-nums`). Never decorative.
