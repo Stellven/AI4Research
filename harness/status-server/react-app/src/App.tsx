@@ -942,6 +942,7 @@ function AgentSignature({
     -1,
   );
   const breakAfter = isBlocked ? Math.max(lastActive, 0) : -1;
+  const flowUntil = isBlocked ? breakAfter : lastActive;
 
   return (
     <section className="agent-signature sig-relay" data-testid="agent-presence">
@@ -961,7 +962,13 @@ function AgentSignature({
             </div>
             {index < agents.length - 1 && (
               <span
-                className={`relay-link ${breakAfter === index ? "is-broken" : ""}`}
+                className={`relay-link ${
+                  breakAfter === index
+                    ? "is-broken"
+                    : index < flowUntil
+                      ? "is-flow"
+                      : ""
+                }`}
                 aria-hidden="true"
               />
             )}
@@ -1034,7 +1041,7 @@ function ProcessStepItem({
     );
   return (
     <article
-      className={`process-step process-step-${step.state}`}
+      className={`process-step process-step-${step.state} ${expanded ? "is-open" : ""}`}
       data-testid={`process-step-${step.state}`}
     >
       <button

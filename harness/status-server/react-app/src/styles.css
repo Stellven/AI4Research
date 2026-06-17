@@ -447,8 +447,9 @@ summary:focus-visible,
   align-items: center;
   justify-content: space-between;
   gap: var(--solar-space-8);
-  min-height: 84px;
-  padding: var(--solar-space-4) 0;
+  min-height: 76px;
+  margin: 0 calc(-1 * var(--solar-space-10));
+  padding: var(--solar-space-4) var(--solar-space-10);
   border-bottom: 1px solid var(--solar-line);
   background: var(--solar-canvas);
 }
@@ -748,7 +749,16 @@ summary:focus-visible,
 
 .process-step-detail {
   overflow: hidden;
-  margin: 0 0 var(--solar-space-7) 46px;
+  margin: 0 0 var(--solar-space-6) 46px;
+}
+
+/* Persistent 'opened and stayed' surface: grey wash + a left inset tying it to
+   the step (open != active — red stays the running-now signal). */
+.process-step.is-open .process-step-detail {
+  padding: var(--solar-space-4);
+  border-radius: var(--solar-radius-small);
+  background: #f6f6f7;
+  box-shadow: inset 2px 0 0 var(--solar-line-strong);
 }
 
 .process-step-detail p {
@@ -1416,11 +1426,44 @@ summary:focus-visible,
 
 .relay-link {
   position: relative;
+  overflow: hidden;
   flex: 1 1 auto;
   min-width: 36px;
-  height: 1px;
+  height: 2px;
   margin: 0 var(--solar-space-4);
-  background: var(--solar-line-strong);
+  border-radius: 1px;
+  background: var(--solar-line);
+}
+
+/* A restrained traveling pulse along completed handoffs — flow, not a glow. */
+.relay-link.is-flow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--solar-accent) 50%,
+    transparent 100%
+  );
+  animation: relay-flow 2.6s linear infinite;
+  will-change: transform;
+}
+
+@keyframes relay-flow {
+  0% {
+    transform: translateX(-110%);
+    opacity: 0;
+  }
+  25%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(240%);
+    opacity: 0;
+  }
 }
 
 .relay-link.is-broken {
@@ -2408,6 +2451,8 @@ summary:focus-visible,
     align-items: flex-start;
     flex-direction: column;
     gap: var(--solar-space-4);
+    margin: 0 calc(-1 * var(--solar-space-5));
+    padding: var(--solar-space-4) var(--solar-space-5);
   }
 
   .topbar-actions {
@@ -2426,6 +2471,11 @@ summary:focus-visible,
 @media (max-width: 560px) {
   .workspace-scroll {
     padding: 0 var(--solar-space-4) var(--solar-space-7);
+  }
+
+  .topbar {
+    margin: 0 calc(-1 * var(--solar-space-4));
+    padding: var(--solar-space-4);
   }
 
   .process-step-summary {
