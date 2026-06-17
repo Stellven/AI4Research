@@ -472,7 +472,7 @@ function useSessionData(
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [usage, setUsage] = useState<UsagePayload>();
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
-  const [state, setState] = useState<LoadState>("loading");
+  const [state, setState] = useState<LoadState>("ready");
   const [error, setError] = useState("");
   const [streamState, setStreamState] = useState<
     "connecting" | "live" | "retrying" | "off"
@@ -485,52 +485,81 @@ function useSessionData(
 
   const refresh = useCallback(async () => {
     if (!sprintId) return;
-    try {
-      const [
-        statusResponse,
-        dashboardResponse,
-        eventsResponse,
-        usageResponse,
-        deliverablesResponse,
-      ] = await Promise.all([
-        fetchStatus(sprintId),
-        fetchDashboard(sprintId),
-        fetchEvents(sprintId, 140),
-        fetchUsage(),
-        fetchDeliverables(sprintId),
-      ]);
-      if (selectedSprintRef.current !== sprintId) {
-        return;
-      }
-      setStatus(statusResponse);
-      setDashboard(dashboardResponse);
-      const scopedEvents = eventsResponse.filter(
-        (event) => !event.sprint_id || event.sprint_id === sprintId,
-      );
-      const nextDeliverables = deliverablesResponse.items || [];
-      setEvents((existing) => {
-        const merged = mergeEvents(
-          existing.filter(
-            (event) => !event.sprint_id || event.sprint_id === sprintId,
-          ),
-          scopedEvents,
+    const isCurrent = () => selectedSprintRef.current === sprintId;
+    const cachePatch = (patch: Partial<SessionCacheEntry>) => {
+      const base: SessionCacheEntry = sessionDataCache.get(sprintId) || {
+        status: undefined,
+        dashboard: undefined,
+        events: [],
+        usage: undefined,
+        deliverables: [],
+      };
+      sessionDataCache.set(sprintId, { ...base, ...patch });
+    };
+
+    setError("");
+    setState("ready");
+
+    // Each endpoint applies its own slice as soon as it resolves. A slow
+    // endpoint (e.g. /usage, /status) never holds back the process stream,
+    // the DAG/plan, or the stall reason — those land the moment their own
+    // request returns instead of waiting on the slowest of the batch.
+    const results = await Promise.allSettled([
+      fetchDashboard(sprintId).then((dashboardResponse) => {
+        if (!isCurrent()) return;
+        setDashboard(dashboardResponse);
+        cachePatch({ dashboard: dashboardResponse });
+      }),
+      fetchStatus(sprintId).then((statusResponse) => {
+        if (!isCurrent()) return;
+        setStatus(statusResponse);
+        cachePatch({ status: statusResponse });
+      }),
+      fetchEvents(sprintId, 140).then((eventsResponse) => {
+        if (!isCurrent()) return;
+        const scopedEvents = eventsResponse.filter(
+          (event) => !event.sprint_id || event.sprint_id === sprintId,
         );
-        sessionDataCache.set(sprintId, {
-          status: statusResponse,
-          dashboard: dashboardResponse,
-          events: merged,
-          usage: usageResponse,
-          deliverables: nextDeliverables,
+        setEvents((existing) => {
+          const merged = mergeEvents(
+            existing.filter(
+              (event) => !event.sprint_id || event.sprint_id === sprintId,
+            ),
+            scopedEvents,
+          );
+          cachePatch({ events: merged });
+          return merged;
         });
-        return merged;
-      });
-      setUsage(usageResponse);
-      setDeliverables(nextDeliverables);
-      setState("ready");
-      setError("");
-    } catch (err) {
+      }),
+      fetchUsage().then((usageResponse) => {
+        if (!isCurrent()) return;
+        setUsage(usageResponse);
+        cachePatch({ usage: usageResponse });
+      }),
+      fetchDeliverables(sprintId).then((deliverablesResponse) => {
+        if (!isCurrent()) return;
+        const nextDeliverables = deliverablesResponse.items || [];
+        setDeliverables(nextDeliverables);
+        cachePatch({ deliverables: nextDeliverables });
+      }),
+    ]);
+
+    if (!isCurrent()) return;
+    // Only surface the hard-error screen when the core data is unreachable and
+    // there is nothing already on screen to keep.
+    const [dashboardResult, , eventsResult] = results;
+    const coreFailed =
+      dashboardResult.status === "rejected" &&
+      eventsResult.status === "rejected";
+    if (coreFailed && !sessionDataCache.get(sprintId)?.events?.length) {
+      const rejection = results.find(
+        (item): item is PromiseRejectedResult => item.status === "rejected",
+      );
+      const reason = rejection?.reason;
+      setError(
+        reason instanceof Error ? reason.message : "Unable to load session",
+      );
       setState("error");
-      setError(err instanceof Error ? err.message : "Unable to load session");
     }
   }, [sprintId]);
 
@@ -752,9 +781,7 @@ function stalledPlainLanguage(
   );
 }
 
-function missingCapability(
-  dashboard: DashboardResponse | undefined,
-): string {
+function missingCapability(dashboard: DashboardResponse | undefined): string {
   const blockedNode = dashboard?.data?.blocked_nodes?.[0];
   const nodeCapability = blockedNode?.required_capabilities?.[0];
   if (nodeCapability) return nodeCapability;
@@ -1043,7 +1070,9 @@ function buildPlanStages(
   const blockedIndex = isBlocked
     ? Math.min(
         PHASES.length - 1,
-        phase.includes("build_complete") ? normalizedIndex : normalizedIndex + 1,
+        phase.includes("build_complete")
+          ? normalizedIndex
+          : normalizedIndex + 1,
       )
     : -1;
 
@@ -1573,9 +1602,7 @@ function UsagePanel({ usage }: { usage?: UsagePayload }) {
         title="Usage"
         detail={usage?.total_used_tokens_label || "0 tok"}
       />
-      <p className="usage-label">
-        {usageScopeCopy(usage)}
-      </p>
+      <p className="usage-label">{usageScopeCopy(usage)}</p>
       <div className="usage-models">
         {(usage?.models || []).slice(0, 4).map((model) => (
           <div className="usage-model" key={`${model.model_key}-${model.date}`}>
