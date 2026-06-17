@@ -651,7 +651,6 @@ function SessionView({
     <div className={`workspace-scroll design-${designVariant}`}>
       <TopBar
         sprint={currentSprint}
-        usage={session.usage}
         streamState={session.streamState}
         onCreated={onCreated}
       />
@@ -680,6 +679,12 @@ function SessionView({
               stallText={stallCopy(stall)}
               dashboard={dashboard}
             />
+            <PlanStatusBand
+              dashboard={dashboard}
+              phase={phase}
+              isBlocked={isBlocked}
+              isComplete={isComplete}
+            />
             <AgentPresenceStrip agents={agents} />
             <div className="process-results-layout">
               <ProcessStream
@@ -687,14 +692,10 @@ function SessionView({
                 streamState={session.streamState}
               />
               <ResultsRail
-                dashboard={dashboard}
                 deliverables={session.deliverables}
-                usage={session.usage}
-                phase={phase}
-                isBlocked={isBlocked}
-                isComplete={isComplete}
               />
             </div>
+            <UsagePanel usage={session.usage} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1005,30 +1006,13 @@ function ProcessStepItem({
 }
 
 function ResultsRail({
-  dashboard,
   deliverables,
-  usage,
-  phase,
-  isBlocked,
-  isComplete,
 }: {
-  dashboard?: DashboardResponse;
   deliverables: Deliverable[];
-  usage?: UsagePayload;
-  phase: string;
-  isBlocked: boolean;
-  isComplete: boolean;
 }) {
   return (
     <aside className="results-rail" data-testid="results-rail">
       <DeliverablesPanel deliverables={deliverables} />
-      <GraphSummaryPanel
-        dashboard={dashboard}
-        phase={phase}
-        isBlocked={isBlocked}
-        isComplete={isComplete}
-      />
-      <UsagePanel usage={usage} />
     </aside>
   );
 }
@@ -1037,6 +1021,7 @@ function buildPlanStages(
   phase: string,
   isBlocked: boolean,
   isComplete: boolean,
+  dashboard?: DashboardResponse,
 ): PlanStage[] {
   const currentIndex = PHASES.findIndex((item) => phase.includes(item));
   const normalizedIndex = currentIndex >= 0 ? currentIndex : 0;
@@ -1046,6 +1031,7 @@ function buildPlanStages(
         phase.includes("build_complete") ? normalizedIndex : normalizedIndex + 1,
       )
     : -1;
+  const blockedCapability = missingCapability(dashboard);
 
   return [
     { id: "spec", label: "Spec", complete: "Request accepted" },
@@ -1066,7 +1052,9 @@ function buildPlanStages(
         state === "passed"
           ? stage.complete
           : state === "blocked"
-            ? "Blocked by dispatch capability"
+            ? blockedCapability
+              ? `No agent provides ${blockedCapability}`
+              : "Blocked by dispatch capability"
             : state === "active"
               ? "Current stage"
               : "Waiting",
@@ -1074,7 +1062,7 @@ function buildPlanStages(
   });
 }
 
-function GraphSummaryPanel({
+function PlanStatusBand({
   dashboard,
   phase,
   isBlocked,
@@ -1092,9 +1080,9 @@ function GraphSummaryPanel({
   const blocked = nodes.filter(
     (node) => statusTone(asString(node.status)) === "blocked",
   );
-  const stages = buildPlanStages(phase, isBlocked, isComplete);
+  const stages = buildPlanStages(phase, isBlocked, isComplete, dashboard);
   return (
-    <section className="panel graph-summary-panel" data-testid="graph-summary">
+    <section className="panel plan-status-band" data-testid="graph-summary">
       <SectionHeader
         icon={<ListTree size={17} />}
         title="Plan"
@@ -1105,6 +1093,7 @@ function GraphSummaryPanel({
           <div className={`stage-row stage-${stage.state}`} key={stage.id}>
             <span className="stage-marker" aria-hidden="true">
               {stage.state === "passed" ? <CheckCircle2 size={14} /> : null}
+              {stage.state === "blocked" ? <AlertTriangle size={14} /> : null}
             </span>
             <div>
               <strong>{stage.label}</strong>
@@ -1114,38 +1103,55 @@ function GraphSummaryPanel({
         ))}
       </div>
       {nodes.length === 0 && <EmptyInline label="No DAG available" />}
-      {active && (
-        <div className="plan-focus">
-          <span className="state-dot tone-working" />
-          <div>
-            <strong>{nodeId(active)}</strong>
-            <p>{nodeTitle(active)}</p>
-          </div>
+      <div className="plan-band-lower">
+        <div className="plan-focus-list">
+          {active && (
+            <div className="plan-focus">
+              <span className="state-dot tone-working" />
+              <div>
+                <strong>{nodeId(active)}</strong>
+                <p>{nodeTitle(active)}</p>
+              </div>
+            </div>
+          )}
+          {blocked.length > 0 && (
+            <div className="plan-focus blocked">
+              <span className="state-dot tone-blocked" />
+              <div>
+                <strong>{blocked.length} blocked</strong>
+                <p>
+                  {shortText(
+                    blocked.map((node) => nodeId(node)).join(", "),
+                    96,
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+          {!active && blocked.length === 0 && (
+            <EmptyInline label="No active or blocked DAG node" />
+          )}
         </div>
-      )}
-      {blocked.length > 0 && (
-        <div className="plan-focus blocked">
-          <span className="state-dot tone-blocked" />
-          <div>
-            <strong>{blocked.length} blocked</strong>
-            <p>
-              {shortText(blocked.map((node) => nodeId(node)).join(", "), 96)}
-            </p>
-          </div>
+        <div className="mini-node-list" aria-label="DAG node states">
+          {nodes.slice(0, 6).map((node) => (
+            <div key={nodeId(node)}>
+              <span
+                className={`state-dot tone-${statusTone(asString(node.status))}`}
+              />
+              <span>{nodeId(node)}</span>
+              <strong>
+                {asString(node.status, "pending").replace(/_/g, " ")}
+              </strong>
+            </div>
+          ))}
+          {nodes.length > 6 && (
+            <div>
+              <span className="state-dot tone-idle" />
+              <span>{nodes.length - 6} more</span>
+              <strong>hidden</strong>
+            </div>
+          )}
         </div>
-      )}
-      <div className="mini-node-list">
-        {nodes.slice(0, 6).map((node) => (
-          <div key={nodeId(node)}>
-            <span
-              className={`state-dot tone-${statusTone(asString(node.status))}`}
-            />
-            <span>{nodeId(node)}</span>
-            <strong>
-              {asString(node.status, "pending").replace(/_/g, " ")}
-            </strong>
-          </div>
-        ))}
       </div>
     </section>
   );
@@ -1416,12 +1422,10 @@ function timestampValue(value: string): number {
 
 function TopBar({
   sprint,
-  usage,
   streamState,
   onCreated,
 }: {
   sprint: SprintSummary;
-  usage?: UsagePayload;
   streamState: string;
   onCreated: (sprintId: string) => Promise<void>;
 }) {
@@ -1437,10 +1441,6 @@ function TopBar({
         <div className={`stream-chip stream-${streamState}`}>
           <Radio size={14} />
           <span>{streamState}</span>
-        </div>
-        <div className="usage-chip" aria-label="Tokens per model per day">
-          <Zap size={14} />
-          <span>{usage?.total_used_tokens_label || "0 tok"} per model/day</span>
         </div>
         <NewTaskDialog
           onCreated={onCreated}
@@ -1567,15 +1567,15 @@ function usageScopeCopy(usage?: UsagePayload): string {
 
 function UsagePanel({ usage }: { usage?: UsagePayload }) {
   return (
-    <section className="panel usage-panel" data-testid="usage-panel">
-      <SectionHeader
-        icon={<Zap size={17} />}
-        title="Usage"
-        detail={usage?.total_used_tokens_label || "0 tok"}
-      />
-      <p className="usage-label">
-        {usageScopeCopy(usage)}
-      </p>
+    <section className="usage-panel usage-footer" data-testid="usage-panel">
+      <div className="usage-footer-copy">
+        <SectionHeader
+          icon={<Zap size={17} />}
+          title="Usage"
+          detail={usage?.total_used_tokens_label || "0 tok"}
+        />
+        <p className="usage-label">{usageScopeCopy(usage)}</p>
+      </div>
       <div className="usage-models">
         {(usage?.models || []).slice(0, 4).map((model) => (
           <div className="usage-model" key={`${model.model_key}-${model.date}`}>

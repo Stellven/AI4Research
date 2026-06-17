@@ -460,7 +460,6 @@ summary:focus-visible,
 }
 
 .stream-chip,
-.usage-chip,
 .agent-state {
   display: inline-flex;
   align-items: center;
@@ -480,15 +479,10 @@ summary:focus-visible,
   color: var(--solar-warning);
 }
 
-.usage-chip {
-  font-family: var(--solar-font-mono);
-  font-size: var(--solar-type-micro);
-}
-
 .process-workbench {
   display: flex;
   flex-direction: column;
-  gap: var(--solar-space-8);
+  gap: var(--solar-space-7);
   padding-top: var(--solar-space-9);
 }
 
@@ -560,7 +554,7 @@ summary:focus-visible,
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--solar-space-5);
-  padding-bottom: var(--solar-space-5);
+  padding: var(--solar-space-1) 0 var(--solar-space-5);
   border-bottom: 1px solid var(--solar-line-soft);
 }
 
@@ -589,8 +583,8 @@ summary:focus-visible,
 
 .process-results-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
-  gap: var(--solar-space-10);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 356px);
+  gap: var(--solar-space-9);
   align-items: start;
 }
 
@@ -784,7 +778,6 @@ summary:focus-visible,
 .results-rail {
   display: flex;
   flex-direction: column;
-  gap: var(--solar-space-8);
   position: sticky;
   top: 108px;
 }
@@ -819,25 +812,37 @@ summary:focus-visible,
 }
 
 .stage-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--solar-space-2);
-  margin-bottom: var(--solar-space-5);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--solar-space-5);
+  margin-bottom: var(--solar-space-6);
 }
 
 .stage-row {
+  position: relative;
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: 26px minmax(0, 1fr);
   gap: var(--solar-space-3);
   align-items: start;
-  padding: var(--solar-space-2) 0;
+  min-height: 76px;
+  padding: var(--solar-space-3) 0;
+}
+
+.stage-row:not(:last-child)::after {
+  position: absolute;
+  top: 24px;
+  right: calc(-1 * var(--solar-space-5));
+  width: var(--solar-space-5);
+  height: 1px;
+  content: "";
+  background: var(--solar-line);
 }
 
 .stage-marker {
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   margin-top: 2px;
   border: 1px solid var(--solar-line);
   border-radius: 999px;
@@ -867,11 +872,31 @@ summary:focus-visible,
 
 .stage-blocked .stage-marker {
   border-color: var(--solar-warning);
+  color: var(--solar-warning);
 }
 
 .stage-blocked strong,
 .stage-blocked p {
   color: var(--solar-warning);
+}
+
+.plan-status-band {
+  padding-top: var(--solar-space-5);
+  border-top: 1px solid var(--solar-line);
+}
+
+.plan-band-lower {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.56fr) minmax(0, 1fr);
+  gap: var(--solar-space-8);
+  align-items: start;
+  padding-top: var(--solar-space-4);
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.plan-focus-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .plan-focus {
@@ -905,6 +930,12 @@ summary:focus-visible,
 
 .mini-node-list {
   margin-top: var(--solar-space-2);
+}
+
+.plan-status-band .mini-node-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
 }
 
 .mini-node-list div,
@@ -992,6 +1023,25 @@ summary:focus-visible,
   color: var(--solar-muted);
   font-size: var(--solar-type-sm);
   line-height: 1.62;
+}
+
+.usage-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+  gap: var(--solar-space-8);
+  align-items: start;
+  padding-top: var(--solar-space-5);
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.usage-footer .section-header {
+  margin-bottom: var(--solar-space-2);
+}
+
+.usage-footer .usage-label {
+  max-width: 760px;
+  margin-bottom: 0;
+  font-size: var(--solar-type-xs);
 }
 
 .usage-model {
@@ -1331,7 +1381,7 @@ summary:focus-visible,
 }
 
 .design-technical .process-results-layout {
-  grid-template-columns: minmax(0, 1.16fr) minmax(360px, 0.84fr);
+  grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.58fr);
 }
 
 .design-editorial .compact-session-header {
@@ -1349,7 +1399,7 @@ summary:focus-visible,
 }
 
 .design-editorial .process-results-layout {
-  grid-template-columns: minmax(0, 0.95fr) minmax(380px, 0.88fr);
+  grid-template-columns: minmax(0, 0.95fr) minmax(300px, 0.58fr);
 }
 
 @keyframes spin {
@@ -1385,6 +1435,19 @@ summary:focus-visible,
 
   .results-rail {
     position: static;
+  }
+
+  .stage-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stage-row:nth-child(2)::after {
+    display: none;
+  }
+
+  .plan-band-lower,
+  .usage-footer {
+    grid-template-columns: 1fr;
   }
 
   .agent-presence-strip {
@@ -1434,6 +1497,15 @@ summary:focus-visible,
 
   .agent-presence-strip {
     grid-template-columns: 1fr;
+  }
+
+  .stage-list,
+  .plan-status-band .mini-node-list {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-row::after {
+    display: none;
   }
 
   .settings-stats {
