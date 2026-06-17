@@ -1,13 +1,13 @@
-# asdad
+# Write a research report on WWDC Apple 2026
 
 ## Goal
-asdad
+Write a research report on WWDC Apple 2026
 
 ## Context
 基于当前请求直接定位到局部改动范围。
 
 ## Scope
-- asdad
+- Write a research report on WWDC Apple 2026
 
 ## Non-goals
 - 不做无关架构重写。

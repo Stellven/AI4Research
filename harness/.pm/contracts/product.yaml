@@ -1,5 +1,5 @@
 enabled: true
-goal: asdad
+goal: Write a research report on WWDC Apple 2026
 success_metrics: &id001
 - 目标变更在声明范围内完成。
 - 至少一条测试/执行证据被记录。

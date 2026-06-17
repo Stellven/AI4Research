@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.coverage_report.v1",
-  "sprint_id": "sprint-20260617-165134-intent-asdad-3abfab76",
-  "requirement_ir_id": "req-60f1f91026a7",
+  "sprint_id": "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67",
+  "requirement_ir_id": "req-b73199da283b",
   "summary": {
     "total": 4,
     "done": 0,
@@ -13,9 +13,9 @@
   "items": [
     {
       "requirement_id": "REQ-000",
-      "source_text": "asdad",
+      "source_text": "Write a research report on WWDC Apple 2026",
       "success_criteria": [
-        "asdad"
+        "Write a research report on WWDC Apple 2026"
       ],
       "verification_method": "task_graph_closeout",
       "mapped_nodes": [

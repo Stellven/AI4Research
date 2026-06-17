@@ -1,4 +1,4 @@
-# solar-harness Handoff — asdad
+# solar-harness Handoff — Write a research report on WWDC Apple 2026
 
 ## Goal
 
@@ -6,11 +6,11 @@ Read compiled PRD / contract / task graph proposal, then produce planner artifac
 
 ## Read First
 
-- sprint-20260617-165134-intent-asdad-3abfab76.requirement_ir.json
-- sprint-20260617-165134-intent-asdad-3abfab76.prd.md
-- sprint-20260617-165134-intent-asdad-3abfab76.Contracts.yaml
-- sprint-20260617-165134-intent-asdad-3abfab76.task_graph.json
-- sprint-20260617-165134-intent-asdad-3abfab76.handoff.md
+- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.requirement_ir.json
+- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.prd.md
+- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.Contracts.yaml
+- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.task_graph.json
+- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.handoff.md
 
 ## Constraints
 

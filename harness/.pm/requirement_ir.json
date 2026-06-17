@@ -1,19 +1,19 @@
 {
   "schema_version": "solar.requirement_ir.v1",
-  "id": "req-60f1f91026a7",
+  "id": "req-b73199da283b",
   "request_type": "implementation",
   "priority": "P2",
   "lane_hint": "delivery",
   "source_inputs": {
-    "raw_request": "asdad",
-    "raw_request_original": "# RawIntent Consumer Request - asdad\n\n## Source\n\n- intent_id: intent-20260617-165134-3abfab76c5\n- channel: cli_intake\n- actor: user\n- device: \n- thread_ref: \n\n## Rewritten Objective\n\nasdad\n\n## Problem\n\nasdad\n\n## Constraints\n\n- All execution must enter Solar-Harness through RawIntent and requirement compilation.\n- Do not bypass task_graph, operator runtime, quota-aware fallback, or evidence logging.\n\n## Acceptance\n\n- RawIntent, rewritten_intent, requirement_ir, and requirement_trace artifacts are persisted.\n- Compiled work is routable through PM/Planner/task_graph and multi-task operator runtime.\n- Completion requires evidence artifacts and verifier-visible status.\n\n## Raw User Intent\n\nasdad",
+    "raw_request": "Write a research report on WWDC Apple 2026",
+    "raw_request_original": "# RawIntent Consumer Request - Write a research report on WWDC Apple 2026\n\n## Source\n\n- intent_id: intent-20260617-170416-ee1ade6706\n- channel: cli_intake\n- actor: user\n- device: \n- thread_ref: \n\n## Rewritten Objective\n\nWrite a research report on WWDC Apple 2026\n\n## Problem\n\nWrite a research report on WWDC Apple 2026\n\n## Constraints\n\n- All execution must enter Solar-Harness through RawIntent and requirement compilation.\n- Do not bypass task_graph, operator runtime, quota-aware fallback, or evidence logging.\n- Claims require source/evidence artifacts before final closeout.\n\n## Acceptance\n\n- RawIntent, rewritten_intent, requirement_ir, and requirement_trace artifacts are persisted.\n- Compiled work is routable through PM/Planner/task_graph and multi-task operator runtime.\n- Completion requires evidence artifacts and verifier-visible status.\n\n## Raw User Intent\n\nWrite a research report on WWDC Apple 2026",
     "papers": [],
     "logs": [],
     "repo_context": []
   },
-  "user_intent": "asdad",
-  "normalized_goal": "asdad",
-  "problem_statement": "asdad",
+  "user_intent": "Write a research report on WWDC Apple 2026",
+  "normalized_goal": "Write a research report on WWDC Apple 2026",
+  "problem_statement": "Write a research report on WWDC Apple 2026",
   "assumptions": [
     "PM 产物需要兼容 solar-harness 现有 PM -> Planner -> Builder 主链。",
     "Markdown PRD / contract 是编译视图，不是唯一事实源。",
@@ -43,9 +43,9 @@
   "requirements": [
     {
       "id": "REQ-000",
-      "source_text": "asdad",
+      "source_text": "Write a research report on WWDC Apple 2026",
       "success_criteria": [
-        "asdad"
+        "Write a research report on WWDC Apple 2026"
       ],
       "verification_method": "task_graph_closeout",
       "priority": "P2"
@@ -89,7 +89,7 @@
     "sections": [
       {
         "title": "Goal",
-        "body": "asdad"
+        "body": "Write a research report on WWDC Apple 2026"
       },
       {
         "title": "Context",
@@ -97,7 +97,7 @@
       },
       {
         "title": "Scope",
-        "body": "- asdad"
+        "body": "- Write a research report on WWDC Apple 2026"
       },
       {
         "title": "Non-goals",
@@ -120,7 +120,7 @@
   "contracts": {
     "product": {
       "enabled": true,
-      "goal": "asdad",
+      "goal": "Write a research report on WWDC Apple 2026",
       "success_metrics": [
         "目标变更在声明范围内完成。",
         "至少一条测试/执行证据被记录。",
@@ -206,7 +206,7 @@
     },
     "research": {
       "enabled": false,
-      "hypothesis": "asdad",
+      "hypothesis": "Write a research report on WWDC Apple 2026",
       "source_papers": [],
       "experiments": [],
       "adoption_threshold": {},
@@ -459,26 +459,26 @@
         ]
       }
     ],
-    "sprint_id": "sprint-20260617-165134-intent-asdad-3abfab76"
+    "sprint_id": "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67"
   },
   "handoff_view": {
     "codex": {
       "target": "Codex",
       "artifacts": [
-        "sprint-20260617-165134-intent-asdad-3abfab76.requirement_ir.json",
-        "sprint-20260617-165134-intent-asdad-3abfab76.prd.md",
-        "sprint-20260617-165134-intent-asdad-3abfab76.Contracts.yaml",
-        "sprint-20260617-165134-intent-asdad-3abfab76.task_graph.json"
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.requirement_ir.json",
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.prd.md",
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.Contracts.yaml",
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.task_graph.json"
       ]
     },
     "solar_harness": {
       "target": "solar-harness",
       "artifacts": [
-        "sprint-20260617-165134-intent-asdad-3abfab76.requirement_ir.json",
-        "sprint-20260617-165134-intent-asdad-3abfab76.prd.md",
-        "sprint-20260617-165134-intent-asdad-3abfab76.Contracts.yaml",
-        "sprint-20260617-165134-intent-asdad-3abfab76.task_graph.json",
-        "sprint-20260617-165134-intent-asdad-3abfab76.handoff.md"
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.requirement_ir.json",
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.prd.md",
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.Contracts.yaml",
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.task_graph.json",
+        "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.handoff.md"
       ]
     }
   },
