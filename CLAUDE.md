@@ -10,7 +10,7 @@ this file small, public-safe, and aligned with the shipped tree.
 
 ## Frontend Design
 
-Before building or changing any Solar Harness GUI under
+Before building or changing the AI4Research GUI under
 `harness/status-server/react-app`, read `./DESIGN.md` and follow it exactly. Its
 token front matter is the single source of truth; never introduce colors,
 fonts, shadows, gradients, or progress bars outside it.

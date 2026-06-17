@@ -1,178 +1,176 @@
 ---
-name: Solar Harness GUI
-version: 0.2-claude
+name: AI4Research GUI
+version: 0.3-claude
 description: >-
-  Visual contract for the Solar Harness multi-agent orchestration GUI.
+  Visual contract for the AI4Research multi-agent orchestration GUI.
   Read before any UI work. Tokens are the source of truth; the prose says why.
 tokens:
   color:
-    ink: "#17171a"            # near-black text (slightly cool)
-    canvas: "#f3f2ee"         # neutral warm paper — deliberately off the cream/terracotta default
-    surface: "#faf9f6"        # quiet raised surface
-    surface_quiet: "#ecebe6"  # sidebar / inset
-    muted: "#56555a"          # secondary text
-    subtle: "#6e6d66"         # tertiary text / metadata (AA 4.6:1 on canvas)
-    faint: "#d7d5ce"          # disabled / skeleton
-    line: "rgba(20,19,24,0.12)"
-    line_soft: "rgba(20,19,24,0.06)"
-    line_strong: "rgba(20,19,24,0.22)"
-    primary: "#b23a1e"        # THE single accent: now/active/primary-action/focus. <5% of viewport.
-    blocked: "#8f5a10"        # honest stall — hollow/amber, calm; AA on canvas and amber fill
-    complete: "#3f6150"       # quiet de-emphasized "done"; success is calm, not celebratory
-    danger: "#9e3a2d"         # hard errors only
+    # Huawei-derived black / white / red. Red is a SIGNAL (~<10% of any view), never a field.
+    ink: "#1a1b1d"            # primary text / filled black UI (not pure #000)
+    canvas: "#ffffff"         # the page
+    surface: "#fafafb"        # quiet raised surface
+    surface_quiet: "#f4f4f6"  # sidebar / inset / hover+selected fill
+    muted: "#54565c"          # secondary text
+    subtle: "#74767d"         # tertiary text / metadata
+    faint: "#d8d9dd"          # disabled / skeleton
+    line: "#e6e6ea"           # default hairline / divider
+    line_soft: "#efeff1"      # faint row divider
+    line_strong: "#d3d4d9"    # border on fills
+    primary: "#cf0a2c"        # THE accent — Huawei red (PANTONE 186 C); active/now/brand/focus only
+    primary_ink: "#a60822"    # darker red for small/dense red text (AA on white)
+    blocked: "#b26a00"        # 'stalled' amber — hue-separated so red stays the brand, never the error
+    blocked_fill: "#fbefd0"
+    complete: "#3a3b40"       # 'done' is quiet ink + a check — NO green
+    danger: "#a60822"         # hard errors only, with an explicit glyph (never plain brand red)
+    neutral_ramp: "#ffffff #fafafb #f4f4f6 #e9e9ec #d8d9dd #c2c3c8 #9a9ca3 #74767d #54565c #3a3b40 #26272b #1a1b1d"
   typography:
     display:   { family: "Schibsted Grotesk", weights: [660, 770], tracking: "-0.014em" }
     body:      { family: "Schibsted Grotesk", weight: 400 }
     technical: { family: "Geist Mono", weight: 460, features: "tabular-nums" }
     scale_px: [11, 12, 14, 16, 20, 26]
-    display_size: "clamp(2rem, 3vw, 3.05rem)"
-    weight_contrast: "quiet 400 body vs 660-770 display (Schibsted axis is 400-900); 500/660 mids — not a flat 400/700"
+    weight_contrast: "quiet 400 body vs 660-770 display; 500/660 mids — not a flat 400/700"
   space: { base: 4, major: [32, 48, 64] }
-  radius: { control: 8, pill: 999, modal: 10, region: 0 }
+  radius: { control: 999, pill: 999, modal: 10, small: 6, region: 0 }   # controls are pills
   motion:
     ease: "cubic-bezier(0.16, 1, 0.3, 1)"
     fast: "120ms"
     base: "180ms"
     forbidden: [bounce, elastic, overshoot, slow-reveal-theater]
   focus: { ring: "2px solid var(--solar-accent)", offset: "3px", radius_px: 4 }
-  variants:
-    relay:    { primary: "#b23a1e", signature: "agent relay spine + broken handoff at the stall" }
-    dispatch: { primary: "#1f6f5c", signature: "capability supply/demand gate as the stall hero" }
-    console:  { primary: "#b5790d", signature: "mono operator log + a held dispatch line" }
+  signature: "relay — the agent baton (PM->Planner->Builder->Evaluator) with a broken handoff at the capability gate"
 ---
 
-# Solar Harness GUI Design System
+# AI4Research GUI Design System
 
-The visual contract for the Solar Harness React GUI. It exists to prevent
-generic AI-dashboard defaults and **must be read before visual UI work**. The
-YAML front matter above is the machine-readable token source; everything in
-`styles.css :root` derives from it.
+The visual contract for the AI4Research React GUI. It exists to prevent generic
+AI-dashboard defaults and **must be read before visual UI work**. The YAML front
+matter is the machine-readable token source; everything in `styles.css :root`
+derives from it.
 
 ## Intent
 
-Solar Harness is a **multi-agent orchestration surface**: four named agents
-(PM → Planner → Builder → Evaluator) hand work down a capability-routed DAG,
-and the run **stalls honestly** when no agent advertises a needed capability.
-The interface should feel quiet, exact, and operational — closer to Codex,
-Linear, and Vercel than to a template dashboard. The information architecture
-(process stream · results rail · session sidebar) is inherited; craft comes
-from type, spacing, honest state, and disciplined restraint.
+AI4Research is a **multi-agent orchestration surface**: four named agents
+(PM → Planner → Builder → Evaluator) hand work down a capability-routed DAG, and
+the run **stalls honestly** when no agent advertises a needed capability. The
+interface should feel quiet, exact, and operational — Codex/Linear/Vercel craft,
+not a template dashboard. IA = a prompt-first home, then a per-session view whose
+**process stream is the hero**, with a session sidebar and a slim results rail.
 
 ## The distinctiveness rule (the spine)
 
-Distinctiveness must come from **the subject**, not from borrowed minimalism.
-"Severe minimalism" — hairline rules, zero radius, dense broadsheet columns —
-is itself one of today's AI-default looks; adopting it as a default is as much
-a tell as a purple gradient. So identity here comes from making the **multi-
-agent relay** legible: who acted, what was handed to whom, and exactly where a
-capability gate held the work. Spend boldness in **one** place (the signature);
-keep everything else quiet.
+Distinctiveness comes from **the subject**, not borrowed minimalism. "Severe
+minimalism" (hairline rules, zero radius, dense broadsheet columns) is itself an
+AI-default tell. Identity here comes from making the **multi-agent relay**
+legible: who acted, what was handed to whom, and exactly where a capability gate
+held the work. Spend boldness in **one** place (the signature); keep the rest
+quiet. Every element must earn its place — if it doesn't answer the view's one
+question, cut it.
 
-## Signature element (subject-derived)
+## Signature element
 
-The signature is **agent attribution + the handoff/gate**, not decoration.
-Three expressions are under review (pick one):
+**The relay.** The four agents render as a baton/flow (PM → Planner → Builder →
+Evaluator); a stall is a **broken handoff** at the capability gate. This — plus
+the process stream itself — is how a stall is communicated; **not** via a
+separate "Stalled" card, badge, or technical-details box. One signature move per
+view; resist a second.
 
-- **relay** — a vertical agent spine; each process step is anchored to the agent
-  that performed it, and the stall renders as a *broken handoff* where the baton
-  cannot pass (no agent provides the capability).
-- **dispatch** — the stall is framed as a *dispatch gate*: a compact
-  supply/demand ledger (demanded capability vs what each of the four agents
-  provides) with the gap called out.
-- **console** — an honest *operator log*: agent · time · node in mono, hairline
-  rows, the stall as a single "held" dispatch line.
+## Color — Huawei black / white / red
 
-A view has exactly one signature move. Resist adding a second.
+Monochrome by rule, on a **white** canvas with **ink `#1a1b1d`** (never pure
+`#000`) and a cool 12-step neutral ramp. **Red `#cf0a2c` is the one accent and a
+SIGNAL only** — rationed to ~<10% of any view: the brand mark (lotus), the
+active/now agent, the live marker, the selected mark, the focus ring, and at most
+one primary action. Never paint fields of red; never red gradients/glows/shadows.
+Use `primary_ink #a60822` for small/dense red text (AA). White-on-red is the only
+red-fill text pairing.
+
+- **Stalled = amber `#b26a00`** (hue-separated from red so brand red is never
+  mistaken for the error/stuck color).
+- **Done = quiet ink + a check.** No green — success is calm, expressed with
+  neutral ink, reserving the hue budget for red (brand) and amber (stalled).
+- Structure with neutrals (dividers, borders, muted/subtle text), so red pops.
+
+Forbidden color moves: Tailwind defaults (indigo/slate/tailwind-blue); purple/
+cyan/blue gradients; gradient text; **green** "success"; fields of red / red
+gradients / red glows; pure `#000`; rosy/warm-tinted neutrals (keep grays cool so
+red is the only warm-saturated thing); a second brand accent.
 
 ## Typeface
 
 - **Display / UI / body: Schibsted Grotesk** (SIL OFL, self-hosted variable
-  woff2). A UI-purpose neo-grotesk with more editorial character than Inter or
-  Geist — and notably *not* Geist, which has itself become a Vercel/AI tell.
-  Use **extreme weight contrast**: a quiet 400 for most text and 660–770 for
-  headings and critical labels, with 500/660 mids — a wide jump, not the flat
-  400/700 default pairing. (Schibsted's variable axis is 400–900.)
-- **Technical: Geist Mono** (SIL OFL). Reserved strictly for IDs, timestamps,
-  capability names, node ids, decisions, file paths, code, and tabular numbers
-  (`font-variant-numeric: tabular-nums`). Never decorative.
+  woff2). Extreme weight contrast: quiet 400 body vs 660–770 headings, 500/660
+  mids — not a flat 400/700. (Research suggested a cooler grotesk like Inter for
+  the Huawei feel; **Inter is on the forbidden list**, so we keep Schibsted.)
+- **Technical: Geist Mono** (SIL OFL) — IDs, timestamps, capability/node names,
+  decisions, paths, code, tabular numbers (`tabular-nums`). Never decorative.
 
 Forbidden typefaces: Inter, Roboto, Open Sans, Lato, Arial, `system-ui` as a
-primary choice, **Space Grotesk**, and **Geist Sans as the display face**
-(reserved to Mono only here).
+primary choice, Space Grotesk.
 
 Type scale (px): 11 micro · 12 label · 14 dense body · 16 body · 20 emphasis ·
-26 compact display · `clamp(2rem,3vw,3.05rem)` page display.
+26 compact display.
 
-## Color
+## Structure & layout (process-as-hero)
 
-Monochrome-by-rule. Semantic color communicates **truthful system state only**,
-never brand decoration. One accent per view, used like punctuation (<5% of the
-viewport saturated). Each variant carries a distinct `primary` (see front
-matter) so the three reads are genuinely different.
-
-- Neutrals: `ink #17171a` on `canvas #f3f2ee`; `surface`, `surface-quiet`,
-  `muted`, `subtle`, `faint`, and three hairline `line` strengths.
-- `primary` — active/now, the primary action, the focus ring, the selected mark.
-- `blocked` — the honest stall, drawn **hollow/amber**, calm not alarming.
-- `complete` — quiet and de-emphasized; "done" is not a celebration.
-
-Forbidden color moves: Tailwind defaults (indigo-600, slate-900, tailwind
-blue); purple/cyan/blue gradients; **gradient text**; **green progress
-gradients**; tinted glass panels; decorative colored icons; the
-**warm-cream + terracotta** default pairing as the whole-app look.
-
-## Structure
-
-Card-less by default — content sits on the canvas; structure comes from
-whitespace, type hierarchy, and hairline dividers. Cards only for genuinely
-discrete, actionable objects, and then varied by role (not a uniform grid).
+Card-less by default; structure from whitespace, type hierarchy, and hairline
+dividers. The session view leads with a **thin context bar** (no repeated giant
+title — the title lives once in the topbar), the **process stream owns the center
+column**, and a slim **results rail** (Deliverables + per-sprint usage) sits
+right. Separation lines may run **full-bleed** to the edges. Cards only for
+genuinely discrete, actionable objects.
 
 Forbidden structure: uniform card grids · nested cards · box/drop shadows ·
-glassmorphism/blur/frost · gradients · decorative illustration ·
-centered-everything symmetry.
+gradients · decorative illustration · centered-everything symmetry.
 
-Allowed grouping: 1px hairline dividers · generous 4px-scale whitespace ·
-intentional asymmetry where it clarifies the work · filled backgrounds only for
-true controls, dialogs, and semantic blocked/error regions.
+**Sanctioned exception (owner-approved):** the **sidebar** may use a tasteful
+translucent/glassy material (subtle backdrop blur + tint) for depth, provided text
+contrast stays AA and footer links (Settings) remain clearly legible.
 
 ## Space
 
-A 4px scale. **When a spacing choice feels merely sufficient, double it.**
-Default major gaps: 32 / 48 / 64px. Controls still align to 4px increments.
+A 4px rhythm (8px-derived steps, multiples only). **When spacing feels merely
+sufficient, double it.** Major gaps: 32 / 48 / 64px.
 
 ## Shape & motion
 
-Controls may use a small radius (8px) or full pills for true controls; regions
-and rows stay square (0). Motion is short and natural — `ease` cubic-bezier,
-120ms fast / 180ms base, **transform + opacity only**, GPU-friendly. Forbidden:
-bounce, elastic, overshoot, slow-reveal theater. High-frequency UI appears
-instantly (no fade). `prefers-reduced-motion` is respected.
+Controls are **pills** (999px); regions/rows stay square. Motion is short and
+natural — `ease` cubic-bezier, 120ms fast / 180ms base, **transform + opacity
+only**. The relay may show a restrained traveling *flow* highlight (not a glow) to
+indicate handoff direction. Forbidden: bounce, elastic, overshoot, slow-reveal
+theater. High-frequency UI appears instantly. `prefers-reduced-motion` respected.
 
 ## Micro-states (quality floor — every interactive element)
 
-default · hover · **focus-visible (custom ring: 2px `primary`, 3px offset,
-4px radius)** · active · disabled · loading. Every data view also has **empty**
-and **error** states. Inputs respond immediately. No dead hover states; no
-un-eased snaps.
+default · hover · **focus-visible (2px red ring, 3px offset)** · active · disabled
+· loading. Every data view has **empty** and **error** states. **Selected ≠
+hover:** selected/active rows take a persistent darker neutral fill
+(`surface_quiet`) + a rationed red tick; hover is a lighter transient fill — not
+motion alone. Collapsible steps keep a **persistent** expanded state (changed
+background + rotated chevron + `aria-expanded`), so a toggle never reads as
+momentary.
 
 ## Honest state rules (verify, do not assume)
 
-- A stalled sprint **never** shows a filled percentage/progress bar.
-- Use discrete phase states: spec · PRD · plan · build. Passed = plain neutral
-  check; the blocked stage = amber, **hollow**, explicit.
-- **Never** synthesize a "Result is available" / completed step while stalled.
-- Token usage is labeled **per-model/day**, never per-agent or per-sprint.
-- Header status appears once, in plain language ("No agent provides X").
-- Raw tokens (`no_matching_worker`) live behind a **Technical details** expander.
+- A stalled sprint **never** shows a filled percentage/progress bar or a
+  synthesized "Result is available".
+- A stall is shown by the **relay's broken handoff + the process stream's blocked
+  step** (whose raw tokens like `no_matching_worker` live in that step's
+  expandable detail) — not a separate alarming card.
+- **Token usage:** per-sprint on the session view (`dashboard.data.sprint_usage`);
+  honest fallback to the account-wide per-model/day signal (with a note) when the
+  runtime can't attribute per-sprint. The **account-wide total lives in Settings**.
+- Settings controls are real but **do not persist** in P0 (no runtime write path);
+  say so plainly; Save is disabled.
 
 ## Accessibility floor (WCAG 2.2 AA)
 
-Text contrast ≥ 4.5:1, large text / non-text / focus indicators ≥ 3:1. Visible
-keyboard focus on every interactive element; logical focus order; no keyboard
-traps. Reduced motion respected. Responsive down to mobile.
+Text ≥ 4.5:1, large/non-text/focus ≥ 3:1. Never rely on color alone (pair status
+with text/glyph). Visible keyboard focus everywhere; logical order; no traps.
+Reduced motion respected. Responsive to mobile.
 
 ## Centralization
 
-All visual tokens live in `harness/status-server/react-app/src/styles.css`
-under `:root` with the `--solar-*` prefix (and `[data-variant]` overrides).
-Component CSS consumes tokens only — no one-off color, shadow, gradient, or font.
+All visual tokens live in `harness/status-server/react-app/src/styles.css` under
+`:root` with the `--solar-*` prefix. Component CSS consumes tokens only — no
+one-off color, shadow, gradient, or font.
