@@ -1745,20 +1745,48 @@ function UsagePanel({ usage }: { usage?: UsagePayload }) {
   );
 }
 
+const MODEL_OPTIONS = [
+  "claude-opus-4.x",
+  "claude-sonnet-4.x",
+  "claude-haiku-4.x",
+  "glm-4.6",
+];
+
+const LAB_MODES = [
+  { id: "all-claude", label: "All-Claude" },
+  { id: "all-glm", label: "All-GLM" },
+  { id: "custom", label: "Custom" },
+];
+
+const API_PROVIDERS = [
+  { id: "anthropic", label: "Anthropic", hint: "Claude models" },
+  { id: "zai", label: "Z.ai", hint: "GLM models" },
+];
+
 function SettingsView() {
   const [settings, setSettings] = useState<SettingsPayload>();
-  const [status, setStatus] = useState<StatusPayload>();
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState("");
 
+  const [roleModels, setRoleModels] = useState<Record<string, string>>({});
+  const [agentOn, setAgentOn] = useState<Record<string, boolean>>({});
+  const [labMode, setLabMode] = useState("all-claude");
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+
   const refresh = useCallback(async () => {
     try {
-      const [settingsResponse, statusResponse] = await Promise.all([
-        fetchSettings(),
-        fetchStatus(),
-      ]);
-      setSettings(settingsResponse);
-      setStatus(statusResponse);
+      const response = await fetchSettings();
+      setSettings(response);
+      const models: Record<string, string> = {};
+      const on: Record<string, boolean> = {};
+      ROLE_ORDER.forEach((role) => {
+        models[role] =
+          asString(response.role_models?.[role]?.model) || MODEL_OPTIONS[0];
+        on[role] = true;
+      });
+      setRoleModels(models);
+      setAgentOn(on);
+      setLabMode(asString(response.model_lab_matrix?.value) || "all-claude");
       setState("ready");
       setError("");
     } catch (err) {
@@ -1771,9 +1799,18 @@ function SettingsView() {
     void refresh();
   }, [refresh]);
 
-  const physical =
-    settings?.physical_operators || status?.physical_operators || {};
-  const roleModels = Object.entries(settings?.role_models || {});
+  function applyLabMode(mode: string) {
+    setLabMode(mode);
+    if (mode === "all-claude") {
+      setRoleModels(
+        Object.fromEntries(ROLE_ORDER.map((role) => [role, "claude-opus-4.x"])),
+      );
+    } else if (mode === "all-glm") {
+      setRoleModels(
+        Object.fromEntries(ROLE_ORDER.map((role) => [role, "glm-4.6"])),
+      );
+    }
+  }
 
   return (
     <div className="workspace-scroll">
@@ -1788,85 +1825,162 @@ function SettingsView() {
           onClick={() => void refresh()}
         >
           <RefreshCw size={15} />
-          <span>Refresh</span>
+          <span>Reload from runtime</span>
         </button>
       </header>
       <div className="settings-layout" data-testid="settings-view">
-        <section className="hero-status settings-hero">
-          <div className="hero-main">
-            <div className="eyebrow-row">
-              <span className="state-orb tone-idle" />
-              <span>Read-only</span>
-              <span>{settings?.source || "status-server"}</span>
+        <section className="compact-session-header">
+          <div className="compact-title-block">
+            <div className="task-eyebrow">
+              <span className="task-kicker">Configuration</span>
             </div>
-            <h1>Model and lab configuration</h1>
-            <p>
-              {settings?.write_note ||
-                "P0 exposes current configuration without inventing a new write path."}
-            </p>
-          </div>
-          <div className="settings-stats">
-            <span>
-              <strong>{compactNumber(physical.count || 0)}</strong>
-              operators
-            </span>
-            <span>
-              <strong>{compactNumber(physical.available || 0)}</strong>
-              available
-            </span>
-            <span>
-              <strong>{compactNumber(physical.busy || 0)}</strong>
-              busy
-            </span>
+            <h1>Agents, models &amp; keys</h1>
           </div>
         </section>
+
+        <div className="settings-notice">
+          <ShieldCheck size={15} />
+          <p>
+            Read from the runtime ({settings?.source || "status-server"}). Edits
+            here are staged in this view only — AI4Research P0 has no write path
+            yet, so nothing is persisted to the runtime or sent anywhere.
+          </p>
+        </div>
 
         {state === "loading" && <LoadingWorkbench />}
         {state === "error" && (
           <ErrorWorkbench message={error} onRetry={refresh} />
         )}
         {state === "ready" && (
-          <div className="two-column-grid">
-            <section className="panel">
+          <>
+            <section className="settings-block">
               <SectionHeader
                 icon={<SquareTerminal size={17} />}
                 title="Lab matrix"
-                detail={settings?.model_lab_matrix?.source || "unset"}
+                detail={labMode}
               />
-              <div className="setting-row">
-                <span>All-Claude / GLM lab matrix</span>
-                <Switch.Root
-                  className="switch-root"
-                  checked={Boolean(settings?.model_lab_matrix?.value)}
-                  disabled
-                >
-                  <Switch.Thumb className="switch-thumb" />
-                </Switch.Root>
+              <p className="settings-help">
+                How agents map to model families. Custom lets you set each agent
+                below.
+              </p>
+              <div
+                className="segmented"
+                role="group"
+                aria-label="Lab matrix mode"
+              >
+                {LAB_MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className={`segmented-option ${labMode === mode.id ? "is-active" : ""}`}
+                    aria-pressed={labMode === mode.id}
+                    onClick={() => applyLabMode(mode.id)}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
               </div>
-              <code className="code-block">
-                {settings?.model_lab_matrix?.value ||
-                  "No lab matrix value found in env/config scan."}
-              </code>
             </section>
-            <section className="panel">
+
+            <section className="settings-block">
               <SectionHeader
-                icon={<ShieldCheck size={17} />}
-                title="Role models"
-                detail={`${roleModels.length} configured`}
+                icon={<Bot size={17} />}
+                title="Agents & models"
+                detail={`${ROLE_ORDER.length} agents`}
               />
-              <div className="settings-list">
-                {roleModels.length === 0 && (
-                  <EmptyInline label="No role model overrides found" />
-                )}
-                {roleModels.map(([role, info]) => (
-                  <div className="setting-row" key={role}>
-                    <span>{role}</span>
-                    <strong>{info.model || "unset"}</strong>
+              <div className="agent-config-list">
+                {ROLE_ORDER.map((role) => (
+                  <div
+                    className={`agent-config-row ${agentOn[role] ? "" : "is-off"}`}
+                    key={role}
+                  >
+                    <Switch.Root
+                      className="switch-root"
+                      checked={Boolean(agentOn[role])}
+                      onCheckedChange={(value) =>
+                        setAgentOn((prev) => ({ ...prev, [role]: value }))
+                      }
+                      aria-label={`Enable ${ROLE_META[role].title}`}
+                    >
+                      <Switch.Thumb className="switch-thumb" />
+                    </Switch.Root>
+                    <div className="agent-config-id">
+                      <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
+                      <span>{ROLE_META[role].subtitle}</span>
+                    </div>
+                    <div className="model-select">
+                      <select
+                        aria-label={`${ROLE_META[role].title} model`}
+                        value={roleModels[role] || MODEL_OPTIONS[0]}
+                        disabled={!agentOn[role]}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setRoleModels((prev) => ({ ...prev, [role]: value }));
+                          setLabMode("custom");
+                        }}
+                      >
+                        {MODEL_OPTIONS.map((model) => (
+                          <option key={model} value={model}>
+                            {model}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} aria-hidden="true" />
+                    </div>
                   </div>
                 ))}
               </div>
             </section>
-          </div>
+
+            <section className="settings-block">
+              <SectionHeader
+                icon={<ShieldCheck size={17} />}
+                title="Provider API keys"
+                detail="local only"
+              />
+              <p className="settings-help">
+                Held in this view only; never transmitted until a runtime write
+                path exists.
+              </p>
+              <div className="key-list">
+                {API_PROVIDERS.map((provider) => (
+                  <div className="key-row" key={provider.id}>
+                    <div className="key-id">
+                      <strong>{provider.label}</strong>
+                      <span>{provider.hint}</span>
+                    </div>
+                    <input
+                      type="password"
+                      className="key-input"
+                      placeholder="sk-…"
+                      autoComplete="off"
+                      value={apiKeys[provider.id] || ""}
+                      onChange={(event) =>
+                        setApiKeys((prev) => ({
+                          ...prev,
+                          [provider.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="settings-actions">
+              <span className="settings-actions-note">
+                Saving to the runtime is not enabled in P0.
+              </span>
+              <button
+                type="button"
+                className="primary-button"
+                disabled
+                title="Runtime write path not enabled in P0"
+              >
+                <span>Save configuration</span>
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

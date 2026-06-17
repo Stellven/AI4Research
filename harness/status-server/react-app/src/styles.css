@@ -1905,6 +1905,201 @@ summary:focus-visible,
   font-size: var(--solar-type-micro);
 }
 
+/* Settings — interactive config (honest: staged locally, no write path). */
+.settings-notice {
+  display: flex;
+  gap: var(--solar-space-3);
+  max-width: 760px;
+  padding: var(--solar-space-3) var(--solar-space-4);
+  border: 1px solid var(--solar-line);
+  border-left: 2px solid var(--solar-subtle);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-muted);
+}
+
+.settings-notice svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--solar-subtle);
+}
+
+.settings-notice p {
+  margin: 0;
+  font-size: var(--solar-type-sm);
+  line-height: 1.55;
+}
+
+.settings-block {
+  max-width: 760px;
+  padding-top: var(--solar-space-6);
+  border-top: 1px solid var(--solar-line);
+}
+
+.settings-help {
+  margin: calc(-1 * var(--solar-space-3)) 0 var(--solar-space-4);
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  background: var(--solar-surface-quiet);
+}
+
+.segmented-option {
+  min-height: 32px;
+  padding: 0 var(--solar-space-4);
+  border-radius: 6px;
+  color: var(--solar-muted);
+  background: transparent;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  cursor: pointer;
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.segmented-option:hover {
+  color: var(--solar-ink);
+}
+
+.segmented-option.is-active {
+  color: var(--solar-ink);
+  background: var(--solar-surface);
+  box-shadow: inset 0 0 0 1px var(--solar-line);
+}
+
+.agent-config-list,
+.key-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-config-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 220px;
+  gap: var(--solar-space-4);
+  align-items: center;
+  padding: var(--solar-space-4) 0;
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.agent-config-row:first-child {
+  border-top: 0;
+}
+
+.agent-config-row.is-off {
+  opacity: 0.55;
+}
+
+.agent-config-id strong {
+  display: block;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.agent-config-id span {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.model-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.model-select select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--solar-space-7) 0 var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-ink);
+  background: var(--solar-surface);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  appearance: none;
+  cursor: pointer;
+  transition: border-color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.model-select select:hover {
+  border-color: var(--solar-line-strong);
+}
+
+.model-select select:disabled {
+  cursor: not-allowed;
+  color: var(--solar-subtle);
+}
+
+.model-select svg {
+  position: absolute;
+  right: var(--solar-space-3);
+  color: var(--solar-subtle);
+  pointer-events: none;
+}
+
+.key-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--solar-space-4);
+  align-items: center;
+  padding: var(--solar-space-4) 0;
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.key-row:first-child {
+  border-top: 0;
+}
+
+.key-id strong {
+  display: block;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.key-id span {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.key-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  outline: 0;
+  color: var(--solar-ink);
+  background: var(--solar-surface);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  transition: border-color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.key-input:focus {
+  border-color: var(--solar-accent);
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--solar-space-4);
+  max-width: 760px;
+  padding-top: var(--solar-space-5);
+}
+
+.settings-actions-note {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
