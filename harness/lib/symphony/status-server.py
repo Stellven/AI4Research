@@ -409,6 +409,7 @@ def _load_orchestration_routes_module():
     # Keep dynamically imported route builders aligned with this server's root.
     mod.HARNESS_DIR = HARNESS_DIR
     mod.SPRINTS_DIR = SPRINTS_DIR
+    mod.SESSIONS_DIR = HARNESS_DIR / "sessions"
     mod.STATE_DIR = HARNESS_DIR / "state"
     return mod
 
@@ -423,6 +424,56 @@ def _orchestration_dashboard_payload(sprint_id: str = "") -> dict:
         "degraded_sources": degraded or [],
         "data": data,
     }
+
+
+def _orchestration_projection_payload(sprint_id: str = "") -> dict:
+    mod = _load_orchestration_routes_module()
+    builder = getattr(mod, "build_projection_payload", None)
+    if not callable(builder):
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "build_projection_payload unavailable",
+            "schema_version": getattr(mod, "SCHEMA_VERSION", "solar.orchestration.v1"),
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "degraded_sources": ["projection_builder:missing"],
+            "data": {},
+        }
+    data, degraded = builder(sprint_id or None)
+    return {
+        "ok": True,
+        "schema_version": getattr(mod, "SCHEMA_VERSION", "solar.orchestration.v1"),
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "degraded_sources": degraded or [],
+        "data": data,
+    }
+
+
+def _orchestration_verdict_payload(kind: str, sprint_id: str, data: dict) -> tuple[dict, int]:
+    mod = _load_orchestration_routes_module()
+    fn_by_kind = {
+        "plan": "submit_plan_verdict_payload",
+        "eval": "submit_eval_verdict_payload",
+        "handoff": "submit_handoff_payload",
+    }
+    fn_name = fn_by_kind.get(kind)
+    if not fn_name:
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "unsupported_orchestration_action",
+            "sprint_id": sprint_id,
+        }, 400
+    submitter = getattr(mod, fn_name, None)
+    if not callable(submitter):
+        return {
+            "ok": False,
+            "status": "error",
+            "error": f"{fn_name} unavailable",
+            "sprint_id": sprint_id,
+        }, 500
+    payload, status_code = submitter(sprint_id, data)
+    return payload, status_code
 
 
 def _sprint_index_payload(limit: int = 80) -> dict:
@@ -12512,6 +12563,18 @@ class StatusHandler(BaseHTTPRequestHandler):
                 self._send_json(_start_thunderomlx_from_status())
             elif path == "/api/collector-schedules":
                 self._send_json(_collector_scheduler_update(data))
+            elif re.match(r"^/api/sprints/[^/]+/plan-verdict$", path):
+                sid = urllib.parse.unquote(path.split("/api/sprints/", 1)[1].split("/plan-verdict", 1)[0])
+                payload, status_code = _orchestration_verdict_payload("plan", sid, data)
+                self._send_json(payload, status=status_code)
+            elif re.match(r"^/api/sprints/[^/]+/eval-verdict$", path):
+                sid = urllib.parse.unquote(path.split("/api/sprints/", 1)[1].split("/eval-verdict", 1)[0])
+                payload, status_code = _orchestration_verdict_payload("eval", sid, data)
+                self._send_json(payload, status=status_code)
+            elif re.match(r"^/api/sprints/[^/]+/handoff-submit$", path):
+                sid = urllib.parse.unquote(path.split("/api/sprints/", 1)[1].split("/handoff-submit", 1)[0])
+                payload, status_code = _orchestration_verdict_payload("handoff", sid, data)
+                self._send_json(payload, status=status_code)
             else:
                 self._send_json({"ok": False, "error": "not found"}, status=404)
         except Exception as exc:
@@ -12558,7 +12621,14 @@ class StatusHandler(BaseHTTPRequestHandler):
             except Exception as exc:
                 self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
 
-        elif path == "/sprints":
+        elif path == "/orchestration/projection":
+            sprint_id = params.get("sprint_id", [""])[0]
+            try:
+                self._send_json(_orchestration_projection_payload(sprint_id))
+            except Exception as exc:
+                self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
+
+        elif path in {"/sprints", "/api/sprints"}:
             try:
                 limit = int(params.get("limit", ["80"])[0])
                 limit = max(1, min(limit, 300))
@@ -12783,6 +12853,13 @@ class StatusHandler(BaseHTTPRequestHandler):
                         self._send_file(target, content_type)
             else:
                 self._send_json(_sprint_deliverables_payload(sid))
+
+        elif re.match(r"^/api/sprints/[^/]+/projection$", path):
+            sid = urllib.parse.unquote(path.split("/api/sprints/", 1)[1].split("/projection", 1)[0])
+            try:
+                self._send_json(_orchestration_projection_payload(sid))
+            except Exception as exc:
+                self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
 
         elif path.startswith("/mermaid/assets/"):
             asset = _asset_path(path.removeprefix("/mermaid/assets/"))
