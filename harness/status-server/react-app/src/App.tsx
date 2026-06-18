@@ -258,7 +258,7 @@ function Sidebar({
     <aside className="sidebar">
       <NavLink to="/" className="brand-row" aria-label="AI4Research home">
         <div className="brand-mark" aria-hidden="true">
-          <BrandMark size={24} />
+          <BrandMark size={40} />
         </div>
         <div>
           <div className="brand-name">AI4Research</div>
@@ -706,10 +706,7 @@ function SessionView({
           >
             <AgentSignature agents={agents} gate={gate} isBlocked={isBlocked} />
             <div className="process-results-layout">
-              <ProcessStream
-                steps={processSteps}
-                streamState={session.streamState}
-              />
+              <ProcessStream steps={processSteps} />
               <ResultsRail
                 deliverables={session.deliverables}
                 usage={session.usage}
@@ -936,71 +933,34 @@ function AgentSignature({
   isBlocked: boolean;
 }) {
   // The relay breaks after the last agent that actually advanced the work.
-  const lastActive = agents.reduce(
-    (acc, agent, index) =>
-      agent.state === "complete" || agent.state === "working" ? index : acc,
-    -1,
-  );
-  const breakAfter = isBlocked ? Math.max(lastActive, 0) : -1;
-  const flowUntil = isBlocked ? breakAfter : lastActive;
-
+  // A non-sequential status roster — the agents' real current states, with no
+  // directional flow/arrows (the orchestration is a DAG, not a line). The actual
+  // non-linear handoffs live in the process stream below.
   return (
-    <section className="agent-signature sig-relay" data-testid="agent-presence">
-      <div className="relay-track">
-        {agents.map((agent, index) => (
-          <div className="relay-cell" key={agent.role}>
-            <div className={`relay-agent tone-${agent.state}`}>
-              <span className={`state-dot tone-${agent.state}`} />
-              <strong>{agentShortName(agent.role)}</strong>
-              <span className="relay-activity">
-                {agent.state === "idle"
-                  ? "waiting"
-                  : agent.state === "complete"
-                    ? "done"
-                    : agent.state}
-              </span>
-            </div>
-            {index < agents.length - 1 && (
-              <span
-                className={`relay-link ${
-                  breakAfter === index
-                    ? "is-broken"
-                    : index < flowUntil
-                      ? "is-flow"
-                      : ""
-                }`}
-                aria-hidden="true"
-              />
-            )}
+    <section
+      className="agent-signature sig-roster"
+      data-testid="agent-presence"
+    >
+      {agents.map((agent) => (
+        <div className={`roster-agent tone-${agent.state}`} key={agent.role}>
+          <span className={`state-dot tone-${agent.state}`} />
+          <div className="roster-copy">
+            <strong>{agentShortName(agent.role)}</strong>
+            <span className="roster-state">
+              {agent.state === "idle"
+                ? "waiting"
+                : agent.state === "complete"
+                  ? "done"
+                  : agent.state}
+            </span>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </section>
   );
 }
 
-function ProcessStream({
-  steps,
-  streamState,
-}: {
-  steps: ProcessStep[];
-  streamState: string;
-}) {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const signature = steps
-    .map((step) => `${step.id}:${step.defaultExpanded ? "1" : "0"}`)
-    .join("|");
-
-  useEffect(() => {
-    setExpanded(
-      Object.fromEntries(steps.map((step) => [step.id, step.defaultExpanded])),
-    );
-  }, [signature, steps]);
-
-  function toggle(id: string) {
-    setExpanded((current) => ({ ...current, [id]: !current[id] }));
-  }
-
+function ProcessStream({ steps }: { steps: ProcessStep[] }) {
   return (
     <section className="process-stream-panel" data-testid="process-stream">
       <div className="process-step-list">
@@ -1008,27 +968,16 @@ function ProcessStream({
           <EmptyInline label="Waiting for agent process events" />
         )}
         {steps.map((step) => (
-          <ProcessStepItem
-            key={step.id}
-            step={step}
-            expanded={Boolean(expanded[step.id])}
-            onToggle={() => toggle(step.id)}
-          />
+          <ProcessStepItem key={step.id} step={step} />
         ))}
       </div>
     </section>
   );
 }
 
-function ProcessStepItem({
-  step,
-  expanded,
-  onToggle,
-}: {
-  step: ProcessStep;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
+// A static activity-log entry — no click-to-expand cards. Detail is inline,
+// the way Linear/Stripe activity feeds read.
+function ProcessStepItem({ step }: { step: ProcessStep }) {
   const icon =
     step.state === "blocked" ? (
       <AlertTriangle size={16} />
@@ -1041,62 +990,41 @@ function ProcessStepItem({
     );
   return (
     <article
-      className={`process-step process-step-${step.state} ${expanded ? "is-open" : ""}`}
+      className={`process-step process-step-${step.state}`}
       data-testid={`process-step-${step.state}`}
     >
-      <button
-        className="process-step-summary"
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-      >
-        <span className="process-step-icon">{icon}</span>
-        <span className="process-step-main">
-          <span className="process-step-kicker">
+      <span className="process-step-icon">{icon}</span>
+      <div className="process-step-main">
+        <div className="process-step-head">
+          <strong>{step.title}</strong>
+          <span className="process-step-time">
             {formatDateTime(step.timestamp)}
           </span>
-          <strong>{step.title}</strong>
-          <span>{step.summary}</span>
-        </span>
-        <span className="process-step-toggle">
-          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </span>
-      </button>
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            className="process-step-detail"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            <p>{step.detail}</p>
-            {step.facts.length > 0 && (
-              <div className="process-facts">
-                {step.facts.map((fact) => (
-                  <span key={`${fact.label}-${fact.value}`}>
-                    <small>{fact.label}</small>
-                    <strong>{fact.value}</strong>
-                  </span>
-                ))}
-              </div>
-            )}
-            {step.result && (
-              <a
-                className="step-result-link"
-                href={step.result.view_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <FileCheck2 size={15} />
-                <span>Open {step.result.name}</span>
-                <ArrowUpRight size={13} />
-              </a>
-            )}
-          </motion.div>
+        </div>
+        {step.summary && <p className="process-step-text">{step.summary}</p>}
+        {step.facts.length > 0 && (
+          <div className="process-facts">
+            {step.facts.map((fact) => (
+              <span key={`${fact.label}-${fact.value}`}>
+                <small>{fact.label}</small>
+                <code>{fact.value}</code>
+              </span>
+            ))}
+          </div>
         )}
-      </AnimatePresence>
+        {step.result && (
+          <a
+            className="step-result-link"
+            href={step.result.view_url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <FileCheck2 size={15} />
+            <span>Open {step.result.name}</span>
+            <ArrowUpRight size={13} />
+          </a>
+        )}
+      </div>
     </article>
   );
 }

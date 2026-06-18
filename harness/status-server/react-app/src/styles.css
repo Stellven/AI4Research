@@ -175,9 +175,10 @@ summary:focus-visible,
 .brand-mark,
 .empty-mark {
   display: grid;
+  flex: 0 0 auto;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   color: var(--solar-accent);
 }
 
@@ -634,8 +635,15 @@ summary:focus-visible,
   flex-direction: column;
 }
 
+/* A static activity-log entry: marker + (title, time) + inline text/facts.
+   No button, no click-to-expand cards — detail reads inline. */
 .process-step {
   position: relative;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: var(--solar-space-4);
+  align-items: start;
+  padding: var(--solar-space-5) 0;
   border-top: 1px solid var(--solar-line-soft);
 }
 
@@ -643,10 +651,11 @@ summary:focus-visible,
   border-top: 0;
 }
 
+/* Timeline spine connecting the markers. */
 .process-step::before {
   position: absolute;
-  top: 31px;
-  bottom: -31px;
+  top: 34px;
+  bottom: -18px;
   left: 12px;
   width: 1px;
   content: "";
@@ -655,29 +664,6 @@ summary:focus-visible,
 
 .process-step:last-child::before {
   display: none;
-}
-
-.process-step-summary {
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) 24px;
-  gap: var(--solar-space-5);
-  width: 100%;
-  padding: var(--solar-space-7) 0;
-  color: inherit;
-  text-align: left;
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background var(--solar-duration-fast) var(--solar-ease),
-    color var(--solar-duration-fast) var(--solar-ease);
-}
-
-.process-step-summary:hover {
-  background: var(--solar-surface);
-}
-
-.process-step-summary:hover strong {
-  color: var(--solar-accent-ink);
 }
 
 .process-step-icon {
@@ -690,10 +676,6 @@ summary:focus-visible,
   border-radius: 999px;
   background: var(--solar-canvas);
   color: var(--solar-subtle);
-  transition:
-    border-color var(--solar-duration-fast) var(--solar-ease),
-    background var(--solar-duration-fast) var(--solar-ease),
-    color var(--solar-duration-fast) var(--solar-ease);
 }
 
 .process-step-active .process-step-icon {
@@ -704,99 +686,75 @@ summary:focus-visible,
 .process-step-blocked .process-step-icon {
   color: var(--solar-warning);
   border-color: var(--solar-warning);
-  background: transparent;
 }
 
 .process-step-completed .process-step-icon {
   color: var(--solar-success);
-  border-color: var(--solar-line);
 }
 
 .process-step-main {
   min-width: 0;
+  padding-top: 1px;
 }
 
-.process-step-kicker {
-  display: block;
-  margin-bottom: var(--solar-space-1);
+.process-step-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+}
+
+.process-step-head strong {
+  min-width: 0;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-base);
+  font-weight: var(--solar-weight-strong);
+}
+
+.process-step-time {
+  flex: 0 0 auto;
   color: var(--solar-subtle);
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-micro);
   font-variant-numeric: tabular-nums;
 }
 
-.process-step-main strong {
-  display: block;
-  color: var(--solar-ink);
-  font-size: var(--solar-type-base);
-  font-weight: var(--solar-weight-strong);
-  transition: color var(--solar-duration-fast) var(--solar-ease);
-}
-
-.process-step-main > span:last-child {
-  display: block;
-  margin-top: var(--solar-space-1);
+.process-step-text {
+  max-width: 720px;
+  margin: var(--solar-space-1) 0 0;
   color: var(--solar-muted);
   font-size: var(--solar-type-sm);
   line-height: 1.55;
 }
 
-.process-step-toggle {
-  display: grid;
-  place-items: center;
-  color: var(--solar-subtle);
-}
-
-.process-step-detail {
-  overflow: hidden;
-  margin: 0 0 var(--solar-space-6) 46px;
-}
-
-/* Persistent 'opened and stayed' surface: grey wash + a left inset tying it to
-   the step (open != active — red stays the running-now signal). */
-.process-step.is-open .process-step-detail {
-  padding: var(--solar-space-4);
-  border-radius: var(--solar-radius-small);
-  background: #f6f6f7;
-  box-shadow: inset 2px 0 0 var(--solar-line-strong);
-}
-
-.process-step-detail p {
-  max-width: 760px;
-  margin: 0;
-  color: var(--solar-muted);
-  line-height: 1.68;
-}
-
+/* Inline, borderless mono key:value facts (no pills/cards). */
 .process-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--solar-space-2);
-  margin-top: var(--solar-space-4);
+  gap: var(--solar-space-1) var(--solar-space-4);
+  margin-top: var(--solar-space-3);
 }
 
 .process-facts span {
   display: inline-flex;
   align-items: baseline;
-  gap: var(--solar-space-2);
+  gap: 6px;
   max-width: 100%;
-  padding: 5px var(--solar-space-3);
-  border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-control);
-  color: var(--solar-muted);
-  font-size: var(--solar-type-xs);
+  font-size: var(--solar-type-micro);
 }
 
 .process-facts small {
   color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.process-facts strong {
+.process-facts code {
   overflow: hidden;
-  color: var(--solar-ink);
+  color: var(--solar-muted);
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-micro);
-  font-weight: 520;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1376,47 +1334,33 @@ summary:focus-visible,
   font-weight: var(--solar-weight-display);
 }
 
-/* --- relay: the agent baton with a broken handoff at the gate ---------- */
-.sig-relay .relay-track {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  row-gap: var(--solar-space-3);
-}
-
-.sig-relay .relay-cell {
-  display: flex;
-  flex: 1 1 0;
-  min-width: 0;
-  align-items: center;
-}
-
-.sig-relay .relay-cell:last-child {
-  flex: 0 0 auto;
-}
-
-.relay-agent {
+/* --- roster: a non-sequential agent status row (no false linear flow) --- */
+.sig-roster {
   display: grid;
-  grid-template-columns: 9px auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--solar-space-5);
+}
+
+.roster-agent {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
   column-gap: var(--solar-space-2);
   align-items: center;
-  flex: 0 0 auto;
 }
 
-.relay-agent .state-dot {
-  grid-row: 1 / span 2;
-  align-self: center;
+.roster-copy {
+  min-width: 0;
 }
 
-.relay-agent strong {
+.roster-copy strong {
+  display: block;
+  color: var(--solar-ink);
   font-size: var(--solar-type-sm);
   font-weight: var(--solar-weight-strong);
-  color: var(--solar-ink);
 }
 
-.relay-activity {
-  grid-column: 2;
-  max-width: 17ch;
+.roster-state {
+  display: block;
   overflow: hidden;
   color: var(--solar-subtle);
   font-size: var(--solar-type-xs);
@@ -1424,85 +1368,11 @@ summary:focus-visible,
   white-space: nowrap;
 }
 
-.relay-link {
-  position: relative;
-  overflow: hidden;
-  flex: 1 1 auto;
-  min-width: 36px;
-  height: 2px;
-  margin: 0 var(--solar-space-4);
-  border-radius: 1px;
-  background: var(--solar-line);
-}
-
-/* A restrained traveling pulse along completed handoffs — flow, not a glow. */
-.relay-link.is-flow::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 42%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--solar-accent) 50%,
-    transparent 100%
-  );
-  animation: relay-flow 2.6s linear infinite;
-  will-change: transform;
-}
-
-@keyframes relay-flow {
-  0% {
-    transform: translateX(-110%);
-    opacity: 0;
+@media (max-width: 880px) {
+  .sig-roster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--solar-space-4);
   }
-  25%,
-  75% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(240%);
-    opacity: 0;
-  }
-}
-
-.relay-link.is-broken {
-  min-width: 132px;
-  height: 0;
-  background: transparent;
-  border-top: 1px dashed var(--solar-warning);
-}
-
-.relay-gap {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  padding: 2px var(--solar-space-2);
-  transform: translate(-50%, -50%);
-  background: var(--solar-canvas);
-  color: var(--solar-warning);
-  font-family: var(--solar-font-mono);
-  font-size: var(--solar-type-micro);
-  white-space: nowrap;
-}
-
-.relay-break-note {
-  max-width: 720px;
-  margin: var(--solar-space-5) 0 0;
-  color: var(--solar-muted);
-  font-size: var(--solar-type-sm);
-  line-height: 1.6;
-}
-
-.relay-break-note code {
-  color: var(--solar-warning);
-  font-family: var(--solar-font-mono);
-  font-size: 0.92em;
-}
-
-.relay-break-note strong {
-  color: var(--solar-ink);
-  font-weight: var(--solar-weight-strong);
 }
 
 .compact-title-block h1 {
