@@ -793,6 +793,19 @@ def run(args: argparse.Namespace) -> int:
             wait_for_text(page, "Sent back with your guidance.")
             screenshot(page, screenshots, "plan-rejected")
 
+            handoff_switch = measure_session_switch(page, "Submit builder handoff for review", "Submit builder handoff")
+            wait_for_hero_title(page, "Submit builder handoff")
+            page.wait_for_selector("[data-testid='human-gate']", timeout=10000)
+            screenshot(page, screenshots, "handoff-gate")
+
+            eval_switch = measure_session_switch(page, "Review evaluator result", "Review evaluator result")
+            wait_for_hero_title(page, "Review evaluator result")
+            page.wait_for_selector("[data-testid='human-gate']", timeout=10000)
+            screenshot(page, screenshots, "eval-gate")
+            page.get_by_test_id("human-gate").get_by_role("button", name="Request fixes").click()
+            page.wait_for_selector("[data-testid='human-gate'] .decision-reason", timeout=5000)
+            screenshot(page, screenshots, "eval-request-fixes")
+
             first_switch = measure_session_switch(page, "Live build sprint with active", "Live build sprint")
             wait_for_hero_title(page, "Live build sprint")
             wait_for_text(page, "5 steps")
@@ -811,6 +824,8 @@ def run(args: argparse.Namespace) -> int:
             audit_before["sessionSwitch"] = {
                 "plan_gate": plan_gate_switch,
                 "plan_reject": plan_reject_switch,
+                "handoff_gate": handoff_switch,
+                "eval_gate": eval_switch,
                 "first_uncached": first_switch,
                 "second_uncached": second_switch,
                 "repeat_cached": repeat_switch,
