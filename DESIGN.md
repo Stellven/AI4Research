@@ -150,12 +150,17 @@ sibling of the brand red, NOT `#cf0a2c`, which would read pink). The warmth is a
 from `#74767d` to `#6e7077`; verified subtle 4.66 / muted 6.92 / ink 16.3:1). Footer
 links (Settings) remain clearly legible.
 
-**Crew launcher (home composer):** a footer-left pill (`Crew · {preset}`, monochrome at
-rest) opens a persistent inline disclosure below the composer — a lab-matrix preset
-(All-Claude / All-GLM / Custom) + per-agent (PM/Planner/Builder/Evaluator) model selects,
+**Crew launcher (home composer):** a small footer-left `Crew` pill opens a **floating
+popover** (Codex-style — Radix, click / click-outside / Esc, persistent open state, never a
+hover dropdown) holding a lab-matrix preset (All-Claude / All-GLM / Custom), per-agent
+(PM/Planner/Builder/Evaluator) model selects, and a **build-panes** stepper (parallel build
+workers, capped at the runtime's real operator budget `physical_operators.count`), all
 seeded read-only from the runtime. It is **staged-only**: P0 has no write path, so the
-selection is not sent with the intake and "Start work" launches on the runtime's
-configured crew. That honesty line ships in the panel; never add a "Saved"/success state.
+selection is not sent with the intake and "Start work" launches on the runtime's configured
+crew. That honesty line ships **both** in the popover and in the always-visible composer
+caption (so it reads at the moment of action, not only when the popover is open); never add
+a "Saved"/success state. A popover is a sanctioned elevated surface (restrained layered
+shadow, not a heavy drop shadow).
 
 ## Space
 

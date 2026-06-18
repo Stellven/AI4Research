@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import * as Popover from "@radix-ui/react-popover";
 import * as Switch from "@radix-ui/react-switch";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
@@ -7,7 +8,6 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
-  ChevronUp,
   CheckCircle2,
   Circle,
   Clock3,
@@ -16,7 +16,9 @@ import {
   ListTree,
   Loader2,
   MessageSquarePlus,
+  Minus,
   Play,
+  Plus,
   Radio,
   RefreshCw,
   Search,
@@ -1891,11 +1893,17 @@ function defaultRoleModels(): Record<string, string> {
 // Staged-only crew config for the launcher. Seeds from the runtime (read-only) so the
 // shown models are real, not invented; nothing here is sent with the intake or persisted
 // — P0 has no write path, and "Start work" launches on the runtime's configured crew.
+const MAX_BUILD_PANES_FALLBACK = 4;
+
 function useCrew() {
   const [open, setOpen] = useState(false);
   const [labMode, setLabMode] = useState("all-claude");
   const [roleModels, setRoleModels] =
     useState<Record<string, string>>(defaultRoleModels);
+  // Build-pane parallelism. maxPanes is the runtime's real operator budget
+  // (physical_operators.count); the chosen count is staged like the rest of the crew.
+  const [buildPanes, setBuildPanesRaw] = useState(1);
+  const [maxPanes, setMaxPanes] = useState(MAX_BUILD_PANES_FALLBACK);
 
   useEffect(() => {
     let alive = true;
@@ -1909,12 +1917,18 @@ function useCrew() {
         });
         setRoleModels(models);
         setLabMode(asString(res.model_lab_matrix?.value) || "all-claude");
+        const ops = Number(res.physical_operators?.count);
+        if (Number.isFinite(ops) && ops >= 1) setMaxPanes(ops);
       })
       .catch(() => undefined);
     return () => {
       alive = false;
     };
   }, []);
+
+  function setBuildPanes(next: number) {
+    setBuildPanesRaw(Math.max(1, Math.min(maxPanes, next)));
+  }
 
   function applyPreset(mode: string) {
     setLabMode(mode);
@@ -1945,6 +1959,9 @@ function useCrew() {
     applyPreset,
     setRoleModel,
     presetLabel,
+    buildPanes,
+    maxPanes,
+    setBuildPanes,
   };
 }
 
@@ -1996,10 +2013,37 @@ function CrewPanel({ crew }: { crew: Crew }) {
           </div>
         ))}
       </div>
+      <div className="crew-panes-row">
+        <div className="crew-agent-id">
+          <strong>Build panes</strong>
+          <span>Parallel build workers · up to {crew.maxPanes}</span>
+        </div>
+        <div className="crew-stepper" role="group" aria-label="Build panes">
+          <button
+            type="button"
+            className="crew-stepper-btn"
+            onClick={() => crew.setBuildPanes(crew.buildPanes - 1)}
+            disabled={crew.buildPanes <= 1}
+            aria-label="Fewer build panes"
+          >
+            <Minus size={14} aria-hidden="true" />
+          </button>
+          <span className="crew-stepper-value">{crew.buildPanes}</span>
+          <button
+            type="button"
+            className="crew-stepper-btn"
+            onClick={() => crew.setBuildPanes(crew.buildPanes + 1)}
+            disabled={crew.buildPanes >= crew.maxPanes}
+            aria-label="More build panes"
+          >
+            <Plus size={14} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
       <p className="crew-panel-note">
-        Staged preview — the crew you pick here isn’t wired to the run yet, so
-        “Start work” launches on the runtime’s configured crew. Set it for real
-        in Settings once a write path exists.
+        Staged preview — the crew and build panes you set here aren’t wired to
+        the run yet, so “Start work” launches on the runtime’s configured crew.
+        Set them for real in Settings once a write path exists.
       </p>
     </section>
   );
@@ -2071,17 +2115,38 @@ function HomeLanding({
             }}
           />
           <div className="home-prompt-foot">
-            <button
-              type="button"
-              className={`crew-pill ${crew.open ? "is-open" : ""}`}
-              aria-expanded={crew.open}
-              aria-controls={crew.open ? "crew-panel" : undefined}
-              onClick={() => crew.setOpen(!crew.open)}
-            >
-              <Bot size={14} className="crew-pill-icon" aria-hidden="true" />
-              <span className="crew-pill-label">Crew · {crew.presetLabel}</span>
-              <ChevronUp size={13} className="crew-caret" aria-hidden="true" />
-            </button>
+            <Popover.Root open={crew.open} onOpenChange={crew.setOpen}>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="crew-pill"
+                  aria-label="Crew and build panes"
+                >
+                  <Bot
+                    size={13}
+                    className="crew-pill-icon"
+                    aria-hidden="true"
+                  />
+                  <span className="crew-pill-label">Crew</span>
+                  <ChevronDown
+                    size={12}
+                    className="crew-caret"
+                    aria-hidden="true"
+                  />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="crew-popover"
+                  side="top"
+                  align="start"
+                  sideOffset={8}
+                  collisionPadding={16}
+                >
+                  <CrewPanel crew={crew} />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
             <button
               type="submit"
               className="primary-button"
@@ -2097,8 +2162,6 @@ function HomeLanding({
           </div>
           {error && <div className="form-error">{error}</div>}
         </form>
-
-        {crew.open && <CrewPanel crew={crew} />}
 
         <p className="home-caption">
           Starts a real intake via the existing CLI <kbd>⌘ ↵</kbd>

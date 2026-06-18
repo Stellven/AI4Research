@@ -1713,21 +1713,21 @@ summary:focus-visible,
   font-size: var(--solar-type-micro);
 }
 
-/* Crew launcher — footer-left pill prints the live selection; an inline disclosure
-   panel drops below the composer. Persistent open state (not a hover dropdown), so it
-   structurally cannot flicker; the prompt keeps all its height. */
+/* Crew launcher — a small footer-left pill opens a floating Radix popover (Codex-style):
+   click to open, click-outside / Esc to dismiss, persistent open state (no hover dropdown),
+   so it cannot flicker and the prompt keeps all its height. */
 .crew-pill {
   display: inline-flex;
   align-items: center;
-  gap: var(--solar-space-2);
-  min-height: 32px;
-  padding: 0 var(--solar-space-2) 0 6px;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 8px 0 7px;
   border: 1px solid var(--solar-line);
   border-radius: var(--solar-radius-control);
   color: var(--solar-ink);
   background: transparent;
   font-family: var(--solar-font-mono);
-  font-size: var(--solar-type-xs);
+  font-size: var(--solar-type-micro);
   cursor: pointer;
   transition:
     border-color var(--solar-duration-fast) var(--solar-ease),
@@ -1743,13 +1743,14 @@ summary:focus-visible,
 }
 
 .crew-pill:hover,
-.crew-pill.is-open {
+.crew-pill[data-state="open"] {
   border-color: var(--solar-line-strong);
   background: var(--solar-surface);
 }
 
 .crew-pill-label {
   font-weight: var(--solar-weight-medium);
+  letter-spacing: 0.01em;
 }
 
 .crew-caret {
@@ -1757,19 +1758,49 @@ summary:focus-visible,
   transition: transform var(--solar-duration) var(--solar-ease);
 }
 
-.crew-pill:not(.is-open) .crew-caret {
+.crew-pill[data-state="open"] .crew-caret {
   transform: rotate(180deg);
+}
+
+/* Floating popover card (Radix Content). Elevation is sanctioned here — a floating layer
+   must read as above the page; a restrained layered shadow, never a heavy drop shadow. */
+.crew-popover {
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  padding: var(--solar-space-5);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-modal);
+  background: var(--solar-canvas);
+  box-shadow:
+    0 1px 1px rgba(20, 21, 23, 0.04),
+    0 12px 32px -10px rgba(20, 21, 23, 0.22),
+    0 4px 10px -4px rgba(20, 21, 23, 0.12);
+  z-index: 50;
+  transform-origin: var(--radix-popover-content-transform-origin);
+  animation: crew-pop-in var(--solar-duration) var(--solar-ease);
+}
+
+@keyframes crew-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crew-popover {
+    animation: none;
+  }
 }
 
 .crew-panel {
   display: flex;
   flex-direction: column;
   gap: var(--solar-space-4);
-  margin-top: var(--solar-space-3);
-  padding: var(--solar-space-5);
-  border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-modal);
-  background: var(--solar-surface);
 }
 
 .crew-panel-head {
@@ -1800,8 +1831,8 @@ summary:focus-visible,
 
 .crew-agent-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
-  gap: var(--solar-space-4);
+  grid-template-columns: minmax(0, 1fr) 168px;
+  gap: var(--solar-space-3);
   align-items: center;
   padding: var(--solar-space-3) 0;
   border-top: 1px solid var(--solar-line-soft);
@@ -1809,6 +1840,57 @@ summary:focus-visible,
 
 .crew-agent-row:first-child {
   border-top: 0;
+}
+
+.crew-panes-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--solar-space-3);
+  align-items: center;
+  padding-top: var(--solar-space-4);
+  border-top: 1px solid var(--solar-line);
+}
+
+.crew-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: 2px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  background: var(--solar-surface);
+}
+
+.crew-stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--solar-ink);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.crew-stepper-btn:hover:not(:disabled) {
+  background: var(--solar-surface-quiet);
+}
+
+.crew-stepper-btn:disabled {
+  color: var(--solar-faint);
+  cursor: not-allowed;
+}
+
+.crew-stepper-value {
+  min-width: 18px;
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .crew-agent-id strong {

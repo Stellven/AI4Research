@@ -225,5 +225,5 @@ export type SettingsPayload = {
     source?: string;
   };
   role_models?: Record<string, { model?: string; source?: string }>;
-  physical_operators?: JsonRecord;
+  physical_operators?: { count?: number; available?: number; busy?: number };
 };
