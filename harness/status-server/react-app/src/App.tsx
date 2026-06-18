@@ -139,16 +139,19 @@ type PlanStage = {
 // currentColor so it inherits the brand accent. Not a reproduction of any
 // existing trademark; inspired by the fanned-petal flower silhouette.
 function BrandMark({ size = 40 }: { size?: number }) {
-  // One teardrop petal, pivot at (12,13), tip near the viewport top — wide enough that
-  // adjacent petals (72deg apart) overlap. Depth = back-to-front paint order + 3 red
-  // lightness steps (darker rear petals occluded by the lighter front one), no glow/bevel.
-  const petal = "M12 13C7.7 9.6 8.4 4.2 12 2.6C15.6 4.2 16.3 9.6 12 13Z";
+  // An upright lotus bloom: petals fan up from a single base (12,21). Outer petals
+  // recede in the darkest red, mid petals a step lighter, the front/center petals the
+  // bright brand red — the three shades give the bloom its depth. No glow/gradient.
+  const petal = "M0 0C-2.5 -5.5 -2.2 -12.5 0 -16.5C2.2 -12.5 2.5 -5.5 0 0Z";
+  // Painted back-to-front so lighter front petals overlap the darker rear ones.
   const petals = [
-    { angle: 144, cls: "lotus-back" },
-    { angle: 216, cls: "lotus-back" },
-    { angle: 72, cls: "lotus-mid" },
-    { angle: 288, cls: "lotus-mid" },
-    { angle: 0, cls: "lotus-front" },
+    { a: -58, s: 0.8, cls: "lotus-back" },
+    { a: 58, s: 0.8, cls: "lotus-back" },
+    { a: -33, s: 0.9, cls: "lotus-mid" },
+    { a: 33, s: 0.9, cls: "lotus-mid" },
+    { a: -15, s: 0.99, cls: "lotus-front" },
+    { a: 15, s: 0.99, cls: "lotus-front" },
+    { a: 0, s: 1.08, cls: "lotus-front" },
   ];
   return (
     <svg
@@ -159,15 +162,14 @@ function BrandMark({ size = 40 }: { size?: number }) {
       aria-hidden="true"
       focusable="false"
     >
-      {petals.map(({ angle, cls }) => (
+      {petals.map(({ a, s, cls }, index) => (
         <path
-          key={angle}
+          key={index}
           className={cls}
           d={petal}
-          transform={`rotate(${angle} 12 13)`}
+          transform={`translate(12 21) rotate(${a}) scale(${s})`}
         />
       ))}
-      <circle className="lotus-front" cx="12" cy="13" r="2.4" />
     </svg>
   );
 }
@@ -2186,7 +2188,6 @@ const MAX_BUILD_PANES_FALLBACK = 4;
 
 function useCrew() {
   const [open, setOpen] = useState(false);
-  const [labMode, setLabMode] = useState("all-claude");
   const [roleModels, setRoleModels] =
     useState<Record<string, string>>(defaultRoleModels);
   // Build-pane parallelism. maxPanes is the runtime's real operator budget
@@ -2205,7 +2206,6 @@ function useCrew() {
             asString(res.role_models?.[role]?.model) || MODEL_OPTIONS[0];
         });
         setRoleModels(models);
-        setLabMode(asString(res.model_lab_matrix?.value) || "all-claude");
         const ops = Number(res.physical_operators?.count);
         if (Number.isFinite(ops) && ops >= 1) setMaxPanes(ops);
       })
@@ -2219,35 +2219,15 @@ function useCrew() {
     setBuildPanesRaw(Math.max(1, Math.min(maxPanes, next)));
   }
 
-  function applyPreset(mode: string) {
-    setLabMode(mode);
-    if (mode === "all-claude") {
-      setRoleModels(
-        Object.fromEntries(ROLE_ORDER.map((role) => [role, "claude-opus-4.x"])),
-      );
-    } else if (mode === "all-glm") {
-      setRoleModels(
-        Object.fromEntries(ROLE_ORDER.map((role) => [role, "glm-4.6"])),
-      );
-    }
-  }
-
   function setRoleModel(role: string, value: string) {
     setRoleModels((prev) => ({ ...prev, [role]: value }));
-    setLabMode("custom");
   }
-
-  const presetLabel =
-    LAB_MODES.find((mode) => mode.id === labMode)?.label ?? "Custom";
 
   return {
     open,
     setOpen,
-    labMode,
     roleModels,
-    applyPreset,
     setRoleModel,
-    presetLabel,
     buildPanes,
     maxPanes,
     setBuildPanes,
@@ -2262,19 +2242,6 @@ function CrewPanel({ crew }: { crew: Crew }) {
       <div className="crew-panel-head">
         <span className="crew-panel-title">Crew</span>
         <span className="crew-panel-count">{ROLE_ORDER.length} agents</span>
-      </div>
-      <div className="segmented" role="group" aria-label="Crew preset">
-        {LAB_MODES.map((mode) => (
-          <button
-            key={mode.id}
-            type="button"
-            className={`segmented-option ${crew.labMode === mode.id ? "is-active" : ""} ${mode.id === "custom" ? "is-computed" : ""}`}
-            aria-pressed={crew.labMode === mode.id}
-            onClick={() => crew.applyPreset(mode.id)}
-          >
-            {mode.label}
-          </button>
-        ))}
       </div>
       <div className="crew-agent-list">
         {ROLE_ORDER.map((role) => (
