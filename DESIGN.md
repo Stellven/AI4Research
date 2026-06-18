@@ -38,7 +38,7 @@ tokens:
     base: "180ms"
     forbidden: [bounce, elastic, overshoot, slow-reveal-theater]
   focus: { ring: "2px solid var(--solar-accent)", offset: "3px", radius_px: 4 }
-  signature: "relay — the agent baton (PM->Planner->Builder->Evaluator) with a broken handoff at the capability gate"
+  signature: "the multi-agent subject made legible — an honest agent STATUS ROSTER (no fake linear flow/arrows) + a static activity-log process stream that is the accurate non-linear record"
 ---
 
 # AI4Research GUI Design System
@@ -69,11 +69,20 @@ question, cut it.
 
 ## Signature element
 
-**The relay.** The four agents render as a baton/flow (PM → Planner → Builder →
-Evaluator); a stall is a **broken handoff** at the capability gate. This — plus
-the process stream itself — is how a stall is communicated; **not** via a
-separate "Stalled" card, badge, or technical-details box. One signature move per
-view; resist a second.
+The subject (multi-agent orchestration) made legible — **honestly**. The
+orchestration is a capability-routed **DAG, not a line**, so do NOT draw a fixed
+PM → Planner → Builder → Evaluator pipeline with directional flow/arrows — that
+implies a linearity that isn't real.
+
+- **Agent roster:** the four agents as a non-sequential status row (each shows its
+  real current state); no connectors, no flow.
+- **Process stream:** a static activity log (oldest → newest) — icon + actor/action
+  title + time-on-the-right + an inline secondary line + inline borderless mono
+  facts. This is the *accurate* record of the (non-linear) handoffs. No
+  click-to-expand cards.
+- A **stall** is communicated by the blocked agent's state + the blocked step in
+  the stream (raw tokens inline) — **not** a separate "Stalled" card, badge, or
+  "Technical details" box.
 
 ## Color — Huawei black / white / red
 
