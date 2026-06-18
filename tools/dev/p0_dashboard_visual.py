@@ -14,6 +14,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -61,6 +62,8 @@ def node(node_id: str, goal: str, status: str, depends_on: list[str], capabiliti
 
 def seed_harness(harness: Path) -> Path:
     sid = "rich-sprint-001"
+    plan_review_sid = "rich-sprint-plan-review"
+    plan_reject_sid = "rich-sprint-plan-reject"
     running_sid = "rich-sprint-running"
     done_sid = "rich-sprint-002"
     sprints = harness / "sprints"
@@ -73,6 +76,26 @@ def seed_harness(harness: Path) -> Path:
         {
             "sprint_id": sid,
             "title": "Build Codex-style dashboard observability",
+            "status": "active",
+            "phase": "planning_complete",
+            "epic_id": "visual-demo",
+        },
+    )
+    write_json(
+        sprints / f"{plan_review_sid}.status.json",
+        {
+            "sprint_id": plan_review_sid,
+            "title": "Review planner DAG before build",
+            "status": "active",
+            "phase": "planning_complete",
+            "epic_id": "visual-demo",
+        },
+    )
+    write_json(
+        sprints / f"{plan_reject_sid}.status.json",
+        {
+            "sprint_id": plan_reject_sid,
+            "title": "Reject planner DAG with guidance",
             "status": "active",
             "phase": "planning_complete",
             "epic_id": "visual-demo",
@@ -126,6 +149,32 @@ def seed_harness(harness: Path) -> Path:
             ],
         },
     )
+    write_json(
+        sprints / f"{plan_review_sid}.task_graph.json",
+        {
+            "sprint_id": plan_review_sid,
+            "nodes": [
+                node("spec", "Capture the supervised workflow request.", "passed", [], ["product"]),
+                node("prd", "Shape requirements before build work.", "passed", ["spec"], ["planning"]),
+                node("build", "Implement the reviewed dashboard backend slice.", "pending", ["prd"], ["frontend", "status-server"]),
+            ],
+        },
+    )
+    write_text(sprints / f"{plan_review_sid}.design.md", "# Design\n\nPlan review UI must stay backend-gated.\n")
+    write_text(sprints / f"{plan_review_sid}.plan.md", "# Plan\n\nApprove or reject this DAG before build.\n")
+    write_json(
+        sprints / f"{plan_reject_sid}.task_graph.json",
+        {
+            "sprint_id": plan_reject_sid,
+            "nodes": [
+                node("spec", "Capture the supervised workflow request.", "passed", [], ["product"]),
+                node("prd", "Shape requirements before build work.", "passed", ["spec"], ["planning"]),
+                node("build", "Implement the reviewed dashboard backend slice.", "pending", ["prd"], ["frontend", "status-server"]),
+            ],
+        },
+    )
+    write_text(sprints / f"{plan_reject_sid}.design.md", "# Design\n\nPlan rejection should keep the workflow honest.\n")
+    write_text(sprints / f"{plan_reject_sid}.plan.md", "# Plan\n\nThis DAG needs more operator guidance before build.\n")
     write_json(
         sprints / f"{running_sid}.closure.json",
         {
@@ -262,6 +311,40 @@ def seed_harness(harness: Path) -> Path:
         ("2026-06-16T11:03:00Z", "model_session_started", "Builder", {"model": "claude-sonnet", "node_id": "build", "summary": "Builder is replacing the card grid with a process stream and separate results rail."}),
     ]
     write_text(
+        sessions / plan_review_sid / "events.jsonl",
+        json.dumps(
+            {
+                "ts": "2026-06-16T10:10:00Z",
+                "sprint_id": plan_review_sid,
+                "type": "phase_transition",
+                "actor": "Planner",
+                "payload": {
+                    "phase": "planning_complete",
+                    "status": "active",
+                    "summary": "Planner produced a DAG that needs human review.",
+                },
+            }
+        )
+        + "\n",
+    )
+    write_text(
+        sessions / plan_reject_sid / "events.jsonl",
+        json.dumps(
+            {
+                "ts": "2026-06-16T10:12:00Z",
+                "sprint_id": plan_reject_sid,
+                "type": "phase_transition",
+                "actor": "Planner",
+                "payload": {
+                    "phase": "planning_complete",
+                    "status": "active",
+                    "summary": "Planner produced a DAG that needs rejection guidance.",
+                },
+            }
+        )
+        + "\n",
+    )
+    write_text(
         sessions / running_sid / "events.jsonl",
         "".join(json.dumps({"ts": ts, "sprint_id": running_sid, "type": typ, "actor": actor, "payload": payload}) + "\n" for ts, typ, actor, payload in running_events),
     )
@@ -297,6 +380,20 @@ from pathlib import Path
 root = Path(os.environ["HARNESS_DIR"])
 task = ""
 args = sys.argv[1:]
+if len(args) >= 4 and args[0] == "harness" and args[1] == "plan-verdict":
+    sid = args[2]
+    verdict = args[3]
+    status = "approved" if verdict == "approve" else "planning"
+    phase = "plan_reviewed" if verdict == "approve" else "planning"
+    sprints = root / "sprints"
+    current = {}
+    status_file = sprints / f"{sid}.status.json"
+    if status_file.exists():
+        current = json.loads(status_file.read_text(encoding="utf-8"))
+    current.update({"sprint_id": sid, "status": status, "phase": phase})
+    status_file.write_text(json.dumps(current), encoding="utf-8")
+    print(f"plan-verdict: {sid} -> {status}")
+    raise SystemExit(0)
 for idx, value in enumerate(args):
     if value == "--request" and idx + 1 < len(args):
         task = args[idx + 1]
@@ -470,12 +567,12 @@ def audit(page) -> dict:
 def measure_session_switch(page, link_name: str, title_fragment: str) -> dict:
     started = time.perf_counter()
     saw_skeleton = False
-    page.get_by_role("link", name=link_name).click()
+    page.get_by_test_id("session-list").get_by_role("link", name=re.compile(link_name)).click()
     deadline = time.perf_counter() + 6
     while time.perf_counter() < deadline:
         if page.locator(".loading-workbench,.loading-panel").count() > 0:
             saw_skeleton = True
-        titles = page.locator("[data-testid='process-header'] h1")
+        titles = page.locator("[data-testid='process-header'] h1, .topbar-title, .home-landing h1")
         if titles.count() > 0 and title_fragment in titles.first.inner_text(timeout=500):
             return {
                 "target": title_fragment,
@@ -503,11 +600,16 @@ def screenshot(page, output_dir: Path, name: str, selector: str | None = None) -
         page.screenshot(path=str(path), full_page=True)
 
 
+def screenshot_if_present(page, output_dir: Path, name: str, selector: str) -> None:
+    if page.locator(selector).count() > 0:
+        screenshot(page, output_dir, name, selector)
+
+
 def wait_for_hero_title(page, title_fragment: str) -> None:
     page.wait_for_function(
         """fragment => {
           const loading = document.querySelector(".loading-panel,.loading-workbench");
-          const heroes = Array.from(document.querySelectorAll("[data-testid='process-header'] h1, [data-testid='hero-status'] h1"));
+          const heroes = Array.from(document.querySelectorAll("[data-testid='process-header'] h1, [data-testid='hero-status'] h1, .topbar-title, .home-landing h1"));
           const hero = heroes.find((el) => {
             const rect = el.getBoundingClientRect();
             return rect.width > 0 && rect.height > 0 && el.textContent && el.textContent.includes(fragment);
@@ -562,7 +664,8 @@ def screenshot_empty_state(base: Path, screenshots: Path, width: int, height: in
             context = browser.new_context(viewport={"width": width, "height": height}, device_scale_factor=1)
             page = context.new_page()
             page.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
-            page.wait_for_selector("[data-testid='empty-state']", timeout=9000)
+            page.wait_for_selector("[data-testid='home-landing']", timeout=9000)
+            wait_for_text(page, "What do you want done?")
             screenshot(page, screenshots, "empty-state")
             context.close()
             browser.close()
@@ -591,49 +694,74 @@ def run(args: argparse.Namespace) -> int:
             context = browser.new_context(viewport={"width": args.width, "height": args.height}, device_scale_factor=1)
             page = context.new_page()
             page.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
-            page.wait_for_selector("[data-testid='process-stream']", timeout=10000)
-            page.wait_for_selector("[data-testid='results-rail']", timeout=10000)
-            page.get_by_role("link", name="Build Codex-style dashboard").click()
+            page.wait_for_selector("[data-testid='home-landing']", timeout=10000)
+            screenshot(page, screenshots, "home")
+            page.get_by_test_id("session-list").get_by_role("link", name=re.compile("Build Codex-style dashboard")).click()
             wait_for_hero_title(page, "Build Codex-style")
-            wait_for_text(page, "3/4 nodes")
+            page.wait_for_selector("[data-testid='process-stream']", timeout=10000)
+            page.wait_for_selector("[data-testid='results-rail']", state="attached", timeout=10000)
+            page.wait_for_selector("[data-testid='plan-flow']", timeout=10000)
+            wait_for_text(page, "4 steps")
             screenshot(page, screenshots, "blocked-full-page")
             sections = {
-                "process-header": "[data-testid='process-header']",
-                "agent-presence": "[data-testid='agent-presence']",
+                "topbar": ".topbar",
+                "plan-flow": "[data-testid='plan-flow']",
                 "process-stream": "[data-testid='process-stream']",
-                "results-rail": "[data-testid='results-rail']",
-                "deliverables": "[data-testid='deliverables-panel']",
-                "usage": "[data-testid='usage-panel']",
             }
             for name, selector in sections.items():
                 screenshot(page, screenshots, name, selector)
+            page.locator(".rail-toggle").click()
+            page.wait_for_selector("[data-testid='deliverables-panel']", timeout=5000)
+            screenshot(page, screenshots, "results-rail", "[data-testid='results-rail']")
+            screenshot(page, screenshots, "deliverables", "[data-testid='deliverables-panel']")
+            screenshot_if_present(page, screenshots, "usage", "[data-testid='usage-panel']")
             page.locator(".new-task-button").hover()
-            page.locator("[data-testid='process-step-blocked'] button").first.focus()
+            page.locator(".rail-toggle").focus()
             screenshot(page, screenshots, "hover-focus-microstates")
             screenshot(page, screenshots, "focused-process-stream", "[data-testid='process-stream']")
-            collapsed_step = page.locator("[data-testid='process-step-completed']:has(button[aria-expanded='false'])").first
-            collapsed_step.screenshot(path=str(screenshots / "completed-step-collapsed.png"))
-            collapsed_step.locator("button").click()
-            page.wait_for_timeout(350)
-            collapsed_step.screenshot(path=str(screenshots / "completed-step-expanded.png"))
             audit_before = audit(page)
+
+            plan_gate_switch = measure_session_switch(page, "Review planner DAG before build", "Review planner DAG")
+            wait_for_hero_title(page, "Review planner DAG")
+            page.wait_for_selector("[data-testid='plan-gate-controls']", timeout=10000)
+            screenshot(page, screenshots, "plan-review-gate")
+            page.get_by_test_id("plan-gate-controls").get_by_role("button", name="Approve").click()
+            page.wait_for_timeout(900)
+            screenshot(page, screenshots, "plan-approved")
+
+            plan_reject_switch = measure_session_switch(page, "Reject planner DAG with guidance", "Reject planner DAG")
+            wait_for_hero_title(page, "Reject planner DAG")
+            page.wait_for_selector("[data-testid='plan-gate-controls']", timeout=10000)
+            page.get_by_placeholder("Guidance for rejection").fill("Split the build node and constrain capabilities to the available workers.")
+            page.get_by_test_id("plan-gate-controls").get_by_role("button", name="Reject").click()
+            wait_for_text(page, "Plan rejected")
+            page.wait_for_function(
+                """() => {
+                  const gate = document.querySelector("[data-testid='plan-gate-controls']");
+                  return gate && !gate.textContent.includes("Rejecting");
+                }""",
+                timeout=5000,
+            )
+            screenshot(page, screenshots, "plan-rejected")
 
             first_switch = measure_session_switch(page, "Live build sprint with active", "Live build sprint")
             wait_for_hero_title(page, "Live build sprint")
-            wait_for_text(page, "3/5 nodes")
+            wait_for_text(page, "5 steps")
             screenshot(page, screenshots, "running-session")
 
             second_switch = measure_session_switch(page, "Completed report sprint", "Completed report sprint")
             wait_for_hero_title(page, "Completed report sprint")
-            wait_for_text(page, "2/2 nodes")
+            wait_for_text(page, "2 steps")
             screenshot(page, screenshots, "complete-session")
 
             repeat_switch = measure_session_switch(page, "Build Codex-style dashboard", "Build Codex-style")
             wait_for_hero_title(page, "Build Codex-style")
-            wait_for_text(page, "3/4 nodes")
+            wait_for_text(page, "4 steps")
             screenshot(page, screenshots, "revisited-session")
 
             audit_before["sessionSwitch"] = {
+                "plan_gate": plan_gate_switch,
+                "plan_reject": plan_reject_switch,
                 "first_uncached": first_switch,
                 "second_uncached": second_switch,
                 "repeat_cached": repeat_switch,
@@ -646,7 +774,7 @@ def run(args: argparse.Namespace) -> int:
             screenshot(page, screenshots, "settings")
 
             page.get_by_role("button", name="New task").first.click()
-            page.get_by_placeholder("Build, investigate, verify, or produce an artifact...").fill(args.task)
+            page.get_by_placeholder(re.compile("Build, investigate, verify, or produce an artifact")).fill(args.task)
             page.get_by_role("button", name="Start work").click()
             page.wait_for_selector("text=visual-intake-", timeout=8000)
             page.wait_for_timeout(800)
