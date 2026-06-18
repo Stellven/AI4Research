@@ -14,7 +14,11 @@ from __future__ import annotations
 import datetime
 import json
 import os
+import re
+import shutil
+import subprocess
 import time
+import urllib.parse
 from pathlib import Path
 from typing import Any, Generator
 
@@ -51,10 +55,12 @@ except ModuleNotFoundError:  # status-server.py uses the pure builders without F
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", str(Path.home() / ".solar" / "harness"))).expanduser()
 SCRIPT_HARNESS_DIR = Path(__file__).resolve().parents[2]
 SPRINTS_DIR = HARNESS_DIR / "sprints"
+SESSIONS_DIR = HARNESS_DIR / "sessions"
 STATE_DIR = HARNESS_DIR / "state"
 EVENTS_JSONL = HARNESS_DIR / "events.jsonl"
 
 SCHEMA_VERSION = "solar.orchestration.v1"
+SAFE_SPRINT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,180}$")
 
 orchestration_bp = Blueprint("orchestration", __name__, url_prefix="/orchestration")
 
@@ -232,6 +238,14 @@ def _display_path(path: Path) -> str:
         return str(path.relative_to(HARNESS_DIR))
     except ValueError:
         return str(path)
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def _normalize_status(status: str | None) -> str:
@@ -440,10 +454,29 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
         nid = str(node.get("id") or f"N{index + 1}")
         decision = by_node.get(nid, {})
         required = [c for c in (node.get("required_capabilities") or []) if isinstance(c, str)]
+        required_skills = [s for s in (node.get("required_skills") or []) if isinstance(s, str)]
         provided = decision.get("provided_capabilities") or []
         missing = [cap for cap in required if cap not in _provided_capability_names(provided)]
         target_pane = str(decision.get("target_pane") or "")
         actorhost = _actorhost_for_pane(target_pane, required) if target_pane else {}
+        physical_plan = node.get("physical_plan") if isinstance(node.get("physical_plan"), dict) else {}
+        physical_plan_ir = node.get("physical_plan_ir") if isinstance(node.get("physical_plan_ir"), dict) else {}
+        capsule_plan_ir = node.get("capsule_plan_ir") if isinstance(node.get("capsule_plan_ir"), dict) else {}
+        selected_operator = (
+            physical_plan.get("selected_operator_id")
+            or physical_plan_ir.get("selected_operator_id")
+            or node.get("selected_operator_id")
+            or ""
+        )
+        requested_role = (
+            decision.get("required_role")
+            or node.get("target_role")
+            or node.get("preferred_role")
+            or node.get("role")
+            or physical_plan_ir.get("role")
+            or capsule_plan_ir.get("role")
+            or ""
+        )
         cards.append({
             "id": nid,
             "goal": node.get("goal") or "",
@@ -452,7 +485,16 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
             "gate": node.get("gate") or "",
             "estimated_cost": node.get("estimated_cost") or 0,
             "required_capabilities": required,
+            "required_skills": required_skills,
             "missing_capabilities": missing,
+            "missing_skills": [s for s in (decision.get("missing_skills") or node.get("missing_skills") or []) if isinstance(s, str)],
+            "requested_role": requested_role,
+            "logical_operator": node.get("logical_operator") or physical_plan_ir.get("logical_operator") or "",
+            "preferred_model": node.get("preferred_model") or "",
+            "selected_operator_id": selected_operator,
+            "capability_capsule_id": physical_plan_ir.get("capability_capsule_id") or capsule_plan_ir.get("capability_capsule_id") or "",
+            "candidate_workers_seen": bool(decision.get("any_worker_seen") or decision.get("candidate_workers_seen")),
+            "role_candidates_seen": bool(decision.get("role_candidates_seen")),
             "target_pane": target_pane,
             "pane_carrier": {"pane_id": target_pane, "source": "autopilot_routing"} if target_pane else {},
             "actorhost": actorhost,
@@ -596,6 +638,971 @@ def _build_stall_summary(status: dict, node_cards: list[dict], diagnostics: list
         "detail": "No blocked gate or blocked DAG node is visible in the current status artifacts.",
         "reasons": [],
     }
+
+
+def _artifact_kind(path: Path) -> str:
+    name = path.name.lower()
+    suffix = path.suffix.lower()
+    if name.endswith(".status.json"):
+        return "status"
+    if "requirement_trace" in name:
+        return "requirement_trace"
+    if "coverage" in name:
+        return "coverage"
+    if "acceptance_verdict" in name:
+        return "acceptance_verdict"
+    if "contract" in name:
+        return "contract"
+    if ".prd" in name or name.endswith("prd.md"):
+        return "prd"
+    if "design" in name:
+        return "design"
+    if "task_graph" in name or "task_dag" in name or "closure" in name:
+        return "task_graph"
+    if "plan" in name and suffix in {".md", ".json"}:
+        return "plan"
+    if "handoff" in name:
+        return "handoff"
+    if "eval" in name or "verdict" in name:
+        return "eval"
+    if suffix == ".jsonl" or "event" in name:
+        return "event_log"
+    if suffix in {".html", ".htm", ".pdf"} or "report" in name:
+        return "report"
+    if "evidence" in name:
+        return "evidence"
+    return suffix.lstrip(".") or "file"
+
+
+def _artifact_stage(kind: str) -> str:
+    return {
+        "status": "runtime",
+        "event_log": "runtime",
+        "contract": "intake",
+        "prd": "prd",
+        "requirement_trace": "evaluation",
+        "coverage": "evaluation",
+        "acceptance_verdict": "evaluation",
+        "design": "planning",
+        "plan": "planning",
+        "task_graph": "planning",
+        "handoff": "build",
+        "eval": "evaluation",
+        "evidence": "evaluation",
+        "report": "deliverable",
+    }.get(kind, "artifact")
+
+
+def _artifact_view_url(sid: str, rel_path: str, suffix: str) -> str:
+    if suffix.lower() not in {".html", ".htm", ".md", ".markdown", ".json", ".txt", ".log", ".pdf", ".png", ".jpg", ".jpeg"}:
+        return ""
+    return f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(rel_path)}"
+
+
+def _projection_artifacts(sid: str) -> list[dict]:
+    if not sid:
+        return []
+    candidates: list[Path] = []
+    exact_names = [
+        f"{sid}.status.json",
+        f"{sid}.contract.md",
+        f"{sid}.prd.md",
+        f"{sid}.design.md",
+        f"{sid}.plan.md",
+        f"{sid}.task_graph.json",
+        f"{sid}.task_graph.state.json",
+        f"{sid}.task_dag.json",
+        f"{sid}.handoff.md",
+        f"{sid}.eval.md",
+        f"{sid}.events.jsonl",
+        f"{sid}.requirement_trace.json",
+        f"{sid}.coverage_report.json",
+        f"{sid}.acceptance_verdict.json",
+    ]
+    candidates.extend(SPRINTS_DIR / name for name in exact_names)
+    for pattern in (
+        f"{sid}*.md",
+        f"{sid}*.json",
+        f"{sid}*.jsonl",
+        f"{sid}*.html",
+        f"{sid}*.htm",
+        f"{sid}*.pdf",
+    ):
+        try:
+            candidates.extend(sorted(SPRINTS_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True))
+        except OSError:
+            continue
+    for root in (SPRINTS_DIR / sid, SPRINTS_DIR / sid / ".research", SPRINTS_DIR / f"{sid}.research"):
+        if not root.exists() or not root.is_dir():
+            continue
+        try:
+            candidates.extend(p for p in root.rglob("*") if p.is_file())
+        except OSError:
+            continue
+
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for path in candidates:
+        try:
+            if not path.exists() or not path.is_file():
+                continue
+            resolved = path.resolve()
+            if not _is_within(resolved, SPRINTS_DIR):
+                continue
+            rel_path = _display_path(resolved)
+            if rel_path in seen:
+                continue
+            seen.add(rel_path)
+            stat = resolved.stat()
+            kind = _artifact_kind(resolved)
+            rows.append({
+                "name": resolved.name,
+                "kind": kind,
+                "stage": _artifact_stage(kind),
+                "rel_path": rel_path,
+                "size": stat.st_size,
+                "mtime": stat.st_mtime,
+                "reviewable": kind in {"prd", "design", "plan", "task_graph", "handoff", "eval", "report", "evidence", "coverage", "acceptance_verdict", "requirement_trace"},
+                "view_url": _artifact_view_url(sid, rel_path, resolved.suffix),
+            })
+        except OSError:
+            continue
+    rows.sort(key=lambda item: (str(item.get("stage") or ""), -float(item.get("mtime") or 0), str(item.get("name") or "")))
+    return rows
+
+
+def _first_artifact(artifacts: list[dict], *kinds: str) -> dict:
+    wanted = set(kinds)
+    return next((item for item in artifacts if item.get("kind") in wanted), {})
+
+
+def _artifact_ref(item: dict | None) -> dict:
+    if not isinstance(item, dict) or not item:
+        return {}
+    return {
+        "name": item.get("name") or "",
+        "kind": item.get("kind") or "",
+        "stage": item.get("stage") or "",
+        "rel_path": item.get("rel_path") or "",
+        "view_url": item.get("view_url") or "",
+        "reviewable": bool(item.get("reviewable")),
+    }
+
+
+def _artifact_refs(artifacts: list[dict], *kinds: str) -> list[dict]:
+    wanted = set(kinds)
+    return [_artifact_ref(item) for item in artifacts if item.get("kind") in wanted]
+
+
+def _artifact_rel_paths(artifacts: list[dict], *kinds: str) -> list[str]:
+    return [str(item.get("rel_path") or item.get("name") or "") for item in _artifact_refs(artifacts, *kinds) if item]
+
+
+def _artifact_by_name_part(artifacts: list[dict], *needles: str) -> dict:
+    lowered = [needle.lower() for needle in needles if needle]
+    for item in artifacts:
+        hay = f"{item.get('name') or ''} {item.get('rel_path') or ''}".lower()
+        if all(needle in hay for needle in lowered):
+            return item
+    return {}
+
+
+def _artifact_abs_path(item: dict) -> Path | None:
+    rel = str(item.get("rel_path") or "").strip()
+    if not rel:
+        return None
+    path = (HARNESS_DIR / rel).resolve()
+    if _is_within(path, SPRINTS_DIR):
+        return path
+    return None
+
+
+def _read_artifact_json(item: dict) -> dict:
+    path = _artifact_abs_path(item)
+    if not path:
+        return {}
+    data, ok = _read_json(path)
+    return data if ok and isinstance(data, dict) else {}
+
+
+def _projection_requirements(sid: str, artifacts: list[dict]) -> dict:
+    prd = _first_artifact(artifacts, "prd")
+    contract = _first_artifact(artifacts, "contract")
+    trace = _first_artifact(artifacts, "requirement_trace") or _artifact_by_name_part(artifacts, "requirement", "trace")
+    coverage = _first_artifact(artifacts, "coverage") or _artifact_by_name_part(artifacts, "coverage")
+    acceptance = _first_artifact(artifacts, "acceptance_verdict") or _artifact_by_name_part(artifacts, "acceptance", "verdict")
+    coverage_json = _read_artifact_json(coverage)
+    acceptance_json = _read_artifact_json(acceptance)
+    return {
+        "sprint_id": sid,
+        "present": bool(prd or contract or trace or coverage or acceptance),
+        "prd": _artifact_ref(prd),
+        "contract": _artifact_ref(contract),
+        "requirement_trace": _artifact_ref(trace),
+        "coverage_report": _artifact_ref(coverage),
+        "acceptance_verdict": _artifact_ref(acceptance),
+        "coverage_summary": coverage_json.get("summary") or coverage_json.get("coverage_summary") or {},
+        "verdict": acceptance_json.get("verdict") or "",
+        "verdict_reasons": acceptance_json.get("reasons") or [],
+    }
+
+
+def _projection_plan(dashboard: dict, artifacts: list[dict]) -> dict:
+    design = _first_artifact(artifacts, "design")
+    plan = _first_artifact(artifacts, "plan")
+    graph = _first_artifact(artifacts, "task_graph")
+    present = bool(design or plan or graph)
+    complete = bool(design and plan and graph)
+    return {
+        "present": present,
+        "complete": complete,
+        "status": "complete" if complete else "partial" if present else "waiting",
+        "design": _artifact_ref(design),
+        "plan": _artifact_ref(plan),
+        "task_graph": _artifact_ref(graph),
+        "graph_source": (dashboard.get("generated_from") or {}).get("task_graph_json") or "",
+    }
+
+
+def _projection_task_graph(dashboard: dict) -> dict:
+    dag = dashboard.get("dag") if isinstance(dashboard.get("dag"), dict) else {}
+    nodes = dag.get("nodes") if isinstance(dag.get("nodes"), list) else []
+    edges = dag.get("edges") if isinstance(dag.get("edges"), list) else []
+    return {
+        "present": bool(nodes or edges or dag.get("required_gates")),
+        "required_gates": dag.get("required_gates") or [],
+        "nodes": nodes,
+        "edges": edges,
+        "source": (dashboard.get("generated_from") or {}).get("task_graph_json") or "",
+    }
+
+
+def _latest_verdict_from_events(kind: str, events: list[dict], status: dict) -> dict | None:
+    event_tokens = ("plan_verdict",) if kind == "plan_review" else ("eval_passed", "eval_failed", "eval_verdict")
+    for event in reversed(events):
+        if not isinstance(event, dict):
+            continue
+        event_name = str(event.get("event") or event.get("type") or "").lower()
+        if not any(token in event_name for token in event_tokens):
+            continue
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else event
+        return {
+            "verdict": payload.get("verdict") or "",
+            "reason": payload.get("reason") or "",
+            "ts": event.get("ts") or event.get("timestamp") or "",
+            "source": "event",
+        }
+    history = status.get("history") if isinstance(status.get("history"), list) else []
+    for item in reversed(history):
+        if not isinstance(item, dict):
+            continue
+        event_name = str(item.get("event") or item.get("phase") or "").lower()
+        if kind == "plan_review" and "plan_reviewed" not in event_name:
+            continue
+        if kind == "eval_review" and "eval" not in event_name:
+            continue
+        return {
+            "verdict": item.get("verdict") or "",
+            "reason": item.get("reason") or "",
+            "ts": item.get("ts") or item.get("timestamp") or "",
+            "source": "status_history",
+        }
+    return None
+
+
+def _plan_gate(status: dict, dashboard: dict, artifacts: list[dict], events: list[dict]) -> dict:
+    sprint_status = str(status.get("status") or dashboard.get("sprint_status") or "").lower()
+    phase = str(status.get("phase") or dashboard.get("phase") or "").lower()
+    plan_artifacts = _artifact_rel_paths(artifacts, "design", "plan", "task_graph")
+    has_plan = bool(_first_artifact(artifacts, "plan"))
+    has_design = bool(_first_artifact(artifacts, "design"))
+    has_graph = bool(_first_artifact(artifacts, "task_graph"))
+    resolved_statuses = {"approved", "dispatched", "reviewing", "ready_for_review", "passed", "done", "completed", "failed_review"}
+    resolved_phases = {"plan_reviewed", "building", "build_complete", "implementation_complete", "evaluating", "eval_completed", "eval_passed", "eval_failed"}
+    if sprint_status in resolved_statuses or phase in resolved_phases:
+        gate_status = "resolved"
+    elif has_plan and has_design and has_graph and (phase in {"planning_complete", "planning"} or sprint_status in {"active", "planning"}):
+        gate_status = "available"
+    elif has_plan or has_design or has_graph:
+        gate_status = "waiting"
+    else:
+        gate_status = "waiting"
+    return {
+        "kind": "plan_review",
+        "status": gate_status,
+        "allowed_actions": ["approve", "reject"] if gate_status == "available" else [],
+        "source_artifacts": plan_artifacts,
+        "last_verdict": _latest_verdict_from_events("plan_review", events, status),
+        "reason": "",
+        "missing_artifacts": [
+            name for name, present in (("design", has_design), ("plan", has_plan), ("task_graph", has_graph)) if not present
+        ],
+    }
+
+
+def _eval_gate(status: dict, dashboard: dict, artifacts: list[dict], events: list[dict]) -> dict:
+    sprint_status = str(status.get("status") or dashboard.get("sprint_status") or "").lower()
+    phase = str(status.get("phase") or dashboard.get("phase") or "").lower()
+    source_artifacts = _artifact_rel_paths(artifacts, "handoff", "eval", "coverage", "acceptance_verdict", "requirement_trace")
+    has_eval = bool(_first_artifact(artifacts, "eval"))
+    has_handoff = bool(_first_artifact(artifacts, "handoff"))
+    resolved_statuses = {"passed", "done", "completed", "failed_review", "failed", "cancelled"}
+    resolved_phases = {"eval_completed", "eval_passed", "eval_failed"}
+    if sprint_status in resolved_statuses or phase in resolved_phases:
+        gate_status = "resolved"
+    elif sprint_status in {"reviewing", "ready_for_review"} or phase in {"build_complete", "implementation_complete", "evaluating"}:
+        gate_status = "available"
+    elif has_eval or has_handoff:
+        gate_status = "available"
+    else:
+        gate_status = "waiting"
+    return {
+        "kind": "eval_review",
+        "status": gate_status,
+        "allowed_actions": ["pass", "fail"] if gate_status == "available" else [],
+        "source_artifacts": source_artifacts,
+        "last_verdict": _latest_verdict_from_events("eval_review", events, status),
+        "reason": "",
+        "missing_artifacts": [name for name, present in (("handoff", has_handoff), ("eval", has_eval)) if not present],
+    }
+
+
+def _projection_human_gates(status: dict, dashboard: dict, artifacts: list[dict], events: list[dict]) -> list[dict]:
+    return [
+        _plan_gate(status, dashboard, artifacts, events),
+        _eval_gate(status, dashboard, artifacts, events),
+    ]
+
+
+def _projection_evaluation(status: dict, artifacts: list[dict]) -> dict:
+    eval_artifact = _first_artifact(artifacts, "eval")
+    handoff = _first_artifact(artifacts, "handoff")
+    coverage = _first_artifact(artifacts, "coverage") or _artifact_by_name_part(artifacts, "coverage")
+    acceptance = _first_artifact(artifacts, "acceptance_verdict") or _artifact_by_name_part(artifacts, "acceptance", "verdict")
+    coverage_json = _read_artifact_json(coverage)
+    acceptance_json = _read_artifact_json(acceptance)
+    return {
+        "status": status.get("status") or "",
+        "phase": status.get("phase") or "",
+        "handoff": _artifact_ref(handoff),
+        "eval": _artifact_ref(eval_artifact),
+        "coverage_report": _artifact_ref(coverage),
+        "acceptance_verdict": _artifact_ref(acceptance),
+        "verdict": acceptance_json.get("verdict") or "",
+        "requested_verdict": acceptance_json.get("requested_verdict") or "",
+        "reasons": acceptance_json.get("reasons") or [],
+        "coverage_summary": coverage_json.get("summary") or coverage_json.get("coverage_summary") or {},
+    }
+
+
+def _terminal_sprint_status(status: str) -> bool:
+    return status.strip().lower() in {"passed", "done", "completed", "failed", "cancelled", "eval_pass"}
+
+
+def _descendant_node_ids(node_id: str, nodes: list[dict]) -> list[str]:
+    children: dict[str, list[str]] = {}
+    status_by_id: dict[str, str] = {}
+    for node in nodes:
+        nid = str(node.get("id") or node.get("node_id") or "")
+        if not nid:
+            continue
+        status_by_id[nid] = str(node.get("status") or "")
+        for dep in node.get("depends_on") or []:
+            if isinstance(dep, str):
+                children.setdefault(dep, []).append(nid)
+    out: list[str] = []
+    stack = list(children.get(node_id, []))
+    while stack:
+        child = stack.pop(0)
+        if child in out:
+            continue
+        if _normalize_status(status_by_id.get(child)) not in {"passed", "completed"}:
+            out.append(child)
+        stack.extend(children.get(child, []))
+    return out
+
+
+def _capability_mismatch_projection(dashboard: dict) -> dict:
+    data_nodes = (dashboard.get("dag") or {}).get("nodes") or []
+    nodes = [node for node in data_nodes if isinstance(node, dict)]
+    supply_rows = ((dashboard.get("capabilities") or {}).get("pane_supply") or [])
+    available = sorted({
+        cap.removeprefix("inferred:")
+        for row in supply_rows
+        if isinstance(row, dict)
+        for cap in (row.get("provided_capabilities") or [])
+        if isinstance(cap, str)
+    })
+    mismatches: list[dict] = []
+    for node in nodes:
+        nid = str(node.get("id") or node.get("node_id") or "")
+        required = [cap for cap in (node.get("required_capabilities") or []) if isinstance(cap, str)]
+        required_skills = [skill for skill in (node.get("required_skills") or []) if isinstance(skill, str)]
+        missing = [cap for cap in (node.get("missing_capabilities") or []) if isinstance(cap, str)]
+        missing_skills = [skill for skill in (node.get("missing_skills") or []) if isinstance(skill, str)]
+        route_decision = str(node.get("route_decision") or node.get("decision") or "")
+        blocked_reason = str(node.get("blocked_reason") or "")
+        normalized_status = _normalize_status(str(node.get("status") or ""))
+        no_match = "no_matching_worker" in f"{route_decision} {blocked_reason}"
+        status_blocked = normalized_status in {"blocked", "failed", "gate_blocked", "worker_blocked"}
+        if not no_match and not status_blocked:
+            continue
+        if no_match and required and not missing:
+            missing = [cap for cap in required if cap not in available]
+        if not missing and not no_match:
+            continue
+        mismatches.append({
+            "node_id": nid,
+            "goal": node.get("goal") or node.get("title") or "",
+            "requested_role": node.get("requested_role") or "",
+            "required_skills": required_skills,
+            "required_capabilities": required,
+            "missing_skills": missing_skills,
+            "missing_capabilities": missing or required,
+            "logical_operator": node.get("logical_operator") or "",
+            "preferred_model": node.get("preferred_model") or "",
+            "selected_operator_id": node.get("selected_operator_id") or "",
+            "capability_capsule_id": node.get("capability_capsule_id") or "",
+            "candidate_workers_seen": bool(node.get("candidate_workers_seen")),
+            "role_candidates_seen": bool(node.get("role_candidates_seen")),
+            "route_decision": route_decision,
+            "blocked_reason": blocked_reason,
+            "waiting_nodes": _descendant_node_ids(nid, nodes),
+        })
+    if not mismatches:
+        return {
+            "present": False,
+            "blocked_nodes": [],
+            "available_capabilities": available,
+        }
+    primary = mismatches[0]
+    return {
+        "present": True,
+        "blocked_node": primary.get("node_id", ""),
+        "missing_capability": (primary.get("missing_capabilities") or [""])[0],
+        "blocked_nodes": mismatches,
+        "available_capabilities": available,
+    }
+
+
+def _human_action_required(status: dict, dashboard: dict, artifacts: list[dict], capability_mismatch: dict) -> dict:
+    sprint_status = str(status.get("status") or dashboard.get("sprint_status") or "").lower()
+    phase = str(status.get("phase") or dashboard.get("phase") or "").lower()
+    stall = dashboard.get("stall") or {}
+    plan_ready = bool(_first_artifact(artifacts, "design") and _first_artifact(artifacts, "plan") and _first_artifact(artifacts, "task_graph"))
+    if capability_mismatch.get("present") and stall.get("is_stalled"):
+        missing = capability_mismatch.get("missing_capability") or "required capability"
+        return {
+            "type": "capability_mismatch",
+            "severity": "blocked",
+            "title": "Capability mismatch",
+            "detail": f"No worker advertises {missing}.",
+            "primary_artifact": _first_artifact(artifacts, "task_graph"),
+        }
+    if plan_ready and (sprint_status in {"active", "planning"} or phase in {"planning", "planning_complete"}):
+        return {
+            "type": "plan_review",
+            "severity": "decision",
+            "title": "Review the plan",
+            "detail": "Approve the planner output or request changes before build work continues.",
+            "primary_artifact": _first_artifact(artifacts, "plan", "design", "task_graph"),
+        }
+    if sprint_status in {"reviewing", "ready_for_review"}:
+        return {
+            "type": "eval_review",
+            "severity": "decision",
+            "title": "Review evaluator output",
+            "detail": "Accept the result or send fixes back to Builder.",
+            "primary_artifact": _first_artifact(artifacts, "eval", "handoff"),
+        }
+    if sprint_status == "approved" and _first_artifact(artifacts, "handoff"):
+        return {
+            "type": "handoff_submit",
+            "severity": "decision",
+            "title": "Submit handoff for review",
+            "detail": "A Builder handoff exists and can move to evaluator review.",
+            "primary_artifact": _first_artifact(artifacts, "handoff"),
+        }
+    if sprint_status == "failed_review":
+        return {
+            "type": "builder_fixes",
+            "severity": "decision",
+            "title": "Builder fixes required",
+            "detail": "Evaluator rejected the handoff; route the sprint back to Builder with the eval notes.",
+            "primary_artifact": _first_artifact(artifacts, "eval"),
+        }
+    if stall.get("is_stalled"):
+        return {
+            "type": "stall_review",
+            "severity": "blocked",
+            "title": stall.get("title") or "Sprint stalled",
+            "detail": stall.get("detail") or "The harness needs operator review before it can advance.",
+            "primary_artifact": _first_artifact(artifacts, "status", "task_graph"),
+        }
+    if _terminal_sprint_status(sprint_status):
+        return {
+            "type": "none",
+            "severity": "ok",
+            "title": "No decision required",
+            "detail": "The sprint is in a terminal state.",
+            "primary_artifact": _first_artifact(artifacts, "handoff", "eval", "report"),
+        }
+    return {
+        "type": "monitor",
+        "severity": "info",
+        "title": "Monitor progress",
+        "detail": "No human gate is currently visible from status artifacts.",
+        "primary_artifact": _first_artifact(artifacts, "status", "task_graph"),
+    }
+
+
+def _action(
+    action_id: str,
+    label: str,
+    *,
+    availability: str,
+    safe: bool,
+    enabled: bool,
+    effect: str,
+    endpoint: str = "",
+    method: str = "",
+    cli_command: str = "",
+    reason: str = "",
+) -> dict:
+    return {
+        "id": action_id,
+        "label": label,
+        "availability": availability,
+        "safe": safe,
+        "enabled": enabled,
+        "endpoint": endpoint,
+        "method": method,
+        "cli_command": cli_command,
+        "effect": effect,
+        "reason": reason,
+    }
+
+
+def _unsupported_actions(capability_mismatch: dict) -> list[dict]:
+    retry_reason = (
+        "Retrying the same dispatch would repeat the same worker match; it does not re-plan or repair the missing capability."
+        if capability_mismatch.get("present")
+        else "Dispatch retry needs a verified state transition before it can be exposed safely."
+    )
+    return [
+        _action(
+            "cancel",
+            "Cancel sprint",
+            availability="unsupported_deferred",
+            safe=False,
+            enabled=False,
+            effect="Would stop or mark a sprint cancelled.",
+            reason="No safe status-server endpoint or process/state cancellation contract has been verified.",
+        ),
+        _action(
+            "retry_dispatch",
+            "Retry dispatch",
+            availability="unsafe_or_needs_engine_work",
+            safe=False,
+            enabled=False,
+            effect="Would re-attempt worker matching for a blocked node.",
+            reason=retry_reason,
+        ),
+        _action(
+            "retry_node",
+            "Retry node",
+            availability="unsupported_deferred",
+            safe=False,
+            enabled=False,
+            effect="Would re-run a failed node.",
+            reason="Node retry semantics and evaluator/gate side effects are not verified safe.",
+        ),
+        _action(
+            "skip_node",
+            "Skip node",
+            availability="unsafe_or_needs_engine_work",
+            safe=False,
+            enabled=False,
+            effect="Would mark a node skipped.",
+            reason="Skipping can break downstream DAG dependencies unless the engine proves it is safe.",
+        ),
+        _action(
+            "mid_run_steering",
+            "Send live guidance",
+            availability="unsupported_deferred",
+            safe=False,
+            enabled=False,
+            effect="Would steer a running agent.",
+            reason="Raw Solar has no live mid-run steering channel.",
+        ),
+        _action(
+            "capability_repair",
+            "Repair capability mismatch",
+            availability="unsafe_or_needs_engine_work",
+            safe=False,
+            enabled=False,
+            effect="Would change planner/scheduler capability behavior.",
+            reason="Capability repair crosses into engine behavior and needs owner approval.",
+        ),
+        _action(
+            "wake",
+            "Wake sprint",
+            availability="unsupported_deferred",
+            safe=False,
+            enabled=False,
+            effect="Would route the sprint through the wake state machine.",
+            cli_command="solar harness wake <sprint-id>",
+            reason="The raw command exists, but no safe dashboard endpoint is part of this backend sprint.",
+        ),
+    ]
+
+
+def _available_actions(status: dict, human_action: dict, capability_mismatch: dict, sid: str = "") -> list[dict]:
+    sprint_status = str(status.get("status") or "").lower()
+    terminal = _terminal_sprint_status(sprint_status)
+    actions: list[dict] = [
+        _action(
+            "view_artifacts",
+            "View artifacts",
+            availability="supported_now",
+            safe=True,
+            enabled=True,
+            effect="Read-only artifact review.",
+        )
+    ]
+    if human_action.get("type") == "plan_review":
+        for verdict in ("approve", "reject"):
+            actions.append(_action(
+                f"plan_{verdict}",
+                f"{verdict.title()} plan",
+                availability="supported_now",
+                safe=True,
+                enabled=True,
+                method="POST",
+                endpoint=f"/api/sprints/{urllib.parse.quote(sid)}/plan-verdict" if sid else "/api/sprints/<sid>/plan-verdict",
+                cli_command=f"solar harness plan-verdict <sprint-id> {verdict} <reason>",
+                effect="Applies the existing atomic plan verdict state transition.",
+            ))
+    if human_action.get("type") == "handoff_submit":
+        actions.append(_action(
+            "handoff_submit",
+            "Submit handoff",
+            availability="supported_now",
+            safe=True,
+            enabled=True,
+            method="POST",
+            endpoint=f"/api/sprints/{urllib.parse.quote(sid)}/handoff-submit" if sid else "/api/sprints/<sid>/handoff-submit",
+            cli_command="solar harness handoff-submit <sprint-id>",
+            effect="Moves the sprint to evaluator review through the existing atomic command.",
+        ))
+    if human_action.get("type") == "eval_review":
+        for verdict in ("pass", "fail"):
+            actions.append(_action(
+                f"eval_{verdict}",
+                f"Eval {verdict}",
+                availability="supported_now",
+                safe=True,
+                enabled=True,
+                method="POST",
+                endpoint=f"/api/sprints/{urllib.parse.quote(sid)}/eval-verdict" if sid else "/api/sprints/<sid>/eval-verdict",
+                cli_command=f"solar harness eval-verdict <sprint-id> {verdict} <reason>",
+                effect="Applies the existing atomic eval verdict state transition.",
+            ))
+    actions.append(_action(
+        "edit_rerun",
+        "Edit guidance and re-run",
+        availability="supported_now",
+        safe=True,
+        enabled=not terminal,
+        method="POST",
+        endpoint="/intake",
+        effect="Starts a new intake with revised guidance; does not steer the running agent.",
+        reason="Disabled for terminal sprints." if terminal else "",
+    ))
+    actions.extend(_unsupported_actions(capability_mismatch))
+    return actions
+
+
+def _runtime_health_projection(dashboard: dict) -> list[dict]:
+    rows: list[dict] = []
+    for row in ((dashboard.get("capabilities") or {}).get("pane_supply") or []):
+        if not isinstance(row, dict):
+            continue
+        state = str(row.get("state") or "").lower()
+        if any(token in state for token in ("auth", "quota", "permission", "survey", "blocked", "error")):
+            readiness = "blocked"
+        elif any(token in state for token in ("running", "active", "dispatched", "busy", "in_progress")):
+            readiness = "busy"
+        elif any(token in state for token in ("idle", "ready", "waiting")):
+            readiness = "ready"
+        else:
+            readiness = "unknown"
+        rows.append({
+            "pane_id": row.get("pane_id") or "",
+            "role": row.get("role") or "",
+            "state": row.get("state") or "",
+            "model": row.get("model") or "",
+            "readiness": readiness,
+            "actor_id": row.get("actor_id") or "",
+            "host_type": row.get("host_type") or "",
+            "lease_state": row.get("lease_state") or "",
+        })
+    return rows
+
+
+def _load_physical_operator_rows() -> list[dict]:
+    data, ok = _read_json(HARNESS_DIR / "config" / "physical-operators.json")
+    operators = data.get("operators", {}) if ok and isinstance(data, dict) else {}
+    if not isinstance(operators, dict):
+        return []
+    rows: list[dict] = []
+    for operator_id, cfg in operators.items():
+        if not isinstance(cfg, dict):
+            continue
+        state_cfg = cfg.get("state") if isinstance(cfg.get("state"), dict) else {}
+        auth_cfg = cfg.get("auth") if isinstance(cfg.get("auth"), dict) else {}
+        quota_cfg = cfg.get("quota") if isinstance(cfg.get("quota"), dict) else {}
+        surface_cfg = cfg.get("surface") if isinstance(cfg.get("surface"), dict) else {}
+        model_binding = cfg.get("model_binding") if isinstance(cfg.get("model_binding"), dict) else {}
+        runtime_state = str(
+            cfg.get("runtime_state")
+            or state_cfg.get("runtime_state")
+            or ("disabled" if cfg.get("enabled") is False else "")
+            or "idle"
+        )
+        quota_state = str(cfg.get("quota_guard_state") or quota_cfg.get("state") or "ok")
+        auth_mode = str(cfg.get("auth_mode") or auth_cfg.get("mode") or "")
+        key_ref = str(cfg.get("key_ref") or auth_cfg.get("secret_ref") or auth_cfg.get("key_env") or "")
+        if runtime_state == "auth_expired" or quota_state == "auth_expired":
+            auth_state = "auth_expired"
+        elif auth_mode in {"api_key", "oauth", "subscription", "subscription_cli"} and not key_ref:
+            auth_state = "key_ref_missing"
+        elif auth_mode:
+            auth_state = "configured"
+        else:
+            auth_state = "unknown"
+        rows.append({
+            "operator_id": str(operator_id),
+            "display_name": str(cfg.get("display_name") or operator_id),
+            "role": str(cfg.get("role") or cfg.get("persona") or ""),
+            "roles": cfg.get("roles") if isinstance(cfg.get("roles"), list) else [],
+            "backend": str(cfg.get("backend") or surface_cfg.get("tool") or ""),
+            "model": str(cfg.get("model") or model_binding.get("model_id") or ""),
+            "enabled": cfg.get("enabled") is not False,
+            "available": cfg.get("available") is not False,
+            "runtime_state": runtime_state,
+            "quota_state": quota_state,
+            "auth_mode": auth_mode,
+            "auth_state": auth_state,
+            "pane": str(cfg.get("pane") or ""),
+            "capabilities": sorted(str(k) for k, v in (cfg.get("capability") or cfg.get("capability_profile") or {}).items() if isinstance(v, (int, float)) and v),
+        })
+    rows.sort(key=lambda item: (str(item.get("role") or ""), str(item.get("operator_id") or "")))
+    return rows
+
+
+def _operator_readiness_projection(dashboard: dict) -> list[dict]:
+    pane_rows = _runtime_health_projection(dashboard)
+    by_actor = {str(row.get("actor_id") or ""): row for row in pane_rows if str(row.get("actor_id") or "")}
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for op in _load_physical_operator_rows():
+        actor_row = by_actor.get(str(op.get("operator_id") or "")) or {}
+        runtime_state = str(actor_row.get("state") or op.get("runtime_state") or "unknown")
+        if op.get("auth_state") == "auth_expired" or runtime_state == "auth_expired":
+            readiness = "auth_blocked"
+        elif str(op.get("quota_state") or "") in {"cooldown", "quota_exhausted"} or runtime_state in {"cooldown", "quota_exhausted"}:
+            readiness = "quota_blocked"
+        elif runtime_state in {"leased", "running", "draining"} or actor_row.get("readiness") == "busy":
+            readiness = "busy"
+        elif op.get("enabled") and op.get("available") and runtime_state in {"idle", "ready", "waiting", "unknown"}:
+            readiness = "ready"
+        elif not op.get("enabled") or runtime_state == "disabled":
+            readiness = "disabled"
+        else:
+            readiness = "unknown"
+        row = {
+            **op,
+            "pane_id": actor_row.get("pane_id") or op.get("pane") or "",
+            "operator_runtime_state": runtime_state,
+            "readiness": readiness,
+        }
+        rows.append(row)
+        seen.add(str(op.get("operator_id") or ""))
+    for pane in pane_rows:
+        actor_id = str(pane.get("actor_id") or "")
+        if actor_id and actor_id in seen:
+            continue
+        rows.append({
+            "operator_id": actor_id or str(pane.get("pane_id") or ""),
+            "display_name": actor_id or str(pane.get("pane_id") or ""),
+            "role": pane.get("role") or "",
+            "roles": [pane.get("role")] if pane.get("role") else [],
+            "backend": "pane",
+            "model": pane.get("model") or "",
+            "enabled": True,
+            "available": pane.get("readiness") != "blocked",
+            "runtime_state": pane.get("state") or "",
+            "operator_runtime_state": pane.get("state") or "",
+            "quota_state": "unknown",
+            "auth_mode": "",
+            "auth_state": "unknown",
+            "pane_id": pane.get("pane_id") or "",
+            "readiness": pane.get("readiness") or "unknown",
+            "capabilities": [],
+        })
+    return rows
+
+
+def _projection_events(sid: str, limit: int = 80) -> list[dict]:
+    paths = [
+        SESSIONS_DIR / sid / "events.jsonl",
+        SPRINTS_DIR / f"{sid}.events.jsonl",
+        EVENTS_JSONL,
+        HARNESS_DIR / "events" / "all.jsonl",
+    ]
+    for path in paths:
+        if not path.exists():
+            continue
+        events: list[dict] = []
+        try:
+            for line in path.read_text(encoding="utf-8", errors="ignore").splitlines()[-500:]:
+                try:
+                    ev = json.loads(line)
+                except Exception:
+                    continue
+                if isinstance(ev, dict) and (path.name != "all.jsonl" and path != EVENTS_JSONL or ev.get("sprint_id") == sid):
+                    events.append(ev)
+        except OSError:
+            continue
+        if events:
+            return events[-limit:]
+    return []
+
+
+def _timeline_title(event_type: str, actor: str, payload: dict) -> str:
+    decision = str(payload.get("decision") or "")
+    node = str(payload.get("node_id") or payload.get("node") or "")
+    if "intake" in event_type:
+        return "Task intake recorded"
+    if "plan_verdict" in event_type:
+        return "Plan verdict recorded"
+    if "eval_pass" in event_type or "eval_failed" in event_type:
+        return "Evaluator verdict recorded"
+    if "handoff" in event_type:
+        return "Builder handoff recorded"
+    if "dispatch" in event_type and "no_matching" in decision:
+        return f"Dispatch blocked{f' for {node}' if node else ''}"
+    if "dispatch" in event_type:
+        return f"{actor} dispatch decision"
+    if "model_session_started" in event_type:
+        return f"{actor} started work"
+    if "model_session_ended" in event_type:
+        return f"{actor} finished work"
+    return event_type.replace("_", " ").title()
+
+
+def _timeline_from_events(events: list[dict], dashboard: dict, generated_at: str) -> list[dict]:
+    rows: list[dict] = []
+    for index, event in enumerate(events):
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else event
+        event_type = str(event.get("type") or event.get("event") or "event")
+        actor = str(event.get("actor") or event.get("role") or payload.get("actor") or "Harness")
+        decision = str(payload.get("decision") or event.get("decision") or "")
+        reason = str(payload.get("reason") or payload.get("blocked_reason") or event.get("reason") or "")
+        tone = "blocked" if "blocked" in event_type or "no_matching" in f"{decision} {reason}" else "complete"
+        rows.append({
+            "id": f"event-{index}",
+            "source": "event",
+            "ts": event.get("ts") or event.get("timestamp") or event.get("time") or "",
+            "actor": actor,
+            "title": _timeline_title(event_type, actor, payload),
+            "summary": reason or str(payload.get("message") or event.get("message") or decision or ""),
+            "tone": tone,
+            "event_type": event_type,
+        })
+    if rows:
+        return rows
+    for index, node in enumerate((dashboard.get("dag") or {}).get("nodes") or []):
+        if not isinstance(node, dict):
+            continue
+        status = str(node.get("status") or "pending")
+        tone = "blocked" if _normalize_status(status) in {"blocked", "failed"} else "complete" if _normalize_status(status) == "passed" else "idle"
+        nid = str(node.get("id") or node.get("node_id") or f"N{index + 1}")
+        rows.append({
+            "id": f"node-{nid}",
+            "source": "dag",
+            "ts": generated_at,
+            "actor": "Planner",
+            "title": f"{nid} is {status.replace('_', ' ')}",
+            "summary": str(node.get("goal") or node.get("title") or ""),
+            "tone": tone,
+            "event_type": "dag_node",
+        })
+    return rows
+
+
+def build_projection_payload(sprint_id: str | None = None) -> tuple[dict, list[str]]:
+    dashboard, degraded = build_dashboard_payload(sprint_id)
+    sid = str(dashboard.get("focus_sprint_id") or sprint_id or "")
+    status = _load_status_by_sprint(sid) if sid else {}
+    if sid and not status:
+        degraded.append(f"sprint_status:missing:{sid}")
+    artifacts = _projection_artifacts(sid)
+    capability_mismatch = _capability_mismatch_projection(dashboard)
+    human_action = _human_action_required(status, dashboard, artifacts, capability_mismatch)
+    generated_at = _now()
+    events = _projection_events(sid)
+    timeline = _timeline_from_events(events, dashboard, generated_at)
+    requirements = _projection_requirements(sid, artifacts)
+    plan = _projection_plan(dashboard, artifacts)
+    task_graph = _projection_task_graph(dashboard)
+    human_gates = _projection_human_gates(status, dashboard, artifacts, events)
+    operators = _operator_readiness_projection(dashboard)
+    evaluation = _projection_evaluation(status, artifacts)
+    return {
+        "projection_schema": "solar.dashboard_projection.v1",
+        "sprint_id": sid,
+        "title": dashboard.get("title") or status.get("title") or sid,
+        "status": status.get("status") or dashboard.get("sprint_status") or "",
+        "phase": status.get("phase") or dashboard.get("phase") or "",
+        "sprint": {
+            "sprint_id": sid,
+            "epic_id": dashboard.get("epic_id") or status.get("epic_id") or "",
+            "title": dashboard.get("title") or status.get("title") or sid,
+            "status": status.get("status") or dashboard.get("sprint_status") or "",
+            "phase": status.get("phase") or dashboard.get("phase") or "",
+            "raw_status": status,
+        },
+        "requirements": requirements,
+        "plan": plan,
+        "task_graph": task_graph,
+        "nodes": task_graph.get("nodes") or [],
+        "dependencies": task_graph.get("edges") or [],
+        "dispatch": {
+            "resources": dashboard.get("resources") or {},
+            "blocker_diagnostics": dashboard.get("blocker_diagnostics") or [],
+            "stall": dashboard.get("stall") or {},
+            "capability_mismatch": capability_mismatch,
+        },
+        "operators": operators,
+        "human_gates": human_gates,
+        "evaluation": evaluation,
+        "events": events,
+        "summary": {
+            "progress": dashboard.get("progress") or {},
+            "stall": dashboard.get("stall") or {},
+            "active_node": next((node.get("id") for node in (dashboard.get("dag") or {}).get("nodes", []) if isinstance(node, dict) and _normalize_status(str(node.get("status") or "")) == "active"), ""),
+        },
+        "human_action_required": human_action,
+        "available_actions": _available_actions(status, human_action, capability_mismatch, sid),
+        "capability_mismatch": capability_mismatch,
+        "artifacts": artifacts,
+        "runtime_health": _runtime_health_projection(dashboard),
+        "timeline": timeline,
+        "sources": dashboard.get("generated_from") or {},
+        "degraded_sources": list(degraded),
+    }, degraded
 
 
 def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[str]]:
@@ -820,6 +1827,201 @@ def _capability_registry() -> dict[str, list[str]]:
         return {}
 
 
+def _safe_sprint_id(sid: str) -> bool:
+    return bool(SAFE_SPRINT_ID_RE.fullmatch(str(sid or "")))
+
+
+def _solar_harness_command_prefix() -> list[str]:
+    solar = shutil.which("solar")
+    if solar:
+        return [solar, "harness"]
+    local_solar = Path.home() / ".solar" / "bin" / "solar"
+    if local_solar.exists():
+        return [str(local_solar), "harness"]
+    harness = shutil.which("solar-harness")
+    if harness:
+        return [harness]
+    local_harness = HARNESS_DIR / "solar-harness.sh"
+    return [str(local_harness)]
+
+
+def _command_exists(cmd0: str) -> bool:
+    return Path(cmd0).exists() or shutil.which(cmd0) is not None
+
+
+def _verdict_payload(kind: str, sid: str, data: dict) -> tuple[dict, int]:
+    if not _safe_sprint_id(sid):
+        return {"ok": False, "status": "error", "error": "invalid_sprint_id"}, 400
+    if not isinstance(data, dict):
+        return {"ok": False, "status": "error", "error": "invalid_json_body"}, 400
+    verdict = str(data.get("verdict") or data.get("action") or "").strip().lower()
+    reason = str(data.get("reason") or "").strip()
+    if len(reason) > 4000:
+        return {"ok": False, "status": "error", "error": "reason_too_long", "max_chars": 4000}, 400
+
+    if kind == "plan":
+        allowed = {"approve", "reject"}
+        command_name = "plan-verdict"
+        reason_required = verdict == "reject"
+    else:
+        allowed = {"pass", "fail"}
+        command_name = "eval-verdict"
+        reason_required = verdict == "fail"
+
+    if verdict not in allowed:
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "invalid_verdict",
+            "allowed": sorted(allowed),
+        }, 400
+    if reason_required and not reason:
+        return {"ok": False, "status": "error", "error": "reason_required"}, 400
+
+    prefix = _solar_harness_command_prefix()
+    if not prefix or not _command_exists(prefix[0]):
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "solar_harness_cli_not_found",
+            "command": prefix[0] if prefix else "",
+        }, 500
+
+    cmd = [*prefix, command_name, sid, verdict]
+    if reason:
+        cmd.append(reason)
+    env = dict(os.environ)
+    env["HARNESS_DIR"] = str(HARNESS_DIR)
+    try:
+        proc = subprocess.run(
+            cmd,
+            text=True,
+            capture_output=True,
+            timeout=60,
+            cwd=os.getcwd(),
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        output = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") + "\n" + ((exc.stderr or "") if isinstance(exc.stderr, str) else "")
+        projection, degraded = build_projection_payload(sid)
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "verdict_timeout",
+            "sprint_id": sid,
+            "kind": kind,
+            "verdict": verdict,
+            "command": f"solar harness {command_name} <sid> <verdict> <reason>",
+            "stdout_tail": output[-4000:],
+            "projection": projection,
+            "degraded_sources": degraded,
+        }, 504
+
+    output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
+    projection, degraded = build_projection_payload(sid)
+    ok = proc.returncode == 0
+    return {
+        "ok": ok,
+        "status": "ok" if ok else "error",
+        "error": "" if ok else "verdict_command_failed",
+        "sprint_id": sid,
+        "kind": kind,
+        "verdict": verdict,
+        "returncode": proc.returncode,
+        "command": f"solar harness {command_name} <sid> <verdict> <reason>",
+        "stdout_tail": output[-4000:],
+        "projection": projection,
+        "degraded_sources": degraded,
+    }, 200 if ok else 500
+
+
+def submit_plan_verdict_payload(sid: str, data: dict) -> tuple[dict, int]:
+    return _verdict_payload("plan", sid, data)
+
+
+def submit_eval_verdict_payload(sid: str, data: dict) -> tuple[dict, int]:
+    return _verdict_payload("eval", sid, data)
+
+
+def submit_handoff_payload(sid: str, data: dict | None = None) -> tuple[dict, int]:
+    if not _safe_sprint_id(sid):
+        return {"ok": False, "status": "error", "error": "invalid_sprint_id"}, 400
+    status = _load_status_by_sprint(sid)
+    if not status:
+        return {"ok": False, "status": "error", "error": "sprint_not_found", "sprint_id": sid}, 404
+    sprint_status = str(status.get("status") or "").strip().lower()
+    if sprint_status != "approved":
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "handoff_not_available",
+            "sprint_id": sid,
+            "current_status": sprint_status,
+            "required_status": "approved",
+        }, 409
+    artifacts = _projection_artifacts(sid)
+    if not _first_artifact(artifacts, "handoff"):
+        return {"ok": False, "status": "error", "error": "handoff_missing", "sprint_id": sid}, 400
+
+    prefix = _solar_harness_command_prefix()
+    if not prefix or not _command_exists(prefix[0]):
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "solar_harness_cli_not_found",
+            "command": prefix[0] if prefix else "",
+        }, 500
+
+    cmd = [*prefix, "handoff-submit", sid]
+    env = dict(os.environ)
+    env["HARNESS_DIR"] = str(HARNESS_DIR)
+    try:
+        proc = subprocess.run(
+            cmd,
+            text=True,
+            capture_output=True,
+            timeout=60,
+            cwd=os.getcwd(),
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        output = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") + "\n" + ((exc.stderr or "") if isinstance(exc.stderr, str) else "")
+        projection, degraded = build_projection_payload(sid)
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "handoff_timeout",
+            "sprint_id": sid,
+            "command": "solar harness handoff-submit <sid>",
+            "stdout_tail": output[-4000:],
+            "projection": projection,
+            "degraded_sources": degraded,
+        }, 504
+
+    output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
+    projection, degraded = build_projection_payload(sid)
+    ok = proc.returncode == 0
+    return {
+        "ok": ok,
+        "status": "ok" if ok else "error",
+        "error": "" if ok else "handoff_command_failed",
+        "sprint_id": sid,
+        "returncode": proc.returncode,
+        "command": "solar harness handoff-submit <sid>",
+        "stdout_tail": output[-4000:],
+        "projection": projection,
+        "degraded_sources": degraded,
+    }, 200 if ok else 500
+
+
+def _request_json_body() -> dict:
+    try:
+        body = request.get_json(silent=True)  # type: ignore[attr-defined]
+    except Exception:
+        body = {}
+    return body if isinstance(body, dict) else {}
+
+
 # ---------------------------------------------------------------------------
 # Route: GET /orchestration/epics
 # ---------------------------------------------------------------------------
@@ -854,6 +2056,12 @@ def dashboard_page():
 @orchestration_bp.route("/dashboard", methods=["GET"])
 def dashboard_data():
     data, degraded = build_dashboard_payload(request.args.get("sprint_id") or None)
+    return jsonify(_envelope(data, degraded))
+
+
+@orchestration_bp.route("/projection", methods=["GET"])
+def projection_data():
+    data, degraded = build_projection_payload(request.args.get("sprint_id") or None)
     return jsonify(_envelope(data, degraded))
 
 
@@ -954,6 +2162,32 @@ def get_sprint(sid: str):
         "verifier_refs": verifier_refs,
         "routing_decisions": routing,
     }, degraded))
+
+
+@orchestration_bp.route("/sprints/<path:sid>/projection", methods=["GET"])
+def get_sprint_projection(sid: str):
+    data, degraded = build_projection_payload(sid)
+    if not data.get("sprint_id"):
+        return jsonify({"ok": False, "error": f"sprint not found: {sid}"}), 404
+    return jsonify(_envelope(data, degraded))
+
+
+@orchestration_bp.route("/sprints/<path:sid>/plan-verdict", methods=["POST"])
+def post_sprint_plan_verdict(sid: str):
+    payload, status_code = submit_plan_verdict_payload(sid, _request_json_body())
+    return jsonify(payload), status_code
+
+
+@orchestration_bp.route("/sprints/<path:sid>/eval-verdict", methods=["POST"])
+def post_sprint_eval_verdict(sid: str):
+    payload, status_code = submit_eval_verdict_payload(sid, _request_json_body())
+    return jsonify(payload), status_code
+
+
+@orchestration_bp.route("/sprints/<path:sid>/handoff-submit", methods=["POST"])
+def post_sprint_handoff_submit(sid: str):
+    payload, status_code = submit_handoff_payload(sid, _request_json_body())
+    return jsonify(payload), status_code
 
 
 # ---------------------------------------------------------------------------

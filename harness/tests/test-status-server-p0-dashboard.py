@@ -96,10 +96,27 @@ def main() -> None:
             fake_solar,
             """#!/usr/bin/env bash
 set -eu
-sid=sprint-p0-intake
+cmd="${2:-}"
 mkdir -p "$HARNESS_DIR/sprints"
-printf '{"sprint_id":"%s","status":"active","phase":"spec","title":"Fake Intake"}\n' "$sid" > "$HARNESS_DIR/sprints/$sid.status.json"
-echo "Sprint created: $sid"
+if [[ "$cmd" == "intake" ]]; then
+  sid=sprint-p0-intake
+  printf '{"sprint_id":"%s","status":"active","phase":"spec","title":"Fake Intake"}\n' "$sid" > "$HARNESS_DIR/sprints/$sid.status.json"
+  echo "Sprint created: $sid"
+elif [[ "$cmd" == "plan-verdict" || "$cmd" == "eval-verdict" || "$cmd" == "handoff-submit" ]]; then
+  sid="${3:-}"
+  verdict="${4:-}"
+  status="active"
+  phase="plan_reviewed"
+  if [[ "$cmd" == "plan-verdict" && "$verdict" == "approve" ]]; then status="approved"; fi
+  if [[ "$cmd" == "eval-verdict" && "$verdict" == "pass" ]]; then status="passed"; phase="eval_completed"; fi
+  if [[ "$cmd" == "eval-verdict" && "$verdict" == "fail" ]]; then status="failed_review"; phase="eval_completed"; fi
+  if [[ "$cmd" == "handoff-submit" ]]; then status="reviewing"; phase="implementation_completed"; fi
+  printf '{"sprint_id":"%s","status":"%s","phase":"%s","title":"Fake Verdict"}\n' "$sid" "$status" "$phase" > "$HARNESS_DIR/sprints/$sid.status.json"
+  echo "$cmd: $sid -> $status"
+else
+  echo "unsupported fake solar command: $*" >&2
+  exit 2
+fi
 """,
         )
         fake_solar.chmod(0o755)
@@ -129,6 +146,24 @@ echo "Sprint created: $sid"
         assert data["stall"]["state"] == "no_matching_worker"
         assert data["dag"]["nodes"][1]["route_decision"] == "no_matching_worker"
         assert data["capabilities"]["pane_supply"][0]["pane_id"] == "%1:0.1"
+
+        projection = mod._orchestration_projection_payload(sid)
+        projected = projection["data"]
+        assert projection["ok"] is True
+        assert projected["projection_schema"] == "solar.dashboard_projection.v1"
+        assert projected["sprint_id"] == sid
+        assert projected["sprint"]["sprint_id"] == sid
+        assert "requirements" in projected
+        assert "human_gates" in projected
+        assert "dispatch" in projected
+        assert projected["dispatch"]["capability_mismatch"]["present"] is True
+        assert projected["operators"]
+        assert projected["human_action_required"]["type"] == "capability_mismatch"
+        assert projected["capability_mismatch"]["present"] is True
+        assert projected["capability_mismatch"]["blocked_node"] == "N2"
+        assert projected["available_actions"][0]["id"] == "view_artifacts"
+        assert any(item["kind"] == "task_graph" for item in projected["artifacts"])
+        assert projected["timeline"][0]["source"] == "event"
 
         sprint_index = mod._sprint_index_payload(limit=10)
         assert sprint_index["ok"] is True
@@ -164,6 +199,17 @@ echo "Sprint created: $sid"
         assert intake["ok"] is True
         assert intake["sprint_id"] == "sprint-p0-intake"
         assert (sprints / "sprint-p0-intake.status.json").exists()
+
+        verdict, verdict_status = mod._orchestration_verdict_payload("plan", sid, {"verdict": "approve", "reason": "scope ok"})
+        assert verdict_status == 200, verdict
+        assert verdict["ok"] is True
+        assert verdict["projection"]["status"] == "approved"
+
+        write(sprints / f"{sid}.handoff.md", "# Handoff\n")
+        handoff, handoff_status = mod._orchestration_verdict_payload("handoff", sid, {})
+        assert handoff_status == 200, handoff
+        assert handoff["ok"] is True
+        assert handoff["projection"]["status"] == "reviewing"
 
         html = mod._p0_dashboard_html()
         assert "Solar Harness Status" in html
