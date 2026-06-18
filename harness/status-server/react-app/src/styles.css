@@ -1700,6 +1700,10 @@ summary:focus-visible,
   font-size: var(--solar-type-xs);
 }
 
+.home-caption-note {
+  color: var(--solar-subtle);
+}
+
 .home-caption kbd {
   padding: 1px 6px;
   border: 1px solid var(--solar-line);

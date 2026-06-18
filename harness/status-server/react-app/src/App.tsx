@@ -2075,7 +2075,7 @@ function HomeLanding({
               type="button"
               className={`crew-pill ${crew.open ? "is-open" : ""}`}
               aria-expanded={crew.open}
-              aria-controls="crew-panel"
+              aria-controls={crew.open ? "crew-panel" : undefined}
               onClick={() => crew.setOpen(!crew.open)}
             >
               <Bot size={14} className="crew-pill-icon" aria-hidden="true" />
@@ -2102,6 +2102,9 @@ function HomeLanding({
 
         <p className="home-caption">
           Starts a real intake via the existing CLI <kbd>⌘ ↵</kbd>
+          <span className="home-caption-note">
+            · crew is staged, not yet applied to runs
+          </span>
         </p>
 
         {recent.length > 0 && (
