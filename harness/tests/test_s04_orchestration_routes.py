@@ -236,7 +236,11 @@ def test_projection_payload_surfaces_ui_action_contract(tmp_path: Path) -> None:
 
     assert degraded == []
     assert payload["projection_schema"] == "solar.dashboard_projection.v1"
+    assert payload["projection_mode"] == "full"
     assert payload["sprint_id"] == "sprint-active"
+    assert payload["lazy_slices"]["events"] == "/events?sprint_id=sprint-active&limit=140"
+    assert payload["lazy_slices"]["deliverables"] == "/sprints/sprint-active/deliverables"
+    assert payload["lazy_slices"]["usage"] == "/usage"
     assert payload["sprint"]["phase"] == "planning_complete"
     assert payload["requirements"]["present"] is True
     assert payload["requirements"]["coverage_summary"]["covered"] == 1
@@ -258,6 +262,16 @@ def test_projection_payload_surfaces_ui_action_contract(tmp_path: Path) -> None:
     actions = {item["id"]: item for item in payload["available_actions"]}
     assert actions["view_artifacts"]["availability"] == "supported_now"
     assert actions["view_artifacts"]["enabled"] is True
+
+    fast_payload, fast_degraded = mod.build_projection_payload("sprint-active", mode="fast")
+
+    assert fast_degraded == []
+    assert fast_payload["projection_mode"] == "fast"
+    assert fast_payload["sprint_id"] == "sprint-active"
+    assert fast_payload["human_gates"][0]["kind"] == "plan_review"
+    assert fast_payload["available_actions"][0]["id"] == "view_artifacts"
+    assert fast_payload["events"] == []
+    assert fast_payload["timeline"] == []
     assert actions["wake"]["availability"] == "unsupported_deferred"
     assert actions["wake"]["enabled"] is False
     assert actions["retry_dispatch"]["safe"] is False

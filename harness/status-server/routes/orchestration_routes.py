@@ -1542,7 +1542,17 @@ def _timeline_from_events(events: list[dict], dashboard: dict, generated_at: str
     return rows
 
 
-def build_projection_payload(sprint_id: str | None = None) -> tuple[dict, list[str]]:
+def _projection_lazy_slices(sid: str) -> dict:
+    quoted = urllib.parse.quote(sid) if sid else ""
+    return {
+        "events": f"/events?sprint_id={quoted}&limit=140" if sid else "/events?limit=140",
+        "deliverables": f"/sprints/{quoted}/deliverables" if sid else "",
+        "usage": "/usage",
+    }
+
+
+def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -> tuple[dict, list[str]]:
+    projection_mode = "fast" if str(mode or "").strip().lower() in {"fast", "summary"} else "full"
     dashboard, degraded = build_dashboard_payload(sprint_id)
     sid = str(dashboard.get("focus_sprint_id") or sprint_id or "")
     status = _load_status_by_sprint(sid) if sid else {}
@@ -1552,8 +1562,8 @@ def build_projection_payload(sprint_id: str | None = None) -> tuple[dict, list[s
     capability_mismatch = _capability_mismatch_projection(dashboard)
     human_action = _human_action_required(status, dashboard, artifacts, capability_mismatch)
     generated_at = _now()
-    events = _projection_events(sid)
-    timeline = _timeline_from_events(events, dashboard, generated_at)
+    events = [] if projection_mode == "fast" else _projection_events(sid)
+    timeline = [] if projection_mode == "fast" else _timeline_from_events(events, dashboard, generated_at)
     requirements = _projection_requirements(sid, artifacts)
     plan = _projection_plan(dashboard, artifacts)
     task_graph = _projection_task_graph(dashboard)
@@ -1562,10 +1572,12 @@ def build_projection_payload(sprint_id: str | None = None) -> tuple[dict, list[s
     evaluation = _projection_evaluation(status, artifacts)
     return {
         "projection_schema": "solar.dashboard_projection.v1",
+        "projection_mode": projection_mode,
         "sprint_id": sid,
         "title": dashboard.get("title") or status.get("title") or sid,
         "status": status.get("status") or dashboard.get("sprint_status") or "",
         "phase": status.get("phase") or dashboard.get("phase") or "",
+        "lazy_slices": _projection_lazy_slices(sid),
         "sprint": {
             "sprint_id": sid,
             "epic_id": dashboard.get("epic_id") or status.get("epic_id") or "",

@@ -248,6 +248,14 @@ fi
             assert http_projection["data"]["projection_schema"] == "solar.dashboard_projection.v1"
             assert http_projection["data"]["sprint_id"] == sid
 
+            status_code, fast_projection = request_json(base_url, f"/orchestration/projection?sprint_id={sid}&mode=fast")
+            assert status_code == 200, fast_projection
+            assert fast_projection["ok"] is True
+            assert fast_projection["data"]["projection_mode"] == "fast"
+            assert fast_projection["data"]["events"] == []
+            assert fast_projection["data"]["timeline"] == []
+            assert fast_projection["data"]["lazy_slices"]["events"] == f"/events?sprint_id={sid}&limit=140"
+
             status_code, api_projection = request_json(base_url, f"/api/sprints/{sid}/projection")
             assert status_code == 200, api_projection
             assert api_projection["ok"] is True
