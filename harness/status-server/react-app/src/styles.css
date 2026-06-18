@@ -1567,6 +1567,12 @@ summary:focus-visible,
   font-size: var(--solar-type-sm);
 }
 
+.form-notice {
+  margin-top: var(--solar-space-3);
+  color: var(--solar-success);
+  font-size: var(--solar-type-sm);
+}
+
 .settings-layout {
   display: flex;
   flex-direction: column;
@@ -1852,6 +1858,56 @@ summary:focus-visible,
 
 .plan-node.tone-idle .plan-node-label {
   color: var(--solar-muted);
+}
+
+.plan-gate {
+  display: grid;
+  gap: var(--solar-space-3);
+  margin-top: var(--solar-space-5);
+  padding: var(--solar-space-4);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-panel);
+  background: var(--solar-surface);
+}
+
+.plan-gate-copy {
+  display: grid;
+  gap: var(--solar-space-1);
+}
+
+.plan-gate-copy strong {
+  font-size: var(--solar-type-sm);
+}
+
+.plan-gate-copy p {
+  max-width: 64ch;
+  margin: 0;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+}
+
+.plan-gate-reason {
+  width: 100%;
+  min-height: 68px;
+  resize: vertical;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  padding: var(--solar-space-3);
+  color: var(--solar-ink);
+  background: var(--solar-bg);
+  font: inherit;
+  font-size: var(--solar-type-sm);
+}
+
+.plan-gate-reason:focus-visible {
+  outline: 2px solid var(--solar-focus);
+  outline-offset: 2px;
+}
+
+.plan-gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--solar-space-3);
 }
 
 .agent-signature .state-dot {

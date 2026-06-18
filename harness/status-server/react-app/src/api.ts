@@ -1,4 +1,5 @@
 import type {
+  ActionResponse,
   DashboardResponse,
   DeliverablesPayload,
   EventRecord,
@@ -112,6 +113,20 @@ export function submitIntake(task: string): Promise<IntakeResponse> {
     method: "POST",
     body: JSON.stringify({ task }),
   });
+}
+
+export function submitPlanVerdict(
+  sprintId: string,
+  verdict: "approve" | "reject",
+  reason = "",
+): Promise<ActionResponse> {
+  return requestJson<ActionResponse>(
+    `/api/sprints/${encodeURIComponent(sprintId)}/plan-verdict`,
+    {
+      method: "POST",
+      body: JSON.stringify({ verdict, reason }),
+    },
+  );
 }
 
 export function openEventStream(

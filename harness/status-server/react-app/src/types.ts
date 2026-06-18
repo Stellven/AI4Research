@@ -113,14 +113,50 @@ export type ProjectionData = {
     capability_mismatch?: JsonRecord;
     [key: string]: unknown;
   };
-  human_gates?: JsonRecord[];
-  available_actions?: JsonRecord[];
+  human_gates?: HumanGate[];
+  available_actions?: ProjectionAction[];
   capability_mismatch?: {
     present?: boolean;
     missing_capability?: string;
     blocked_node?: string;
     [key: string]: unknown;
   };
+  [key: string]: unknown;
+};
+
+export type HumanGate = {
+  kind?: string;
+  status?: string;
+  allowed_actions?: string[];
+  source_artifacts?: string[];
+  last_verdict?: JsonRecord | null;
+  missing_artifacts?: string[];
+  reason?: string;
+  [key: string]: unknown;
+};
+
+export type ProjectionAction = {
+  id?: string;
+  label?: string;
+  availability?: string;
+  safe?: boolean;
+  enabled?: boolean;
+  endpoint?: string;
+  method?: string;
+  cli_command?: string;
+  effect?: string;
+  reason?: string;
+  [key: string]: unknown;
+};
+
+export type ActionResponse = {
+  ok: boolean;
+  status?: string;
+  error?: string;
+  sprint_id?: string;
+  projection?: ProjectionData;
+  stdout_tail?: string;
+  returncode?: number;
   [key: string]: unknown;
 };
 

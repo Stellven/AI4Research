@@ -58,6 +58,7 @@ import {
   fetchUsage,
   openEventStream,
   submitIntake,
+  submitPlanVerdict,
 } from "./api";
 import {
   AgentCardModel,
@@ -745,7 +746,9 @@ function SessionView({
             <PlanFlow
               dashboard={dashboard}
               projection={projection}
+              sprintId={sprintId}
               isBlocked={isBlocked}
+              onRefresh={session.refresh}
             />
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
@@ -1034,11 +1037,15 @@ function buildPlanLevels(nodes: DagNode[]): DagNode[][] {
 function PlanFlow({
   dashboard,
   projection,
+  sprintId,
   isBlocked,
+  onRefresh,
 }: {
   dashboard?: DashboardResponse;
   projection?: ProjectionResponse;
+  sprintId: string;
   isBlocked: boolean;
+  onRefresh: () => Promise<void>;
 }) {
   const projectionNodes =
     projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
@@ -1080,7 +1087,119 @@ function PlanFlow({
           </li>
         ))}
       </ol>
+      <PlanGateControls
+        sprintId={sprintId}
+        projection={projection}
+        onRefresh={onRefresh}
+      />
     </section>
+  );
+}
+
+function PlanGateControls({
+  sprintId,
+  projection,
+  onRefresh,
+}: {
+  sprintId: string;
+  projection?: ProjectionResponse;
+  onRefresh: () => Promise<void>;
+}) {
+  const actions = projection?.data?.available_actions || [];
+  const approve = actions.find((action) => action.id === "plan_approve");
+  const reject = actions.find((action) => action.id === "plan_reject");
+  const planGate = (projection?.data?.human_gates || []).find(
+    (gate) => gate.kind === "plan_review",
+  );
+  const show =
+    planGate?.status === "available" ||
+    Boolean(approve?.enabled || reject?.enabled);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState<"approve" | "reject" | "">("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  if (!show) return null;
+
+  async function submit(verdict: "approve" | "reject") {
+    const cleanReason = reason.trim();
+    if (verdict === "reject" && !cleanReason) {
+      setError("Rejection needs guidance for the planner.");
+      return;
+    }
+    setSubmitting(verdict);
+    setError("");
+    setNotice("");
+    try {
+      const response = await submitPlanVerdict(sprintId, verdict, cleanReason);
+      if (!response.ok) {
+        throw new Error(
+          response.error ||
+            response.stdout_tail ||
+            `Plan ${verdict} did not complete`,
+        );
+      }
+      setReason("");
+      setNotice(verdict === "approve" ? "Plan approved" : "Plan rejected");
+      await onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Unable to ${verdict} plan`);
+    } finally {
+      setSubmitting("");
+    }
+  }
+
+  return (
+    <div className="plan-gate" data-testid="plan-gate-controls">
+      <div className="plan-gate-copy">
+        <strong>Plan review required</strong>
+        <p>
+          Approve the current DAG to continue, or reject it with guidance for a
+          new planning pass.
+        </p>
+      </div>
+      <textarea
+        className="plan-gate-reason"
+        value={reason}
+        onChange={(event) => {
+          setReason(event.target.value);
+          setError("");
+          setNotice("");
+        }}
+        placeholder="Guidance for rejection"
+        rows={2}
+      />
+      <div className="plan-gate-actions">
+        <button
+          type="button"
+          className="primary-button"
+          disabled={!approve?.enabled || Boolean(submitting)}
+          onClick={() => void submit("approve")}
+        >
+          {submitting === "approve" ? (
+            <Loader2 className="spin" size={15} />
+          ) : (
+            <CheckCircle2 size={15} />
+          )}
+          <span>{submitting === "approve" ? "Approving" : "Approve"}</span>
+        </button>
+        <button
+          type="button"
+          className="icon-text-button"
+          disabled={!reject?.enabled || Boolean(submitting)}
+          onClick={() => void submit("reject")}
+        >
+          {submitting === "reject" ? (
+            <Loader2 className="spin" size={15} />
+          ) : (
+            <X size={15} />
+          )}
+          <span>{submitting === "reject" ? "Rejecting" : "Reject"}</span>
+        </button>
+      </div>
+      {error && <div className="form-error">{error}</div>}
+      {notice && <div className="form-notice">{notice}</div>}
+    </div>
   );
 }
 
