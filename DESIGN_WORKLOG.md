@@ -92,9 +92,37 @@ since asked to push this further — see the concept/wireframe pass; the stall c
 "Stalled" badge, "build phase", and redundant title are being removed in favor of the
 relay's broken handoff + the stream itself.)*
 
+### 10 · Launcher crew · 3D logo · warm glass (2026-06-18)
+Owner pass, research-grounded (a 5-agent design workflow: composer crew-picker IA, agent
+matrix config, 3D-from-one-hue mark, lockup sizing, tinted glass).
+- **Removed** the `{sprints.length}` "4" by the Sessions heading and the redundant home-page
+  logo (it lives in the sidebar).
+- **Brand mark → dimensional lotus.** Rebuilt `BrandMark` as a radial 5-petal lotus (pivot
+  12,13; petals 72° apart, overlapping) with **three lightness steps of the one red hue**
+  (`--lotus-front #cf0a2c` / `--lotus-mid #a60822` / `--lotus-back #7a0a1d`) painted
+  back-to-front + a focal center node — 3D via occlusion, no glow/gradient/bevel. Fixed the
+  "too short" complaint by **filling the viewBox** (old petals used ~56%): measured the mark
+  box `40→80px` = the wordmark block `40→80px`, glyph `~44→79px` ≈ cap-of-line-1 →
+  baseline-of-line-2. (Overrode the research's 28px/line-height-1.1 route — measurement showed
+  parity already, and tightening line-heights had blast radius.)
+- **Warm-glass sidebar.** Tint `rgba(252,252,253,0.82)` → `rgba(255,252,248,0.82)`
+  (orange-leaning warm white, **not** pink — derived from an orange sibling, never `#cf0a2c`).
+  Required paired AA change `--solar-subtle #74767d → #6e7077`; verified on the **sampled**
+  composite (#FAF8F4): subtle 4.66 / muted 6.92 / ink 16.3:1 (old #74767d failed at 4.28).
+  Confirmed the red active-tick still pops against the warm chrome.
+- **Crew launcher (home composer).** Footer-left `Crew · {preset}` pill (monochrome at rest,
+  no red) → **persistent inline disclosure** below the composer (not a hover dropdown — can't
+  flicker): lab-matrix preset segmented + 4 per-agent model selects, seeded read-only from
+  `fetchSettings().role_models`. **Staged-only & honest** — not sent with the intake, "Start
+  work" launches on the runtime's configured crew; an action-strength note says so; no
+  "Saved" state. Verified by Playwright: pill tracks selection, preset homogenizes rows +
+  keeps panel open, per-row change flips to "Custom". Moved the CLI hint to a caption.
+- DESIGN.md updated: `subtle` token, lotus shade tokens, two sanctioned-exception blocks
+  (mark depth, warm glass), and the crew-launcher IA.
+
 ---
 
-## Research (two multi-agent workflows)
+## Research (three multi-agent workflows)
 1. **Toolchain/craft research** — design-intelligence skills, browser MCPs, a11y tooling,
    the React/Vite stack, fonts + licensing, the DESIGN.md-as-harness pattern, and the
    craft references (Rauno/Vercel, Karri/Linear, Ström/Stripe) + anti-slop tells.
@@ -103,6 +131,13 @@ relay's broken handoff + the stream itself.)*
    + activity microcopy, deliverables presentation patterns, and a skills hunt (finding:
    there is **no** real "coherence/harmony" skill — the mechanism is the persistent
    design-system file, which is what DESIGN.md is).
+3. **Launcher/logo/glass research** (iteration 10) — composer-attached crew/model-picker IA
+   (Codex/Cursor/v0/Replit/Devin), multi-agent matrix config (CrewAI/AutoGen/LangGraph),
+   3D-from-one-hue brand-mark occlusion, logo↔wordmark lockup sizing, and warm-tinted glass.
+   *Caveat:* the synthesis hallucinated code-state from the **base** branch (`feat/p0-gui-react`
+   — orange ramp, Geist, "Solar Harness") rather than this worktree; design decisions were
+   used, every code-state claim was re-verified against the worktree, and sizing was decided
+   by on-screen measurement (eyes over brief).
 
 ## Verification done
 Per change: `tsc --noEmit` (green), Playwright screenshots (multi-viewport), CDP

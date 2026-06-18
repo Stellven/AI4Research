@@ -7,6 +7,7 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   CheckCircle2,
   Circle,
   Clock3,
@@ -129,8 +130,18 @@ type PlanStage = {
 // Original lotus mark — five petals fanning from a common base. Uses
 // currentColor so it inherits the brand accent. Not a reproduction of any
 // existing trademark; inspired by the fanned-petal flower silhouette.
-function BrandMark({ size = 22 }: { size?: number }) {
-  const petal = "M12 20.5C9.6 15.5 9.9 10 12 7C14.1 10 14.4 15.5 12 20.5Z";
+function BrandMark({ size = 40 }: { size?: number }) {
+  // One teardrop petal, pivot at (12,13), tip near the viewport top — wide enough that
+  // adjacent petals (72deg apart) overlap. Depth = back-to-front paint order + 3 red
+  // lightness steps (darker rear petals occluded by the lighter front one), no glow/bevel.
+  const petal = "M12 13C7.7 9.6 8.4 4.2 12 2.6C15.6 4.2 16.3 9.6 12 13Z";
+  const petals = [
+    { angle: 144, cls: "lotus-back" },
+    { angle: 216, cls: "lotus-back" },
+    { angle: 72, cls: "lotus-mid" },
+    { angle: 288, cls: "lotus-mid" },
+    { angle: 0, cls: "lotus-front" },
+  ];
   return (
     <svg
       width={size}
@@ -140,14 +151,15 @@ function BrandMark({ size = 22 }: { size?: number }) {
       aria-hidden="true"
       focusable="false"
     >
-      {[0, -28, 28, -53, 53].map((angle) => (
+      {petals.map(({ angle, cls }) => (
         <path
           key={angle}
+          className={cls}
           d={petal}
-          fill="currentColor"
-          transform={`rotate(${angle} 12 20.5)`}
+          transform={`rotate(${angle} 12 13)`}
         />
       ))}
+      <circle className="lotus-front" cx="12" cy="13" r="2.4" />
     </svg>
   );
 }
@@ -271,7 +283,6 @@ function Sidebar({
       <div className="sidebar-section">
         <div className="sidebar-heading">
           <span>Sessions</span>
-          <span>{sprints.length}</span>
         </div>
         <div className="session-list" data-testid="session-list">
           {state === "loading" && <SidebarSkeleton />}
@@ -1873,6 +1884,127 @@ function SettingsView() {
   );
 }
 
+function defaultRoleModels(): Record<string, string> {
+  return Object.fromEntries(ROLE_ORDER.map((role) => [role, MODEL_OPTIONS[0]]));
+}
+
+// Staged-only crew config for the launcher. Seeds from the runtime (read-only) so the
+// shown models are real, not invented; nothing here is sent with the intake or persisted
+// — P0 has no write path, and "Start work" launches on the runtime's configured crew.
+function useCrew() {
+  const [open, setOpen] = useState(false);
+  const [labMode, setLabMode] = useState("all-claude");
+  const [roleModels, setRoleModels] =
+    useState<Record<string, string>>(defaultRoleModels);
+
+  useEffect(() => {
+    let alive = true;
+    void fetchSettings()
+      .then((res) => {
+        if (!alive) return;
+        const models: Record<string, string> = {};
+        ROLE_ORDER.forEach((role) => {
+          models[role] =
+            asString(res.role_models?.[role]?.model) || MODEL_OPTIONS[0];
+        });
+        setRoleModels(models);
+        setLabMode(asString(res.model_lab_matrix?.value) || "all-claude");
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  function applyPreset(mode: string) {
+    setLabMode(mode);
+    if (mode === "all-claude") {
+      setRoleModels(
+        Object.fromEntries(ROLE_ORDER.map((role) => [role, "claude-opus-4.x"])),
+      );
+    } else if (mode === "all-glm") {
+      setRoleModels(
+        Object.fromEntries(ROLE_ORDER.map((role) => [role, "glm-4.6"])),
+      );
+    }
+  }
+
+  function setRoleModel(role: string, value: string) {
+    setRoleModels((prev) => ({ ...prev, [role]: value }));
+    setLabMode("custom");
+  }
+
+  const presetLabel =
+    LAB_MODES.find((mode) => mode.id === labMode)?.label ?? "Custom";
+
+  return {
+    open,
+    setOpen,
+    labMode,
+    roleModels,
+    applyPreset,
+    setRoleModel,
+    presetLabel,
+  };
+}
+
+type Crew = ReturnType<typeof useCrew>;
+
+function CrewPanel({ crew }: { crew: Crew }) {
+  return (
+    <section className="crew-panel" id="crew-panel" aria-label="Crew">
+      <div className="crew-panel-head">
+        <span className="crew-panel-title">Crew</span>
+        <span className="crew-panel-count">{ROLE_ORDER.length} agents</span>
+      </div>
+      <div className="segmented" role="group" aria-label="Crew preset">
+        {LAB_MODES.map((mode) => (
+          <button
+            key={mode.id}
+            type="button"
+            className={`segmented-option ${crew.labMode === mode.id ? "is-active" : ""} ${mode.id === "custom" ? "is-computed" : ""}`}
+            aria-pressed={crew.labMode === mode.id}
+            onClick={() => crew.applyPreset(mode.id)}
+          >
+            {mode.label}
+          </button>
+        ))}
+      </div>
+      <div className="crew-agent-list">
+        {ROLE_ORDER.map((role) => (
+          <div className="crew-agent-row" key={role}>
+            <div className="crew-agent-id">
+              <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
+              <span>{ROLE_META[role].subtitle}</span>
+            </div>
+            <div className="model-select">
+              <select
+                aria-label={`${ROLE_META[role].title} model`}
+                value={crew.roleModels[role] || MODEL_OPTIONS[0]}
+                onChange={(event) =>
+                  crew.setRoleModel(role, event.target.value)
+                }
+              >
+                {MODEL_OPTIONS.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} aria-hidden="true" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="crew-panel-note">
+        Staged preview — the crew you pick here isn’t wired to the run yet, so
+        “Start work” launches on the runtime’s configured crew. Set it for real
+        in Settings once a write path exists.
+      </p>
+    </section>
+  );
+}
+
 function HomeLanding({
   sprints,
   onCreated,
@@ -1880,6 +2012,7 @@ function HomeLanding({
   sprints: SprintSummary[];
   onCreated: (sprintId: string) => Promise<void>;
 }) {
+  const crew = useCrew();
   const [task, setTask] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -1912,9 +2045,6 @@ function HomeLanding({
   return (
     <div className="home-landing" data-testid="home-landing">
       <div className="home-inner">
-        <div className="home-mark" aria-hidden="true">
-          <BrandMark size={30} />
-        </div>
         <h1>What do you want done?</h1>
         <p className="home-sub">
           Describe a task. AI4Research routes it through PM, Planner, Builder,
@@ -1941,10 +2071,17 @@ function HomeLanding({
             }}
           />
           <div className="home-prompt-foot">
-            <span className="home-hint">
-              Starts a real intake via the existing CLI
-              <kbd>⌘ ↵</kbd>
-            </span>
+            <button
+              type="button"
+              className={`crew-pill ${crew.open ? "is-open" : ""}`}
+              aria-expanded={crew.open}
+              aria-controls="crew-panel"
+              onClick={() => crew.setOpen(!crew.open)}
+            >
+              <Bot size={14} className="crew-pill-icon" aria-hidden="true" />
+              <span className="crew-pill-label">Crew · {crew.presetLabel}</span>
+              <ChevronUp size={13} className="crew-caret" aria-hidden="true" />
+            </button>
             <button
               type="submit"
               className="primary-button"
@@ -1960,6 +2097,12 @@ function HomeLanding({
           </div>
           {error && <div className="form-error">{error}</div>}
         </form>
+
+        {crew.open && <CrewPanel crew={crew} />}
+
+        <p className="home-caption">
+          Starts a real intake via the existing CLI <kbd>⌘ ↵</kbd>
+        </p>
 
         {recent.length > 0 && (
           <div className="home-recent">

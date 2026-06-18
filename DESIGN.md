@@ -12,13 +12,15 @@ tokens:
     surface: "#fafafb"        # quiet raised surface
     surface_quiet: "#f4f4f6"  # sidebar / inset / hover+selected fill
     muted: "#54565c"          # secondary text
-    subtle: "#74767d"         # tertiary text / metadata
+    subtle: "#6e7077"         # tertiary text / metadata (nudged from #74767d for AA over the warm-glass sidebar)
     faint: "#d8d9dd"          # disabled / skeleton
     line: "#e6e6ea"           # default hairline / divider
     line_soft: "#efeff1"      # faint row divider
     line_strong: "#d3d4d9"    # border on fills
     primary: "#cf0a2c"        # THE accent — Huawei red (PANTONE 186 C); active/now/brand/focus only
     primary_ink: "#a60822"    # darker red for small/dense red text (AA on white)
+    lotus_mid: "#a60822"      # BRAND MARK ONLY — mid petal shade (same as primary_ink)
+    lotus_back: "#7a0a1d"     # BRAND MARK ONLY — deepest petal shade; gives the lotus front->back occlusion depth
     blocked: "#b26a00"        # 'stalled' amber — hue-separated so red stays the brand, never the error
     blocked_fill: "#fbefd0"
     complete: "#3a3b40"       # 'done' is quiet ink + a check — NO green
@@ -100,6 +102,13 @@ red-fill text pairing.
   neutral ink, reserving the hue budget for red (brand) and amber (stalled).
 - Structure with neutrals (dividers, borders, muted/subtle text), so red pops.
 
+**Sanctioned exception — brand mark depth (owner-approved 2026-06):** the 5-petal
+lotus mark (and ONLY the mark) uses three lightness steps of the one red hue —
+`#cf0a2c` front / `#a60822` mid / `#7a0a1d` back — to read 3D via overlap occlusion
+(darker rear petals behind a lighter front petal, plus a focal center node). All three
+are the same hue and AA on white (5.6 / 7.8 / 11.1:1); depth comes from stacking order,
+never an intra-petal gradient/glow/bevel. It stays one rationed signal.
+
 Forbidden color moves: Tailwind defaults (indigo/slate/tailwind-blue); purple/
 cyan/blue gradients; gradient text; **green** "success"; fields of red / red
 gradients / red glows; pure `#000`; rosy/warm-tinted neutrals (keep grays cool so
@@ -133,8 +142,20 @@ Forbidden structure: uniform card grids · nested cards · box/drop shadows ·
 gradients · decorative illustration · centered-everything symmetry.
 
 **Sanctioned exception (owner-approved):** the **sidebar** may use a tasteful
-translucent/glassy material (subtle backdrop blur + tint) for depth, provided text
-contrast stays AA and footer links (Settings) remain clearly legible.
+translucent/glassy material (subtle backdrop blur + tint) for depth, and may carry a
+subtle **warm hue** (`rgba(255,252,248,0.82)` — orange-leaning, derived from an orange
+sibling of the brand red, NOT `#cf0a2c`, which would read pink). The warmth is a
+**surface**, not a signal — the rationed red still lives only on the mark / active tick
+/ focus ring. Text contrast must stay AA over the warm composite (this forced `subtle`
+from `#74767d` to `#6e7077`; verified subtle 4.66 / muted 6.92 / ink 16.3:1). Footer
+links (Settings) remain clearly legible.
+
+**Crew launcher (home composer):** a footer-left pill (`Crew · {preset}`, monochrome at
+rest) opens a persistent inline disclosure below the composer — a lab-matrix preset
+(All-Claude / All-GLM / Custom) + per-agent (PM/Planner/Builder/Evaluator) model selects,
+seeded read-only from the runtime. It is **staged-only**: P0 has no write path, so the
+selection is not sent with the intake and "Start work" launches on the runtime's
+configured crew. That honesty line ships in the panel; never add a "Saved"/success state.
 
 ## Space
 

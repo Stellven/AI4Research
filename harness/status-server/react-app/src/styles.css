@@ -35,7 +35,7 @@
   --solar-surface-quiet: #f4f4f6;
   --solar-ink: #1a1b1d;
   --solar-muted: #54565c;
-  --solar-subtle: #74767d;
+  --solar-subtle: #6e7077; /* nudged darker from #74767d so subtle text clears AA over the warm glass sidebar (and on white) */
   --solar-faint: #d8d9dd;
   --solar-line: #e6e6ea;
   --solar-line-soft: #efeff1;
@@ -45,6 +45,13 @@
   --solar-accent: #cf0a2c;
   --solar-accent-ink: #a60822; /* darker red for small/dense red text (AA on white) */
   --solar-accent-wash: rgba(207, 10, 44, 0.07);
+
+  /* Brand mark only (owner-sanctioned exception): three lightness steps of the ONE
+     red hue (~350deg) give the lotus front->back occlusion depth. Same hue, no glow,
+     no intra-petal gradient. All three pass AA on white (5.6 / 7.8 / 11.1). */
+  --lotus-front: #cf0a2c;
+  --lotus-mid: #a60822;
+  --lotus-back: #7a0a1d;
 
   /* Semantic state — amber owns 'stalled' (hue-separated from brand red); done = quiet ink. */
   --solar-success: #3a3b40;
@@ -156,7 +163,11 @@ summary:focus-visible,
   height: 100vh;
   padding: var(--solar-space-8) var(--solar-space-5) var(--solar-space-5);
   border-right: 1px solid rgba(20, 21, 23, 0.08);
-  background: rgba(252, 252, 253, 0.82);
+  /* Warm-white brand tint (owner-sanctioned): orange-leaning ~32deg, R>G>B so it reads
+     as warm white, never pink/red. Warmth is a surface, not a signal; the rationed red
+     still lives only on the mark / active tick / focus ring. Subtle text (#6e7077) stays
+     AA (~4.87:1) over this composite. */
+  background: rgba(255, 252, 248, 0.82);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   backdrop-filter: blur(16px) saturate(180%);
   box-shadow:
@@ -180,6 +191,19 @@ summary:focus-visible,
   width: 40px;
   height: 40px;
   color: var(--solar-accent);
+}
+
+/* Lotus mark depth: front->back red lightness steps (brand-only sanctioned exception). */
+.lotus-front {
+  fill: var(--lotus-front);
+}
+
+.lotus-mid {
+  fill: var(--lotus-mid);
+}
+
+.lotus-back {
+  fill: var(--lotus-back);
 }
 
 .brand-name {
@@ -1616,15 +1640,6 @@ summary:focus-visible,
   max-width: 680px;
 }
 
-.home-mark {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: var(--solar-space-6);
-  color: var(--solar-accent);
-}
-
 .home-landing h1 {
   margin: 0;
   font-size: clamp(1.9rem, 3vw, 2.6rem);
@@ -1676,21 +1691,138 @@ summary:focus-visible,
     var(--solar-space-4);
 }
 
-.home-hint {
-  display: inline-flex;
+.home-caption {
+  display: flex;
   align-items: center;
   gap: var(--solar-space-2);
+  margin: var(--solar-space-4) 0 0;
   color: var(--solar-subtle);
   font-size: var(--solar-type-xs);
 }
 
-.home-hint kbd {
+.home-caption kbd {
   padding: 1px 6px;
   border: 1px solid var(--solar-line);
   border-radius: 4px;
   color: var(--solar-muted);
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-micro);
+}
+
+/* Crew launcher — footer-left pill prints the live selection; an inline disclosure
+   panel drops below the composer. Persistent open state (not a hover dropdown), so it
+   structurally cannot flicker; the prompt keeps all its height. */
+.crew-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  min-height: 32px;
+  padding: 0 var(--solar-space-2) 0 6px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-ink);
+  background: transparent;
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  cursor: pointer;
+  transition:
+    border-color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.crew-pill svg {
+  flex: 0 0 auto;
+}
+
+.crew-pill-icon {
+  color: var(--solar-subtle);
+}
+
+.crew-pill:hover,
+.crew-pill.is-open {
+  border-color: var(--solar-line-strong);
+  background: var(--solar-surface);
+}
+
+.crew-pill-label {
+  font-weight: var(--solar-weight-medium);
+}
+
+.crew-caret {
+  color: var(--solar-subtle);
+  transition: transform var(--solar-duration) var(--solar-ease);
+}
+
+.crew-pill:not(.is-open) .crew-caret {
+  transform: rotate(180deg);
+}
+
+.crew-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-4);
+  margin-top: var(--solar-space-3);
+  padding: var(--solar-space-5);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-modal);
+  background: var(--solar-surface);
+}
+
+.crew-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.crew-panel-title {
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.crew-panel-count {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+}
+
+.segmented-option.is-computed:not(.is-active) {
+  color: var(--solar-subtle);
+}
+
+.crew-agent-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.crew-agent-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: var(--solar-space-4);
+  align-items: center;
+  padding: var(--solar-space-3) 0;
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.crew-agent-row:first-child {
+  border-top: 0;
+}
+
+.crew-agent-id strong {
+  display: block;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+}
+
+.crew-agent-id span {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.crew-panel-note {
+  margin: 0;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-xs);
+  line-height: 1.5;
 }
 
 .home-recent {
