@@ -707,14 +707,26 @@ function SessionView({
     data?.sprint ||
     sprint || { sprint_id: sprintId }) as SprintSummary;
   const stall = projectionStall(projection) || data?.stall || sprint?.stall;
+  const humanActionType = asString(
+    projectionData?.human_action_required &&
+      typeof projectionData.human_action_required === "object"
+      ? (projectionData.human_action_required as { type?: unknown }).type
+      : "",
+  );
   const phase = asString(
     projectionData?.phase || data?.phase || currentSprint.phase || currentSprint.status,
   );
-  const isBlocked = Boolean(stall?.is_stalled);
+  const isBlocked = isSystemBlocked(stall, humanActionType);
   const processSteps = useMemo(
     () =>
-      buildProcessSteps(dashboard, session.events, session.deliverables, phase),
-    [dashboard, session.deliverables, session.events, phase],
+      buildProcessSteps(
+        dashboard,
+        session.events,
+        session.deliverables,
+        phase,
+        { showStallSummary: isBlocked, stall },
+      ),
+    [dashboard, isBlocked, session.deliverables, session.events, phase, stall],
   );
   const rail = useDeliverablesRail();
 
@@ -806,6 +818,17 @@ function projectionStall(
 ): StallSummary | undefined {
   const stall = projection?.data?.dispatch?.stall;
   return stall && typeof stall === "object" ? stall : undefined;
+}
+
+function isSystemBlocked(
+  stall: StallSummary | undefined,
+  humanActionType: string,
+): boolean {
+  if (!stall?.is_stalled) return false;
+  if (["plan_review", "eval_review", "handoff_submit"].includes(humanActionType)) {
+    return false;
+  }
+  return true;
 }
 
 function stalledPlainLanguage(
@@ -1841,6 +1864,7 @@ function buildProcessSteps(
   events: EventRecord[],
   deliverables: Deliverable[],
   phase: string,
+  options: { showStallSummary?: boolean; stall?: StallSummary } = {},
 ): ProcessStep[] {
   const steps: ProcessStep[] = [];
   const orderedEvents = [...events].sort(
@@ -1858,7 +1882,10 @@ function buildProcessSteps(
     });
   }
 
-  const stall = dashboard?.data?.stall;
+  const stall =
+    options.showStallSummary === false
+      ? undefined
+      : options.stall || dashboard?.data?.stall;
   if (stall?.is_stalled && !steps.some((step) => step.state === "blocked")) {
     steps.push({
       id: "stall-summary",
