@@ -78,6 +78,52 @@ export type DashboardResponse = {
   data: DashboardData;
 };
 
+export type ProjectionResponse = {
+  ok: boolean;
+  generated_at?: string;
+  schema_version?: string;
+  degraded_sources?: string[];
+  data: ProjectionData;
+};
+
+export type ProjectionData = {
+  projection_schema?: string;
+  projection_mode?: string;
+  lazy_slices?: {
+    events?: string;
+    deliverables?: string;
+    usage?: string;
+    [key: string]: unknown;
+  };
+  sprint_id?: string;
+  title?: string;
+  status?: string;
+  phase?: string;
+  sprint?: SprintStatus;
+  task_graph?: {
+    present?: boolean;
+    nodes?: DagNode[];
+    edges?: DagEdge[];
+    [key: string]: unknown;
+  };
+  nodes?: DagNode[];
+  dependencies?: DagEdge[];
+  dispatch?: {
+    stall?: StallSummary;
+    capability_mismatch?: JsonRecord;
+    [key: string]: unknown;
+  };
+  human_gates?: JsonRecord[];
+  available_actions?: JsonRecord[];
+  capability_mismatch?: {
+    present?: boolean;
+    missing_capability?: string;
+    blocked_node?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
 export type DashboardData = {
   focus_sprint_id?: string;
   sprint?: SprintStatus;

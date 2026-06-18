@@ -51,6 +51,7 @@ import {
   fetchDeliverables,
   fetchDeliverableText,
   fetchEvents,
+  fetchProjection,
   fetchSettings,
   fetchSprints,
   fetchStatus,
@@ -85,7 +86,9 @@ import type {
   DashboardResponse,
   Deliverable,
   EventRecord,
+  ProjectionResponse,
   SettingsPayload,
+  StallSummary,
   SprintSummary,
   StatusPayload,
   UsagePayload,
@@ -96,6 +99,7 @@ type LoadState = "loading" | "ready" | "error";
 type SessionData = {
   status?: StatusPayload;
   dashboard?: DashboardResponse;
+  projection?: ProjectionResponse;
   events: EventRecord[];
   usage?: UsagePayload;
   deliverables: Deliverable[];
@@ -107,7 +111,7 @@ type SessionData = {
 
 type SessionCacheEntry = Pick<
   SessionData,
-  "status" | "dashboard" | "events" | "usage" | "deliverables"
+  "status" | "dashboard" | "projection" | "events" | "usage" | "deliverables"
 >;
 
 const sessionDataCache = new Map<string, SessionCacheEntry>();
@@ -499,6 +503,7 @@ function useSessionData(
 ): SessionData {
   const [status, setStatus] = useState<StatusPayload>();
   const [dashboard, setDashboard] = useState<DashboardResponse>();
+  const [projection, setProjection] = useState<ProjectionResponse>();
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [usage, setUsage] = useState<UsagePayload>();
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
@@ -520,6 +525,7 @@ function useSessionData(
       const base: SessionCacheEntry = sessionDataCache.get(sprintId) || {
         status: undefined,
         dashboard: undefined,
+        projection: undefined,
         events: [],
         usage: undefined,
         deliverables: [],
@@ -539,6 +545,11 @@ function useSessionData(
         if (!isCurrent()) return;
         setDashboard(dashboardResponse);
         cachePatch({ dashboard: dashboardResponse });
+      }),
+      fetchProjection(sprintId, "fast").then((projectionResponse) => {
+        if (!isCurrent()) return;
+        setProjection(projectionResponse);
+        cachePatch({ projection: projectionResponse });
       }),
       fetchStatus(sprintId).then((statusResponse) => {
         if (!isCurrent()) return;
@@ -577,9 +588,10 @@ function useSessionData(
     if (!isCurrent()) return;
     // Only surface the hard-error screen when the core data is unreachable and
     // there is nothing already on screen to keep.
-    const [dashboardResult, , eventsResult] = results;
+    const [dashboardResult, projectionResult, , eventsResult] = results;
     const coreFailed =
       dashboardResult.status === "rejected" &&
+      projectionResult.status === "rejected" &&
       eventsResult.status === "rejected";
     if (coreFailed && !sessionDataCache.get(sprintId)?.events?.length) {
       const rejection = results.find(
@@ -598,6 +610,7 @@ function useSessionData(
     if (cached) {
       setStatus(cached.status);
       setDashboard(cached.dashboard);
+      setProjection(cached.projection);
       setEvents(cached.events);
       setUsage(cached.usage);
       setDeliverables(cached.deliverables);
@@ -606,6 +619,7 @@ function useSessionData(
     } else {
       setStatus(undefined);
       setDashboard(undefined);
+      setProjection(undefined);
       setUsage(undefined);
       setDeliverables([]);
       setEvents([]);
@@ -662,6 +676,7 @@ function useSessionData(
   return {
     status,
     dashboard,
+    projection,
     events,
     usage,
     deliverables,
@@ -684,12 +699,15 @@ function SessionView({
   onCreated: (sprintId: string) => Promise<void>;
 }) {
   const dashboard = dashboardForSprint(session.dashboard, sprintId);
+  const projection = projectionForSprint(session.projection, sprintId);
   const data = dashboard?.data;
-  const currentSprint = (data?.sprint ||
+  const projectionData = projection?.data;
+  const currentSprint = (projectionData?.sprint ||
+    data?.sprint ||
     sprint || { sprint_id: sprintId }) as SprintSummary;
-  const stall = data?.stall || sprint?.stall;
+  const stall = projectionStall(projection) || data?.stall || sprint?.stall;
   const phase = asString(
-    data?.phase || currentSprint.phase || currentSprint.status,
+    projectionData?.phase || data?.phase || currentSprint.phase || currentSprint.status,
   );
   const isBlocked = Boolean(stall?.is_stalled);
   const processSteps = useMemo(
@@ -724,7 +742,11 @@ function SessionView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <PlanFlow dashboard={dashboard} isBlocked={isBlocked} />
+            <PlanFlow
+              dashboard={dashboard}
+              projection={projection}
+              isBlocked={isBlocked}
+            />
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
             >
@@ -762,6 +784,25 @@ function dashboardForSprint(
   );
   if (focus && focus !== sprintId) return undefined;
   return dashboard;
+}
+
+function projectionForSprint(
+  projection: ProjectionResponse | undefined,
+  sprintId: string,
+): ProjectionResponse | undefined {
+  if (!projection) return undefined;
+  const focus = asString(
+    projection.data?.sprint_id || projection.data?.sprint?.sprint_id,
+  );
+  if (focus && focus !== sprintId) return undefined;
+  return projection;
+}
+
+function projectionStall(
+  projection: ProjectionResponse | undefined,
+): StallSummary | undefined {
+  const stall = projection?.data?.dispatch?.stall;
+  return stall && typeof stall === "object" ? stall : undefined;
 }
 
 function stalledPlainLanguage(
@@ -992,12 +1033,18 @@ function buildPlanLevels(nodes: DagNode[]): DagNode[][] {
 // The Planner's plan made legible: the DAG nodes as a left-to-right flow of stages.
 function PlanFlow({
   dashboard,
+  projection,
   isBlocked,
 }: {
   dashboard?: DashboardResponse;
+  projection?: ProjectionResponse;
   isBlocked: boolean;
 }) {
-  const nodes = dashboard?.data?.dag?.nodes || [];
+  const projectionNodes =
+    projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
+  const nodes = projectionNodes.length
+    ? projectionNodes
+    : dashboard?.data?.dag?.nodes || [];
   const levels = useMemo(() => buildPlanLevels(nodes), [nodes]);
   if (!levels.length) return null;
   return (

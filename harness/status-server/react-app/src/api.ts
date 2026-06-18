@@ -3,6 +3,7 @@ import type {
   DeliverablesPayload,
   EventRecord,
   IntakeResponse,
+  ProjectionResponse,
   SettingsPayload,
   SprintIndexResponse,
   StatusPayload,
@@ -41,6 +42,19 @@ export function fetchSprints(limit = 120): Promise<SprintIndexResponse> {
 export function fetchDashboard(sprintId?: string): Promise<DashboardResponse> {
   const query = sprintId ? `?sprint_id=${encodeURIComponent(sprintId)}` : "";
   return requestJson<DashboardResponse>(`/orchestration/dashboard${query}`);
+}
+
+export function fetchProjection(
+  sprintId?: string,
+  mode: "fast" | "full" = "fast",
+): Promise<ProjectionResponse> {
+  const params = new URLSearchParams({ mode });
+  if (sprintId) {
+    params.set("sprint_id", sprintId);
+  }
+  return requestJson<ProjectionResponse>(
+    `/orchestration/projection?${params.toString()}`,
+  );
 }
 
 export function fetchEvents(
