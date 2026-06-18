@@ -703,6 +703,9 @@ def run(args: argparse.Namespace) -> int:
             page.wait_for_selector("[data-testid='plan-flow']", timeout=10000)
             wait_for_text(page, "4 steps")
             screenshot(page, screenshots, "blocked-full-page")
+            screenshot_if_present(
+                page, screenshots, "system-stall", "[data-testid='system-stall']"
+            )
             sections = {
                 "topbar": ".topbar",
                 "plan-flow": "[data-testid='plan-flow']",
@@ -723,25 +726,22 @@ def run(args: argparse.Namespace) -> int:
 
             plan_gate_switch = measure_session_switch(page, "Review planner DAG before build", "Review planner DAG")
             wait_for_hero_title(page, "Review planner DAG")
-            page.wait_for_selector("[data-testid='plan-gate-controls']", timeout=10000)
+            page.wait_for_selector("[data-testid='human-gate']", timeout=10000)
             screenshot(page, screenshots, "plan-review-gate")
-            page.get_by_test_id("plan-gate-controls").get_by_role("button", name="Approve").click()
+            page.get_by_test_id("human-gate").get_by_role("button", name="Approve plan").click()
             page.wait_for_timeout(900)
             screenshot(page, screenshots, "plan-approved")
 
             plan_reject_switch = measure_session_switch(page, "Reject planner DAG with guidance", "Reject planner DAG")
             wait_for_hero_title(page, "Reject planner DAG")
-            page.wait_for_selector("[data-testid='plan-gate-controls']", timeout=10000)
-            page.get_by_placeholder("Guidance for rejection").fill("Split the build node and constrain capabilities to the available workers.")
-            page.get_by_test_id("plan-gate-controls").get_by_role("button", name="Reject").click()
-            wait_for_text(page, "Plan rejected")
-            page.wait_for_function(
-                """() => {
-                  const gate = document.querySelector("[data-testid='plan-gate-controls']");
-                  return gate && !gate.textContent.includes("Rejecting");
-                }""",
-                timeout=5000,
+            page.wait_for_selector("[data-testid='human-gate']", timeout=10000)
+            page.get_by_test_id("human-gate").get_by_role("button", name="Request changes").click()
+            page.get_by_placeholder("What should the planner change?").fill(
+                "Split the build node and constrain capabilities to the available workers."
             )
+            screenshot(page, screenshots, "plan-reject-guidance")
+            page.get_by_test_id("human-gate").get_by_role("button", name="Send guidance").click()
+            wait_for_text(page, "Sent back with your guidance.")
             screenshot(page, screenshots, "plan-rejected")
 
             first_switch = measure_session_switch(page, "Live build sprint with active", "Live build sprint")

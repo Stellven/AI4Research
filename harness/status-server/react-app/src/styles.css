@@ -1860,54 +1860,155 @@ summary:focus-visible,
   color: var(--solar-muted);
 }
 
-.plan-gate {
+/* Decision zone — one attention surface above the stream: a human gate (the
+   operator's decision) or an honest system pause. Amber is reserved for the pause. */
+.decision-card {
   display: grid;
   gap: var(--solar-space-3);
-  margin-top: var(--solar-space-5);
-  padding: var(--solar-space-4);
+  margin: var(--solar-space-6) 0;
+  padding: var(--solar-space-5);
   border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-panel);
+  border-radius: var(--solar-radius-modal);
   background: var(--solar-surface);
 }
 
-.plan-gate-copy {
+.decision-stall {
+  border-color: var(--solar-warning);
+  background: var(--solar-warning-fill);
+}
+
+.decision-head {
   display: grid;
   gap: var(--solar-space-1);
 }
 
-.plan-gate-copy strong {
-  font-size: var(--solar-type-sm);
+.decision-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.plan-gate-copy p {
-  max-width: 64ch;
+.stall-kicker {
+  color: var(--solar-warning);
+}
+
+.decision-title {
+  margin: 0;
+  font-size: var(--solar-type-lg);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.decision-desc {
+  max-width: 68ch;
   margin: 0;
   color: var(--solar-muted);
   font-size: var(--solar-type-sm);
+  line-height: 1.55;
 }
 
-.plan-gate-reason {
-  width: 100%;
-  min-height: 68px;
-  resize: vertical;
-  border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-control);
-  padding: var(--solar-space-3);
+.decision-card code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(20, 21, 23, 0.06);
   color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: 0.92em;
+}
+
+.decision-stall code {
+  background: rgba(178, 106, 0, 0.12);
+  color: var(--solar-warning);
+}
+
+.decision-artifacts {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.decision-reason {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  padding: var(--solar-space-3);
+  border: 1px solid var(--solar-line-strong);
+  border-radius: var(--solar-radius-control);
   background: var(--solar-canvas);
+  color: var(--solar-ink);
   font: inherit;
   font-size: var(--solar-type-sm);
 }
 
-.plan-gate-reason:focus-visible {
+.decision-reason:focus-visible {
   outline: 2px solid var(--solar-accent);
   outline-offset: 2px;
 }
 
-.plan-gate-actions {
+.decision-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--solar-space-3);
+}
+
+.text-button {
+  border: 0;
+  background: none;
+  color: var(--solar-subtle);
+  font: inherit;
+  font-size: var(--solar-type-sm);
+  cursor: pointer;
+  transition: color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.text-button:hover {
+  color: var(--solar-ink);
+}
+
+.stall-waiting,
+.stall-resolve {
+  margin: 0;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+  line-height: 1.5;
+}
+
+.stall-unsafe {
+  display: grid;
+  gap: var(--solar-space-2);
+  margin: 0;
+  padding: var(--solar-space-3) 0 0;
+  border-top: 1px solid rgba(178, 106, 0, 0.22);
+  list-style: none;
+}
+
+.stall-unsafe li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--solar-space-2) var(--solar-space-3);
+}
+
+.stall-unsafe-name {
+  color: var(--solar-muted);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-medium);
+}
+
+.stall-unsafe-reason {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
 }
 
 .agent-signature .state-dot {

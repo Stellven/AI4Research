@@ -129,6 +129,33 @@ export function submitPlanVerdict(
   );
 }
 
+export function submitEvalVerdict(
+  sprintId: string,
+  verdict: "pass" | "fail",
+  reason = "",
+): Promise<ActionResponse> {
+  return requestJson<ActionResponse>(
+    `/api/sprints/${encodeURIComponent(sprintId)}/eval-verdict`,
+    {
+      method: "POST",
+      body: JSON.stringify({ verdict, reason }),
+    },
+  );
+}
+
+// Submit the approved Builder handoff into Evaluator review. Wraps the existing
+// `solar harness handoff-submit` command — it records and advances state; it does
+// not itself guarantee a fresh agent pass.
+export function submitHandoff(sprintId: string): Promise<ActionResponse> {
+  return requestJson<ActionResponse>(
+    `/api/sprints/${encodeURIComponent(sprintId)}/handoff-submit`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  );
+}
+
 export function openEventStream(
   sprintId: string | undefined,
   onEvent: (event: EventRecord) => void,

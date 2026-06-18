@@ -23,6 +23,7 @@ import {
   MessageSquarePlus,
   Minus,
   PanelRight,
+  PauseCircle,
   Play,
   Plus,
   Radio,
@@ -52,6 +53,8 @@ import {
   fetchDeliverableText,
   fetchEvents,
   fetchProjection,
+  submitEvalVerdict,
+  submitHandoff,
   fetchSettings,
   fetchSprints,
   fetchStatus,
@@ -87,6 +90,8 @@ import type {
   DashboardResponse,
   Deliverable,
   EventRecord,
+  HumanGate,
+  ProjectionAction,
   ProjectionResponse,
   SettingsPayload,
   StallSummary,
@@ -714,7 +719,10 @@ function SessionView({
       : "",
   );
   const phase = asString(
-    projectionData?.phase || data?.phase || currentSprint.phase || currentSprint.status,
+    projectionData?.phase ||
+      data?.phase ||
+      currentSprint.phase ||
+      currentSprint.status,
   );
   const isBlocked = isSystemBlocked(stall, humanActionType);
   const processSteps = useMemo(
@@ -758,8 +766,11 @@ function SessionView({
             <PlanFlow
               dashboard={dashboard}
               projection={projection}
-              sprintId={sprintId}
               isBlocked={isBlocked}
+            />
+            <DecisionZone
+              projection={projection}
+              sprintId={sprintId}
               onRefresh={session.refresh}
             />
             <div
@@ -825,7 +836,9 @@ function isSystemBlocked(
   humanActionType: string,
 ): boolean {
   if (!stall?.is_stalled) return false;
-  if (["plan_review", "eval_review", "handoff_submit"].includes(humanActionType)) {
+  if (
+    ["plan_review", "eval_review", "handoff_submit"].includes(humanActionType)
+  ) {
     return false;
   }
   return true;
@@ -1060,15 +1073,11 @@ function buildPlanLevels(nodes: DagNode[]): DagNode[][] {
 function PlanFlow({
   dashboard,
   projection,
-  sprintId,
   isBlocked,
-  onRefresh,
 }: {
   dashboard?: DashboardResponse;
   projection?: ProjectionResponse;
-  sprintId: string;
   isBlocked: boolean;
-  onRefresh: () => Promise<void>;
 }) {
   const projectionNodes =
     projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
@@ -1110,119 +1119,399 @@ function PlanFlow({
           </li>
         ))}
       </ol>
-      <PlanGateControls
-        sprintId={sprintId}
-        projection={projection}
-        onRefresh={onRefresh}
-      />
     </section>
   );
 }
 
-function PlanGateControls({
-  sprintId,
+type GateSpec = {
+  title: string;
+  description: string;
+  primary: { actionId: string; label: string; pending: string };
+  secondary?: {
+    actionId: string;
+    label: string;
+    confirm: string;
+    pending: string;
+    reasonPlaceholder: string;
+  };
+};
+
+// Copy is deliberately honest: a verdict records + advances state. It does NOT
+// itself guarantee a fresh agent pass, so we never say "starts a new planning pass".
+const GATE_KINDS: Record<string, GateSpec> = {
+  plan_review: {
+    title: "Review the plan",
+    description:
+      "The planner produced a DAG. Approve it to start the build, or request changes with guidance for the planner.",
+    primary: {
+      actionId: "plan_approve",
+      label: "Approve plan",
+      pending: "Approving",
+    },
+    secondary: {
+      actionId: "plan_reject",
+      label: "Request changes",
+      confirm: "Send guidance",
+      pending: "Sending",
+      reasonPlaceholder: "What should the planner change?",
+    },
+  },
+  handoff_submit: {
+    title: "Submit the handoff",
+    description:
+      "The builder's handoff is ready. Submit it to the Evaluator for review.",
+    primary: {
+      actionId: "handoff_submit",
+      label: "Submit to Evaluator",
+      pending: "Submitting",
+    },
+  },
+  eval_review: {
+    title: "Review the result",
+    description:
+      "The evaluator finished its review. Accept the result, or send it back to the builder with a reason.",
+    primary: {
+      actionId: "eval_pass",
+      label: "Accept result",
+      pending: "Accepting",
+    },
+    secondary: {
+      actionId: "eval_fail",
+      label: "Request fixes",
+      confirm: "Send for fixes",
+      pending: "Sending",
+      reasonPlaceholder: "What needs to change before this passes?",
+    },
+  },
+};
+
+function shortArtifact(path: string): string {
+  return asString(path).split("/").pop() || asString(path);
+}
+
+function prettyActionLabel(id: string): string {
+  return id.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+// One attention surface above the stream: the operator's current decision (a human
+// gate) when one is open, otherwise an honest system-pause when the run is stalled.
+function DecisionZone({
   projection,
+  sprintId,
   onRefresh,
 }: {
-  sprintId: string;
   projection?: ProjectionResponse;
+  sprintId: string;
   onRefresh: () => Promise<void>;
 }) {
-  const actions = projection?.data?.available_actions || [];
-  const approve = actions.find((action) => action.id === "plan_approve");
-  const reject = actions.find((action) => action.id === "plan_reject");
-  const planGate = (projection?.data?.human_gates || []).find(
-    (gate) => gate.kind === "plan_review",
-  );
-  const show =
-    planGate?.status === "available" ||
-    Boolean(approve?.enabled || reject?.enabled);
+  const data = projection?.data;
+  if (!data) return null;
+  const actions = data.available_actions || [];
+  // human_action_required.type is the backend's single "what does the human do now"
+  // signal — and the only one that covers handoff (which has no human_gates entry).
+  const action = (data.human_action_required || {}) as {
+    type?: string;
+    primary_artifact?: string;
+  };
+  const actionType = asString(action.type);
+  if (GATE_KINDS[actionType]) {
+    const gate = (data.human_gates || []).find(
+      (item) => asString(item.kind) === actionType,
+    );
+    return (
+      <GateCard
+        kind={actionType}
+        gate={gate}
+        primaryArtifact={asString(action.primary_artifact)}
+        actions={actions}
+        sprintId={sprintId}
+        onRefresh={onRefresh}
+      />
+    );
+  }
+  const stall = projectionStall(projection);
+  const mismatch = data.capability_mismatch;
+  if (
+    actionType === "capability_mismatch" ||
+    actionType === "stall_review" ||
+    stall?.is_stalled ||
+    mismatch?.present
+  ) {
+    return <SystemStall stall={stall} mismatch={mismatch} actions={actions} />;
+  }
+  return null;
+}
+
+function GateCard({
+  kind,
+  gate,
+  primaryArtifact,
+  actions,
+  sprintId,
+  onRefresh,
+}: {
+  kind: string;
+  gate?: HumanGate;
+  primaryArtifact?: string;
+  actions: ProjectionAction[];
+  sprintId: string;
+  onRefresh: () => Promise<void>;
+}) {
+  const spec = GATE_KINDS[kind];
   const [reason, setReason] = useState("");
-  const [submitting, setSubmitting] = useState<"approve" | "reject" | "">("");
+  const [rejecting, setRejecting] = useState(false);
+  const [submitting, setSubmitting] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
 
-  if (!show) return null;
+  if (!spec) return null;
+  const primaryAction = actions.find((a) => a.id === spec.primary.actionId);
+  const secondaryAction = spec.secondary
+    ? actions.find((a) => a.id === spec.secondary!.actionId)
+    : undefined;
+  const gateArtifacts = (gate?.source_artifacts || []).filter(Boolean);
+  const artifacts = gateArtifacts.length
+    ? gateArtifacts
+    : primaryArtifact
+      ? [primaryArtifact]
+      : [];
+  const busy = Boolean(submitting);
 
-  async function submit(verdict: "approve" | "reject") {
+  async function run(target: "primary" | "secondary") {
     const cleanReason = reason.trim();
-    if (verdict === "reject" && !cleanReason) {
-      setError("Rejection needs guidance for the planner.");
+    if (target === "secondary" && !cleanReason) {
+      setError("Add guidance before sending it back.");
+      reasonRef.current?.focus();
       return;
     }
-    setSubmitting(verdict);
+    setSubmitting(
+      target === "primary" ? spec!.primary.actionId : spec!.secondary!.actionId,
+    );
     setError("");
     setNotice("");
     try {
-      const response = await submitPlanVerdict(sprintId, verdict, cleanReason);
+      let response;
+      if (kind === "plan_review") {
+        response = await submitPlanVerdict(
+          sprintId,
+          target === "primary" ? "approve" : "reject",
+          cleanReason,
+        );
+      } else if (kind === "eval_review") {
+        response = await submitEvalVerdict(
+          sprintId,
+          target === "primary" ? "pass" : "fail",
+          cleanReason,
+        );
+      } else {
+        response = await submitHandoff(sprintId);
+      }
       if (!response.ok) {
         throw new Error(
-          response.error ||
-            response.stdout_tail ||
-            `Plan ${verdict} did not complete`,
+          response.error || response.stdout_tail || "Action did not complete",
         );
       }
       setReason("");
-      setNotice(verdict === "approve" ? "Plan approved" : "Plan rejected");
+      setRejecting(false);
+      setNotice(
+        target === "primary"
+          ? "Recorded — Solar is advancing."
+          : "Sent back with your guidance.",
+      );
       await onRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Unable to ${verdict} plan`);
+      setError(err instanceof Error ? err.message : "Action failed");
     } finally {
       setSubmitting("");
     }
   }
 
+  function onSecondaryClick() {
+    if (!spec!.secondary) return;
+    if (!rejecting) {
+      setRejecting(true);
+      setError("");
+      window.setTimeout(() => reasonRef.current?.focus(), 0);
+      return;
+    }
+    void run("secondary");
+  }
+
   return (
-    <div className="plan-gate" data-testid="plan-gate-controls">
-      <div className="plan-gate-copy">
-        <strong>Plan review required</strong>
-        <p>
-          Approve the current DAG to continue, or reject it with guidance for a
-          new planning pass.
-        </p>
+    <section
+      className="decision-card decision-gate"
+      data-testid="human-gate"
+      aria-label={spec.title}
+    >
+      <div className="decision-head">
+        <span className="decision-kicker">Your decision</span>
+        <h2 className="decision-title">{spec.title}</h2>
       </div>
-      <textarea
-        className="plan-gate-reason"
-        value={reason}
-        onChange={(event) => {
-          setReason(event.target.value);
-          setError("");
-          setNotice("");
-        }}
-        placeholder="Guidance for rejection"
-        rows={2}
-      />
-      <div className="plan-gate-actions">
-        <button
-          type="button"
-          className="primary-button"
-          disabled={!approve?.enabled || Boolean(submitting)}
-          onClick={() => void submit("approve")}
-        >
-          {submitting === "approve" ? (
-            <Loader2 className="spin" size={15} />
-          ) : (
-            <CheckCircle2 size={15} />
-          )}
-          <span>{submitting === "approve" ? "Approving" : "Approve"}</span>
-        </button>
-        <button
-          type="button"
-          className="icon-text-button"
-          disabled={!reject?.enabled || Boolean(submitting)}
-          onClick={() => void submit("reject")}
-        >
-          {submitting === "reject" ? (
-            <Loader2 className="spin" size={15} />
-          ) : (
-            <X size={15} />
-          )}
-          <span>{submitting === "reject" ? "Rejecting" : "Reject"}</span>
-        </button>
+      <p className="decision-desc">{spec.description}</p>
+      {artifacts.length > 0 && (
+        <div className="decision-artifacts">
+          <FileText size={13} aria-hidden="true" />
+          <span>Review {artifacts.map(shortArtifact).join(" · ")}</span>
+        </div>
+      )}
+      {rejecting && spec.secondary && (
+        <textarea
+          ref={reasonRef}
+          className="decision-reason"
+          rows={2}
+          value={reason}
+          onChange={(event) => {
+            setReason(event.target.value);
+            setError("");
+          }}
+          placeholder={spec.secondary.reasonPlaceholder}
+        />
+      )}
+      <div className="decision-actions">
+        {!rejecting && (
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!primaryAction?.enabled || busy}
+            onClick={() => void run("primary")}
+          >
+            {submitting === spec.primary.actionId ? (
+              <Loader2 className="spin" size={15} />
+            ) : (
+              <CheckCircle2 size={15} />
+            )}
+            <span>
+              {submitting === spec.primary.actionId
+                ? spec.primary.pending
+                : spec.primary.label}
+            </span>
+          </button>
+        )}
+        {spec.secondary && (
+          <button
+            type="button"
+            className={rejecting ? "primary-button" : "ghost-button"}
+            disabled={(!secondaryAction?.enabled && !rejecting) || busy}
+            onClick={onSecondaryClick}
+          >
+            {submitting === spec.secondary.actionId && (
+              <Loader2 className="spin" size={15} />
+            )}
+            <span>
+              {submitting === spec.secondary.actionId
+                ? spec.secondary.pending
+                : rejecting
+                  ? spec.secondary.confirm
+                  : spec.secondary.label}
+            </span>
+          </button>
+        )}
+        {rejecting && (
+          <button
+            type="button"
+            className="text-button"
+            disabled={busy}
+            onClick={() => {
+              setRejecting(false);
+              setReason("");
+              setError("");
+            }}
+          >
+            Cancel
+          </button>
+        )}
       </div>
       {error && <div className="form-error">{error}</div>}
       {notice && <div className="form-notice">{notice}</div>}
-    </div>
+    </section>
+  );
+}
+
+function SystemStall({
+  stall,
+  mismatch,
+  actions,
+}: {
+  stall?: StallSummary;
+  mismatch?: {
+    present?: boolean;
+    missing_capability?: string;
+    blocked_node?: string;
+  };
+  actions: ProjectionAction[];
+}) {
+  const missing = asString(mismatch?.missing_capability);
+  const blockedNode = asString(
+    mismatch?.blocked_node || (stall?.blocked_nodes || [])[0],
+  );
+  const explanation = asString(stall?.explanation || stall?.reason);
+  const waiting = (stall?.blocked_nodes || []).filter(
+    (node) => node && node !== blockedNode,
+  );
+  const unsafe = actions.filter(
+    (action) =>
+      action.enabled === false &&
+      /retry|skip|cancel|repair|steer/i.test(asString(action.id)),
+  );
+  return (
+    <section
+      className="decision-card decision-stall"
+      data-testid="system-stall"
+      aria-label="Run paused"
+    >
+      <div className="decision-head">
+        <span className="decision-kicker stall-kicker">
+          <PauseCircle size={13} aria-hidden="true" />
+          System paused
+        </span>
+        <h2 className="decision-title">
+          No connected worker can take the next step
+        </h2>
+      </div>
+      <p className="decision-desc">
+        {blockedNode && (
+          <>
+            <code>{blockedNode}</code> is held:{" "}
+          </>
+        )}
+        no worker advertises{" "}
+        {missing ? <code>{missing}</code> : "a required capability"}, so Solar
+        paused rather than dispatch unsafely.
+        {explanation ? ` ${explanation}` : ""}
+      </p>
+      {waiting.length > 0 && (
+        <p className="stall-waiting">
+          Waiting behind it:{" "}
+          {waiting.map((node, index) => (
+            <span key={node}>
+              {index > 0 && ", "}
+              <code>{node}</code>
+            </span>
+          ))}
+        </p>
+      )}
+      <p className="stall-resolve">
+        This isn't something to retry — connect a worker that provides{" "}
+        {missing ? <code>{missing}</code> : "the capability"} and the run
+        continues.
+      </p>
+      {unsafe.length > 0 && (
+        <ul className="stall-unsafe">
+          {unsafe.map((action) => (
+            <li key={asString(action.id)}>
+              <span className="stall-unsafe-name">
+                {asString(action.label) ||
+                  prettyActionLabel(asString(action.id))}
+              </span>
+              <span className="stall-unsafe-reason">
+                {asString(action.reason) || "not safe yet"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
