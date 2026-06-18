@@ -1748,6 +1748,112 @@ summary:focus-visible,
   border-bottom: 1px solid var(--solar-line-soft);
 }
 
+/* Plan flow — the Planner's DAG nodes as a left-to-right flow of stages; parallel
+   siblings stack within a stage so the branch/merge reads honestly. */
+.plan-flow {
+  padding-bottom: var(--solar-space-7);
+  margin-bottom: var(--solar-space-7);
+  border-bottom: 1px solid var(--solar-line);
+}
+
+.plan-flow-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-5);
+}
+
+.plan-flow-title {
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.plan-flow-meta {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.plan-flow-track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: var(--solar-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-stage {
+  display: flex;
+  align-items: center;
+}
+
+.plan-stage:not(:last-child)::after {
+  content: "";
+  flex: 0 0 auto;
+  width: var(--solar-space-6);
+  height: 1px;
+  margin: 0 var(--solar-space-2);
+  background: var(--solar-line-strong);
+}
+
+.plan-stage-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-2);
+}
+
+.plan-node {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: 6px 12px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  background: var(--solar-surface);
+  white-space: nowrap;
+}
+
+.plan-node-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--solar-faint);
+}
+
+.plan-node-label {
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+}
+
+.plan-node.tone-complete .plan-node-dot {
+  background: var(--solar-success);
+}
+
+.plan-node.tone-working {
+  border-color: var(--solar-accent);
+}
+
+.plan-node.tone-working .plan-node-dot {
+  background: var(--solar-accent);
+}
+
+.plan-node.tone-blocked {
+  border-color: var(--solar-warning);
+  background: var(--solar-warning-fill);
+}
+
+.plan-node.tone-blocked .plan-node-dot {
+  background: var(--solar-warning);
+}
+
+.plan-node.tone-idle .plan-node-label {
+  color: var(--solar-muted);
+}
+
 .agent-signature .state-dot {
   margin: 0;
 }
@@ -2164,9 +2270,12 @@ summary:focus-visible,
 /* Floating popover card (Radix Content). Elevation is sanctioned here — a floating layer
    must read as above the page; a restrained layered shadow, never a heavy drop shadow. */
 .crew-popover {
-  width: 360px;
+  width: 340px;
   max-width: calc(100vw - 32px);
-  padding: var(--solar-space-5);
+  /* Never let the panel run past the viewport — fit the space Radix reports, then scroll. */
+  max-height: var(--radix-popover-content-available-height, 70vh);
+  overflow-y: auto;
+  padding: var(--solar-space-4);
   border: 1px solid var(--solar-line);
   border-radius: var(--solar-radius-modal);
   background: var(--solar-canvas);
@@ -2199,7 +2308,7 @@ summary:focus-visible,
 .crew-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--solar-space-4);
+  gap: var(--solar-space-3);
 }
 
 .crew-panel-head {
@@ -2233,12 +2342,17 @@ summary:focus-visible,
   grid-template-columns: minmax(0, 1fr) 168px;
   gap: var(--solar-space-3);
   align-items: center;
-  padding: var(--solar-space-3) 0;
+  padding: var(--solar-space-2) 0;
   border-top: 1px solid var(--solar-line-soft);
 }
 
 .crew-agent-row:first-child {
   border-top: 0;
+}
+
+.crew-agent-name {
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
 }
 
 .crew-panes-row {

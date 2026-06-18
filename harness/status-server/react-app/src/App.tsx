@@ -81,6 +81,7 @@ import {
   titleForSprint,
 } from "./format";
 import type {
+  DagNode,
   DashboardResponse,
   Deliverable,
   EventRecord,
@@ -687,17 +688,10 @@ function SessionView({
   const currentSprint = (data?.sprint ||
     sprint || { sprint_id: sprintId }) as SprintSummary;
   const stall = data?.stall || sprint?.stall;
-  const agents = useMemo(
-    () => buildAgents(session.status, dashboard, session.events),
-    [session.status, dashboard, session.events],
-  );
   const phase = asString(
     data?.phase || currentSprint.phase || currentSprint.status,
   );
   const isBlocked = Boolean(stall?.is_stalled);
-  const isComplete =
-    statusTone(asString(currentSprint.status || phase)) === "complete";
-  const gate = useMemo(() => buildGate(dashboard), [dashboard]);
   const processSteps = useMemo(
     () =>
       buildProcessSteps(dashboard, session.events, session.deliverables, phase),
@@ -710,7 +704,6 @@ function SessionView({
       <TopBar
         sprint={currentSprint}
         streamState={session.streamState}
-        onCreated={onCreated}
         rail={rail}
         deliverableCount={session.deliverables.length}
       />
@@ -731,7 +724,7 @@ function SessionView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <AgentSignature agents={agents} gate={gate} isBlocked={isBlocked} />
+            <PlanFlow dashboard={dashboard} isBlocked={isBlocked} />
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
             >
@@ -961,6 +954,89 @@ function agentShortName(role: AgentCardModel["role"]): string {
 
 // The signature element: the multi-agent relay. Each variant expresses the
 // same subject (who acted, and where the capability gate held the work)
+function planNodeLabel(node: DagNode): string {
+  const id = asString(node.node_id || node.id);
+  const short = id.replace(/^build-/, "");
+  return short || asString(node.title) || id;
+}
+
+// Group the plan's DAG nodes by dependency depth so parallel siblings share a stage —
+// an honest flow (it shows the real branch/merge) rather than a fake straight line.
+function buildPlanLevels(nodes: DagNode[]): DagNode[][] {
+  const byId = new Map<string, DagNode>();
+  nodes.forEach((node) => byId.set(asString(node.node_id || node.id), node));
+  const cache = new Map<string, number>();
+  function depth(id: string, seen: Set<string>): number {
+    const cached = cache.get(id);
+    if (cached !== undefined) return cached;
+    if (seen.has(id)) return 0; // cycle guard
+    seen.add(id);
+    const deps = (byId.get(id)?.depends_on || []).filter((dep) =>
+      byId.has(dep),
+    );
+    const value = deps.length
+      ? 1 + Math.max(...deps.map((dep) => depth(dep, seen)))
+      : 0;
+    seen.delete(id);
+    cache.set(id, value);
+    return value;
+  }
+  const levels: DagNode[][] = [];
+  nodes.forEach((node) => {
+    const level = depth(asString(node.node_id || node.id), new Set());
+    (levels[level] ||= []).push(node);
+  });
+  return levels.filter((stage) => stage && stage.length);
+}
+
+// The Planner's plan made legible: the DAG nodes as a left-to-right flow of stages.
+function PlanFlow({
+  dashboard,
+  isBlocked,
+}: {
+  dashboard?: DashboardResponse;
+  isBlocked: boolean;
+}) {
+  const nodes = dashboard?.data?.dag?.nodes || [];
+  const levels = useMemo(() => buildPlanLevels(nodes), [nodes]);
+  if (!levels.length) return null;
+  return (
+    <section className="plan-flow" aria-label="Plan" data-testid="plan-flow">
+      <div className="plan-flow-head">
+        <span className="plan-flow-title">Plan</span>
+        <span className="plan-flow-meta">
+          {nodes.length} steps
+          {isBlocked ? " · blocked at a capability gate" : ""}
+        </span>
+      </div>
+      <ol className="plan-flow-track">
+        {levels.map((stage, index) => (
+          <li className="plan-stage" key={index}>
+            <div className="plan-stage-nodes">
+              {stage.map((node) => {
+                const id = asString(node.node_id || node.id);
+                const tone = statusTone(asString(node.status));
+                return (
+                  <span
+                    className={`plan-node tone-${tone}`}
+                    key={id}
+                    title={asString(node.title) || id}
+                  >
+                    <span className="plan-node-dot" aria-hidden="true" />
+                    <span className="plan-node-label">
+                      {planNodeLabel(node)}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 // differently — a handoff spine, a supply/demand ledger, or an operator log.
 function AgentSignature({
   agents,
@@ -1862,13 +1938,11 @@ function timestampValue(value: string): number {
 function TopBar({
   sprint,
   streamState,
-  onCreated,
   rail,
   deliverableCount,
 }: {
   sprint: SprintSummary;
   streamState: string;
-  onCreated: (sprintId: string) => Promise<void>;
   rail: RailController;
   deliverableCount: number;
 }) {
@@ -1904,11 +1978,6 @@ function TopBar({
             <span className="rail-toggle-count">{deliverableCount}</span>
           )}
         </button>
-        <NewTaskDialog
-          onCreated={onCreated}
-          buttonClassName="primary-button topbar-new-task"
-          compact
-        />
       </div>
     </header>
   );
@@ -2352,10 +2421,9 @@ function CrewPanel({ crew }: { crew: Crew }) {
       <div className="crew-agent-list">
         {ROLE_ORDER.map((role) => (
           <div className="crew-agent-row" key={role}>
-            <div className="crew-agent-id">
-              <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
-              <span>{ROLE_META[role].subtitle}</span>
-            </div>
+            <strong className="crew-agent-name">
+              {ROLE_META[role].title.split(" ")[0]}
+            </strong>
             <div className="model-select">
               <select
                 aria-label={`${ROLE_META[role].title} model`}
