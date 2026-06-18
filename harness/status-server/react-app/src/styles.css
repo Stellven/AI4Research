@@ -993,6 +993,164 @@ summary:focus-visible,
   tab-size: 2;
 }
 
+.dv-action.is-active {
+  color: var(--solar-ink);
+  background: var(--solar-surface-quiet);
+}
+
+/* Rendered markdown — typographic hierarchy in the monochrome palette, mono for code. */
+.dv-md {
+  padding: var(--solar-space-4);
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  line-height: 1.6;
+}
+
+.dv-md > :first-child {
+  margin-top: 0;
+}
+
+.dv-md > :last-child {
+  margin-bottom: 0;
+}
+
+.dv-md h1,
+.dv-md h2,
+.dv-md h3,
+.dv-md h4 {
+  margin: 1.2em 0 0.5em;
+  font-weight: var(--solar-weight-strong);
+  line-height: 1.25;
+}
+
+.dv-md h1 {
+  font-size: var(--solar-type-lg);
+}
+
+.dv-md h2 {
+  font-size: var(--solar-type-base);
+}
+
+.dv-md h3 {
+  font-size: var(--solar-type-sm);
+}
+
+.dv-md p {
+  margin: 0 0 0.8em;
+}
+
+.dv-md ul,
+.dv-md ol {
+  margin: 0 0 0.8em;
+  padding-left: 1.3em;
+}
+
+.dv-md li {
+  margin: 0.2em 0;
+}
+
+.dv-md a {
+  color: var(--solar-accent-ink);
+  text-underline-offset: 2px;
+}
+
+.dv-md code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--solar-surface-quiet);
+  font-family: var(--solar-font-mono);
+  font-size: 0.92em;
+}
+
+.dv-md pre {
+  margin: 0 0 0.8em;
+  padding: var(--solar-space-3);
+  overflow-x: auto;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-canvas);
+}
+
+.dv-md pre code {
+  padding: 0;
+  background: none;
+}
+
+.dv-md blockquote {
+  margin: 0 0 0.8em;
+  padding: 0.2em 0 0.2em 0.9em;
+  border-left: 2px solid var(--solar-line-strong);
+  color: var(--solar-muted);
+}
+
+.dv-md table {
+  width: 100%;
+  margin: 0 0 0.8em;
+  border-collapse: collapse;
+  font-size: var(--solar-type-xs);
+}
+
+.dv-md th,
+.dv-md td {
+  padding: 6px 8px;
+  border: 1px solid var(--solar-line);
+  text-align: left;
+}
+
+.dv-md th {
+  background: var(--solar-surface-quiet);
+  font-weight: var(--solar-weight-strong);
+}
+
+.dv-md hr {
+  margin: 1.2em 0;
+  border: 0;
+  border-top: 1px solid var(--solar-line);
+}
+
+/* JSON — tonal (monochrome) highlight: differentiate by weight/tone, not hue. */
+.dv-json {
+  margin: 0;
+  padding: var(--solar-space-4);
+  color: var(--solar-muted);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
+}
+
+.dv-json .json-key {
+  color: var(--solar-ink);
+  font-weight: var(--solar-weight-medium);
+}
+
+.dv-json .json-str {
+  color: var(--solar-muted);
+}
+
+.dv-json .json-num {
+  color: var(--solar-ink);
+}
+
+.dv-json .json-lit {
+  color: var(--solar-ink);
+  font-style: italic;
+}
+
+.dv-image-wrap {
+  display: flex;
+  padding: var(--solar-space-4);
+}
+
+.dv-image {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+}
+
 .dv-status {
   display: flex;
   flex-direction: column;

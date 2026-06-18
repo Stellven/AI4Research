@@ -2,6 +2,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as Popover from "@radix-ui/react-popover";
 import * as Switch from "@radix-ui/react-switch";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -12,6 +14,7 @@ import {
   CheckCircle2,
   Circle,
   Clock3,
+  Code2,
   Download,
   FileCheck2,
   FileText,
@@ -1255,6 +1258,84 @@ function kindLabel(kind: string): string {
   return map[kind.toLowerCase()] || kind.toUpperCase();
 }
 
+const IMAGE_KINDS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
+
+function isImageKind(kind: string): boolean {
+  return IMAGE_KINDS.has(kind.toLowerCase());
+}
+
+function canRenderKind(kind: string): boolean {
+  const k = kind.toLowerCase();
+  return k === "md" || k === "markdown" || k === "json";
+}
+
+// Tonal (not color-coded) JSON highlight: keys, strings, numbers, and literals each get a
+// class so weight/tone can differentiate them while staying in the monochrome palette.
+function highlightJson(src: string): React.ReactNode[] {
+  const re =
+    /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+\.?\d*(?:[eE][+-]?\d+)?)|\b(true|false|null)\b/g;
+  const nodes: React.ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(src))) {
+    if (match.index > last) nodes.push(src.slice(last, match.index));
+    if (match[1]) {
+      nodes.push(
+        <span key={key++} className={match[2] ? "json-key" : "json-str"}>
+          {match[1]}
+        </span>,
+      );
+      if (match[2]) nodes.push(match[2]);
+    } else if (match[3]) {
+      nodes.push(
+        <span key={key++} className="json-num">
+          {match[3]}
+        </span>,
+      );
+    } else if (match[4]) {
+      nodes.push(
+        <span key={key++} className="json-lit">
+          {match[4]}
+        </span>,
+      );
+    }
+    last = match.index + match[0].length;
+  }
+  if (last < src.length) nodes.push(src.slice(last));
+  return nodes;
+}
+
+function DeliverableRendered({
+  item,
+  text,
+  raw,
+}: {
+  item: Deliverable;
+  text: string;
+  raw: boolean;
+}) {
+  if (raw) return <pre className="dv-raw">{text}</pre>;
+  const kind = item.kind.toLowerCase();
+  if (kind === "md" || kind === "markdown") {
+    return (
+      <div className="dv-md">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      </div>
+    );
+  }
+  if (kind === "json") {
+    let pretty = text;
+    try {
+      pretty = JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+      // Not valid JSON — fall back to the raw text rather than throwing.
+    }
+    return <pre className="dv-json">{highlightJson(pretty)}</pre>;
+  }
+  return <pre className="dv-raw">{text}</pre>;
+}
+
 function DeliverablePreview({
   item,
   sprintId,
@@ -1267,12 +1348,19 @@ function DeliverablePreview({
   onClose: () => void;
 }) {
   const url = deliverableUrl(sprintId, item);
-  const [state, setState] = useState<LoadState>("loading");
+  const isImage = isImageKind(item.kind);
+  const canToggleRaw = canRenderKind(item.kind);
+  const [state, setState] = useState<LoadState>(isImage ? "ready" : "loading");
   const [text, setText] = useState("");
   const [error, setError] = useState("");
+  const [raw, setRaw] = useState(false);
   const backRef = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(() => {
+    if (isImage) {
+      setState("ready");
+      return;
+    }
     setState("loading");
     setError("");
     fetchDeliverableText(url)
@@ -1286,7 +1374,7 @@ function DeliverablePreview({
         );
         setState("error");
       });
-  }, [url]);
+  }, [url, isImage]);
 
   useEffect(() => {
     load();
@@ -1310,6 +1398,17 @@ function DeliverablePreview({
           <span>Deliverables</span>
         </button>
         <div className="dv-preview-actions">
+          {canToggleRaw && (
+            <button
+              type="button"
+              className={`dv-action ${raw ? "is-active" : ""}`}
+              aria-pressed={raw}
+              aria-label="Toggle raw source"
+              onClick={() => setRaw((value) => !value)}
+            >
+              <Code2 size={15} />
+            </button>
+          )}
           <a
             className="dv-action"
             href={url}
@@ -1358,7 +1457,14 @@ function DeliverablePreview({
             </button>
           </div>
         )}
-        {state === "ready" && <pre className="dv-raw">{text}</pre>}
+        {state === "ready" &&
+          (isImage ? (
+            <div className="dv-image-wrap">
+              <img className="dv-image" src={url} alt={item.name} />
+            </div>
+          ) : (
+            <DeliverableRendered item={item} text={text} raw={raw} />
+          ))}
       </div>
       <div className="dv-preview-foot">
         {kindLabel(item.kind)}
