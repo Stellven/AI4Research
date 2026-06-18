@@ -102,12 +102,14 @@ red-fill text pairing.
   neutral ink, reserving the hue budget for red (brand) and amber (stalled).
 - Structure with neutrals (dividers, borders, muted/subtle text), so red pops.
 
-**Sanctioned exception — brand mark depth (owner-approved 2026-06):** the 5-petal
-lotus mark (and ONLY the mark) uses three lightness steps of the one red hue —
-`#cf0a2c` front / `#a60822` mid / `#7a0a1d` back — to read 3D via overlap occlusion
-(darker rear petals behind a lighter front petal, plus a focal center node). All three
-are the same hue and AA on white (5.6 / 7.8 / 11.1:1); depth comes from stacking order,
-never an intra-petal gradient/glow/bevel. It stays one rationed signal.
+**Sanctioned exception — brand mark depth (owner-approved 2026-06):** the lotus mark
+(and ONLY the mark) is an upright **lotus bloom** — petals fan up from one base — using
+three lightness steps of the one red hue: `#cf0a2c` front/center, `#a60822` mid, `#7a0a1d`
+outer/back. Outer petals recede in the darkest red, the center/front petals are the bright
+brand red, so the three shades give the bloom its depth (it must read as a lotus, not a
+radial/sunflower). All three are the same hue and AA on white (5.6 / 7.8 / 11.1:1); depth
+comes from per-petal shade + stacking order, never an intra-petal gradient/glow/bevel. It
+stays one rationed signal.
 
 Forbidden color moves: Tailwind defaults (indigo/slate/tailwind-blue); purple/
 cyan/blue gradients; gradient text; **green** "success"; fields of red / red
@@ -134,9 +136,10 @@ Type scale (px): 11 micro · 12 label · 14 dense body · 16 body · 20 emphasis
 Card-less by default; structure from whitespace, type hierarchy, and hairline
 dividers. The session view leads with a **thin context bar** (no repeated giant
 title — the title lives once in the topbar), the **process stream owns the center
-column**, and a slim **results rail** (Deliverables + per-sprint usage) sits
-right. Separation lines may run **full-bleed** to the edges. Cards only for
-genuinely discrete, actionable objects.
+column**, and a **collapsible results rail** (Deliverables + per-sprint usage) is
+summoned on the right (see the deliverables-rail contract below). Separation lines
+may run **full-bleed** to the edges. Cards only for genuinely discrete, actionable
+objects.
 
 Forbidden structure: uniform card grids · nested cards · box/drop shadows ·
 gradients · decorative illustration · centered-everything symmetry.
@@ -152,15 +155,27 @@ links (Settings) remain clearly legible.
 
 **Crew launcher (home composer):** a small footer-left `Crew` pill opens a **floating
 popover** (Codex-style — Radix, click / click-outside / Esc, persistent open state, never a
-hover dropdown) holding a lab-matrix preset (All-Claude / All-GLM / Custom), per-agent
-(PM/Planner/Builder/Evaluator) model selects, and a **build-panes** stepper (parallel build
-workers, capped at the runtime's real operator budget `physical_operators.count`), all
-seeded read-only from the runtime. It is **staged-only**: P0 has no write path, so the
-selection is not sent with the intake and "Start work" launches on the runtime's configured
-crew. That honesty line ships **both** in the popover and in the always-visible composer
-caption (so it reads at the moment of action, not only when the popover is open); never add
-a "Saved"/success state. A popover is a sanctioned elevated surface (restrained layered
-shadow, not a heavy drop shadow).
+hover dropdown) holding **per-agent (PM/Planner/Builder/Evaluator) model selects** (the user
+sets each directly — no preset row) and a **build-panes** stepper (parallel build workers,
+capped at the runtime's real operator budget `physical_operators.count`), all seeded
+read-only from the runtime. It is **staged-only**: P0 has no write path, so the selection is
+not sent with the intake and "Start work" launches on the runtime's configured crew. That
+honesty line ships **both** in the popover and in the always-visible composer caption (so it
+reads at the moment of action, not only when the popover is open); never add a "Saved"/
+success state. A popover is a sanctioned elevated surface (restrained layered shadow, not a
+heavy drop shadow).
+
+**Deliverables rail (session view):** the results rail is **collapsed by default** (clean
+two-pane run); a `PanelRight` toggle in the run header opens it (`aria-expanded`), `×` or the
+toggle closes it, and the open/closed choice persists (localStorage). Docked on desktop, it
+transitions width 0 → ~300px (list) → ~480px (preview) while the run flexes to stay visible
+beside it; on narrow viewports it overlays as a fixed drawer + scrim. **Master-detail:**
+clicking a deliverable opens it **inside** the rail (never download / open-in-new-tab as the
+default — those are explicit buttons), with a back control, type-aware rendering (markdown
+via react-markdown **default-safe, no raw-HTML**; JSON pretty-printed with a monochrome tonal
+highlight; images inline; a raw-source toggle), lazy fetch from the existing read endpoint
+(`…/deliverables?path=`) with loading + error/retry. a11y: focus enters the preview on open
+and returns to the originating row on back; Esc steps preview → list → collapsed.
 
 ## Space
 

@@ -120,6 +120,44 @@ matrix config, 3D-from-one-hue mark, lockup sizing, tinted glass).
 - DESIGN.md updated: `subtle` token, lotus shade tokens, two sanctioned-exception blocks
   (mark depth, warm glass), and the crew-launcher IA.
 
+### 11 · Crew popover · build panes · lotus reshape (2026-06-18, owner-directed)
+- **Crew → floating popover.** Owner wanted Codex-style: shrank the pill (~178→82px) and
+  moved the crew config into a **Radix Popover** (click / click-outside / Esc, persistent,
+  portaled — can't flicker). Added a **Build panes** stepper (parallel build workers) capped
+  at the runtime's real `physical_operators.count` (4), seeded read-only; staged like the
+  rest. Later, per owner, **removed the All-Claude/All-GLM/Custom preset row** — the user
+  sets each agent's model directly (simplified `useCrew`: dropped labMode/applyPreset).
+- **Lotus reshape.** The radial 5-petal mark read as a **sunflower**; owner asked for an
+  actual lotus with the shades inside. Rebuilt `BrandMark` as an **upright lotus bloom**
+  (7 petals fanning up from one base via `translate/rotate/scale`): outer petals `#7a0a1d`,
+  mid `#a60822`, center/front `#cf0a2c` — the three shades give depth.
+- Verified: tsc green, Playwright (pill 82px, popover opens/dismisses, stepper 1→4 capped,
+  per-agent selects, no preset), prod-bundle smoke, logo zoom screenshot.
+
+### 12 · Collapsible deliverables rail + inline preview (2026-06-18, owner-directed)
+Owner spec: a Codex-style collapsible right rail with an in-panel file preview.
+- **Rail.** Collapsed by default; `PanelRight` toggle in the run header (`aria-expanded`),
+  `×`/toggle to close, open state persisted in **localStorage**. Docked desktop: width
+  transitions 0 → 300px (list) → 480px (preview), run flexes to stay visible; **narrow:
+  fixed overlay drawer + scrim**. Reduced-motion respected.
+- **List state:** deliverables (clickable rows → preview) + per-sprint tokens.
+- **Master-detail preview (inside the rail):** clicking opens the file inline — **never
+  downloads / new-tabs by default** (those are explicit buttons). Back control, type-aware
+  rendering — **markdown** via react-markdown + remark-gfm (**default-safe, no raw-HTML
+  plugin** → agent content can't inject), **JSON** pretty-printed with a monochrome tonal
+  highlight, **images** inline, plus a **raw-source toggle**. Lazy fetch from the EXISTING
+  read endpoint `…/deliverables?path=` (confirmed against the real status-server handler:
+  full content, matching content-types, no Content-Disposition — **no repo backend change**;
+  the dev mock got content-serving + fixture bodies to match). Loading + error/retry.
+- **a11y:** focus enters the preview on open and **returns to the originating row** on back;
+  **Esc steps** preview → list → collapsed; preview body keyboard-scrollable.
+- Deferred (flagged): collapsible JSON tree nodes; image preview path implemented but
+  unverified (no image deliverable in the fixture).
+- Verified: tsc green, Playwright a11y/behavior driver (collapsed=0 / list=300 / preview=480,
+  focus in/out, Esc steps, localStorage persist), pixel screenshots (md table/code/blockquote,
+  tonal JSON), **prod-bundle render smoke**. New deps: `react-markdown`, `remark-gfm`,
+  `@radix-ui/react-popover`. DESIGN.md updated (deliverables-rail + per-agent crew + lotus).
+
 ---
 
 ## Research (three multi-agent workflows)
