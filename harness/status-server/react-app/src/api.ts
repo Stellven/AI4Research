@@ -70,6 +70,29 @@ export function fetchSettings(): Promise<SettingsPayload> {
   return requestJson<SettingsPayload>("/settings");
 }
 
+// The read-only content URL for a deliverable. Prefer the server-provided view_url
+// (real status-server already exposes it); fall back to the documented path query.
+export function deliverableUrl(
+  sprintId: string,
+  item: { rel_path: string; view_url?: string },
+): string {
+  if (item.view_url && item.view_url.startsWith("/")) return item.view_url;
+  return `/sprints/${encodeURIComponent(sprintId)}/deliverables?path=${encodeURIComponent(item.rel_path)}`;
+}
+
+export async function fetchDeliverableText(
+  url: string,
+): Promise<{ text: string; contentType: string }> {
+  const response = await fetch(url, { headers: { Accept: "text/plain, */*" } });
+  if (!response.ok) {
+    throw new Error(`Couldn’t load this file (HTTP ${response.status})`);
+  }
+  return {
+    text: await response.text(),
+    contentType: response.headers.get("Content-Type") || "",
+  };
+}
+
 export function submitIntake(task: string): Promise<IntakeResponse> {
   return requestJson<IntakeResponse>("/intake", {
     method: "POST",

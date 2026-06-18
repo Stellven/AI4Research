@@ -4,6 +4,7 @@ import * as Switch from "@radix-ui/react-switch";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowUpRight,
   Bot,
   ChevronDown,
@@ -11,12 +12,14 @@ import {
   CheckCircle2,
   Circle,
   Clock3,
+  Download,
   FileCheck2,
   FileText,
   ListTree,
   Loader2,
   MessageSquarePlus,
   Minus,
+  PanelRight,
   Play,
   Plus,
   Radio,
@@ -26,6 +29,7 @@ import {
   ShieldCheck,
   SquareTerminal,
   Workflow,
+  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -39,8 +43,10 @@ import {
   useParams,
 } from "react-router-dom";
 import {
+  deliverableUrl,
   fetchDashboard,
   fetchDeliverables,
+  fetchDeliverableText,
   fetchEvents,
   fetchSettings,
   fetchSprints,
@@ -692,6 +698,7 @@ function SessionView({
       buildProcessSteps(dashboard, session.events, session.deliverables, phase),
     [dashboard, session.deliverables, session.events, phase],
   );
+  const rail = useDeliverablesRail();
 
   return (
     <div className="workspace-scroll">
@@ -699,6 +706,8 @@ function SessionView({
         sprint={currentSprint}
         streamState={session.streamState}
         onCreated={onCreated}
+        rail={rail}
+        deliverableCount={session.deliverables.length}
       />
       <AnimatePresence mode="popLayout">
         {session.state === "loading" && <LoadingWorkbench key="loading" />}
@@ -718,13 +727,25 @@ function SessionView({
             exit={{ opacity: 0, y: -10 }}
           >
             <AgentSignature agents={agents} gate={gate} isBlocked={isBlocked} />
-            <div className="process-results-layout">
+            <div
+              className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
+            >
               <ProcessStream steps={processSteps} />
-              <ResultsRail
+              <DeliverablesRail
+                rail={rail}
+                sprintId={sprintId}
                 deliverables={session.deliverables}
                 usage={session.usage}
                 dashboard={dashboard}
               />
+              {rail.open && (
+                <button
+                  type="button"
+                  className="rail-scrim"
+                  aria-label="Collapse deliverables"
+                  onClick={() => rail.setOpen(false)}
+                />
+              )}
             </div>
           </motion.div>
         )}
@@ -1042,20 +1063,306 @@ function ProcessStepItem({ step }: { step: ProcessStep }) {
   );
 }
 
-function ResultsRail({
+const RAIL_STORAGE_KEY = "ai4r.rail.open";
+
+// Collapsed by default; honor the stored open/closed choice. Preview state never persists.
+function useDeliverablesRail() {
+  const [open, setOpenState] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(RAIL_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+
+  const setOpen = useCallback((next: boolean) => {
+    setOpenState(next);
+    try {
+      window.localStorage.setItem(RAIL_STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      // localStorage unavailable (private mode) — open state stays in memory only.
+    }
+    if (!next) setPreviewPath(null);
+  }, []);
+
+  const toggle = useCallback(() => setOpen(!open), [open, setOpen]);
+  const openPreview = useCallback((path: string) => setPreviewPath(path), []);
+  const closePreview = useCallback(() => setPreviewPath(null), []);
+
+  return { open, setOpen, toggle, previewPath, openPreview, closePreview };
+}
+
+type RailController = ReturnType<typeof useDeliverablesRail>;
+
+function DeliverablesRail({
+  rail,
+  sprintId,
   deliverables,
   usage,
   dashboard,
 }: {
+  rail: RailController;
+  sprintId: string;
   deliverables: Deliverable[];
   usage?: UsagePayload;
   dashboard?: DashboardResponse;
 }) {
+  const activeItem = rail.previewPath
+    ? deliverables.find((item) => item.rel_path === rail.previewPath)
+    : undefined;
+  const inPreview = Boolean(activeItem);
+  const asideRef = useRef<HTMLElement>(null);
+  const returnFocusPath = useRef<string | null>(null);
+
+  // Remove the collapsed rail from the tab order / a11y tree without killing the
+  // width transition (visibility/display would).
+  useEffect(() => {
+    const node = asideRef.current as (HTMLElement & { inert?: boolean }) | null;
+    if (node) node.inert = !rail.open;
+  }, [rail.open]);
+
+  function handleOpenPreview(path: string) {
+    returnFocusPath.current = path;
+    rail.openPreview(path);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent) {
+    if (event.key !== "Escape") return;
+    event.stopPropagation();
+    if (inPreview) rail.closePreview();
+    else rail.setOpen(false);
+  }
+
   return (
-    <aside className="results-rail" data-testid="results-rail">
-      <DeliverablesPanel deliverables={deliverables} />
-      <UsagePanel usage={usage} dashboard={dashboard} />
+    <aside
+      ref={asideRef}
+      className={`deliverables-rail ${rail.open ? "is-open" : "is-collapsed"} ${inPreview ? "is-preview" : ""}`}
+      data-testid="results-rail"
+      aria-label="Deliverables"
+      onKeyDown={handleKeyDown}
+    >
+      {inPreview && activeItem ? (
+        <DeliverablePreview
+          item={activeItem}
+          sprintId={sprintId}
+          onBack={rail.closePreview}
+          onClose={() => rail.setOpen(false)}
+        />
+      ) : (
+        <RailList
+          deliverables={deliverables}
+          usage={usage}
+          dashboard={dashboard}
+          onOpen={handleOpenPreview}
+          onClose={() => rail.setOpen(false)}
+          focusPath={returnFocusPath.current}
+        />
+      )}
     </aside>
+  );
+}
+
+function RailList({
+  deliverables,
+  usage,
+  dashboard,
+  onOpen,
+  onClose,
+  focusPath,
+}: {
+  deliverables: Deliverable[];
+  usage?: UsagePayload;
+  dashboard?: DashboardResponse;
+  onOpen: (path: string) => void;
+  onClose: () => void;
+  focusPath: string | null;
+}) {
+  const focusRowRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (focusPath && focusRowRef.current) focusRowRef.current.focus();
+  }, [focusPath]);
+
+  return (
+    <div className="rail-list" data-testid="deliverables-panel">
+      <div className="rail-head">
+        <div className="rail-head-title">
+          <span>Deliverables</span>
+          <span className="rail-count">{deliverables.length}</span>
+        </div>
+        <button
+          type="button"
+          className="rail-close"
+          onClick={onClose}
+          aria-label="Collapse deliverables"
+        >
+          <X size={15} />
+        </button>
+      </div>
+      {deliverables.length === 0 ? (
+        <EmptyInline label="No deliverables yet" />
+      ) : (
+        <div className="artifact-list">
+          {deliverables.map((item) => (
+            <button
+              type="button"
+              key={item.rel_path}
+              ref={focusPath === item.rel_path ? focusRowRef : undefined}
+              className="artifact-row"
+              onClick={() => onOpen(item.rel_path)}
+            >
+              <FileText className="artifact-icon" size={15} />
+              <span className="artifact-name">{item.name}</span>
+              <span className="artifact-meta">{item.kind.toUpperCase()}</span>
+              <ChevronRight size={14} className="artifact-chevron" />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="rail-divider" />
+      <UsagePanel usage={usage} dashboard={dashboard} />
+    </div>
+  );
+}
+
+function formatDeliverableTime(mtime?: number): string {
+  if (!mtime) return "";
+  const date = new Date(mtime * 1000);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function kindLabel(kind: string): string {
+  const map: Record<string, string> = {
+    md: "Markdown",
+    markdown: "Markdown",
+    json: "JSON",
+    txt: "Text",
+    log: "Log",
+    html: "HTML",
+    png: "Image",
+    jpg: "Image",
+    jpeg: "Image",
+  };
+  return map[kind.toLowerCase()] || kind.toUpperCase();
+}
+
+function DeliverablePreview({
+  item,
+  sprintId,
+  onBack,
+  onClose,
+}: {
+  item: Deliverable;
+  sprintId: string;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  const url = deliverableUrl(sprintId, item);
+  const [state, setState] = useState<LoadState>("loading");
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const backRef = useRef<HTMLButtonElement>(null);
+
+  const load = useCallback(() => {
+    setState("loading");
+    setError("");
+    fetchDeliverableText(url)
+      .then(({ text: body }) => {
+        setText(body);
+        setState("ready");
+      })
+      .catch((err) => {
+        setError(
+          err instanceof Error ? err.message : "Couldn’t load this file",
+        );
+        setState("error");
+      });
+  }, [url]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Move focus into the preview on open (back to the originating row is handled by RailList).
+  useEffect(() => {
+    backRef.current?.focus();
+  }, []);
+
+  return (
+    <div className="dv-preview" data-testid="deliverable-preview">
+      <div className="dv-preview-head">
+        <button
+          type="button"
+          ref={backRef}
+          className="dv-back"
+          onClick={onBack}
+        >
+          <ArrowLeft size={15} aria-hidden="true" />
+          <span>Deliverables</span>
+        </button>
+        <div className="dv-preview-actions">
+          <a
+            className="dv-action"
+            href={url}
+            download={item.name}
+            aria-label="Download file"
+          >
+            <Download size={15} />
+          </a>
+          <a
+            className="dv-action"
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open in new tab"
+          >
+            <ArrowUpRight size={15} />
+          </a>
+          <button
+            type="button"
+            className="dv-action"
+            onClick={onClose}
+            aria-label="Collapse deliverables"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      </div>
+      <div className="dv-preview-title">
+        <span className="dv-preview-name">{item.name}</span>
+        <span className="dv-badge">{item.kind.toUpperCase()}</span>
+      </div>
+      <div className="dv-preview-body" tabIndex={0}>
+        {state === "loading" && (
+          <div className="dv-status">
+            <Loader2 className="spin" size={16} />
+            <span>Loading…</span>
+          </div>
+        )}
+        {state === "error" && (
+          <div className="dv-status dv-status-error">
+            <AlertTriangle size={16} />
+            <p>{error}</p>
+            <button type="button" className="icon-text-button" onClick={load}>
+              <RefreshCw size={14} />
+              <span>Retry</span>
+            </button>
+          </div>
+        )}
+        {state === "ready" && <pre className="dv-raw">{text}</pre>}
+      </div>
+      <div className="dv-preview-foot">
+        {kindLabel(item.kind)}
+        {item.mtime ? ` · updated ${formatDeliverableTime(item.mtime)}` : ""}
+      </div>
+    </div>
   );
 }
 
@@ -1448,10 +1755,14 @@ function TopBar({
   sprint,
   streamState,
   onCreated,
+  rail,
+  deliverableCount,
 }: {
   sprint: SprintSummary;
   streamState: string;
   onCreated: (sprintId: string) => Promise<void>;
+  rail: RailController;
+  deliverableCount: number;
 }) {
   return (
     <header className="topbar">
@@ -1473,6 +1784,18 @@ function TopBar({
             </span>
           </div>
         )}
+        <button
+          type="button"
+          className={`rail-toggle ${rail.open ? "is-open" : ""}`}
+          aria-label="Deliverables"
+          aria-expanded={rail.open}
+          onClick={rail.toggle}
+        >
+          <PanelRight size={16} aria-hidden="true" />
+          {deliverableCount > 0 && (
+            <span className="rail-toggle-count">{deliverableCount}</span>
+          )}
+        </button>
         <NewTaskDialog
           onCreated={onCreated}
           buttonClassName="primary-button topbar-new-task"
@@ -1536,40 +1859,6 @@ function buildAgents(
         : [],
     };
   });
-}
-
-function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
-  return (
-    <section
-      className="panel deliverables-panel"
-      data-testid="deliverables-panel"
-    >
-      <div className="panel-head">
-        <h2>Deliverables</h2>
-        <span>{deliverables.length}</span>
-      </div>
-      {deliverables.length === 0 ? (
-        <EmptyInline label="No artifacts produced yet" />
-      ) : (
-        <div className="artifact-list">
-          {deliverables.slice(0, 6).map((item) => (
-            <a
-              className="artifact-row"
-              href={item.view_url}
-              target="_blank"
-              rel="noreferrer"
-              key={item.rel_path}
-            >
-              <FileText className="artifact-icon" size={15} />
-              <span className="artifact-name">{item.name}</span>
-              <span className="artifact-meta">{item.kind.toUpperCase()}</span>
-              <ArrowUpRight size={14} />
-            </a>
-          ))}
-        </div>
-      )}
-    </section>
-  );
 }
 
 function UsagePanel({

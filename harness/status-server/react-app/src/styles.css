@@ -643,10 +643,14 @@ summary:focus-visible,
 }
 
 .process-results-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(248px, 300px);
-  gap: var(--solar-space-10);
-  align-items: start;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+.process-results-layout > .process-stream-panel {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .process-stream-panel {
@@ -802,12 +806,249 @@ summary:focus-visible,
   transform: translateY(-1px);
 }
 
-.results-rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--solar-space-8);
+/* Collapsible deliverables rail. Docked on desktop (width transitions 0 -> list -> preview,
+   the run pane flexes to fill); a fixed overlay drawer on narrow viewports. */
+.deliverables-rail {
+  flex: 0 0 auto;
+  width: 300px;
+  margin-left: var(--solar-space-10);
   position: sticky;
   top: 108px;
+  align-self: flex-start;
+  max-height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    width var(--solar-duration) var(--solar-ease),
+    margin-left var(--solar-duration) var(--solar-ease),
+    opacity var(--solar-duration-fast) var(--solar-ease);
+}
+
+.deliverables-rail.is-preview {
+  width: 480px;
+}
+
+.deliverables-rail.is-collapsed {
+  width: 0;
+  margin-left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Inner content keeps its open width so the outer width transition reveals (not reflows)
+   it; the content scrolls inside the rail. */
+.rail-list,
+.dv-preview {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-height: calc(100vh - 140px);
+}
+
+.dv-preview {
+  width: 480px;
+  overflow: hidden;
+}
+
+.rail-list {
+  overflow-y: auto;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-4);
+}
+
+.rail-head-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--solar-space-2);
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.rail-count {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  font-weight: 400;
+}
+
+.rail-close,
+.dv-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--solar-subtle);
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.rail-close:hover,
+.dv-action:hover {
+  color: var(--solar-ink);
+  background: var(--solar-surface-quiet);
+}
+
+.rail-divider {
+  margin: var(--solar-space-5) 0;
+  border-top: 1px solid var(--solar-line);
+}
+
+.dv-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solar-space-2);
+  margin-bottom: var(--solar-space-3);
+}
+
+.dv-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: 4px 8px 4px 4px;
+  border: 0;
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-muted);
+  background: transparent;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  cursor: pointer;
+  transition: color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.dv-back:hover {
+  color: var(--solar-ink);
+}
+
+.dv-preview-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dv-preview-title {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-4);
+}
+
+.dv-preview-name {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-badge {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border: 1px solid var(--solar-line);
+  border-radius: 999px;
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.dv-preview-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-surface);
+}
+
+.dv-preview-body:focus-visible {
+  outline: 2px solid var(--solar-accent);
+  outline-offset: 2px;
+}
+
+.dv-raw {
+  margin: 0;
+  padding: var(--solar-space-4);
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
+}
+
+.dv-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--solar-space-3);
+  padding: var(--solar-space-9) var(--solar-space-5);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-sm);
+  text-align: center;
+}
+
+.dv-status-error svg {
+  color: var(--solar-warning);
+}
+
+.dv-preview-foot {
+  margin-top: var(--solar-space-3);
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.rail-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  min-height: 40px;
+  padding: 0 var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color var(--solar-duration-fast) var(--solar-ease),
+    color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.rail-toggle:hover,
+.rail-toggle.is-open {
+  border-color: var(--solar-line-strong);
+  color: var(--solar-ink);
+  background: var(--solar-surface);
+}
+
+.rail-toggle-count {
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  font-weight: var(--solar-weight-medium);
+}
+
+/* Narrow-viewport scrim; hidden while the rail is docked (see media query). */
+.rail-scrim {
+  display: none;
 }
 
 .panel {
@@ -2259,12 +2500,19 @@ summary:focus-visible,
   grid-template-columns: 16px minmax(0, 1fr) auto 14px;
   gap: var(--solar-space-3);
   align-items: center;
-  padding: var(--solar-space-3) 0;
+  width: 100%;
+  padding: var(--solar-space-3) 4px;
+  border: 0;
   border-top: 1px solid var(--solar-line-soft);
+  border-radius: var(--solar-radius-small);
   color: var(--solar-muted);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   transition:
     color var(--solar-duration-fast) var(--solar-ease),
-    padding-left var(--solar-duration-fast) var(--solar-ease);
+    background var(--solar-duration-fast) var(--solar-ease);
 }
 
 .artifact-row:first-child {
@@ -2272,8 +2520,8 @@ summary:focus-visible,
 }
 
 .artifact-row:hover {
-  padding-left: var(--solar-space-2);
   color: var(--solar-ink);
+  background: var(--solar-surface-quiet);
 }
 
 .artifact-name {
@@ -2496,8 +2744,55 @@ summary:focus-visible,
     grid-template-columns: 1fr;
   }
 
-  .results-rail {
-    position: static;
+  /* Narrow: the rail overlays the run as a fixed right drawer (slides via transform). */
+  .deliverables-rail {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    width: min(420px, 92vw);
+    margin-left: 0;
+    max-height: none;
+    padding: var(--solar-space-6);
+    border-left: 1px solid var(--solar-line);
+    background: var(--solar-canvas);
+    box-shadow: -12px 0 32px -12px rgba(20, 21, 23, 0.22);
+    z-index: 60;
+    transform: translateX(0);
+    opacity: 1;
+    transition: transform var(--solar-duration) var(--solar-ease);
+  }
+
+  .deliverables-rail.is-preview {
+    width: min(560px, 96vw);
+  }
+
+  .deliverables-rail.is-collapsed {
+    width: min(420px, 92vw);
+    margin-left: 0;
+    opacity: 1;
+    transform: translateX(110%);
+    box-shadow: none;
+  }
+
+  .rail-list,
+  .dv-preview {
+    width: 100%;
+    max-height: 100%;
+  }
+
+  .rail-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    padding: 0;
+    background: rgba(20, 21, 23, 0.32);
+    cursor: pointer;
   }
 
   .agent-presence-strip {
