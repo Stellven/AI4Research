@@ -1894,13 +1894,13 @@ summary:focus-visible,
   border-radius: var(--solar-radius-control);
   padding: var(--solar-space-3);
   color: var(--solar-ink);
-  background: var(--solar-bg);
+  background: var(--solar-canvas);
   font: inherit;
   font-size: var(--solar-type-sm);
 }
 
 .plan-gate-reason:focus-visible {
-  outline: 2px solid var(--solar-focus);
+  outline: 2px solid var(--solar-accent);
   outline-offset: 2px;
 }
 
