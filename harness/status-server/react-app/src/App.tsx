@@ -768,11 +768,6 @@ function SessionView({
               projection={projection}
               isBlocked={isBlocked}
             />
-            <DecisionZone
-              projection={projection}
-              sprintId={sprintId}
-              onRefresh={session.refresh}
-            />
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
             >
@@ -793,6 +788,11 @@ function SessionView({
                 />
               )}
             </div>
+            <DecisionZone
+              projection={projection}
+              sprintId={sprintId}
+              onRefresh={session.refresh}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1237,7 +1237,7 @@ function DecisionZone({
     stall?.is_stalled ||
     mismatch?.present
   ) {
-    return <SystemStall stall={stall} mismatch={mismatch} actions={actions} />;
+    return <SystemStall mismatch={mismatch} actions={actions} />;
   }
   return null;
 }
@@ -1429,11 +1429,9 @@ function GateCard({
 }
 
 function SystemStall({
-  stall,
   mismatch,
   actions,
 }: {
-  stall?: StallSummary;
   mismatch?: {
     present?: boolean;
     missing_capability?: string;
@@ -1442,13 +1440,6 @@ function SystemStall({
   actions: ProjectionAction[];
 }) {
   const missing = asString(mismatch?.missing_capability);
-  const blockedNode = asString(
-    mismatch?.blocked_node || (stall?.blocked_nodes || [])[0],
-  );
-  const explanation = asString(stall?.explanation || stall?.reason);
-  const waiting = (stall?.blocked_nodes || []).filter(
-    (node) => node && node !== blockedNode,
-  );
   const unsafe = actions.filter(
     (action) =>
       action.enabled === false &&
@@ -1458,43 +1449,16 @@ function SystemStall({
     <section
       className="decision-card decision-stall"
       data-testid="system-stall"
-      aria-label="Run paused"
+      aria-label="System paused"
     >
-      <div className="decision-head">
-        <span className="decision-kicker stall-kicker">
-          <PauseCircle size={13} aria-hidden="true" />
-          System paused
-        </span>
-        <h2 className="decision-title">
-          No connected worker can take the next step
-        </h2>
-      </div>
-      <p className="decision-desc">
-        {blockedNode && (
-          <>
-            <code>{blockedNode}</code> is held:{" "}
-          </>
-        )}
-        no worker advertises{" "}
-        {missing ? <code>{missing}</code> : "a required capability"}, so Solar
-        paused rather than dispatch unsafely.
-        {explanation ? ` ${explanation}` : ""}
-      </p>
-      {waiting.length > 0 && (
-        <p className="stall-waiting">
-          Waiting behind it:{" "}
-          {waiting.map((node, index) => (
-            <span key={node}>
-              {index > 0 && ", "}
-              <code>{node}</code>
-            </span>
-          ))}
-        </p>
-      )}
+      <h2 className="stall-title">
+        <PauseCircle size={16} aria-hidden="true" />
+        System paused
+      </h2>
       <p className="stall-resolve">
-        This isn't something to retry — connect a worker that provides{" "}
-        {missing ? <code>{missing}</code> : "the capability"} and the run
-        continues.
+        Connect a worker that provides{" "}
+        {missing ? <code>{missing}</code> : "the missing capability"} and the
+        run continues.
       </p>
       {unsafe.length > 0 && (
         <ul className="stall-unsafe">

@@ -121,6 +121,55 @@ def seed_harness(harness: Path) -> Path:
             "epic_id": "visual-demo",
         },
     )
+    handoff_sid = "rich-sprint-handoff"
+    write_json(
+        sprints / f"{handoff_sid}.status.json",
+        {
+            "sprint_id": handoff_sid,
+            "title": "Submit builder handoff for review",
+            "status": "approved",
+            "phase": "plan_reviewed",
+            "epic_id": "visual-demo",
+        },
+    )
+    write_json(
+        sprints / f"{handoff_sid}.task_graph.json",
+        {
+            "sprint_id": handoff_sid,
+            "nodes": [
+                node("spec", "Capture the supervised workflow request.", "passed", [], ["product"]),
+                node("prd", "Shape requirements before build work.", "passed", ["spec"], ["planning"]),
+                node("build", "Builder implemented the reviewed slice.", "passed", ["prd"], ["frontend", "status-server"]),
+            ],
+        },
+    )
+    write_text(sprints / f"{handoff_sid}.design.md", "# Design\n\nApproved plan for the builder handoff.\n")
+    write_text(sprints / f"{handoff_sid}.plan.md", "# Plan\n\nThe approved DAG the builder worked from.\n")
+    write_text(sprints / f"{handoff_sid}.handoff.md", "# Handoff\n\nBuilder output is ready to submit to the Evaluator.\n")
+
+    eval_sid = "rich-sprint-eval"
+    write_json(
+        sprints / f"{eval_sid}.status.json",
+        {
+            "sprint_id": eval_sid,
+            "title": "Review evaluator result",
+            "status": "reviewing",
+            "phase": "implementation_completed",
+            "epic_id": "visual-demo",
+        },
+    )
+    write_json(
+        sprints / f"{eval_sid}.task_graph.json",
+        {
+            "sprint_id": eval_sid,
+            "nodes": [
+                node("build", "Builder implemented the reviewed slice.", "passed", [], ["frontend", "status-server"]),
+                node("review", "Evaluator reviewed the result end-to-end.", "passed", ["build"], ["evaluation"]),
+            ],
+        },
+    )
+    write_text(sprints / f"{eval_sid}.handoff.md", "# Handoff\n\nBuilder output submitted for evaluation.\n")
+    write_text(sprints / f"{eval_sid}.eval.md", "# Eval\n\nEvaluator findings: accept the result or send fixes back to the builder.\n")
     write_json(
         sprints / f"{sid}.task_dag.state.json",
         {

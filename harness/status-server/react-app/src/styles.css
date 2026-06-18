@@ -1898,6 +1898,17 @@ summary:focus-visible,
   color: var(--solar-warning);
 }
 
+.stall-title {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  margin: 0;
+  color: var(--solar-warning);
+  font-size: var(--solar-type-lg);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: -0.01em;
+}
+
 .decision-title {
   margin: 0;
   font-size: var(--solar-type-lg);
