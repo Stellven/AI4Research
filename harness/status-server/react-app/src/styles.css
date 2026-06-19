@@ -806,6 +806,43 @@ summary:focus-visible,
   transform: translateY(-1px);
 }
 
+/* Clickable artifact chips under a log entry — open the rail preview directly. */
+.process-artifacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--solar-space-2);
+  margin-top: var(--solar-space-3);
+}
+
+.process-artifact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-muted);
+  background: var(--solar-surface);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  cursor: pointer;
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    border-color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.process-artifact-link:hover {
+  color: var(--solar-ink);
+  border-color: var(--solar-line-strong);
+  background: var(--solar-surface-quiet);
+}
+
+.process-artifact-link svg {
+  flex: 0 0 auto;
+  color: var(--solar-subtle);
+}
+
 /* Collapsible deliverables rail. Docked on desktop (width transitions 0 -> list -> preview,
    the run pane flexes to fill); a fixed overlay drawer on narrow viewports. */
 .deliverables-rail {

@@ -762,7 +762,9 @@ def run(args: argparse.Namespace) -> int:
             }
             for name, selector in sections.items():
                 screenshot(page, screenshots, name, selector)
-            page.locator(".rail-toggle").click()
+            # Rail is open by default on desktop; only toggle it open if it is collapsed.
+            if not page.locator("[data-testid='deliverables-panel']").is_visible():
+                page.locator(".rail-toggle").click()
             page.wait_for_selector("[data-testid='deliverables-panel']", timeout=5000)
             screenshot(page, screenshots, "results-rail", "[data-testid='results-rail']")
             screenshot(page, screenshots, "deliverables", "[data-testid='deliverables-panel']")

@@ -136,6 +136,7 @@ type ProcessStep = {
   defaultExpanded: boolean;
   facts: Array<{ label: string; value: string }>;
   result?: Deliverable;
+  artifacts?: Deliverable[];
 };
 
 type DesignVariant = "relay" | "dispatch" | "console";
@@ -771,7 +772,17 @@ function SessionView({
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
             >
-              <ProcessStream steps={processSteps} />
+              <ProcessStream
+                steps={processSteps}
+                onOpenArtifact={rail.openArtifact}
+                decision={
+                  <DecisionZone
+                    projection={projection}
+                    sprintId={sprintId}
+                    onRefresh={session.refresh}
+                  />
+                }
+              />
               <DeliverablesRail
                 rail={rail}
                 sprintId={sprintId}
@@ -788,11 +799,6 @@ function SessionView({
                 />
               )}
             </div>
-            <DecisionZone
-              projection={projection}
-              sprintId={sprintId}
-              onRefresh={session.refresh}
-            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1157,13 +1163,13 @@ const GATE_KINDS: Record<string, GateSpec> = {
     },
   },
   handoff_submit: {
-    title: "Submit the handoff",
+    title: "Review the builder's output",
     description:
-      "The builder's handoff is ready. Submit it to the Evaluator for review.",
+      "The builder finished its work. Approve it to send the result into evaluation.",
     primary: {
       actionId: "handoff_submit",
-      label: "Submit to Evaluator",
-      pending: "Submitting",
+      label: "Approve",
+      pending: "Approving",
     },
   },
   eval_review: {
@@ -1517,7 +1523,15 @@ function AgentSignature({
   );
 }
 
-function ProcessStream({ steps }: { steps: ProcessStep[] }) {
+function ProcessStream({
+  steps,
+  decision,
+  onOpenArtifact,
+}: {
+  steps: ProcessStep[];
+  decision?: React.ReactNode;
+  onOpenArtifact: (path: string) => void;
+}) {
   return (
     <section className="process-stream-panel" data-testid="process-stream">
       <div className="process-step-list">
@@ -1525,8 +1539,13 @@ function ProcessStream({ steps }: { steps: ProcessStep[] }) {
           <EmptyInline label="Waiting for agent process events" />
         )}
         {steps.map((step) => (
-          <ProcessStepItem key={step.id} step={step} />
+          <ProcessStepItem
+            key={step.id}
+            step={step}
+            onOpenArtifact={onOpenArtifact}
+          />
         ))}
+        {decision}
       </div>
     </section>
   );
@@ -1534,7 +1553,13 @@ function ProcessStream({ steps }: { steps: ProcessStep[] }) {
 
 // A static activity-log entry — no click-to-expand cards. Detail is inline,
 // the way Linear/Stripe activity feeds read.
-function ProcessStepItem({ step }: { step: ProcessStep }) {
+function ProcessStepItem({
+  step,
+  onOpenArtifact,
+}: {
+  step: ProcessStep;
+  onOpenArtifact: (path: string) => void;
+}) {
   const icon =
     step.state === "blocked" ? (
       <AlertTriangle size={16} />
@@ -1569,17 +1594,30 @@ function ProcessStepItem({ step }: { step: ProcessStep }) {
             ))}
           </div>
         )}
+        {step.artifacts && step.artifacts.length > 0 && (
+          <div className="process-artifacts">
+            {step.artifacts.map((item) => (
+              <button
+                key={item.rel_path}
+                type="button"
+                className="process-artifact-link"
+                onClick={() => onOpenArtifact(item.rel_path)}
+              >
+                <FileText size={13} aria-hidden="true" />
+                <span>{item.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {step.result && (
-          <a
+          <button
+            type="button"
             className="step-result-link"
-            href={step.result.view_url}
-            target="_blank"
-            rel="noreferrer"
+            onClick={() => onOpenArtifact(step.result!.rel_path)}
           >
             <FileCheck2 size={15} />
             <span>Open {step.result.name}</span>
-            <ArrowUpRight size={13} />
-          </a>
+          </button>
         )}
       </div>
     </article>
@@ -1588,13 +1626,17 @@ function ProcessStepItem({ step }: { step: ProcessStep }) {
 
 const RAIL_STORAGE_KEY = "ai4r.rail.open";
 
-// Collapsed by default; honor the stored open/closed choice. Preview state never persists.
+// Open by default on desktop, collapsed on narrow/mobile; honor any stored choice.
+// Preview state never persists.
 function useDeliverablesRail() {
   const [open, setOpenState] = useState<boolean>(() => {
     try {
-      return window.localStorage.getItem(RAIL_STORAGE_KEY) === "1";
+      const stored = window.localStorage.getItem(RAIL_STORAGE_KEY);
+      if (stored === "1") return true;
+      if (stored === "0") return false;
+      return window.innerWidth > 1240;
     } catch {
-      return false;
+      return true;
     }
   });
   const [previewPath, setPreviewPath] = useState<string | null>(null);
@@ -1612,8 +1654,24 @@ function useDeliverablesRail() {
   const toggle = useCallback(() => setOpen(!open), [open, setOpen]);
   const openPreview = useCallback((path: string) => setPreviewPath(path), []);
   const closePreview = useCallback(() => setPreviewPath(null), []);
+  // Open a deliverable from anywhere (e.g. a log entry) — ensure the rail is open.
+  const openArtifact = useCallback(
+    (path: string) => {
+      setOpen(true);
+      setPreviewPath(path);
+    },
+    [setOpen],
+  );
 
-  return { open, setOpen, toggle, previewPath, openPreview, closePreview };
+  return {
+    open,
+    setOpen,
+    toggle,
+    previewPath,
+    openPreview,
+    closePreview,
+    openArtifact,
+  };
 }
 
 type RailController = ReturnType<typeof useDeliverablesRail>;
@@ -2112,6 +2170,53 @@ function GraphSummaryPanel({
   );
 }
 
+const ARTIFACT_ROLE_KEYWORDS: Record<string, string[]> = {
+  pm: ["prd", "spec", "intake", "scope"],
+  planner: ["plan", "design", "task_graph", "task-graph", "dag", "closure"],
+  builder: ["handoff", "build", "impl"],
+  evaluator: ["eval", "verdict", "review", "acceptance"],
+};
+
+// The classifying token of a deliverable — its directory (e.g. "prd/foo.md" -> "prd")
+// or the segment before the extension (e.g. "<sid>.design.md" -> "design"). Avoids
+// matching the sprint id, which can itself contain words like "plan".
+function artifactKindToken(item: Deliverable): string {
+  const path = asString(item.rel_path || item.name).toLowerCase();
+  const base = path.split("/").pop() || path;
+  const dotParts = base.split(".");
+  // "<sid>.<kind>.<ext>" -> the kind segment (ignores the sprint id, which can
+  // itself contain words like "plan").
+  if (dotParts.length >= 3) return dotParts[dotParts.length - 2];
+  // Directory-based ("prd/foo.md") -> the directory names the kind.
+  const dir = path.includes("/") ? path.split("/")[0] : "";
+  if (dir && !["sprints", "sessions", "state", "config"].includes(dir)) {
+    return dir;
+  }
+  return dotParts.length >= 2 ? dotParts[dotParts.length - 2] : base;
+}
+
+// Attach each deliverable to the most recent log step of its producing role, so the
+// entry that produced a plan/handoff/eval file links straight to the rail preview.
+function attachArtifactsToSteps(
+  steps: ProcessStep[],
+  deliverables: Deliverable[],
+): void {
+  deliverables.forEach((item) => {
+    const token = artifactKindToken(item);
+    const role = Object.keys(ARTIFACT_ROLE_KEYWORDS).find((key) =>
+      ARTIFACT_ROLE_KEYWORDS[key].some(
+        (keyword) => token.includes(keyword) || keyword.includes(token),
+      ),
+    );
+    if (!role) return;
+    let target: ProcessStep | undefined;
+    for (const step of steps) {
+      if (normalizeRole(step.actor) === role) target = step;
+    }
+    if (target) (target.artifacts ||= []).push(item);
+  });
+}
+
 function buildProcessSteps(
   dashboard: DashboardResponse | undefined,
   events: EventRecord[],
@@ -2199,6 +2304,7 @@ function buildProcessSteps(
   const sorted = steps.sort(
     (a, b) => timestampValue(a.timestamp) - timestampValue(b.timestamp),
   );
+  attachArtifactsToSteps(sorted, deliverables);
   return sorted.map((step, index) => ({
     ...step,
     defaultExpanded:
@@ -2272,6 +2378,23 @@ function processStepFromEvent(
   };
 }
 
+// Infer which agent a DAG node belongs to (node-based steps have no event actor),
+// so node logs attach the right artifacts (build->Builder, review->Evaluator, ...).
+function nodeActor(node: { [key: string]: unknown }): string {
+  const caps = (
+    Array.isArray(node.required_capabilities) ? node.required_capabilities : []
+  )
+    .map((cap) => asString(cap).toLowerCase())
+    .join(" ");
+  const text = `${asString(nodeId(node)).toLowerCase()} ${caps}`;
+  if (/eval|review|verdict|gate|accept/.test(text)) return "Evaluator";
+  if (/build|impl|code|frontend|backend|server|handoff/.test(text))
+    return "Builder";
+  if (/plan|design|dag|rout/.test(text)) return "Planner";
+  if (/spec|prd|intake|scope|product/.test(text)) return "PM";
+  return "Planner";
+}
+
 function processStepFromNode(
   node: { [key: string]: unknown },
   latest: boolean,
@@ -2289,7 +2412,7 @@ function processStepFromNode(
           : "pending";
   return {
     id: `node-${nodeId(node)}`,
-    actor: "Planner",
+    actor: nodeActor(node),
     title: `${nodeId(node)} is ${status.replace(/_/g, " ")}`,
     summary: nodeTitle(node),
     detail: `Planner DAG node ${nodeId(node)} is currently ${status.replace(/_/g, " ")}.`,
