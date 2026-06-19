@@ -718,9 +718,14 @@ start_coordinator_sync() {
     return 0
   fi
 
-  # 启动 (nohup 隔离 SIGHUP)
-  nohup "$BASH4" "$HARNESS_DIR/coordinator.sh" >> "$HARNESS_DIR/.coordinator.log" 2>&1 &
-  disown 2>/dev/null || true
+  # 启动 (setsid isolates from non-interactive launchers that reap process groups;
+  # fallback keeps the installed/default behavior on platforms without setsid).
+  if command -v setsid >/dev/null 2>&1; then
+    setsid "$BASH4" "$HARNESS_DIR/coordinator.sh" >> "$HARNESS_DIR/.coordinator.log" 2>&1 </dev/null &
+  else
+    nohup "$BASH4" "$HARNESS_DIR/coordinator.sh" >> "$HARNESS_DIR/.coordinator.log" 2>&1 </dev/null &
+    disown 2>/dev/null || true
+  fi
 
   # 等待 pidfile 出现 (最多 3 秒)
   local waited=0
@@ -761,8 +766,12 @@ start_watchdog_sync() {
     rm -f "$pidfile"
   fi
 
-  nohup "$BASH4" "$HARNESS_DIR/coordinator-watchdog.sh" start >> "$HARNESS_DIR/.watchdog.log" 2>&1 &
-  disown 2>/dev/null || true
+  if command -v setsid >/dev/null 2>&1; then
+    setsid "$BASH4" "$HARNESS_DIR/coordinator-watchdog.sh" start >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
+  else
+    nohup "$BASH4" "$HARNESS_DIR/coordinator-watchdog.sh" start >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
+    disown 2>/dev/null || true
+  fi
 
   sleep 0.5
   if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
@@ -810,6 +819,8 @@ start_harness() {
     fi
     warn_if_product_delivery_layout_incomplete || true
     configure_product_delivery_labels
+    start_coordinator_sync || { err "Coordinator 启动失败，中止"; exit 1; }
+    start_watchdog_sync
     attach_or_print
     return
   fi

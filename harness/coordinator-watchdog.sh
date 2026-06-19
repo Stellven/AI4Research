@@ -673,7 +673,11 @@ case "${1:-help}" in
       warn "launchd 启动失败，回退到后台进程模式"
     fi
     bash_path=$(resolve_bash4 2>/dev/null || command -v bash 2>/dev/null || echo /bin/bash)
-    nohup "$bash_path" "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
+    if command -v setsid >/dev/null 2>&1; then
+      setsid "$bash_path" "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
+    else
+      nohup "$bash_path" "$HARNESS_DIR/coordinator-watchdog.sh" run-daemon >> "$HARNESS_DIR/.watchdog.log" 2>&1 </dev/null &
+    fi
     echo $! > "$WATCHDOG_PID_FILE"
     ok "Watchdog 启动完成 (PID: $!)"
     ;;
