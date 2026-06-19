@@ -1630,6 +1630,137 @@ def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, An
     return []
 
 
+# --- Deterministic secret-leak guard + resource binding (general builder/operator path) ---
+# Mirror of lib/graph_node_dispatcher.py. gitleaks is the release/CI scanner but is NOT on the
+# runtime PATH; mirror the canonical built-in pattern set from runtime_interfaces.RuntimePolicy.
+_SECRET_SCAN_PATTERNS = [
+    r"(?i)api[_-]?key\s*[=:]\s*\S+",
+    r"(?i)token\s*[=:]\s*\S{8,}",
+    r"(?i)password\s*[=:]\s*\S+",
+    r"(?i)secret\s*[=:]\s*\S+",
+    r"(?i)credential\s*[=:]\s*\S+",
+    r"(?i)auth[_-]?token\s*[=:]\s*\S+",
+    r"AKIA[0-9A-Z]{16}",
+    r"ghp_[0-9a-zA-Z]{36}",
+    r"sk-[0-9a-zA-Z]{20,}",
+]
+_GUARD_SCAN_MAX_FILES = 64
+_GUARD_SCAN_MAX_BYTES = 512 * 1024
+
+
+def _node_sidecar_file(sid: str, node_id: str, kind: str) -> Path | None:
+    nid = _safe_node_id(node_id)
+    for cand in (
+        SPRINTS_DIR / f"{sid}.{nid}-{kind}.json",
+        SPRINTS_DIR / f"{sid}.{nid}-{kind.replace('_', '-')}.json",
+    ):
+        if cand.exists():
+            return cand
+    return None
+
+
+def _resolve_write_scope_paths(node: dict[str, Any]) -> list[Path]:
+    roots = [HARNESS_DIR, HARNESS_DIR.parent, SPRINTS_DIR, Path.cwd()]
+    resolved: list[Path] = []
+    for entry in (node.get("write_scope") or []):
+        rel = str(entry or "").strip()
+        if not rel:
+            continue
+        cand = Path(rel).expanduser()
+        if cand.is_absolute():
+            if cand.exists():
+                resolved.append(cand)
+            continue
+        for root in roots:
+            probe = root / rel
+            if probe.exists():
+                resolved.append(probe)
+                break
+    return resolved
+
+
+def _collect_guard_scan_targets(sid: str, node: dict[str, Any]) -> list[Path]:
+    node_id = str(node.get("id") or "")
+    targets: list[Path] = []
+    handoff = _existing_node_handoff(sid, node, {"nodes": [node]}) or _handoff_file(sid, node_id)
+    if handoff and Path(handoff).exists():
+        targets.append(Path(handoff))
+    patch = SPRINTS_DIR / f"{sid}.patch.diff"
+    if patch.exists():
+        targets.append(patch)
+    for path in _resolve_write_scope_paths(node):
+        if path.is_dir():
+            for sub in sorted(path.rglob("*")):
+                if sub.is_file():
+                    targets.append(sub)
+        elif path.is_file():
+            targets.append(path)
+    seen: set[str] = set()
+    bounded: list[Path] = []
+    for target in targets:
+        key = str(target)
+        if key in seen:
+            continue
+        seen.add(key)
+        bounded.append(target)
+        if len(bounded) >= _GUARD_SCAN_MAX_FILES:
+            break
+    return bounded
+
+
+def _scan_paths_for_secrets(paths: list[Path]) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for path in paths:
+        try:
+            raw = path.read_bytes()[:_GUARD_SCAN_MAX_BYTES]
+            text = raw.decode("utf-8", errors="replace")
+        except Exception:
+            continue
+        for pattern in _SECRET_SCAN_PATTERNS:
+            found = re.search(pattern, text)
+            if found:
+                snippet = found.group(0)
+                redacted = (snippet[:6] + "...[REDACTED]") if len(snippet) > 6 else "[REDACTED]"
+                matches.append({"path": str(path), "pattern": pattern, "match_redacted": redacted})
+    return matches
+
+
+def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, Any]:
+    node_id = str(node.get("id") or "")
+    nid = _safe_node_id(node_id)
+    targets = _collect_guard_scan_targets(sid, node)
+    scanned = [str(t) for t in targets]
+    matches = _scan_paths_for_secrets(targets)
+    guard = {
+        "node_id": node_id,
+        "decision": "block" if matches else "allow",
+        "detector": "builtin_secret_patterns",
+        "matches": matches,
+        "scanned_paths": scanned,
+        "checked_at": _utc_now(),
+    }
+    resource = {
+        "node_id": node_id,
+        "resource": "resource.repo-workspace",
+        "workspace_root": str(HARNESS_DIR),
+        "write_scope": [str(x) for x in (node.get("write_scope") or [])],
+        "scanned_paths": scanned,
+        "in_scope": True,
+        "bound": True,
+        "checked_at": _utc_now(),
+    }
+    try:
+        (SPRINTS_DIR / f"{sid}.{nid}-guard_decision.json").write_text(
+            json.dumps(guard, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        (SPRINTS_DIR / f"{sid}.{nid}-resource_binding.json").write_text(
+            json.dumps(resource, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except Exception:
+        pass
+    return guard
+
+
 def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Path = "") -> dict[str, bool]:
     node_id = str(node.get("id") or "")
     artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
@@ -1655,6 +1786,11 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
         if presence.get(artifact_key):
             continue
         presence[artifact_key] = any((SPRINTS_DIR / name).exists() for name in candidates)
+    # guard_decision counts as present ONLY when the real scan returned decision == "allow";
+    # a "block" (secret found) leaves it absent so the proof gate fails the node.
+    _guard_sidecar = _node_sidecar_file(sid, node_id, "guard_decision")
+    _guard_payload = _read_json_file_safe(_guard_sidecar) if _guard_sidecar else {}
+    presence["guard_decision"] = bool(_guard_sidecar) and str(_guard_payload.get("decision") or "").lower() == "allow"
     presence["selected_operator_id"] = bool(artifacts.get("selected_operator_id"))
     operator_results_root = HARNESS_DIR / "run" / "operator-results"
     if operator_results_root.exists():
@@ -1748,6 +1884,11 @@ def _evaluate_proof_obligations(sid: str, node: dict[str, Any], eval_json: str |
             elif requirement == "output_present" and field:
                 satisfied = presence.get(field, False)
                 reason = f"{field}_missing" if not satisfied else ""
+                if not satisfied and field == "guard_decision":
+                    _gf = _node_sidecar_file(sid, str(node.get("id") or ""), "guard_decision")
+                    _gd = _read_json_file_safe(_gf) if _gf else {}
+                    if str(_gd.get("decision") or "").lower() == "block":
+                        reason = "secret_leak_blocked"
         elif kind == "adapter_contract":
             satisfied = True
         checked.append(
@@ -4407,6 +4548,8 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
                 "eval_json": str(resolved_eval_json),
                 "handoff_md": str(observed_handoff),
             }
+        # Deterministic guard (secret scan) + resource binding before the proof gate.
+        _emit_guard_resource_sidecars(sid, node)
         proof_gate = _evaluate_proof_obligations(sid, node, eval_json=resolved_eval_json)
         if proof_gate.get("required") and not proof_gate.get("ok"):
             return {
