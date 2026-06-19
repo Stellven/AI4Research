@@ -13,8 +13,9 @@
 
 set -euo pipefail
 
-STATE_MACHINE_JSON="${HARNESS_DIR:-$HOME/.solar/harness}/config/coordinator-state-machine.json"
-SPRINTS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}/sprints"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+STATE_MACHINE_JSON="$HARNESS_DIR/config/coordinator-state-machine.json"
+SPRINTS_DIR="$HARNESS_DIR/sprints"
 
 # ── internal: read field from status.json via python3 (jq fallback) ──────────
 

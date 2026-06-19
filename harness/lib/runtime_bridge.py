@@ -24,7 +24,11 @@ from activity_runtime import ActivityRuntime
 from projection_engine import ProjectionEngine
 from session_log import DuplicateEventError, SessionLog
 
-HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", os.path.expanduser("~/.solar/harness"))).expanduser()
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or os.path.expanduser("~/.solar/harness")
+).expanduser()
 SPRINTS_DIR = HARNESS_DIR / "sprints"
 
 

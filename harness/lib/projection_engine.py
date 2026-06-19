@@ -19,7 +19,11 @@ from typing import Any, Dict, List, Optional
 
 from session_log import SessionLog
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = os.path.expanduser(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or "~/.solar/harness"
+)
 SPRINTS_DIR = os.path.join(HARNESS_DIR, "sprints")
 
 # Map of (last terminal event type) → legacy status value

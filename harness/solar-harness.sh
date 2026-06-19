@@ -2136,7 +2136,12 @@ import os
 import sys
 
 sid = sys.argv[1]
-lib_dir = os.path.join(os.environ.get("HARNESS_DIR", os.path.expanduser("~/.solar/harness")), "lib")
+lib_dir = os.path.join(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or os.path.expanduser("~/.solar/harness"),
+    "lib",
+)
 if lib_dir not in sys.path:
     sys.path.insert(0, lib_dir)
 from coordinator_hooks import gate_status_transition  # noqa: E402

@@ -52,7 +52,11 @@ except ModuleNotFoundError:  # status-server.py uses the pure builders without F
     Blueprint = _NoopBlueprint  # type: ignore[assignment]
     request = _Request()  # type: ignore[assignment]
 
-HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", str(Path.home() / ".solar" / "harness"))).expanduser()
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or str(Path.home() / ".solar" / "harness")
+).expanduser()
 SCRIPT_HARNESS_DIR = Path(__file__).resolve().parents[2]
 SPRINTS_DIR = HARNESS_DIR / "sprints"
 SESSIONS_DIR = HARNESS_DIR / "sessions"

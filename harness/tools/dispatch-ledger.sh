@@ -11,7 +11,8 @@
 #   - dispatch_id format: d-<YYYYMMDDTHHMMSSz>-<6hex>; unique per call
 #   - All reads are pure; no state mutation
 
-DISPATCH_LEDGER_FILE="${HARNESS_DIR:-$HOME/.solar/harness}/run/dispatch-ledger.jsonl"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+DISPATCH_LEDGER_FILE="$HARNESS_DIR/run/dispatch-ledger.jsonl"
 
 # ── new_dispatch_id ───────────────────────────────────────────────────────────
 new_dispatch_id() {

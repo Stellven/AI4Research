@@ -15,7 +15,7 @@
 # ================================================================
 set -eu
 
-HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
 ARCHIVE_DIR="$SPRINTS_DIR/archive"
 [[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
