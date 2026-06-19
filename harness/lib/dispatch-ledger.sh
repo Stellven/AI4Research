@@ -32,7 +32,8 @@ dispatch_ledger_append() {
     local sid="${2:?dispatch_ledger_append: sid required}"
     local pane="${3:-unknown}"
     local dispatch_id="${4:-$(new_dispatch_id)}"
-    local extra_json="${5:-{}}"
+    local extra_json="${5:-}"
+    [[ -n "$extra_json" ]] || extra_json="{}"
     local ledger_file="$DISPATCH_LEDGER_FILE"
 
     python3 -c "

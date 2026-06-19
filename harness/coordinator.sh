@@ -756,8 +756,10 @@ else:
 " 2>/dev/null || true
   local sid
   sid=$(basename "$sf" .status.json)
+  local event_extra="${extra:-}"
+  [[ -n "$event_extra" ]] || event_extra="{}"
   [[ -n "$sid" && -f "$HARNESS_DIR/lib/runtime_bridge.py" ]] && \
-    python3 "$HARNESS_DIR/lib/runtime_bridge.py" event "$sid" "$event" "$by" "${extra:-{}}" --quiet 2>/dev/null || true
+    python3 "$HARNESS_DIR/lib/runtime_bridge.py" event "$sid" "$event" "$by" "$event_extra" --quiet 2>/dev/null || true
 }
 
 G='\033[0;32m'; Y='\033[1;33m'; R='\033[0;31m'; C='\033[0;36m'; N='\033[0m'
@@ -2145,7 +2147,8 @@ os.rename(tmp, sf)
 }
 
 runtime_status_transition() {
-  local sid="$1" new_status="$2" event="$3" by="$4" extra_json="${5:-{}}" bump="${6:-0}"
+  local sid="$1" new_status="$2" event="$3" by="$4" extra_json="${5:-}" bump="${6:-0}"
+  [[ -n "$extra_json" ]] || extra_json="{}"
   local sf="$SPRINTS_DIR/${sid}.status.json"
   [[ -f "$sf" ]] || return 1
   if [[ "$bump" == "1" || "$bump" == "true" || "$bump" == "--bump-round" ]]; then

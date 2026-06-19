@@ -5374,7 +5374,8 @@ PY
         _runtime_status="${1:-}"; shift || true
         _runtime_event="${1:-state_transition}"; shift || true
         _runtime_actor="${1:-coordinator}"; shift || true
-        _runtime_extra="${1:-{}}"; shift || true
+        _runtime_extra="${1:-}"; shift || true
+        [[ -n "$_runtime_extra" ]] || _runtime_extra="{}"
         if [[ -z "$_runtime_sid" || -z "$_runtime_status" ]]; then
           err "用法: $0 runtime status <sid> <new_status> [event] [actor] [extra_json] [--bump-round]"
           exit 2
