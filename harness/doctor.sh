@@ -11,7 +11,8 @@
 # ================================================================
 set -eu
 
-HARNESS_DIR="$HOME/.solar/harness"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+export HARNESS_DIR
 SESSION_NAME="solar-harness"
 LAB_SESSION_NAME="solar-harness-lab"
 
@@ -23,7 +24,11 @@ from pathlib import Path
 
 SESSION_NAME = "solar-harness"
 LAB_SESSION_NAME = "solar-harness-lab"
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = os.path.abspath(os.path.expanduser(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or "~/.solar/harness"
+))
 sys.path.insert(0, os.path.join(HARNESS_DIR, "lib"))
 try:
     from qmd_resolver import resolve_qmd_bin
@@ -60,7 +65,7 @@ result = {
     "gateway_compat": {
         "checked": False,
         "ok": False,
-        "script": os.path.join(os.path.expanduser("~/.solar/harness"), "test-gateway-compat.sh")
+        "script": os.path.join(HARNESS_DIR, "test-gateway-compat.sh")
     },
     "task_graph_gate_audit": {
         "present": False,

@@ -44,10 +44,12 @@ if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
   exit 1
 fi
 
-HARNESS_DIR="$HOME/.solar/harness"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
+export HARNESS_DIR SPRINTS_DIR
 SESSION_NAME="solar-harness"
 LAB_SESSION_NAME="solar-harness-lab"
+HARNESS_MANAGE_LAB="${SOLAR_HARNESS_MANAGE_LAB:-${SOLAR_WATCHDOG_MANAGE_LAB:-0}}"
 COORD_STATE="$HARNESS_DIR/.coordinator-state"
 SESSION_SH="$HARNESS_DIR/session.sh"
 export LANG="en_US.UTF-8"
@@ -235,6 +237,9 @@ discover_pane_by_persona() {
 
 ensure_lab_session() {
   tmux has-session -t "$LAB_SESSION_NAME" 2>/dev/null && return 0
+  if [[ "$HARNESS_MANAGE_LAB" != "1" && "$HARNESS_MANAGE_LAB" != "true" ]]; then
+    return 1
+  fi
   log "${Y}[lab] Strategy Lab 未运行，自动启动独立第二屏${N}"
   TERM=dumb bash "$HARNESS_DIR/solar-harness.sh" 扩展 "$HOME" >> "$COORD_LOG" 2>&1 || {
     log "${Y}[lab] 自动启动 Strategy Lab 失败，使用 fallback pane${N}"
