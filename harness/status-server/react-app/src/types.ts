@@ -100,6 +100,28 @@ export type ProjectionData = {
   status?: string;
   phase?: string;
   sprint?: SprintStatus;
+  requirements?: {
+    present?: boolean;
+    prd?: ProjectionArtifactRef;
+    contract?: ProjectionArtifactRef;
+    requirement_trace?: ProjectionArtifactRef;
+    coverage_report?: ProjectionArtifactRef;
+    acceptance_verdict?: ProjectionArtifactRef;
+    coverage_summary?: JsonRecord;
+    verdict?: string;
+    verdict_reasons?: string[];
+    [key: string]: unknown;
+  };
+  plan?: {
+    present?: boolean;
+    complete?: boolean;
+    status?: string;
+    design?: ProjectionArtifactRef;
+    plan?: ProjectionArtifactRef;
+    task_graph?: ProjectionArtifactRef;
+    graph_source?: string;
+    [key: string]: unknown;
+  };
   task_graph?: {
     present?: boolean;
     nodes?: DagNode[];
@@ -114,6 +136,32 @@ export type ProjectionData = {
     [key: string]: unknown;
   };
   human_gates?: HumanGate[];
+  operators?: JsonRecord[];
+  evaluation?: {
+    status?: string;
+    phase?: string;
+    handoff?: ProjectionArtifactRef;
+    eval?: ProjectionArtifactRef;
+    coverage_report?: ProjectionArtifactRef;
+    acceptance_verdict?: ProjectionArtifactRef;
+    verdict?: string;
+    requested_verdict?: string;
+    reasons?: string[];
+    coverage_summary?: JsonRecord;
+    [key: string]: unknown;
+  };
+  events?: EventRecord[];
+  summary?: {
+    progress?: JsonRecord;
+    stall?: StallSummary;
+    active_node?: string;
+    [key: string]: unknown;
+  };
+  human_action_required?: {
+    type?: string;
+    primary_artifact?: string | ProjectionArtifactRef;
+    [key: string]: unknown;
+  };
   available_actions?: ProjectionAction[];
   capability_mismatch?: {
     present?: boolean;
@@ -121,7 +169,23 @@ export type ProjectionData = {
     blocked_node?: string;
     [key: string]: unknown;
   };
+  artifacts?: ProjectionArtifact[];
   [key: string]: unknown;
+};
+
+export type ProjectionArtifactRef = {
+  name?: string;
+  kind?: string;
+  stage?: string;
+  rel_path?: string;
+  view_url?: string;
+  reviewable?: boolean;
+  [key: string]: unknown;
+};
+
+export type ProjectionArtifact = ProjectionArtifactRef & {
+  size?: number;
+  mtime?: number;
 };
 
 export type HumanGate = {

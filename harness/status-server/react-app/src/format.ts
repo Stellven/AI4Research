@@ -263,8 +263,7 @@ export function humanEvent(event: EventRecord): {
   }
   return {
     title: type.replace(/_/g, " "),
-    detail:
-      message || shortText(JSON.stringify(body === event ? {} : body), 140),
+    detail: message || "The harness recorded this process event.",
     tone: statusTone(asString(event.status || body.status)),
   };
 }

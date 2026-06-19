@@ -18,7 +18,6 @@ import {
   Download,
   FileCheck2,
   FileText,
-  ListTree,
   Loader2,
   MessageSquarePlus,
   Minus,
@@ -48,7 +47,6 @@ import {
 } from "react-router-dom";
 import {
   deliverableUrl,
-  fetchDashboard,
   fetchDeliverables,
   fetchDeliverableText,
   fetchEvents,
@@ -64,8 +62,6 @@ import {
   submitPlanVerdict,
 } from "./api";
 import {
-  AgentCardModel,
-  PHASES,
   ROLE_META,
   ROLE_ORDER,
   asString,
@@ -73,7 +69,6 @@ import {
   eventActor,
   eventTimestamp,
   formatDateTime,
-  formatTime,
   humanEvent,
   mergeEvents,
   nodeId,
@@ -87,7 +82,6 @@ import {
 } from "./format";
 import type {
   DagNode,
-  DashboardResponse,
   Deliverable,
   EventRecord,
   HumanGate,
@@ -104,7 +98,6 @@ type LoadState = "loading" | "ready" | "error";
 
 type SessionData = {
   status?: StatusPayload;
-  dashboard?: DashboardResponse;
   projection?: ProjectionResponse;
   events: EventRecord[];
   usage?: UsagePayload;
@@ -117,7 +110,7 @@ type SessionData = {
 
 type SessionCacheEntry = Pick<
   SessionData,
-  "status" | "dashboard" | "projection" | "events" | "usage" | "deliverables"
+  "status" | "projection" | "events" | "usage" | "deliverables"
 >;
 
 const sessionDataCache = new Map<string, SessionCacheEntry>();
@@ -140,15 +133,6 @@ type ProcessStep = {
 };
 
 type DesignVariant = "relay" | "dispatch" | "console";
-
-type StageState = "passed" | "active" | "blocked" | "pending";
-
-type PlanStage = {
-  id: string;
-  label: string;
-  state: StageState;
-  detail: string;
-};
 
 // Original lotus mark — five petals fanning from a common base. Uses
 // currentColor so it inherits the brand accent. Not a reproduction of any
@@ -486,9 +470,7 @@ function SessionRoute({
   const { sprintId = "" } = useParams();
   const decodedSprintId = decodeURIComponent(sprintId);
   const session = useSessionData(decodedSprintId, onSprintChanged);
-  const sprint =
-    sprints.find((item) => item.sprint_id === decodedSprintId) ||
-    session.dashboard?.data?.sprint;
+  const sprint = sprints.find((item) => item.sprint_id === decodedSprintId);
 
   if (!decodedSprintId) {
     return <HomeLanding sprints={sprints} onCreated={onCreated} />;
@@ -509,7 +491,6 @@ function useSessionData(
   onSprintChanged: () => Promise<void>,
 ): SessionData {
   const [status, setStatus] = useState<StatusPayload>();
-  const [dashboard, setDashboard] = useState<DashboardResponse>();
   const [projection, setProjection] = useState<ProjectionResponse>();
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [usage, setUsage] = useState<UsagePayload>();
@@ -531,7 +512,6 @@ function useSessionData(
     const cachePatch = (patch: Partial<SessionCacheEntry>) => {
       const base: SessionCacheEntry = sessionDataCache.get(sprintId) || {
         status: undefined,
-        dashboard: undefined,
         projection: undefined,
         events: [],
         usage: undefined,
@@ -548,11 +528,6 @@ function useSessionData(
     // the DAG/plan, or the stall reason — those land the moment their own
     // request returns instead of waiting on the slowest of the batch.
     const results = await Promise.allSettled([
-      fetchDashboard(sprintId).then((dashboardResponse) => {
-        if (!isCurrent()) return;
-        setDashboard(dashboardResponse);
-        cachePatch({ dashboard: dashboardResponse });
-      }),
       fetchProjection(sprintId, "fast").then((projectionResponse) => {
         if (!isCurrent()) return;
         setProjection(projectionResponse);
@@ -595,9 +570,8 @@ function useSessionData(
     if (!isCurrent()) return;
     // Only surface the hard-error screen when the core data is unreachable and
     // there is nothing already on screen to keep.
-    const [dashboardResult, projectionResult, , eventsResult] = results;
+    const [projectionResult, , eventsResult] = results;
     const coreFailed =
-      dashboardResult.status === "rejected" &&
       projectionResult.status === "rejected" &&
       eventsResult.status === "rejected";
     if (coreFailed && !sessionDataCache.get(sprintId)?.events?.length) {
@@ -616,7 +590,6 @@ function useSessionData(
     const cached = sessionDataCache.get(sprintId);
     if (cached) {
       setStatus(cached.status);
-      setDashboard(cached.dashboard);
       setProjection(cached.projection);
       setEvents(cached.events);
       setUsage(cached.usage);
@@ -625,7 +598,6 @@ function useSessionData(
       setError("");
     } else {
       setStatus(undefined);
-      setDashboard(undefined);
       setProjection(undefined);
       setUsage(undefined);
       setDeliverables([]);
@@ -682,7 +654,6 @@ function useSessionData(
 
   return {
     status,
-    dashboard,
     projection,
     events,
     usage,
@@ -705,14 +676,11 @@ function SessionView({
   session: SessionData;
   onCreated: (sprintId: string) => Promise<void>;
 }) {
-  const dashboard = dashboardForSprint(session.dashboard, sprintId);
   const projection = projectionForSprint(session.projection, sprintId);
-  const data = dashboard?.data;
   const projectionData = projection?.data;
   const currentSprint = (projectionData?.sprint ||
-    data?.sprint ||
     sprint || { sprint_id: sprintId }) as SprintSummary;
-  const stall = projectionStall(projection) || data?.stall || sprint?.stall;
+  const stall = projectionStall(projection) || sprint?.stall;
   const humanActionType = asString(
     projectionData?.human_action_required &&
       typeof projectionData.human_action_required === "object"
@@ -720,22 +688,30 @@ function SessionView({
       : "",
   );
   const phase = asString(
-    projectionData?.phase ||
-      data?.phase ||
-      currentSprint.phase ||
-      currentSprint.status,
+    projectionData?.phase || currentSprint.phase || currentSprint.status,
   );
   const isBlocked = isSystemBlocked(stall, humanActionType);
+  const projectionEvents =
+    projectionData?.events && projectionData.events.length > 0
+      ? projectionData.events
+      : session.events;
   const processSteps = useMemo(
     () =>
       buildProcessSteps(
-        dashboard,
-        session.events,
+        projection,
+        projectionEvents,
         session.deliverables,
         phase,
         { showStallSummary: isBlocked, stall },
       ),
-    [dashboard, isBlocked, session.deliverables, session.events, phase, stall],
+    [
+      projection,
+      projectionEvents,
+      isBlocked,
+      session.deliverables,
+      phase,
+      stall,
+    ],
   );
   const rail = useDeliverablesRail();
 
@@ -765,7 +741,6 @@ function SessionView({
             exit={{ opacity: 0, y: -10 }}
           >
             <PlanFlow
-              dashboard={dashboard}
               projection={projection}
               isBlocked={isBlocked}
             />
@@ -788,7 +763,6 @@ function SessionView({
                 sprintId={sprintId}
                 deliverables={session.deliverables}
                 usage={session.usage}
-                dashboard={dashboard}
               />
               {rail.open && (
                 <button
@@ -804,18 +778,6 @@ function SessionView({
       </AnimatePresence>
     </div>
   );
-}
-
-function dashboardForSprint(
-  dashboard: DashboardResponse | undefined,
-  sprintId: string,
-): DashboardResponse | undefined {
-  if (!dashboard) return undefined;
-  const focus = asString(
-    dashboard.data?.focus_sprint_id || dashboard.data?.sprint?.sprint_id,
-  );
-  if (focus && focus !== sprintId) return undefined;
-  return dashboard;
 }
 
 function projectionForSprint(
@@ -848,194 +810,6 @@ function isSystemBlocked(
     return false;
   }
   return true;
-}
-
-function stalledPlainLanguage(
-  dashboard: DashboardResponse | undefined,
-  stallText: string,
-): string {
-  const raw = [
-    stallText,
-    ...(dashboard?.data?.stall?.reasons || []),
-    dashboard?.data?.stall?.reason,
-    dashboard?.data?.stall?.explanation,
-  ]
-    .map((item) => asString(item))
-    .join(" ")
-    .toLowerCase();
-
-  if (
-    raw.includes("no_matching_worker") ||
-    raw.includes("no matching worker") ||
-    raw.includes("missing worker")
-  ) {
-    const capability = missingCapability(dashboard);
-    return capability
-      ? `No agent provides ${capability}.`
-      : "No agent provides the required capability.";
-  }
-
-  const capability = missingCapability(dashboard);
-  if (capability && dashboard?.data?.stall?.is_stalled) {
-    return `No agent provides ${capability}.`;
-  }
-
-  return (
-    stallText
-      .replace(/\bno_matching_worker\b/g, "")
-      .replace(/\s*:\s*$/g, "")
-      .trim() || "The sprint is waiting on a dispatch gate."
-  );
-}
-
-function missingCapability(dashboard: DashboardResponse | undefined): string {
-  const blockedNode = dashboard?.data?.blocked_nodes?.[0];
-  const nodeCapability = blockedNode?.required_capabilities?.[0];
-  if (nodeCapability) return nodeCapability;
-  const demand = dashboard?.data?.capabilities?.demand || {};
-  const demanded = Object.keys(demand).find((key) => key.trim());
-  if (demanded) return demanded;
-  const nodes = dashboard?.data?.dag?.nodes || [];
-  const blockedDagNode = nodes.find(
-    (node) => statusTone(asString(node.status)) === "blocked",
-  );
-  return blockedDagNode?.required_capabilities?.[0] || "";
-}
-
-function technicalDetailsForStall(
-  dashboard: DashboardResponse | undefined,
-  stallText: string,
-): string[] {
-  const stall = dashboard?.data?.stall;
-  if (!stall?.is_stalled) return [];
-  const details = [
-    asString(stall.state) && `state: ${asString(stall.state)}`,
-    stallText && `summary: ${stallText}`,
-    ...((stall.reasons || []).map((reason) => `reason: ${reason}`) || []),
-    ...((stall.blocked_nodes || []).map((node) => `blocked node: ${node}`) ||
-      []),
-  ].filter(Boolean) as string[];
-
-  const blockedNodes = [
-    ...(dashboard?.data?.blocked_nodes || []),
-    ...((dashboard?.data?.dag?.nodes || []).filter(
-      (node) => statusTone(asString(node.status)) === "blocked",
-    ) || []),
-  ];
-  blockedNodes.slice(0, 4).forEach((node) => {
-    const id = nodeId(node);
-    if (node.route_decision) {
-      details.push(`route decision ${id}: ${asString(node.route_decision)}`);
-    }
-    if (node.blocked_reason) {
-      details.push(`blocked reason ${id}: ${asString(node.blocked_reason)}`);
-    }
-    (node.required_capabilities || []).slice(0, 3).forEach((capability) => {
-      details.push(`required capability ${id}: ${capability}`);
-    });
-  });
-
-  return Array.from(new Set(details)).slice(0, 10);
-}
-
-function CompactSessionHeader({
-  sprint,
-  phase,
-  isBlocked,
-  isComplete,
-}: {
-  sprint: SprintSummary;
-  phase: string;
-  isBlocked: boolean;
-  isComplete: boolean;
-}) {
-  const label = isBlocked
-    ? "Stalled"
-    : isComplete
-      ? "Complete"
-      : asString(sprint.status || phase, "Active").replace(/_/g, " ");
-  const phaseLabel = phase.replace(/_/g, " ");
-  const tone = isBlocked ? "blocked" : isComplete ? "complete" : "working";
-
-  return (
-    <section className="context-bar" data-testid="process-header">
-      <div className="context-main">
-        <span className="task-kicker">Task</span>
-        <h2 className="context-title">{titleForSprint(sprint)}</h2>
-      </div>
-      <div className="context-facts">
-        <span className={`status-badge tone-${tone}`}>
-          {isBlocked ? (
-            <AlertTriangle size={13} />
-          ) : isComplete ? (
-            <CheckCircle2 size={13} />
-          ) : (
-            <Loader2 className="spin-soft" size={13} />
-          )}
-          <span>{label}</span>
-        </span>
-        {phaseLabel && <span className="context-fact">{phaseLabel} phase</span>}
-      </div>
-    </section>
-  );
-}
-
-// The single most-important state, pinned at the head of the stream (the hero
-// zone) — not a giant title. Amber owns 'stalled' so brand red stays the signal.
-function StallCallout({
-  dashboard,
-  stallText,
-}: {
-  dashboard?: DashboardResponse;
-  stallText: string;
-}) {
-  const reason = stalledPlainLanguage(dashboard, stallText);
-  const technicalDetails = technicalDetailsForStall(dashboard, stallText);
-  return (
-    <div className="stall-callout" role="status">
-      <AlertTriangle size={18} />
-      <div className="stall-callout-body">
-        <strong>Stalled</strong>
-        <p>{reason}</p>
-        {technicalDetails.length > 0 && (
-          <details className="technical-details">
-            <summary>Technical details</summary>
-            <ul>
-              {technicalDetails.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </details>
-        )}
-      </div>
-    </div>
-  );
-}
-
-type GateInfo = {
-  nodeId: string;
-  nodeTitle: string;
-  capability: string;
-  reason: string;
-};
-
-function buildGate(dashboard?: DashboardResponse): GateInfo {
-  const nodes = dashboard?.data?.dag?.nodes || [];
-  const blocked =
-    dashboard?.data?.blocked_nodes?.[0] ||
-    nodes.find((node) => statusTone(asString(node.status)) === "blocked");
-  return {
-    nodeId: blocked ? nodeId(blocked) : "",
-    nodeTitle: blocked ? nodeTitle(blocked) : "",
-    capability: missingCapability(dashboard),
-    reason:
-      asString(blocked?.blocked_reason) ||
-      asString(dashboard?.data?.stall?.reason),
-  };
-}
-
-function agentShortName(role: AgentCardModel["role"]): string {
-  return ROLE_META[role].title.split(" ")[0];
 }
 
 // The signature element: the multi-agent relay. Each variant expresses the
@@ -1077,19 +851,15 @@ function buildPlanLevels(nodes: DagNode[]): DagNode[][] {
 
 // The Planner's plan made legible: the DAG nodes as a left-to-right flow of stages.
 function PlanFlow({
-  dashboard,
   projection,
   isBlocked,
 }: {
-  dashboard?: DashboardResponse;
   projection?: ProjectionResponse;
   isBlocked: boolean;
 }) {
   const projectionNodes =
     projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
-  const nodes = projectionNodes.length
-    ? projectionNodes
-    : dashboard?.data?.dag?.nodes || [];
+  const nodes = projectionNodes;
   const levels = useMemo(() => buildPlanLevels(nodes), [nodes]);
   if (!levels.length) return null;
   return (
@@ -1199,6 +969,39 @@ function prettyActionLabel(id: string): string {
   return id.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function artifactPath(ref?: string | { rel_path?: unknown }): string {
+  if (typeof ref === "string") return ref;
+  return asString(ref?.rel_path);
+}
+
+function projectionGateArtifacts(
+  data: ProjectionResponse["data"],
+  kind: string,
+  primaryArtifact: string,
+): string[] {
+  const fromProjection =
+    kind === "plan_review"
+      ? [
+          artifactPath(data.requirements?.prd),
+          artifactPath(data.requirements?.contract),
+          artifactPath(data.plan?.design),
+          artifactPath(data.plan?.plan),
+          artifactPath(data.plan?.task_graph),
+        ]
+      : kind === "eval_review"
+        ? [
+            artifactPath(data.evaluation?.handoff),
+            artifactPath(data.evaluation?.eval),
+            artifactPath(data.evaluation?.coverage_report),
+            artifactPath(data.evaluation?.acceptance_verdict),
+            artifactPath(data.requirements?.requirement_trace),
+          ]
+        : kind === "handoff_submit"
+          ? [primaryArtifact, artifactPath(data.evaluation?.handoff)]
+          : [primaryArtifact];
+  return Array.from(new Set(fromProjection.filter(Boolean)));
+}
+
 // One attention surface above the stream: the operator's current decision (a human
 // gate) when one is open, otherwise an honest system-pause when the run is stalled.
 function DecisionZone({
@@ -1215,11 +1018,9 @@ function DecisionZone({
   const actions = data.available_actions || [];
   // human_action_required.type is the backend's single "what does the human do now"
   // signal — and the only one that covers handoff (which has no human_gates entry).
-  const action = (data.human_action_required || {}) as {
-    type?: string;
-    primary_artifact?: string;
-  };
+  const action = data.human_action_required || {};
   const actionType = asString(action.type);
+  const primaryArtifact = artifactPath(action.primary_artifact);
   if (GATE_KINDS[actionType]) {
     const gate = (data.human_gates || []).find(
       (item) => asString(item.kind) === actionType,
@@ -1228,7 +1029,11 @@ function DecisionZone({
       <GateCard
         kind={actionType}
         gate={gate}
-        primaryArtifact={asString(action.primary_artifact)}
+        fallbackArtifacts={projectionGateArtifacts(
+          data,
+          actionType,
+          primaryArtifact,
+        )}
         actions={actions}
         sprintId={sprintId}
         onRefresh={onRefresh}
@@ -1251,14 +1056,14 @@ function DecisionZone({
 function GateCard({
   kind,
   gate,
-  primaryArtifact,
+  fallbackArtifacts,
   actions,
   sprintId,
   onRefresh,
 }: {
   kind: string;
   gate?: HumanGate;
-  primaryArtifact?: string;
+  fallbackArtifacts?: string[];
   actions: ProjectionAction[];
   sprintId: string;
   onRefresh: () => Promise<void>;
@@ -1277,11 +1082,7 @@ function GateCard({
     ? actions.find((a) => a.id === spec.secondary!.actionId)
     : undefined;
   const gateArtifacts = (gate?.source_artifacts || []).filter(Boolean);
-  const artifacts = gateArtifacts.length
-    ? gateArtifacts
-    : primaryArtifact
-      ? [primaryArtifact]
-      : [];
+  const artifacts = gateArtifacts.length ? gateArtifacts : fallbackArtifacts || [];
   const busy = Boolean(submitting);
 
   async function run(target: "primary" | "secondary") {
@@ -1485,44 +1286,6 @@ function SystemStall({
   );
 }
 
-// differently — a handoff spine, a supply/demand ledger, or an operator log.
-function AgentSignature({
-  agents,
-  gate,
-  isBlocked,
-}: {
-  agents: AgentCardModel[];
-  gate: GateInfo;
-  isBlocked: boolean;
-}) {
-  // The relay breaks after the last agent that actually advanced the work.
-  // A non-sequential status roster — the agents' real current states, with no
-  // directional flow/arrows (the orchestration is a DAG, not a line). The actual
-  // non-linear handoffs live in the process stream below.
-  return (
-    <section
-      className="agent-signature sig-roster"
-      data-testid="agent-presence"
-    >
-      {agents.map((agent) => (
-        <div className={`roster-agent tone-${agent.state}`} key={agent.role}>
-          <span className={`state-dot tone-${agent.state}`} />
-          <div className="roster-copy">
-            <strong>{agentShortName(agent.role)}</strong>
-            <span className="roster-state">
-              {agent.state === "idle"
-                ? "waiting"
-                : agent.state === "complete"
-                  ? "done"
-                  : agent.state}
-            </span>
-          </div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
 function ProcessStream({
   steps,
   decision,
@@ -1583,7 +1346,9 @@ function ProcessStepItem({
             {formatDateTime(step.timestamp)}
           </span>
         </div>
-        {step.summary && <p className="process-step-text">{step.summary}</p>}
+        {step.summary && step.summary !== step.title && (
+          <p className="process-step-text">{step.summary}</p>
+        )}
         {step.facts.length > 0 && (
           <div className="process-facts">
             {step.facts.map((fact) => (
@@ -1681,13 +1446,11 @@ function DeliverablesRail({
   sprintId,
   deliverables,
   usage,
-  dashboard,
 }: {
   rail: RailController;
   sprintId: string;
   deliverables: Deliverable[];
   usage?: UsagePayload;
-  dashboard?: DashboardResponse;
 }) {
   const activeItem = rail.previewPath
     ? deliverables.find((item) => item.rel_path === rail.previewPath)
@@ -1734,7 +1497,6 @@ function DeliverablesRail({
         <RailList
           deliverables={deliverables}
           usage={usage}
-          dashboard={dashboard}
           onOpen={handleOpenPreview}
           onClose={() => rail.setOpen(false)}
           focusPath={returnFocusPath.current}
@@ -1747,14 +1509,12 @@ function DeliverablesRail({
 function RailList({
   deliverables,
   usage,
-  dashboard,
   onOpen,
   onClose,
   focusPath,
 }: {
   deliverables: Deliverable[];
   usage?: UsagePayload;
-  dashboard?: DashboardResponse;
   onOpen: (path: string) => void;
   onClose: () => void;
   focusPath: string | null;
@@ -1802,7 +1562,7 @@ function RailList({
         </div>
       )}
       <div className="rail-divider" />
-      <UsagePanel usage={usage} dashboard={dashboard} />
+      <UsagePanel usage={usage} />
     </div>
   );
 }
@@ -2050,126 +1810,6 @@ function DeliverablePreview({
   );
 }
 
-function buildPlanStages(
-  phase: string,
-  isBlocked: boolean,
-  isComplete: boolean,
-): PlanStage[] {
-  const currentIndex = PHASES.findIndex((item) => phase.includes(item));
-  const normalizedIndex = currentIndex >= 0 ? currentIndex : 0;
-  const blockedIndex = isBlocked
-    ? Math.min(
-        PHASES.length - 1,
-        phase.includes("build_complete")
-          ? normalizedIndex
-          : normalizedIndex + 1,
-      )
-    : -1;
-
-  return [
-    { id: "spec", label: "Spec", complete: "Request accepted" },
-    { id: "prd_ready", label: "PRD", complete: "Requirements shaped" },
-    { id: "planning_complete", label: "Plan", complete: "DAG prepared" },
-    { id: "build_complete", label: "Build", complete: "Output produced" },
-  ].map((stage, index) => {
-    let state: StageState = "pending";
-    if (isComplete || index < normalizedIndex) state = "passed";
-    if (!isComplete && index === normalizedIndex) state = "active";
-    if (index === blockedIndex) state = "blocked";
-    if (isBlocked && index < blockedIndex) state = "passed";
-    return {
-      id: stage.id,
-      label: stage.label,
-      state,
-      detail:
-        state === "passed"
-          ? stage.complete
-          : state === "blocked"
-            ? "Blocked by dispatch capability"
-            : state === "active"
-              ? "Current stage"
-              : "Waiting",
-    };
-  });
-}
-
-function GraphSummaryPanel({
-  dashboard,
-  phase,
-  isBlocked,
-  isComplete,
-}: {
-  dashboard?: DashboardResponse;
-  phase: string;
-  isBlocked: boolean;
-  isComplete: boolean;
-}) {
-  const nodes = dashboard?.data?.dag?.nodes || [];
-  const active = nodes.find(
-    (node) => statusTone(asString(node.status)) === "working",
-  );
-  const blocked = nodes.filter(
-    (node) => statusTone(asString(node.status)) === "blocked",
-  );
-  const stages = buildPlanStages(phase, isBlocked, isComplete);
-  return (
-    <section className="panel graph-summary-panel" data-testid="graph-summary">
-      <SectionHeader
-        icon={<ListTree size={17} />}
-        title="Plan"
-        detail={`${nodes.length} nodes`}
-      />
-      <div className="stage-list" aria-label="Discrete sprint stages">
-        {stages.map((stage) => (
-          <div className={`stage-row stage-${stage.state}`} key={stage.id}>
-            <span className="stage-marker" aria-hidden="true">
-              {stage.state === "passed" ? <CheckCircle2 size={14} /> : null}
-            </span>
-            <div>
-              <strong>{stage.label}</strong>
-              <p>{stage.detail}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      {nodes.length === 0 && <EmptyInline label="No DAG available" />}
-      {active && (
-        <div className="plan-focus">
-          <span className="state-dot tone-working" />
-          <div>
-            <strong>{nodeId(active)}</strong>
-            <p>{nodeTitle(active)}</p>
-          </div>
-        </div>
-      )}
-      {blocked.length > 0 && (
-        <div className="plan-focus blocked">
-          <span className="state-dot tone-blocked" />
-          <div>
-            <strong>{blocked.length} blocked</strong>
-            <p>
-              {shortText(blocked.map((node) => nodeId(node)).join(", "), 96)}
-            </p>
-          </div>
-        </div>
-      )}
-      <div className="mini-node-list">
-        {nodes.slice(0, 6).map((node) => (
-          <div key={nodeId(node)}>
-            <span
-              className={`state-dot tone-${statusTone(asString(node.status))}`}
-            />
-            <span>{nodeId(node)}</span>
-            <strong>
-              {asString(node.status, "pending").replace(/_/g, " ")}
-            </strong>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 const ARTIFACT_ROLE_KEYWORDS: Record<string, string[]> = {
   pm: ["prd", "spec", "intake", "scope"],
   planner: ["plan", "design", "task_graph", "task-graph", "dag", "closure"],
@@ -2218,7 +1858,7 @@ function attachArtifactsToSteps(
 }
 
 function buildProcessSteps(
-  dashboard: DashboardResponse | undefined,
+  projection: ProjectionResponse | undefined,
   events: EventRecord[],
   deliverables: Deliverable[],
   phase: string,
@@ -2233,7 +1873,8 @@ function buildProcessSteps(
     steps.push(processStepFromEvent(event, index === orderedEvents.length - 1));
   });
 
-  const nodes = dashboard?.data?.dag?.nodes || [];
+  const nodes =
+    projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
   if (steps.length === 0 && nodes.length > 0) {
     nodes.forEach((node, index) => {
       steps.push(processStepFromNode(node, index === nodes.length - 1, phase));
@@ -2243,7 +1884,7 @@ function buildProcessSteps(
   const stall =
     options.showStallSummary === false
       ? undefined
-      : options.stall || dashboard?.data?.stall;
+      : options.stall || projection?.data?.dispatch?.stall;
   if (stall?.is_stalled && !steps.some((step) => step.state === "blocked")) {
     steps.push({
       id: "stall-summary",
@@ -2253,7 +1894,7 @@ function buildProcessSteps(
       detail:
         stallCopy(stall) ||
         "The sprint is waiting on a dispatch gate or missing worker capability.",
-      timestamp: dashboard?.generated_at || "",
+      timestamp: projection?.generated_at || "",
       state: "blocked",
       tone: "blocked",
       defaultExpanded: true,
@@ -2280,7 +1921,7 @@ function buildProcessSteps(
         "The output is separated from the process stream so review can happen without digging through agent telemetry.",
       timestamp: primaryDeliverable.mtime
         ? new Date(primaryDeliverable.mtime * 1000).toISOString()
-        : dashboard?.generated_at || "",
+        : projection?.generated_at || "",
       state: "completed",
       tone: "complete",
       defaultExpanded: false,
@@ -2552,81 +2193,17 @@ function TopBar({
   );
 }
 
-function buildAgents(
-  status?: StatusPayload,
-  dashboard?: DashboardResponse,
-  events: EventRecord[] = [],
-): AgentCardModel[] {
-  const panes = [
-    ...(status?.panes || []),
-    ...((dashboard?.data?.capabilities?.pane_supply || []).map((pane) => ({
-      id: pane.pane_id,
-      pane_id: pane.pane_id,
-      role: pane.role,
-      state: pane.state,
-      status: pane.state,
-      current_activity: "",
-      model: pane.model,
-      provided_capabilities: pane.provided_capabilities,
-    })) || []),
-  ];
-
-  return ROLE_ORDER.map((role) => {
-    const meta = ROLE_META[role];
-    const pane = panes.find((item) => normalizeRole(item.role) === role);
-    const recent = events.find(
-      (event) => normalizeRole(eventActor(event)) === role,
-    );
-    const readable = recent ? humanEvent(recent) : undefined;
-    const paneState = asString(pane?.state || pane?.status);
-    const eventState = readable?.tone || "";
-    const state =
-      eventState === "blocked"
-        ? "blocked"
-        : eventState === "complete"
-          ? "complete"
-          : statusTone(paneState || eventState);
-    return {
-      role,
-      title: meta.title,
-      subtitle: meta.subtitle,
-      state,
-      activity:
-        asString(pane?.current_activity) ||
-        readable?.title ||
-        "Waiting for harness activity",
-      model: asString(pane?.model),
-      pane: asString(pane?.id || pane?.pane_id),
-      lastEvent: readable
-        ? `${formatTime(eventTimestamp(recent as EventRecord))} · ${readable.detail || readable.title}`
-        : "No recent event",
-      provides: Array.isArray(pane?.provided_capabilities)
-        ? (pane?.provided_capabilities as string[])
-        : [],
-    };
-  });
-}
-
 function UsagePanel({
   usage,
-  dashboard,
 }: {
   usage?: UsagePayload;
-  dashboard?: DashboardResponse;
 }) {
-  const sprintUsage = dashboard?.data?.sprint_usage;
-  const scoped = Boolean(
-    sprintUsage &&
-    (sprintUsage.total_tokens_label || sprintUsage.models?.length),
-  );
-  const total = scoped
-    ? sprintUsage?.total_tokens_label || "0 tok"
-    : usage?.total_used_tokens_label || "0 tok";
-  const models = (scoped ? sprintUsage?.models : usage?.models) || [];
+  const total = usage?.total_used_tokens_label || "0 tok";
+  const models = usage?.models || [];
   return (
     <section className="panel usage-panel" data-testid="usage-panel">
       <div className="usage-head">
-        <span>{scoped ? "This sprint" : "Usage"}</span>
+        <span>Usage</span>
         <strong>{total}</strong>
       </div>
       <div className="usage-models">
@@ -2641,9 +2218,8 @@ function UsagePanel({
         ))}
       </div>
       <p className="usage-foot">
-        {scoped
-          ? "Tokens used by this sprint, per model."
-          : "Per model, per day (account-wide) — runtime does not report per-sprint tokens."}
+        Per model, per day (account-wide) — runtime does not report per-sprint
+        tokens.
       </p>
     </section>
   );
