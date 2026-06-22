@@ -11,6 +11,39 @@ from pane_hygiene_registry import PaneEntry, PaneHygieneRegistry, PaneState
 from pane_clear_manager import PaneClearManager, ClearResult, _tmux_send_keys
 
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "tmux_capture_samples"
+CODEX_IDLE_CAPTURE = """
+╭──────────────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.141.0)                           │
+│                                                      │
+│ permissions: YOLO mode                               │
+╰──────────────────────────────────────────────────────╯
+
+› Run /review on my current changes
+
+  gpt-5.5 xhigh fast · /tmp/solar-codex-runtime-integration
+"""
+CODEX_SLASH_RESIDUE_CAPTURE = """
+╭──────────────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.141.0)                           │
+│ permissions: YOLO mode                               │
+╰──────────────────────────────────────────────────────╯
+
+› /clear
+
+  gpt-5.5 xhigh fast · /tmp/solar-codex-runtime-integration
+"""
+CODEX_ROTATED_IDLE_CAPTURE = """
+╭──────────────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.141.0)                           │
+│ permissions: YOLO mode                               │
+╰──────────────────────────────────────────────────────╯
+
+  Tip: Use /side to start a side conversation in a temporary fork.
+
+› Write tests for @filename
+
+  gpt-5.5 xhigh fast · /tmp/solar-codex-runtime-integration
+"""
 
 
 def _load_fixture(name: str) -> str:
@@ -78,6 +111,17 @@ class TestClearPane:
         assert result.signal_no_confirm
         assert sends == [("solar-harness:0.3", "/clear")]
 
+    def test_codex_runtime_uses_new_thread_command(self, registry, monkeypatch):
+        monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+        _make_dirty(registry)
+        mgr, sends, sleeps = _make_manager(registry, lambda _: CODEX_IDLE_CAPTURE)
+        result = mgr.clear_pane("solar-harness:0.3")
+        assert result.success
+        assert result.signal_empty
+        assert result.signal_no_queued
+        assert result.signal_no_confirm
+        assert sends == [("solar-harness:0.3", "/new")]
+
     def test_fail_on_dirty(self, registry, dirty_capture):
         _make_dirty(registry)
         mgr, sends, sleeps = _make_manager(registry, dirty_capture)
@@ -131,6 +175,30 @@ class TestClearPane:
             ["tmux", "send-keys", "-t", "solar-harness-lab:0.3", "Enter"],
         ]
 
+    def test_codex_tmux_sender_cancels_slash_completion_before_literal(self, monkeypatch):
+        monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+
+            class Result:
+                returncode = 0
+
+            return Result()
+
+        monkeypatch.setattr("pane_clear_manager.subprocess.run", fake_run)
+        monkeypatch.setattr("pane_clear_manager.time.sleep", lambda _: None)
+
+        _tmux_send_keys("solar-harness:0.0", "/new")
+
+        assert calls == [
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "C-c"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "C-u"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "-l", "/new"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
+        ]
+
 
 # --- verify_clear_success three-signal ---
 
@@ -158,6 +226,30 @@ class TestVerifyClearSuccess:
         _, _, s_no_confirm = mgr.verify_clear_success("test")
         assert not s_no_confirm
 
+    def test_codex_idle_composer_is_clean(self, registry, monkeypatch):
+        monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+        from recover_detector import RecoverDetector
+        det = RecoverDetector(capture_fn=lambda _: CODEX_IDLE_CAPTURE)
+        mgr = PaneClearManager(registry, det)
+        assert mgr.verify_clear_success("test") == (True, True, True)
+
+    def test_codex_rotated_idle_composer_is_clean(self, registry, monkeypatch):
+        monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+        from recover_detector import RecoverDetector
+        det = RecoverDetector(capture_fn=lambda _: CODEX_ROTATED_IDLE_CAPTURE)
+        mgr = PaneClearManager(registry, det)
+        assert mgr.verify_clear_success("test") == (True, True, True)
+
+    def test_codex_slash_residue_is_not_empty_prompt(self, registry, monkeypatch):
+        monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+        from recover_detector import RecoverDetector
+        det = RecoverDetector(capture_fn=lambda _: CODEX_SLASH_RESIDUE_CAPTURE)
+        mgr = PaneClearManager(registry, det)
+        s_empty, s_no_queued, s_no_confirm = mgr.verify_clear_success("test")
+        assert not s_empty
+        assert s_no_queued
+        assert s_no_confirm
+
 
 # --- clear_with_retry ---
 
@@ -169,6 +261,15 @@ class TestClearWithRetry:
         assert result.success
         assert result.attempts == 1
         assert sends == [("solar-harness:0.3", "/clear")]
+
+    def test_codex_clear_with_retry_uses_new_thread_command(self, registry, monkeypatch):
+        monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+        _make_dirty(registry)
+        mgr, sends, sleeps = _make_manager(registry, lambda _: CODEX_IDLE_CAPTURE)
+        result = mgr.clear_with_retry("solar-harness:0.3")
+        assert result.success
+        assert result.attempts == 1
+        assert sends == [("solar-harness:0.3", "/new")]
 
     def test_succeeds_second_try(self, registry):
         _make_dirty(registry)
