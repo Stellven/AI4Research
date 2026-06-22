@@ -441,6 +441,14 @@ apply_product_delivery_models() {
     tmux respawn-pane -k -t "$target" "$(claude_clean_env_prefix) TMUX_PANE=${pane_id} SOLAR_CLAUDE_BYPASS=1 bash ${_esc_harness}/pane-launcher.sh ${persona} ${_esc_work}" 2>/dev/null || true
     sleep 0.3
   done
+  # Fix C: each pane was just respawned into a fresh Claude, so drop any stale
+  # pane-hygiene state (needs_respawn/dirty/cooling/cooldown) that would otherwise
+  # strand the freshly-respawned pane from dispatch (the root of the operator-respawn
+  # walls). The next dispatch boundary re-registers each pane clean.
+  local _reg="$HARNESS_DIR/run/pane-hygiene.json" _pi
+  for _pi in 0 1 2 3; do
+    python3 "$HARNESS_DIR/lib/pane_role_pool.py" reset-hygiene --pane "$SESSION_NAME:0.${_pi}" --registry "$_reg" >/dev/null 2>&1 || true
+  done
   configure_product_delivery_labels
 }
 

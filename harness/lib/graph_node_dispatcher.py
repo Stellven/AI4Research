@@ -62,6 +62,11 @@ PANE_QUOTA_EXHAUSTED_RE = re.compile(
 )
 PANE_RATE_LIMIT_FALLBACK_SEC = int(os.environ.get("SOLAR_PANE_RATE_LIMIT_FALLBACK_SEC", "900"))
 OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC = int(os.environ.get("SOLAR_GRAPH_OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC", "900"))
+# Fix F: faster recovery from an eval input-submit jam (wall #5). Caps the EVAL
+# lease + the re-dispatch gate so a stuck eval re-dispatches before the full 900s
+# TTL. Safety is the existing busy-check: a still-working eval pane reads busy and
+# is never re-dispatched, so this only accelerates the genuinely-stuck case.
+EVAL_RECOVER_SEC = int(os.environ.get("SOLAR_GRAPH_EVAL_RECOVER_SEC", "600"))
 
 
 def _effective_graph_max_parallel(default: int = 8) -> int:
@@ -131,6 +136,7 @@ RECOVERABLE_DISPATCH_PROMPT_REASONS = {
     "edit_confirmation_prompt",
     "queued_prompt_residue",
     "plan_mode_blocked",
+    "survey_prompt_blocked",
 }
 RECOVERABLE_PANE_BLOCKER_FRAGMENTS = {
     "proceed_confirmation_prompt",
@@ -2061,12 +2067,30 @@ def _verdict_from_eval_md(eval_md: Path) -> str:
     return ""
 
 
+def _eval_md_is_substantive(eval_md: Path) -> bool:
+    """True iff the evaluator Markdown reads as a genuine independent verification
+    rather than a bare verdict stamp. A real node eval re-runs checks and records
+    evidence across multiple sections (observed genuine evals are ~7-9KB / 11-12
+    sections); a rubber-stamp is a few lines. Thresholds are set far below genuine
+    sizes so this only rejects stamps, never real evals."""
+    try:
+        text = eval_md.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    if len(text.strip()) < 600:
+        return False
+    section_count = len(re.findall(r"(?im)^##\s+\S", text))
+    has_evidence = bool(re.search(r"(?i)\b(evidence|checked|acceptance|re-?ran|re-?run|verif|smoke)", text))
+    return section_count >= 3 or has_evidence
+
+
 def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
     """Recover evaluator sidecar JSON when the Markdown verdict is explicit.
 
     This is intentionally narrow: it only runs for graph node eval sidecars,
     requires a `## Verdict` section with PASS/FAIL, and records that the JSON was
-    derived from evaluator Markdown. It does not invent a verdict.
+    derived from evaluator Markdown. It does not invent a verdict, and (trust gate)
+    it never mints a PASS sidecar from a non-substantive eval .md.
     """
     eval_json = _eval_json_file(sid, node_id)
     if eval_json.exists():
@@ -2076,6 +2100,19 @@ def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
         return None
     verdict = _verdict_from_eval_md(eval_md)
     if verdict not in {"PASS", "FAIL"}:
+        return None
+    # Trust gate (no hollow passes): a PASS must be backed by a substantive
+    # independent eval. A thin/rubber-stamp PASS .md is refused here so the node
+    # stays unverified and is re-evaluated rather than silently marked passed.
+    # FAIL is always honored (fail-safe).
+    if verdict == "PASS" and not _eval_md_is_substantive(eval_md):
+        try:
+            _append_dispatch_ledger(
+                "eval_backfill_refused_thin_pass", sid, "", "",
+                {"node": node_id, "eval_md": str(eval_md)},
+            )
+        except Exception:
+            pass
         return None
     payload = {
         "verdict": verdict,
@@ -3327,6 +3364,19 @@ def _pane_prompt_residue_is_stale_scrollback(pane: str, text: str) -> bool:
     )
 
 
+def _clear_pane_scrollback(pane: str) -> bool:
+    """Fix #7b: drop a pane's tmux scrollback buffer to evict a stale, already-
+    resolved rate-limit banner ("resets X") that would otherwise keep matching
+    PANE_TUI_UNAVAILABLE_RE and wedge the pane out of dispatch forever (a /clear
+    clears the conversation, NOT the terminal scrollback). Does not touch the
+    Claude turn/conversation — only the terminal backbuffer."""
+    try:
+        subprocess.run(["tmux", "clear-history", "-t", pane], timeout=3)
+        return True
+    except Exception:
+        return False
+
+
 def _pane_tui_busy(pane: str) -> bool:
     tail = _pane_tail(pane)
     bottom = "\n".join(tail.splitlines()[-40:])
@@ -3342,6 +3392,29 @@ def _pane_tui_busy(pane: str) -> bool:
                 return False
         return True
     if PANE_TUI_UNAVAILABLE_RE.search(bottom):
+        # Fix #7b: a rate-limit / API-error banner means BUSY only while it is the
+        # pane's LIVE state. A RESOLVED limit leaves a stale "resets X" banner in
+        # scrollback while the pane returns to an idle, ready prompt — that must not
+        # wedge the pane forever. LIVE = banner in the immediate active region (last
+        # screen), or the options modal / quota-exhausted marker present. STALE =
+        # only matches higher in scrollback with an idle, empty, non-spinning prompt
+        # below. CONSERVATIVE: anything not provably stale stays BUSY (never dispatch
+        # into a genuinely-limited pane). On a provably-stale banner, evict it from
+        # the scrollback so it stops matching, and report available.
+        active_region = "\n".join(tail.splitlines()[-10:])
+        banner_live_now = bool(
+            PANE_TUI_UNAVAILABLE_RE.search(active_region)
+            or PANE_RATE_LIMIT_OPTIONS_MODAL_RE.search(bottom)
+            or PANE_QUOTA_EXHAUSTED_RE.search(active_region)
+        )
+        stale_resolved = (
+            not banner_live_now
+            and prompt_is_empty
+            and not PANE_LIVE_SPINNER_RE.search(bottom)
+        )
+        if stale_resolved:
+            _clear_pane_scrollback(pane)
+            return False
         return True
     if PANE_PROCESSING_RE.search(bottom):
         if _pane_prompt_residue_is_stale_scrollback(pane, tail):
@@ -3363,6 +3436,14 @@ def _pane_tui_busy(pane: str) -> bool:
     if PANE_SURVEY_PROMPT_RE.search(bottom):
         if overlay.get("state") == "stale_scrollback_ignored" or prompt_is_empty:
             return False
+        # Fix #7a: the survey is an idle-time modal blocking dispatch. Reaching this
+        # branch means no working turn (the processing branch returns earlier), so it
+        # is safe to auto-dismiss the survey and re-check before reporting busy.
+        if _dismiss_dispatch_prompt(pane, "survey_prompt_blocked"):
+            time.sleep(0.4)
+            bottom = "\n".join(_pane_tail(pane).splitlines()[-40:])
+            if not PANE_SURVEY_PROMPT_RE.search(bottom):
+                return False
         return True
     confirmation_match = PANE_CONFIRMATION_PROMPT_RE.search(bottom)
     if confirmation_match and not _prompt_match_followed_by_idle_default_prompt(bottom, confirmation_match):
@@ -3591,11 +3672,150 @@ def _pane_hygiene_entries() -> dict[str, Any]:
 def _recover_pane_hygiene_if_idle(pane: str, state: str) -> bool:
     if state not in {"cooling", "needs_recover", "dirty"}:
         return False
-    if _pane_has_active_lease(pane):
-        return False
+    # Fix (Wall #4): do NOT bail on an active lease. A dirty/cooling/needs_recover
+    # pane that is IDLE (not tui-busy) is safe to recover regardless of who holds the
+    # lease -- the dirty state is a stale dispatch-boundary marker, not active work.
+    # Bailing on the lease deadlocked a same-pane node (it pre-acquires the lease,
+    # then the boundary-dirty pane won't recover under its OWN lease). tui-busy below
+    # is the real safety; pane-stealing is prevented at lease ACQUISITION, not here.
     if _pane_tui_busy(pane):
         return False
     return True
+
+
+_HUNG_PANE_SAMPLES = 3
+_HUNG_PANE_SAMPLE_GAP_S = 6.0  # 3 samples across ~12s
+_SPINNER_TIMER_RE = re.compile(r"\((\d+(?:h|m|s)(?:\s+\d+(?:m|s))*)\)")
+
+
+def _pane_shows_spinner(pane: str) -> bool:
+    bottom = "\n".join(_pane_tail(pane, lines=12).splitlines()[-12:])
+    return bool(PANE_PROCESSING_RE.search(bottom))
+
+
+_COCKPIT_PERSONA_BY_INDEX = {"0.0": "pm", "0.1": "planner", "0.2": "builder", "0.3": "evaluator"}
+_CLAUDE_CLEAN_ENV = (
+    "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_EXECPATH "
+    "-u ANTHROPIC_BASE_URL -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY "
+    "-u ANTHROPIC_DEFAULT_OPUS_MODEL -u ANTHROPIC_DEFAULT_SONNET_MODEL -u ANTHROPIC_DEFAULT_HAIKU_MODEL"
+)
+
+
+def _respawn_cockpit_pane(pane: str) -> bool:
+    """Force-kill a wedged cockpit pane and relaunch its persona fresh, mirroring
+    solar-harness.sh apply_product_delivery_models (clean env + pane-launcher).
+    pane_doctor refuses to respawn PROTECTED main panes, so this is the only path
+    that recovers a main pane whose turn is hung beyond key-interrupt recovery."""
+    persona = _COCKPIT_PERSONA_BY_INDEX.get(pane.split(":")[-1], "builder")
+    try:
+        pane_id = subprocess.check_output(
+            ["tmux", "display-message", "-p", "-t", pane, "#{pane_id}"], timeout=3
+        ).decode().strip()
+        work_dir = subprocess.check_output(
+            ["tmux", "display-message", "-p", "-t", pane, "#{pane_current_path}"], timeout=3
+        ).decode().strip()
+    except Exception:
+        return False
+    if not pane_id:
+        return False
+    if not work_dir:
+        work_dir = str(Path.home() / "solar-cleanrun")
+    launcher = str(HARNESS_DIR / "pane-launcher.sh")
+    cmd = (
+        f"{_CLAUDE_CLEAN_ENV} TMUX_PANE={pane_id} SOLAR_CLAUDE_BYPASS=1 "
+        f"bash '{launcher}' {persona} '{work_dir}'"
+    )
+    try:
+        subprocess.run(["tmux", "respawn-pane", "-k", "-t", pane, cmd], timeout=10, check=True)
+        return True
+    except Exception:
+        return False
+
+
+def _set_pane_boot_grace(pane: str, seconds: int, *, sid: str = "", dispatch_id: str = "") -> None:
+    """Hold a freshly-respawned pane out of dispatch while its Claude boots, via a
+    short custom recover-cooldown (the default PANE_RECOVER_COOLDOWN_SEC is too
+    long). Mirrors _mark_pane_recover_cooldown's entry shape so it stays valid."""
+    until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=seconds)
+    data = _pane_cooldowns()
+    data[pane] = {
+        "reason": "hung_pane_respawn_booting",
+        "sid": sid,
+        "dispatch_id": dispatch_id,
+        "marked_at": _utc_now(),
+        "until": until.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    _write_pane_cooldowns(data)
+
+
+def _recover_hung_pane(pane: str, *, sid: str = "", node_id: str = "", dispatch_id: str = "") -> bool:
+    """Recover a FROZEN (hung) cockpit pane so an assigned node stops looping.
+
+    A wedged Claude turn leaves a processing spinner on screen with no progress,
+    stranding the node assigned to it (observed: builder pane stuck on a frozen
+    `Prestidigitating… (0s)` turn whose elapsed-time counter never advances, after
+    a transient opus stall; opus recovered but the pane did not, and pane_doctor
+    never recovers PROTECTED main panes). The fragile part is the busy/lease
+    CLASSIFICATION — the same frozen render was read tui-busy in one moment and
+    not-busy (with a stale dispatch lease) the next — so we deliberately do NOT
+    gate on _pane_tui_busy or on the lease here.
+
+    The robust, sufficient discriminator is the spinner's ELAPSED TIMER. A working
+    turn counts up — (5s) -> (12s) — and/or streams output; a frozen turn is stuck.
+    Sample several times across a window and bail if the timer advances, the render
+    streams, the spinner clears, or no live timer can be parsed. Act ONLY when a
+    live elapsed-timer is present-and-stuck across the whole window AND the render
+    is byte-static — that is the safety (a real working pane is never interrupted).
+    On a confirmed freeze, interrupt the hung turn (Escape, then C-c), clear any
+    recover-cooldown, and log the action; the subsequent dispatch goes through
+    _send_to_pane's normal C-u residue clear, and the reconcile path re-dispatches
+    the (now released) node onto the recovered pane.
+
+    Returns True iff the interrupt fired AND the spinner cleared.
+    """
+    if not _pane_shows_spinner(pane):
+        return False
+    renders: list[str] = []
+    timers: list[str | None] = []
+    for i in range(_HUNG_PANE_SAMPLES):
+        if i:
+            time.sleep(_HUNG_PANE_SAMPLE_GAP_S)
+        render = _pane_tail(pane, lines=40)
+        bottom = "\n".join(render.splitlines()[-12:])
+        timer: str | None = None
+        if PANE_PROCESSING_RE.search(bottom):
+            found = _SPINNER_TIMER_RE.findall(bottom)
+            timer = found[-1] if found else None
+        renders.append(render)
+        timers.append(timer)
+    if not _pane_shows_spinner(pane):
+        return False  # spinner cleared during sampling -> not hung
+    if any(t is None for t in timers):
+        return False  # no parseable elapsed-timer -> cannot confirm a stuck spinner
+    if any(t != timers[0] for t in timers):
+        return False  # spinner elapsed-timer advanced -> genuinely working
+    if any(r != renders[0] for r in renders):
+        return False  # render changed (streaming) -> genuinely working
+    for keys in (("Escape",), ("C-c",), ("Escape", "C-u")):
+        try:
+            subprocess.run(["tmux", "send-keys", "-t", pane, *keys], timeout=2)
+        except Exception:
+            return False
+        time.sleep(0.4)
+        if not _pane_shows_spinner(pane):
+            cooldowns = _pane_cooldowns()
+            if cooldowns.pop(pane, None) is not None:
+                _write_pane_cooldowns(cooldowns)
+            _append_dispatch_ledger(
+                "hung_pane_recovered", sid, pane, dispatch_id,
+                {"node": node_id, "keys": "+".join(keys), "elapsed": timers[0] or "", "detector": "frozen_timer"},
+            )
+            return True
+    _append_dispatch_ledger(
+        "hung_pane_recover_failed", sid, pane, dispatch_id,
+        {"node": node_id, "detector": "frozen_timer"},
+    )
+    return False
 
 
 def _pane_hygiene_unavailable_reason(pane: str) -> str:
@@ -3715,6 +3935,16 @@ def _dismiss_dispatch_prompt(pane: str, reason: str) -> bool:
                 time.sleep(0.25)
                 after = "\n".join(_pane_tail(pane).splitlines()[-40:])
                 if not PANE_PLAN_MODE_RE.search(after):
+                    return True
+            return False
+        if reason == "survey_prompt_blocked":
+            # Fix #7a: dismiss the "How is Claude doing?" survey modal (0 = Dismiss;
+            # Escape as fallback), verifying it actually cleared.
+            for keys in (("0",), ("Escape",)):
+                subprocess.run(["tmux", "send-keys", "-t", pane, *keys], timeout=2)
+                time.sleep(0.4)
+                after = "\n".join(_pane_tail(pane).splitlines()[-40:])
+                if not PANE_SURVEY_PROMPT_RE.search(after):
                     return True
             return False
     except Exception:
@@ -5473,6 +5703,15 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
             continue
         if dispatch_role != "builder":
             continue
+        # Unattended hung-pane recovery, before availability is sampled: a MAIN
+        # cockpit builder pane wedged on a frozen turn (a processing spinner whose
+        # elapsed-timer never advances) strands its assigned node — regardless of
+        # whether worker discovery happens to read it busy and regardless of a
+        # stale dispatch lease. The frozen-timer detection inside _recover_hung_pane
+        # is the safety (a working turn advances its timer / streams), so we do NOT
+        # gate on the fragile tui-busy/lease classification here.
+        if pane.startswith(f"{SESSION}:"):
+            _recover_hung_pane(pane)
         models = _models_for_pane(pane, title)
         tail = _pane_tail(pane)
         health = _pane_health(pane)
@@ -5646,7 +5885,7 @@ def _node_eval_needed(graph: dict[str, Any], sid: str, node: dict[str, Any], for
         dispatched_at = _parse_utc(str(node.get("eval_dispatched_at") or ""))
         if assignments and dispatched_at:
             age = datetime.datetime.now(datetime.timezone.utc) - dispatched_at
-            if age.total_seconds() < 900:
+            if age.total_seconds() < EVAL_RECOVER_SEC:
                 return False
         lease_matches = False
         for assignment in assignments:
@@ -5805,7 +6044,7 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                     str(assignment["pane"]),
                     sid,
                     str(assignment["dispatch_id"]),
-                    ttl,
+                    min(ttl, EVAL_RECOVER_SEC),
                     dry_run,
                 )
             lease_results.append(lease_result)

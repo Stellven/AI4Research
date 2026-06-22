@@ -2904,12 +2904,45 @@ def cmd_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_research_eval_json(eval_json, report_ast, final_md):
+    """Fix G: tolerate being handed the wrong artifact. A genuine research_eval.json
+    carries source_count + claim_count metrics; a verdict.json (sometimes passed by
+    mistake) does not. If the given --eval-json is absent or not a research_eval,
+    fall back to the canonical *-research_eval.json sibling in the same export dir so
+    the gate scores the real artifacts instead of a spurious 0-source FAIL. Pass the
+    original through unchanged if nothing better is found (zero regression risk)."""
+    import glob as _glob, json as _json
+    def _is_research_eval(p):
+        try:
+            d = _json.load(open(p, encoding="utf-8"))
+        except Exception:
+            return False
+        return isinstance(d, dict) and "source_count" in d and "claim_count" in d
+    if eval_json and os.path.exists(eval_json) and _is_research_eval(eval_json):
+        return eval_json
+    seen = set()
+    for ref in (eval_json, report_ast, final_md):
+        if not ref:
+            continue
+        base = os.path.dirname(os.path.abspath(ref))
+        if not base or base in seen:
+            continue
+        seen.add(base)
+        for cand in sorted(_glob.glob(os.path.join(base, "*-research_eval.json"))):
+            if _is_research_eval(cand):
+                return cand
+    return eval_json
+
+
 def cmd_eval_artifacts(args: argparse.Namespace) -> int:
     """Run deterministic DeepResearch quality gate over exported artifacts."""
     from research.evaluator import evaluate_artifacts
 
+    eval_json = _resolve_research_eval_json(
+        args.eval_json, getattr(args, "report_ast", None), getattr(args, "final_md", None)
+    )
     payload = evaluate_artifacts(
-        args.eval_json,
+        eval_json,
         report_ast=args.report_ast or None,
         final_md=args.final_md or None,
         bibliography=args.bibliography or None,

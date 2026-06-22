@@ -1531,12 +1531,30 @@ def _verdict_from_eval_md(eval_md: Path) -> str:
     return ""
 
 
+def _eval_md_is_substantive(eval_md: Path) -> bool:
+    """True iff the evaluator Markdown reads as a genuine independent verification
+    rather than a bare verdict stamp. A real node eval re-runs checks and records
+    evidence across multiple sections (observed genuine evals are ~7-9KB / 11-12
+    sections); a rubber-stamp is a few lines. Thresholds are set far below genuine
+    sizes so this only rejects stamps, never real evals."""
+    try:
+        text = eval_md.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    if len(text.strip()) < 600:
+        return False
+    section_count = len(re.findall(r"(?im)^##\s+\S", text))
+    has_evidence = bool(re.search(r"(?i)\b(evidence|checked|acceptance|re-?ran|re-?run|verif|smoke)", text))
+    return section_count >= 3 or has_evidence
+
+
 def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
     """Recover evaluator sidecar JSON when the Markdown verdict is explicit.
 
     This is intentionally narrow: it only runs for graph node eval sidecars,
     requires a `## Verdict` section with PASS/FAIL, and records that the JSON was
-    derived from evaluator Markdown. It does not invent a verdict.
+    derived from evaluator Markdown. It does not invent a verdict, and (trust gate)
+    it never mints a PASS sidecar from a non-substantive eval .md.
     """
     eval_json = _eval_json_file(sid, node_id)
     if eval_json.exists():
@@ -1546,6 +1564,19 @@ def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
         return None
     verdict = _verdict_from_eval_md(eval_md)
     if verdict not in {"PASS", "FAIL"}:
+        return None
+    # Trust gate (no hollow passes): a PASS must be backed by a substantive
+    # independent eval. A thin/rubber-stamp PASS .md is refused here so the node
+    # stays unverified and is re-evaluated rather than silently marked passed.
+    # FAIL is always honored (fail-safe).
+    if verdict == "PASS" and not _eval_md_is_substantive(eval_md):
+        try:
+            _append_dispatch_ledger(
+                "eval_backfill_refused_thin_pass", sid, "", "",
+                {"node": node_id, "eval_md": str(eval_md)},
+            )
+        except Exception:
+            pass
         return None
     payload = {
         "verdict": verdict,

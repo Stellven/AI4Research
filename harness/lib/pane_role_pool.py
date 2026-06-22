@@ -237,12 +237,90 @@ def _entry_for_boundary(registry: PaneHygieneRegistry, pane: str, role: str):
     return entry
 
 
+def _pane_capture_tail(pane: str, lines: int = 14) -> str:
+    try:
+        out = subprocess.run(
+            ["tmux", "capture-pane", "-t", pane, "-p"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return ""
+    if out.returncode != 0:
+        return ""
+    return "\n".join(out.stdout.splitlines()[-lines:])
+
+
+def _pane_actively_working(pane: str) -> bool:
+    # Claude Code prints "esc to interrupt" while a turn is in flight. Never
+    # reconcile a pane that is mid-task.
+    return "esc to interrupt" in _pane_capture_tail(pane).lower()
+
+
+def _pane_active_lease(pane: str) -> bool:
+    safe = pane.replace(":", "_").replace(".", "_")
+    lease = HARNESS_DIR / "run" / "pane-leases" / f"{safe}.json"
+    if not lease.exists():
+        return False
+    try:
+        data = json.loads(lease.read_text(encoding="utf-8"))
+    except Exception:
+        return True
+    expires = str(data.get("expires") or data.get("expires_at") or "")
+    if not expires:
+        return True
+    try:
+        from datetime import datetime, timezone
+
+        return datetime.fromisoformat(expires.replace("Z", "+00:00")) > datetime.now(timezone.utc)
+    except Exception:
+        return True
+
+
+def _reconcile_stranded_main_pane(
+    registry: PaneHygieneRegistry,
+    manager: PaneClearManager,
+    pane: str,
+    state: PaneState,
+) -> bool:
+    """Unattended recovery for a MAIN cockpit pane stranded in a severe hygiene
+    state (needs_respawn / needs_recover).
+
+    pane_doctor never auto-respawns or repairs PROTECTED main panes, so a single
+    exhausted /clear can strand a main pane — and the whole pipeline — forever
+    (observed: PM pane stuck `needs_respawn` from a stale clear-exhaust, blocking
+    every sprint at pm_prd_fix with "no usable pm"). Reconcile a pane back to
+    `running` ONLY when it is unleased, not actively working, and not sitting on
+    a real confirm/queued overlay — i.e. a live idle pane whose only problem is
+    the stale severe-state latch. It then rejoins the normal dispatch-boundary
+    clear path and clear_with_retry cleans any input residue. A genuinely wedged
+    pane fails these guards and stays flagged (no fake recovery — that case still
+    needs a real respawn)."""
+    if state not in {PaneState.needs_respawn, PaneState.needs_recover}:
+        return False
+    if _pane_active_lease(pane):
+        return False
+    if _pane_actively_working(pane):
+        return False
+    _empty, no_queued, no_confirm = manager.verify_clear_success(pane)
+    if not (no_queued and no_confirm):
+        return False
+    registry.transition_state(
+        pane, PaneState.running, reason="stranded_main_pane_idle_reconcile"
+    )
+    return True
+
+
 def ensure_clean_for_dispatch(pane: str, role: str, registry_path: Path | None = None) -> dict[str, Any]:
     registry = PaneHygieneRegistry(str((registry_path or REGISTRY_PATH).expanduser()))
     entry = _entry_for_boundary(registry, pane, role)
-    if entry.state in {PaneState.cooling, PaneState.needs_recover, PaneState.needs_respawn}:
-        return {"ok": False, "pane": pane, "role": role, "reason": entry.state.value}
     manager = PaneClearManager(registry, RecoverDetector())
+    if entry.state in {PaneState.cooling, PaneState.needs_recover, PaneState.needs_respawn}:
+        if _reconcile_stranded_main_pane(registry, manager, pane, entry.state):
+            entry = _entry_for_boundary(registry, pane, role)
+        else:
+            return {"ok": False, "pane": pane, "role": role, "reason": entry.state.value}
     result = manager.clear_with_retry(pane)
     if result.success:
         registry.update_context_fields(pane, persona=role)
@@ -259,6 +337,20 @@ def ensure_clean_for_dispatch(pane: str, role: str, registry_path: Path | None =
     }
 
 
+def reset_pane_hygiene_after_respawn(pane: str, registry_path: Path | None = None) -> dict[str, Any]:
+    """Drop a pane's hygiene entry after it has been respawned (Fix C). A respawn
+    launches a brand-new Claude process, so any prior severe state (needs_respawn /
+    dirty / cooling / cooldown) no longer describes the live pane and must not strand
+    it from dispatch. The next dispatch boundary re-registers the pane clean.
+    Idempotent: a no-op if the pane has no entry."""
+    registry = PaneHygieneRegistry(str((registry_path or REGISTRY_PATH).expanduser()))
+    try:
+        registry.unregister_pane(pane)
+        return {"ok": True, "pane": pane, "reset": "unregistered"}
+    except KeyError:
+        return {"ok": True, "pane": pane, "reset": "absent"}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Pane role-pool + hygiene utilities")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -271,6 +363,10 @@ def main(argv: list[str] | None = None) -> int:
     clear_cmd.add_argument("--role", required=True)
     clear_cmd.add_argument("--registry", default=str(REGISTRY_PATH))
 
+    reset_cmd = sub.add_parser("reset-hygiene")
+    reset_cmd.add_argument("--pane", required=True)
+    reset_cmd.add_argument("--registry", default=str(REGISTRY_PATH))
+
     args = parser.parse_args(argv)
     if args.cmd == "discover-role-pool":
         print(json.dumps({"role": args.role, "panes": discover_role_pool(args.role)}, ensure_ascii=False))
@@ -281,6 +377,10 @@ def main(argv: list[str] | None = None) -> int:
             args.role,
             registry_path=Path(args.registry).expanduser(),
         )
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("ok") else 1
+    if args.cmd == "reset-hygiene":
+        result = reset_pane_hygiene_after_respawn(args.pane, registry_path=Path(args.registry).expanduser())
         print(json.dumps(result, ensure_ascii=False))
         return 0 if result.get("ok") else 1
     return 1
