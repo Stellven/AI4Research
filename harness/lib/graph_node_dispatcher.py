@@ -3129,6 +3129,14 @@ def _pane_title_matches_role(pane: str, title: str, role: str) -> bool:
             )
         return False
     if role == "evaluator":
+        # The designated cockpit evaluator pane is authoritative BY POSITION. Its idle
+        # title ("...sprint 评估") lacks "审判官"/"Evaluator" — that title is only set
+        # transiently during an active dispatch — so gating discovery on the title makes a
+        # cold/idle evaluator undiscoverable, leaving only the (often unbacked) operator-pool
+        # evaluator slot to be selected -> send_failed retry loop. The title regex below is
+        # meant to reject OTHER panes, not to gate the one hardcoded evaluator pane.
+        if pane == f"{SESSION}:0.3":
+            return True
         if not (
             pane == f"{SESSION}:0.3"
             or pane.startswith("solar-harness-lab:")
@@ -3581,7 +3589,7 @@ def _pane_hygiene_entries() -> dict[str, Any]:
 
 
 def _recover_pane_hygiene_if_idle(pane: str, state: str) -> bool:
-    if state not in {"cooling", "needs_recover"}:
+    if state not in {"cooling", "needs_recover", "dirty"}:
         return False
     if _pane_has_active_lease(pane):
         return False
@@ -3600,6 +3608,8 @@ def _pane_hygiene_unavailable_reason(pane: str) -> str:
     if state == "needs_respawn":
         return "pane_hygiene_needs_respawn"
     if state == "dirty":
+        if _recover_pane_hygiene_if_idle(pane, state):
+            return ""
         return "pane_hygiene_dirty"
     if state in {"cooling", "needs_recover"}:
         if _recover_pane_hygiene_if_idle(pane, state):

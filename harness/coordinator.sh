@@ -55,6 +55,12 @@ SESSION_SH="$HARNESS_DIR/session.sh"
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 
+# LOCAL-ONLY product architecture: the shipped single-Mac .app has no remote operator
+# pool — dispatch must land on the 4 local cockpit panes. Default the builder/evaluator
+# operator pool OFF here (gate read by lib/graph_node_dispatcher.py). Dev rigs can still
+# scale out by exporting SOLAR_GRAPH_BUILDER_OPERATOR_POOL=1 before the coordinator launches.
+export SOLAR_GRAPH_BUILDER_OPERATOR_POOL="${SOLAR_GRAPH_BUILDER_OPERATOR_POOL:-0}"
+
 # sprint-20260503-163542 D3: bridge ledger
 [[ -f "$HARNESS_DIR/lib/bridge-ledger.sh" ]] && . "$HARNESS_DIR/lib/bridge-ledger.sh"
 # sprint-20260503-195627 D1: telemetry
@@ -4945,8 +4951,12 @@ with open('$patches_file','w') as f:
     # ── D2: 文件级 mtime 检测 (Sprint sprint-20260417-213037, 2026-04-17) ──
     # 根因: macOS APFS 改文件内容不更新目录 mtime → coordinator 漏检
     # 修复: 扫描 sprint-*.status.json 取 max(mtime), 单文件修改即触发
+    # Also watch *.task_dag.state.json: intra-DAG node transitions (e.g. reviewing->eval,
+    # eval->passed) are written there, NOT to status.json, so without this the scanner stays
+    # dormant on node-level progress and never re-runs dispatch-evals/dispatch-ready
+    # (back-half stall). Extra wakes are safe: downstream dispatch is lease-guarded/idempotent.
     local max_file_mtime=0
-    for f in "$SPRINTS_DIR"/sprint-*.status.json; do
+    for f in "$SPRINTS_DIR"/sprint-*.status.json "$SPRINTS_DIR"/sprint-*.task_dag.state.json; do
       [[ -f "$f" ]] || continue
       local fmtime
       fmtime=$(solar_file_mtime "$f" 2>/dev/null || echo 0)

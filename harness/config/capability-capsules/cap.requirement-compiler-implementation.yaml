@@ -81,7 +81,7 @@ effects:
 bindings:
   skills:
     required:
-      - skill.multi-file-implementation
+      - skill.implementation
     optional: []
   mcp_capabilities: {}
   data_refs:
