@@ -1635,7 +1635,15 @@ def validate_compiled_package(payload: dict[str, Any]) -> dict[str, Any]:
         errors.append("task_graph_cycle_detected")
 
     graph_variant = str(graph.get("dag_variant") or payload.get("dag_variant") or "").strip().lower()
-    nonlinear = graph_variant not in {"", "linear", "serial", "sequential", "single", "single_node"}
+    nonlinear = graph_variant not in {
+        "",
+        "linear",
+        "serial",
+        "sequential",
+        "single",
+        "single_node",
+        "standard",
+    }
     quality = graph.get("quality_gates") if isinstance(graph.get("quality_gates"), dict) else {}
     parallelism = quality.get("parallelism") if isinstance(quality.get("parallelism"), dict) else {}
     explicit_min = parallelism.get("min_ready_width") or quality.get("min_ready_width") or graph.get("min_ready_width")

@@ -10,6 +10,8 @@
 set -eu
 
 HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
+COORDINATOR_SH="${HARNESS_DIR}/coordinator.sh"
+export COORDINATOR_SH
 
 # ── Safety guards ──
 [[ "${SESSION_NAME:-}" == "solar-harness" ]] && {
@@ -51,7 +53,7 @@ EOF
 python3 - <<'PYEOF'
 import re, sys
 
-with open(f"{__import__('os').environ['HOME']}/.solar/harness/coordinator.sh") as f:
+with open(__import__('os').environ["COORDINATOR_SH"]) as f:
     src = f.read()
 
 # Extract discover_pane_by_persona, choose_* functions and pane_title_persona
@@ -165,6 +167,14 @@ assert "exact 'Persona: evaluator' line matches strict pattern" \
 TEST_WITH_SUFFIX="Persona: evaluator-pending"
 assert "'evaluator-pending' does not match strict pattern" \
   '! printf "%s\n" "$TEST_WITH_SUFFIX" | grep -qE "$PATTERN"'
+echo ""
+
+# ── TC6: Coordinator honors custom tmux session env ──
+echo "TC6: coordinator.sh session defaults honor custom-session env"
+assert "SESSION_NAME reads SOLAR_HARNESS_SESSION" \
+  'grep -qF '\''SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"'\'' "$COORDINATOR_SH"'
+assert "LAB_SESSION_NAME derives from custom session unless explicitly set" \
+  'grep -qF '\''LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"'\'' "$COORDINATOR_SH"'
 echo ""
 
 # ── Summary ──
