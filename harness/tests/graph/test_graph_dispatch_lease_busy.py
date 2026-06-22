@@ -165,6 +165,74 @@ def test_worker_discovery_marks_shell_prompt_residue_as_runtime_not_running(monk
     assert workers[0]["unavailable_reason"] == "worker_runtime_not_running"
 
 
+def test_codex_shell_process_is_runtime_not_running(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+    monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "bash")
+    monkeypatch.setattr(gnd, "_pane_has_codex_process", lambda pane: False)
+
+    assert (
+        gnd._pane_runtime_unavailable_reason(
+            "solar-harness:0.2",
+            "Builder 主建设者 | 模型:codex",
+        )
+        == "codex_runtime_not_running"
+    )
+
+
+def test_codex_shell_with_child_process_is_available(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+    monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "bash")
+    monkeypatch.setattr(gnd, "_pane_has_codex_process", lambda pane: True)
+
+    assert (
+        gnd._pane_runtime_unavailable_reason(
+            "solar-harness:0.2",
+            "Builder 主建设者 | 模型:codex",
+        )
+        == ""
+    )
+
+
+def test_codex_dispatch_window_refuses_shell_before_clear(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+    instruction = tmp_path / "node.dispatch.md"
+    instruction.write_text("smoke", encoding="utf-8")
+    clear_attempts: list[str] = []
+
+    monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "bash")
+    monkeypatch.setattr(gnd, "_pane_has_codex_process", lambda pane: False)
+    monkeypatch.setattr(gnd, "_pane_title", lambda pane: "Builder 主建设者 | 模型:codex")
+    monkeypatch.setattr(gnd, "_pane_tail", lambda pane, lines=80: "solar-codex-runtime-integration ❯\n")
+    monkeypatch.setattr(gnd, "_clear_stale_prompt_residue", lambda pane: clear_attempts.append(pane) or False)
+
+    ready, reason = gnd._wait_for_dispatch_window("solar-harness:0.2", instruction, attempts=1)
+
+    assert ready is False
+    assert reason == "codex_runtime_not_running"
+    assert clear_attempts == []
+
+
+def test_worker_discovery_marks_codex_shell_unavailable(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+    monkeypatch.setattr(
+        gnd.subprocess,
+        "check_output",
+        lambda *a, **kw: "solar-harness:0.2\tBuilder 主建设者 | 模型:codex\n".encode(),
+    )
+    monkeypatch.setattr(gnd, "read_lease", lambda pane: None)
+    monkeypatch.setattr(gnd, "_pane_cooldown_reason", lambda pane: "")
+    monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "bash")
+    monkeypatch.setattr(gnd, "_pane_has_codex_process", lambda pane: False)
+    monkeypatch.setattr(gnd, "_pane_tail", lambda pane, lines=80: "solar-codex-runtime-integration ❯\n")
+    monkeypatch.setattr(gnd, "_pane_health", lambda pane: {})
+
+    workers = gnd._discover_workers(dry_run=False)
+
+    assert len(workers) == 1
+    assert workers[0]["busy"] is True
+    assert workers[0]["unavailable_reason"] == "codex_runtime_not_running"
+
+
 def test_completed_output_with_empty_prompt_is_not_busy(monkeypatch) -> None:
     monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "claude")
     monkeypatch.setattr(

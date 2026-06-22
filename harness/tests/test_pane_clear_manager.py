@@ -175,7 +175,7 @@ class TestClearPane:
             ["tmux", "send-keys", "-t", "solar-harness-lab:0.3", "Enter"],
         ]
 
-    def test_codex_tmux_sender_cancels_slash_completion_before_literal(self, monkeypatch):
+    def test_codex_tmux_sender_does_not_cancel_clean_composer(self, monkeypatch):
         monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
         calls = []
 
@@ -184,6 +184,7 @@ class TestClearPane:
 
             class Result:
                 returncode = 0
+                stdout = CODEX_IDLE_CAPTURE
 
             return Result()
 
@@ -193,9 +194,37 @@ class TestClearPane:
         _tmux_send_keys("solar-harness:0.0", "/new")
 
         assert calls == [
+            ["tmux", "capture-pane", "-pt", "solar-harness:0.0", "-S", "-30"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "C-u"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "-l", "/new"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
+        ]
+
+    def test_codex_tmux_sender_cancels_slash_completion_before_literal(self, monkeypatch):
+        monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+
+            class Result:
+                returncode = 0
+                stdout = CODEX_SLASH_RESIDUE_CAPTURE
+
+            return Result()
+
+        monkeypatch.setattr("pane_clear_manager.subprocess.run", fake_run)
+        monkeypatch.setattr("pane_clear_manager.time.sleep", lambda _: None)
+
+        _tmux_send_keys("solar-harness:0.0", "/new")
+
+        assert calls == [
+            ["tmux", "capture-pane", "-pt", "solar-harness:0.0", "-S", "-30"],
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "C-c"],
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "C-u"],
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "-l", "/new"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
         ]
 

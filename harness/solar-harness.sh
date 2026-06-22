@@ -20,8 +20,12 @@ case "$SOLAR_PANE_RUNTIME" in
   claude|codex) ;;
   *) echo "ERROR: unsupported SOLAR_PANE_RUNTIME='$SOLAR_PANE_RUNTIME' (expected claude|codex)" >&2; exit 64 ;;
 esac
-SESSION_NAME="solar-harness"
-LAB_SESSION_NAME="solar-harness-lab"
+case "$SOLAR_PANE_RUNTIME" in
+  codex) PANE_RUNTIME_LABEL="Codex" ;;
+  *) PANE_RUNTIME_LABEL="Claude" ;;
+esac
+SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"
+LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"
 LEGACY_LAB_SESSION_NAME="solar-harness-strategy"
 BG_SESSION_NAME="${SOLAR_HARNESS_BG_SESSION:-solar-harness-bg}"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
@@ -415,11 +419,13 @@ pane_runtime_env_assignments() {
 }
 
 pane_launch_prefix() {
-  printf '%s %s' "$(claude_clean_env_prefix)" "$(pane_runtime_env_assignments)"
+  printf '%s HARNESS_DIR=%q SOLAR_HARNESS_DIR=%q %s' "$(claude_clean_env_prefix)" "$HARNESS_DIR" "$HARNESS_DIR" "$(pane_runtime_env_assignments)"
 }
 
 configure_tmux_pane_runtime_env() {
   local session="$1" var
+  tmux set-environment -t "$session" HARNESS_DIR "$HARNESS_DIR" 2>/dev/null || true
+  tmux set-environment -t "$session" SOLAR_HARNESS_DIR "$HARNESS_DIR" 2>/dev/null || true
   tmux set-environment -t "$session" SOLAR_PANE_RUNTIME "$SOLAR_PANE_RUNTIME" 2>/dev/null || true
   case "$SOLAR_PANE_RUNTIME" in
     codex)
@@ -1025,8 +1031,8 @@ start_harness() {
   echo ""
   log "使用方法:"
   echo "  1. 切到化身 pane (Ctrl+B → 方向键 / 鼠标点击)"
-  echo "  2. 按 Enter 启动该化身的 Claude"
-  echo "  3. 处理 Claude 的确认提示 (信任文件夹等)"
+  echo "  2. 按 Enter 启动该化身的 ${PANE_RUNTIME_LABEL}"
+  echo "  3. 处理 ${PANE_RUNTIME_LABEL} 的确认提示 (信任文件夹等)"
   echo ""
 
   # ── 同步拉 Coordinator + Watchdog (SIGHUP 隔离) ──

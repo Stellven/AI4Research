@@ -50,6 +50,35 @@ def _clear_wait_s(default: float) -> float:
         return max(default, 5.0)
 
 
+def _codex_composer_has_slash_residue(pane_id: str, tmux_binary: str = "tmux") -> bool:
+    """Return true when Codex's live composer contains a slash command residue.
+
+    `C-c` is useful for clearing Codex slash-completion/input residue, but on a
+    clean idle Codex composer it can exit the TUI back to the shell. Inspect the
+    visible composer and only cancel when there is residue to cancel.
+    """
+    try:
+        result = subprocess.run(
+            [tmux_binary, "capture-pane", "-pt", pane_id, "-S", "-30"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except Exception:
+        return False
+    if result.returncode != 0:
+        return False
+    for line in reversed(result.stdout.splitlines()[-20:]):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith(("│", "╭", "╰")):
+            continue
+        if stripped.startswith("›"):
+            return stripped[1:].lstrip().startswith("/")
+    return False
+
+
 class ClearLedger(Protocol):
     """Minimal ledger interface for recording clear attempts."""
 
@@ -81,7 +110,7 @@ def _utc_now() -> str:
 
 
 def _tmux_send_keys(pane_id: str, keys: str, tmux_binary: str = "tmux") -> None:
-    if _pane_runtime() == "codex":
+    if _pane_runtime() == "codex" and _codex_composer_has_slash_residue(pane_id, tmux_binary):
         subprocess.run(
             [tmux_binary, "send-keys", "-t", pane_id, "C-c"],
             capture_output=True,
@@ -103,6 +132,13 @@ def _tmux_send_keys(pane_id: str, keys: str, tmux_binary: str = "tmux") -> None:
         capture_output=True,
         timeout=5,
     )
+    if _pane_runtime() == "codex":
+        time.sleep(0.4)
+        subprocess.run(
+            [tmux_binary, "send-keys", "-t", pane_id, "Enter"],
+            capture_output=True,
+            timeout=5,
+        )
 
 
 class PaneClearManager:

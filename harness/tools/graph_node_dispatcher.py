@@ -222,6 +222,7 @@ def _recoverable_pane_blocker(reason: str) -> bool:
         "provider_health_unavailable",
         "multi_task_shell_not_direct_worker",
         "worker_runtime_not_running",
+        "codex_runtime_not_running",
     )
     if any(fragment in normalized for fragment in hard_fragments):
         return False
@@ -2660,6 +2661,68 @@ def _pane_current_command(pane: str) -> str:
         return ""
 
 
+def _pane_root_pid(pane: str) -> int | None:
+    try:
+        raw = subprocess.run(
+            ["tmux", "display-message", "-p", "-t", pane, "#{pane_pid}"],
+            text=True,
+            capture_output=True,
+            timeout=2,
+        ).stdout.strip()
+        return int(raw) if raw else None
+    except Exception:
+        return None
+
+
+def _pane_has_codex_process(pane: str) -> bool:
+    """Return true when a pane's process tree contains the Codex CLI.
+
+    tmux reports `pane_current_command=bash` for panes launched through
+    `pane-launcher.sh`, even while Codex is alive as a child process. Use the
+    process tree instead of the foreground command alone for Codex liveness.
+    """
+    root_pid = _pane_root_pid(pane)
+    if not root_pid:
+        return False
+    try:
+        result = subprocess.run(
+            ["ps", "-eo", "pid=,ppid=,comm=,args="],
+            text=True,
+            capture_output=True,
+            timeout=3,
+        )
+    except Exception:
+        return False
+    if result.returncode != 0:
+        return False
+    children: dict[int, list[tuple[int, str, str]]] = {}
+    for line in result.stdout.splitlines():
+        parts = line.strip().split(None, 3)
+        if len(parts) < 3:
+            continue
+        try:
+            pid = int(parts[0])
+            ppid = int(parts[1])
+        except ValueError:
+            continue
+        comm = parts[2]
+        args = parts[3] if len(parts) > 3 else ""
+        children.setdefault(ppid, []).append((pid, comm, args))
+    stack = [root_pid]
+    seen: set[int] = set()
+    while stack:
+        current = stack.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+        for pid, comm, args in children.get(current, []):
+            command = f"{comm} {args}"
+            if comm == "codex" or re.search(r"(^|[/\s])codex($|\s)", command):
+                return True
+            stack.append(pid)
+    return False
+
+
 def _pane_has_codex_idle_composer(text: str) -> bool:
     """Return true for Codex's empty composer glyph."""
     if "esc to interrupt" in text.lower():
@@ -2803,6 +2866,10 @@ def _pane_runtime_unavailable_reason(pane: str, title: str = "") -> str:
     command = _pane_current_command(pane).lower()
     if command not in {"bash", "zsh", "sh", "fish"}:
         return ""
+    if _pane_runtime() == "codex":
+        if _pane_has_codex_process(pane):
+            return ""
+        return "codex_runtime_not_running"
     title_lower = title.lower()
     if "idle/no active sprint" not in title_lower:
         return ""
@@ -3033,6 +3100,9 @@ def _wait_for_dispatch_window(pane: str, instruction_file: Path, *, sid: str = "
     last_reason = ""
     for _ in range(max(1, attempts)):
         tail = _pane_tail(pane)
+        runtime_reason = _pane_runtime_unavailable_reason(pane, _pane_title(pane))
+        if runtime_reason:
+            return False, runtime_reason
         if _pane_has_matching_queued_prompt(pane, instruction_file):
             last_reason = "matching_queued_prompt"
             if PANE_PROCESSING_RE.search(tail):
