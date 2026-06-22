@@ -15,6 +15,12 @@ WORK_DIR="${2:-.}"
 ORIGINAL_WORK_DIR="$WORK_DIR"
 HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 export HARNESS_DIR
+PANE_RUNTIME="${SOLAR_PANE_RUNTIME:-claude}"
+case "$PANE_RUNTIME" in
+  claude|codex) ;;
+  *) echo "ERROR: unsupported SOLAR_PANE_RUNTIME='$PANE_RUNTIME' (expected claude|codex)" >&2; exit 64 ;;
+esac
+export SOLAR_PANE_RUNTIME="$PANE_RUNTIME"
 
 prepare_harness_cli_path() {
   local runtime_bin="$HARNESS_DIR/run/bin"
@@ -56,6 +62,18 @@ source "$HARNESS_DIR/lib/capability-prefix.sh"
 CONFIG=$(get_persona_config "$PERSONA")
 eval "$CONFIG"  # 设置 CN, MODEL_FLAG, TOOL_FLAG, DISPLAY_MODEL, STARTUP_TOKEN, PROXY_CHECK, EXTRA_FLAGS
 
+if [[ "$PANE_RUNTIME" == "codex" ]]; then
+  # Persona model config is Claude/Anthropic-gateway policy. Codex uses its own
+  # CLI config and optional SOLAR_CODEX_MODEL, while persona instructions still
+  # come from the shared persona file.
+  LAUNCH_ERROR=""
+  MODEL_FLAG=""
+  TOOL_FLAG=""
+  EXTRA_FLAGS=""
+  DISPLAY_MODEL="Codex"
+  [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && DISPLAY_MODEL="Codex (${SOLAR_CODEX_MODEL})"
+fi
+
 if [[ -n "${LAUNCH_ERROR:-}" ]]; then
   echo "FATAL: $LAUNCH_ERROR" >&2
   echo "Refusing to start an Anthropic Claude fallback for persona=$PERSONA." >&2
@@ -63,7 +81,9 @@ if [[ -n "${LAUNCH_ERROR:-}" ]]; then
 fi
 
 # 设置环境变量
-apply_persona_env "$PERSONA"
+if [[ "$PANE_RUNTIME" == "claude" ]]; then
+  apply_persona_env "$PERSONA"
+fi
 
 G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; B='\033[0;34m'; N='\033[0m'
 
@@ -146,7 +166,7 @@ send_ready_token() {
     attempt=$((attempt + 1))
   done
 }
-if [[ -n "$TMUX_PANE" ]]; then
+if [[ "$PANE_RUNTIME" == "claude" && -n "$TMUX_PANE" ]]; then
   send_ready_token "$TMUX_PANE" "$STARTUP_TOKEN" &>/dev/null &
   AUTO_PID=$!
 fi
@@ -173,10 +193,36 @@ find_claude_bin() {
   return 1
 }
 
-CLAUDE_BIN="$(find_claude_bin)" || {
-  echo "FATAL: no Claude CLI found with required capabilities for EXTRA_FLAGS='${EXTRA_FLAGS:-}'" >&2
-  exit 78
+find_codex_bin() {
+  local c
+  local candidates=()
+  [[ -n "${SOLAR_CODEX_BIN:-}" ]] && candidates+=("$SOLAR_CODEX_BIN")
+  candidates+=("$HOME/.npm-global/bin/codex" "$HOME/bin/codex" "$HOME/n/bin/codex")
+  c="$(command -v codex 2>/dev/null || true)"
+  [[ -n "$c" ]] && candidates+=("$c")
+
+  for c in "${candidates[@]}"; do
+    [[ -x "$c" ]] || continue
+    printf '%s\n' "$c"
+    return 0
+  done
+  return 1
 }
+
+SELECTED_RUNTIME_BIN=""
+if [[ "$PANE_RUNTIME" == "codex" ]]; then
+  CODEX_BIN="$(find_codex_bin)" || {
+    echo "FATAL: no Codex CLI found on PATH (SOLAR_PANE_RUNTIME=codex)" >&2
+    exit 78
+  }
+  SELECTED_RUNTIME_BIN="$CODEX_BIN"
+else
+  CLAUDE_BIN="$(find_claude_bin)" || {
+    echo "FATAL: no Claude CLI found with required capabilities for EXTRA_FLAGS='${EXTRA_FLAGS:-}'" >&2
+    exit 78
+  }
+  SELECTED_RUNTIME_BIN="$CLAUDE_BIN"
+fi
 
 write_runtime_marker() {
   local marker_dir="$HARNESS_DIR/run/pane-env"
@@ -199,7 +245,10 @@ record = {
     "pane": os.environ.get("TMUX_PANE", ""),
     "persona": os.environ.get("SOLAR_PERSONA", ""),
     "builder_slot": os.environ.get("SOLAR_BUILDER_SLOT", ""),
+    "pane_runtime": os.environ.get("SOLAR_PANE_RUNTIME", "claude"),
+    "runtime_bin": os.environ.get("SOLAR_SELECTED_RUNTIME_BIN", ""),
     "claude_bin": os.environ.get("SOLAR_SELECTED_CLAUDE_BIN", ""),
+    "codex_bin": os.environ.get("SOLAR_SELECTED_CODEX_BIN", ""),
     "auth_source": os.environ.get("SOLAR_AUTH_SOURCE", ""),
     "base_url_host": host(os.environ.get("ANTHROPIC_BASE_URL", "")),
     "has_anthropic_auth_token": present("ANTHROPIC_AUTH_TOKEN"),
@@ -269,14 +318,21 @@ PY
 }
 
 export SOLAR_PERSONA="$PERSONA"
-export SOLAR_SELECTED_CLAUDE_BIN="$CLAUDE_BIN"
+export SOLAR_SELECTED_RUNTIME_BIN="$SELECTED_RUNTIME_BIN"
+if [[ "$PANE_RUNTIME" == "codex" ]]; then
+  export SOLAR_SELECTED_CODEX_BIN="$CODEX_BIN"
+else
+  export SOLAR_SELECTED_CLAUDE_BIN="$CLAUDE_BIN"
+fi
 export SOLAR_AUTH_SOURCE="${AUTH_SOURCE:-}"
 export SOLAR_MODEL_FLAG="${MODEL_FLAG:-}"
 export SOLAR_EXTRA_FLAGS="${EXTRA_FLAGS:-}"
 export SOLAR_RUNTIME_SESSION_ID="${SOLAR_RUNTIME_SESSION_ID:-pane-${TMUX_PANE:-unknown}}"
-CLAUDE_SETTINGS_FILE="$(prepare_sanitized_claude_settings "$PERSONA")"
-export SOLAR_CLAUDE_SETTINGS_FILE="$CLAUDE_SETTINGS_FILE"
-export SOLAR_CLAUDE_SETTING_SOURCES="local"
+if [[ "$PANE_RUNTIME" == "claude" ]]; then
+  CLAUDE_SETTINGS_FILE="$(prepare_sanitized_claude_settings "$PERSONA")"
+  export SOLAR_CLAUDE_SETTINGS_FILE="$CLAUDE_SETTINGS_FILE"
+  export SOLAR_CLAUDE_SETTING_SOURCES="local"
+fi
 write_runtime_marker
 
 record_pane_model_session() {
@@ -290,15 +346,17 @@ record_pane_model_session() {
   python3 "${args[@]}" >/dev/null 2>&1 || true
 }
 
-CLAUDE_CMD="$CLAUDE_BIN"
-SOLAR_CLAUDE_BYPASS="${SOLAR_CLAUDE_BYPASS:-1}"
-if [[ "$SOLAR_CLAUDE_BYPASS" == "1" ]]; then
-  CLAUDE_CMD="$CLAUDE_BIN --dangerously-skip-permissions --permission-mode ${SOLAR_CLAUDE_PERMISSION_MODE:-bypassPermissions}"
-fi
-[[ -n "$MODEL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $MODEL_FLAG"
-[[ -n "$TOOL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $TOOL_FLAG"
-[[ -n "${EXTRA_FLAGS:-}" ]] && CLAUDE_CMD="$CLAUDE_CMD $EXTRA_FLAGS"
-CLAUDE_CMD="$CLAUDE_CMD --setting-sources ${SOLAR_CLAUDE_SETTING_SOURCES} --settings ${CLAUDE_SETTINGS_FILE}"
+prepare_codex_role_file() {
+  local persona="$1"
+  local role_dir="$HARNESS_DIR/run/pane-codex"
+  mkdir -p "$role_dir"
+  {
+    printf '%s\n\n%s\n\n' "$_runtime_policy" "$_prefix_policy"
+    cat "$PERSONA_FILE"
+    printf '%s\n' "$_whisper"
+  } > "$role_dir/${persona}.md" 2>/dev/null || true
+  printf '%s\n' "$role_dir/${persona}.md"
+}
 
 # 退出信号捕获 → pane-exit.jsonl
 EXIT_LOG="$HARNESS_DIR/logs/pane-exit.jsonl"
@@ -309,11 +367,36 @@ _runtime_policy=$(inject_runtime_policy "$PERSONA")
 _whisper=$(inject_whisper "$PERSONA")
 _prefix_policy=$(inject_prefix_policy "$PERSONA")
 record_pane_model_session "session-started" ""
-$CLAUDE_CMD --append-system-prompt "$_runtime_policy
+if [[ "$PANE_RUNTIME" == "codex" ]]; then
+  CODEX_CMD="$CODEX_BIN"
+  SOLAR_CODEX_BYPASS="${SOLAR_CODEX_BYPASS:-1}"
+  if [[ "$SOLAR_CODEX_BYPASS" == "1" ]]; then
+    CODEX_CMD="$CODEX_CMD --dangerously-bypass-approvals-and-sandbox"
+  fi
+  [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && CODEX_CMD="$CODEX_CMD --model ${SOLAR_CODEX_MODEL}"
+  [[ -n "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] && CODEX_CMD="$CODEX_CMD ${SOLAR_CODEX_EXTRA_FLAGS}"
+  CODEX_ROLE_FILE="$(prepare_codex_role_file "$PERSONA")"
+  echo -e "${Y}[${PERSONA}] Codex runtime selected${N}"
+  echo -e "  Role instructions: ${CODEX_ROLE_FILE}"
+  echo -e "  Starting Codex idle; dispatcher prompts will include role + task files."
+  $CODEX_CMD
+  RUNTIME_EXIT=$?
+else
+  CLAUDE_CMD="$CLAUDE_BIN"
+  SOLAR_CLAUDE_BYPASS="${SOLAR_CLAUDE_BYPASS:-1}"
+  if [[ "$SOLAR_CLAUDE_BYPASS" == "1" ]]; then
+    CLAUDE_CMD="$CLAUDE_BIN --dangerously-skip-permissions --permission-mode ${SOLAR_CLAUDE_PERMISSION_MODE:-bypassPermissions}"
+  fi
+  [[ -n "$MODEL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $MODEL_FLAG"
+  [[ -n "$TOOL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $TOOL_FLAG"
+  [[ -n "${EXTRA_FLAGS:-}" ]] && CLAUDE_CMD="$CLAUDE_CMD $EXTRA_FLAGS"
+  CLAUDE_CMD="$CLAUDE_CMD --setting-sources ${SOLAR_CLAUDE_SETTING_SOURCES} --settings ${CLAUDE_SETTINGS_FILE}"
+  $CLAUDE_CMD --append-system-prompt "$_runtime_policy
 $_prefix_policy
 $(cat "$PERSONA_FILE")$_whisper"
-CLAUDE_EXIT=$?
-record_pane_model_session "session-ended" "$CLAUDE_EXIT"
+  RUNTIME_EXIT=$?
+fi
+record_pane_model_session "session-ended" "$RUNTIME_EXIT"
 set -e
 
 # 写退出记录。Pane 内容可能含引号、反引号、控制字符；通过 stdin/env
@@ -322,7 +405,7 @@ LAST_LINES=""
 if [[ -n "$TMUX_PANE" ]]; then
   LAST_LINES=$(tmux capture-pane -t "$TMUX_PANE" -p -S -30 2>/dev/null | tail -30 | head -c 2000 || true)
 fi
-PANE_EXIT_LOG="$EXIT_LOG" PANE_EXIT_CODE="$CLAUDE_EXIT" PANE_EXIT_TMUX="${TMUX_PANE:-}" PANE_EXIT_PERSONA="$PERSONA" PANE_EXIT_LAST_LINES="$LAST_LINES" python3 - <<'PY' 2>/dev/null || true
+PANE_EXIT_LOG="$EXIT_LOG" PANE_EXIT_CODE="$RUNTIME_EXIT" PANE_EXIT_TMUX="${TMUX_PANE:-}" PANE_EXIT_PERSONA="$PERSONA" PANE_EXIT_RUNTIME="$PANE_RUNTIME" PANE_EXIT_LAST_LINES="$LAST_LINES" python3 - <<'PY' 2>/dev/null || true
 import datetime
 import json
 import os
@@ -332,6 +415,7 @@ record = {
     "ts": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "pane": os.environ.get("PANE_EXIT_TMUX", ""),
     "persona": os.environ.get("PANE_EXIT_PERSONA", ""),
+    "pane_runtime": os.environ.get("PANE_EXIT_RUNTIME", "claude"),
     "exit_code": exit_code,
     "signal": "normal" if exit_code < 128 else f"signal_{exit_code - 128}",
     "last_30_lines": os.environ.get("PANE_EXIT_LAST_LINES", "")[:2000],

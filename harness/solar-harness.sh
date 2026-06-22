@@ -15,6 +15,11 @@
 set -eu
 
 HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+SOLAR_PANE_RUNTIME="${SOLAR_PANE_RUNTIME:-claude}"
+case "$SOLAR_PANE_RUNTIME" in
+  claude|codex) ;;
+  *) echo "ERROR: unsupported SOLAR_PANE_RUNTIME='$SOLAR_PANE_RUNTIME' (expected claude|codex)" >&2; exit 64 ;;
+esac
 SESSION_NAME="solar-harness"
 LAB_SESSION_NAME="solar-harness-lab"
 LEGACY_LAB_SESSION_NAME="solar-harness-strategy"
@@ -22,7 +27,7 @@ BG_SESSION_NAME="${SOLAR_HARNESS_BG_SESSION:-solar-harness-bg}"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
 BG_TASKS_DIR="$HARNESS_DIR/run/bg-tasks"
 EXPECTED_PRODUCT_DELIVERY_PANES=4
-export HARNESS_DIR SPRINTS_DIR
+export HARNESS_DIR SPRINTS_DIR SOLAR_PANE_RUNTIME
 
 # sprint-20260503-094659 D2: 统一 state helper
 . "$HARNESS_DIR/lib/run-state.sh"
@@ -370,6 +375,72 @@ claude_clean_env_prefix() {
   printf '%s' "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_EXECPATH -u ANTHROPIC_BASE_URL -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_DEFAULT_OPUS_MODEL -u ANTHROPIC_DEFAULT_SONNET_MODEL -u ANTHROPIC_DEFAULT_HAIKU_MODEL"
 }
 
+pane_runtime_cli_path() {
+  local c
+  local candidates=()
+  case "$SOLAR_PANE_RUNTIME" in
+    codex)
+      [[ -n "${SOLAR_CODEX_BIN:-}" ]] && candidates+=("$SOLAR_CODEX_BIN")
+      candidates+=("$HOME/.npm-global/bin/codex" "$HOME/bin/codex" "$HOME/n/bin/codex")
+      c="$(command -v codex 2>/dev/null || true)"
+      ;;
+    claude)
+      [[ -n "${SOLAR_CLAUDE_BIN:-}" ]] && candidates+=("$SOLAR_CLAUDE_BIN")
+      candidates+=("$HOME/.npm-global/bin/claude" "$HOME/bin/claude" "$HOME/n/bin/claude")
+      c="$(command -v claude 2>/dev/null || true)"
+      ;;
+  esac
+  [[ -n "${c:-}" ]] && candidates+=("$c")
+  for c in "${candidates[@]}"; do
+    [[ -x "$c" ]] || continue
+    printf '%s\n' "$c"
+    return 0
+  done
+  return 1
+}
+
+pane_runtime_env_assignments() {
+  case "$SOLAR_PANE_RUNTIME" in
+    codex)
+      printf 'SOLAR_PANE_RUNTIME=codex SOLAR_CODEX_BYPASS=%q' "${SOLAR_CODEX_BYPASS:-1}"
+      [[ -n "${SOLAR_CODEX_BIN:-}" ]] && printf ' SOLAR_CODEX_BIN=%q' "$SOLAR_CODEX_BIN"
+      [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && printf ' SOLAR_CODEX_MODEL=%q' "$SOLAR_CODEX_MODEL"
+      [[ -n "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] && printf ' SOLAR_CODEX_EXTRA_FLAGS=%q' "$SOLAR_CODEX_EXTRA_FLAGS"
+      ;;
+    claude)
+      printf 'SOLAR_PANE_RUNTIME=claude SOLAR_CLAUDE_BYPASS=%q' "${SOLAR_CLAUDE_BYPASS:-1}"
+      [[ -n "${SOLAR_CLAUDE_BIN:-}" ]] && printf ' SOLAR_CLAUDE_BIN=%q' "$SOLAR_CLAUDE_BIN"
+      ;;
+  esac
+}
+
+pane_launch_prefix() {
+  printf '%s %s' "$(claude_clean_env_prefix)" "$(pane_runtime_env_assignments)"
+}
+
+configure_tmux_pane_runtime_env() {
+  local session="$1" var
+  tmux set-environment -t "$session" SOLAR_PANE_RUNTIME "$SOLAR_PANE_RUNTIME" 2>/dev/null || true
+  case "$SOLAR_PANE_RUNTIME" in
+    codex)
+      tmux set-environment -t "$session" SOLAR_CODEX_BYPASS "${SOLAR_CODEX_BYPASS:-1}" 2>/dev/null || true
+      tmux set-environment -t "$session" -gu SOLAR_CLAUDE_BYPASS 2>/dev/null || true
+      for var in SOLAR_CODEX_BIN SOLAR_CODEX_MODEL SOLAR_CODEX_EXTRA_FLAGS; do
+        if [[ -n "${!var:-}" ]]; then
+          tmux set-environment -t "$session" "$var" "${!var}" 2>/dev/null || true
+        else
+          tmux set-environment -t "$session" -gu "$var" 2>/dev/null || true
+        fi
+      done
+      ;;
+    claude)
+      tmux set-environment -t "$session" SOLAR_CLAUDE_BYPASS "${SOLAR_CLAUDE_BYPASS:-1}" 2>/dev/null || true
+      tmux set-environment -t "$session" -gu SOLAR_CODEX_BYPASS 2>/dev/null || true
+      [[ -n "${SOLAR_CLAUDE_BIN:-}" ]] && tmux set-environment -t "$session" SOLAR_CLAUDE_BIN "$SOLAR_CLAUDE_BIN" 2>/dev/null || true
+      ;;
+  esac
+}
+
 attach_or_print() {
   local session="${1:-$SESSION_NAME}"
   if [[ -t 1 && -n "${TERM:-}" && "${TERM:-}" != "dumb" ]]; then
@@ -438,7 +509,7 @@ apply_product_delivery_models() {
     pane_id=$(tmux display-message -p -t "$target" '#{pane_id}' 2>/dev/null || true)
     work_dir=$(tmux display-message -p -t "$target" '#{pane_current_path}' 2>/dev/null || pwd)
     _esc_work=$(printf '%q' "$work_dir")
-    tmux respawn-pane -k -t "$target" "$(claude_clean_env_prefix) TMUX_PANE=${pane_id} SOLAR_CLAUDE_BYPASS=1 bash ${_esc_harness}/pane-launcher.sh ${persona} ${_esc_work}" 2>/dev/null || true
+    tmux respawn-pane -k -t "$target" "$(pane_launch_prefix) TMUX_PANE=${pane_id} bash ${_esc_harness}/pane-launcher.sh ${persona} ${_esc_work}" 2>/dev/null || true
     sleep 0.3
   done
   # Fix C: each pane was just respawned into a fresh Claude, so drop any stale
@@ -502,6 +573,9 @@ install_hint_for_required_dep() {
     claude)
       printf '%s\n' "Install the Claude Code CLI and confirm 'claude --version' works before launching panes"
       ;;
+    codex)
+      printf '%s\n' "Install the Codex CLI and confirm 'codex --version' works before launching panes"
+      ;;
     jq)
       printf '%s\n' "macOS: brew install jq; Ubuntu/Debian: sudo apt-get install jq"
       ;;
@@ -512,9 +586,10 @@ install_hint_for_required_dep() {
 }
 
 harness_launch_preflight() {
-  local failed=0 bash4 cmd path
+  local failed=0 bash4 cmd path runtime_path
 
   echo "Solar Harness launch preflight"
+  echo "selected pane runtime: ${SOLAR_PANE_RUNTIME}"
   if bash4=$(resolve_bash4); then
     local bash_version
     bash_version=$("$bash4" --version 2>/dev/null | head -1 || printf 'bash version unknown')
@@ -525,7 +600,7 @@ harness_launch_preflight() {
     failed=$((failed + 1))
   fi
 
-  for cmd in python3 tmux claude jq; do
+  for cmd in python3 tmux jq; do
     if path=$(command -v "$cmd" 2>/dev/null); then
       echo "required ok: ${cmd} path=${path}"
     else
@@ -534,6 +609,14 @@ harness_launch_preflight() {
       failed=$((failed + 1))
     fi
   done
+
+  if runtime_path=$(pane_runtime_cli_path); then
+    echo "required ok: ${SOLAR_PANE_RUNTIME} path=${runtime_path}"
+  else
+    echo "required fail: ${SOLAR_PANE_RUNTIME} runtime CLI not found"
+    echo "  install hint: $(install_hint_for_required_dep "$SOLAR_PANE_RUNTIME")"
+    failed=$((failed + 1))
+  fi
 
   if [[ -w "$HARNESS_DIR" ]]; then
     echo "required ok: harness dir writable (${HARNESS_DIR})"
@@ -544,7 +627,7 @@ harness_launch_preflight() {
   fi
 
   if (( failed == 0 )); then
-    echo "manual-pending: live Claude pane behavior is not verified by preflight; after tmux opens, press Enter in each pane and resolve Claude trust/auth/quota prompts."
+    echo "manual-pending: live ${SOLAR_PANE_RUNTIME} pane behavior is not verified by preflight; after tmux opens, resolve any trust/auth/quota prompts."
     return 0
   fi
 
@@ -639,7 +722,7 @@ do_doctor() {
 
   if (( failed == 0 )); then
     echo "Solar Harness doctor: required checks passed"
-    echo "manual-pending: live Claude panes and real delegation are verified only after Claude starts and responds in the tmux panes."
+    echo "manual-pending: live ${SOLAR_PANE_RUNTIME} panes and real delegation are verified only after the selected runtime starts and responds in the tmux panes."
     return 0
   else
     echo "Solar Harness doctor: ${failed} required check group(s) failed"
@@ -809,7 +892,7 @@ start_harness() {
   fi
 
   command -v tmux &>/dev/null || { err "tmux 未安装: brew install tmux"; exit 1; }
-  command -v claude &>/dev/null || { err "claude 未安装"; exit 1; }
+  pane_runtime_cli_path >/dev/null || { err "${SOLAR_PANE_RUNTIME} runtime CLI 未安装或不在 PATH"; exit 1; }
 
   if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
     # 安全优先: pane_current_command 经常是 bash/zsh，因为 Claude TUI 是子进程。
@@ -852,7 +935,7 @@ start_harness() {
 
   tmux new-session -d -s "$SESSION_NAME" -c "$work_dir"
   sanitize_tmux_claude_env "$SESSION_NAME"
-  tmux set-environment -t "$SESSION_NAME" SOLAR_CLAUDE_BYPASS 1 2>/dev/null || true
+  configure_tmux_pane_runtime_env "$SESSION_NAME"
 
   # D3: pane 保留现场 — 进程退出后 pane 不消失 (remain-on-exit)
   tmux set-option -t "$SESSION_NAME" remain-on-exit on
@@ -878,7 +961,7 @@ start_harness() {
     local target="$1" persona="$2"
     local pane_id
     pane_id=$(tmux display-message -p -t "$target" '#{pane_id}')
-    tmux send-keys -t "$target" "$(claude_clean_env_prefix) TMUX_PANE=${pane_id} SOLAR_CLAUDE_BYPASS=1 bash ${_esc_harness}/pane-launcher.sh ${persona} ${_esc_work}" Enter
+    tmux send-keys -t "$target" "$(pane_launch_prefix) TMUX_PANE=${pane_id} bash ${_esc_harness}/pane-launcher.sh ${persona} ${_esc_work}" Enter
   }
   sleep 1
   launch_persona_pane "$SESSION_NAME:Product Delivery.0" "pm"
@@ -1121,7 +1204,7 @@ ensure_parallel_builder_lab() {
 
   tmux rename-window -t "$LAB_SESSION_NAME:0" "Builder Lab" 2>/dev/null || true
   tmux set-option -t "$LAB_SESSION_NAME" status-right "#[fg=#f9e2af]Solar Builder Lab #[fg=#a6e3a1]${matrix_label} #[default]%H:%M" 2>/dev/null || true
-  tmux set-environment -t "$LAB_SESSION_NAME" SOLAR_CLAUDE_BYPASS 1 2>/dev/null || true
+  configure_tmux_pane_runtime_env "$LAB_SESSION_NAME"
   configure_builder_lab_labels
 
   local pane_count
@@ -1145,7 +1228,7 @@ ensure_parallel_builder_lab() {
       continue
     fi
     pane_id=$(tmux display-message -p -t "$target" '#{pane_id}')
-    tmux respawn-pane -k -t "$target" "$(claude_clean_env_prefix) TMUX_PANE=${pane_id} SOLAR_BUILDER_SLOT=${slot} SOLAR_LAB_BUILDER_MODEL_MATRIX=${desired_matrix} SOLAR_CLAUDE_BYPASS=1 bash ${_esc_harness}/pane-launcher.sh lab-builder ${_esc_work}"
+    tmux respawn-pane -k -t "$target" "$(pane_launch_prefix) TMUX_PANE=${pane_id} SOLAR_BUILDER_SLOT=${slot} SOLAR_LAB_BUILDER_MODEL_MATRIX=${desired_matrix} bash ${_esc_harness}/pane-launcher.sh lab-builder ${_esc_work}"
   done
   configure_builder_lab_labels
 }
@@ -1176,7 +1259,7 @@ start_extension() {
 
   tmux new-session -d -s "$LAB_SESSION_NAME" -n "Builder Lab" -c "$work_dir"
   sanitize_tmux_claude_env "$LAB_SESSION_NAME"
-  tmux set-environment -t "$LAB_SESSION_NAME" SOLAR_CLAUDE_BYPASS 1 2>/dev/null || true
+  configure_tmux_pane_runtime_env "$LAB_SESSION_NAME"
   tmux set-option -t "$LAB_SESSION_NAME" remain-on-exit on
 
   # Split into 4 panes (same layout as window 0)
@@ -1193,7 +1276,7 @@ start_extension() {
     local target="$1" persona="$2" slot="$3"
     local pane_id
     pane_id=$(tmux display-message -p -t "$target" '#{pane_id}')
-    tmux send-keys -t "$target" "$(claude_clean_env_prefix) TMUX_PANE=${pane_id} SOLAR_BUILDER_SLOT=${slot} SOLAR_LAB_BUILDER_MODEL_MATRIX=${model_matrix} SOLAR_CLAUDE_BYPASS=1 bash ${_esc_harness}/pane-launcher.sh ${persona} ${_esc_work}" Enter
+    tmux send-keys -t "$target" "$(pane_launch_prefix) TMUX_PANE=${pane_id} SOLAR_BUILDER_SLOT=${slot} SOLAR_LAB_BUILDER_MODEL_MATRIX=${model_matrix} bash ${_esc_harness}/pane-launcher.sh ${persona} ${_esc_work}" Enter
   }
   sleep 1
   launch_persona_pane "$LAB_SESSION_NAME:Builder Lab.0" "lab-builder" "lab-builder-1"
@@ -1733,7 +1816,7 @@ wake_sprint() {
     # 重建 4-pane 布局 (后台)
     tmux new-session -d -s "$SESSION_NAME" -c "$work_dir"
     sanitize_tmux_claude_env "$SESSION_NAME"
-    tmux set-environment -t "$SESSION_NAME" SOLAR_CLAUDE_BYPASS 1 2>/dev/null || true
+    configure_tmux_pane_runtime_env "$SESSION_NAME"
     tmux split-window -v -t "$SESSION_NAME" -c "$work_dir"
     tmux split-window -h -t "$SESSION_NAME:0.0" -c "$work_dir"
     tmux split-window -h -t "$SESSION_NAME:0.2" -c "$work_dir"
@@ -1744,13 +1827,13 @@ wake_sprint() {
     local _esc_h _esc_w
     _esc_h=$(printf '%q' "$HARNESS_DIR")
     _esc_w=$(printf '%q' "$work_dir")
-    tmux send-keys -t "$SESSION_NAME:0.0" "$(claude_clean_env_prefix) SOLAR_CLAUDE_BYPASS=1 bash ${_esc_h}/pane-launcher.sh pm ${_esc_w}" Enter
+    tmux send-keys -t "$SESSION_NAME:0.0" "$(pane_launch_prefix) bash ${_esc_h}/pane-launcher.sh pm ${_esc_w}" Enter
     sleep 1
-    tmux send-keys -t "$SESSION_NAME:0.1" "$(claude_clean_env_prefix) SOLAR_CLAUDE_BYPASS=1 bash ${_esc_h}/pane-launcher.sh planner ${_esc_w}" Enter
+    tmux send-keys -t "$SESSION_NAME:0.1" "$(pane_launch_prefix) bash ${_esc_h}/pane-launcher.sh planner ${_esc_w}" Enter
     sleep 1
-    tmux send-keys -t "$SESSION_NAME:0.2" "$(claude_clean_env_prefix) SOLAR_CLAUDE_BYPASS=1 bash ${_esc_h}/pane-launcher.sh builder ${_esc_w}" Enter
+    tmux send-keys -t "$SESSION_NAME:0.2" "$(pane_launch_prefix) bash ${_esc_h}/pane-launcher.sh builder ${_esc_w}" Enter
     sleep 1
-    tmux send-keys -t "$SESSION_NAME:0.3" "$(claude_clean_env_prefix) SOLAR_CLAUDE_BYPASS=1 bash ${_esc_h}/pane-launcher.sh evaluator ${_esc_w}" Enter
+    tmux send-keys -t "$SESSION_NAME:0.3" "$(pane_launch_prefix) bash ${_esc_h}/pane-launcher.sh evaluator ${_esc_w}" Enter
     sleep 1
     configure_product_delivery_labels
 

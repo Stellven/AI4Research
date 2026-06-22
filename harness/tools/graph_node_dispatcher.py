@@ -59,6 +59,7 @@ PANE_DISPATCH_FAILED_IDLE_RE = re.compile(
     re.I,
 )
 PANE_PROCESSING_RE = re.compile(
+    r"esc to interrupt|• Working|Working \(|"
     r"Crafting|Cogitating|Orchestrating|Coalescing|Wandering|Sock-hopping|"
     r"Puzzling|Cooking|Baked|Thinking|Considering|Newspapering|"
     r"Reticulating|Scurrying|Roosting|Mustering|Herding|Ruminating|"
@@ -181,6 +182,33 @@ except Exception:  # pragma: no cover - DeepResearch is additive
 
 def _json(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False)
+
+
+def _dispatch_role_for_pane(pane: str, title: str | None = None) -> str:
+    title = _pane_title(pane) if title is None else str(title or "")
+    lowered = title.lower()
+    if "planner" in lowered or "规划者" in title:
+        return "planner"
+    if "evaluator" in lowered or "审判官" in title:
+        return "evaluator"
+    if "pm" in lowered or "产品经理" in title:
+        return "pm"
+    if pane.endswith(":0.0") or pane.endswith(".0"):
+        return "pm"
+    if pane.endswith(":0.1") or pane.endswith(".1"):
+        return "planner"
+    if pane.endswith(":0.3") or pane.endswith(".3"):
+        return "evaluator"
+    return "builder"
+
+
+def _role_file_for_pane(pane: str) -> Path:
+    return HARNESS_DIR / "run" / "pane-codex" / f"{_dispatch_role_for_pane(pane)}.md"
+
+
+def _pane_runtime() -> str:
+    runtime = os.environ.get("SOLAR_PANE_RUNTIME", "claude").strip().lower()
+    return runtime if runtime in {"claude", "codex"} else "claude"
 
 
 def _recoverable_pane_blocker(reason: str) -> bool:
@@ -2632,6 +2660,13 @@ def _pane_current_command(pane: str) -> str:
         return ""
 
 
+def _pane_has_codex_idle_composer(text: str) -> bool:
+    """Return true for Codex's empty composer glyph."""
+    if "esc to interrupt" in text.lower():
+        return False
+    return "›" in text
+
+
 def _pane_current_prompt_has_residue(text: str) -> bool:
     """Return true only when the visible current prompt has unsubmitted text.
 
@@ -2698,13 +2733,13 @@ def _pane_prompt_residue_is_stale_scrollback(pane: str, text: str) -> bool:
 def _pane_tui_busy(pane: str) -> bool:
     tail = _pane_tail(pane)
     bottom = "\n".join(tail.splitlines()[-40:])
-    prompt_is_empty = "❯" in bottom and not _pane_current_prompt_has_residue(bottom)
+    prompt_is_empty = ("❯" in bottom and not _pane_current_prompt_has_residue(bottom)) or _pane_has_codex_idle_composer(bottom)
     if PANE_RATE_LIMIT_OPTIONS_MODAL_RE.search(bottom):
         if _dismiss_rate_limit_options_modal(pane):
             time.sleep(0.5)
             tail = _pane_tail(pane)
             bottom = "\n".join(tail.splitlines()[-40:])
-            prompt_is_empty = "❯" in bottom and not _pane_current_prompt_has_residue(bottom)
+            prompt_is_empty = ("❯" in bottom and not _pane_current_prompt_has_residue(bottom)) or _pane_has_codex_idle_composer(bottom)
             if not PANE_RATE_LIMIT_OPTIONS_MODAL_RE.search(bottom):
                 return False
         return True
@@ -3163,7 +3198,11 @@ def _send_to_pane(pane: str, instruction_file: Path, dry_run: bool,
     _set_pane_capability_title(pane, instruction_file)
     instruction_path = str(instruction_file.resolve())
     dispatch_keyword = instruction_file.name
-    short_cmd = f"{_visibility_summary(instruction_file)['text']}; 读取并执行 {instruction_path}"
+    if _pane_runtime() == "codex":
+        role_file = _role_file_for_pane(pane)
+        short_cmd = f"{_visibility_summary(instruction_file)['text']}; 先读取角色指令 {role_file}，再读取并执行 {instruction_path}"
+    else:
+        short_cmd = f"{_visibility_summary(instruction_file)['text']}; 读取并执行 {instruction_path}"
     _record_model_call("request", sid, pane, dispatch_id, instruction_file, status="tmux_submit_requested")
     last_error = ""
     def _settled_dispatch_state() -> tuple[str, str, bool, bool]:
