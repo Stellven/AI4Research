@@ -460,6 +460,113 @@ class TestSendToPaneLiteral:
             }
         ]
 
+    def test_direct_node_verdict_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
+        """Primary evaluator node-verdict FAIL uses the same repair path as sidecar reconcile."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph_path = sprints / f"{sid}.task_graph.json"
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["assigned_to"] = "solar-harness-lab:0.2"
+        node["dispatch_id"] = "dispatch-N1"
+        node["eval_assignments"] = [
+            {
+                "pane": "solar-harness-lab:0.3",
+                "dispatch_id": "eval-N1",
+                "role": "primary",
+                "eval_md_path": str(sprints / f"{sid}.N1-eval.md"),
+                "eval_json_path": str(sprints / f"{sid}.N1-eval.json"),
+            }
+        ]
+        node["max_repair_attempts"] = 1
+        graph["node_results"]["N1"] = {
+            "status": "reviewing",
+            "assigned_to": node["assigned_to"],
+            "dispatch_id": node["dispatch_id"],
+        }
+        graph_path.write_text(json.dumps(graph) + "\n", encoding="utf-8")
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_md = sprints / f"{sid}.N1-eval.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_md.write_text("## Verdict\nFAIL\n\nEvidence\n", encoding="utf-8")
+        eval_json.write_text(
+            json.dumps(
+                {
+                    "verdict": "FAIL",
+                    "node_id": "N1",
+                    "summary": "Artifact omitted package manifests.",
+                    "failed_conditions": ["ACC-003"],
+                    "errors": [
+                        {
+                            "cond": "ACC-003",
+                            "severity": "high",
+                            "evidence": "package.json exists but was reported absent",
+                            "fix_hint": "Correct the manifest inventory.",
+                        }
+                    ],
+                }
+            ) + "\n",
+            encoding="utf-8",
+        )
+        release_calls = []
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: release_calls.append(a) or {"released": True})
+
+        result = gnd.node_verdict(str(graph_path), "N1", "fail", reason="manifest inventory wrong", eval_json=str(eval_json))
+        saved = gnd.load_graph(graph_path)
+        saved_node = saved["nodes"][0]
+
+        assert result["ok"] is True
+        assert result["status"] == "failed_review"
+        assert saved_node["status"] == "failed_review"
+        assert saved["node_results"]["N1"]["status"] == "failed_review"
+        assert saved_node["repair_attempts"] == 1
+        assert saved_node["repair_context"]["summary"] == "Artifact omitted package manifests."
+        assert saved_node["repair_context"]["failed_conditions"] == ["ACC-003"]
+        assert saved_node["repair_context"]["errors"][0]["fix_hint"] == "Correct the manifest inventory."
+        assert "assigned_to" not in saved_node
+        assert "dispatch_id" not in saved_node
+        assert "eval_assignments" not in saved_node
+        assert "eval_json" not in saved_node
+        assert not handoff.exists()
+        assert not eval_json.exists()
+        assert not eval_md.exists()
+        archived = saved_node["repair_context"]["archived_sidecars"]
+        assert Path(archived["handoff_md"]).exists()
+        assert Path(archived["eval_json"]).exists()
+        assert Path(archived["eval_md"]).exists()
+        assert ("solar-harness-lab:0.2", "dispatch-N1", "node_failed_review") in release_calls
+        assert ("solar-harness-lab:0.3", "eval-N1", "node_failed_review") in release_calls
+
+    def test_direct_node_verdict_fail_after_repair_limit_marks_terminal_failed(self, tmp_harness, monkeypatch):
+        """Direct evaluator FAIL still terminal-fails once repair attempts are exhausted."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph_path = sprints / f"{sid}.task_graph.json"
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["repair_attempts"] = 1
+        node["max_repair_attempts"] = 1
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        graph_path.write_text(json.dumps(graph) + "\n", encoding="utf-8")
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_json.write_text(json.dumps({"verdict": "FAIL", "node_id": "N1"}) + "\n", encoding="utf-8")
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        result = gnd.node_verdict(str(graph_path), "N1", "fail", eval_json=str(eval_json))
+        saved = gnd.load_graph(graph_path)
+
+        assert result["ok"] is True
+        assert result["status"] == "failed"
+        assert saved["nodes"][0]["status"] == "failed"
+        assert saved["node_results"]["N1"]["status"] == "failed"
+        assert handoff.exists()
+        assert eval_json.exists()
+
     def test_failed_review_nodes_are_ready_for_repair_dispatch(self, tmp_harness):
         """Graph scheduler treats failed_review as a repairable ready node."""
         tmp_path, sprints, sid, graph = tmp_harness

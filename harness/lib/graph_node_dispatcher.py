@@ -6918,6 +6918,61 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
     if eval_json:
         note_parts.append(f"eval_json={eval_json}")
     eval_assignments = _node_eval_assignments(node)
+    if status == "failed":
+        resolved_eval_json = str(eval_json or _eval_json_file(sid, node_id))
+        eval_payload = _read_json_file_safe(resolved_eval_json)
+        if reason and not str(eval_payload.get("summary") or "").strip():
+            eval_payload["summary"] = reason
+        observed_handoff = _existing_node_handoff(sid, node, graph) or _handoff_file(sid, node_id)
+        if observed_handoff and Path(observed_handoff).exists():
+            worker_pane = str(node.get("assigned_to") or "")
+            worker_dispatch_id = str(node.get("dispatch_id") or "")
+            repair_context = _start_node_repair_from_eval_fail(
+                graph,
+                node,
+                sid,
+                node_id,
+                Path(observed_handoff),
+                resolved_eval_json,
+                eval_payload,
+            )
+            if repair_context is not None:
+                if not dry_run:
+                    save_graph(graph_path, graph)
+                worker_lease_released = False
+                eval_lease_released = False
+                if not dry_run and worker_pane and worker_dispatch_id:
+                    worker_lease_released = bool(
+                        release_lease(worker_pane, worker_dispatch_id, "node_failed_review").get("released")
+                    )
+                if not dry_run and eval_assignments:
+                    eval_lease_released = any(
+                        bool(
+                            release_lease(
+                                str(assignment.get("pane") or ""),
+                                str(assignment.get("dispatch_id") or ""),
+                                "node_failed_review",
+                            ).get("released")
+                        )
+                        for assignment in eval_assignments
+                        if str(assignment.get("pane") or "") and str(assignment.get("dispatch_id") or "")
+                    )
+                coverage_refresh = _refresh_requirement_coverage_artifacts(sid, dry_run=dry_run)
+                return {
+                    "ok": True,
+                    "node": node_id,
+                    "status": "failed_review",
+                    "repair_context": repair_context,
+                    "dry_run": dry_run,
+                    "worker_lease_released": worker_lease_released,
+                    "eval_lease_released": eval_lease_released,
+                    "downstream": {"ok": True, "skipped": "repair_requested"},
+                    "parent_status_updated": False,
+                    "capability_effect": {},
+                    "proof_gate": proof_gate,
+                    "research_quality_gate": research_quality_gate,
+                    "coverage_refresh": coverage_refresh,
+                }
     parent = mark_node_result(graph, node_id, status, gate_status=status, note="; ".join(note_parts) or None)
     node["status"] = status
     node["updated_at"] = _utc_now()
