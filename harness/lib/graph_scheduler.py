@@ -2036,6 +2036,73 @@ def assign_ready(graph: dict[str, Any], workers: list[dict[str, Any]],
     return result
 
 
+def _node_gate_verdict_ok(node: dict[str, Any]) -> tuple[bool, str]:
+    """Consume a gate node's domain verdict artifact (verifier / critic).
+
+    A gate must NOT be satisfied merely because its member nodes finished
+    executing: a verifier/critic node is marked ``passed`` when it RAN
+    correctly, regardless of whether its machine verdict approved or blocked.
+    This reads the verdict artifact declared in the node's ``write_scope`` and
+    returns ``(False, detail)`` when that verdict is FAIL/block.
+
+    Fail-CLOSED: if a node declares a verdict artifact but it is missing or
+    unparseable, the verdict is treated as NOT ok. Nodes that declare no verdict
+    artifact return ``(True, ...)`` — nothing to consume, they pass on completion.
+    """
+    write_scope = node.get("write_scope") or []
+    if isinstance(write_scope, str):
+        write_scope = [write_scope]
+    for entry in write_scope:
+        name = Path(str(entry)).name
+        if not name:
+            continue
+        path = SPRINTS_DIR / name
+        # Verifier decision: strict allowlist, matching verification_gate.py policy.
+        if name.endswith("verifier_decision.json"):
+            try:
+                decision = str(json.loads(path.read_text(encoding="utf-8")).get("decision", "")).strip().lower()
+            except Exception as exc:  # missing / unparseable -> fail-closed
+                return False, f"verifier_decision_unreadable:{name}:{type(exc).__name__}"
+            if decision not in {"pass", "passed", "approved", "ok"}:
+                return False, f"verifier_decision={decision or 'missing'}"
+        # Critic gate: block on explicit negative tokens (avoid false-negatives on unknown pass tokens).
+        elif name.endswith("contradictions.jsonl"):
+            decision = None
+            try:
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    obj = json.loads(line)
+                    if str(obj.get("type") or "") == "gate_verdict":
+                        decision = str(obj.get("gate_decision") or "").strip().lower()
+                        break
+            except Exception as exc:  # missing / unparseable -> fail-closed
+                return False, f"contradictions_unreadable:{name}:{type(exc).__name__}"
+            if decision is None:
+                return False, f"critic_gate_verdict_missing:{name}"
+            if decision in {"block", "blocked", "fail", "failed", "reject", "rejected"}:
+                return False, f"critic_gate_decision={decision}"
+    return True, "verdict_ok"
+
+
+def _gate_verdicts_ok(graph: dict[str, Any], gate_node_ids: list[str]) -> tuple[bool, str, str]:
+    """Aggregate verdict-consumption across a gate's member nodes.
+
+    Returns ``(ok, blocking_node_id, detail)``. A gate is verdict-ok only when
+    every member node that emits a verifier/critic verdict approved.
+    """
+    ids = _node_map(graph)
+    for node_id in gate_node_ids:
+        node = ids.get(node_id)
+        if not isinstance(node, dict):
+            continue
+        ok, detail = _node_gate_verdict_ok(node)
+        if not ok:
+            return False, node_id, detail
+    return True, "", "verdict_ok"
+
+
 def mark_node_result(graph: dict[str, Any], node_id: str, status: str,
                      gate_status: str | None = None, note: str | None = None) -> dict[str, Any]:
     _ensure_required_gate_node_mapping(graph)
@@ -2081,7 +2148,19 @@ def mark_node_result(graph: dict[str, Any], node_id: str, status: str,
                 "updated_at": updated_at,
             }
         else:
-            graph["gate_results"][gate] = {"status": "passed", "node": node_id, "updated_at": updated_at}
+            verdicts_ok, blocking_node, verdict_detail = _gate_verdicts_ok(
+                graph, [str(n.get("id") or "") for n in gate_nodes]
+            )
+            if verdicts_ok:
+                graph["gate_results"][gate] = {"status": "passed", "node": node_id, "updated_at": updated_at}
+            else:
+                # member nodes all executed, but a verifier/critic verdict is FAIL/block.
+                graph["gate_results"][gate] = {
+                    "status": "blocked",
+                    "node": blocking_node,
+                    "reason": f"gate_verdict_block:{verdict_detail}",
+                    "updated_at": updated_at,
+                }
 
     if str(status or "").lower() in {"passed", "failed", "reviewing"}:
         _sync_node_evidence_refs(
@@ -2376,8 +2455,19 @@ def parent_ready_check(graph: dict[str, Any]) -> dict[str, Any]:
     for gate in required_gates:
         gate_nodes = [node_id for node_id, node in ids.items() if str(node.get("gate") or "") == gate]
         if gate_nodes and all(node_status(graph, node_id) in PASS_STATUSES for node_id in gate_nodes):
+            verdicts_ok, blocking_node, verdict_detail = _gate_verdicts_ok(graph, gate_nodes)
             current_gate = gate_results.get(gate)
-            if not isinstance(current_gate, dict) or current_gate.get("status") != "passed":
+            if not verdicts_ok:
+                # All member nodes executed, but a verifier/critic verdict is FAIL/block:
+                # consume verdict CONTENT, not just node completion -> do NOT self-heal to passed.
+                if not isinstance(current_gate, dict) or current_gate.get("status") != "blocked":
+                    graph["gate_results"][gate] = {
+                        "status": "blocked",
+                        "node": blocking_node,
+                        "updated_at": _now(),
+                        "reason": f"gate_verdict_block:{verdict_detail}",
+                    }
+            elif not isinstance(current_gate, dict) or current_gate.get("status") != "passed":
                 graph["gate_results"][gate] = {
                     "status": "passed",
                     "node": gate_nodes[-1],
