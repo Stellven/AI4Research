@@ -108,6 +108,7 @@ RECOVERABLE_PANE_BLOCKER_FRAGMENTS = {
     "dispatch prompt not dismissed",
     "late_settle_blocked",
 }
+GRAPH_NODE_REPAIR_MAX_ATTEMPTS = int(os.environ.get("SOLAR_GRAPH_NODE_REPAIR_MAX_ATTEMPTS", "1"))
 STATE_READ_PREFLIGHT = """<!-- SOLAR_STATE_READ_PREFLIGHT -->
 ## 必须先读状态 (防写入 hook 卡死)
 
@@ -1164,6 +1165,167 @@ def _existing_node_handoff(sid: str, node: dict[str, Any], graph: dict[str, Any]
     return None
 
 
+def _node_repair_attempts(node: dict[str, Any]) -> int:
+    raw = node.get("repair_attempts")
+    if raw in (None, ""):
+        context = node.get("repair_context")
+        raw = context.get("attempt") if isinstance(context, dict) else 0
+    try:
+        return max(0, int(raw or 0))
+    except Exception:
+        return 0
+
+
+def _node_repair_max_attempts(graph: dict[str, Any], node: dict[str, Any]) -> int:
+    candidates: list[Any] = [
+        node.get("max_repair_attempts"),
+        node.get("repair_max_attempts"),
+    ]
+    repair_policy = graph.get("node_repair") if isinstance(graph.get("node_repair"), dict) else {}
+    quality_gates = graph.get("quality_gates") if isinstance(graph.get("quality_gates"), dict) else {}
+    graph_repair_gate = quality_gates.get("repair") if isinstance(quality_gates.get("repair"), dict) else {}
+    candidates.extend([
+        repair_policy.get("max_attempts"),
+        graph_repair_gate.get("max_attempts"),
+        GRAPH_NODE_REPAIR_MAX_ATTEMPTS,
+    ])
+    for raw in candidates:
+        if raw in (None, ""):
+            continue
+        try:
+            return max(0, int(raw))
+        except Exception:
+            continue
+    return 1
+
+
+def _archive_path_for_repair(path: Path, attempt: int) -> Path:
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    base = path.with_name(f"{path.stem}.repair{attempt}.{stamp}{path.suffix}")
+    if not base.exists():
+        return base
+    for index in range(2, 100):
+        candidate = path.with_name(f"{path.stem}.repair{attempt}.{stamp}.{index}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+    return path.with_name(f"{path.stem}.repair{attempt}.{stamp}.{os.getpid()}{path.suffix}")
+
+
+def _archive_node_review_sidecars(sid: str, node_id: str, handoff_file: Path | None, eval_json_path: str | Path, attempt: int) -> dict[str, str]:
+    archived: dict[str, str] = {}
+    candidates: list[tuple[str, Path]] = []
+    if handoff_file is not None:
+        candidates.append(("handoff_md", Path(handoff_file)))
+    for key, path in (
+        ("eval_json", Path(str(eval_json_path))) if str(eval_json_path or "").strip() else ("eval_json", Path()),
+        ("eval_md", _eval_md_file(sid, node_id)),
+    ):
+        if str(path) not in {"", "."}:
+            candidates.append((key, path))
+
+    seen: set[Path] = set()
+    for key, path in candidates:
+        try:
+            resolved = path.expanduser()
+        except Exception:
+            continue
+        if resolved in seen or not resolved.exists():
+            continue
+        seen.add(resolved)
+        archive = _archive_path_for_repair(resolved, attempt)
+        try:
+            resolved.replace(archive)
+        except Exception:
+            continue
+        archived[key] = str(archive)
+    return archived
+
+
+def _short_eval_errors(eval_payload: dict[str, Any]) -> list[dict[str, str]]:
+    errors = eval_payload.get("errors")
+    if not isinstance(errors, list):
+        return []
+    items: list[dict[str, str]] = []
+    for raw in errors[:6]:
+        if not isinstance(raw, dict):
+            continue
+        item: dict[str, str] = {}
+        for key in ("cond", "severity", "evidence", "fix_hint"):
+            value = str(raw.get(key) or "").strip()
+            if value:
+                item[key] = value[:1200]
+        if item:
+            items.append(item)
+    return items
+
+
+def _start_node_repair_from_eval_fail(
+    graph: dict[str, Any],
+    node: dict[str, Any],
+    sid: str,
+    node_id: str,
+    handoff_file: Path,
+    eval_json_path: str,
+    eval_payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    max_attempts = _node_repair_max_attempts(graph, node)
+    prior_attempts = _node_repair_attempts(node)
+    if prior_attempts >= max_attempts:
+        return None
+
+    attempt = prior_attempts + 1
+    archived = _archive_node_review_sidecars(sid, node_id, handoff_file, eval_json_path, attempt)
+    now = _utc_now()
+    failed_conditions = eval_payload.get("failed_conditions")
+    if not isinstance(failed_conditions, list):
+        failed_conditions = []
+    repair_context = {
+        "attempt": attempt,
+        "max_attempts": max_attempts,
+        "verdict": "FAIL",
+        "summary": str(eval_payload.get("summary") or "").strip()[:2000],
+        "failed_conditions": [str(item) for item in failed_conditions if str(item).strip()][:20],
+        "errors": _short_eval_errors(eval_payload),
+        "archived_sidecars": archived,
+        "created_at": now,
+    }
+
+    _clear_eval_assignments(node)
+    for key in (
+        "assigned_to",
+        "dispatch_id",
+        "eval_json",
+        "eval_assigned_to",
+        "eval_dispatch_id",
+        "eval_dispatched_at",
+        "eval_retry_reason",
+        "last_eval_closeout_failure",
+        "last_eval_operator_cooldown_after_closeout",
+        "handoff_md",
+    ):
+        node.pop(key, None)
+
+    artifacts = node.get("artifacts")
+    if isinstance(artifacts, dict):
+        artifacts.pop("eval_json", None)
+        artifacts.pop("handoff_md", None)
+
+    node["status"] = "failed_review"
+    node["repair_attempts"] = attempt
+    node["repair_context"] = repair_context
+    node.setdefault("repair_history", []).append(repair_context)
+    node["updated_at"] = now
+
+    graph.setdefault("node_results", {})
+    graph["node_results"][node_id] = {
+        "status": "failed_review",
+        "updated_at": now,
+        "note": f"repair_requested_from_eval_sidecar:{Path(eval_json_path).name}",
+        "repair_context": repair_context,
+    }
+    return repair_context
+
+
 def _ledger_dispatch_for(sid: str, instruction_file: Path) -> dict[str, Any]:
     if not DISPATCH_LEDGER.exists():
         return {}
@@ -1264,6 +1426,30 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             dispatch_id = str(node.get("dispatch_id") or "").strip()
             if pane and dispatch_id:
                 release_lease(pane, dispatch_id, "graph_dispatch_reconcile_eval_verdict")
+            if eval_verdict == "FAIL":
+                repair_context = _start_node_repair_from_eval_fail(
+                    graph,
+                    node,
+                    sid,
+                    node_id,
+                    handoff_file,
+                    eval_json_path,
+                    eval_payload,
+                )
+                if repair_context is not None:
+                    repaired.append(
+                        {
+                            "node": node_id,
+                            "status": "failed_review",
+                            "reason": "eval_sidecar_failed_repair_requested",
+                            "handoff": str(handoff_file),
+                            "eval_json": eval_json_path,
+                            "verdict": eval_verdict,
+                            "repair_attempt": repair_context.get("attempt"),
+                            "max_repair_attempts": repair_context.get("max_attempts"),
+                        }
+                    )
+                    continue
             node.pop("assigned_to", None)
             node.pop("dispatch_id", None)
             verdict_status = "passed" if eval_verdict == "PASS" else "failed"
@@ -2322,7 +2508,7 @@ def _mark_graph_node(graph_path: str, node_id: str, status: str,
                 results.pop(node_id, None)
             else:
                 results[node_id] = {"status": status, "updated_at": updated_at}
-            clear_builder_claim = clear_assignment or status in {"reviewing", "passed", "failed", "skipped"}
+            clear_builder_claim = clear_assignment or status in {"reviewing", "failed_review", "passed", "failed", "skipped"}
             if clear_builder_claim:
                 node.pop("assigned_to", None)
                 node.pop("dispatch_id", None)
@@ -2381,6 +2567,64 @@ def _ensure_execution_plan_payload(
     return payload
 
 
+def _node_repair_context_block(node: dict[str, Any]) -> str:
+    context = node.get("repair_context")
+    if not isinstance(context, dict) or not context:
+        return ""
+
+    attempt = context.get("attempt", "N/A")
+    max_attempts = context.get("max_attempts", "N/A")
+    summary = str(context.get("summary") or "").strip() or "N/A"
+    failed_conditions = context.get("failed_conditions")
+    condition_lines = _scope_lines(failed_conditions if isinstance(failed_conditions, list) else [])
+    archived = context.get("archived_sidecars")
+    archived_lines = _scope_lines(
+        [f"{key}: {value}" for key, value in archived.items()]
+        if isinstance(archived, dict)
+        else []
+    )
+
+    error_lines: list[str] = []
+    errors = context.get("errors")
+    if isinstance(errors, list):
+        for index, item in enumerate(errors[:6], start=1):
+            if not isinstance(item, dict):
+                continue
+            cond = str(item.get("cond") or f"error-{index}")
+            severity = str(item.get("severity") or "unknown")
+            evidence = str(item.get("evidence") or "").strip()
+            fix_hint = str(item.get("fix_hint") or "").strip()
+            error_lines.append(f"- `{cond}` ({severity})")
+            if evidence:
+                error_lines.append(f"  Evidence: {evidence}")
+            if fix_hint:
+                error_lines.append(f"  Fix hint: {fix_hint}")
+    if not error_lines:
+        error_lines = ["- `N/A`"]
+    error_text = "\n".join(error_lines)
+
+    return f"""## Repair Context
+
+This node previously failed evaluator review. Repair the existing node artifact using the evaluator feedback below, then write a fresh handoff for re-review.
+
+- Repair Attempt: `{attempt}` / `{max_attempts}`
+- Previous Verdict: `FAIL`
+- Previous Summary: {summary}
+
+### Failed Conditions
+
+{condition_lines}
+
+### Evaluator Errors
+
+{error_text}
+
+### Archived Previous Review Sidecars
+
+{archived_lines}
+"""
+
+
 def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
     node = payload.get("node") or {}
     sid = payload.get("sprint_id") or payload.get("sid") or ""
@@ -2423,6 +2667,7 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
             plan_artifacts.get("physical_plan_ir_path", ""),
         ]
     )
+    repair_context_block = _node_repair_context_block(node)
 
     return f"""{STATE_READ_PREFLIGHT}
 {DEFINITION_OF_DONE_POLICY}
@@ -2470,6 +2715,8 @@ Graph: `{graph_path}`
 {_scope_lines(node.get("write_scope"))}
 
 {architecture_block}
+
+{repair_context_block}
 
 ## Acceptance
 

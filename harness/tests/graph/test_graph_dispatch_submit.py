@@ -353,6 +353,174 @@ class TestSendToPaneLiteral:
             }
         ]
 
+    def test_eval_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
+        """A first evaluator FAIL feeds critique back to the node instead of terminal-failing."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["assigned_to"] = "solar-harness-lab:0.2"
+        node["dispatch_id"] = "dispatch-N1"
+        node["max_repair_attempts"] = 1
+        graph["node_results"]["N1"] = {
+            "status": "reviewing",
+            "assigned_to": node["assigned_to"],
+            "dispatch_id": node["dispatch_id"],
+        }
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_md = sprints / f"{sid}.N1-eval.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_md.write_text("## Verdict\nFAIL\n\nEvidence\n", encoding="utf-8")
+        eval_json.write_text(
+            json.dumps(
+                {
+                    "verdict": "FAIL",
+                    "node_id": "N1",
+                    "summary": "Missing required entrypoint coverage.",
+                    "failed_conditions": ["AC1", "AC2"],
+                    "errors": [
+                        {
+                            "cond": "AC1",
+                            "severity": "high",
+                            "evidence": "inventory omitted a required launcher",
+                            "fix_hint": "Add the missing launcher row with cwd/env assumptions.",
+                        }
+                    ],
+                }
+            ) + "\n",
+            encoding="utf-8",
+        )
+        release_calls = []
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: release_calls.append(a) or {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert node["status"] == "failed_review"
+        assert graph["node_results"]["N1"]["status"] == "failed_review"
+        assert node["repair_attempts"] == 1
+        assert node["repair_context"]["summary"] == "Missing required entrypoint coverage."
+        assert node["repair_context"]["failed_conditions"] == ["AC1", "AC2"]
+        assert node["repair_context"]["errors"][0]["fix_hint"] == "Add the missing launcher row with cwd/env assumptions."
+        assert "assigned_to" not in node
+        assert "dispatch_id" not in node
+        assert "eval_json" not in node
+        assert not handoff.exists()
+        assert not eval_json.exists()
+        assert not eval_md.exists()
+        archived = node["repair_context"]["archived_sidecars"]
+        assert Path(archived["handoff_md"]).exists()
+        assert Path(archived["eval_json"]).exists()
+        assert Path(archived["eval_md"]).exists()
+        assert len(release_calls) == 1
+        assert repaired == [
+            {
+                "node": "N1",
+                "status": "failed_review",
+                "reason": "eval_sidecar_failed_repair_requested",
+                "handoff": str(handoff),
+                "eval_json": str(eval_json),
+                "verdict": "FAIL",
+                "repair_attempt": 1,
+                "max_repair_attempts": 1,
+            }
+        ]
+
+    def test_eval_fail_after_repair_limit_marks_terminal_failed(self, tmp_harness, monkeypatch):
+        """A node still fails terminally once the capped repair attempts are exhausted."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["repair_attempts"] = 1
+        node["max_repair_attempts"] = 1
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_json.write_text(json.dumps({"verdict": "FAIL", "node_id": "N1"}) + "\n", encoding="utf-8")
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert node["status"] == "failed"
+        assert graph["node_results"]["N1"]["status"] == "failed"
+        assert handoff.exists()
+        assert eval_json.exists()
+        assert repaired == [
+            {
+                "node": "N1",
+                "status": "failed",
+                "reason": "eval_sidecar_exists",
+                "handoff": str(handoff),
+                "eval_json": str(eval_json),
+                "verdict": "FAIL",
+            }
+        ]
+
+    def test_failed_review_nodes_are_ready_for_repair_dispatch(self, tmp_harness):
+        """Graph scheduler treats failed_review as a repairable ready node."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        from graph_scheduler import ready_nodes
+
+        graph["nodes"] = [
+            {"id": "N1", "status": "passed", "depends_on": [], "write_scope": ["/tmp/a"]},
+            {
+                "id": "N2",
+                "status": "failed_review",
+                "depends_on": ["N1"],
+                "write_scope": ["/tmp/b"],
+                "repair_context": {"attempt": 1, "max_attempts": 1},
+            },
+        ]
+        graph["node_results"] = {
+            "N1": {"status": "passed"},
+            "N2": {"status": "failed_review"},
+        }
+
+        ready = ready_nodes(graph)
+
+        assert [node["id"] for node in ready] == ["N2"]
+
+    def test_dispatch_text_includes_repair_feedback(self, tmp_harness):
+        """A repair dispatch gives the builder evaluator errors and fix hints."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = {
+            "id": "N1",
+            "goal": "Repair audit artifact",
+            "depends_on": [],
+            "write_scope": [f"sprints/{sid}.audit.md"],
+            "acceptance": ["covers required entrypoints"],
+            "repair_context": {
+                "attempt": 1,
+                "max_attempts": 1,
+                "summary": "Missing required entrypoint coverage.",
+                "failed_conditions": ["AC1"],
+                "errors": [
+                    {
+                        "cond": "AC1",
+                        "severity": "high",
+                        "evidence": "artifact omitted status-server route modules",
+                        "fix_hint": "Add route modules and launch assumptions.",
+                    }
+                ],
+                "archived_sidecars": {"eval_json": str(sprints / f"{sid}.N1-eval.repair1.json")},
+            },
+        }
+
+        text = gnd.build_dispatch_text({"sprint_id": sid, "node": node}, "solar-harness-lab:0.2")
+
+        assert "## Repair Context" in text
+        assert "Missing required entrypoint coverage." in text
+        assert "`AC1` (high)" in text
+        assert "artifact omitted status-server route modules" in text
+        assert "Add route modules and launch assumptions." in text
+        assert "eval_json:" in text
+
     def test_assigned_pane_plan_mode_prompt_is_unavailable(self, tmp_harness, monkeypatch):
         """A pane blocked in Claude plan-mode confirmation is not dispatchable."""
         import graph_node_dispatcher as gnd
