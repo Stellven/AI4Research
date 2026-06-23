@@ -2025,6 +2025,14 @@ DISPATCH_EOF
     return 4
   fi
 
+  codex_runtime_suppresses_pm_operator_dispatch() {
+    local runtime="${SOLAR_PANE_RUNTIME:-}"
+    local allow="${SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH:-}"
+    runtime="${runtime,,}"
+    allow="${allow,,}"
+    [[ "$runtime" == "codex" && "$allow" != "1" && "$allow" != "true" && "$allow" != "yes" && "$allow" != "on" ]]
+  }
+
   dispatch_via_operator_pool() {
     local role="$1"
     local task_type="$2"
@@ -2069,7 +2077,9 @@ CTX
   }
 
   if [[ -n "$dispatch_role" ]]; then
-    if dispatch_via_operator_pool "$dispatch_role" "$dispatch_task_type" "$target_pane"; then
+    if codex_runtime_suppresses_pm_operator_dispatch; then
+      warn "Codex pane runtime selected; skipping PM operator pool for ${dispatch_role}, using fixed pane ${target_pane}"
+    elif dispatch_via_operator_pool "$dispatch_role" "$dispatch_task_type" "$target_pane"; then
       _ensure_bash4 2>/dev/null || true
       local coord_bash="${BASH4:-bash}"
       if [[ -f "$HARNESS_DIR/.coordinator.pid" ]]; then

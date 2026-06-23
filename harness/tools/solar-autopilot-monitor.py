@@ -1351,6 +1351,7 @@ def wake_sid(sid: str) -> bool:
 
 
 ROLE_POOL_HANDOFF_FINDINGS = {"ready_for_planner", "ready_for_builder", "active_without_handoff", "pane_idle_with_pending_artifact", "ready_for_evaluator"}
+TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 ROLE_POOL_UNAVAILABLE_CACHE_TTL_SEC = int(os.environ.get("SOLAR_ROLE_POOL_UNAVAILABLE_CACHE_TTL_SEC", "120"))
 ROLE_POOL_UNAVAILABLE_CACHE: dict[str, dict] = {}
 
@@ -1492,7 +1493,15 @@ def finding_uses_operator_role_pool(ftype: str) -> bool:
     and evaluator handoffs, prefer pm_dispatch/operator_runtime so multiple
     configured physical operators can be leased independently.
     """
+    if codex_pane_runtime_suppresses_pm_operator_dispatch():
+        return False
     return ftype in ROLE_POOL_HANDOFF_FINDINGS
+
+
+def codex_pane_runtime_suppresses_pm_operator_dispatch() -> bool:
+    runtime = os.environ.get("SOLAR_PANE_RUNTIME", "").strip().lower()
+    allow = os.environ.get("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", "").strip().lower()
+    return runtime == "codex" and allow not in TRUE_ENV_VALUES
 
 
 def role_for_handoff_finding(ftype: str) -> str:
