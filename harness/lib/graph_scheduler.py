@@ -415,11 +415,17 @@ def _status_path_for_graph(graph: dict[str, Any], graph_path: str | Path | None 
 
 
 def _status_has_terminal_evidence(sid: str, status: dict[str, Any] | None = None, graph_path: str | Path | None = None) -> bool:
-    payload = status or {}
-    state = str(payload.get("status", "")).lower()
-    if state in {"passed", "completed", "eval_passed"}:
-        return True
     base_dir = Path(graph_path).expanduser().parent if graph_path else SPRINTS_DIR
+    if (base_dir / f"{sid}.finalized").exists():
+        return True
+    try:
+        closure = json.loads((base_dir / f"{sid}.closure.json").read_text(encoding="utf-8"))
+        if closure.get("all_nodes_passed") and closure.get("all_required_gates_passed"):
+            return True
+    except Exception:
+        pass
+    if graph_path:
+        return False
     handoff = (base_dir / f"{sid}.handoff.md").exists() or any(base_dir.glob(f"{sid}.*-handoff.md"))
     eval_exists = (
         (base_dir / f"{sid}.eval.md").exists()

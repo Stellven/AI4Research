@@ -4672,6 +4672,54 @@ PY
   return 0
 }
 
+ensure_graph_parent_ready_for_pass() {
+  local sid="$1" sf="$2"
+  local graph="$SPRINTS_DIR/${sid}.task_graph.json"
+  [[ -f "$graph" ]] || return 0
+
+  local out
+  if out=$(PYTHONPATH="$HARNESS_DIR/lib:${PYTHONPATH:-}" python3 - "$graph" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+import graph_scheduler
+
+graph_path = Path(sys.argv[1])
+graph = json.loads(graph_path.read_text(encoding="utf-8"))
+result = graph_scheduler.sync_status_cache_from_graph(
+    graph,
+    graph_path,
+    actor="coordinator",
+    event="legacy_pass_blocked_by_graph_parent",
+)
+print(json.dumps(result, ensure_ascii=False))
+parent = result.get("parent") if isinstance(result, dict) else {}
+raise SystemExit(0 if isinstance(parent, dict) and parent.get("ready") is True else 2)
+PY
+  ); then
+    return 0
+  fi
+
+  log "${Y}[graph-parent] BLOCK legacy PASS: ${sid} task_graph parent is not ready${N}"
+  emit_event "$sid" "legacy_pass_blocked_by_graph_parent" "coordinator" \
+    "{\"reason\":\"graph_parent_not_ready\"}"
+  python3 - "$sf" "$out" <<'PY' || true
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+detail = sys.argv[2][-2000:]
+data = json.loads(path.read_text(encoding="utf-8"))
+data["legacy_pass_blocked"] = True
+data["legacy_pass_block_reason"] = "graph_parent_not_ready"
+data["legacy_pass_block_detail"] = detail
+path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+PY
+  return 1
+}
+
 # 审判官判定 PASS → 通知完成
 handle_passed() {
   local sid="$1" sf="$2"
@@ -4699,6 +4747,10 @@ handle_passed() {
 
   local title
   title=$(get_field "$sf" "title")
+
+  if ! ensure_graph_parent_ready_for_pass "$sid" "$sf"; then
+    return 1
+  fi
 
   log "${G}Sprint PASSED! ${title}${N}"
 

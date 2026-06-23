@@ -98,6 +98,69 @@ def test_sync_status_cache_repairs_stale_task_graph_status_for_passed_parent(tmp
     assert updated["active_node"] is None
 
 
+def test_sync_status_cache_revokes_passed_status_when_graph_parent_not_ready(tmp_path, monkeypatch):
+    import graph_scheduler as gs
+
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
+
+    sid = "sprint-test-false-positive-pass"
+    graph_path = sprints / f"{sid}.task_graph.json"
+    status_path = sprints / f"{sid}.status.json"
+    graph = {
+        "sprint_id": sid,
+        "title": "Blocked graph",
+        "required_gates": ["G_PLAN"],
+        "nodes": [
+            {"id": "S1", "status": "worker_blocked", "depends_on": [], "gate": "G_PLAN"},
+            {"id": "S2", "status": "pending", "depends_on": ["S1"], "gate": "G_IMPL"},
+        ],
+        "node_results": {"S1": {"status": "worker_blocked"}},
+        "gate_results": {},
+    }
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    status_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "status": "passed",
+                "phase": "completed",
+                "stage": "completed",
+                "active_node": None,
+                "task_graph": str(graph_path),
+                "history": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (sprints / f"{sid}.eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
+    (sprints / f"{sid}.handoff.md").write_text("handoff exists\n", encoding="utf-8")
+    (sprints / f"{sid}.closure.json").write_text(
+        json.dumps(
+            {
+                "all_nodes_passed": False,
+                "all_required_gates_passed": False,
+                "open_nodes": ["S1", "S2"],
+                "missing_gates": ["G_PLAN", "G_IMPL"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = gs.sync_status_cache_from_graph(graph, graph_path, actor="test", event="legacy_pass_guard")
+
+    assert result["ok"] is True
+    assert result["reason"] == "parent_reopened"
+    updated = json.loads(status_path.read_text(encoding="utf-8"))
+    assert updated["status"] == "active"
+    assert updated["phase"] == "graph_in_progress"
+    assert updated["task_graph_status"] == "active"
+    assert updated["active_node"] == "S1"
+    assert updated["graph_parent_ready"]["ready"] is False
+    assert updated["graph_parent_ready"]["open_nodes"] == ["S1", "S2"]
+
+
 def test_parent_ready_check_self_heals_stale_blocked_gate(tmp_path, monkeypatch):
     import graph_scheduler as gs
 
