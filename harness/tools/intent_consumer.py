@@ -140,6 +140,26 @@ def trusted_autodispatch_channels() -> set[str]:
     return {item.strip() for item in values if item.strip()}
 
 
+def codex_pane_runtime_suppresses_pm_operator_dispatch() -> bool:
+    runtime = os.environ.get("SOLAR_PANE_RUNTIME", "").strip().lower()
+    allow = os.environ.get("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", "").strip().lower()
+    return runtime == "codex" and allow not in {"1", "true", "yes", "on"}
+
+
+def suppress_pm_operator_dispatch_for_codex(handoff: dict[str, Any]) -> dict[str, Any]:
+    if not handoff.get("requested"):
+        return handoff
+    if not codex_pane_runtime_suppresses_pm_operator_dispatch():
+        return handoff
+    return {
+        **handoff,
+        "requested": False,
+        "suppressed_requested": True,
+        "suppressed_reason": handoff.get("reason"),
+        "reason": "codex_pane_runtime_uses_coordinator_planner_pane",
+    }
+
+
 def planner_handoff_policy(
     raw: dict[str, Any],
     *,
@@ -253,6 +273,7 @@ def consume_one(
         explicit_dispatch_planner=dispatch_planner,
         auto_dispatch_planner=auto_dispatch_planner,
     )
+    handoff = suppress_pm_operator_dispatch_for_codex(handoff)
     request_text = build_consumer_text(raw, rewritten, ir)
     cmd = [
         sys.executable,
