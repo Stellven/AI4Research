@@ -199,18 +199,24 @@ class TestClearPane:
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "-l", "/new"],
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
+            ["tmux", "capture-pane", "-pt", "solar-harness:0.0", "-S", "-30"],
         ]
 
     def test_codex_tmux_sender_cancels_slash_completion_before_literal(self, monkeypatch):
         monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
         calls = []
+        captures = iter([CODEX_SLASH_RESIDUE_CAPTURE, CODEX_IDLE_CAPTURE])
 
         def fake_run(args, **kwargs):
             calls.append(args)
 
             class Result:
                 returncode = 0
-                stdout = CODEX_SLASH_RESIDUE_CAPTURE
+                stdout = (
+                    next(captures, CODEX_IDLE_CAPTURE)
+                    if args[:2] == ["tmux", "capture-pane"]
+                    else ""
+                )
 
             return Result()
 
@@ -226,6 +232,45 @@ class TestClearPane:
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "-l", "/new"],
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
             ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
+            ["tmux", "capture-pane", "-pt", "solar-harness:0.0", "-S", "-30"],
+        ]
+
+    def test_codex_tmux_sender_resubmits_when_new_residue_persists(self, monkeypatch):
+        monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+        calls = []
+        captures = iter([
+            CODEX_IDLE_CAPTURE,
+            CODEX_SLASH_RESIDUE_CAPTURE,
+            CODEX_IDLE_CAPTURE,
+        ])
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+
+            class Result:
+                returncode = 0
+                stdout = (
+                    next(captures, CODEX_IDLE_CAPTURE)
+                    if args[:2] == ["tmux", "capture-pane"]
+                    else ""
+                )
+
+            return Result()
+
+        monkeypatch.setattr("pane_clear_manager.subprocess.run", fake_run)
+        monkeypatch.setattr("pane_clear_manager.time.sleep", lambda _: None)
+
+        _tmux_send_keys("solar-harness:0.0", "/new")
+
+        assert calls == [
+            ["tmux", "capture-pane", "-pt", "solar-harness:0.0", "-S", "-30"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "C-u"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "-l", "/new"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
+            ["tmux", "capture-pane", "-pt", "solar-harness:0.0", "-S", "-30"],
+            ["tmux", "send-keys", "-t", "solar-harness:0.0", "Enter"],
+            ["tmux", "capture-pane", "-pt", "solar-harness:0.0", "-S", "-30"],
         ]
 
 

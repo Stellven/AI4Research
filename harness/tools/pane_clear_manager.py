@@ -133,12 +133,21 @@ def _tmux_send_keys(pane_id: str, keys: str, tmux_binary: str = "tmux") -> None:
         timeout=5,
     )
     if _pane_runtime() == "codex":
-        time.sleep(0.4)
+        time.sleep(0.8)
         subprocess.run(
             [tmux_binary, "send-keys", "-t", pane_id, "Enter"],
             capture_output=True,
             timeout=5,
         )
+        for _ in range(2):
+            time.sleep(0.8)
+            if not _codex_composer_has_slash_residue(pane_id, tmux_binary):
+                break
+            subprocess.run(
+                [tmux_binary, "send-keys", "-t", pane_id, "Enter"],
+                capture_output=True,
+                timeout=5,
+            )
 
 
 class PaneClearManager:
