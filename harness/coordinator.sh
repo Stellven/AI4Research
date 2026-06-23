@@ -1144,6 +1144,10 @@ pane_is_idle_snapshot() {
   #         → 永远不匹配 → idle 永远 false → wait_for_dispatch_window 12 次都失败
   # 修复: 允许 ❯ 后任意空白字符到行尾
   printf '%s\n' "$snapshot" | grep -qE '❯[[:space:]]*$' && return 0
+  # Codex TUI uses a `›` composer. The idle composer may show rotating
+  # suggestion text after the glyph, but slash-command residue such as
+  # `› /clear` is not clean and must still block dispatch.
+  printf '%s\n' "$snapshot" | tail -12 | grep -qE '^[[:space:]]*›([[:space:]]*$|[[:space:]]+[^/].*)$' && return 0
   # Claude Code often leaves the last submitted prompt in history while the
   # current input is empty; the mode footer is a better idle signal there.
   printf '%s\n' "$snapshot" | tail -8 | grep -qE '⏵.*((auto|accept edits|edit) mode on|bypass permissions on)'
@@ -1151,7 +1155,7 @@ pane_is_idle_snapshot() {
 
 pane_has_prompt_snapshot() {
   local snapshot="$1"
-  printf '%s\n' "$snapshot" | grep -q '❯'
+  printf '%s\n' "$snapshot" | grep -qE '❯|›'
 }
 
 pane_prompt_input_snapshot() {
@@ -1161,7 +1165,7 @@ import re
 import sys
 
 lines = sys.stdin.read().splitlines()
-prompt_indexes = [i for i, line in enumerate(lines) if "❯" in line]
+prompt_indexes = [i for i, line in enumerate(lines) if "❯" in line or "›" in line]
 if not prompt_indexes:
     sys.exit(0)
 
@@ -1187,8 +1191,16 @@ if not eligible:
     sys.exit(0)
 
 line = lines[eligible[-1]]
-prompt_input = line.split("❯", 1)[1].replace("\u00a0", " ").strip()
-if prompt_input in {"Try \"fix lint errors\"", "Try \"summarize this codebase\""}:
+glyph = "❯" if "❯" in line else "›"
+prompt_input = line.split(glyph, 1)[1].replace("\u00a0", " ").strip()
+if prompt_input in {
+    "Try \"fix lint errors\"",
+    "Try \"summarize this codebase\"",
+    "Find and fix a bug in @filename",
+    "Improve documentation in @filename",
+    "Run /review on my current changes",
+    "Write tests for @filename",
+}:
     prompt_input = ""
 
 print(prompt_input)

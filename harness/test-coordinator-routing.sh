@@ -58,6 +58,9 @@ with open(__import__('os').environ["COORDINATOR_SH"]) as f:
 
 # Extract discover_pane_by_persona, choose_* functions and pane_title_persona
 funcs_to_extract = [
+    "pane_is_idle_snapshot",
+    "pane_has_prompt_snapshot",
+    "pane_prompt_input_snapshot",
     "pane_title_persona",
     "discover_pane_by_persona",
     "choose_builder_pane",
@@ -175,6 +178,24 @@ assert "SESSION_NAME reads SOLAR_HARNESS_SESSION" \
   'grep -qF '\''SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"'\'' "$COORDINATOR_SH"'
 assert "LAB_SESSION_NAME derives from custom session unless explicitly set" \
   'grep -qF '\''LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"'\'' "$COORDINATOR_SH"'
+echo ""
+
+# ── TC7: Codex idle composer is dispatchable ──
+echo "TC7: Codex idle composer is treated as idle, slash residue is not"
+CODEX_IDLE_SNAPSHOT=$'╭────────────────────────╮\n│ >_ OpenAI Codex       │\n│ permissions: YOLO mode│\n╰────────────────────────╯\n\n› Find and fix a bug in @filename\n\n  gpt-5.5 xhigh fast · /tmp/repo'
+CODEX_SLASH_SNAPSHOT=$'╭────────────────────────╮\n│ >_ OpenAI Codex       │\n│ permissions: YOLO mode│\n╰────────────────────────╯\n\n› /clear\n\n  gpt-5.5 xhigh fast · /tmp/repo'
+assert "Codex suggestion composer is idle" \
+  'pane_is_idle_snapshot "$CODEX_IDLE_SNAPSHOT"'
+assert "Codex slash residue is not idle" \
+  '! pane_is_idle_snapshot "$CODEX_SLASH_SNAPSHOT"'
+assert "Codex prompt glyph is detected" \
+  'pane_has_prompt_snapshot "$CODEX_IDLE_SNAPSHOT"'
+PROMPT_INPUT="$(pane_prompt_input_snapshot "$CODEX_IDLE_SNAPSHOT")"
+assert "Codex default suggestion is not treated as typed residue" \
+  '[[ -z "$PROMPT_INPUT" ]]'
+SLASH_INPUT="$(pane_prompt_input_snapshot "$CODEX_SLASH_SNAPSHOT")"
+assert "Codex slash residue remains visible to quarantine logic" \
+  '[[ "$SLASH_INPUT" == "/clear" ]]'
 echo ""
 
 # ── Summary ──
