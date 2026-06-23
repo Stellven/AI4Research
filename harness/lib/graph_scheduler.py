@@ -163,8 +163,10 @@ LABEL_ALIAS_GROUPS = [
         "schema",
     },
     {
+        "gstack",
         "browser.browse",
         "browser.qa",
+        "code.review",
         "browser",
         "browser-automation",
         "browser.automation",
@@ -174,6 +176,16 @@ LABEL_ALIAS_GROUPS = [
         "scraping",
         "crawler",
         "collector",
+    },
+    {
+        "ATLAS",
+        "atlas",
+        "repair.pr-cot",
+        "failure.structured_repair",
+        "routing.complexity_budget",
+        "debug.systematic",
+        "regression",
+        "regression-tests",
     },
     {
         "social",
