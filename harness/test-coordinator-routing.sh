@@ -59,8 +59,10 @@ with open(__import__('os').environ["COORDINATOR_SH"]) as f:
 # Extract discover_pane_by_persona, choose_* functions and pane_title_persona
 funcs_to_extract = [
     "pane_is_idle_snapshot",
+    "pane_has_processing_snapshot",
     "pane_has_prompt_snapshot",
     "pane_prompt_input_snapshot",
+    "ensure_ack_contract",
     "pane_title_persona",
     "discover_pane_by_persona",
     "choose_builder_pane",
@@ -196,6 +198,39 @@ assert "Codex default suggestion is not treated as typed residue" \
 SLASH_INPUT="$(pane_prompt_input_snapshot "$CODEX_SLASH_SNAPSHOT")"
 assert "Codex slash residue remains visible to quarantine logic" \
   '[[ "$SLASH_INPUT" == "/clear" ]]'
+echo ""
+
+# ── TC8: Codex processing markers satisfy coordinator direct-dispatch verification ──
+echo "TC8: Codex processing markers count as real direct-dispatch processing"
+CODEX_WORKING_SNAPSHOT=$'› Read and execute /tmp/sprint.dispatch.md\n\n• Working (12s · esc to interrupt)\n'
+assert "Codex Working marker is processing" \
+  'pane_has_processing_snapshot "$CODEX_WORKING_SNAPSHOT"'
+assert "Codex esc-to-interrupt marker is processing" \
+  'pane_has_processing_snapshot "esc to interrupt"'
+echo ""
+
+# ── TC9: ACK contract follows active SPRINTS_DIR, not installed ~/.solar path ──
+echo "TC9: ACK contract uses active worktree SPRINTS_DIR"
+ACK_TMP="$TEST_TMP/ack-path"
+mkdir -p "$ACK_TMP/sprints"
+OLD_SPRINTS_DIR="${SPRINTS_DIR:-}"
+SPRINTS_DIR="$ACK_TMP/sprints"
+DISPATCH_FILE="$ACK_TMP/sprints/sprint-test.dispatch.md"
+printf 'dispatch body\n' > "$DISPATCH_FILE"
+ensure_ack_contract "$DISPATCH_FILE" "sprint-test" "dispatch-123" "solar-codex-cockpit-smoke:0.1"
+assert "ACK path points at active SPRINTS_DIR" \
+  'grep -qF "$ACK_TMP/sprints/sprint-test.ack-dispatch-123.json" "$DISPATCH_FILE"'
+assert "ACK contract no longer hard-codes Path.home ~/.solar harness" \
+  '! grep -qF '\''Path.home() / ".solar" / "harness" / "sprints"'\'' "$DISPATCH_FILE"'
+SPRINTS_DIR="$OLD_SPRINTS_DIR"
+echo ""
+
+# ── TC10: tmux dispatch text is sent literally ──
+echo "TC10: coordinator sends dispatch command as literal tmux text"
+assert "dispatch_to_pane uses tmux send-keys -l for short command" \
+  'grep -qF '\''tmux send-keys -t "$pane" -l "$short_cmd"'\'' "$COORDINATOR_SH"'
+assert "dispatch_to_pane no longer sends short command through key-name parser" \
+  '! grep -qF '\''tmux send-keys -t "$pane" "$short_cmd"'\'' "$COORDINATOR_SH"'
 echo ""
 
 # ── Summary ──

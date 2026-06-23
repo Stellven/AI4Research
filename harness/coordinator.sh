@@ -1136,6 +1136,11 @@ pane_has_runtime_blocker_snapshot() {
   printf '%s\n' "$snapshot" | grep -qiE "You've hit your limit|hit your limit|rate[- ]limit|usage limit|/upgrade to increase your usage limit|resets .*\\(America/Toronto\\)|How is Claude doing this session|1:[[:space:]]*Bad[[:space:]]+2:[[:space:]]*Fine[[:space:]]+3:[[:space:]]*Good[[:space:]]+0:[[:space:]]*Dismiss"
 }
 
+pane_has_processing_snapshot() {
+  local snapshot="$1"
+  printf '%s\n' "$snapshot" | grep -qE 'esc to interrupt|• Working|Working \(|Crafting|Cogitating|Wandering|Sock-hopping|Crunched|Puzzling|Gusting|Ideating|Musing|Orbiting|Reticulating|Read\(|Bash\(|Edit\(|Write\(|按 dispatch|合约、PRD 读毕|What should Claude do|⎿|✻|✶|✳|✢'
+}
+
 pane_is_idle_snapshot() {
   local snapshot="$1"
   # sprint-20260502-182804 hot-reload follow-up: 修 idle 检测正则
@@ -1634,6 +1639,7 @@ ensure_ack_contract() {
   [[ -z "$dispatch_file" || ! -f "$dispatch_file" ]] && return 0
   [[ -z "$sid" || -z "$dispatch_id" ]] && return 0
   grep -q "SOLAR_ACK_CONTRACT" "$dispatch_file" 2>/dev/null && return 0
+  local ack_file="${SPRINTS_DIR}/${sid}.ack-${dispatch_id}.json"
 
   cat >> "$dispatch_file" <<EOF
 
@@ -1642,7 +1648,7 @@ ensure_ack_contract() {
 
 确认已读取本 dispatch 并开始处理后，必须立即写 ACK 文件：
 
-\`~/.solar/harness/sprints/${sid}.ack-${dispatch_id}.json\`
+\`${ack_file}\`
 
 可直接执行：
 
@@ -1652,7 +1658,7 @@ import datetime
 import json
 from pathlib import Path
 
-ack_path = Path.home() / ".solar" / "harness" / "sprints" / "${sid}.ack-${dispatch_id}.json"
+ack_path = Path("${ack_file}")
 ack_path.parent.mkdir(parents=True, exist_ok=True)
 ack = {
     "dispatch_id": "${dispatch_id}",
@@ -2019,7 +2025,10 @@ dispatch_to_pane() {
   #           (Crafting/Cogitating/Read\(|⎿/✻ 等)
   #       (3) 如只命中 keyword 但无处理特征 → 视为输入框残留,继续重试
   while (( tries < max_tries )); do
-    tmux send-keys -t "$pane" "$short_cmd" 2>/dev/null || true
+    # Send literal text. Without -l, tmux can interpret punctuation in long
+    # file paths or shell-ish snippets as key names, which produces false NACKs
+    # on Codex and can silently drop part of the dispatch command.
+    tmux send-keys -t "$pane" -l "$short_cmd" 2>/dev/null || true
     sleep 0.8
     tmux send-keys -t "$pane" Enter 2>/dev/null || true
     sleep 0.3
@@ -2051,7 +2060,7 @@ dispatch_to_pane() {
     # Claude 真在处理的特征。Claude Code 2.x frequently uses
     # Ideating/Musing/Orbiting/Reticulating before a tool call; treating those
     # as idle causes false dispatch failures while the pane is actually working.
-    printf '%s\n' "$verify_output" | grep -qE 'Crafting|Cogitating|Wandering|Sock-hopping|Crunched|Puzzling|Gusting|Ideating|Musing|Orbiting|Reticulating|Read\(|Bash\(|Edit\(|Write\(|按 dispatch|合约、PRD 读毕|What should Claude do|⎿|✻|✶|✳|✢' && has_processing=1
+    pane_has_processing_snapshot "$verify_output" && has_processing=1
     if (( has_runtime_blocker )); then
       log "${Y}[dispatch] runtime limit/blocker detected; not assigning pane=${pane} sid=${sid} try=$((tries + 1))/${max_tries}${N}"
     elif (( has_keyword && has_processing )); then
