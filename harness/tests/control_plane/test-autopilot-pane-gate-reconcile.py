@@ -420,6 +420,37 @@ def test_codex_runtime_ready_for_planner_uses_wake_not_role_pool(monkeypatch) ->
     assert "role_pool_dispatch" not in actions[0]
 
 
+def test_wake_sid_uses_current_harness_command(tmp_path, monkeypatch) -> None:
+    harness_dir = tmp_path / "harness"
+    harness_dir.mkdir()
+    harness_cmd = harness_dir / "solar-harness.sh"
+    harness_cmd.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "HARNESS", harness_dir)
+    monkeypatch.setattr(mod, "SESSION", "solar-codex-test")
+    monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+    calls = []
+
+    class Proc:
+        returncode = 0
+
+    def fake_run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return Proc()
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    assert mod.wake_sid("sprint-local-harness") is True
+
+    assert calls
+    cmd, kwargs = calls[0]
+    assert cmd == ["bash", str(harness_cmd), "wake", "sprint-local-harness"]
+    assert str(mod.HOME / ".solar" / "bin" / "solar-harness") not in cmd
+    assert kwargs["env"]["HARNESS_DIR"] == str(harness_dir)
+    assert kwargs["env"]["SOLAR_HARNESS_DIR"] == str(harness_dir)
+    assert kwargs["env"]["SOLAR_HARNESS_SESSION"] == "solar-codex-test"
+    assert kwargs["env"]["SOLAR_PANE_RUNTIME"] == "codex"
+
+
 def test_role_pool_handoffs_do_not_share_fixed_target_cooldown(monkeypatch) -> None:
     findings = [
         {"sid": "sprint-a", "type": "ready_for_planner", "target": "solar-harness:0.1", "message": "a"},

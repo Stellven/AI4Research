@@ -1337,11 +1337,23 @@ def pane_gate(target: str, sid: str) -> tuple[bool, str, dict]:
     return True, "ok", state
 
 
+def solar_harness_command() -> Path:
+    harness_cmd = HARNESS / "solar-harness.sh"
+    if harness_cmd.exists():
+        return harness_cmd
+    return HOME / ".solar" / "bin" / "solar-harness"
+
+
 def wake_sid(sid: str) -> bool:
     try:
+        env = os.environ.copy()
+        env["HARNESS_DIR"] = str(HARNESS)
+        env["SOLAR_HARNESS_DIR"] = str(HARNESS)
+        env.setdefault("SOLAR_HARNESS_SESSION", SESSION)
         r = subprocess.run(
-            [str(HOME / ".solar" / "bin" / "solar-harness"), "wake", sid],
+            ["bash", str(solar_harness_command()), "wake", sid],
             capture_output=True,
+            env=env,
             text=True,
             timeout=20,
         )
