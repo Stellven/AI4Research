@@ -71,6 +71,8 @@ def tmp_harness(tmp_path, monkeypatch):
     import graph_node_dispatcher
     monkeypatch.setattr(graph_node_dispatcher, "SPRINTS_DIR", sprints)
     monkeypatch.setattr(graph_node_dispatcher, "HARNESS_DIR", tmp_path)
+    import graph_scheduler
+    monkeypatch.setattr(graph_scheduler, "SPRINTS_DIR", sprints)
 
     return tmp_path, sprints, sid, graph
 

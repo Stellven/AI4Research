@@ -1338,8 +1338,13 @@ def blocked_external_prerequisites(graph: dict[str, Any]) -> list[dict[str, Any]
 
 def ready_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
     validation = validate_graph(graph)
-    if not validation["ok"]:
-        raise ValueError("; ".join(validation["errors"]))
+    runtime_errors = [
+        str(error)
+        for error in validation.get("errors", [])
+        if not str(error).startswith("parallelism_quality:")
+    ]
+    if runtime_errors:
+        raise ValueError("; ".join(runtime_errors))
     if blocked_external_prerequisites(graph):
         return []
 
