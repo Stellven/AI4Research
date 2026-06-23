@@ -6297,6 +6297,8 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         "env-passthrough", "metrics", "quota", "quota-management", "quota_fallback", "quota.fallback",
         "harness.context_preflight", "harness.intent", "harness.dispatch_visibility", "harness.contracts",
         "harness.dag", "harness.status", "harness.model_routing", "model.routing",
+        "cap.requirement-compiler-planner", "cap.requirement-compiler-implementation",
+        "cap.requirement-compiler-verification", "cap.requirement-compiler-audit",
         "policy", "policy.verdict",
         "intent.match", "intent.audit", "dispatch.intent_telemetry",
         "models.show", "models.lab_matrix", "models.footer_labels",
