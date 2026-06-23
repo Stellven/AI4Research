@@ -3,7 +3,8 @@
 # generic parent builder dispatch path.
 set -euo pipefail
 
-HARNESS_DIR_REAL="${HARNESS_DIR:-$HOME/.solar/harness}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HARNESS_DIR_REAL="${HARNESS_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 COORD="$HARNESS_DIR_REAL/coordinator.sh"
 
 PASS=0
@@ -55,6 +56,24 @@ then
   ok "startup recovery replays active/planning_complete DAG handoff"
 else
   fail "startup recovery still misses active/planning_complete DAG handoff"
+fi
+
+echo "T4: DAG failed_review suppresses legacy builder repair"
+if python3 - "$COORD" <<'PY'
+import sys
+s=open(sys.argv[1], encoding="utf-8").read()
+helper=s.index('failed_review_graph_native_guard()')
+handler=s.index('handle_failed_review()')
+guard=s.index('failed_review_legacy_builder_blocked', handler)
+legacy=s.index('failed_review_returned_to_builder', handler)
+assert helper < handler < guard < legacy
+assert 'active_nodes' in s[helper:handler]
+assert 'failed_nodes' in s[helper:handler]
+PY
+then
+  ok "failed_review DAG guard blocks legacy builder repair before dispatch"
+else
+  fail "failed_review DAG guard missing or ordered after legacy builder repair"
 fi
 
 echo ""

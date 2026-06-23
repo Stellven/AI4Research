@@ -4130,6 +4130,56 @@ PY
   log "${Y}[failed-followup] generated ${followup}${N}"
 }
 
+failed_review_graph_native_guard() {
+  local sid="$1"
+  local graph="$SPRINTS_DIR/${sid}.task_graph.json"
+  local state="$SPRINTS_DIR/${sid}.task_dag.state.json"
+  [[ -f "$graph" ]] || return 1
+  python3 - "$graph" "$state" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+active_statuses = {"assigned", "dispatched", "in_progress", "running", "reviewing", "ready_for_review"}
+failed_statuses = {"failed", "error", "cancelled", "failed_missing_handoff", "failed_stale_handoff"}
+
+try:
+    graph = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+
+statuses = {}
+for node in graph.get("nodes") or []:
+    if isinstance(node, dict) and node.get("id"):
+        statuses[str(node["id"])] = str(node.get("status") or "pending")
+
+result_source = graph.get("node_results")
+if isinstance(result_source, dict):
+    for node_id, result in result_source.items():
+        if isinstance(result, dict) and result.get("status"):
+            statuses[str(node_id)] = str(result.get("status"))
+
+state_path = Path(sys.argv[2])
+if state_path.exists():
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        state = {}
+    result_source = state.get("node_results") if isinstance(state, dict) else {}
+    if isinstance(result_source, dict):
+        for node_id, result in result_source.items():
+            if isinstance(result, dict) and result.get("status"):
+                statuses[str(node_id)] = str(result.get("status"))
+
+active = sorted(node_id for node_id, status in statuses.items() if status in active_statuses)
+failed = sorted(node_id for node_id, status in statuses.items() if status in failed_statuses)
+if not active and not failed:
+    sys.exit(1)
+
+print(json.dumps({"active_nodes": active, "failed_nodes": failed}, ensure_ascii=False))
+PY
+}
+
 handle_failed_review() {
   local sid="$1" sf="$2"
   local round
@@ -4178,6 +4228,15 @@ cat ${SPRINTS_DIR}/${sid}.eval.md
     # sprint-20260503-195627 D2: telemetry emit (failed, max rounds)
     type telemetry_emit_run &>/dev/null && telemetry_emit_run "$sid" "failed" "[]" 2>> "$COORD_LOG" || true
     return
+  fi
+
+  local graph_guard
+  if graph_guard="$(failed_review_graph_native_guard "$sid")"; then
+    log "${Y}[failed_review] ${sid} has active/failed DAG node state; suppressing legacy whole-sprint builder repair: ${graph_guard}${N}"
+    emit_event "$sid" "failed_review_legacy_builder_blocked" "coordinator" "${graph_guard}"
+    runtime_status_transition "$sid" "active" "failed_review_graph_native_blocked_legacy_builder" "coordinator" '{"status_fields":{"phase":"graph_dispatch_active","handoff_to":"builder_main","target_role":"builder_main"},"note":"DAG-native node state exists; legacy whole-sprint failed_review builder repair was suppressed to avoid interrupting active graph panes."}' || true
+    rollback_state_cache "$sid"
+    return 0
   fi
 
   # ── D4: Codex 根因分析 (Sprint sprint-20260419-223020) ──

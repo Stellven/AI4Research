@@ -1217,6 +1217,65 @@ def _scope_lines(values: Any) -> str:
     return "\n".join(f"- `{v}`" for v in values)
 
 
+def _iter_scope_values(values: Any) -> list[str]:
+    if not values:
+        return []
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, list):
+        return []
+    return [str(value).strip() for value in values if str(value).strip()]
+
+
+def _canonical_sprint_artifact_path(raw: str) -> Path | None:
+    """Resolve sprint artifact paths to the canonical harness sprint directory.
+
+    Builder panes run inside role worktrees, so a relative path such as
+    `harness/sprints/foo.md` otherwise lands under `.worktrees/builder`.
+    Source-code paths are intentionally not rewritten; only sprint artifacts
+    get canonical absolute guidance.
+    """
+    scope = str(raw or "").strip()
+    if not scope or any(ch in scope for ch in "*?[]"):
+        return None
+    expanded = Path(scope).expanduser()
+    if expanded.is_absolute():
+        return expanded
+    parts = expanded.parts
+    if len(parts) >= 2 and parts[0] == "harness" and parts[1] == "sprints":
+        return (HARNESS_DIR.parent / expanded).resolve()
+    if parts and parts[0] == "sprints":
+        return (HARNESS_DIR / expanded).resolve()
+    return None
+
+
+def _canonical_output_paths_block(node: dict[str, Any]) -> str:
+    seen: set[tuple[str, str]] = set()
+    rows: list[str] = []
+    for field in ("write_scope", "outputs"):
+        for raw in _iter_scope_values(node.get(field)):
+            canonical = _canonical_sprint_artifact_path(raw)
+            if canonical is None:
+                continue
+            key = (field, raw)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(f"- `{field}` `{raw}` -> `{canonical}`")
+    if not rows:
+        return (
+            "## Canonical Output Paths\n\n"
+            "- No sprint artifact outputs declared. For source-code files, use the current repository/worktree path."
+        )
+    return (
+        "## Canonical Output Paths\n\n"
+        "Builder panes may run from an isolated role worktree. For sprint artifacts, do not rely on "
+        "relative `harness/sprints/...` paths; write to the canonical absolute paths below so the "
+        "scheduler and evaluator can find them:\n\n"
+        + "\n".join(rows)
+    )
+
+
 def _write_scope_preflight_block(sid: str, node: dict[str, Any]) -> str:
     """Warn builders when write-scope artifacts already exist from another sprint.
 
@@ -1224,16 +1283,15 @@ def _write_scope_preflight_block(sid: str, node: dict[str, Any]) -> str:
     `sprints/s01-req-N5-handoff.md`. Those paths can survive from a different
     sprint and must not be treated as current evidence.
     """
-    scopes = node.get("write_scope") or []
-    if isinstance(scopes, str):
-        scopes = [scopes]
     rows: list[str] = []
     sprint_re = re.compile(r"sprint-[A-Za-z0-9_.\-\u4e00-\u9fff]+")
-    for raw in scopes:
+    for raw in _iter_scope_values(node.get("write_scope")):
         scope = str(raw or "").strip()
         if not scope or any(ch in scope for ch in "*?[]"):
             continue
-        path = (HARNESS_DIR / scope).expanduser() if not scope.startswith("/") else Path(scope).expanduser()
+        path = _canonical_sprint_artifact_path(scope)
+        if path is None:
+            path = (HARNESS_DIR / scope).expanduser() if not scope.startswith("/") else Path(scope).expanduser()
         if not path.exists() or not path.is_file():
             continue
         try:
@@ -3030,6 +3088,7 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
         ]
     )
     write_scope_preflight = _write_scope_preflight_block(str(sid), node)
+    canonical_output_paths = _canonical_output_paths_block(node)
 
     return f"""{STATE_READ_PREFLIGHT}
 {DEFINITION_OF_DONE_POLICY}
@@ -3076,6 +3135,8 @@ Graph: `{graph_path}`
 
 {_scope_lines(node.get("write_scope"))}
 
+{canonical_output_paths}
+
 {write_scope_preflight}
 
 {architecture_block}
@@ -3088,6 +3149,7 @@ Graph: `{graph_path}`
 
 - 只做本节点，不接手其他 DAG node。
 - 只允许修改 `Write Scope` 里的文件/目录；需要扩大范围时写入 handoff 的 `Scope Change Request`，不要直接扩大。
+- 如果 `Write Scope` / `outputs` 包含 `harness/sprints/...` 或 `sprints/...`，必须写入上方 `Canonical Output Paths` 中的绝对路径；不要把 sprint artifact 只写到当前 builder worktree 的相对路径。
 - 不要把 parent sprint 标成 passed。
 - 不要等待用户确认；遇到阻塞先写清楚证据和最小修复建议。
 - 不要停在“继续/要不要继续/等待 review”提示；只要本节点 acceptance 未完成，就自主继续执行。

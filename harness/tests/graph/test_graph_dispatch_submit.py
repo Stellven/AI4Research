@@ -452,6 +452,38 @@ class TestSendToPaneLiteral:
         assert result["ok"] is True
         assert injection_calls == []
 
+    def test_dispatch_text_canonicalizes_harness_sprint_outputs(self, tmp_path, monkeypatch):
+        """Builder worktrees need absolute canonical paths for sprint artifacts."""
+        import graph_node_dispatcher as gnd
+
+        repo = tmp_path / "repo"
+        harness = repo / "harness"
+        sprints = harness / "sprints"
+        sprints.mkdir(parents=True)
+        monkeypatch.setattr(gnd, "HARNESS_DIR", harness)
+        monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+
+        sid = "sprint-canonical-output"
+        raw_output = f"harness/sprints/{sid}.entrypoints_inventory.md"
+        expected = sprints / f"{sid}.entrypoints_inventory.md"
+        payload = {
+            "sprint_id": sid,
+            "node": {
+                "id": "S1",
+                "goal": "Write inventory",
+                "write_scope": [raw_output, "harness/lib/source_file.py"],
+                "outputs": [raw_output],
+                "acceptance": ["canonical artifact exists"],
+            },
+        }
+
+        text = gnd.build_dispatch_text(payload, "solar-codex-cockpit:0.2")
+
+        assert "## Canonical Output Paths" in text
+        assert f"`write_scope` `{raw_output}` -> `{expected}`" in text
+        assert f"`outputs` `{raw_output}` -> `{expected}`" in text
+        assert "harness/lib/source_file.py` ->" not in text
+
 
 # ---------------------------------------------------------------------------
 # Test: submit creates ack/submit evidence
