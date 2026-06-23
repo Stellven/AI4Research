@@ -233,6 +233,16 @@ assert "dispatch_to_pane no longer sends short command through key-name parser" 
   '! grep -qF '\''tmux send-keys -t "$pane" "$short_cmd"'\'' "$COORDINATOR_SH"'
 echo ""
 
+# ── TC11: generated worker prompts do not route isolated runs to installed harness ──
+echo "TC11: coordinator prompt text is harness-dir aware"
+assert "coordinator.sh no longer hard-codes ~/.solar/harness in worker prompts" \
+  '! grep -qF '\''~/.solar/harness'\'' "$COORDINATOR_SH"'
+assert "coordinator.sh prompt text uses active SPRINTS_DIR" \
+  'grep -qF '\''${SPRINTS_DIR}/${sid}.contract.md'\'' "$COORDINATOR_SH"'
+assert "coordinator.sh prompt text uses active HARNESS_DIR for helper commands" \
+  'grep -qF '\''${HARNESS_DIR}/solar-harness.sh handoff-submit'\'' "$COORDINATOR_SH"'
+echo ""
+
 # ── Summary ──
 echo "=== Results: PASS=$PASS FAIL=$FAIL ==="
 [[ "$FAIL" -eq 0 ]] && exit 0 || exit 1

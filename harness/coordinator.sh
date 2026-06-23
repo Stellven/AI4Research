@@ -2457,7 +2457,7 @@ generate_dispatch() {
 
 ## 通用步骤说明
 1. 先用 Read 工具读取 \`~/.solar/STATE.md\`
-2. 读取合约: 路径格式 \`~/.solar/harness/sprints/<sid>.contract.md\`
+2. 读取合约: 路径格式 \`${SPRINTS_DIR}/<sid>.contract.md\`
 3. 按指令执行，不超出范围
 4. 完成后写 handoff/eval + 更新 status.json
 
@@ -2749,7 +2749,7 @@ gate_check() {
 	      req_file=$(pm_requirements_file "$sid" 2>/dev/null || true)
 	      if [[ -z "$req_file" ]]; then
 	        log "${R}门禁拦截: active 状态但 PRD 不存在${N}"
-        dispatch_to_pm "$sid" "gate_missing_prd" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：Sprint ${sid} 缺少 PM PRD。请先研究用户需求，写 ~/.solar/harness/sprints/${sid}.prd.md，再交给 Planner/架构师。"
+        dispatch_to_pm "$sid" "gate_missing_prd" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：Sprint ${sid} 缺少 PM PRD。请先研究用户需求，写 ${SPRINTS_DIR}/${sid}.prd.md，再交给 Planner/架构师。"
         runtime_status_transition "$sid" "drafting" "active_blocked_missing_prd" "coordinator" '{"status_fields":{"phase":"spec","handoff_to":"pm","target_role":"pm"}}' || true
         return 1
       fi
@@ -2757,7 +2757,7 @@ gate_check() {
         local prd_err
         if prd_err=$(validate_doc "prd" "$req_file"); then :; else
           log "${R}门禁拦截: PRD 结构不完整${N}"
-          dispatch_to_pm "$sid" "gate_prd_schema" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截 (PRD Schema): ${prd_err}。请补全 ~/.solar/harness/sprints/${sid}.prd.md 后再交给 Planner。"
+          dispatch_to_pm "$sid" "gate_prd_schema" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截 (PRD Schema): ${prd_err}。请补全 ${SPRINTS_DIR}/${sid}.prd.md 后再交给 Planner。"
           runtime_status_transition "$sid" "drafting" "active_blocked_invalid_prd" "coordinator" '{"status_fields":{"phase":"spec","handoff_to":"pm","target_role":"pm"}}' || true
           return 1
         fi
@@ -2775,7 +2775,7 @@ gate_check() {
       # 门禁: plan.md 必须存在 + 结构校验
       if [[ ! -f "$sprint_dir/${sid}.plan.md" ]]; then
         log "${R}门禁拦截: planning 状态但 plan.md 不存在${N}"
-        dispatch_to_builder "$sid" "gate_missing_plan" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：你需要先写实现计划到 ~/.solar/harness/sprints/${sid}.plan.md 再更新状态为 planning。"
+        dispatch_to_builder "$sid" "gate_missing_plan" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：你需要先写实现计划到 ${SPRINTS_DIR}/${sid}.plan.md 再更新状态为 planning。"
         runtime_status_transition "$sid" "active" "planning_blocked_missing_plan" "coordinator" '{}' || true
         return 1
       fi
@@ -2792,7 +2792,7 @@ gate_check() {
       # 门禁: handoff.md 必须存在 + 结构校验
       if [[ ! -f "$sprint_dir/${sid}.handoff.md" ]]; then
         log "${R}门禁拦截: reviewing 状态但 handoff.md 不存在${N}"
-        dispatch_to_builder "$sid" "gate_missing_handoff" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：你需要先写 handoff 文档到 ~/.solar/harness/sprints/${sid}.handoff.md 再更新状态为 reviewing。"
+        dispatch_to_builder "$sid" "gate_missing_handoff" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：你需要先写 handoff 文档到 ${SPRINTS_DIR}/${sid}.handoff.md 再更新状态为 reviewing。"
         runtime_status_transition "$sid" "approved" "reviewing_blocked_missing_handoff" "coordinator" '{}' || true
         return 1
       fi
@@ -2817,7 +2817,7 @@ gate_check() {
       # 门禁: eval.md 必须存在 + 结构校验 + 无未解决 FAIL
       if [[ ! -f "$sprint_dir/${sid}.eval.md" ]]; then
         log "${R}门禁拦截: passed 但 eval.md 不存在${N}"
-        dispatch_to_evaluator "$sid" "gate_missing_eval" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：你需要先写评估报告到 ~/.solar/harness/sprints/${sid}.eval.md 再标记为 passed。"
+        dispatch_to_evaluator "$sid" "gate_missing_eval" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：你需要先写评估报告到 ${SPRINTS_DIR}/${sid}.eval.md 再标记为 passed。"
         runtime_status_transition "$sid" "reviewing" "passed_blocked_missing_eval" "coordinator" '{}' || true
         return 1
       fi
@@ -2950,24 +2950,24 @@ PY
     append_dispatch "$sid" "### 步骤
 
 1. 读取合约:
-   cat ~/.solar/harness/sprints/${sid}.contract.md
+   cat ${SPRINTS_DIR}/${sid}.contract.md
 
 2. 读取 PRD 模板和 schema:
-   cat ~/.solar/harness/templates/prd.template.md 2>/dev/null || true
-   cat ~/.solar/harness/schemas/prd.schema.json 2>/dev/null || true
+   cat ${HARNESS_DIR}/templates/prd.template.md 2>/dev/null || true
+   cat ${HARNESS_DIR}/schemas/prd.schema.json 2>/dev/null || true
 
 3. 作为 PM，你要研究、分析、拆解用户原话，写正式 PRD 到:
-   ~/.solar/harness/sprints/${sid}.prd.md
+   ${SPRINTS_DIR}/${sid}.prd.md
 
 4. 额外写人读 HTML artifact 到:
-   ~/.solar/harness/sprints/${sid}.prd.html
+   ${SPRINTS_DIR}/${sid}.prd.html
    HTML 是给用户阅读和审阅的可视化 artifact，不能替代 prd.md。必须 self-contained，不依赖外部 CSS/JS/CDN。
    优先使用统一渲染器生成:
-   python3 ~/.solar/harness/lib/render_sprint_html.py render --sid ${sid} --kind prd --register
+   python3 ${HARNESS_DIR}/lib/render_sprint_html.py render --sid ${sid} --kind prd --register
    \`prd.html\` 和后续 \`planning.html\` 必须统一为同一套 richer 视觉系统：深色 hero、锚点目录 TOC、卡片分区、流程/架构图、技术栈/算子绑定区、风险矩阵；不能只是 Markdown 转 HTML，也不能退化成朴素米色文档页。
 
 5. 写完 HTML 后注册并自动打开:
-   python3 ~/.solar/harness/lib/html_artifact.py register --sid ${sid} --kind prd_html --path ~/.solar/harness/sprints/${sid}.prd.html
+   python3 ${HARNESS_DIR}/lib/html_artifact.py register --sid ${sid} --kind prd_html --path ${SPRINTS_DIR}/${sid}.prd.html
    helper 失败只记录 warn，不允许阻断 PM -> Planner 主链路。
 
 6. PRD 至少包含: 背景/问题、用户目标、用户故事、功能需求、非目标、约束、验收标准、风险、开放问题、交给架构师/Planner 的问题。
@@ -3010,7 +3010,7 @@ PY
       local prd_err
       if prd_err=$(validate_doc "prd" "$req_file"); then :; else
         log "${R}PRD ready 但结构不完整 → 打回 PM 补全${N}"
-        dispatch_to_pm "$sid" "pm_prd_fix" "$SPRINTS_DIR/${sid}.dispatch.md" "PRD 门禁未通过：${prd_err}。请补全 ~/.solar/harness/sprints/${sid}.prd.md，保持 status=drafting，然后更新 updated_at 触发 coordinator。"
+        dispatch_to_pm "$sid" "pm_prd_fix" "$SPRINTS_DIR/${sid}.dispatch.md" "PRD 门禁未通过：${prd_err}。请补全 ${SPRINTS_DIR}/${sid}.prd.md，保持 status=drafting，然后更新 updated_at 触发 coordinator。"
         emit_event "$sid" "gate_blocked" "coordinator" "{\"stage\":\"prd\",\"reason\":\"invalid_prd\"}"
         return 0
       fi
@@ -3030,19 +3030,19 @@ PY
     append_dispatch "$sid" "### 步骤
 
 1. 读取合约:
-   cat ~/.solar/harness/sprints/${sid}.contract.md
+   cat ${SPRINTS_DIR}/${sid}.contract.md
 
 2. 读取 PM PRD:
    cat ${req_file}
 
 3. 写架构设计到:
-   ~/.solar/harness/sprints/${sid}.design.md
+   ${SPRINTS_DIR}/${sid}.design.md
 
 4. 写实施计划到:
-   ~/.solar/harness/sprints/${sid}.plan.md
+   ${SPRINTS_DIR}/${sid}.plan.md
 
 5. 写机器可执行 DAG 任务图到:
-   ~/.solar/harness/sprints/${sid}.task_graph.json
+   ${SPRINTS_DIR}/${sid}.task_graph.json
 
 5.1 显式维护需求映射:
    - task_graph.json 的每个节点都必须写出 `requirement_ids`，表示它覆盖哪些 requirement
@@ -3050,18 +3050,18 @@ PY
    - 禁止只依赖默认占位映射；Planner 必须把 requirement -> node 的关系写清楚
 
 6. 额外写人读 HTML artifact 到:
-   ~/.solar/harness/sprints/${sid}.design.html
-   ~/.solar/harness/sprints/${sid}.planning.html
+   ${SPRINTS_DIR}/${sid}.design.html
+   ${SPRINTS_DIR}/${sid}.planning.html
    HTML 是给用户阅读和审阅的可视化 artifact，不能替代 design.md、plan.md 或 task_graph.json。必须 self-contained，不依赖外部 CSS/JS/CDN。
    `design.html` 用来承载架构设计视图，`planning.html` 用来承载执行计划 / DAG 视图；两者必须属于同一套 html-anything 默认视觉系统。
    优先使用统一渲染器生成:
-   python3 ~/.solar/harness/lib/render_sprint_html.py render --sid ${sid} --kind design --register
-   python3 ~/.solar/harness/lib/render_sprint_html.py render --sid ${sid} --kind planning --register
+   python3 ${HARNESS_DIR}/lib/render_sprint_html.py render --sid ${sid} --kind design --register
+   python3 ${HARNESS_DIR}/lib/render_sprint_html.py render --sid ${sid} --kind planning --register
    \`design.html\` / \`planning.html\` 必须和 PM 侧 \`prd.html\` 保持同一套 richer 视觉系统：深色 hero、锚点目录 TOC、卡片分区、流程/架构图、技术栈/算子绑定区、风险矩阵；禁止回退成旧的朴素米色 planning 页。`design.html` 必须突出架构方案与技术栈绑定，`planning.html` 必须突出 DAG/并发边界、文件级写范围、验证命令、风险矩阵和 stop rules。
 
 7. 写完 HTML 后注册并自动打开:
-   python3 ~/.solar/harness/lib/html_artifact.py register --sid ${sid} --kind design_html --path ~/.solar/harness/sprints/${sid}.design.html
-   python3 ~/.solar/harness/lib/html_artifact.py register --sid ${sid} --kind planning_html --path ~/.solar/harness/sprints/${sid}.planning.html
+   python3 ${HARNESS_DIR}/lib/html_artifact.py register --sid ${sid} --kind design_html --path ${SPRINTS_DIR}/${sid}.design.html
+   python3 ${HARNESS_DIR}/lib/html_artifact.py register --sid ${sid} --kind planning_html --path ${SPRINTS_DIR}/${sid}.planning.html
    helper 失败只记录 warn，不允许阻断 Planner -> Builder 主链路。
 
 8. task_graph.json 每个节点必须包含: id、goal、depends_on、write_scope、read_scope、required_skills、preferred_model、gate、acceptance、estimated_cost、priority、required_phase、required_node_id、required_node_status、requirement_ids、acceptance_ids。没有 write_scope 的节点不得并行。
@@ -3452,7 +3452,7 @@ EOF
       return 0
     fi
     log "${R}[graph-dispatch] ${sid} phase=${phase} but task_graph missing; refuse parent builder dispatch${N}"
-    dispatch_to_planner "$sid" "gate_missing_task_graph" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：Planner 必须补齐 ~/.solar/harness/sprints/${sid}.task_graph.json，包含 id/goal/depends_on/write_scope/read_scope/required_skills/preferred_model/gate/acceptance/estimated_cost。未生成 DAG 前禁止直接派 Builder。"
+    dispatch_to_planner "$sid" "gate_missing_task_graph" "$SPRINTS_DIR/${sid}.dispatch.md" "门禁拦截：Planner 必须补齐 ${SPRINTS_DIR}/${sid}.task_graph.json，包含 id/goal/depends_on/write_scope/read_scope/required_skills/preferred_model/gate/acceptance/estimated_cost。未生成 DAG 前禁止直接派 Builder。"
     runtime_status_transition "$sid" "drafting" "active_blocked_missing_task_graph" "coordinator" '{"status_fields":{"phase":"prd_ready","handoff_to":"planner","target_role":"planner"},"note":"Workflow guard refused single-builder fallback; task_graph is required."}' || true
     rollback_state_cache "$sid"
     emit_event "$sid" "graph_dispatch_failed" "coordinator" "{\"reason\":\"task_graph_missing\",\"phase\":\"${phase}\"}"
@@ -3489,10 +3489,10 @@ ${contract_summary:-（请直接打开 contract.md 查看最新修订）}
 ### 步骤
 
 1. 读取最新合约:
-   cat ~/.solar/harness/sprints/${sid}.contract.md
+   cat ${SPRINTS_DIR}/${sid}.contract.md
 
 2. 读取上一轮反馈:
-   cat ~/.solar/harness/sprints/${sid}.eval.json 2>/dev/null || cat ~/.solar/harness/sprints/${sid}.eval.md
+   cat ${SPRINTS_DIR}/${sid}.eval.json 2>/dev/null || cat ${SPRINTS_DIR}/${sid}.eval.md
 
 3. 对照最新合约修复代码，只做 round ${round} 必要改动
 
@@ -3500,7 +3500,7 @@ ${contract_summary:-（请直接打开 contract.md 查看最新修订）}
 
 5. 完成后提交:
    \`\`\`bash
-   bash ~/.solar/harness/solar-harness.sh handoff-submit ${sid}
+   bash ${HARNESS_DIR}/solar-harness.sh handoff-submit ${sid}
    \`\`\`
 "
     dispatch_to_builder "$sid" "builder_dispatch"
@@ -3526,9 +3526,9 @@ ${contract_summary:-（请直接打开 contract.md 查看最新修订）}
   append_dispatch "$sid" "### 步骤
 
 1. 读取合约:
-   cat ~/.solar/harness/sprints/${sid}.contract.md
+   cat ${SPRINTS_DIR}/${sid}.contract.md
 
-2. 写实现计划到 ~/.solar/harness/sprints/${sid}.plan.md，包含:
+2. 写实现计划到 ${SPRINTS_DIR}/${sid}.plan.md，包含:
    - \`## 变更文件\` — 要改哪些文件、每个文件改什么
    - \`## 技术方案\` — 数据结构、算法、接口设计
    - \`## 风险点\` — 边界条件、可能出问题的地方
@@ -3568,10 +3568,10 @@ handle_planning() {
   append_dispatch "$sid" "### 步骤
 
 1. 读取合约:
-   cat ~/.solar/harness/sprints/${sid}.contract.md
+   cat ${SPRINTS_DIR}/${sid}.contract.md
 
 2. 读取实现计划:
-   cat ~/.solar/harness/sprints/${sid}.plan.md
+   cat ${SPRINTS_DIR}/${sid}.plan.md
 
 3. 审批要点:
    - 计划是否覆盖所有 Done 条件？
@@ -3582,11 +3582,11 @@ handle_planning() {
 4. 判定:
 	   - APPROVE:
 	     \`\`\`bash
-	     bash ~/.solar/harness/solar-harness.sh plan-verdict ${sid} approve
+	     bash ${HARNESS_DIR}/solar-harness.sh plan-verdict ${sid} approve
 	     \`\`\`
 	   - REJECT (在 plan.md 末尾写修改意见):
 	     \`\`\`bash
-	     bash ~/.solar/harness/solar-harness.sh plan-verdict ${sid} reject 原因
+	     bash ${HARNESS_DIR}/solar-harness.sh plan-verdict ${sid} reject 原因
 	     \`\`\`
 "
   dispatch_to_evaluator "$sid" "review_plan"
@@ -3633,19 +3633,19 @@ handle_approved() {
   append_dispatch "$sid" "### 步骤
 
 1. 读取你的计划:
-   cat ~/.solar/harness/sprints/${sid}.plan.md
-   cat ~/.solar/harness/sprints/${sid}.requirement_ir.json 2>/dev/null
-   cat ~/.solar/harness/sprints/${sid}.requirement_trace.json 2>/dev/null
+   cat ${SPRINTS_DIR}/${sid}.plan.md
+   cat ${SPRINTS_DIR}/${sid}.requirement_ir.json 2>/dev/null
+   cat ${SPRINTS_DIR}/${sid}.requirement_trace.json 2>/dev/null
 
 2. 按计划逐步实现代码
 
-3. 实现完成后写 handoff 文档到 ~/.solar/harness/sprints/${sid}.handoff.md
+3. 实现完成后写 handoff 文档到 ${SPRINTS_DIR}/${sid}.handoff.md
    必须包含: \`## 变更文件\`, \`## Done 达成\`, \`## 验证方法\`
    还要逐条说明你完成了哪些 requirement，以及哪些仍待下轮完成；不要只写泛化总结。
 
 4. 更新状态:
    \`\`\`bash
-   bash ~/.solar/harness/solar-harness.sh handoff-submit ${sid}
+   bash ${HARNESS_DIR}/solar-harness.sh handoff-submit ${sid}
    \`\`\`
 
 **按计划实现，不要超出范围。**"
@@ -3719,9 +3719,9 @@ ${chunk}
 
 ### 步骤
 
-1. 读取计划: cat ~/.solar/harness/sprints/${sid}.plan.md
+1. 读取计划: cat ${SPRINTS_DIR}/${sid}.plan.md
 2. 只实现上面列出的 Done 子集
-3. 写 handoff 到: ~/.solar/harness/sprints/${sid}.handoff-builder${i}.md
+3. 写 handoff 到: ${SPRINTS_DIR}/${sid}.handoff-builder${i}.md
 4. 不要更新整个 sprint 为 reviewing；等所有 builder handoff 到齐后 coordinator 自动合并
 
 **只做分配给你的 Done，不要碰其他 builder 的范围。**"
@@ -3964,17 +3964,17 @@ PY
 ### 步骤
 
 1. 读取合约:
-   cat ~/.solar/harness/sprints/${sid}.contract.md
+   cat ${SPRINTS_DIR}/${sid}.contract.md
 
 2. 读取 handoff:
-   cat ~/.solar/harness/sprints/${sid}.handoff.md
-   cat ~/.solar/harness/sprints/${sid}.requirement_trace.json 2>/dev/null
-   cat ~/.solar/harness/sprints/${sid}.coverage_report.json 2>/dev/null
-   cat ~/.solar/harness/sprints/${sid}.acceptance_verdict.json 2>/dev/null
+   cat ${SPRINTS_DIR}/${sid}.handoff.md
+   cat ${SPRINTS_DIR}/${sid}.requirement_trace.json 2>/dev/null
+   cat ${SPRINTS_DIR}/${sid}.coverage_report.json 2>/dev/null
+   cat ${SPRINTS_DIR}/${sid}.acceptance_verdict.json 2>/dev/null
 
 3. 逐条检查 Done 定义，查看实际代码，运行测试验证
 
-4. 写评估报告到 ~/.solar/harness/sprints/${sid}.eval.md
+4. 写评估报告到 ${SPRINTS_DIR}/${sid}.eval.md
    必须包含: \`## 总判定\` (PASS/FAIL), \`## Done 条件逐条\`
    还必须对照 requirement coverage，说明 partial / missing 是否已经清零。
 
@@ -3983,11 +3983,11 @@ PY
 6. 更新状态:
    - PASS:
      \`\`\`bash
-     bash ~/.solar/harness/solar-harness.sh eval-verdict ${sid} pass
+     bash ${HARNESS_DIR}/solar-harness.sh eval-verdict ${sid} pass
      \`\`\`
    - FAIL:
      \`\`\`bash
-     bash ~/.solar/harness/solar-harness.sh eval-verdict ${sid} fail \"失败原因\"
+     bash ${HARNESS_DIR}/solar-harness.sh eval-verdict ${sid} fail \"失败原因\"
      \`\`\`
 
 ## 失败时的增量 refine 要求
@@ -4148,12 +4148,12 @@ handle_failed_review() {
 	    append_dispatch "$sid" "Sprint ${sid} 已经 3 轮未通过审判官评审。
 
 请读取评审报告分析原因:
-cat ~/.solar/harness/sprints/${sid}.eval.md
+cat ${SPRINTS_DIR}/${sid}.eval.md
 
 	决定: 修正合约范围 or 拆分为更小的 Sprint。
 
 	优先读取自动拆单材料:
-	cat ~/.solar/harness/sprints/${sid}.followup.md"
+	cat ${SPRINTS_DIR}/${sid}.followup.md"
 
     local planner_rc
     dispatch_to_planner "$sid" "failed_max_rounds" "$SPRINTS_DIR/${sid}.dispatch.md"
@@ -4227,7 +4227,7 @@ ${fail_info}
 ### 步骤
 
 1. 读取 eval.json 定位失败项:
-   cat ~/.solar/harness/sprints/${sid}.eval.json
+   cat ${SPRINTS_DIR}/${sid}.eval.json
 
 2. 按 \`failed_conditions\` 逐条修复代码
 
@@ -4235,14 +4235,14 @@ ${fail_info}
 
 4. 更新状态:
    \`\`\`bash
-   bash ~/.solar/harness/solar-harness.sh handoff-submit ${sid}
+   bash ${HARNESS_DIR}/solar-harness.sh handoff-submit ${sid}
    \`\`\`"
   else
     # 无 eval.json，退回到注入 eval.md
     append_dispatch "$sid" "### 步骤
 
 1. 读取评审报告:
-   cat ~/.solar/harness/sprints/${sid}.eval.md
+   cat ${SPRINTS_DIR}/${sid}.eval.md
 
 2. 按 FAIL 项逐条修复代码
 
@@ -4250,13 +4250,13 @@ ${fail_info}
 
 4. 更新状态:
    \`\`\`bash
-   bash ~/.solar/harness/solar-harness.sh handoff-submit ${sid}
+   bash ${HARNESS_DIR}/solar-harness.sh handoff-submit ${sid}
    \`\`\`
 
 ## 增量修复指引
 
 如果上一轮 eval.md 有 ## next_round_capsule_diff:
-1. 先读 capsule_diff: grep -A 20 'next_round_capsule_diff' ~/.solar/harness/sprints/${sid}.eval.md
+1. 先读 capsule_diff: grep -A 20 'next_round_capsule_diff' ${SPRINTS_DIR}/${sid}.eval.md
 2. 只修 capsule_diff 中指出的差异, 不重写 plan.md
 3. 更新 handoff.md 的增量改动部分"
   fi
@@ -4743,7 +4743,7 @@ handle_needs_human() {
 **原因**: ${reason}
 
 ### 选项
-1. 修复合约: 编辑 ~/.solar/harness/sprints/${sid}.contract.md
+1. 修复合约: 编辑 ${SPRINTS_DIR}/${sid}.contract.md
 2. 继续 Sprint: 更新 status 为 active
    \`\`\`bash
    solar-harness runtime status ${sid} active human_continue planner '{}'
