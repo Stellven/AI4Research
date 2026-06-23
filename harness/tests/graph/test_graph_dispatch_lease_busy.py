@@ -171,6 +171,42 @@ def test_worker_discovery_supports_s05_release_skill_aliases(monkeypatch) -> Non
         assert skill in workers[0]["skills"]
 
 
+def test_worker_discovery_scopes_to_configured_harness_session(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_HARNESS_SESSION", "solar-codex-cockpit-clean")
+    monkeypatch.setattr(gnd, "SESSION", "solar-codex-cockpit-clean")
+    monkeypatch.setattr(
+        gnd.subprocess,
+        "check_output",
+        lambda *a, **kw: (
+            b"solar-codex-cockpit-clean:0.2\tBuilder | \xe6\xa8\xa1\xe5\x9e\x8b:Codex\n"
+            b"solar-codex-cockpit-clean-lab:0.0\tBuilder | \xe6\xa8\xa1\xe5\x9e\x8b:Codex\n"
+            b"solar-codex-cockpit-old:0.2\tBuilder | \xe6\xa8\xa1\xe5\x9e\x8b:Codex\n"
+            b"solar-harness-lab:0.0\tBuilder | \xe6\xa8\xa1\xe5\x9e\x8b:Opus\n"
+        ),
+    )
+    monkeypatch.setattr(gnd, "_recover_hung_pane", lambda pane: False)
+    monkeypatch.setattr(gnd, "read_lease", lambda pane: None)
+    monkeypatch.setattr(gnd, "_pane_tail", lambda pane, lines=80: "")
+    monkeypatch.setattr(gnd, "_pane_health", lambda pane: {})
+    monkeypatch.setattr(gnd, "_pane_cooldown_reason", lambda pane: "")
+    monkeypatch.setattr(gnd, "_clear_stale_prompt_residue", lambda pane: False)
+    monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "codex")
+    monkeypatch.setattr(gnd, "_pane_runtime_unavailable_reason", lambda pane, title="": "")
+    monkeypatch.setattr(gnd, "_multi_task_direct_dispatch_unavailable_reason", lambda pane, current_command=None: "")
+    monkeypatch.setattr(gnd, "_pane_unavailable_reason", lambda pane: "")
+    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda pane: False)
+    monkeypatch.setattr(gnd, "_actorhost_bridge", lambda **kwargs: {})
+    monkeypatch.setattr(gnd, "_flatten_actorhost_bridge", lambda worker, bridge: None)
+
+    workers = gnd._discover_workers(dry_run=False)
+    panes = [item["pane"] for item in workers]
+
+    assert panes == [
+        "solar-codex-cockpit-clean-lab:0.0",
+        "solar-codex-cockpit-clean:0.2",
+    ]
+
+
 def test_worker_discovery_marks_shell_prompt_residue_as_runtime_not_running(monkeypatch) -> None:
     monkeypatch.setattr(
         gnd.subprocess,
@@ -433,6 +469,7 @@ def test_worker_discovery_marks_claude_monthly_limit_as_anthropic_quota(monkeypa
     monkeypatch.setattr(gnd, "_clear_stale_prompt_residue", lambda pane: False)
     monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "bash")
     monkeypatch.setattr(gnd, "_pane_health", lambda pane: {})
+    monkeypatch.setattr(gnd, "_persist_pane_rate_limit_block", lambda *args, **kwargs: [])
     monkeypatch.setattr(
         gnd,
         "_pane_tail",
@@ -486,6 +523,21 @@ def test_assigned_pane_quota_detection_handles_wrapped_monthly_limit(monkeypatch
     )
 
     assert gnd._assigned_pane_unavailable_reason("solar-harness-lab:0.3") == "rate_limit_or_api_error"
+
+
+def test_assigned_pane_rejects_pane_outside_harness_session(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_HARNESS_SESSION", "solar-codex-cockpit-clean")
+    monkeypatch.setattr(gnd, "SESSION", "solar-codex-cockpit-clean")
+    monkeypatch.setattr(
+        gnd,
+        "_pane_title",
+        lambda pane: (_ for _ in ()).throw(AssertionError("off-session pane must fail before pane reads")),
+    )
+
+    assert (
+        gnd._assigned_pane_unavailable_reason("solar-codex-cockpit-old:0.2")
+        == "pane_outside_harness_session"
+    )
 
 
 def test_reconcile_keeps_acknowledged_dispatch_when_leases_disabled(monkeypatch, tmp_path) -> None:
@@ -985,15 +1037,16 @@ def test_evaluator_discovery_ignores_expired_lease(monkeypatch) -> None:
 
 
 def test_evaluator_discovery_finds_pool_candidates_by_role(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_HARNESS_SESSION", "solar-harness-test")
     monkeypatch.setattr(gnd, "SESSION", "solar-harness-test")
     monkeypatch.setattr(
         gnd.subprocess,
         "check_output",
         lambda *a, **kw: (
             b"solar-harness-test:0.3\tEvaluator \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Opus\n"
-            b"solar-harness-lab:0.3\tEvaluator Print \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Opus\n"
-            b"solar-harness-lab:0.1\tBuilder 2 | \xe6\xa8\xa1\xe5\x9e\x8b:Sonnet\n"
-            b"solar-harness-multi-task:7\tEvaluator Detached \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Gemini\n"
+            b"solar-harness-test-lab:0.3\tEvaluator Print \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Opus\n"
+            b"solar-harness-test-lab:0.1\tBuilder 2 | \xe6\xa8\xa1\xe5\x9e\x8b:Sonnet\n"
+            b"solar-harness-test-multi-task:7\tEvaluator Detached \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Gemini\n"
         ),
     )
     monkeypatch.setattr(gnd, "_pane_exists", lambda pane: True)
@@ -1002,9 +1055,9 @@ def test_evaluator_discovery_finds_pool_candidates_by_role(monkeypatch) -> None:
         "_pane_title",
         lambda pane: {
             "solar-harness-test:0.3": "Evaluator 审判官 | 模型:Opus",
-            "solar-harness-lab:0.3": "Evaluator Print 审判官 | 模型:Opus",
-            "solar-harness-lab:0.1": "Builder 2 | 模型:Sonnet",
-            "solar-harness-multi-task:7": "Evaluator Detached 审判官 | 模型:Gemini",
+            "solar-harness-test-lab:0.3": "Evaluator Print 审判官 | 模型:Opus",
+            "solar-harness-test-lab:0.1": "Builder 2 | 模型:Sonnet",
+            "solar-harness-test-multi-task:7": "Evaluator Detached 审判官 | 模型:Gemini",
         }.get(pane, ""),
     )
     monkeypatch.setattr(gnd, "read_lease", lambda pane: {})
@@ -1018,15 +1071,50 @@ def test_evaluator_discovery_finds_pool_candidates_by_role(monkeypatch) -> None:
 
     assert set(panes) == {
         "solar-harness-test:0.3",
-        "solar-harness-lab:0.3",
-        "solar-harness-lab:0.1",
-        "solar-harness-multi-task:7",
+        "solar-harness-test-lab:0.3",
+        "solar-harness-test-lab:0.1",
+        "solar-harness-test-multi-task:7",
     }
-    lab_builder = next(item for item in evaluators if item["pane"] == "solar-harness-lab:0.1")
+    lab_builder = next(item for item in evaluators if item["pane"] == "solar-harness-test-lab:0.1")
     assert lab_builder["evaluator_host_role"] == "lab_builder_spillover"
-    multi_task = next(item for item in evaluators if item["pane"] == "solar-harness-multi-task:7")
+    multi_task = next(item for item in evaluators if item["pane"] == "solar-harness-test-multi-task:7")
     assert multi_task["busy"] is True
     assert multi_task["unavailable_reason"] == "multi_task_shell_not_direct_worker"
+
+
+def test_evaluator_discovery_ignores_global_helpers_for_custom_session(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_HARNESS_SESSION", "solar-codex-cockpit-clean")
+    monkeypatch.setattr(gnd, "SESSION", "solar-codex-cockpit-clean")
+    monkeypatch.setattr(
+        gnd.subprocess,
+        "check_output",
+        lambda *a, **kw: (
+            b"solar-codex-cockpit-clean:0.3\tEvaluator \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Codex\n"
+            b"solar-codex-cockpit-clean-lab:0.3\tEvaluator \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Codex\n"
+            b"solar-codex-cockpit-old:0.3\tEvaluator \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Codex\n"
+            b"solar-harness-lab:0.3\tEvaluator \xe5\xae\xa1\xe5\x88\xa4\xe5\xae\x98 | \xe6\xa8\xa1\xe5\x9e\x8b:Opus\n"
+        ),
+    )
+    titles = {
+        "solar-codex-cockpit-clean:0.3": "Evaluator 审判官 | 模型:Codex",
+        "solar-codex-cockpit-clean-lab:0.3": "Evaluator 审判官 | 模型:Codex",
+    }
+    monkeypatch.setattr(gnd, "_pane_exists", lambda pane: pane in titles)
+    monkeypatch.setattr(gnd, "_pane_title", lambda pane: titles.get(pane, ""))
+    monkeypatch.setattr(gnd, "read_lease", lambda pane: None)
+    monkeypatch.setattr(gnd, "_pane_hygiene_unavailable_reason", lambda pane: "")
+    monkeypatch.setattr(gnd, "_pane_unavailable_reason", lambda pane: "")
+    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda pane: False)
+    monkeypatch.setattr(gnd, "_pane_cooldown_reason", lambda pane: "")
+    monkeypatch.setattr(gnd, "_pane_runtime_unavailable_reason", lambda pane, title="": "")
+    monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "codex")
+
+    panes = [item["pane"] for item in gnd._discover_evaluators(dry_run=False)]
+
+    assert panes == [
+        "solar-codex-cockpit-clean:0.3",
+        "solar-codex-cockpit-clean-lab:0.3",
+    ]
 
 
 def test_force_eval_retry_allows_failed_node_after_repair_artifact(monkeypatch, tmp_path) -> None:

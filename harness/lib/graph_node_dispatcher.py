@@ -70,6 +70,67 @@ GRAPH_NODE_REPAIR_MAX_ATTEMPTS = int(os.environ.get("SOLAR_GRAPH_NODE_REPAIR_MAX
 EVAL_RECOVER_SEC = int(os.environ.get("SOLAR_GRAPH_EVAL_RECOVER_SEC", "600"))
 
 
+def _current_harness_session() -> str:
+    session = str(os.environ.get("SOLAR_HARNESS_SESSION") or SESSION or "solar-harness").strip()
+    return session or "solar-harness"
+
+
+def _pane_session_name(pane: str) -> str:
+    return str(pane or "").split(":", 1)[0].strip()
+
+
+def _allowed_pane_sessions() -> set[str]:
+    session = _current_harness_session()
+    allowed = {session, f"{session}-lab", f"{session}-multi-task"}
+    for env_name in (
+        "SOLAR_HARNESS_LAB_SESSION",
+        "SOLAR_HARNESS_BG_SESSION",
+        "SOLAR_HARNESS_MULTI_TASK_SESSION",
+    ):
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            allowed.add(value)
+    for value in str(os.environ.get("SOLAR_HARNESS_ALLOWED_EXTRA_SESSIONS") or "").split(","):
+        value = value.strip()
+        if value:
+            allowed.add(value)
+    if session == "solar-harness":
+        allowed.update({"solar-harness-lab", "solar-harness-multi-task"})
+    return allowed
+
+
+def _pane_in_harness_session_scope(pane: str) -> bool:
+    return _pane_session_name(pane) in _allowed_pane_sessions()
+
+
+def _pane_in_helper_session(pane: str) -> bool:
+    pane_session = _pane_session_name(pane)
+    return bool(pane_session and pane_session != _current_harness_session() and pane_session in _allowed_pane_sessions())
+
+
+def _pane_in_lab_session(pane: str) -> bool:
+    session = _current_harness_session()
+    names = {f"{session}-lab"}
+    for env_name in ("SOLAR_HARNESS_LAB_SESSION", "SOLAR_HARNESS_BG_SESSION"):
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            names.add(value)
+    if session == "solar-harness":
+        names.add("solar-harness-lab")
+    return _pane_session_name(pane) in names
+
+
+def _pane_in_multi_task_session(pane: str) -> bool:
+    session = _current_harness_session()
+    names = {f"{session}-multi-task"}
+    value = str(os.environ.get("SOLAR_HARNESS_MULTI_TASK_SESSION") or "").strip()
+    if value:
+        names.add(value)
+    if session == "solar-harness":
+        names.add("solar-harness-multi-task")
+    return _pane_session_name(pane) in names
+
+
 def _effective_graph_max_parallel(default: int = 8) -> int:
     try:
         if str(HARNESS_DIR / "lib") not in sys.path:
@@ -273,7 +334,7 @@ def _pane_runtime() -> str:
 
 
 def _clear_dispatch_boundary(pane: str, sid: str, dispatch_id: str) -> tuple[bool, str]:
-    if not (pane.startswith(f"{SESSION}:") or pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:")):
+    if not _pane_in_harness_session_scope(pane):
         return True, "non_harness_pane"
     if ensure_clean_for_dispatch_boundary is None:
         return True, "helper_unavailable"
@@ -1080,11 +1141,12 @@ def _configured_lab_model_for_pane(pane: str) -> str:
 
 
 def _models_for_pane(pane: str, title: str = "") -> list[str]:
-    if pane == f"{SESSION}:0.2":
+    session = _current_harness_session()
+    if pane == f"{session}:0.2":
         return _model_alias_set(_configured_main_model("builder"))
-    if pane == f"{SESSION}:0.3":
+    if pane == f"{session}:0.3":
         return _model_alias_set(_configured_main_model("evaluator"))
-    if pane.startswith("solar-harness-lab:"):
+    if _pane_in_lab_session(pane):
         return _model_alias_set(_configured_lab_model_for_pane(pane))
     title_lower = title.lower()
     if "deepseek" in title_lower:
@@ -3686,10 +3748,7 @@ def _pane_title_matches_role(pane: str, title: str, role: str) -> bool:
     title = re.split(r"\s+\|\s+状态:", title or "", maxsplit=1)[0].strip()
     negative = re.compile(r"PM|产品经理|Planner|规划者|Builder|建设者|Evaluator|审判官", re.I)
     if role == "builder":
-        if (
-            pane.startswith("solar-harness-lab:")
-            or pane.startswith("solar-harness-multi-task:")
-        ):
+        if _pane_in_lab_session(pane) or _pane_in_multi_task_session(pane):
             return bool(re.search(r"Builder|建设者|lab-builder", title, re.I)) and not bool(
                 re.search(r"PM|产品经理|Planner|规划者|Evaluator|审判官", title, re.I)
             )
@@ -3701,13 +3760,14 @@ def _pane_title_matches_role(pane: str, title: str, role: str) -> bool:
         # cold/idle evaluator undiscoverable, leaving only the (often unbacked) operator-pool
         # evaluator slot to be selected -> send_failed retry loop. The title regex below is
         # meant to reject OTHER panes, not to gate the one hardcoded evaluator pane.
-        if pane == f"{SESSION}:0.3":
+        session = _current_harness_session()
+        if pane == f"{session}:0.3":
             return True
         if not (
-            pane == f"{SESSION}:0.3"
-            or pane.startswith("solar-harness-lab:")
-            or pane.startswith("solar-harness-multi-task:")
-            or pane.startswith(f"{SESSION}:")
+            pane == f"{session}:0.3"
+            or _pane_in_lab_session(pane)
+            or _pane_in_multi_task_session(pane)
+            or pane.startswith(f"{session}:")
         ):
             return False
         non_role_title = re.sub(r"Evaluator|审判官", "", title, flags=re.I)
@@ -3718,11 +3778,12 @@ def _pane_title_matches_role(pane: str, title: str, role: str) -> bool:
 
 
 def _pane_execution_priority(pane: str) -> tuple[int, str]:
-    if pane.startswith("solar-harness-multi-task:"):
+    session = _current_harness_session()
+    if _pane_in_multi_task_session(pane):
         return (0, pane)
-    if pane.startswith("solar-harness-lab:"):
+    if _pane_in_lab_session(pane):
         return (1, pane)
-    if pane.startswith(f"{SESSION}:"):
+    if pane.startswith(f"{session}:"):
         return (2, pane)
     return (9, pane)
 
@@ -3734,15 +3795,16 @@ def _pane_evaluator_priority(pane: str, title: str = "") -> tuple[int, str]:
     eval sidecar should stay anchored to the main Evaluator when it is
     available. Lab panes are capacity spillover, not the first choice.
     """
-    if pane == f"{SESSION}:0.3":
+    session = _current_harness_session()
+    if pane == f"{session}:0.3":
         return (0, pane)
     if re.search(r"Evaluator|审判官", title or _pane_title(pane), re.I):
         return (1, pane)
-    if pane.startswith("solar-harness-multi-task:"):
+    if _pane_in_multi_task_session(pane):
         return (2, pane)
-    if pane.startswith("solar-harness-lab:"):
+    if _pane_in_lab_session(pane):
         return (3, pane)
-    if pane.startswith(f"{SESSION}:"):
+    if pane.startswith(f"{session}:"):
         return (4, pane)
     return (9, pane)
 
@@ -3757,7 +3819,7 @@ def _lab_builder_can_host_evaluator(pane: str, title: str) -> bool:
     """
     if os.environ.get("SOLAR_GRAPH_ALLOW_LAB_BUILDER_EVALUATOR", "1") == "0":
         return False
-    if not (pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:")):
+    if not (_pane_in_lab_session(pane) or _pane_in_multi_task_session(pane)):
         return False
     normalized_title = re.split(r"\s+\|\s+状态:", title or "", maxsplit=1)[0].strip()
     if re.search(r"PM|产品经理|Planner|规划者", normalized_title, re.I):
@@ -4125,7 +4187,7 @@ def _multi_task_direct_dispatch_unavailable_reason(
     shells; the multi-task runner is responsible for starting a model process
     there first.
     """
-    if not pane.startswith("solar-harness-multi-task:"):
+    if not _pane_in_multi_task_session(pane):
         return ""
     command = (current_command if current_command is not None else _pane_current_command(pane)).lower()
     if command in {"bash", "zsh", "sh", "fish", ""}:
@@ -4469,6 +4531,8 @@ def _assigned_pane_unavailable_reason(pane: str) -> str:
     target immediately before lease/send so a later quota hit or TUI block does
     not strand the node in dispatched state.
     """
+    if not _pane_in_harness_session_scope(pane):
+        return "pane_outside_harness_session"
     title = _pane_title(pane)
     health = _pane_health(pane)
     models = _models_for_pane(pane, title)
@@ -5393,8 +5457,8 @@ def _builder_operator_pool_allowed_for_pane(pane: str) -> bool:
         return True
     return (
         pane.startswith("operator-pool:builder")
-        or pane.startswith("solar-harness-lab:")
-        or pane.startswith("solar-harness-multi-task:")
+        or _pane_in_lab_session(pane)
+        or _pane_in_multi_task_session(pane)
     )
 
 
@@ -6285,11 +6349,16 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
     if dry_run and os.environ.get("SOLAR_GRAPH_DISPATCH_FAKE_WORKERS") == "1":
         if restrict_to_session:
             return []
+        lab_session = str(os.environ.get("SOLAR_HARNESS_LAB_SESSION") or "").strip()
+        if not lab_session:
+            current_session = _current_harness_session()
+            lab_session = "solar-harness-lab" if current_session == "solar-harness" else f"{current_session}-lab"
+        fake_panes = [f"{lab_session}:0.{idx}" for idx in range(4)]
         return [
-            {"pane": "solar-harness-lab:0.0", "models": _models_for_pane("solar-harness-lab:0.0"), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
-            {"pane": "solar-harness-lab:0.1", "models": _models_for_pane("solar-harness-lab:0.1"), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
-            {"pane": "solar-harness-lab:0.2", "models": _models_for_pane("solar-harness-lab:0.2"), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
-            {"pane": "solar-harness-lab:0.3", "models": _models_for_pane("solar-harness-lab:0.3"), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
+            {"pane": fake_panes[0], "models": _models_for_pane(fake_panes[0]), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
+            {"pane": fake_panes[1], "models": _models_for_pane(fake_panes[1]), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
+            {"pane": fake_panes[2], "models": _models_for_pane(fake_panes[2]), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
+            {"pane": fake_panes[3], "models": _models_for_pane(fake_panes[3]), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
         ]
     try:
         out = subprocess.check_output(
@@ -6306,16 +6375,11 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         pane = row[0].strip()
         title = row[1].strip() if len(row) > 1 else ""
         dispatch_role = _dispatch_role_for_pane(pane, title)
-        if restrict_to_session:
+        if restrict_to_session and not pane.startswith(f"{_current_harness_session()}:"):
             continue
-        if not (
-            pane.startswith(f"{SESSION}:")
-            or
-            pane.startswith("solar-harness-lab:")
-            or pane.startswith("solar-harness-multi-task:")
-        ):
+        if not _pane_in_harness_session_scope(pane):
             continue
-        if dispatch_role != "builder":
+        if dispatch_role not in {"builder", "planner", "architect"}:
             continue
         # Unattended hung-pane recovery, before availability is sampled: a MAIN
         # cockpit builder pane wedged on a frozen turn (a processing spinner whose
@@ -6324,7 +6388,7 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         # stale dispatch lease. The frozen-timer detection inside _recover_hung_pane
         # is the safety (a working turn advances its timer / streams), so we do NOT
         # gate on the fragile tui-busy/lease classification here.
-        if pane.startswith(f"{SESSION}:"):
+        if pane.startswith(f"{_current_harness_session()}:"):
             _recover_hung_pane(pane)
         models = _models_for_pane(pane, title)
         tail = _pane_tail(pane)
@@ -6332,7 +6396,7 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         quota_exhausted = _quota_exhausted_models(title, tail, health, models)
         rate_limit_blocks = _persist_pane_rate_limit_block(pane, title, tail, quota_exhausted) if quota_exhausted else []
         cooldown_reason = _pane_cooldown_reason(pane)
-        if pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:"):
+        if _pane_in_helper_session(pane):
             if not cooldown_reason:
                 _clear_stale_prompt_residue(pane)
         current_command = _pane_current_command(pane)
@@ -6375,13 +6439,14 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
 def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
     _prune_expired_operator_blocks()
     if dry_run and os.environ.get("SOLAR_GRAPH_DISPATCH_FAKE_EVALUATORS") == "1":
-        return [{"pane": f"{SESSION}:0.3", "models": _models_for_pane(f"{SESSION}:0.3"), "skills": ["review", "testing", "bash"]}]
+        session = _current_harness_session()
+        return [{"pane": f"{session}:0.3", "models": _models_for_pane(f"{session}:0.3"), "skills": ["review", "testing", "bash"]}]
     # Graph node evaluation mutates graph verdict state. Keep it on evaluator
     # personas only, but allow a pool of evaluator hosts instead of pinning the
     # runtime to one pane. Planning still decides whether a node may use a
     # single evaluator or require quorum semantics.
     restrict_to_session = os.environ.get("SOLAR_GRAPH_DISPATCH_RESTRICT_SESSION") == "1"
-    candidates = [f"{SESSION}:0.3"]
+    candidates = [f"{_current_harness_session()}:0.3"]
     try:
         out = subprocess.check_output(
             ["tmux", "list-panes", "-a", "-F", "#{session_name}:#{window_index}.#{pane_index}\t#{pane_title}"],
@@ -6396,15 +6461,10 @@ def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
         if not pane or pane in candidates:
             continue
         if restrict_to_session:
-            if not pane.startswith(f"{SESSION}:"):
+            if not pane.startswith(f"{_current_harness_session()}:"):
                 continue
-        else:
-            if not (
-                pane.startswith(f"{SESSION}:")
-                or pane.startswith("solar-harness-lab:")
-                or pane.startswith("solar-harness-multi-task:")
-            ):
-                continue
+        elif not _pane_in_harness_session_scope(pane):
+            continue
         candidates.append(pane)
     evaluators: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -6420,7 +6480,7 @@ def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
                 continue
             current_command = _pane_current_command(pane)
             cooldown_reason = _pane_cooldown_reason(pane)
-            if (pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:")) and not cooldown_reason:
+            if _pane_in_helper_session(pane) and not cooldown_reason:
                 _clear_stale_prompt_residue(pane)
             tail = _pane_tail(pane)
             models = _models_for_pane(pane, title)

@@ -29,6 +29,62 @@ PHYSICAL_OPERATORS_PATH = Path(
 )
 
 
+def _current_harness_session() -> str:
+    session = str(os.environ.get("SOLAR_HARNESS_SESSION") or SESSION or "solar-harness").strip()
+    return session or "solar-harness"
+
+
+def _pane_session_name(pane: str) -> str:
+    return str(pane or "").split(":", 1)[0].strip()
+
+
+def _allowed_pane_sessions() -> set[str]:
+    session = _current_harness_session()
+    allowed = {session, f"{session}-lab", f"{session}-multi-task"}
+    for env_name in (
+        "SOLAR_HARNESS_LAB_SESSION",
+        "SOLAR_HARNESS_BG_SESSION",
+        "SOLAR_HARNESS_MULTI_TASK_SESSION",
+    ):
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            allowed.add(value)
+    for value in str(os.environ.get("SOLAR_HARNESS_ALLOWED_EXTRA_SESSIONS") or "").split(","):
+        value = value.strip()
+        if value:
+            allowed.add(value)
+    if session == "solar-harness":
+        allowed.update({"solar-harness-lab", "solar-harness-multi-task"})
+    return allowed
+
+
+def _pane_in_harness_session_scope(pane: str) -> bool:
+    return _pane_session_name(pane) in _allowed_pane_sessions()
+
+
+def _pane_in_lab_session(pane: str) -> bool:
+    session = _current_harness_session()
+    names = {f"{session}-lab"}
+    for env_name in ("SOLAR_HARNESS_LAB_SESSION", "SOLAR_HARNESS_BG_SESSION"):
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            names.add(value)
+    if session == "solar-harness":
+        names.add("solar-harness-lab")
+    return _pane_session_name(pane) in names
+
+
+def _pane_in_multi_task_session(pane: str) -> bool:
+    session = _current_harness_session()
+    names = {f"{session}-multi-task"}
+    value = str(os.environ.get("SOLAR_HARNESS_MULTI_TASK_SESSION") or "").strip()
+    if value:
+        names.add(value)
+    if session == "solar-harness":
+        names.add("solar-harness-multi-task")
+    return _pane_session_name(pane) in names
+
+
 def list_tmux_panes() -> list[dict[str, str]]:
     try:
         result = subprocess.run(
@@ -51,7 +107,7 @@ def list_tmux_panes() -> list[dict[str, str]]:
 
 
 def _allowed_session(pane: str) -> bool:
-    return pane.startswith(f"{SESSION}:") or pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:")
+    return _pane_in_harness_session_scope(pane)
 
 
 def _normalize_role(role: str) -> str:
@@ -112,7 +168,8 @@ def infer_role(pane: str, title: str) -> str:
     base = normalized.split("|", 1)[0].strip()
     lowered = base.lower()
     registry_roles = _registry_roles_for_pane(pane)
-    if pane.endswith(":0.0") and pane.startswith(f"{SESSION}:") and ("pm" in lowered or "产品经理" in base):
+    session = _current_harness_session()
+    if pane.endswith(":0.0") and pane.startswith(f"{session}:") and ("pm" in lowered or "产品经理" in base):
         return "pm"
     if "planner" in lowered or "规划者" in base:
         return "planner"
@@ -127,13 +184,13 @@ def infer_role(pane: str, title: str) -> str:
     for candidate in ("planner", "evaluator", "architect", "builder", "pm"):
         if candidate in registry_roles:
             return candidate
-    if pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:"):
+    if _pane_in_lab_session(pane) or _pane_in_multi_task_session(pane):
         return "builder"
-    if pane == f"{SESSION}:0.0":
+    if pane == f"{session}:0.0":
         return "pm"
-    if pane == f"{SESSION}:0.1":
+    if pane == f"{session}:0.1":
         return "planner"
-    if pane == f"{SESSION}:0.3":
+    if pane == f"{session}:0.3":
         return "evaluator"
     return "builder"
 
@@ -142,9 +199,9 @@ def _planner_rank(item: dict[str, str]) -> tuple[int, str]:
     role = item["host_role"]
     pane = item["pane"]
     if role == "planner":
-        if pane.startswith(f"{SESSION}:"):
+        if pane.startswith(f"{_current_harness_session()}:"):
             return (0, pane)
-        if pane.startswith("solar-harness-multi-task:"):
+        if _pane_in_multi_task_session(pane):
             return (1, pane)
         return (0, pane)
     if role == "architect":
@@ -158,9 +215,9 @@ def _evaluator_rank(item: dict[str, str]) -> tuple[int, str]:
     role = item["host_role"]
     pane = item["pane"]
     if role == "evaluator":
-        if pane.startswith(f"{SESSION}:"):
+        if pane.startswith(f"{_current_harness_session()}:"):
             return (0, pane)
-        if pane.startswith("solar-harness-multi-task:"):
+        if _pane_in_multi_task_session(pane):
             return (1, pane)
         return (0, pane)
     if role == "builder":
@@ -170,9 +227,9 @@ def _evaluator_rank(item: dict[str, str]) -> tuple[int, str]:
 
 def _builder_rank(item: dict[str, str]) -> tuple[int, str]:
     pane = item["pane"]
-    if pane.startswith("solar-harness-lab:"):
+    if _pane_in_lab_session(pane):
         return (0, pane)
-    if pane.startswith("solar-harness-multi-task:"):
+    if _pane_in_multi_task_session(pane):
         return (1, pane)
     return (2, pane)
 

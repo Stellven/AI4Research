@@ -807,6 +807,8 @@ class TestSubmitFailureRecovery:
 
         tmp_path, sprints, sid, graph = tmp_harness
 
+        monkeypatch.setenv("SOLAR_HARNESS_SESSION", "test")
+        monkeypatch.setattr(gnd, "SESSION", "test")
         # Mock pane exists
         monkeypatch.setattr(gnd, "_pane_exists", lambda p: True)
         # Mock lease acquire success
