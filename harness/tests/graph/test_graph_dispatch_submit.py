@@ -104,8 +104,8 @@ class TestSendToPaneLiteral:
         literal_calls = [c for c in calls_log if "-l" in c]
         assert len(literal_calls) > 0, "Expected -l (literal) flag in tmux send-keys"
 
-    def test_sprint_level_handoff_only_reconciles_owner_node(self, tmp_harness):
-        """A sprint-level handoff must not make sibling same-gate nodes reviewing."""
+    def test_sprint_level_handoff_does_not_reconcile_before_dependencies_pass(self, tmp_harness):
+        """A sprint-level handoff must not advance a node before its deps pass."""
         tmp_path, sprints, sid, graph = tmp_harness
         import graph_node_dispatcher as gnd
 
@@ -137,13 +137,109 @@ class TestSendToPaneLiteral:
         assert repaired == [
             {
                 "node": "N10",
+                "status": "pending",
+                "reason": "handoff_reconcile_blocked_by_dependencies",
+                "handoff": str(sprints / f"{sid}.handoff.md"),
+                "blocked_by": ["N8"],
+            }
+        ]
+        assert graph["nodes"][0]["status"] == "pending"
+        assert graph["nodes"][1]["status"] == "pending"
+
+    def test_sprint_level_handoff_reconciles_owner_node_after_dependencies_pass(self, tmp_harness):
+        """A sprint-level handoff may advance its owner node once deps passed."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph["required_gates"] = ["gate-shared"]
+        graph["nodes"] = [
+            {
+                "id": "N8",
+                "goal": "Prerequisite",
+                "depends_on": [],
+                "write_scope": [f"sprints/{sid}.prep.md"],
+                "acceptance": ["prep exists"],
+                "status": "passed",
+                "gate": "gate-shared",
+            },
+            {
+                "id": "N9",
+                "goal": "Render planning.html",
+                "depends_on": ["N8"],
+                "write_scope": [f"sprints/{sid}.planning.html"],
+                "acceptance": ["planning.html exists"],
+                "status": "pending",
+                "gate": "gate-shared",
+            },
+            {
+                "id": "N10",
+                "goal": "Write sprint handoff",
+                "depends_on": ["N8"],
+                "write_scope": [f"sprints/{sid}.handoff.md"],
+                "acceptance": ["handoff exists"],
+                "status": "pending",
+                "gate": "gate-shared",
+            },
+        ]
+        graph["node_results"] = {"N8": {"status": "passed"}}
+        (sprints / f"{sid}.handoff.md").write_text("# Sprint handoff\n", encoding="utf-8")
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert repaired == [
+            {
+                "node": "N10",
                 "status": "reviewing",
                 "reason": "handoff_file_exists",
                 "handoff": str(sprints / f"{sid}.handoff.md"),
             }
         ]
-        assert graph["nodes"][0]["status"] == "pending"
+        assert graph["nodes"][1]["status"] == "pending"
+        assert graph["nodes"][2]["status"] == "reviewing"
+
+    def test_eval_sidecar_does_not_reconcile_before_dependencies_pass(self, tmp_harness):
+        """A downstream eval sidecar cannot fail/pass a node before deps pass."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph["nodes"] = [
+            {
+                "id": "N8",
+                "goal": "Prerequisite",
+                "depends_on": [],
+                "write_scope": [f"sprints/{sid}.prep.md"],
+                "acceptance": ["prep exists"],
+                "status": "pending",
+            },
+            {
+                "id": "N10",
+                "goal": "Write sprint handoff",
+                "depends_on": ["N8"],
+                "write_scope": [f"sprints/{sid}.handoff.md"],
+                "acceptance": ["handoff exists"],
+                "status": "reviewing",
+            },
+        ]
+        (sprints / f"{sid}.handoff.md").write_text("# Sprint handoff\n", encoding="utf-8")
+        (sprints / f"{sid}.N10-eval.json").write_text(
+            json.dumps({"verdict": "FAIL", "node_id": "N10"}) + "\n",
+            encoding="utf-8",
+        )
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert repaired == [
+            {
+                "node": "N10",
+                "status": "reviewing",
+                "reason": "sidecar_reconcile_blocked_by_dependencies",
+                "handoff": str(sprints / f"{sid}.handoff.md"),
+                "eval_json": str(sprints / f"{sid}.N10-eval.json"),
+                "blocked_by": ["N8"],
+            }
+        ]
         assert graph["nodes"][1]["status"] == "reviewing"
+        assert "N10" not in graph["node_results"]
 
     def test_stale_submit_ack_without_live_lease_does_not_resurrect_dispatch(self, tmp_harness, monkeypatch):
         """Old ack files are not proof of a current dispatch after the lease expired."""

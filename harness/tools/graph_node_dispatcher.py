@@ -1209,6 +1209,21 @@ def _active_multi_task_status_for(sid: str, node_id: str) -> dict[str, Any] | No
     return newest[1] if newest else None
 
 
+def _sidecar_reconcile_dependency_blockers(graph: dict[str, Any], node: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for dep in node.get("depends_on") or []:
+        dep_id = str(dep or "").strip()
+        if not dep_id or dep_id.startswith("external:") or "://" in dep_id:
+            continue
+        try:
+            dep_status = str(node_status(graph, dep_id) or "").strip().lower()
+        except Exception:
+            dep_status = ""
+        if dep_status != "passed":
+            blockers.append(dep_id)
+    return blockers
+
+
 def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path) -> list[dict[str, Any]]:
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     repaired: list[dict[str, Any]] = []
@@ -1218,6 +1233,7 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             continue
         status = node_status(graph, node_id)
         handoff_file = _existing_node_handoff(sid, node, graph)
+        dependency_blockers = _sidecar_reconcile_dependency_blockers(graph, node) if handoff_file else []
         eval_json_path = str(node.get("eval_json") or _eval_json_file(sid, node_id))
         if not Path(eval_json_path).exists():
             backfilled_eval = _maybe_backfill_eval_json_from_md(sid, node_id)
@@ -1231,6 +1247,18 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             eval_verdict = "FAIL"
         else:
             eval_verdict = ""
+        if handoff_file and dependency_blockers and eval_verdict in {"PASS", "FAIL"} and status not in {"passed", "failed"}:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "sidecar_reconcile_blocked_by_dependencies",
+                    "handoff": str(handoff_file),
+                    "eval_json": eval_json_path,
+                    "blocked_by": dependency_blockers,
+                }
+            )
+            continue
         if handoff_file and eval_verdict in {"PASS", "FAIL"} and status in {"pending", "queued", "blocked", "assigned", "dispatched", "in_progress", "running", "reviewing", "ready_for_review", "needs_human_review", "failed_review", ""}:
             pane = str(node.get("assigned_to") or "").strip()
             dispatch_id = str(node.get("dispatch_id") or "").strip()
@@ -1257,6 +1285,17 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     "handoff": str(handoff_file),
                     "eval_json": eval_json_path,
                     "verdict": eval_verdict,
+                }
+            )
+            continue
+        if handoff_file and dependency_blockers and status in {"pending", "queued", "blocked", "worker_blocked", "assigned", "dispatched", "in_progress", "running", ""}:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "handoff_reconcile_blocked_by_dependencies",
+                    "handoff": str(handoff_file),
+                    "blocked_by": dependency_blockers,
                 }
             )
             continue
