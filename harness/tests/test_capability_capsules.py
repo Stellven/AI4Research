@@ -47,6 +47,16 @@ def test_validate_sample_capability_capsule_manifest_has_no_errors():
     assert errors == []
 
 
+def test_validate_audit_capability_capsule_manifest_has_no_errors():
+    manifest_path = ROOT / "config" / "capability-capsules" / "cap.requirement-compiler-audit.yaml"
+    manifest = caps.load_capability_capsule_manifest(manifest_path)
+    errors = caps.validate_capability_capsule(
+        manifest,
+        schema_path=ROOT / "schemas" / "draft" / "capability-capsule.v1.draft.json",
+    )
+    assert errors == []
+
+
 def test_registry_loader_and_query_skip_non_stable_by_default():
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -219,3 +229,26 @@ def test_default_capability_plan_for_logical_operator_maps_requirement_nodes():
     assert planner["dispatch_task_type"] == "planning"
     assert builder["capability_capsule_id"] == "cap.requirement-compiler-implementation"
     assert builder["required_resource_capsules"] == ["resource.repo-workspace"]
+
+
+def test_read_only_audit_nodes_use_audit_capsule_not_patch_capsule():
+    audit = caps.default_capability_plan_for_logical_operator(
+        "ImplementationWorker",
+        request_type="implementation",
+        lane_hint="execution",
+        node={
+            "id": "A1",
+            "goal": "Inventory backend entrypoints for packaging readiness without modifying source code.",
+            "type": "audit_inventory",
+            "required_skills": ["documentation", "harness.reporting"],
+            "write_scope": ["harness/sprints/sprint-x.audit-backend-entrypoints.md"],
+            "architecture_policy": {
+                "package_boundary": "sprint-artifacts-only",
+                "core_patch_allowed": False,
+            },
+        },
+        registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
+    )
+    assert audit["capability_capsule_id"] == "cap.requirement-compiler-audit"
+    assert audit["dispatch_task_type"] == "audit_inventory"
+    assert audit["selection_mode"] == "read_only_audit_heuristic"
