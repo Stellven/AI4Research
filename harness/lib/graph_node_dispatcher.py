@@ -5375,7 +5375,7 @@ def _ensure_lease(pane: str, sid: str, dispatch_id: str, ttl: int, dry_run: bool
 
 
 def _builder_operator_pool_enabled() -> bool:
-    return str(os.environ.get("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", "1")).strip().lower() not in {
+    return str(os.environ.get("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", "0")).strip().lower() not in {
         "0",
         "false",
         "off",

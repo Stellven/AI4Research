@@ -24,6 +24,36 @@ def _ts(delta_seconds: int) -> str:
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def test_operator_pool_defaults_disabled_when_env_unset(monkeypatch) -> None:
+    monkeypatch.delenv("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", raising=False)
+    assert gnd._builder_operator_pool_enabled() is False
+
+
+def test_operator_pool_can_be_enabled_explicitly(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", "1")
+    assert gnd._builder_operator_pool_enabled() is True
+
+
+def test_operator_pool_submit_is_disabled_when_env_unset(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.delenv("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", raising=False)
+    monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path / "sprints")
+
+    result = gnd._submit_builder_to_operator_pool(
+        item={"payload": {}},
+        payload={},
+        sid="sprint-test",
+        node={"id": "N2", "required_capabilities": ["harness.status"]},
+        node_id="N2",
+        graph_path=str(tmp_path / "sprint-test.task_graph.json"),
+        pane="operator-pool:builder.0",
+        dispatch_id="dispatch-1",
+        dry_run=True,
+    )
+
+    assert result == {"ok": False, "reason": "operator_pool_disabled"}
+
+
 def test_expired_lease_does_not_make_pane_busy(monkeypatch) -> None:
     monkeypatch.setattr(gnd, "read_lease", lambda pane: {"expires_at": _ts(-60)})
     assert gnd._pane_has_active_lease("solar-harness-lab:0.0") is False
