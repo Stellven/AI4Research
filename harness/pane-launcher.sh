@@ -373,6 +373,13 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
   if [[ "$SOLAR_CODEX_BYPASS" == "1" ]]; then
     CODEX_CMD="$CODEX_CMD --dangerously-bypass-approvals-and-sandbox"
   fi
+  # Solar dispatches into long-lived Codex panes. Interactive update prompts
+  # steal the first Enter during clean/dispatch and can drop the pane back to
+  # shell, so managed panes disable the startup check by default. Operators can
+  # still run `codex update` manually outside the cockpit.
+  if [[ "${SOLAR_CODEX_CHECK_FOR_UPDATE_ON_STARTUP:-0}" != "1" ]]; then
+    CODEX_CMD="$CODEX_CMD -c check_for_update_on_startup=false"
+  fi
   [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && CODEX_CMD="$CODEX_CMD --model ${SOLAR_CODEX_MODEL}"
   [[ -n "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] && CODEX_CMD="$CODEX_CMD ${SOLAR_CODEX_EXTRA_FLAGS}"
   CODEX_ROLE_FILE="$(prepare_codex_role_file "$PERSONA")"
