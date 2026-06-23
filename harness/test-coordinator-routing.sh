@@ -243,6 +243,14 @@ assert "coordinator.sh prompt text uses active HARNESS_DIR for helper commands" 
   'grep -qF '\''${HARNESS_DIR}/solar-harness.sh handoff-submit'\'' "$COORDINATOR_SH"'
 echo ""
 
+# ── TC12: capture-verified direct dispatch materializes ACK to avoid false timeouts ──
+echo "TC12: capture-verified direct dispatch writes control-plane ACK"
+assert "dispatch_to_pane writes in-progress ACK after capture verification" \
+  'grep -qF '\''write_ack_file "$sid" "$_dispatch_id" "$role" "in_progress"'\'' "$COORDINATOR_SH"'
+assert "ACK watcher still launches after capture ACK" \
+  'grep -qF '\''ack_watcher_bg "$sid" "${_dispatch_id:-unknown}" 300'\'' "$COORDINATOR_SH"'
+echo ""
+
 # ── Summary ──
 echo "=== Results: PASS=$PASS FAIL=$FAIL ==="
 [[ "$FAIL" -eq 0 ]] && exit 0 || exit 1

@@ -2078,7 +2078,16 @@ dispatch_to_pane() {
         dispatch_ledger_append "attempted_verified" "$sid" "$pane" "${_dispatch_id:-}" \
           "{\"tries\":$((tries+1)),\"ack_source\":\"capture_verify\"}" || true
       record_model_call_runtime "succeeded" "$sid" "$pane" "${_dispatch_id:-}" "$instruction_file" "$((tries+1))" "keyword_processing_verified" ""
-      # S3: launch background ack-watcher (real ack comes when builder writes ack file)
+      # Capture verification is already an observable dispatch acceptance signal.
+      # Materialize an in-progress ACK so the control plane does not later log a
+      # false ack_timeout when the worker completes the task but omits the
+      # optional ACK snippet.
+      if [[ -n "${_dispatch_id:-}" ]] && type write_ack_file &>/dev/null; then
+        write_ack_file "$sid" "$_dispatch_id" "$role" "in_progress" "0" "capture verified dispatch accepted by runtime" || true
+      fi
+      # S3: launch background ack-watcher; if capture ACK was written, it will
+      # record acked_by_ack_file immediately. A worker may still overwrite the
+      # same ACK path with a later success/failed status.
       type ack_watcher_bg &>/dev/null && ack_watcher_bg "$sid" "${_dispatch_id:-unknown}" 300 || true
       return 0
     fi
