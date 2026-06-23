@@ -1,8 +1,9 @@
 import type {
-  DashboardResponse,
+  ActionResponse,
   DeliverablesPayload,
   EventRecord,
   IntakeResponse,
+  ProjectionResponse,
   SettingsPayload,
   SprintIndexResponse,
   StatusPayload,
@@ -38,9 +39,14 @@ export function fetchSprints(limit = 120): Promise<SprintIndexResponse> {
   return requestJson<SprintIndexResponse>(`/sprints?limit=${limit}`);
 }
 
-export function fetchDashboard(sprintId?: string): Promise<DashboardResponse> {
-  const query = sprintId ? `?sprint_id=${encodeURIComponent(sprintId)}` : "";
-  return requestJson<DashboardResponse>(`/orchestration/dashboard${query}`);
+export function fetchProjection(
+  sprintId: string,
+  mode: "fast" | "full" = "fast",
+): Promise<ProjectionResponse> {
+  const params = new URLSearchParams({ mode });
+  return requestJson<ProjectionResponse>(
+    `/api/sprints/${encodeURIComponent(sprintId)}/projection?${params.toString()}`,
+  );
 }
 
 export function fetchEvents(
@@ -70,11 +76,75 @@ export function fetchSettings(): Promise<SettingsPayload> {
   return requestJson<SettingsPayload>("/settings");
 }
 
+// The read-only content URL for a deliverable. Prefer the server-provided view_url
+// (real status-server already exposes it); fall back to the documented path query.
+export function deliverableUrl(
+  sprintId: string,
+  item: { rel_path: string; view_url?: string },
+): string {
+  if (item.view_url && item.view_url.startsWith("/")) return item.view_url;
+  return `/sprints/${encodeURIComponent(sprintId)}/deliverables?path=${encodeURIComponent(item.rel_path)}`;
+}
+
+export async function fetchDeliverableText(
+  url: string,
+): Promise<{ text: string; contentType: string }> {
+  const response = await fetch(url, { headers: { Accept: "text/plain, */*" } });
+  if (!response.ok) {
+    throw new Error(`Couldn’t load this file (HTTP ${response.status})`);
+  }
+  return {
+    text: await response.text(),
+    contentType: response.headers.get("Content-Type") || "",
+  };
+}
+
 export function submitIntake(task: string): Promise<IntakeResponse> {
   return requestJson<IntakeResponse>("/intake", {
     method: "POST",
     body: JSON.stringify({ task }),
   });
+}
+
+export function submitPlanVerdict(
+  sprintId: string,
+  verdict: "approve" | "reject",
+  reason = "",
+): Promise<ActionResponse> {
+  return requestJson<ActionResponse>(
+    `/api/sprints/${encodeURIComponent(sprintId)}/plan-verdict`,
+    {
+      method: "POST",
+      body: JSON.stringify({ verdict, reason }),
+    },
+  );
+}
+
+export function submitEvalVerdict(
+  sprintId: string,
+  verdict: "pass" | "fail",
+  reason = "",
+): Promise<ActionResponse> {
+  return requestJson<ActionResponse>(
+    `/api/sprints/${encodeURIComponent(sprintId)}/eval-verdict`,
+    {
+      method: "POST",
+      body: JSON.stringify({ verdict, reason }),
+    },
+  );
+}
+
+// Submit the approved Builder handoff into Evaluator review. Wraps the existing
+// `solar harness handoff-submit` command — it records and advances state; it does
+// not itself guarantee a fresh agent pass.
+export function submitHandoff(sprintId: string): Promise<ActionResponse> {
+  return requestJson<ActionResponse>(
+    `/api/sprints/${encodeURIComponent(sprintId)}/handoff-submit`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  );
 }
 
 export function openEventStream(

@@ -1,8 +1,8 @@
 @font-face {
-  font-family: "Geist";
-  src: url("./assets/fonts/Geist-Variable.woff2") format("woff2");
+  font-family: "Schibsted Grotesk";
+  src: url("./assets/fonts/SchibstedGrotesk-Variable.woff2") format("woff2");
   font-display: swap;
-  font-weight: 100 900;
+  font-weight: 400 900;
   font-style: normal;
 }
 
@@ -19,39 +19,54 @@
   font-family: var(--solar-font-sans);
   font-size: 16px;
   line-height: 1.5;
-  font-weight: 300;
+  font-weight: var(--solar-weight-body);
   color: var(--solar-ink);
   background: var(--solar-canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  --solar-font-sans: "Geist", sans-serif;
-  --solar-font-mono: "Geist Mono", monospace;
+  --solar-font-sans: "Schibsted Grotesk", "Geist", sans-serif;
+  --solar-font-mono: "Geist Mono", ui-monospace, monospace;
 
-  --solar-canvas: #f6f4ef;
-  --solar-surface: #fbfaf7;
-  --solar-surface-quiet: #f1eee7;
-  --solar-ink: #171714;
-  --solar-muted: #5d5b55;
-  --solar-subtle: #8d8981;
-  --solar-faint: #d8d4cb;
-  --solar-line: rgba(23, 23, 20, 0.12);
-  --solar-line-soft: rgba(23, 23, 20, 0.07);
-  --solar-line-strong: rgba(23, 23, 20, 0.22);
-  --solar-accent: #d85f1f;
-  --solar-accent-ink: #8f3512;
-  --solar-success: #2f6f4e;
-  --solar-warning: #a36518;
-  --solar-danger: #a64235;
-  --solar-warning-fill: #f2e4cb;
-  --solar-danger-fill: #f0d9d2;
-  --solar-control: #24231f;
-  --solar-control-hover: #33312c;
+  /* Huawei-derived black / white / red. Red is a signal (<=~10%), never a field. */
+  --solar-canvas: #ffffff;
+  --solar-surface: #fafafb;
+  --solar-surface-quiet: #f4f4f6;
+  --solar-ink: #1a1b1d;
+  --solar-muted: #54565c;
+  --solar-subtle: #6e7077; /* nudged darker from #74767d so subtle text clears AA over the warm glass sidebar (and on white) */
+  --solar-faint: #d8d9dd;
+  --solar-line: #e6e6ea;
+  --solar-line-soft: #efeff1;
+  --solar-line-strong: #d3d4d9;
+
+  /* The one accent: Huawei red #CF0A2C (PANTONE 186 C) — active / now / brand only. */
+  --solar-accent: #cf0a2c;
+  --solar-accent-ink: #a60822; /* darker red for small/dense red text (AA on white) */
+  --solar-accent-wash: rgba(207, 10, 44, 0.07);
+
+  /* Brand mark only (owner-sanctioned exception): three lightness steps of the ONE
+     red hue (~350deg) give the lotus front->back occlusion depth. Same hue, no glow,
+     no intra-petal gradient. All three pass AA on white (5.6 / 7.8 / 11.1). */
+  --lotus-front: #cf0a2c;
+  --lotus-mid: #a60822;
+  --lotus-back: #7a0a1d;
+
+  /* Semantic state — amber owns 'stalled' (hue-separated from brand red); done = quiet ink. */
+  --solar-success: #3a3b40;
+  --solar-warning: #b26a00;
+  --solar-danger: #a60822;
+  --solar-warning-fill: #fbefd0;
+  --solar-danger-fill: #f7dfe3;
+  --solar-control: #1a1b1d;
+  --solar-control-hover: #34353a;
 
   --solar-radius-control: 999px;
+  --solar-radius-pill: 999px;
   --solar-radius-small: 6px;
-  --solar-radius-modal: 8px;
+  --solar-radius-modal: 10px;
+  --solar-focus-radius: 4px;
 
   --solar-space-1: 4px;
   --solar-space-2: 8px;
@@ -70,7 +85,13 @@
   --solar-type-base: 1rem;
   --solar-type-lg: 1.25rem;
   --solar-type-xl: 1.5rem;
-  --solar-type-display: clamp(2rem, 3.2vw, 3.35rem);
+  --solar-type-display: clamp(2rem, 3vw, 3.05rem);
+
+  /* Extreme weight contrast (Schibsted axis is 400-900): quiet body, decisive display. */
+  --solar-weight-body: 400;
+  --solar-weight-medium: 500;
+  --solar-weight-strong: 660;
+  --solar-weight-display: 770;
 
   --solar-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --solar-duration-fast: 120ms;
@@ -141,8 +162,18 @@ summary:focus-visible,
   flex-direction: column;
   height: 100vh;
   padding: var(--solar-space-8) var(--solar-space-5) var(--solar-space-5);
-  border-right: 1px solid var(--solar-line);
-  background: var(--solar-surface-quiet);
+  border-right: 1px solid rgba(20, 21, 23, 0.08);
+  /* Warm-white brand tint (owner-sanctioned): orange-leaning ~32deg, R>G>B so it reads
+     as warm white, never pink/red. Warmth is a surface, not a signal; the rationed red
+     still lives only on the mark / active tick / focus ring. Subtle text (#6e7077) stays
+     AA (~4.87:1) over this composite. */
+  background: rgba(255, 252, 248, 0.82);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset -1px 0 0 rgba(255, 255, 255, 0.35),
+    1px 0 24px rgba(20, 21, 23, 0.04);
 }
 
 .brand-row {
@@ -155,13 +186,24 @@ summary:focus-visible,
 .brand-mark,
 .empty-mark {
   display: grid;
+  flex: 0 0 auto;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-small);
-  background: transparent;
-  color: var(--solar-ink);
+  width: 40px;
+  height: 40px;
+  color: var(--solar-accent);
+}
+
+/* Lotus mark depth: front->back red lightness steps (brand-only sanctioned exception). */
+.lotus-front {
+  fill: var(--lotus-front);
+}
+
+.lotus-mid {
+  fill: var(--lotus-mid);
+}
+
+.lotus-back {
+  fill: var(--lotus-back);
 }
 
 .brand-name {
@@ -200,10 +242,14 @@ summary:focus-visible,
 
 .new-task-button,
 .primary-button {
-  color: var(--solar-surface);
-  background: var(--solar-control);
+  color: #ffffff;
+  background: linear-gradient(180deg, #2a2b2f 0%, var(--solar-control) 100%);
   font-size: var(--solar-type-sm);
   font-weight: 680;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 1px 2px rgba(20, 21, 23, 0.2),
+    0 4px 12px -2px rgba(20, 21, 23, 0.16);
 }
 
 .new-task-button {
@@ -283,52 +329,52 @@ summary:focus-visible,
   padding-right: var(--solar-space-1);
 }
 
-.session-link,
-.session-skeleton {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr);
-  gap: var(--solar-space-3);
-  align-items: center;
-  min-height: 64px;
-  padding: var(--solar-space-3) 0 var(--solar-space-3) var(--solar-space-3);
-  border-top: 1px solid var(--solar-line-soft);
-  color: var(--solar-muted);
-  transition:
-    background var(--solar-duration-fast) var(--solar-ease),
-    color var(--solar-duration-fast) var(--solar-ease);
+.session-link {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding: var(--solar-space-3);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-ink);
+  transition: background var(--solar-duration-fast) var(--solar-ease);
 }
 
+.session-skeleton {
+  display: grid;
+  gap: var(--solar-space-2);
+  min-height: 52px;
+  padding: var(--solar-space-3);
+}
+
+/* Selection/state via a fill ladder (not motion); selected gets a red left tick. */
 .session-link:hover {
-  color: var(--solar-ink);
-  background: var(--solar-surface);
+  background: rgba(26, 27, 29, 0.04);
 }
 
 .session-link.is-active {
-  position: relative;
-  color: var(--solar-ink);
-  background: var(--solar-surface);
+  background: rgba(26, 27, 29, 0.07);
+}
+
+.session-link.is-active:hover {
+  background: rgba(26, 27, 29, 0.09);
 }
 
 .session-link.is-active::before {
   position: absolute;
-  top: -1px;
+  top: 50%;
   left: 0;
-  width: var(--solar-rule-accent-width);
-  height: 1px;
+  width: 2px;
+  height: 20px;
   content: "";
   background: var(--solar-accent);
+  border-radius: 1px;
+  transform: translateY(-50%);
 }
 
-.session-dot,
 .state-dot,
 .state-orb {
   display: block;
   border-radius: 999px;
-}
-
-.session-dot {
-  width: 8px;
-  height: 8px;
 }
 
 .session-copy {
@@ -338,11 +384,15 @@ summary:focus-visible,
 .session-title {
   display: block;
   overflow: hidden;
-  color: inherit;
+  color: var(--solar-ink);
   font-size: var(--solar-type-sm);
-  font-weight: 620;
+  font-weight: var(--solar-weight-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.session-link.is-active .session-title {
+  font-weight: 700;
 }
 
 .session-meta {
@@ -353,6 +403,10 @@ summary:focus-visible,
   font-size: var(--solar-type-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.session-meta.is-stalled {
+  color: var(--solar-warning);
 }
 
 .session-skeleton span,
@@ -418,8 +472,9 @@ summary:focus-visible,
   align-items: center;
   justify-content: space-between;
   gap: var(--solar-space-8);
-  min-height: 84px;
-  padding: var(--solar-space-4) 0;
+  min-height: 76px;
+  margin: 0 calc(-1 * var(--solar-space-10));
+  padding: var(--solar-space-4) var(--solar-space-10);
   border-bottom: 1px solid var(--solar-line);
   background: var(--solar-canvas);
 }
@@ -460,6 +515,7 @@ summary:focus-visible,
 }
 
 .stream-chip,
+.usage-chip,
 .agent-state {
   display: inline-flex;
   align-items: center;
@@ -479,10 +535,15 @@ summary:focus-visible,
   color: var(--solar-warning);
 }
 
+.usage-chip {
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
 .process-workbench {
   display: flex;
   flex-direction: column;
-  gap: var(--solar-space-7);
+  gap: var(--solar-space-8);
   padding-top: var(--solar-space-9);
 }
 
@@ -554,7 +615,7 @@ summary:focus-visible,
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--solar-space-5);
-  padding: var(--solar-space-1) 0 var(--solar-space-5);
+  padding-bottom: var(--solar-space-5);
   border-bottom: 1px solid var(--solar-line-soft);
 }
 
@@ -582,10 +643,14 @@ summary:focus-visible,
 }
 
 .process-results-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 356px);
-  gap: var(--solar-space-9);
-  align-items: start;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+.process-results-layout > .process-stream-panel {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .process-stream-panel {
@@ -598,8 +663,15 @@ summary:focus-visible,
   flex-direction: column;
 }
 
+/* A static activity-log entry: marker + (title, time) + inline text/facts.
+   No button, no click-to-expand cards — detail reads inline. */
 .process-step {
   position: relative;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: var(--solar-space-4);
+  align-items: start;
+  padding: var(--solar-space-5) 0;
   border-top: 1px solid var(--solar-line-soft);
 }
 
@@ -607,10 +679,11 @@ summary:focus-visible,
   border-top: 0;
 }
 
+/* Timeline spine connecting the markers. */
 .process-step::before {
   position: absolute;
-  top: 31px;
-  bottom: -31px;
+  top: 34px;
+  bottom: -18px;
   left: 12px;
   width: 1px;
   content: "";
@@ -619,29 +692,6 @@ summary:focus-visible,
 
 .process-step:last-child::before {
   display: none;
-}
-
-.process-step-summary {
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) 24px;
-  gap: var(--solar-space-5);
-  width: 100%;
-  padding: var(--solar-space-7) 0;
-  color: inherit;
-  text-align: left;
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background var(--solar-duration-fast) var(--solar-ease),
-    color var(--solar-duration-fast) var(--solar-ease);
-}
-
-.process-step-summary:hover {
-  background: var(--solar-surface);
-}
-
-.process-step-summary:hover strong {
-  color: var(--solar-accent-ink);
 }
 
 .process-step-icon {
@@ -654,10 +704,6 @@ summary:focus-visible,
   border-radius: 999px;
   background: var(--solar-canvas);
   color: var(--solar-subtle);
-  transition:
-    border-color var(--solar-duration-fast) var(--solar-ease),
-    background var(--solar-duration-fast) var(--solar-ease),
-    color var(--solar-duration-fast) var(--solar-ease);
 }
 
 .process-step-active .process-step-icon {
@@ -668,90 +714,75 @@ summary:focus-visible,
 .process-step-blocked .process-step-icon {
   color: var(--solar-warning);
   border-color: var(--solar-warning);
-  background: transparent;
 }
 
 .process-step-completed .process-step-icon {
   color: var(--solar-success);
-  border-color: var(--solar-line);
 }
 
 .process-step-main {
   min-width: 0;
+  padding-top: 1px;
 }
 
-.process-step-kicker {
-  display: block;
-  margin-bottom: var(--solar-space-1);
+.process-step-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+}
+
+.process-step-head strong {
+  min-width: 0;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-base);
+  font-weight: var(--solar-weight-strong);
+}
+
+.process-step-time {
+  flex: 0 0 auto;
   color: var(--solar-subtle);
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-micro);
   font-variant-numeric: tabular-nums;
 }
 
-.process-step-main strong {
-  display: block;
-  color: var(--solar-ink);
-  font-size: var(--solar-type-lg);
-  font-weight: 680;
-  transition: color var(--solar-duration-fast) var(--solar-ease);
-}
-
-.process-step-main > span:last-child {
-  display: block;
-  margin-top: var(--solar-space-1);
+.process-step-text {
+  max-width: 720px;
+  margin: var(--solar-space-1) 0 0;
   color: var(--solar-muted);
-  font-size: var(--solar-type-base);
-  line-height: 1.58;
+  font-size: var(--solar-type-sm);
+  line-height: 1.55;
 }
 
-.process-step-toggle {
-  display: grid;
-  place-items: center;
-  color: var(--solar-subtle);
-}
-
-.process-step-detail {
-  overflow: hidden;
-  margin: 0 0 var(--solar-space-7) 46px;
-}
-
-.process-step-detail p {
-  max-width: 760px;
-  margin: 0;
-  color: var(--solar-muted);
-  line-height: 1.68;
-}
-
+/* Inline, borderless mono key:value facts (no pills/cards). */
 .process-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--solar-space-2);
-  margin-top: var(--solar-space-4);
+  gap: var(--solar-space-1) var(--solar-space-4);
+  margin-top: var(--solar-space-3);
 }
 
 .process-facts span {
   display: inline-flex;
   align-items: baseline;
-  gap: var(--solar-space-2);
+  gap: 6px;
   max-width: 100%;
-  padding: 5px var(--solar-space-3);
-  border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-control);
-  color: var(--solar-muted);
-  font-size: var(--solar-type-xs);
+  font-size: var(--solar-type-micro);
 }
 
 .process-facts small {
   color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.process-facts strong {
+.process-facts code {
   overflow: hidden;
-  color: var(--solar-ink);
+  color: var(--solar-muted);
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-micro);
-  font-weight: 520;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -775,11 +806,444 @@ summary:focus-visible,
   transform: translateY(-1px);
 }
 
-.results-rail {
+/* Clickable artifact chips under a log entry — open the rail preview directly. */
+.process-artifacts {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: var(--solar-space-2);
+  margin-top: var(--solar-space-3);
+}
+
+.process-artifact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-muted);
+  background: var(--solar-surface);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  cursor: pointer;
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    border-color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.process-artifact-link:hover {
+  color: var(--solar-ink);
+  border-color: var(--solar-line-strong);
+  background: var(--solar-surface-quiet);
+}
+
+.process-artifact-link svg {
+  flex: 0 0 auto;
+  color: var(--solar-subtle);
+}
+
+/* Collapsible deliverables rail. Docked on desktop (width transitions 0 -> list -> preview,
+   the run pane flexes to fill); a fixed overlay drawer on narrow viewports. */
+.deliverables-rail {
+  flex: 0 0 auto;
+  width: 300px;
+  margin-left: var(--solar-space-10);
   position: sticky;
   top: 108px;
+  align-self: flex-start;
+  max-height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    width var(--solar-duration) var(--solar-ease),
+    margin-left var(--solar-duration) var(--solar-ease),
+    opacity var(--solar-duration-fast) var(--solar-ease);
+}
+
+.deliverables-rail.is-preview {
+  width: 480px;
+}
+
+.deliverables-rail.is-collapsed {
+  width: 0;
+  margin-left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Inner content keeps its open width so the outer width transition reveals (not reflows)
+   it; the content scrolls inside the rail. */
+.rail-list,
+.dv-preview {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-height: calc(100vh - 140px);
+}
+
+.dv-preview {
+  width: 480px;
+  overflow: hidden;
+}
+
+.rail-list {
+  overflow-y: auto;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-4);
+}
+
+.rail-head-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--solar-space-2);
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.rail-count {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  font-weight: 400;
+}
+
+.rail-close,
+.dv-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--solar-subtle);
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.rail-close:hover,
+.dv-action:hover {
+  color: var(--solar-ink);
+  background: var(--solar-surface-quiet);
+}
+
+.rail-divider {
+  margin: var(--solar-space-5) 0;
+  border-top: 1px solid var(--solar-line);
+}
+
+.dv-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solar-space-2);
+  margin-bottom: var(--solar-space-3);
+}
+
+.dv-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: 4px 8px 4px 4px;
+  border: 0;
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-muted);
+  background: transparent;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  cursor: pointer;
+  transition: color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.dv-back:hover {
+  color: var(--solar-ink);
+}
+
+.dv-preview-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dv-preview-title {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-4);
+}
+
+.dv-preview-name {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-badge {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border: 1px solid var(--solar-line);
+  border-radius: 999px;
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.dv-preview-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-surface);
+}
+
+.dv-preview-body:focus-visible {
+  outline: 2px solid var(--solar-accent);
+  outline-offset: 2px;
+}
+
+.dv-raw {
+  margin: 0;
+  padding: var(--solar-space-4);
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
+}
+
+.dv-action.is-active {
+  color: var(--solar-ink);
+  background: var(--solar-surface-quiet);
+}
+
+/* Rendered markdown — typographic hierarchy in the monochrome palette, mono for code. */
+.dv-md {
+  padding: var(--solar-space-4);
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  line-height: 1.6;
+}
+
+.dv-md > :first-child {
+  margin-top: 0;
+}
+
+.dv-md > :last-child {
+  margin-bottom: 0;
+}
+
+.dv-md h1,
+.dv-md h2,
+.dv-md h3,
+.dv-md h4 {
+  margin: 1.2em 0 0.5em;
+  font-weight: var(--solar-weight-strong);
+  line-height: 1.25;
+}
+
+.dv-md h1 {
+  font-size: var(--solar-type-lg);
+}
+
+.dv-md h2 {
+  font-size: var(--solar-type-base);
+}
+
+.dv-md h3 {
+  font-size: var(--solar-type-sm);
+}
+
+.dv-md p {
+  margin: 0 0 0.8em;
+}
+
+.dv-md ul,
+.dv-md ol {
+  margin: 0 0 0.8em;
+  padding-left: 1.3em;
+}
+
+.dv-md li {
+  margin: 0.2em 0;
+}
+
+.dv-md a {
+  color: var(--solar-accent-ink);
+  text-underline-offset: 2px;
+}
+
+.dv-md code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--solar-surface-quiet);
+  font-family: var(--solar-font-mono);
+  font-size: 0.92em;
+}
+
+.dv-md pre {
+  margin: 0 0 0.8em;
+  padding: var(--solar-space-3);
+  overflow-x: auto;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-canvas);
+}
+
+.dv-md pre code {
+  padding: 0;
+  background: none;
+}
+
+.dv-md blockquote {
+  margin: 0 0 0.8em;
+  padding: 0.2em 0 0.2em 0.9em;
+  border-left: 2px solid var(--solar-line-strong);
+  color: var(--solar-muted);
+}
+
+.dv-md table {
+  width: 100%;
+  margin: 0 0 0.8em;
+  border-collapse: collapse;
+  font-size: var(--solar-type-xs);
+}
+
+.dv-md th,
+.dv-md td {
+  padding: 6px 8px;
+  border: 1px solid var(--solar-line);
+  text-align: left;
+}
+
+.dv-md th {
+  background: var(--solar-surface-quiet);
+  font-weight: var(--solar-weight-strong);
+}
+
+.dv-md hr {
+  margin: 1.2em 0;
+  border: 0;
+  border-top: 1px solid var(--solar-line);
+}
+
+/* JSON — tonal (monochrome) highlight: differentiate by weight/tone, not hue. */
+.dv-json {
+  margin: 0;
+  padding: var(--solar-space-4);
+  color: var(--solar-muted);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
+}
+
+.dv-json .json-key {
+  color: var(--solar-ink);
+  font-weight: var(--solar-weight-medium);
+}
+
+.dv-json .json-str {
+  color: var(--solar-muted);
+}
+
+.dv-json .json-num {
+  color: var(--solar-ink);
+}
+
+.dv-json .json-lit {
+  color: var(--solar-ink);
+  font-style: italic;
+}
+
+.dv-image-wrap {
+  display: flex;
+  padding: var(--solar-space-4);
+}
+
+.dv-image {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+}
+
+.dv-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--solar-space-3);
+  padding: var(--solar-space-9) var(--solar-space-5);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-sm);
+  text-align: center;
+}
+
+.dv-status-error svg {
+  color: var(--solar-warning);
+}
+
+.dv-preview-foot {
+  margin-top: var(--solar-space-3);
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.rail-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  min-height: 40px;
+  padding: 0 var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color var(--solar-duration-fast) var(--solar-ease),
+    color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.rail-toggle:hover,
+.rail-toggle.is-open {
+  border-color: var(--solar-line-strong);
+  color: var(--solar-ink);
+  background: var(--solar-surface);
+}
+
+.rail-toggle-count {
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  font-weight: var(--solar-weight-medium);
+}
+
+/* Narrow-viewport scrim; hidden while the rail is docked (see media query). */
+.rail-scrim {
+  display: none;
 }
 
 .panel {
@@ -812,37 +1276,25 @@ summary:focus-visible,
 }
 
 .stage-list {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--solar-space-5);
-  margin-bottom: var(--solar-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-2);
+  margin-bottom: var(--solar-space-5);
 }
 
 .stage-row {
-  position: relative;
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1fr);
   gap: var(--solar-space-3);
   align-items: start;
-  min-height: 76px;
-  padding: var(--solar-space-3) 0;
-}
-
-.stage-row:not(:last-child)::after {
-  position: absolute;
-  top: 24px;
-  right: calc(-1 * var(--solar-space-5));
-  width: var(--solar-space-5);
-  height: 1px;
-  content: "";
-  background: var(--solar-line);
+  padding: var(--solar-space-2) 0;
 }
 
 .stage-marker {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   margin-top: 2px;
   border: 1px solid var(--solar-line);
   border-radius: 999px;
@@ -872,31 +1324,11 @@ summary:focus-visible,
 
 .stage-blocked .stage-marker {
   border-color: var(--solar-warning);
-  color: var(--solar-warning);
 }
 
 .stage-blocked strong,
 .stage-blocked p {
   color: var(--solar-warning);
-}
-
-.plan-status-band {
-  padding-top: var(--solar-space-5);
-  border-top: 1px solid var(--solar-line);
-}
-
-.plan-band-lower {
-  display: grid;
-  grid-template-columns: minmax(240px, 0.56fr) minmax(0, 1fr);
-  gap: var(--solar-space-8);
-  align-items: start;
-  padding-top: var(--solar-space-4);
-  border-top: 1px solid var(--solar-line-soft);
-}
-
-.plan-focus-list {
-  display: flex;
-  flex-direction: column;
 }
 
 .plan-focus {
@@ -930,12 +1362,6 @@ summary:focus-visible,
 
 .mini-node-list {
   margin-top: var(--solar-space-2);
-}
-
-.plan-status-band .mini-node-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 0;
 }
 
 .mini-node-list div,
@@ -1023,25 +1449,6 @@ summary:focus-visible,
   color: var(--solar-muted);
   font-size: var(--solar-type-sm);
   line-height: 1.62;
-}
-
-.usage-footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
-  gap: var(--solar-space-8);
-  align-items: start;
-  padding-top: var(--solar-space-5);
-  border-top: 1px solid var(--solar-line-soft);
-}
-
-.usage-footer .section-header {
-  margin-bottom: var(--solar-space-2);
-}
-
-.usage-footer .usage-label {
-  max-width: 760px;
-  margin-bottom: 0;
-  font-size: var(--solar-type-xs);
 }
 
 .usage-model {
@@ -1194,6 +1601,12 @@ summary:focus-visible,
 .form-error {
   margin-top: var(--solar-space-3);
   color: var(--solar-danger);
+  font-size: var(--solar-type-sm);
+}
+
+.form-notice {
+  margin-top: var(--solar-space-3);
+  color: var(--solar-success);
   font-size: var(--solar-type-sm);
 }
 
@@ -1369,37 +1782,1412 @@ summary:focus-visible,
   animation-duration: 1.4s;
 }
 
-.design-technical {
-  --solar-type-display: clamp(1.6rem, 2.4vw, 2.45rem);
+/* ======================================================================
+   Signature element — the multi-agent relay, expressed three ways.
+   ====================================================================== */
+
+.agent-signature {
+  padding-bottom: var(--solar-space-6);
+  border-bottom: 1px solid var(--solar-line-soft);
 }
 
-.design-technical .compact-title-block h1,
-.design-technical .process-step-main strong,
-.design-technical .section-header h2 {
+/* Plan flow — the Planner's DAG nodes as a left-to-right flow of stages; parallel
+   siblings stack within a stage so the branch/merge reads honestly. */
+.plan-flow {
+  padding-bottom: var(--solar-space-7);
+  margin-bottom: var(--solar-space-7);
+  border-bottom: 1px solid var(--solar-line);
+}
+
+.plan-flow-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-5);
+}
+
+.plan-flow-title {
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.plan-flow-meta {
+  color: var(--solar-subtle);
   font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.plan-flow-track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: var(--solar-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-stage {
+  display: flex;
+  align-items: center;
+}
+
+.plan-stage:not(:last-child)::after {
+  content: "";
+  flex: 0 0 auto;
+  width: var(--solar-space-6);
+  height: 1px;
+  margin: 0 var(--solar-space-2);
+  background: var(--solar-line-strong);
+}
+
+.plan-stage-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-2);
+}
+
+.plan-node {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: 6px 12px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  background: var(--solar-surface);
+  white-space: nowrap;
+}
+
+.plan-node-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--solar-faint);
+}
+
+.plan-node-label {
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+}
+
+.plan-node.tone-complete .plan-node-dot {
+  background: var(--solar-success);
+}
+
+.plan-node.tone-working {
+  border-color: var(--solar-accent);
+}
+
+.plan-node.tone-working .plan-node-dot {
+  background: var(--solar-accent);
+}
+
+.plan-node.tone-blocked {
+  border-color: var(--solar-warning);
+  background: var(--solar-warning-fill);
+}
+
+.plan-node.tone-blocked .plan-node-dot {
+  background: var(--solar-warning);
+}
+
+.plan-node.tone-idle .plan-node-label {
+  color: var(--solar-muted);
+}
+
+/* Decision zone — one attention surface above the stream: a human gate (the
+   operator's decision) or an honest system pause. Amber is reserved for the pause. */
+.decision-card {
+  display: grid;
+  gap: var(--solar-space-3);
+  margin: var(--solar-space-6) 0;
+  padding: var(--solar-space-5);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-modal);
+  background: var(--solar-surface);
+}
+
+.decision-stall {
+  border-color: var(--solar-warning);
+  background: var(--solar-warning-fill);
+}
+
+.decision-head {
+  display: grid;
+  gap: var(--solar-space-1);
+}
+
+.decision-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stall-kicker {
+  color: var(--solar-warning);
+}
+
+.stall-title {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  margin: 0;
+  color: var(--solar-warning);
+  font-size: var(--solar-type-lg);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: -0.01em;
+}
+
+.decision-title {
+  margin: 0;
+  font-size: var(--solar-type-lg);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.decision-desc {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+  line-height: 1.55;
+}
+
+.decision-card code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(20, 21, 23, 0.06);
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: 0.92em;
+}
+
+.decision-stall code {
+  background: rgba(178, 106, 0, 0.12);
+  color: var(--solar-warning);
+}
+
+.decision-artifacts {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.decision-reason {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  padding: var(--solar-space-3);
+  border: 1px solid var(--solar-line-strong);
+  border-radius: var(--solar-radius-control);
+  background: var(--solar-canvas);
+  color: var(--solar-ink);
+  font: inherit;
+  font-size: var(--solar-type-sm);
+}
+
+.decision-reason:focus-visible {
+  outline: 2px solid var(--solar-accent);
+  outline-offset: 2px;
+}
+
+.decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--solar-space-3);
+}
+
+.text-button {
+  border: 0;
+  background: none;
+  color: var(--solar-subtle);
+  font: inherit;
+  font-size: var(--solar-type-sm);
+  cursor: pointer;
+  transition: color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.text-button:hover {
+  color: var(--solar-ink);
+}
+
+.stall-waiting,
+.stall-resolve {
+  margin: 0;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+  line-height: 1.5;
+}
+
+.stall-unsafe {
+  display: grid;
+  gap: var(--solar-space-2);
+  margin: 0;
+  padding: var(--solar-space-3) 0 0;
+  border-top: 1px solid rgba(178, 106, 0, 0.22);
+  list-style: none;
+}
+
+.stall-unsafe li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--solar-space-2) var(--solar-space-3);
+}
+
+.stall-unsafe-name {
+  color: var(--solar-muted);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-medium);
+}
+
+.stall-unsafe-reason {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.agent-signature .state-dot {
+  margin: 0;
+}
+
+/* Default display weight: quiet body, decisive heading (extreme contrast). */
+.compact-title-block h1 {
+  font-weight: var(--solar-weight-display);
+}
+
+/* --- roster: a non-sequential agent status row (no false linear flow) --- */
+.sig-roster {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--solar-space-5);
+}
+
+.roster-agent {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
+  column-gap: var(--solar-space-2);
+  align-items: center;
+}
+
+.roster-copy {
+  min-width: 0;
+}
+
+.roster-copy strong {
+  display: block;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.roster-state {
+  display: block;
+  overflow: hidden;
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 880px) {
+  .sig-roster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--solar-space-4);
+  }
+}
+
+.compact-title-block h1 {
+  letter-spacing: -0.014em;
+}
+
+/* --- dispatch: the capability supply/demand gate ----------------------- */
+.sig-dispatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-5);
+}
+
+.gate-headline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--solar-space-3);
+}
+
+.gate-tag {
+  padding: 3px var(--solar-space-3);
+  border: 1px solid var(--solar-warning);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-warning);
+  font-size: var(--solar-type-micro);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gate-headline p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-lg);
+  line-height: 1.45;
+}
+
+.gate-headline code,
+.supply-ledger code {
+  font-family: var(--solar-font-mono);
+  font-size: 0.9em;
+}
+
+.gate-headline code {
+  color: var(--solar-accent-ink);
+}
+
+.supply-ledger {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+}
+
+.supply-row {
+  display: grid;
+  grid-template-columns: 10px 116px minmax(0, 1fr);
+  gap: var(--solar-space-3);
+  align-items: center;
+  padding: var(--solar-space-3) 0;
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.supply-row:first-child {
+  border-top: 0;
+}
+
+.supply-row > strong {
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.cap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--solar-space-2);
+  align-items: center;
+}
+
+.cap-chips code {
+  padding: 2px var(--solar-space-2);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-muted);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.cap-none {
+  border-style: dashed;
+  color: var(--solar-subtle);
+}
+
+.supply-demand {
+  border-top: 1px solid var(--solar-line);
+}
+
+.supply-demand > strong {
+  color: var(--solar-warning);
+}
+
+.cap-missing {
+  border-color: var(--solar-warning);
+  color: var(--solar-warning);
+  background: var(--solar-warning-fill);
+}
+
+.cap-missing-note {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+/* --- console: the operator log + a held dispatch line ------------------ */
+.sig-console {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-4);
+}
+
+.console-agents {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--solar-space-8);
+}
+
+.console-agent {
+  display: grid;
+  grid-template-columns: 10px 84px 116px minmax(0, 1fr);
+  gap: var(--solar-space-2);
+  align-items: center;
+  padding: var(--solar-space-2) 0;
+  border-top: 1px solid var(--solar-line-soft);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+}
+
+.console-role {
+  color: var(--solar-ink);
   font-weight: 560;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.design-technical .process-results-layout {
-  grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.58fr);
+.console-model {
+  overflow: hidden;
+  color: var(--solar-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.design-editorial .compact-session-header {
-  margin-left: min(8vw, 96px);
-  max-width: 920px;
+.console-activity {
+  overflow: hidden;
+  color: var(--solar-muted);
+  font-family: var(--solar-font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.design-editorial .compact-title-block h1 {
-  max-width: 780px;
-  font-weight: 300;
+.console-held {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--solar-space-2) var(--solar-space-5);
+  padding: var(--solar-space-3) var(--solar-space-4);
+  border-left: 2px solid var(--solar-warning);
+  background: var(--solar-warning-fill);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
 }
 
-.design-editorial .compact-title-block p {
-  font-size: var(--solar-type-xl);
+.console-held code {
+  color: var(--solar-warning);
 }
 
-.design-editorial .process-results-layout {
-  grid-template-columns: minmax(0, 0.95fr) minmax(300px, 0.58fr);
+[data-variant="console"] .compact-title-block h1 {
+  font-family: var(--solar-font-mono);
+  font-size: clamp(1.6rem, 2.2vw, 2.3rem);
+  font-weight: 540;
+  letter-spacing: -0.01em;
+}
+
+[data-variant="console"] .process-step-summary {
+  padding: var(--solar-space-4) 0;
+}
+
+[data-variant="console"] .process-step-main strong {
+  font-size: var(--solar-type-base);
+  font-weight: var(--solar-weight-strong);
+}
+
+[data-variant="console"] .process-results-layout {
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+}
+
+[data-variant="dispatch"] .compact-title-block h1 {
+  font-weight: var(--solar-weight-strong);
+}
+
+/* True toggles stay pills even though controls default to a small radius. */
+.switch-root {
+  border-radius: var(--solar-radius-pill);
+}
+
+@media (max-width: 900px) {
+  .console-agents {
+    grid-template-columns: 1fr;
+  }
+
+  .sig-relay .relay-cell {
+    flex: 1 1 100%;
+  }
+
+  .sig-relay .relay-link {
+    display: none;
+  }
+}
+
+/* ======================================================================
+   Home landing (chatbox) · explicit task header · compact usage.
+   ====================================================================== */
+
+.brand-row {
+  text-decoration: none;
+  border-radius: var(--solar-radius-small);
+  transition: opacity var(--solar-duration-fast) var(--solar-ease);
+}
+
+.brand-row:hover {
+  opacity: 0.72;
+}
+
+.home-landing {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: clamp(56px, 13vh, 168px) var(--solar-space-8) var(--solar-space-10);
+}
+
+.home-inner {
+  width: 100%;
+  max-width: 680px;
+}
+
+.home-landing h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  font-weight: var(--solar-weight-display);
+  letter-spacing: -0.018em;
+  line-height: 1.04;
+}
+
+.home-sub {
+  max-width: 56ch;
+  margin: var(--solar-space-4) 0 var(--solar-space-7);
+  color: var(--solar-muted);
+  font-size: var(--solar-type-base);
+  line-height: 1.55;
+}
+
+.home-prompt {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--solar-line-strong);
+  border-radius: var(--solar-radius-modal);
+  background: var(--solar-surface);
+  transition: border-color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.home-prompt:focus-within {
+  border-color: var(--solar-accent);
+}
+
+.home-prompt textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: var(--solar-space-4) var(--solar-space-4) var(--solar-space-2);
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  color: var(--solar-ink);
+  background: transparent;
+  font: inherit;
+  line-height: 1.5;
+}
+
+.home-prompt-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+  padding: var(--solar-space-2) var(--solar-space-3) var(--solar-space-3)
+    var(--solar-space-4);
+}
+
+.home-caption {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  margin: var(--solar-space-4) 0 0;
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.home-caption-note {
+  color: var(--solar-subtle);
+}
+
+.home-caption kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--solar-line);
+  border-radius: 4px;
+  color: var(--solar-muted);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+/* Crew launcher — a small footer-left pill opens a floating Radix popover (Codex-style):
+   click to open, click-outside / Esc to dismiss, persistent open state (no hover dropdown),
+   so it cannot flicker and the prompt keeps all its height. */
+.crew-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 8px 0 7px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-ink);
+  background: transparent;
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  cursor: pointer;
+  transition:
+    border-color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.crew-pill svg {
+  flex: 0 0 auto;
+}
+
+.crew-pill-icon {
+  color: var(--solar-subtle);
+}
+
+.crew-pill:hover,
+.crew-pill[data-state="open"] {
+  border-color: var(--solar-line-strong);
+  background: var(--solar-surface);
+}
+
+.crew-pill-label {
+  font-weight: var(--solar-weight-medium);
+  letter-spacing: 0.01em;
+}
+
+.crew-caret {
+  color: var(--solar-subtle);
+  transition: transform var(--solar-duration) var(--solar-ease);
+}
+
+.crew-pill[data-state="open"] .crew-caret {
+  transform: rotate(180deg);
+}
+
+/* Floating popover card (Radix Content). Elevation is sanctioned here — a floating layer
+   must read as above the page; a restrained layered shadow, never a heavy drop shadow. */
+.crew-popover {
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  /* Never let the panel run past the viewport — fit the space Radix reports, then scroll. */
+  max-height: var(--radix-popover-content-available-height, 70vh);
+  overflow-y: auto;
+  padding: var(--solar-space-4);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-modal);
+  background: var(--solar-canvas);
+  box-shadow:
+    0 1px 1px rgba(20, 21, 23, 0.04),
+    0 12px 32px -10px rgba(20, 21, 23, 0.22),
+    0 4px 10px -4px rgba(20, 21, 23, 0.12);
+  z-index: 50;
+  transform-origin: var(--radix-popover-content-transform-origin);
+  animation: crew-pop-in var(--solar-duration) var(--solar-ease);
+}
+
+@keyframes crew-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crew-popover {
+    animation: none;
+  }
+}
+
+.crew-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-3);
+}
+
+.crew-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.crew-panel-title {
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.crew-panel-count {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+}
+
+.segmented-option.is-computed:not(.is-active) {
+  color: var(--solar-subtle);
+}
+
+.crew-agent-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.crew-agent-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 168px;
+  gap: var(--solar-space-3);
+  align-items: center;
+  padding: var(--solar-space-2) 0;
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.crew-agent-row:first-child {
+  border-top: 0;
+}
+
+.crew-agent-name {
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+}
+
+.crew-panes-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--solar-space-3);
+  align-items: center;
+  padding-top: var(--solar-space-4);
+  border-top: 1px solid var(--solar-line);
+}
+
+.crew-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: 2px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  background: var(--solar-surface);
+}
+
+.crew-stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--solar-ink);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.crew-stepper-btn:hover:not(:disabled) {
+  background: var(--solar-surface-quiet);
+}
+
+.crew-stepper-btn:disabled {
+  color: var(--solar-faint);
+  cursor: not-allowed;
+}
+
+.crew-stepper-value {
+  min-width: 18px;
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.crew-agent-id strong {
+  display: block;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+}
+
+.crew-agent-id span {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.crew-panel-note {
+  margin: 0;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-xs);
+  line-height: 1.5;
+}
+
+.home-recent {
+  margin-top: var(--solar-space-9);
+}
+
+.home-recent-head {
+  margin-bottom: var(--solar-space-2);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-recent-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--solar-space-3);
+  align-items: center;
+  padding: var(--solar-space-3);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-ink);
+  transition: background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.home-recent-row:hover {
+  background: rgba(26, 27, 29, 0.04);
+}
+
+.home-recent-meta.is-stalled {
+  color: var(--solar-warning);
+}
+
+.home-recent-title {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-recent-meta {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.task-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-4);
+}
+
+.task-kicker {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-pill);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-medium);
+}
+
+.status-chip.status-blocked {
+  border-color: var(--solar-warning);
+  color: var(--solar-warning);
+}
+
+.status-chip.status-working {
+  border-color: var(--solar-accent);
+  color: var(--solar-accent-ink);
+}
+
+.status-chip.status-complete {
+  border-color: var(--solar-success);
+  color: var(--solar-success);
+}
+
+.phase-tag {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.usage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-3);
+}
+
+.usage-head span {
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.usage-head strong {
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-foot {
+  margin: var(--solar-space-3) 0 0;
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-micro);
+}
+
+/* Settings — interactive config (honest: staged locally, no write path). */
+.settings-notice {
+  display: flex;
+  gap: var(--solar-space-3);
+  max-width: 760px;
+  padding: var(--solar-space-3) var(--solar-space-4);
+  border: 1px solid var(--solar-line);
+  border-left: 2px solid var(--solar-subtle);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-muted);
+}
+
+.settings-notice svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--solar-subtle);
+}
+
+.settings-notice p {
+  margin: 0;
+  font-size: var(--solar-type-sm);
+  line-height: 1.55;
+}
+
+.settings-block {
+  max-width: 760px;
+  padding-top: var(--solar-space-6);
+  border-top: 1px solid var(--solar-line);
+}
+
+.settings-help {
+  margin: calc(-1 * var(--solar-space-3)) 0 var(--solar-space-4);
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  background: var(--solar-surface-quiet);
+}
+
+.segmented-option {
+  min-height: 32px;
+  padding: 0 var(--solar-space-4);
+  border-radius: 6px;
+  color: var(--solar-muted);
+  background: transparent;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  cursor: pointer;
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.segmented-option:hover {
+  color: var(--solar-ink);
+}
+
+.segmented-option.is-active {
+  color: var(--solar-ink);
+  background: var(--solar-surface);
+  box-shadow: inset 0 0 0 1px var(--solar-line);
+}
+
+.agent-config-list,
+.key-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-config-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 220px;
+  gap: var(--solar-space-4);
+  align-items: center;
+  padding: var(--solar-space-4) 0;
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.agent-config-row:first-child {
+  border-top: 0;
+}
+
+.agent-config-row.is-off {
+  opacity: 0.55;
+}
+
+.agent-config-id strong {
+  display: block;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.agent-config-id span {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.model-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.model-select select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--solar-space-7) 0 var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-ink);
+  background: var(--solar-surface);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  appearance: none;
+  cursor: pointer;
+  transition: border-color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.model-select select:hover {
+  border-color: var(--solar-line-strong);
+}
+
+.model-select select:disabled {
+  cursor: not-allowed;
+  color: var(--solar-subtle);
+}
+
+.model-select svg {
+  position: absolute;
+  right: var(--solar-space-3);
+  color: var(--solar-subtle);
+  pointer-events: none;
+}
+
+.key-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--solar-space-4);
+  align-items: center;
+  padding: var(--solar-space-4) 0;
+  border-top: 1px solid var(--solar-line-soft);
+}
+
+.key-row:first-child {
+  border-top: 0;
+}
+
+.key-id strong {
+  display: block;
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.key-id span {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.key-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  outline: 0;
+  color: var(--solar-ink);
+  background: var(--solar-surface);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  transition: border-color var(--solar-duration-fast) var(--solar-ease);
+}
+
+.key-input:focus {
+  border-color: var(--solar-accent);
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--solar-space-4);
+  max-width: 760px;
+  padding-top: var(--solar-space-5);
+}
+
+.settings-actions-note {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+/* Deliverables — clean artifact list (no redundant doc icons). */
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-3);
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.panel-head > span {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.artifact-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.artifact-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto 14px;
+  gap: var(--solar-space-3);
+  align-items: center;
+  width: 100%;
+  padding: var(--solar-space-3) 4px;
+  border: 0;
+  border-top: 1px solid var(--solar-line-soft);
+  border-radius: var(--solar-radius-small);
+  color: var(--solar-muted);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color var(--solar-duration-fast) var(--solar-ease),
+    background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.artifact-row:first-child {
+  border-top: 0;
+}
+
+.artifact-row:hover {
+  color: var(--solar-ink);
+  background: var(--solar-surface-quiet);
+}
+
+.artifact-name {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifact-meta {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  white-space: nowrap;
+}
+
+.artifact-row svg {
+  color: var(--solar-subtle);
+}
+
+/* Single, explicit stall/status statement under the task title. */
+.task-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--solar-space-2) var(--solar-space-3);
+  margin-top: var(--solar-space-5);
+  font-size: var(--solar-type-lg);
+  line-height: 1.4;
+}
+
+.task-status svg {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.task-status.tone-blocked {
+  color: var(--solar-warning);
+}
+
+.task-status.tone-complete {
+  color: var(--solar-success);
+}
+
+.task-status.tone-working {
+  color: var(--solar-accent-ink);
+}
+
+.task-status-label {
+  font-weight: var(--solar-weight-strong);
+}
+
+.task-status-reason {
+  color: var(--solar-ink);
+  font-weight: 400;
+}
+
+/* Process-as-hero: a thin context bar (title lives once, small); the stream
+   owns the center; the stall is a focal callout at the head of the stream. */
+.context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--solar-space-3) var(--solar-space-5);
+  padding-bottom: var(--solar-space-5);
+  border-bottom: 1px solid var(--solar-line);
+}
+
+.context-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--solar-space-3);
+  min-width: 0;
+}
+
+.context-title {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--solar-type-lg);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-facts {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-3);
+}
+
+.context-fact {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px var(--solar-space-3);
+  border: 1px solid var(--solar-line-strong);
+  border-radius: var(--solar-radius-pill);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-medium);
+}
+
+.status-badge.tone-blocked {
+  border-color: var(--solar-warning);
+  color: var(--solar-warning);
+}
+
+.status-badge.tone-working {
+  border-color: var(--solar-accent);
+  color: var(--solar-accent-ink);
+}
+
+.status-badge.tone-complete {
+  color: var(--solar-success);
+}
+
+.stream-column {
+  min-width: 0;
+}
+
+.stall-callout {
+  display: flex;
+  gap: var(--solar-space-3);
+  margin-bottom: var(--solar-space-7);
+  padding: var(--solar-space-4) var(--solar-space-5);
+  border: 1px solid var(--solar-line);
+  border-left: 3px solid var(--solar-warning);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-surface);
+}
+
+.stall-callout > svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--solar-warning);
+}
+
+.stall-callout-body {
+  min-width: 0;
+}
+
+.stall-callout-body strong {
+  display: block;
+  color: var(--solar-warning);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stall-callout-body p {
+  max-width: 60ch;
+  margin: var(--solar-space-2) 0 0;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-lg);
+  line-height: 1.4;
+}
+
+.stall-callout .technical-details {
+  margin-top: var(--solar-space-3);
+}
+
+/* Settings legible on the glass sidebar: real ink + hover fill, no faint border. */
+.settings-link {
+  color: var(--solar-ink);
+  border-color: transparent;
+  font-weight: var(--solar-weight-medium);
+}
+
+.settings-link:hover,
+.settings-link.is-active {
+  border-color: transparent;
+  background: rgba(26, 27, 29, 0.05);
+}
+
+/* Topbar 'New task': same black recognition, compact + lighter elevation. */
+.topbar-new-task {
+  min-height: 34px;
+  padding: 0 var(--solar-space-3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 @keyframes spin {
@@ -1433,21 +3221,55 @@ summary:focus-visible,
     grid-template-columns: 1fr;
   }
 
-  .results-rail {
-    position: static;
+  /* Narrow: the rail overlays the run as a fixed right drawer (slides via transform). */
+  .deliverables-rail {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    width: min(420px, 92vw);
+    margin-left: 0;
+    max-height: none;
+    padding: var(--solar-space-6);
+    border-left: 1px solid var(--solar-line);
+    background: var(--solar-canvas);
+    box-shadow: -12px 0 32px -12px rgba(20, 21, 23, 0.22);
+    z-index: 60;
+    transform: translateX(0);
+    opacity: 1;
+    transition: transform var(--solar-duration) var(--solar-ease);
   }
 
-  .stage-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .deliverables-rail.is-preview {
+    width: min(560px, 96vw);
   }
 
-  .stage-row:nth-child(2)::after {
-    display: none;
+  .deliverables-rail.is-collapsed {
+    width: min(420px, 92vw);
+    margin-left: 0;
+    opacity: 1;
+    transform: translateX(110%);
+    box-shadow: none;
   }
 
-  .plan-band-lower,
-  .usage-footer {
-    grid-template-columns: 1fr;
+  .rail-list,
+  .dv-preview {
+    width: 100%;
+    max-height: 100%;
+  }
+
+  .rail-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    padding: 0;
+    background: rgba(20, 21, 23, 0.32);
+    cursor: pointer;
   }
 
   .agent-presence-strip {
@@ -1489,6 +3311,8 @@ summary:focus-visible,
     align-items: flex-start;
     flex-direction: column;
     gap: var(--solar-space-4);
+    margin: 0 calc(-1 * var(--solar-space-5));
+    padding: var(--solar-space-4) var(--solar-space-5);
   }
 
   .topbar-actions {
@@ -1499,15 +3323,6 @@ summary:focus-visible,
     grid-template-columns: 1fr;
   }
 
-  .stage-list,
-  .plan-status-band .mini-node-list {
-    grid-template-columns: 1fr;
-  }
-
-  .stage-row::after {
-    display: none;
-  }
-
   .settings-stats {
     flex-wrap: wrap;
   }
@@ -1516,6 +3331,11 @@ summary:focus-visible,
 @media (max-width: 560px) {
   .workspace-scroll {
     padding: 0 var(--solar-space-4) var(--solar-space-7);
+  }
+
+  .topbar {
+    margin: 0 calc(-1 * var(--solar-space-4));
+    padding: var(--solar-space-4);
   }
 
   .process-step-summary {

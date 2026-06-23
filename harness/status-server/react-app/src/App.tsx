@@ -1,35 +1,38 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import * as Popover from "@radix-ui/react-popover";
 import * as Switch from "@radix-ui/react-switch";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
-  Activity,
   AlertTriangle,
+  ArrowLeft,
   ArrowUpRight,
-  Boxes,
   Bot,
   ChevronDown,
   ChevronRight,
   CheckCircle2,
   Circle,
   Clock3,
-  Command,
+  Code2,
+  Download,
   FileCheck2,
   FileText,
-  GitBranch,
-  ListTree,
   Loader2,
   MessageSquarePlus,
-  PanelLeft,
+  Minus,
+  PanelRight,
+  PauseCircle,
   Play,
+  Plus,
   Radio,
   RefreshCw,
   Search,
   Settings,
   ShieldCheck,
-  Sparkles,
   SquareTerminal,
   Workflow,
-  Zap,
+  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -43,19 +46,22 @@ import {
   useParams,
 } from "react-router-dom";
 import {
-  fetchDashboard,
+  deliverableUrl,
   fetchDeliverables,
+  fetchDeliverableText,
   fetchEvents,
+  fetchProjection,
+  submitEvalVerdict,
+  submitHandoff,
   fetchSettings,
   fetchSprints,
   fetchStatus,
   fetchUsage,
   openEventStream,
   submitIntake,
+  submitPlanVerdict,
 } from "./api";
 import {
-  AgentCardModel,
-  PHASES,
   ROLE_META,
   ROLE_ORDER,
   asString,
@@ -63,7 +69,6 @@ import {
   eventActor,
   eventTimestamp,
   formatDateTime,
-  formatTime,
   humanEvent,
   mergeEvents,
   nodeId,
@@ -76,10 +81,14 @@ import {
   titleForSprint,
 } from "./format";
 import type {
-  DashboardResponse,
+  DagNode,
   Deliverable,
   EventRecord,
+  HumanGate,
+  ProjectionAction,
+  ProjectionResponse,
   SettingsPayload,
+  StallSummary,
   SprintSummary,
   StatusPayload,
   UsagePayload,
@@ -89,7 +98,7 @@ type LoadState = "loading" | "ready" | "error";
 
 type SessionData = {
   status?: StatusPayload;
-  dashboard?: DashboardResponse;
+  projection?: ProjectionResponse;
   events: EventRecord[];
   usage?: UsagePayload;
   deliverables: Deliverable[];
@@ -101,7 +110,7 @@ type SessionData = {
 
 type SessionCacheEntry = Pick<
   SessionData,
-  "status" | "dashboard" | "events" | "usage" | "deliverables"
+  "status" | "projection" | "events" | "usage" | "deliverables"
 >;
 
 const sessionDataCache = new Map<string, SessionCacheEntry>();
@@ -120,18 +129,49 @@ type ProcessStep = {
   defaultExpanded: boolean;
   facts: Array<{ label: string; value: string }>;
   result?: Deliverable;
+  artifacts?: Deliverable[];
 };
 
-type DesignVariant = "contrast" | "technical" | "editorial";
+type DesignVariant = "relay" | "dispatch" | "console";
 
-type StageState = "passed" | "active" | "blocked" | "pending";
-
-type PlanStage = {
-  id: string;
-  label: string;
-  state: StageState;
-  detail: string;
-};
+// Original lotus mark — five petals fanning from a common base. Uses
+// currentColor so it inherits the brand accent. Not a reproduction of any
+// existing trademark; inspired by the fanned-petal flower silhouette.
+function BrandMark({ size = 40 }: { size?: number }) {
+  // An upright lotus bloom: petals fan up from a single base (12,21). Outer petals
+  // recede in the darkest red, mid petals a step lighter, the front/center petals the
+  // bright brand red — the three shades give the bloom its depth. No glow/gradient.
+  const petal = "M0 0C-2.5 -5.5 -2.2 -12.5 0 -16.5C2.2 -12.5 2.5 -5.5 0 0Z";
+  // Painted back-to-front so lighter front petals overlap the darker rear ones.
+  const petals = [
+    { a: -58, s: 0.8, cls: "lotus-back" },
+    { a: 58, s: 0.8, cls: "lotus-back" },
+    { a: -33, s: 0.9, cls: "lotus-mid" },
+    { a: 33, s: 0.9, cls: "lotus-mid" },
+    { a: -15, s: 0.99, cls: "lotus-front" },
+    { a: 15, s: 0.99, cls: "lotus-front" },
+    { a: 0, s: 1.08, cls: "lotus-front" },
+  ];
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {petals.map(({ a, s, cls }, index) => (
+        <path
+          key={index}
+          className={cls}
+          d={petal}
+          transform={`translate(12 21) rotate(${a}) scale(${s})`}
+        />
+      ))}
+    </svg>
+  );
+}
 
 function App() {
   return (
@@ -167,14 +207,6 @@ function Shell() {
     return () => window.clearInterval(id);
   }, [refreshSprints]);
 
-  useEffect(() => {
-    if (location.pathname === "/" && sprints.length > 0) {
-      navigate(`/sessions/${encodeURIComponent(sprints[0].sprint_id)}`, {
-        replace: true,
-      });
-    }
-  }, [location.pathname, navigate, sprints]);
-
   const onCreated = useCallback(
     async (sprintId: string) => {
       await refreshSprints();
@@ -194,21 +226,12 @@ function Shell() {
       />
       <main
         className="main-workspace"
-        aria-label="Solar Harness session workspace"
+        aria-label="AI4Research session workspace"
       >
         <Routes>
           <Route
             path="/"
-            element={
-              sprints.length ? (
-                <Navigate
-                  to={`/sessions/${encodeURIComponent(sprints[0].sprint_id)}`}
-                  replace
-                />
-              ) : (
-                <EmptyState onCreated={onCreated} />
-              )
-            }
+            element={<HomeLanding sprints={sprints} onCreated={onCreated} />}
           />
           <Route
             path="/sessions/:sprintId"
@@ -235,8 +258,8 @@ function selectedSprintFromPath(pathname: string): string {
 
 function designVariantFromSearch(search: string): DesignVariant {
   const value = new URLSearchParams(search).get("variant");
-  if (value === "technical" || value === "editorial") return value;
-  return "contrast";
+  if (value === "dispatch" || value === "console") return value;
+  return "relay";
 }
 
 function Sidebar({
@@ -254,22 +277,21 @@ function Sidebar({
 }) {
   return (
     <aside className="sidebar">
-      <div className="brand-row">
+      <NavLink to="/" className="brand-row" aria-label="AI4Research home">
         <div className="brand-mark" aria-hidden="true">
-          <Command size={18} />
+          <BrandMark size={40} />
         </div>
         <div>
-          <div className="brand-name">Solar Harness</div>
-          <div className="brand-subtitle">Agent runtime</div>
+          <div className="brand-name">AI4Research</div>
+          <div className="brand-subtitle">Multi-agent runtime</div>
         </div>
-      </div>
+      </NavLink>
 
       <NewTaskDialog onCreated={onCreated} buttonClassName="new-task-button" />
 
       <div className="sidebar-section">
         <div className="sidebar-heading">
           <span>Sessions</span>
-          <span>{sprints.length}</span>
         </div>
         <div className="session-list" data-testid="session-list">
           {state === "loading" && <SidebarSkeleton />}
@@ -285,14 +307,17 @@ function Sidebar({
                 `session-link ${isActive || selectedSprintId === sprint.sprint_id ? "is-active" : ""}`
               }
             >
-              <span className={`session-dot tone-${sessionTone(sprint)}`} />
               <span className="session-copy">
                 <span className="session-title">{titleForSprint(sprint)}</span>
-                <span className="session-meta">
-                  {asString(sprint.phase || sprint.status, "unknown").replace(
-                    /_/g,
-                    " ",
-                  )}
+                <span
+                  className={`session-meta ${sprint.stall?.is_stalled ? "is-stalled" : ""}`}
+                >
+                  {sprint.stall?.is_stalled
+                    ? "Stalled"
+                    : asString(
+                        sprint.phase || sprint.status,
+                        "unknown",
+                      ).replace(/_/g, " ")}
                 </span>
               </span>
             </NavLink>
@@ -392,7 +417,7 @@ function NewTaskDialog({
             Describe what you want done
           </Dialog.Title>
           <Dialog.Description className="dialog-description">
-            This starts a real Solar Harness intake via the existing CLI.
+            This starts a real AI4Research intake via the existing CLI.
           </Dialog.Description>
           <form onSubmit={onSubmit} className="intake-form">
             <textarea
@@ -445,12 +470,10 @@ function SessionRoute({
   const { sprintId = "" } = useParams();
   const decodedSprintId = decodeURIComponent(sprintId);
   const session = useSessionData(decodedSprintId, onSprintChanged);
-  const sprint =
-    sprints.find((item) => item.sprint_id === decodedSprintId) ||
-    session.dashboard?.data?.sprint;
+  const sprint = sprints.find((item) => item.sprint_id === decodedSprintId);
 
   if (!decodedSprintId) {
-    return <EmptyState onCreated={onCreated} />;
+    return <HomeLanding sprints={sprints} onCreated={onCreated} />;
   }
 
   return (
@@ -468,11 +491,11 @@ function useSessionData(
   onSprintChanged: () => Promise<void>,
 ): SessionData {
   const [status, setStatus] = useState<StatusPayload>();
-  const [dashboard, setDashboard] = useState<DashboardResponse>();
+  const [projection, setProjection] = useState<ProjectionResponse>();
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [usage, setUsage] = useState<UsagePayload>();
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
-  const [state, setState] = useState<LoadState>("loading");
+  const [state, setState] = useState<LoadState>("ready");
   const [error, setError] = useState("");
   const [streamState, setStreamState] = useState<
     "connecting" | "live" | "retrying" | "off"
@@ -485,52 +508,81 @@ function useSessionData(
 
   const refresh = useCallback(async () => {
     if (!sprintId) return;
-    try {
-      const [
-        statusResponse,
-        dashboardResponse,
-        eventsResponse,
-        usageResponse,
-        deliverablesResponse,
-      ] = await Promise.all([
-        fetchStatus(sprintId),
-        fetchDashboard(sprintId),
-        fetchEvents(sprintId, 140),
-        fetchUsage(),
-        fetchDeliverables(sprintId),
-      ]);
-      if (selectedSprintRef.current !== sprintId) {
-        return;
-      }
-      setStatus(statusResponse);
-      setDashboard(dashboardResponse);
-      const scopedEvents = eventsResponse.filter(
-        (event) => !event.sprint_id || event.sprint_id === sprintId,
-      );
-      const nextDeliverables = deliverablesResponse.items || [];
-      setEvents((existing) => {
-        const merged = mergeEvents(
-          existing.filter(
-            (event) => !event.sprint_id || event.sprint_id === sprintId,
-          ),
-          scopedEvents,
+    const isCurrent = () => selectedSprintRef.current === sprintId;
+    const cachePatch = (patch: Partial<SessionCacheEntry>) => {
+      const base: SessionCacheEntry = sessionDataCache.get(sprintId) || {
+        status: undefined,
+        projection: undefined,
+        events: [],
+        usage: undefined,
+        deliverables: [],
+      };
+      sessionDataCache.set(sprintId, { ...base, ...patch });
+    };
+
+    setError("");
+    setState("ready");
+
+    // Each endpoint applies its own slice as soon as it resolves. A slow
+    // endpoint (e.g. /usage, /status) never holds back the process stream,
+    // the DAG/plan, or the stall reason — those land the moment their own
+    // request returns instead of waiting on the slowest of the batch.
+    const results = await Promise.allSettled([
+      fetchProjection(sprintId, "fast").then((projectionResponse) => {
+        if (!isCurrent()) return;
+        setProjection(projectionResponse);
+        cachePatch({ projection: projectionResponse });
+      }),
+      fetchStatus(sprintId).then((statusResponse) => {
+        if (!isCurrent()) return;
+        setStatus(statusResponse);
+        cachePatch({ status: statusResponse });
+      }),
+      fetchEvents(sprintId, 140).then((eventsResponse) => {
+        if (!isCurrent()) return;
+        const scopedEvents = eventsResponse.filter(
+          (event) => !event.sprint_id || event.sprint_id === sprintId,
         );
-        sessionDataCache.set(sprintId, {
-          status: statusResponse,
-          dashboard: dashboardResponse,
-          events: merged,
-          usage: usageResponse,
-          deliverables: nextDeliverables,
+        setEvents((existing) => {
+          const merged = mergeEvents(
+            existing.filter(
+              (event) => !event.sprint_id || event.sprint_id === sprintId,
+            ),
+            scopedEvents,
+          );
+          cachePatch({ events: merged });
+          return merged;
         });
-        return merged;
-      });
-      setUsage(usageResponse);
-      setDeliverables(nextDeliverables);
-      setState("ready");
-      setError("");
-    } catch (err) {
+      }),
+      fetchUsage().then((usageResponse) => {
+        if (!isCurrent()) return;
+        setUsage(usageResponse);
+        cachePatch({ usage: usageResponse });
+      }),
+      fetchDeliverables(sprintId).then((deliverablesResponse) => {
+        if (!isCurrent()) return;
+        const nextDeliverables = deliverablesResponse.items || [];
+        setDeliverables(nextDeliverables);
+        cachePatch({ deliverables: nextDeliverables });
+      }),
+    ]);
+
+    if (!isCurrent()) return;
+    // Only surface the hard-error screen when the core data is unreachable and
+    // there is nothing already on screen to keep.
+    const [projectionResult, , eventsResult] = results;
+    const coreFailed =
+      projectionResult.status === "rejected" &&
+      eventsResult.status === "rejected";
+    if (coreFailed && !sessionDataCache.get(sprintId)?.events?.length) {
+      const rejection = results.find(
+        (item): item is PromiseRejectedResult => item.status === "rejected",
+      );
+      const reason = rejection?.reason;
+      setError(
+        reason instanceof Error ? reason.message : "Unable to load session",
+      );
       setState("error");
-      setError(err instanceof Error ? err.message : "Unable to load session");
     }
   }, [sprintId]);
 
@@ -538,7 +590,7 @@ function useSessionData(
     const cached = sessionDataCache.get(sprintId);
     if (cached) {
       setStatus(cached.status);
-      setDashboard(cached.dashboard);
+      setProjection(cached.projection);
       setEvents(cached.events);
       setUsage(cached.usage);
       setDeliverables(cached.deliverables);
@@ -546,7 +598,7 @@ function useSessionData(
       setError("");
     } else {
       setStatus(undefined);
-      setDashboard(undefined);
+      setProjection(undefined);
       setUsage(undefined);
       setDeliverables([]);
       setEvents([]);
@@ -602,7 +654,7 @@ function useSessionData(
 
   return {
     status,
-    dashboard,
+    projection,
     events,
     usage,
     deliverables,
@@ -624,35 +676,52 @@ function SessionView({
   session: SessionData;
   onCreated: (sprintId: string) => Promise<void>;
 }) {
-  const location = useLocation();
-  const designVariant = designVariantFromSearch(location.search);
-  const dashboard = dashboardForSprint(session.dashboard, sprintId);
-  const data = dashboard?.data;
-  const currentSprint = (data?.sprint ||
+  const projection = projectionForSprint(session.projection, sprintId);
+  const projectionData = projection?.data;
+  const currentSprint = (projectionData?.sprint ||
     sprint || { sprint_id: sprintId }) as SprintSummary;
-  const stall = data?.stall || sprint?.stall;
-  const agents = useMemo(
-    () => buildAgents(session.status, dashboard, session.events),
-    [session.status, dashboard, session.events],
+  const stall = projectionStall(projection) || sprint?.stall;
+  const humanActionType = asString(
+    projectionData?.human_action_required &&
+      typeof projectionData.human_action_required === "object"
+      ? (projectionData.human_action_required as { type?: unknown }).type
+      : "",
   );
   const phase = asString(
-    data?.phase || currentSprint.phase || currentSprint.status,
+    projectionData?.phase || currentSprint.phase || currentSprint.status,
   );
-  const isBlocked = Boolean(stall?.is_stalled);
-  const isComplete =
-    statusTone(asString(currentSprint.status || phase)) === "complete";
+  const isBlocked = isSystemBlocked(stall, humanActionType);
+  const projectionEvents =
+    projectionData?.events && projectionData.events.length > 0
+      ? projectionData.events
+      : session.events;
   const processSteps = useMemo(
     () =>
-      buildProcessSteps(dashboard, session.events, session.deliverables, phase),
-    [dashboard, session.deliverables, session.events, phase],
+      buildProcessSteps(
+        projection,
+        projectionEvents,
+        session.deliverables,
+        phase,
+        { showStallSummary: isBlocked, stall },
+      ),
+    [
+      projection,
+      projectionEvents,
+      isBlocked,
+      session.deliverables,
+      phase,
+      stall,
+    ],
   );
+  const rail = useDeliverablesRail();
 
   return (
-    <div className={`workspace-scroll design-${designVariant}`}>
+    <div className="workspace-scroll">
       <TopBar
         sprint={currentSprint}
         streamState={session.streamState}
-        onCreated={onCreated}
+        rail={rail}
+        deliverableCount={session.deliverables.length}
       />
       <AnimatePresence mode="popLayout">
         {session.state === "loading" && <LoadingWorkbench key="loading" />}
@@ -671,31 +740,39 @@ function SessionView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <CompactSessionHeader
-              sprint={currentSprint}
-              phase={phase}
+            <PlanFlow
+              projection={projection}
               isBlocked={isBlocked}
-              isComplete={isComplete}
-              stallText={stallCopy(stall)}
-              dashboard={dashboard}
             />
-            <PlanStatusBand
-              dashboard={dashboard}
-              phase={phase}
-              isBlocked={isBlocked}
-              isComplete={isComplete}
-            />
-            <AgentPresenceStrip agents={agents} />
-            <div className="process-results-layout">
+            <div
+              className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
+            >
               <ProcessStream
                 steps={processSteps}
-                streamState={session.streamState}
+                onOpenArtifact={rail.openArtifact}
+                decision={
+                  <DecisionZone
+                    projection={projection}
+                    sprintId={sprintId}
+                    onRefresh={session.refresh}
+                  />
+                }
               />
-              <ResultsRail
+              <DeliverablesRail
+                rail={rail}
+                sprintId={sprintId}
                 deliverables={session.deliverables}
+                usage={session.usage}
               />
+              {rail.open && (
+                <button
+                  type="button"
+                  className="rail-scrim"
+                  aria-label="Collapse deliverables"
+                  onClick={() => rail.setOpen(false)}
+                />
+              )}
             </div>
-            <UsagePanel usage={session.usage} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -703,210 +780,523 @@ function SessionView({
   );
 }
 
-function dashboardForSprint(
-  dashboard: DashboardResponse | undefined,
+function projectionForSprint(
+  projection: ProjectionResponse | undefined,
   sprintId: string,
-): DashboardResponse | undefined {
-  if (!dashboard) return undefined;
+): ProjectionResponse | undefined {
+  if (!projection) return undefined;
   const focus = asString(
-    dashboard.data?.focus_sprint_id || dashboard.data?.sprint?.sprint_id,
+    projection.data?.sprint_id || projection.data?.sprint?.sprint_id,
   );
   if (focus && focus !== sprintId) return undefined;
-  return dashboard;
+  return projection;
 }
 
-function stalledPlainLanguage(
-  dashboard: DashboardResponse | undefined,
-  stallText: string,
-): string {
-  const raw = [
-    stallText,
-    ...(dashboard?.data?.stall?.reasons || []),
-    dashboard?.data?.stall?.reason,
-    dashboard?.data?.stall?.explanation,
-  ]
-    .map((item) => asString(item))
-    .join(" ")
-    .toLowerCase();
+function projectionStall(
+  projection: ProjectionResponse | undefined,
+): StallSummary | undefined {
+  const stall = projection?.data?.dispatch?.stall;
+  return stall && typeof stall === "object" ? stall : undefined;
+}
 
+function isSystemBlocked(
+  stall: StallSummary | undefined,
+  humanActionType: string,
+): boolean {
+  if (!stall?.is_stalled) return false;
   if (
-    raw.includes("no_matching_worker") ||
-    raw.includes("no matching worker") ||
-    raw.includes("missing worker")
+    ["plan_review", "eval_review", "handoff_submit"].includes(humanActionType)
   ) {
-    const capability = missingCapability(dashboard);
-    return capability
-      ? `No agent provides ${capability}.`
-      : "No agent provides the required capability.";
+    return false;
   }
-
-  const capability = missingCapability(dashboard);
-  if (capability && dashboard?.data?.stall?.is_stalled) {
-    return `No agent provides ${capability}.`;
-  }
-
-  return (
-    stallText
-      .replace(/\bno_matching_worker\b/g, "")
-      .replace(/\s*:\s*$/g, "")
-      .trim() || "The sprint is waiting on a dispatch gate."
-  );
+  return true;
 }
 
-function missingCapability(
-  dashboard: DashboardResponse | undefined,
-): string {
-  const blockedNode = dashboard?.data?.blocked_nodes?.[0];
-  const nodeCapability = blockedNode?.required_capabilities?.[0];
-  if (nodeCapability) return nodeCapability;
-  const demand = dashboard?.data?.capabilities?.demand || {};
-  const demanded = Object.keys(demand).find((key) => key.trim());
-  if (demanded) return demanded;
-  const nodes = dashboard?.data?.dag?.nodes || [];
-  const blockedDagNode = nodes.find(
-    (node) => statusTone(asString(node.status)) === "blocked",
-  );
-  return blockedDagNode?.required_capabilities?.[0] || "";
+// The signature element: the multi-agent relay. Each variant expresses the
+// same subject (who acted, and where the capability gate held the work)
+function planNodeLabel(node: DagNode): string {
+  const id = asString(node.node_id || node.id);
+  const short = id.replace(/^build-/, "");
+  return short || asString(node.title) || id;
 }
 
-function technicalDetailsForStall(
-  dashboard: DashboardResponse | undefined,
-  stallText: string,
-): string[] {
-  const stall = dashboard?.data?.stall;
-  if (!stall?.is_stalled) return [];
-  const details = [
-    asString(stall.state) && `state: ${asString(stall.state)}`,
-    stallText && `summary: ${stallText}`,
-    ...((stall.reasons || []).map((reason) => `reason: ${reason}`) || []),
-    ...((stall.blocked_nodes || []).map((node) => `blocked node: ${node}`) ||
-      []),
-  ].filter(Boolean) as string[];
-
-  const blockedNodes = [
-    ...(dashboard?.data?.blocked_nodes || []),
-    ...((dashboard?.data?.dag?.nodes || []).filter(
-      (node) => statusTone(asString(node.status)) === "blocked",
-    ) || []),
-  ];
-  blockedNodes.slice(0, 4).forEach((node) => {
-    const id = nodeId(node);
-    if (node.route_decision) {
-      details.push(`route decision ${id}: ${asString(node.route_decision)}`);
-    }
-    if (node.blocked_reason) {
-      details.push(`blocked reason ${id}: ${asString(node.blocked_reason)}`);
-    }
-    (node.required_capabilities || []).slice(0, 3).forEach((capability) => {
-      details.push(`required capability ${id}: ${capability}`);
-    });
+// Group the plan's DAG nodes by dependency depth so parallel siblings share a stage —
+// an honest flow (it shows the real branch/merge) rather than a fake straight line.
+function buildPlanLevels(nodes: DagNode[]): DagNode[][] {
+  const byId = new Map<string, DagNode>();
+  nodes.forEach((node) => byId.set(asString(node.node_id || node.id), node));
+  const cache = new Map<string, number>();
+  function depth(id: string, seen: Set<string>): number {
+    const cached = cache.get(id);
+    if (cached !== undefined) return cached;
+    if (seen.has(id)) return 0; // cycle guard
+    seen.add(id);
+    const deps = (byId.get(id)?.depends_on || []).filter((dep) =>
+      byId.has(dep),
+    );
+    const value = deps.length
+      ? 1 + Math.max(...deps.map((dep) => depth(dep, seen)))
+      : 0;
+    seen.delete(id);
+    cache.set(id, value);
+    return value;
+  }
+  const levels: DagNode[][] = [];
+  nodes.forEach((node) => {
+    const level = depth(asString(node.node_id || node.id), new Set());
+    (levels[level] ||= []).push(node);
   });
-
-  return Array.from(new Set(details)).slice(0, 10);
+  return levels.filter((stage) => stage && stage.length);
 }
 
-function CompactSessionHeader({
-  sprint,
-  phase,
+// The Planner's plan made legible: the DAG nodes as a left-to-right flow of stages.
+function PlanFlow({
+  projection,
   isBlocked,
-  isComplete,
-  stallText,
-  dashboard,
 }: {
-  sprint: SprintSummary;
-  phase: string;
+  projection?: ProjectionResponse;
   isBlocked: boolean;
-  isComplete: boolean;
-  stallText: string;
-  dashboard?: DashboardResponse;
 }) {
-  const label = isBlocked
-    ? "Stalled"
-    : isComplete
-      ? "Complete"
-      : asString(sprint.status || phase, "Active").replace(/_/g, " ");
-  const statusLine = isBlocked
-    ? stalledPlainLanguage(dashboard, stallText)
-    : isComplete
-      ? "Build phase is marked complete by the harness."
-      : `Current phase: ${phase.replace(/_/g, " ") || "detecting"}.`;
-  const technicalDetails = technicalDetailsForStall(dashboard, stallText);
-
+  const projectionNodes =
+    projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
+  const nodes = projectionNodes;
+  const levels = useMemo(() => buildPlanLevels(nodes), [nodes]);
+  if (!levels.length) return null;
   return (
-    <section
-      className={`compact-session-header ${isBlocked ? "is-blocked" : ""} ${isComplete ? "is-complete" : ""}`}
-      data-testid="process-header"
-    >
-      <div className="compact-title-block">
-        <div className="eyebrow-row">
-          <span
-            className={`state-orb tone-${isBlocked ? "blocked" : isComplete ? "complete" : "working"}`}
-          />
-          <span>{label}</span>
-          <span>{phase.replace(/_/g, " ") || "phase unknown"}</span>
-        </div>
-        <h1>{titleForSprint(sprint)}</h1>
-        <p>{statusLine}</p>
-        {isBlocked && technicalDetails.length > 0 && (
-          <details className="technical-details">
-            <summary>Technical details</summary>
-            <ul>
-              {technicalDetails.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </details>
-        )}
+    <section className="plan-flow" aria-label="Plan" data-testid="plan-flow">
+      <div className="plan-flow-head">
+        <span className="plan-flow-title">Plan</span>
+        <span className="plan-flow-meta">
+          {nodes.length} steps
+          {isBlocked ? " · blocked at a capability gate" : ""}
+        </span>
       </div>
+      <ol className="plan-flow-track">
+        {levels.map((stage, index) => (
+          <li className="plan-stage" key={index}>
+            <div className="plan-stage-nodes">
+              {stage.map((node) => {
+                const id = asString(node.node_id || node.id);
+                const tone = statusTone(asString(node.status));
+                return (
+                  <span
+                    className={`plan-node tone-${tone}`}
+                    key={id}
+                    title={asString(node.title) || id}
+                  >
+                    <span className="plan-node-dot" aria-hidden="true" />
+                    <span className="plan-node-label">
+                      {planNodeLabel(node)}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
 
-function AgentPresenceStrip({ agents }: { agents: AgentCardModel[] }) {
+type GateSpec = {
+  title: string;
+  description: string;
+  primary: { actionId: string; label: string; pending: string };
+  secondary?: {
+    actionId: string;
+    label: string;
+    confirm: string;
+    pending: string;
+    reasonPlaceholder: string;
+  };
+};
+
+// Copy is deliberately honest: a verdict records + advances state. It does NOT
+// itself guarantee a fresh agent pass, so we never say "starts a new planning pass".
+const GATE_KINDS: Record<string, GateSpec> = {
+  plan_review: {
+    title: "Review the plan",
+    description:
+      "The planner produced a DAG. Approve it to start the build, or request changes with guidance for the planner.",
+    primary: {
+      actionId: "plan_approve",
+      label: "Approve plan",
+      pending: "Approving",
+    },
+    secondary: {
+      actionId: "plan_reject",
+      label: "Request changes",
+      confirm: "Send guidance",
+      pending: "Sending",
+      reasonPlaceholder: "What should the planner change?",
+    },
+  },
+  handoff_submit: {
+    title: "Review the builder's output",
+    description:
+      "The builder finished its work. Approve it to send the result into evaluation.",
+    primary: {
+      actionId: "handoff_submit",
+      label: "Approve",
+      pending: "Approving",
+    },
+  },
+  eval_review: {
+    title: "Review the result",
+    description:
+      "The evaluator finished its review. Accept the result, or send it back to the builder with a reason.",
+    primary: {
+      actionId: "eval_pass",
+      label: "Accept result",
+      pending: "Accepting",
+    },
+    secondary: {
+      actionId: "eval_fail",
+      label: "Request fixes",
+      confirm: "Send for fixes",
+      pending: "Sending",
+      reasonPlaceholder: "What needs to change before this passes?",
+    },
+  },
+};
+
+function shortArtifact(path: string): string {
+  return asString(path).split("/").pop() || asString(path);
+}
+
+function prettyActionLabel(id: string): string {
+  return id.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function artifactPath(ref?: string | { rel_path?: unknown }): string {
+  if (typeof ref === "string") return ref;
+  return asString(ref?.rel_path);
+}
+
+function projectionGateArtifacts(
+  data: ProjectionResponse["data"],
+  kind: string,
+  primaryArtifact: string,
+): string[] {
+  const fromProjection =
+    kind === "plan_review"
+      ? [
+          artifactPath(data.requirements?.prd),
+          artifactPath(data.requirements?.contract),
+          artifactPath(data.plan?.design),
+          artifactPath(data.plan?.plan),
+          artifactPath(data.plan?.task_graph),
+        ]
+      : kind === "eval_review"
+        ? [
+            artifactPath(data.evaluation?.handoff),
+            artifactPath(data.evaluation?.eval),
+            artifactPath(data.evaluation?.coverage_report),
+            artifactPath(data.evaluation?.acceptance_verdict),
+            artifactPath(data.requirements?.requirement_trace),
+          ]
+        : kind === "handoff_submit"
+          ? [primaryArtifact, artifactPath(data.evaluation?.handoff)]
+          : [primaryArtifact];
+  return Array.from(new Set(fromProjection.filter(Boolean)));
+}
+
+// One attention surface above the stream: the operator's current decision (a human
+// gate) when one is open, otherwise an honest system-pause when the run is stalled.
+function DecisionZone({
+  projection,
+  sprintId,
+  onRefresh,
+}: {
+  projection?: ProjectionResponse;
+  sprintId: string;
+  onRefresh: () => Promise<void>;
+}) {
+  const data = projection?.data;
+  if (!data) return null;
+  const actions = data.available_actions || [];
+  // human_action_required.type is the backend's single "what does the human do now"
+  // signal — and the only one that covers handoff (which has no human_gates entry).
+  const action = data.human_action_required || {};
+  const actionType = asString(action.type);
+  const primaryArtifact = artifactPath(action.primary_artifact);
+  if (GATE_KINDS[actionType]) {
+    const gate = (data.human_gates || []).find(
+      (item) => asString(item.kind) === actionType,
+    );
+    return (
+      <GateCard
+        kind={actionType}
+        gate={gate}
+        fallbackArtifacts={projectionGateArtifacts(
+          data,
+          actionType,
+          primaryArtifact,
+        )}
+        actions={actions}
+        sprintId={sprintId}
+        onRefresh={onRefresh}
+      />
+    );
+  }
+  const stall = projectionStall(projection);
+  const mismatch = data.capability_mismatch;
+  if (
+    actionType === "capability_mismatch" ||
+    actionType === "stall_review" ||
+    stall?.is_stalled ||
+    mismatch?.present
+  ) {
+    return <SystemStall mismatch={mismatch} actions={actions} />;
+  }
+  return null;
+}
+
+function GateCard({
+  kind,
+  gate,
+  fallbackArtifacts,
+  actions,
+  sprintId,
+  onRefresh,
+}: {
+  kind: string;
+  gate?: HumanGate;
+  fallbackArtifacts?: string[];
+  actions: ProjectionAction[];
+  sprintId: string;
+  onRefresh: () => Promise<void>;
+}) {
+  const spec = GATE_KINDS[kind];
+  const [reason, setReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+  const [submitting, setSubmitting] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
+
+  if (!spec) return null;
+  const primaryAction = actions.find((a) => a.id === spec.primary.actionId);
+  const secondaryAction = spec.secondary
+    ? actions.find((a) => a.id === spec.secondary!.actionId)
+    : undefined;
+  const gateArtifacts = (gate?.source_artifacts || []).filter(Boolean);
+  const artifacts = gateArtifacts.length ? gateArtifacts : fallbackArtifacts || [];
+  const busy = Boolean(submitting);
+
+  async function run(target: "primary" | "secondary") {
+    const cleanReason = reason.trim();
+    if (target === "secondary" && !cleanReason) {
+      setError("Add guidance before sending it back.");
+      reasonRef.current?.focus();
+      return;
+    }
+    setSubmitting(
+      target === "primary" ? spec!.primary.actionId : spec!.secondary!.actionId,
+    );
+    setError("");
+    setNotice("");
+    try {
+      let response;
+      if (kind === "plan_review") {
+        response = await submitPlanVerdict(
+          sprintId,
+          target === "primary" ? "approve" : "reject",
+          cleanReason,
+        );
+      } else if (kind === "eval_review") {
+        response = await submitEvalVerdict(
+          sprintId,
+          target === "primary" ? "pass" : "fail",
+          cleanReason,
+        );
+      } else {
+        response = await submitHandoff(sprintId);
+      }
+      if (!response.ok) {
+        throw new Error(
+          response.error || response.stdout_tail || "Action did not complete",
+        );
+      }
+      setReason("");
+      setRejecting(false);
+      setNotice(
+        target === "primary"
+          ? "Recorded — Solar is advancing."
+          : "Sent back with your guidance.",
+      );
+      await onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Action failed");
+    } finally {
+      setSubmitting("");
+    }
+  }
+
+  function onSecondaryClick() {
+    if (!spec!.secondary) return;
+    if (!rejecting) {
+      setRejecting(true);
+      setError("");
+      window.setTimeout(() => reasonRef.current?.focus(), 0);
+      return;
+    }
+    void run("secondary");
+  }
+
   return (
-    <section className="agent-presence-strip" data-testid="agent-presence">
-      {agents.map((agent) => (
-        <div className={`agent-presence tone-${agent.state}`} key={agent.role}>
-          <span
-            className={`state-dot tone-${agent.state === "complete" ? "complete" : agent.state === "blocked" ? "blocked" : agent.state === "working" ? "working" : "idle"}`}
-          />
-          <strong>{ROLE_META[agent.role].title.split(" ")[0]}</strong>
-          <span>{agent.state === "idle" ? "waiting" : agent.activity}</span>
+    <section
+      className="decision-card decision-gate"
+      data-testid="human-gate"
+      aria-label={spec.title}
+    >
+      <div className="decision-head">
+        <span className="decision-kicker">Your decision</span>
+        <h2 className="decision-title">{spec.title}</h2>
+      </div>
+      <p className="decision-desc">{spec.description}</p>
+      {artifacts.length > 0 && (
+        <div className="decision-artifacts">
+          <FileText size={13} aria-hidden="true" />
+          <span>Review {artifacts.map(shortArtifact).join(" · ")}</span>
         </div>
-      ))}
+      )}
+      {rejecting && spec.secondary && (
+        <textarea
+          ref={reasonRef}
+          className="decision-reason"
+          rows={2}
+          value={reason}
+          onChange={(event) => {
+            setReason(event.target.value);
+            setError("");
+          }}
+          placeholder={spec.secondary.reasonPlaceholder}
+        />
+      )}
+      <div className="decision-actions">
+        {!rejecting && (
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!primaryAction?.enabled || busy}
+            onClick={() => void run("primary")}
+          >
+            {submitting === spec.primary.actionId ? (
+              <Loader2 className="spin" size={15} />
+            ) : (
+              <CheckCircle2 size={15} />
+            )}
+            <span>
+              {submitting === spec.primary.actionId
+                ? spec.primary.pending
+                : spec.primary.label}
+            </span>
+          </button>
+        )}
+        {spec.secondary && (
+          <button
+            type="button"
+            className={rejecting ? "primary-button" : "ghost-button"}
+            disabled={(!secondaryAction?.enabled && !rejecting) || busy}
+            onClick={onSecondaryClick}
+          >
+            {submitting === spec.secondary.actionId && (
+              <Loader2 className="spin" size={15} />
+            )}
+            <span>
+              {submitting === spec.secondary.actionId
+                ? spec.secondary.pending
+                : rejecting
+                  ? spec.secondary.confirm
+                  : spec.secondary.label}
+            </span>
+          </button>
+        )}
+        {rejecting && (
+          <button
+            type="button"
+            className="text-button"
+            disabled={busy}
+            onClick={() => {
+              setRejecting(false);
+              setReason("");
+              setError("");
+            }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+      {error && <div className="form-error">{error}</div>}
+      {notice && <div className="form-notice">{notice}</div>}
+    </section>
+  );
+}
+
+function SystemStall({
+  mismatch,
+  actions,
+}: {
+  mismatch?: {
+    present?: boolean;
+    missing_capability?: string;
+    blocked_node?: string;
+  };
+  actions: ProjectionAction[];
+}) {
+  const missing = asString(mismatch?.missing_capability);
+  const unsafe = actions.filter(
+    (action) =>
+      action.enabled === false &&
+      /retry|skip|cancel|repair|steer/i.test(asString(action.id)),
+  );
+  return (
+    <section
+      className="decision-card decision-stall"
+      data-testid="system-stall"
+      aria-label="System paused"
+    >
+      <h2 className="stall-title">
+        <PauseCircle size={16} aria-hidden="true" />
+        System paused
+      </h2>
+      <p className="stall-resolve">
+        Connect a worker that provides{" "}
+        {missing ? <code>{missing}</code> : "the missing capability"} and the
+        run continues.
+      </p>
+      {unsafe.length > 0 && (
+        <ul className="stall-unsafe">
+          {unsafe.map((action) => (
+            <li key={asString(action.id)}>
+              <span className="stall-unsafe-name">
+                {asString(action.label) ||
+                  prettyActionLabel(asString(action.id))}
+              </span>
+              <span className="stall-unsafe-reason">
+                {asString(action.reason) || "not safe yet"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
 
 function ProcessStream({
   steps,
-  streamState,
+  decision,
+  onOpenArtifact,
 }: {
   steps: ProcessStep[];
-  streamState: string;
+  decision?: React.ReactNode;
+  onOpenArtifact: (path: string) => void;
 }) {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const signature = steps
-    .map((step) => `${step.id}:${step.defaultExpanded ? "1" : "0"}`)
-    .join("|");
-
-  useEffect(() => {
-    setExpanded(
-      Object.fromEntries(steps.map((step) => [step.id, step.defaultExpanded])),
-    );
-  }, [signature, steps]);
-
-  function toggle(id: string) {
-    setExpanded((current) => ({ ...current, [id]: !current[id] }));
-  }
-
   return (
     <section className="process-stream-panel" data-testid="process-stream">
-      <SectionHeader
-        icon={<Workflow size={17} />}
-        title="Process stream"
-        detail={streamState === "live" ? "live" : streamState}
-      />
       <div className="process-step-list">
         {steps.length === 0 && (
           <EmptyInline label="Waiting for agent process events" />
@@ -915,23 +1305,23 @@ function ProcessStream({
           <ProcessStepItem
             key={step.id}
             step={step}
-            expanded={Boolean(expanded[step.id])}
-            onToggle={() => toggle(step.id)}
+            onOpenArtifact={onOpenArtifact}
           />
         ))}
+        {decision}
       </div>
     </section>
   );
 }
 
+// A static activity-log entry — no click-to-expand cards. Detail is inline,
+// the way Linear/Stripe activity feeds read.
 function ProcessStepItem({
   step,
-  expanded,
-  onToggle,
+  onOpenArtifact,
 }: {
   step: ProcessStep;
-  expanded: boolean;
-  onToggle: () => void;
+  onOpenArtifact: (path: string) => void;
 }) {
   const icon =
     step.state === "blocked" ? (
@@ -948,220 +1338,531 @@ function ProcessStepItem({
       className={`process-step process-step-${step.state}`}
       data-testid={`process-step-${step.state}`}
     >
-      <button
-        className="process-step-summary"
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-      >
-        <span className="process-step-icon">{icon}</span>
-        <span className="process-step-main">
-          <span className="process-step-kicker">
-            {step.actor} · {formatDateTime(step.timestamp)}
-          </span>
+      <span className="process-step-icon">{icon}</span>
+      <div className="process-step-main">
+        <div className="process-step-head">
           <strong>{step.title}</strong>
-          <span>{step.summary}</span>
-        </span>
-        <span className="process-step-toggle">
-          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </span>
-      </button>
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            className="process-step-detail"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            <p>{step.detail}</p>
-            {step.facts.length > 0 && (
-              <div className="process-facts">
-                {step.facts.map((fact) => (
-                  <span key={`${fact.label}-${fact.value}`}>
-                    <small>{fact.label}</small>
-                    <strong>{fact.value}</strong>
-                  </span>
-                ))}
-              </div>
-            )}
-            {step.result && (
-              <a
-                className="step-result-link"
-                href={step.result.view_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <FileCheck2 size={15} />
-                <span>Open {step.result.name}</span>
-                <ArrowUpRight size={13} />
-              </a>
-            )}
-          </motion.div>
+          <span className="process-step-time">
+            {formatDateTime(step.timestamp)}
+          </span>
+        </div>
+        {step.summary && step.summary !== step.title && (
+          <p className="process-step-text">{step.summary}</p>
         )}
-      </AnimatePresence>
+        {step.facts.length > 0 && (
+          <div className="process-facts">
+            {step.facts.map((fact) => (
+              <span key={`${fact.label}-${fact.value}`}>
+                <small>{fact.label}</small>
+                <code>{fact.value}</code>
+              </span>
+            ))}
+          </div>
+        )}
+        {step.artifacts && step.artifacts.length > 0 && (
+          <div className="process-artifacts">
+            {step.artifacts.map((item) => (
+              <button
+                key={item.rel_path}
+                type="button"
+                className="process-artifact-link"
+                onClick={() => onOpenArtifact(item.rel_path)}
+              >
+                <FileText size={13} aria-hidden="true" />
+                <span>{item.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {step.result && (
+          <button
+            type="button"
+            className="step-result-link"
+            onClick={() => onOpenArtifact(step.result!.rel_path)}
+          >
+            <FileCheck2 size={15} />
+            <span>Open {step.result.name}</span>
+          </button>
+        )}
+      </div>
     </article>
   );
 }
 
-function ResultsRail({
+const RAIL_STORAGE_KEY = "ai4r.rail.open";
+
+// Open by default on desktop, collapsed on narrow/mobile; honor any stored choice.
+// Preview state never persists.
+function useDeliverablesRail() {
+  const [open, setOpenState] = useState<boolean>(() => {
+    try {
+      const stored = window.localStorage.getItem(RAIL_STORAGE_KEY);
+      if (stored === "1") return true;
+      if (stored === "0") return false;
+      return window.innerWidth > 1240;
+    } catch {
+      return true;
+    }
+  });
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+
+  const setOpen = useCallback((next: boolean) => {
+    setOpenState(next);
+    try {
+      window.localStorage.setItem(RAIL_STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      // localStorage unavailable (private mode) — open state stays in memory only.
+    }
+    if (!next) setPreviewPath(null);
+  }, []);
+
+  const toggle = useCallback(() => setOpen(!open), [open, setOpen]);
+  const openPreview = useCallback((path: string) => setPreviewPath(path), []);
+  const closePreview = useCallback(() => setPreviewPath(null), []);
+  // Open a deliverable from anywhere (e.g. a log entry) — ensure the rail is open.
+  const openArtifact = useCallback(
+    (path: string) => {
+      setOpen(true);
+      setPreviewPath(path);
+    },
+    [setOpen],
+  );
+
+  return {
+    open,
+    setOpen,
+    toggle,
+    previewPath,
+    openPreview,
+    closePreview,
+    openArtifact,
+  };
+}
+
+type RailController = ReturnType<typeof useDeliverablesRail>;
+
+function DeliverablesRail({
+  rail,
+  sprintId,
   deliverables,
+  usage,
 }: {
+  rail: RailController;
+  sprintId: string;
   deliverables: Deliverable[];
+  usage?: UsagePayload;
 }) {
+  const activeItem = rail.previewPath
+    ? deliverables.find((item) => item.rel_path === rail.previewPath)
+    : undefined;
+  const inPreview = Boolean(activeItem);
+  const asideRef = useRef<HTMLElement>(null);
+  const returnFocusPath = useRef<string | null>(null);
+
+  // Remove the collapsed rail from the tab order / a11y tree without killing the
+  // width transition (visibility/display would).
+  useEffect(() => {
+    const node = asideRef.current as (HTMLElement & { inert?: boolean }) | null;
+    if (node) node.inert = !rail.open;
+  }, [rail.open]);
+
+  function handleOpenPreview(path: string) {
+    returnFocusPath.current = path;
+    rail.openPreview(path);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent) {
+    if (event.key !== "Escape") return;
+    event.stopPropagation();
+    if (inPreview) rail.closePreview();
+    else rail.setOpen(false);
+  }
+
   return (
-    <aside className="results-rail" data-testid="results-rail">
-      <DeliverablesPanel deliverables={deliverables} />
+    <aside
+      ref={asideRef}
+      className={`deliverables-rail ${rail.open ? "is-open" : "is-collapsed"} ${inPreview ? "is-preview" : ""}`}
+      data-testid="results-rail"
+      aria-label="Deliverables"
+      onKeyDown={handleKeyDown}
+    >
+      {inPreview && activeItem ? (
+        <DeliverablePreview
+          item={activeItem}
+          sprintId={sprintId}
+          onBack={rail.closePreview}
+          onClose={() => rail.setOpen(false)}
+        />
+      ) : (
+        <RailList
+          deliverables={deliverables}
+          usage={usage}
+          onOpen={handleOpenPreview}
+          onClose={() => rail.setOpen(false)}
+          focusPath={returnFocusPath.current}
+        />
+      )}
     </aside>
   );
 }
 
-function buildPlanStages(
-  phase: string,
-  isBlocked: boolean,
-  isComplete: boolean,
-  dashboard?: DashboardResponse,
-): PlanStage[] {
-  const currentIndex = PHASES.findIndex((item) => phase.includes(item));
-  const normalizedIndex = currentIndex >= 0 ? currentIndex : 0;
-  const blockedIndex = isBlocked
-    ? Math.min(
-        PHASES.length - 1,
-        phase.includes("build_complete") ? normalizedIndex : normalizedIndex + 1,
-      )
-    : -1;
-  const blockedCapability = missingCapability(dashboard);
+function RailList({
+  deliverables,
+  usage,
+  onOpen,
+  onClose,
+  focusPath,
+}: {
+  deliverables: Deliverable[];
+  usage?: UsagePayload;
+  onOpen: (path: string) => void;
+  onClose: () => void;
+  focusPath: string | null;
+}) {
+  const focusRowRef = useRef<HTMLButtonElement>(null);
 
-  return [
-    { id: "spec", label: "Spec", complete: "Request accepted" },
-    { id: "prd_ready", label: "PRD", complete: "Requirements shaped" },
-    { id: "planning_complete", label: "Plan", complete: "DAG prepared" },
-    { id: "build_complete", label: "Build", complete: "Output produced" },
-  ].map((stage, index) => {
-    let state: StageState = "pending";
-    if (isComplete || index < normalizedIndex) state = "passed";
-    if (!isComplete && index === normalizedIndex) state = "active";
-    if (index === blockedIndex) state = "blocked";
-    if (isBlocked && index < blockedIndex) state = "passed";
-    return {
-      id: stage.id,
-      label: stage.label,
-      state,
-      detail:
-        state === "passed"
-          ? stage.complete
-          : state === "blocked"
-            ? blockedCapability
-              ? `No agent provides ${blockedCapability}`
-              : "Blocked by dispatch capability"
-            : state === "active"
-              ? "Current stage"
-              : "Waiting",
-    };
+  useEffect(() => {
+    if (focusPath && focusRowRef.current) focusRowRef.current.focus();
+  }, [focusPath]);
+
+  return (
+    <div className="rail-list" data-testid="deliverables-panel">
+      <div className="rail-head">
+        <div className="rail-head-title">
+          <span>Deliverables</span>
+          <span className="rail-count">{deliverables.length}</span>
+        </div>
+        <button
+          type="button"
+          className="rail-close"
+          onClick={onClose}
+          aria-label="Collapse deliverables"
+        >
+          <X size={15} />
+        </button>
+      </div>
+      {deliverables.length === 0 ? (
+        <EmptyInline label="No deliverables yet" />
+      ) : (
+        <div className="artifact-list">
+          {deliverables.map((item) => (
+            <button
+              type="button"
+              key={item.rel_path}
+              ref={focusPath === item.rel_path ? focusRowRef : undefined}
+              className="artifact-row"
+              onClick={() => onOpen(item.rel_path)}
+            >
+              <FileText className="artifact-icon" size={15} />
+              <span className="artifact-name">{item.name}</span>
+              <span className="artifact-meta">{item.kind.toUpperCase()}</span>
+              <ChevronRight size={14} className="artifact-chevron" />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="rail-divider" />
+      <UsagePanel usage={usage} />
+    </div>
+  );
+}
+
+function formatDeliverableTime(mtime?: number): string {
+  if (!mtime) return "";
+  const date = new Date(mtime * 1000);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
-function PlanStatusBand({
-  dashboard,
-  phase,
-  isBlocked,
-  isComplete,
+function kindLabel(kind: string): string {
+  const map: Record<string, string> = {
+    md: "Markdown",
+    markdown: "Markdown",
+    json: "JSON",
+    txt: "Text",
+    log: "Log",
+    html: "HTML",
+    png: "Image",
+    jpg: "Image",
+    jpeg: "Image",
+  };
+  return map[kind.toLowerCase()] || kind.toUpperCase();
+}
+
+const IMAGE_KINDS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
+
+function isImageKind(kind: string): boolean {
+  return IMAGE_KINDS.has(kind.toLowerCase());
+}
+
+function canRenderKind(kind: string): boolean {
+  const k = kind.toLowerCase();
+  return k === "md" || k === "markdown" || k === "json";
+}
+
+// Tonal (not color-coded) JSON highlight: keys, strings, numbers, and literals each get a
+// class so weight/tone can differentiate them while staying in the monochrome palette.
+function highlightJson(src: string): React.ReactNode[] {
+  const re =
+    /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+\.?\d*(?:[eE][+-]?\d+)?)|\b(true|false|null)\b/g;
+  const nodes: React.ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(src))) {
+    if (match.index > last) nodes.push(src.slice(last, match.index));
+    if (match[1]) {
+      nodes.push(
+        <span key={key++} className={match[2] ? "json-key" : "json-str"}>
+          {match[1]}
+        </span>,
+      );
+      if (match[2]) nodes.push(match[2]);
+    } else if (match[3]) {
+      nodes.push(
+        <span key={key++} className="json-num">
+          {match[3]}
+        </span>,
+      );
+    } else if (match[4]) {
+      nodes.push(
+        <span key={key++} className="json-lit">
+          {match[4]}
+        </span>,
+      );
+    }
+    last = match.index + match[0].length;
+  }
+  if (last < src.length) nodes.push(src.slice(last));
+  return nodes;
+}
+
+function DeliverableRendered({
+  item,
+  text,
+  raw,
 }: {
-  dashboard?: DashboardResponse;
-  phase: string;
-  isBlocked: boolean;
-  isComplete: boolean;
+  item: Deliverable;
+  text: string;
+  raw: boolean;
 }) {
-  const nodes = dashboard?.data?.dag?.nodes || [];
-  const active = nodes.find(
-    (node) => statusTone(asString(node.status)) === "working",
-  );
-  const blocked = nodes.filter(
-    (node) => statusTone(asString(node.status)) === "blocked",
-  );
-  const stages = buildPlanStages(phase, isBlocked, isComplete, dashboard);
+  if (raw) return <pre className="dv-raw">{text}</pre>;
+  const kind = item.kind.toLowerCase();
+  if (kind === "md" || kind === "markdown") {
+    return (
+      <div className="dv-md">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      </div>
+    );
+  }
+  if (kind === "json") {
+    let pretty = text;
+    try {
+      pretty = JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+      // Not valid JSON — fall back to the raw text rather than throwing.
+    }
+    return <pre className="dv-json">{highlightJson(pretty)}</pre>;
+  }
+  return <pre className="dv-raw">{text}</pre>;
+}
+
+function DeliverablePreview({
+  item,
+  sprintId,
+  onBack,
+  onClose,
+}: {
+  item: Deliverable;
+  sprintId: string;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  const url = deliverableUrl(sprintId, item);
+  const isImage = isImageKind(item.kind);
+  const canToggleRaw = canRenderKind(item.kind);
+  const [state, setState] = useState<LoadState>(isImage ? "ready" : "loading");
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const [raw, setRaw] = useState(false);
+  const backRef = useRef<HTMLButtonElement>(null);
+
+  const load = useCallback(() => {
+    if (isImage) {
+      setState("ready");
+      return;
+    }
+    setState("loading");
+    setError("");
+    fetchDeliverableText(url)
+      .then(({ text: body }) => {
+        setText(body);
+        setState("ready");
+      })
+      .catch((err) => {
+        setError(
+          err instanceof Error ? err.message : "Couldn’t load this file",
+        );
+        setState("error");
+      });
+  }, [url, isImage]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Move focus into the preview on open (back to the originating row is handled by RailList).
+  useEffect(() => {
+    backRef.current?.focus();
+  }, []);
+
   return (
-    <section className="panel plan-status-band" data-testid="graph-summary">
-      <SectionHeader
-        icon={<ListTree size={17} />}
-        title="Plan"
-        detail={`${nodes.length} nodes`}
-      />
-      <div className="stage-list" aria-label="Discrete sprint stages">
-        {stages.map((stage) => (
-          <div className={`stage-row stage-${stage.state}`} key={stage.id}>
-            <span className="stage-marker" aria-hidden="true">
-              {stage.state === "passed" ? <CheckCircle2 size={14} /> : null}
-              {stage.state === "blocked" ? <AlertTriangle size={14} /> : null}
-            </span>
-            <div>
-              <strong>{stage.label}</strong>
-              <p>{stage.detail}</p>
-            </div>
+    <div className="dv-preview" data-testid="deliverable-preview">
+      <div className="dv-preview-head">
+        <button
+          type="button"
+          ref={backRef}
+          className="dv-back"
+          onClick={onBack}
+        >
+          <ArrowLeft size={15} aria-hidden="true" />
+          <span>Deliverables</span>
+        </button>
+        <div className="dv-preview-actions">
+          {canToggleRaw && (
+            <button
+              type="button"
+              className={`dv-action ${raw ? "is-active" : ""}`}
+              aria-pressed={raw}
+              aria-label="Toggle raw source"
+              onClick={() => setRaw((value) => !value)}
+            >
+              <Code2 size={15} />
+            </button>
+          )}
+          <a
+            className="dv-action"
+            href={url}
+            download={item.name}
+            aria-label="Download file"
+          >
+            <Download size={15} />
+          </a>
+          <a
+            className="dv-action"
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open in new tab"
+          >
+            <ArrowUpRight size={15} />
+          </a>
+          <button
+            type="button"
+            className="dv-action"
+            onClick={onClose}
+            aria-label="Collapse deliverables"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      </div>
+      <div className="dv-preview-title">
+        <span className="dv-preview-name">{item.name}</span>
+        <span className="dv-badge">{item.kind.toUpperCase()}</span>
+      </div>
+      <div className="dv-preview-body" tabIndex={0}>
+        {state === "loading" && (
+          <div className="dv-status">
+            <Loader2 className="spin" size={16} />
+            <span>Loading…</span>
           </div>
-        ))}
-      </div>
-      {nodes.length === 0 && <EmptyInline label="No DAG available" />}
-      <div className="plan-band-lower">
-        <div className="plan-focus-list">
-          {active && (
-            <div className="plan-focus">
-              <span className="state-dot tone-working" />
-              <div>
-                <strong>{nodeId(active)}</strong>
-                <p>{nodeTitle(active)}</p>
-              </div>
+        )}
+        {state === "error" && (
+          <div className="dv-status dv-status-error">
+            <AlertTriangle size={16} />
+            <p>{error}</p>
+            <button type="button" className="icon-text-button" onClick={load}>
+              <RefreshCw size={14} />
+              <span>Retry</span>
+            </button>
+          </div>
+        )}
+        {state === "ready" &&
+          (isImage ? (
+            <div className="dv-image-wrap">
+              <img className="dv-image" src={url} alt={item.name} />
             </div>
-          )}
-          {blocked.length > 0 && (
-            <div className="plan-focus blocked">
-              <span className="state-dot tone-blocked" />
-              <div>
-                <strong>{blocked.length} blocked</strong>
-                <p>
-                  {shortText(
-                    blocked.map((node) => nodeId(node)).join(", "),
-                    96,
-                  )}
-                </p>
-              </div>
-            </div>
-          )}
-          {!active && blocked.length === 0 && (
-            <EmptyInline label="No active or blocked DAG node" />
-          )}
-        </div>
-        <div className="mini-node-list" aria-label="DAG node states">
-          {nodes.slice(0, 6).map((node) => (
-            <div key={nodeId(node)}>
-              <span
-                className={`state-dot tone-${statusTone(asString(node.status))}`}
-              />
-              <span>{nodeId(node)}</span>
-              <strong>
-                {asString(node.status, "pending").replace(/_/g, " ")}
-              </strong>
-            </div>
+          ) : (
+            <DeliverableRendered item={item} text={text} raw={raw} />
           ))}
-          {nodes.length > 6 && (
-            <div>
-              <span className="state-dot tone-idle" />
-              <span>{nodes.length - 6} more</span>
-              <strong>hidden</strong>
-            </div>
-          )}
-        </div>
       </div>
-    </section>
+      <div className="dv-preview-foot">
+        {kindLabel(item.kind)}
+        {item.mtime ? ` · updated ${formatDeliverableTime(item.mtime)}` : ""}
+      </div>
+    </div>
   );
 }
 
+const ARTIFACT_ROLE_KEYWORDS: Record<string, string[]> = {
+  pm: ["prd", "spec", "intake", "scope"],
+  planner: ["plan", "design", "task_graph", "task-graph", "dag", "closure"],
+  builder: ["handoff", "build", "impl"],
+  evaluator: ["eval", "verdict", "review", "acceptance"],
+};
+
+// The classifying token of a deliverable — its directory (e.g. "prd/foo.md" -> "prd")
+// or the segment before the extension (e.g. "<sid>.design.md" -> "design"). Avoids
+// matching the sprint id, which can itself contain words like "plan".
+function artifactKindToken(item: Deliverable): string {
+  const path = asString(item.rel_path || item.name).toLowerCase();
+  const base = path.split("/").pop() || path;
+  const dotParts = base.split(".");
+  // "<sid>.<kind>.<ext>" -> the kind segment (ignores the sprint id, which can
+  // itself contain words like "plan").
+  if (dotParts.length >= 3) return dotParts[dotParts.length - 2];
+  // Directory-based ("prd/foo.md") -> the directory names the kind.
+  const dir = path.includes("/") ? path.split("/")[0] : "";
+  if (dir && !["sprints", "sessions", "state", "config"].includes(dir)) {
+    return dir;
+  }
+  return dotParts.length >= 2 ? dotParts[dotParts.length - 2] : base;
+}
+
+// Attach each deliverable to the most recent log step of its producing role, so the
+// entry that produced a plan/handoff/eval file links straight to the rail preview.
+function attachArtifactsToSteps(
+  steps: ProcessStep[],
+  deliverables: Deliverable[],
+): void {
+  deliverables.forEach((item) => {
+    const token = artifactKindToken(item);
+    const role = Object.keys(ARTIFACT_ROLE_KEYWORDS).find((key) =>
+      ARTIFACT_ROLE_KEYWORDS[key].some(
+        (keyword) => token.includes(keyword) || keyword.includes(token),
+      ),
+    );
+    if (!role) return;
+    let target: ProcessStep | undefined;
+    for (const step of steps) {
+      if (normalizeRole(step.actor) === role) target = step;
+    }
+    if (target) (target.artifacts ||= []).push(item);
+  });
+}
+
 function buildProcessSteps(
-  dashboard: DashboardResponse | undefined,
+  projection: ProjectionResponse | undefined,
   events: EventRecord[],
   deliverables: Deliverable[],
   phase: string,
+  options: { showStallSummary?: boolean; stall?: StallSummary } = {},
 ): ProcessStep[] {
   const steps: ProcessStep[] = [];
   const orderedEvents = [...events].sort(
@@ -1172,14 +1873,18 @@ function buildProcessSteps(
     steps.push(processStepFromEvent(event, index === orderedEvents.length - 1));
   });
 
-  const nodes = dashboard?.data?.dag?.nodes || [];
+  const nodes =
+    projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
   if (steps.length === 0 && nodes.length > 0) {
     nodes.forEach((node, index) => {
       steps.push(processStepFromNode(node, index === nodes.length - 1, phase));
     });
   }
 
-  const stall = dashboard?.data?.stall;
+  const stall =
+    options.showStallSummary === false
+      ? undefined
+      : options.stall || projection?.data?.dispatch?.stall;
   if (stall?.is_stalled && !steps.some((step) => step.state === "blocked")) {
     steps.push({
       id: "stall-summary",
@@ -1189,7 +1894,7 @@ function buildProcessSteps(
       detail:
         stallCopy(stall) ||
         "The sprint is waiting on a dispatch gate or missing worker capability.",
-      timestamp: dashboard?.generated_at || "",
+      timestamp: projection?.generated_at || "",
       state: "blocked",
       tone: "blocked",
       defaultExpanded: true,
@@ -1216,7 +1921,7 @@ function buildProcessSteps(
         "The output is separated from the process stream so review can happen without digging through agent telemetry.",
       timestamp: primaryDeliverable.mtime
         ? new Date(primaryDeliverable.mtime * 1000).toISOString()
-        : dashboard?.generated_at || "",
+        : projection?.generated_at || "",
       state: "completed",
       tone: "complete",
       defaultExpanded: false,
@@ -1235,15 +1940,18 @@ function buildProcessSteps(
     return [];
   }
 
+  // Oldest -> newest: read the run as a narrative top-down (the relay carries
+  // the current state, so the stream doesn't need newest-first).
   const sorted = steps.sort(
-    (a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp),
+    (a, b) => timestampValue(a.timestamp) - timestampValue(b.timestamp),
   );
+  attachArtifactsToSteps(sorted, deliverables);
   return sorted.map((step, index) => ({
     ...step,
     defaultExpanded:
       step.defaultExpanded ||
       step.state === "blocked" ||
-      (index === 0 && step.state === "active"),
+      (index === sorted.length - 1 && step.state === "active"),
   }));
 }
 
@@ -1311,6 +2019,23 @@ function processStepFromEvent(
   };
 }
 
+// Infer which agent a DAG node belongs to (node-based steps have no event actor),
+// so node logs attach the right artifacts (build->Builder, review->Evaluator, ...).
+function nodeActor(node: { [key: string]: unknown }): string {
+  const caps = (
+    Array.isArray(node.required_capabilities) ? node.required_capabilities : []
+  )
+    .map((cap) => asString(cap).toLowerCase())
+    .join(" ");
+  const text = `${asString(nodeId(node)).toLowerCase()} ${caps}`;
+  if (/eval|review|verdict|gate|accept/.test(text)) return "Evaluator";
+  if (/build|impl|code|frontend|backend|server|handoff/.test(text))
+    return "Builder";
+  if (/plan|design|dag|rout/.test(text)) return "Planner";
+  if (/spec|prd|intake|scope|product/.test(text)) return "PM";
+  return "Planner";
+}
+
 function processStepFromNode(
   node: { [key: string]: unknown },
   latest: boolean,
@@ -1328,7 +2053,7 @@ function processStepFromNode(
           : "pending";
   return {
     id: `node-${nodeId(node)}`,
-    actor: "Planner",
+    actor: nodeActor(node),
     title: `${nodeId(node)} is ${status.replace(/_/g, " ")}`,
     summary: nodeTitle(node),
     detail: `Planner DAG node ${nodeId(node)} is currently ${status.replace(/_/g, " ")}.`,
@@ -1423,185 +2148,129 @@ function timestampValue(value: string): number {
 function TopBar({
   sprint,
   streamState,
-  onCreated,
+  rail,
+  deliverableCount,
 }: {
   sprint: SprintSummary;
   streamState: string;
-  onCreated: (sprintId: string) => Promise<void>;
+  rail: RailController;
+  deliverableCount: number;
 }) {
   return (
     <header className="topbar">
       <div className="topbar-title-block">
         <div className="topbar-title">
-          <PanelLeft size={17} />
           <span>{titleForSprint(sprint)}</span>
         </div>
       </div>
       <div className="topbar-actions">
-        <div className={`stream-chip stream-${streamState}`}>
-          <Radio size={14} />
-          <span>{streamState}</span>
-        </div>
-        <NewTaskDialog
-          onCreated={onCreated}
-          buttonClassName="icon-text-button"
-          compact
-        />
+        {streamState !== "live" && (
+          <div className={`stream-chip stream-${streamState}`}>
+            <Radio size={14} />
+            <span>
+              {streamState === "retrying"
+                ? "reconnecting"
+                : streamState === "off"
+                  ? "offline"
+                  : streamState}
+            </span>
+          </div>
+        )}
+        <button
+          type="button"
+          className={`rail-toggle ${rail.open ? "is-open" : ""}`}
+          aria-label="Deliverables"
+          aria-expanded={rail.open}
+          onClick={rail.toggle}
+        >
+          <PanelRight size={16} aria-hidden="true" />
+          {deliverableCount > 0 && (
+            <span className="rail-toggle-count">{deliverableCount}</span>
+          )}
+        </button>
       </div>
     </header>
   );
 }
 
-function buildAgents(
-  status?: StatusPayload,
-  dashboard?: DashboardResponse,
-  events: EventRecord[] = [],
-): AgentCardModel[] {
-  const panes = [
-    ...(status?.panes || []),
-    ...((dashboard?.data?.capabilities?.pane_supply || []).map((pane) => ({
-      id: pane.pane_id,
-      pane_id: pane.pane_id,
-      role: pane.role,
-      state: pane.state,
-      status: pane.state,
-      current_activity: "",
-      model: pane.model,
-    })) || []),
-  ];
-
-  return ROLE_ORDER.map((role) => {
-    const meta = ROLE_META[role];
-    const pane = panes.find((item) => normalizeRole(item.role) === role);
-    const recent = events.find(
-      (event) => normalizeRole(eventActor(event)) === role,
-    );
-    const readable = recent ? humanEvent(recent) : undefined;
-    const paneState = asString(pane?.state || pane?.status);
-    const eventState = readable?.tone || "";
-    const state =
-      eventState === "blocked"
-        ? "blocked"
-        : eventState === "complete"
-          ? "complete"
-          : statusTone(paneState || eventState);
-    return {
-      role,
-      title: meta.title,
-      subtitle: meta.subtitle,
-      state,
-      activity:
-        asString(pane?.current_activity) ||
-        readable?.title ||
-        "Waiting for harness activity",
-      model: asString(pane?.model),
-      pane: asString(pane?.id || pane?.pane_id),
-      lastEvent: readable
-        ? `${formatTime(eventTimestamp(recent as EventRecord))} · ${readable.detail || readable.title}`
-        : "No recent event",
-    };
-  });
-}
-
-function DeliverablesPanel({ deliverables }: { deliverables: Deliverable[] }) {
-  const primary =
-    deliverables.find(
-      (item) => item.kind === "html" || item.name.endsWith(".html"),
-    ) || deliverables[0];
+function UsagePanel({
+  usage,
+}: {
+  usage?: UsagePayload;
+}) {
+  const total = usage?.total_used_tokens_label || "0 tok";
+  const models = usage?.models || [];
   return (
-    <section
-      className="panel deliverables-panel"
-      data-testid="deliverables-panel"
-    >
-      <SectionHeader
-        icon={<FileText size={17} />}
-        title="Deliverables"
-        detail={`${deliverables.length} artifacts`}
-      />
-      {deliverables.length === 0 && (
-        <EmptyInline label="No artifacts produced yet" />
-      )}
-      {primary && (
-        <a
-          className="primary-deliverable"
-          href={primary.view_url}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <FileText size={18} />
-          <span>
-            <strong>{primary.name}</strong>
-            <small>
-              {primary.kind.toUpperCase()} · {compactNumber(primary.size || 0)}B
-            </small>
-          </span>
-          <ArrowUpRight size={16} />
-        </a>
-      )}
-      <div className="deliverable-list">
-        {deliverables
-          .filter((item) => item !== primary)
-          .slice(0, 5)
-          .map((item) => (
-            <a
-              href={item.view_url}
-              target="_blank"
-              rel="noreferrer"
-              key={item.rel_path}
-            >
-              <span>{item.name}</span>
-              <ArrowUpRight size={13} />
-            </a>
-          ))}
-      </div>
-    </section>
-  );
-}
-
-function usageScopeCopy(usage?: UsagePayload): string {
-  const source = asString(usage?.source, "local quota/log signals")
-    .replace(/[_-]/g, " ")
-    .trim();
-  return `Token usage is estimated per-model/day from ${source}; it is not scoped to a single agent or sprint.`;
-}
-
-function UsagePanel({ usage }: { usage?: UsagePayload }) {
-  return (
-    <section className="usage-panel usage-footer" data-testid="usage-panel">
-      <div className="usage-footer-copy">
-        <SectionHeader
-          icon={<Zap size={17} />}
-          title="Usage"
-          detail={usage?.total_used_tokens_label || "0 tok"}
-        />
-        <p className="usage-label">{usageScopeCopy(usage)}</p>
+    <section className="panel usage-panel" data-testid="usage-panel">
+      <div className="usage-head">
+        <span>Usage</span>
+        <strong>{total}</strong>
       </div>
       <div className="usage-models">
-        {(usage?.models || []).slice(0, 4).map((model) => (
-          <div className="usage-model" key={`${model.model_key}-${model.date}`}>
+        {models.slice(0, 4).map((model) => (
+          <div
+            className="usage-model"
+            key={`${model.model_key}-${model.date ?? ""}`}
+          >
             <span>{model.model_key}</span>
             <strong>{model.used_tokens_label}</strong>
           </div>
         ))}
       </div>
+      <p className="usage-foot">
+        Per model, per day (account-wide) — runtime does not report per-sprint
+        tokens.
+      </p>
     </section>
   );
 }
 
+const MODEL_OPTIONS = [
+  "claude-opus-4.x",
+  "claude-sonnet-4.x",
+  "claude-haiku-4.x",
+  "glm-4.6",
+];
+
+const LAB_MODES = [
+  { id: "all-claude", label: "All-Claude" },
+  { id: "all-glm", label: "All-GLM" },
+  { id: "custom", label: "Custom" },
+];
+
+const API_PROVIDERS = [
+  { id: "anthropic", label: "Anthropic", hint: "Claude models" },
+  { id: "zai", label: "Z.ai", hint: "GLM models" },
+];
+
 function SettingsView() {
   const [settings, setSettings] = useState<SettingsPayload>();
-  const [status, setStatus] = useState<StatusPayload>();
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState("");
 
+  const [roleModels, setRoleModels] = useState<Record<string, string>>({});
+  const [agentOn, setAgentOn] = useState<Record<string, boolean>>({});
+  const [labMode, setLabMode] = useState("all-claude");
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [usage, setUsage] = useState<UsagePayload>();
+
   const refresh = useCallback(async () => {
     try {
-      const [settingsResponse, statusResponse] = await Promise.all([
-        fetchSettings(),
-        fetchStatus(),
-      ]);
-      setSettings(settingsResponse);
-      setStatus(statusResponse);
+      const response = await fetchSettings();
+      setSettings(response);
+      void fetchUsage()
+        .then(setUsage)
+        .catch(() => undefined);
+      const models: Record<string, string> = {};
+      const on: Record<string, boolean> = {};
+      ROLE_ORDER.forEach((role) => {
+        models[role] =
+          asString(response.role_models?.[role]?.model) || MODEL_OPTIONS[0];
+        on[role] = true;
+      });
+      setRoleModels(models);
+      setAgentOn(on);
+      setLabMode(asString(response.model_lab_matrix?.value) || "all-claude");
       setState("ready");
       setError("");
     } catch (err) {
@@ -1614,9 +2283,18 @@ function SettingsView() {
     void refresh();
   }, [refresh]);
 
-  const physical =
-    settings?.physical_operators || status?.physical_operators || {};
-  const roleModels = Object.entries(settings?.role_models || {});
+  function applyLabMode(mode: string) {
+    setLabMode(mode);
+    if (mode === "all-claude") {
+      setRoleModels(
+        Object.fromEntries(ROLE_ORDER.map((role) => [role, "claude-opus-4.x"])),
+      );
+    } else if (mode === "all-glm") {
+      setRoleModels(
+        Object.fromEntries(ROLE_ORDER.map((role) => [role, "glm-4.6"])),
+      );
+    }
+  }
 
   return (
     <div className="workspace-scroll">
@@ -1631,107 +2309,471 @@ function SettingsView() {
           onClick={() => void refresh()}
         >
           <RefreshCw size={15} />
-          <span>Refresh</span>
+          <span>Reload from runtime</span>
         </button>
       </header>
       <div className="settings-layout" data-testid="settings-view">
-        <section className="hero-status settings-hero">
-          <div className="hero-main">
-            <div className="eyebrow-row">
-              <span className="state-orb tone-idle" />
-              <span>Read-only</span>
-              <span>{settings?.source || "status-server"}</span>
+        <section className="compact-session-header">
+          <div className="compact-title-block">
+            <div className="task-eyebrow">
+              <span className="task-kicker">Configuration</span>
             </div>
-            <h1>Model and lab configuration</h1>
-            <p>
-              {settings?.write_note ||
-                "P0 exposes current configuration without inventing a new write path."}
-            </p>
-          </div>
-          <div className="settings-stats">
-            <span>
-              <strong>{compactNumber(physical.count || 0)}</strong>
-              operators
-            </span>
-            <span>
-              <strong>{compactNumber(physical.available || 0)}</strong>
-              available
-            </span>
-            <span>
-              <strong>{compactNumber(physical.busy || 0)}</strong>
-              busy
-            </span>
+            <h1>Agents, models &amp; keys</h1>
           </div>
         </section>
+
+        <div className="settings-notice">
+          <ShieldCheck size={15} />
+          <p>
+            Read from the runtime ({settings?.source || "status-server"}). Edits
+            here are staged in this view only — AI4Research P0 has no write path
+            yet, so nothing is persisted to the runtime or sent anywhere.
+          </p>
+        </div>
 
         {state === "loading" && <LoadingWorkbench />}
         {state === "error" && (
           <ErrorWorkbench message={error} onRetry={refresh} />
         )}
         {state === "ready" && (
-          <div className="two-column-grid">
-            <section className="panel">
+          <>
+            <section className="settings-block">
               <SectionHeader
                 icon={<SquareTerminal size={17} />}
                 title="Lab matrix"
-                detail={settings?.model_lab_matrix?.source || "unset"}
+                detail={labMode}
               />
-              <div className="setting-row">
-                <span>All-Claude / GLM lab matrix</span>
-                <Switch.Root
-                  className="switch-root"
-                  checked={Boolean(settings?.model_lab_matrix?.value)}
-                  disabled
-                >
-                  <Switch.Thumb className="switch-thumb" />
-                </Switch.Root>
+              <p className="settings-help">
+                How agents map to model families. Custom lets you set each agent
+                below.
+              </p>
+              <div
+                className="segmented"
+                role="group"
+                aria-label="Lab matrix mode"
+              >
+                {LAB_MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className={`segmented-option ${labMode === mode.id ? "is-active" : ""}`}
+                    aria-pressed={labMode === mode.id}
+                    onClick={() => applyLabMode(mode.id)}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
               </div>
-              <code className="code-block">
-                {settings?.model_lab_matrix?.value ||
-                  "No lab matrix value found in env/config scan."}
-              </code>
             </section>
-            <section className="panel">
+
+            <section className="settings-block">
               <SectionHeader
-                icon={<ShieldCheck size={17} />}
-                title="Role models"
-                detail={`${roleModels.length} configured`}
+                icon={<Bot size={17} />}
+                title="Agents & models"
+                detail={`${ROLE_ORDER.length} agents`}
               />
-              <div className="settings-list">
-                {roleModels.length === 0 && (
-                  <EmptyInline label="No role model overrides found" />
-                )}
-                {roleModels.map(([role, info]) => (
-                  <div className="setting-row" key={role}>
-                    <span>{role}</span>
-                    <strong>{info.model || "unset"}</strong>
+              <div className="agent-config-list">
+                {ROLE_ORDER.map((role) => (
+                  <div
+                    className={`agent-config-row ${agentOn[role] ? "" : "is-off"}`}
+                    key={role}
+                  >
+                    <Switch.Root
+                      className="switch-root"
+                      checked={Boolean(agentOn[role])}
+                      onCheckedChange={(value) =>
+                        setAgentOn((prev) => ({ ...prev, [role]: value }))
+                      }
+                      aria-label={`Enable ${ROLE_META[role].title}`}
+                    >
+                      <Switch.Thumb className="switch-thumb" />
+                    </Switch.Root>
+                    <div className="agent-config-id">
+                      <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
+                      <span>{ROLE_META[role].subtitle}</span>
+                    </div>
+                    <div className="model-select">
+                      <select
+                        aria-label={`${ROLE_META[role].title} model`}
+                        value={roleModels[role] || MODEL_OPTIONS[0]}
+                        disabled={!agentOn[role]}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setRoleModels((prev) => ({ ...prev, [role]: value }));
+                          setLabMode("custom");
+                        }}
+                      >
+                        {MODEL_OPTIONS.map((model) => (
+                          <option key={model} value={model}>
+                            {model}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} aria-hidden="true" />
+                    </div>
                   </div>
                 ))}
               </div>
             </section>
-          </div>
+
+            <section className="settings-block">
+              <SectionHeader
+                icon={<ShieldCheck size={17} />}
+                title="Provider API keys"
+                detail="local only"
+              />
+              <p className="settings-help">
+                Held in this view only; never transmitted until a runtime write
+                path exists.
+              </p>
+              <div className="key-list">
+                {API_PROVIDERS.map((provider) => (
+                  <div className="key-row" key={provider.id}>
+                    <div className="key-id">
+                      <strong>{provider.label}</strong>
+                      <span>{provider.hint}</span>
+                    </div>
+                    <input
+                      type="password"
+                      className="key-input"
+                      placeholder="sk-…"
+                      autoComplete="off"
+                      value={apiKeys[provider.id] || ""}
+                      onChange={(event) =>
+                        setApiKeys((prev) => ({
+                          ...prev,
+                          [provider.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="settings-block">
+              <SectionHeader
+                icon={<Clock3 size={17} />}
+                title="Account token usage"
+                detail={usage?.total_used_tokens_label || "—"}
+              />
+              <p className="settings-help">
+                Total across all sprints, per model, today — the account-wide
+                quota signal. (Per-sprint usage shows on each session.)
+              </p>
+              <div className="usage-models">
+                {(usage?.models || []).length === 0 && (
+                  <EmptyInline label="No usage signal available" />
+                )}
+                {(usage?.models || []).map((model) => (
+                  <div
+                    className="usage-model"
+                    key={`${model.model_key}-${model.date ?? ""}`}
+                  >
+                    <span>{model.model_key}</span>
+                    <strong>{model.used_tokens_label}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="settings-actions">
+              <span className="settings-actions-note">
+                Saving to the runtime is not enabled in P0.
+              </span>
+              <button
+                type="button"
+                className="primary-button"
+                disabled
+                title="Runtime write path not enabled in P0"
+              >
+                <span>Save configuration</span>
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
   );
 }
 
-function EmptyState({
+function defaultRoleModels(): Record<string, string> {
+  return Object.fromEntries(ROLE_ORDER.map((role) => [role, MODEL_OPTIONS[0]]));
+}
+
+// Staged-only crew config for the launcher. Seeds from the runtime (read-only) so the
+// shown models are real, not invented; nothing here is sent with the intake or persisted
+// — P0 has no write path, and "Start work" launches on the runtime's configured crew.
+const MAX_BUILD_PANES_FALLBACK = 4;
+
+function useCrew() {
+  const [open, setOpen] = useState(false);
+  const [roleModels, setRoleModels] =
+    useState<Record<string, string>>(defaultRoleModels);
+  // Build-pane parallelism. maxPanes is the runtime's real operator budget
+  // (physical_operators.count); the chosen count is staged like the rest of the crew.
+  const [buildPanes, setBuildPanesRaw] = useState(1);
+  const [maxPanes, setMaxPanes] = useState(MAX_BUILD_PANES_FALLBACK);
+
+  useEffect(() => {
+    let alive = true;
+    void fetchSettings()
+      .then((res) => {
+        if (!alive) return;
+        const models: Record<string, string> = {};
+        ROLE_ORDER.forEach((role) => {
+          models[role] =
+            asString(res.role_models?.[role]?.model) || MODEL_OPTIONS[0];
+        });
+        setRoleModels(models);
+        const ops = Number(res.physical_operators?.count);
+        if (Number.isFinite(ops) && ops >= 1) setMaxPanes(ops);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  function setBuildPanes(next: number) {
+    setBuildPanesRaw(Math.max(1, Math.min(maxPanes, next)));
+  }
+
+  function setRoleModel(role: string, value: string) {
+    setRoleModels((prev) => ({ ...prev, [role]: value }));
+  }
+
+  return {
+    open,
+    setOpen,
+    roleModels,
+    setRoleModel,
+    buildPanes,
+    maxPanes,
+    setBuildPanes,
+  };
+}
+
+type Crew = ReturnType<typeof useCrew>;
+
+function CrewPanel({ crew }: { crew: Crew }) {
+  return (
+    <section className="crew-panel" id="crew-panel" aria-label="Crew">
+      <div className="crew-panel-head">
+        <span className="crew-panel-title">Crew</span>
+        <span className="crew-panel-count">{ROLE_ORDER.length} agents</span>
+      </div>
+      <div className="crew-agent-list">
+        {ROLE_ORDER.map((role) => (
+          <div className="crew-agent-row" key={role}>
+            <strong className="crew-agent-name">
+              {ROLE_META[role].title.split(" ")[0]}
+            </strong>
+            <div className="model-select">
+              <select
+                aria-label={`${ROLE_META[role].title} model`}
+                value={crew.roleModels[role] || MODEL_OPTIONS[0]}
+                onChange={(event) =>
+                  crew.setRoleModel(role, event.target.value)
+                }
+              >
+                {MODEL_OPTIONS.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} aria-hidden="true" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="crew-panes-row">
+        <div className="crew-agent-id">
+          <strong>Build panes</strong>
+          <span>Parallel build workers · up to {crew.maxPanes}</span>
+        </div>
+        <div className="crew-stepper" role="group" aria-label="Build panes">
+          <button
+            type="button"
+            className="crew-stepper-btn"
+            onClick={() => crew.setBuildPanes(crew.buildPanes - 1)}
+            disabled={crew.buildPanes <= 1}
+            aria-label="Fewer build panes"
+          >
+            <Minus size={14} aria-hidden="true" />
+          </button>
+          <span className="crew-stepper-value">{crew.buildPanes}</span>
+          <button
+            type="button"
+            className="crew-stepper-btn"
+            onClick={() => crew.setBuildPanes(crew.buildPanes + 1)}
+            disabled={crew.buildPanes >= crew.maxPanes}
+            aria-label="More build panes"
+          >
+            <Plus size={14} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      <p className="crew-panel-note">
+        Staged preview — the crew and build panes you set here aren’t wired to
+        the run yet, so “Start work” launches on the runtime’s configured crew.
+        Set them for real in Settings once a write path exists.
+      </p>
+    </section>
+  );
+}
+
+function HomeLanding({
+  sprints,
   onCreated,
 }: {
+  sprints: SprintSummary[];
   onCreated: (sprintId: string) => Promise<void>;
 }) {
+  const crew = useCrew();
+  const [task, setTask] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function start() {
+    const clean = task.trim();
+    if (!clean || submitting) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const response = await submitIntake(clean);
+      if (!response.ok || !response.sprint_id) {
+        throw new Error(
+          response.error ||
+            response.stdout_tail ||
+            "Intake did not return a sprint id",
+        );
+      }
+      setTask("");
+      await onCreated(response.sprint_id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to start work");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const recent = sprints.slice(0, 6);
+
   return (
-    <div className="empty-page" data-testid="empty-state">
-      <div className="empty-mark">
-        <Sparkles size={28} />
+    <div className="home-landing" data-testid="home-landing">
+      <div className="home-inner">
+        <h1>What do you want done?</h1>
+        <p className="home-sub">
+          Describe a task. AI4Research routes it through PM, Planner, Builder,
+          and Evaluator agents — and tells you plainly when it stalls.
+        </p>
+        <form
+          className="home-prompt"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void start();
+          }}
+        >
+          <textarea
+            value={task}
+            onChange={(event) => setTask(event.target.value)}
+            placeholder="Build, investigate, verify, or produce an artifact…"
+            rows={3}
+            autoFocus
+            onKeyDown={(event) => {
+              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                event.preventDefault();
+                void start();
+              }
+            }}
+          />
+          <div className="home-prompt-foot">
+            <Popover.Root open={crew.open} onOpenChange={crew.setOpen}>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="crew-pill"
+                  aria-label="Crew and build panes"
+                >
+                  <Bot
+                    size={13}
+                    className="crew-pill-icon"
+                    aria-hidden="true"
+                  />
+                  <span className="crew-pill-label">Crew</span>
+                  <ChevronDown
+                    size={12}
+                    className="crew-caret"
+                    aria-hidden="true"
+                  />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="crew-popover"
+                  side="top"
+                  align="start"
+                  sideOffset={8}
+                  collisionPadding={16}
+                >
+                  <CrewPanel crew={crew} />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={!task.trim() || submitting}
+            >
+              {submitting ? (
+                <Loader2 className="spin" size={16} />
+              ) : (
+                <Play size={16} />
+              )}
+              <span>{submitting ? "Starting" : "Start work"}</span>
+            </button>
+          </div>
+          {error && <div className="form-error">{error}</div>}
+        </form>
+
+        <p className="home-caption">
+          Starts a real intake via the existing CLI <kbd>⌘ ↵</kbd>
+          <span className="home-caption-note">
+            · crew is staged, not yet applied to runs
+          </span>
+        </p>
+
+        {recent.length > 0 && (
+          <div className="home-recent">
+            <div className="home-recent-head">Recent sessions</div>
+            <div className="home-recent-list">
+              {recent.map((sprint) => (
+                <NavLink
+                  key={sprint.sprint_id}
+                  to={`/sessions/${encodeURIComponent(sprint.sprint_id)}`}
+                  className="home-recent-row"
+                >
+                  <span className="home-recent-title">
+                    {titleForSprint(sprint)}
+                  </span>
+                  <span
+                    className={`home-recent-meta ${sprint.stall?.is_stalled ? "is-stalled" : ""}`}
+                  >
+                    {sprint.stall?.is_stalled
+                      ? "Stalled"
+                      : asString(
+                          sprint.phase || sprint.status,
+                          "unknown",
+                        ).replace(/_/g, " ")}
+                  </span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      <h1>No harness sessions</h1>
-      <p>
-        Start a real intake to create a sprint and watch agents, events, DAG
-        progress, deliverables, and usage populate here.
-      </p>
-      <NewTaskDialog onCreated={onCreated} buttonClassName="primary-button" />
     </div>
   );
 }

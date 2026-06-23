@@ -78,6 +78,152 @@ export type DashboardResponse = {
   data: DashboardData;
 };
 
+export type ProjectionResponse = {
+  ok: boolean;
+  generated_at?: string;
+  schema_version?: string;
+  degraded_sources?: string[];
+  data: ProjectionData;
+};
+
+export type ProjectionData = {
+  projection_schema?: string;
+  projection_mode?: string;
+  lazy_slices?: {
+    events?: string;
+    deliverables?: string;
+    usage?: string;
+    [key: string]: unknown;
+  };
+  sprint_id?: string;
+  title?: string;
+  status?: string;
+  phase?: string;
+  sprint?: SprintStatus;
+  requirements?: {
+    present?: boolean;
+    prd?: ProjectionArtifactRef;
+    contract?: ProjectionArtifactRef;
+    requirement_trace?: ProjectionArtifactRef;
+    coverage_report?: ProjectionArtifactRef;
+    acceptance_verdict?: ProjectionArtifactRef;
+    coverage_summary?: JsonRecord;
+    verdict?: string;
+    verdict_reasons?: string[];
+    [key: string]: unknown;
+  };
+  plan?: {
+    present?: boolean;
+    complete?: boolean;
+    status?: string;
+    design?: ProjectionArtifactRef;
+    plan?: ProjectionArtifactRef;
+    task_graph?: ProjectionArtifactRef;
+    graph_source?: string;
+    [key: string]: unknown;
+  };
+  task_graph?: {
+    present?: boolean;
+    nodes?: DagNode[];
+    edges?: DagEdge[];
+    [key: string]: unknown;
+  };
+  nodes?: DagNode[];
+  dependencies?: DagEdge[];
+  dispatch?: {
+    stall?: StallSummary;
+    capability_mismatch?: JsonRecord;
+    [key: string]: unknown;
+  };
+  human_gates?: HumanGate[];
+  operators?: JsonRecord[];
+  evaluation?: {
+    status?: string;
+    phase?: string;
+    handoff?: ProjectionArtifactRef;
+    eval?: ProjectionArtifactRef;
+    coverage_report?: ProjectionArtifactRef;
+    acceptance_verdict?: ProjectionArtifactRef;
+    verdict?: string;
+    requested_verdict?: string;
+    reasons?: string[];
+    coverage_summary?: JsonRecord;
+    [key: string]: unknown;
+  };
+  events?: EventRecord[];
+  summary?: {
+    progress?: JsonRecord;
+    stall?: StallSummary;
+    active_node?: string;
+    [key: string]: unknown;
+  };
+  human_action_required?: {
+    type?: string;
+    primary_artifact?: string | ProjectionArtifactRef;
+    [key: string]: unknown;
+  };
+  available_actions?: ProjectionAction[];
+  capability_mismatch?: {
+    present?: boolean;
+    missing_capability?: string;
+    blocked_node?: string;
+    [key: string]: unknown;
+  };
+  artifacts?: ProjectionArtifact[];
+  [key: string]: unknown;
+};
+
+export type ProjectionArtifactRef = {
+  name?: string;
+  kind?: string;
+  stage?: string;
+  rel_path?: string;
+  view_url?: string;
+  reviewable?: boolean;
+  [key: string]: unknown;
+};
+
+export type ProjectionArtifact = ProjectionArtifactRef & {
+  size?: number;
+  mtime?: number;
+};
+
+export type HumanGate = {
+  kind?: string;
+  status?: string;
+  allowed_actions?: string[];
+  source_artifacts?: string[];
+  last_verdict?: JsonRecord | null;
+  missing_artifacts?: string[];
+  reason?: string;
+  [key: string]: unknown;
+};
+
+export type ProjectionAction = {
+  id?: string;
+  label?: string;
+  availability?: string;
+  safe?: boolean;
+  enabled?: boolean;
+  endpoint?: string;
+  method?: string;
+  cli_command?: string;
+  effect?: string;
+  reason?: string;
+  [key: string]: unknown;
+};
+
+export type ActionResponse = {
+  ok: boolean;
+  status?: string;
+  error?: string;
+  sprint_id?: string;
+  projection?: ProjectionData;
+  stdout_tail?: string;
+  returncode?: number;
+  [key: string]: unknown;
+};
+
 export type DashboardData = {
   focus_sprint_id?: string;
   sprint?: SprintStatus;
@@ -117,6 +263,11 @@ export type DashboardData = {
   };
   blocker_diagnostics?: JsonRecord;
   stall?: StallSummary;
+  sprint_usage?: {
+    total_tokens?: number;
+    total_tokens_label?: string;
+    models?: UsageModel[];
+  };
   [key: string]: unknown;
 };
 
@@ -220,5 +371,5 @@ export type SettingsPayload = {
     source?: string;
   };
   role_models?: Record<string, { model?: string; source?: string }>;
-  physical_operators?: JsonRecord;
+  physical_operators?: { count?: number; available?: number; busy?: number };
 };
