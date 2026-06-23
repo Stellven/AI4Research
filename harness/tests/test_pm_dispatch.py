@@ -262,6 +262,38 @@ def test_pending_pm_backlog_count_ignores_failed_variants(monkeypatch, tmp_path)
     assert pm_dispatch._pending_pm_backlog_count() == 1
 
 
+def test_codex_operator_health_accepts_path_resolved_codex(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(pm_dispatch, "_read_health_cache", lambda *args, **kwargs: (False, "command_path_missing:/opt/homebrew/bin/codex"))
+    captured: dict[str, object] = {}
+
+    def fake_write_health_cache(operator_id, ok, reason):
+        captured.update({"operator_id": operator_id, "ok": ok, "reason": reason})
+
+    monkeypatch.setattr(pm_dispatch, "_write_health_cache", fake_write_health_cache)
+    monkeypatch.setattr(pm_dispatch.shutil, "which", lambda cmd: "/tmp/bin/codex" if cmd == "codex" else None)
+    ok, reason = pm_dispatch._operator_external_health(
+        {
+            "operator_id": "mini-codex-gpt55-medium-builder-1",
+            "provider": "openai",
+            "model": "gpt-5.5",
+            "command_path": "/opt/homebrew/bin/codex",
+            "health_check": {
+                "type": "command",
+                "command_path": "/opt/homebrew/bin/codex",
+                "cache_seconds": 300,
+            },
+        }
+    )
+    assert ok is True
+    assert reason == "command_path_resolved_via_path:/tmp/bin/codex"
+    assert captured == {
+        "operator_id": "mini-codex-gpt55-medium-builder-1",
+        "ok": True,
+        "reason": "command_path_resolved_via_path:/tmp/bin/codex",
+    }
+
+
 def _write_builder_ready_graph(sprints: Path, sprint_id: str) -> None:
     (sprints / f"{sprint_id}.status.json").write_text(
         json.dumps({"status": "active", "phase": "planning_complete"}),

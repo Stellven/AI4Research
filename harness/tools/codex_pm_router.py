@@ -556,17 +556,17 @@ def _make_prd_view(
         ]
         return {"variant": "research", "sections": sections}
     sections = [
-        {"title": "1. Problem", "body": normalized_goal},
-        {"title": "2. Users / Stakeholders", "body": "- PM\n- Planner\n- Builder\n- Evaluator"},
-        {"title": "3. Goals / Non-goals", "body": "Goals:\n- " + normalized_goal + "\n\nNon-goals:\n" + "\n".join(f"- {item}" for item in non_goals)},
-        {"title": "4. User Scenarios", "body": "用户输入需求后，需要被结构化、合约化、任务图化，然后再派给执行链路。"},
-        {"title": "5. Functional Requirements", "body": "\n".join(f"- {item}" for item in acceptance)},
-        {"title": "6. Non-functional Requirements", "body": "- 可验证\n- 可追溯\n- 与现有 PM -> Planner -> Builder 主链兼容"},
-        {"title": "7. UX / Interaction Model", "body": "首批仅提供编译结果视图与 handoff bar，不重做完整 UI。"},
-        {"title": "8. Data Model", "body": "Requirement IR 为唯一事实源，PRD/contract/DAG/handoff 均从 IR 派生。"},
-        {"title": "9. Acceptance Criteria", "body": "\n".join(f"- {item}" for item in acceptance)},
-        {"title": "10. Risks / Open Questions", "body": "\n".join(f"- [{risk['level']}] {risk['title']} -> {risk['mitigation']}" for risk in risks) + "\n\nOpen Questions:\n" + ("\n".join(f"- {item}" for item in open_questions) if open_questions else "- N/A")},
-        {"title": "11. Release Plan", "body": "先交付后端编译底座，再逐步扩展 PM pane UI 与 eval loop。"},
+        {"title": "背景 / Context", "body": "Compiled from RawIntent into Requirement IR, contract artifacts, and a dispatchable task graph."},
+        {"title": "用户问题 / Problem", "body": normalized_goal},
+        {"title": "用户目标 / Goals", "body": "- " + normalized_goal},
+        {"title": "用户故事 / User Stories", "body": "- As the Solar operator, I need the request structured into PM, Planner, Builder, and Evaluator handoffs so execution stays inside the product workflow."},
+        {"title": "功能需求 / Requirements", "body": "\n".join(f"- {item}" for item in acceptance)},
+        {"title": "验收标准 / Acceptance Criteria", "body": "\n".join(f"- {item}" for item in acceptance)},
+        {"title": "非目标 / Non-Goals", "body": "\n".join(f"- {item}" for item in non_goals)},
+        {"title": "约束 / Constraints", "body": "- Requirement IR remains the source of truth.\n- Builder execution must go through task_graph dispatch.\n- Evaluator-visible evidence is required before closeout."},
+        {"title": "风险 / Risks", "body": "\n".join(f"- [{risk['level']}] {risk['title']} -> {risk['mitigation']}" for risk in risks)},
+        {"title": "开放问题 / Open Questions", "body": "\n".join(f"- {item}" for item in open_questions) if open_questions else "- N/A"},
+        {"title": "架构交接 / Planner Handoff", "body": "Planner must use `requirement_ir.json`, `contract.md`, and `task_graph.json` to verify DAG boundaries, write scopes, gates, and evaluator evidence requirements before builder execution."},
     ]
     return {"variant": "standard", "sections": sections}
 

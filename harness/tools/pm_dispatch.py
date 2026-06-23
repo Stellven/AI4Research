@@ -459,6 +459,32 @@ def _write_health_cache(operator_id: str, ok: bool, reason: str) -> None:
     os.replace(tmp, str(path))
 
 
+def _operator_uses_codex(op: dict[str, Any]) -> bool:
+    haystack = " ".join(
+        str(op.get(key) or "")
+        for key in ("operator_id", "provider", "vendor", "backend", "base_url", "model", "model_config", "command", "command_path")
+    ).lower()
+    return "codex" in haystack or ("openai" in haystack and "gpt" in haystack)
+
+
+def _command_path_available(command_path: str, op: dict[str, Any]) -> tuple[bool, str]:
+    command_path = str(command_path or "").strip()
+    if not command_path:
+        return False, "command_path_missing:N/A"
+    if command_path.startswith("/"):
+        if Path(command_path).exists():
+            return True, ""
+    elif shutil.which(command_path) is not None:
+        return True, ""
+
+    name = Path(command_path).name
+    if name == "codex" and _operator_uses_codex(op):
+        resolved = shutil.which("codex")
+        if resolved:
+            return True, f"command_path_resolved_via_path:{resolved}"
+    return False, f"command_path_missing:{command_path}"
+
+
 def _operator_external_health(op: dict[str, Any]) -> tuple[bool, str]:
     """Check declared command/http health for pool members without hard failing legacy operators."""
     operator_id = str(op.get("operator_id") or "")
@@ -466,8 +492,7 @@ def _operator_external_health(op: dict[str, Any]) -> tuple[bool, str]:
     if not health:
         command_path = str(op.get("command_path") or "").strip()
         if command_path:
-            exists = Path(command_path).exists() if command_path.startswith("/") else shutil.which(command_path) is not None
-            return (True, "") if exists else (False, f"command_path_missing:{command_path}")
+            return _command_path_available(command_path, op)
         return True, ""
 
     policy_mod = _load_concurrency_policy_module()
@@ -478,7 +503,15 @@ def _operator_external_health(op: dict[str, Any]) -> tuple[bool, str]:
         cache_seconds = 60
     cached_ok, cached_reason = _read_health_cache(operator_id, cache_seconds)
     if cached_ok is not None:
-        return cached_ok, cached_reason
+        command_path = str(health.get("command_path") or op.get("command_path") or "").strip()
+        if (
+            not cached_ok
+            and cached_reason.startswith("command_path_missing:")
+            and _command_path_available(command_path, op)[0]
+        ):
+            cached_ok = None
+        else:
+            return cached_ok, cached_reason
 
     kind = str(health.get("type") or "").strip().lower()
     timeout = float(health.get("timeout_seconds", 0.5))
@@ -498,8 +531,7 @@ def _operator_external_health(op: dict[str, Any]) -> tuple[bool, str]:
                 result = (False, f"http_unreachable:{type(exc).__name__}")
     elif kind == "command":
         command_path = str(health.get("command_path") or op.get("command_path") or "").strip()
-        exists = Path(command_path).exists() if command_path.startswith("/") else shutil.which(command_path) is not None
-        result = ((True, "") if exists else (False, f"command_path_missing:{command_path or 'N/A'}"))
+        result = _command_path_available(command_path, op)
     else:
         result = (True, "")
 

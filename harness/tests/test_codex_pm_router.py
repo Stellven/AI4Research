@@ -42,6 +42,24 @@ def test_build_pm_intake_emits_capsule_plan_for_standard_request():
     assert validation["errors"] == []
 
 
+def test_standard_compiled_prd_passes_existing_schema_validator(tmp_path):
+    router = _load_router()
+    payload = router.build_pm_intake(
+        "Build a requirement compiler that produces PRD, contracts, and task graphs.",
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+    prd_path = tmp_path / "compiled.prd.md"
+    prd_path.write_text(payload["compiled_artifacts"]["prd_markdown"], encoding="utf-8")
+    result = subprocess.run(
+        ["bash", str(ROOT / "schemas" / "validate.sh"), "prd", str(prd_path)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_parallel_delivery_still_enforces_ready_width_gate():
     router = _load_router()
     payload = router.build_pm_intake(
