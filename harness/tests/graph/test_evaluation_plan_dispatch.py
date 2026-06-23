@@ -166,3 +166,51 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     assert "## Evaluation Plan" in text
     assert "Review Mode: `single`" in text
     assert '"evaluation_plan": {' in text
+
+
+def _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid: str, node_id: str) -> None:
+    handoff = tmp_path / f"{sid}.{node_id}-handoff.md"
+    dispatch = tmp_path / f"{sid}.{node_id}-dispatch.md"
+    monkeypatch.setattr(gnd, "_existing_node_handoff", lambda sid, node, graph: handoff)
+    monkeypatch.setattr(gnd, "_node_handoff_candidates", lambda sid, node, graph: [handoff])
+    monkeypatch.setattr(gnd, "_eval_md_file", lambda sid, node_id: tmp_path / f"{node_id}-eval.md")
+    monkeypatch.setattr(gnd, "_eval_json_file", lambda sid, node_id: tmp_path / f"{node_id}-eval.json")
+    monkeypatch.setattr(gnd, "_dispatch_file", lambda sid, node_id: dispatch)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path)
+    (tmp_path / f"{sid}.contract.md").write_text("# contract\n", encoding="utf-8")
+
+
+def test_build_eval_dispatch_text_does_not_require_research_gate_for_local_audit(monkeypatch, tmp_path) -> None:
+    sid = "sid-local-audit"
+    node = {
+        "id": "N4_compile_audit",
+        "goal": "Compile a local packaging-readiness audit from inspected repository files",
+        "required_capabilities": ["harness.reporting", "report.compile", "source.local.read"],
+        "write_scope": [f"harness/sprints/{sid}.packaging-readiness-audit.md"],
+    }
+    _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid, "N4_compile_audit")
+
+    text = gnd.build_eval_dispatch_text({"sprint_id": sid}, "/tmp/graph.json", node, "solar-harness:0.3", "did")
+
+    assert "DeepResearch deterministic artifact gate is **not required**" in text
+    assert "Do not run `solar-harness research eval-artifacts`" in text
+    assert "generic `report.compile` outputs are judged by this node's acceptance criteria" in text
+    assert "没有 `research_quality_gate.ok=true` 不允许 PASS" not in text
+
+
+def test_build_eval_dispatch_text_requires_research_gate_for_deepresearch_node(monkeypatch, tmp_path) -> None:
+    sid = "sid-deepresearch"
+    node = {
+        "id": "R8_section_fact_check",
+        "goal": "Evaluate DeepResearch citation and factuality quality",
+        "required_capabilities": ["research.report_ast", "citation.verify"],
+        "artifacts": {"research_eval": "out/run-research_eval.json", "report_ast": "out/report_ast.json"},
+    }
+    _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid, "R8_section_fact_check")
+
+    text = gnd.build_eval_dispatch_text({"sprint_id": sid}, "/tmp/graph.json", node, "solar-harness:0.3", "did")
+
+    assert "本 node 明确涉及 DeepResearch artifacts" in text
+    assert "solar-harness research eval-artifacts --eval-json" in text
+    assert "没有 `research_quality_gate.ok=true` 不允许 PASS" in text
+    assert "DeepResearch deterministic artifact gate is **not required**" not in text

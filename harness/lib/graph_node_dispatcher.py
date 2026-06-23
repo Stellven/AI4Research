@@ -390,6 +390,17 @@ def _node_requires_deepresearch_quality_gate(node: dict[str, Any]) -> bool:
     return bool(DEEPRESEARCH_GATE_ARTIFACT_RE.search(artifact_text))
 
 
+def _deepresearch_quality_gate_eval_instruction(node: dict[str, Any], eval_json: str | Path) -> str:
+    if _node_requires_deepresearch_quality_gate(node):
+        return f"""- 本 node 明确涉及 DeepResearch artifacts / research evidence ledger / claim ledger / citation verification / research report compiler，必须先运行 deterministic artifact gate：
+  ```bash
+  solar-harness research eval-artifacts --eval-json "<path-to-research_eval.json>" --json
+  ```
+  并把返回 JSON 原样写入 `{eval_json}` 的 `research_quality_gate` 字段。没有 `research_quality_gate.ok=true` 不允许 PASS。"""
+    return """- DeepResearch deterministic artifact gate is **not required** for this node. Do not run `solar-harness research eval-artifacts`, and do not fail this node only because `research_eval.json`, `report_ast.json`, bibliography, source/evidence/claim counts, or citation-accuracy artifacts are absent.
+  Local audit reports, packaging-readiness reports, documentation synthesis, and generic `report.compile` outputs are judged by this node's acceptance criteria, proof obligations, session log, write scope, and handoff evidence unless `research_quality_gate_required=true` or explicit `research.*` artifacts/capabilities are present. Leave `research_quality_gate` empty or mark it `{"required": false}`."""
+
+
 def _refresh_requirement_coverage_artifacts(sid: str, *, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"ok": True, "skipped": "dry_run"}
@@ -3469,6 +3480,7 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
     node_dispatch = _dispatch_file(sid, node_id)
     contract = SPRINTS_DIR / f"{sid}.contract.md"
     architecture_block = dispatch_policy_block(node, graph) if dispatch_policy_block else "## Architecture Guard\n\n- unavailable"
+    research_quality_gate_instruction = _deepresearch_quality_gate_eval_instruction(node, eval_json)
     peer_eval_json_paths = peer_eval_json_paths or []
     canonical_eval_json_path = canonical_eval_json_path or str(_eval_json_file(sid, node_id))
     canonical_eval_md_path = canonical_eval_md_path or str(_eval_md_file(sid, node_id))
@@ -3570,11 +3582,7 @@ solar-harness session evaluate "{sid}" --json
   - `proof_obligations`: 原样记录本 node 的 obligation 列表
   - `proof_checks`: 对 `self_check` 逐项填 `true/false`
   - `verification_results`: 记录 `checked_artifacts / missing_artifacts / proof_gate`
-- 如果本 node 涉及 DeepResearch / evidence ledger / claim ledger / citation / report compiler，必须先运行 deterministic artifact gate：
-  ```bash
-  solar-harness research eval-artifacts --eval-json "<path-to-research_eval.json>" --json
-  ```
-  并把返回 JSON 原样写入 `{eval_json}` 的 `research_quality_gate` 字段。没有 `research_quality_gate.ok=true` 不允许 PASS。
+{research_quality_gate_instruction}
 
 ## Required Outputs
 
