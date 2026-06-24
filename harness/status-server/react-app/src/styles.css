@@ -155,6 +155,14 @@ summary:focus-visible,
   min-height: 100vh;
 }
 
+.app-shell.settings-shell-route {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.settings-shell-route .workspace-scroll {
+  padding: 0;
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -1611,10 +1619,8 @@ summary:focus-visible,
 }
 
 .settings-layout {
-  display: flex;
-  flex-direction: column;
-  gap: var(--solar-space-8);
-  padding-top: var(--solar-space-8);
+  display: block;
+  padding-top: var(--solar-space-6);
 }
 
 .settings-hero {
@@ -2941,6 +2947,10 @@ summary:focus-visible,
   padding-top: var(--solar-space-5);
 }
 
+.settings-actions[hidden] {
+  display: none;
+}
+
 .settings-actions-note {
   color: var(--solar-subtle);
   font-size: var(--solar-type-xs);
@@ -3409,10 +3419,11 @@ summary:focus-visible,
 /* Settings sidebar-nav layout (recovered Jun-18 build) */
 .settings-shell {
   display: grid;
-  grid-template-columns: minmax(190px, 230px) 1fr;
+  grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
   align-items: stretch;
+  min-height: calc(100vh - 96px);
   border: 1px solid var(--solar-line);
-  border-radius: var(--solar-radius-control, 10px);
+  border-radius: var(--solar-radius-small);
   overflow: hidden;
   background: var(--solar-surface, #ffffff);
 }
@@ -3474,15 +3485,28 @@ summary:focus-visible,
   background: var(--solar-surface, #fff);
 }
 .settings-nav-item.is-active {
-  border-color: var(--solar-line-strong);
+  border-color: var(--solar-line);
   color: var(--solar-ink);
   background: var(--solar-surface, #fff);
-  box-shadow: inset 3px 0 0 var(--solar-ink);
 }
 .settings-content {
   display: flex;
   flex-direction: column;
-  gap: var(--solar-space-4, 16px);
+  gap: var(--solar-space-5, 20px);
   padding: var(--solar-space-6, 24px);
   min-width: 0;
+}
+.settings-content-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--solar-space-4);
+  padding-bottom: var(--solar-space-5);
+  border-bottom: 1px solid var(--solar-line);
+}
+.settings-content-head h2 {
+  margin: var(--solar-space-1, 4px) 0 0;
+  font-size: var(--solar-type-2xl, 1.5rem);
+  font-weight: var(--solar-weight-strong, 650);
+  letter-spacing: 0;
 }

@@ -189,6 +189,7 @@ function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const selectedSprintId = selectedSprintFromPath(location.pathname);
+  const isSettingsRoute = location.pathname === "/settings";
 
   const refreshSprints = useCallback(async () => {
     try {
@@ -236,14 +237,16 @@ function Shell() {
   );
 
   return (
-    <div className="app-shell">
-      <Sidebar
-        sprints={sprints}
-        selectedSprintId={selectedSprintId}
-        state={state}
-        error={error}
-        onCreated={onCreated}
-      />
+    <div className={`app-shell ${isSettingsRoute ? "settings-shell-route" : ""}`}>
+      {!isSettingsRoute && (
+        <Sidebar
+          sprints={sprints}
+          selectedSprintId={selectedSprintId}
+          state={state}
+          error={error}
+          onCreated={onCreated}
+        />
+      )}
       <main
         className="main-workspace"
         aria-label="AI4Research session workspace"
@@ -2328,11 +2331,17 @@ function activityLevel(count: number): number {
   return 4;
 }
 
-type SettingsSectionId = "crew" | "credentials" | "usage" | "about";
+type SettingsSectionId =
+  | "credentials"
+  | "crew"
+  | "usage"
+  | "activity"
+  | "about";
 const SETTINGS_SECTIONS: Array<{ id: SettingsSectionId; label: string }> = [
-  { id: "crew", label: "Default crew" },
   { id: "credentials", label: "Credentials" },
+  { id: "crew", label: "Default crew" },
   { id: "usage", label: "Usage & limits" },
+  { id: "activity", label: "Activity" },
   { id: "about", label: "About" },
 ];
 
@@ -2348,7 +2357,8 @@ function SettingsView() {
   const [usage, setUsage] = useState<UsagePayload>();
   const [sprints, setSprints] = useState<SprintSummary[]>([]);
   const [selectedDay, setSelectedDay] = useState("");
-  const [activeSection, setActiveSection] = useState<SettingsSectionId>("crew");
+  const [activeSection, setActiveSection] =
+    useState<SettingsSectionId>("credentials");
 
   const refresh = useCallback(async () => {
     try {
@@ -2421,39 +2431,7 @@ function SettingsView() {
 
   return (
     <div className="workspace-scroll">
-      <header className="topbar">
-        <div className="topbar-title">
-          <Settings size={17} />
-          <span>Settings</span>
-        </div>
-        <button
-          type="button"
-          className="icon-text-button"
-          onClick={() => void refresh()}
-        >
-          <RefreshCw size={15} />
-          <span>Reload from runtime</span>
-        </button>
-      </header>
       <div className="settings-layout" data-testid="settings-view">
-        <section className="compact-session-header">
-          <div className="compact-title-block">
-            <div className="task-eyebrow">
-              <span className="task-kicker">Configuration</span>
-            </div>
-            <h1>Agents, models &amp; keys</h1>
-          </div>
-        </section>
-
-        <div className="settings-notice">
-          <ShieldCheck size={15} />
-          <p>
-            Read from the runtime ({settings?.source || "status-server"}). Save
-            writes model/crew selection to the runtime config and API keys to
-            local secrets; restart the cockpit to apply to running panes.
-          </p>
-        </div>
-
         {state === "loading" && <LoadingWorkbench />}
         {state === "error" && (
           <ErrorWorkbench message={error} onRetry={refresh} />
@@ -2461,13 +2439,13 @@ function SettingsView() {
         {state === "ready" && (
           <div className="settings-shell">
             <aside className="settings-sidebar">
-              <div className="settings-sidebar-head">
-                <h1>Settings</h1>
-              </div>
               <NavLink className="settings-back" to="/">
                 <ArrowLeft size={14} />
                 <span>Back to app</span>
               </NavLink>
+              <div className="settings-sidebar-head">
+                <h1>Settings</h1>
+              </div>
               <nav className="settings-nav" aria-label="Settings sections">
                 {SETTINGS_SECTIONS.map((item) => (
                   <button
@@ -2485,6 +2463,33 @@ function SettingsView() {
               </nav>
             </aside>
             <main className="settings-content">
+              <div className="settings-content-head">
+                <div>
+                  <h2>
+                    {SETTINGS_SECTIONS.find((item) => item.id === activeSection)
+                      ?.label || "Settings"}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className="icon-text-button"
+                  onClick={() => void refresh()}
+                >
+                  <RefreshCw size={15} />
+                  <span>Reload</span>
+                </button>
+              </div>
+
+              <div className="settings-notice">
+                <ShieldCheck size={15} />
+                <p>
+                  Read from the runtime ({settings?.source || "status-server"}).
+                  Save writes model/crew selection to the runtime config and API
+                  keys to local secrets; restart the cockpit to apply to running
+                  panes.
+                </p>
+              </div>
+
               <section
                 className="settings-block"
                 hidden={activeSection !== "crew"}
@@ -2643,7 +2648,7 @@ function SettingsView() {
 
               <section
                 className="settings-block"
-                hidden={activeSection !== "usage"}
+                hidden={activeSection !== "activity"}
               >
                 <SectionHeader
                   icon={<Workflow size={17} />}
