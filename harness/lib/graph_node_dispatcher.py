@@ -1574,6 +1574,48 @@ def _archive_node_review_sidecars(sid: str, node_id: str, handoff_file: Path | N
     return archived
 
 
+def _archive_stale_repair_eval_sidecars(
+    sid: str,
+    node: dict[str, Any],
+    node_id: str,
+    handoff_file: Path | None,
+    eval_json_path: str | Path,
+    status: str,
+) -> dict[str, str]:
+    if status in {"passed", "failed"}:
+        return {}
+    attempt = _node_repair_attempts(node)
+    if attempt <= 0 or handoff_file is None:
+        return {}
+    try:
+        handoff = Path(handoff_file).expanduser()
+        handoff_mtime = handoff.stat().st_mtime
+    except Exception:
+        return {}
+
+    archived: dict[str, str] = {}
+    candidates: list[tuple[str, Path]] = []
+    if str(eval_json_path or "").strip():
+        candidates.append(("eval_json", Path(str(eval_json_path))))
+    candidates.append(("eval_md", _eval_md_file(sid, node_id)))
+
+    seen: set[Path] = set()
+    for key, raw_path in candidates:
+        try:
+            path = raw_path.expanduser()
+            if path in seen or not path.exists():
+                continue
+            seen.add(path)
+            if path.stat().st_mtime >= handoff_mtime:
+                continue
+            archive = _archive_path_for_repair(path, attempt)
+            path.replace(archive)
+        except Exception:
+            continue
+        archived[key] = str(archive)
+    return archived
+
+
 def _short_eval_errors(eval_payload: dict[str, Any]) -> list[dict[str, str]]:
     errors = eval_payload.get("errors")
     if not isinstance(errors, list):
@@ -1884,11 +1926,29 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
         handoff_file = _existing_node_handoff(sid, node, graph)
         dependency_blockers = _sidecar_reconcile_dependency_blockers(graph, node) if handoff_file else []
         eval_json_path = str(node.get("eval_json") or _eval_json_file(sid, node_id))
-        if not Path(eval_json_path).exists():
+        stale_eval_archived = _archive_stale_repair_eval_sidecars(
+            sid,
+            node,
+            node_id,
+            handoff_file,
+            eval_json_path,
+            str(status or "").strip().lower(),
+        )
+        if stale_eval_archived:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "repair_handoff_newer_than_eval_sidecar",
+                    "handoff": str(handoff_file),
+                    "archived_sidecars": stale_eval_archived,
+                }
+            )
+        if not stale_eval_archived and not Path(eval_json_path).exists():
             backfilled_eval = _maybe_backfill_eval_json_from_md(sid, node_id)
             if backfilled_eval is not None:
                 eval_json_path = str(backfilled_eval)
-        eval_payload = _read_json_file_safe(eval_json_path) if eval_json_path else {}
+        eval_payload = {} if stale_eval_archived else (_read_json_file_safe(eval_json_path) if eval_json_path else {})
         raw_eval_verdict = str(eval_payload.get("verdict") or eval_payload.get("status") or "").strip().lower()
         if raw_eval_verdict in {"pass", "passed", "ok", "success", "succeeded"}:
             eval_verdict = "PASS"

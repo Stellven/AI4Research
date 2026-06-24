@@ -460,6 +460,53 @@ class TestSendToPaneLiteral:
             }
         ]
 
+    def test_repair_handoff_newer_than_eval_sidecar_gets_fresh_review(self, tmp_harness, monkeypatch):
+        """A repaired handoff must not terminal-fail from the previous round's eval sidecar."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "dispatched"
+        node["assigned_to"] = "solar-harness-lab:0.2"
+        node["dispatch_id"] = "dispatch-N1-repair"
+        node["repair_attempts"] = 1
+        node["max_repair_attempts"] = 1
+        node["repair_context"] = {"attempt": 1, "max_attempts": 1, "verdict": "FAIL"}
+        graph["node_results"]["N1"] = {
+            "status": "dispatched",
+            "assigned_to": node["assigned_to"],
+            "dispatch_id": node["dispatch_id"],
+        }
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_md = sprints / f"{sid}.N1-eval.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_md.write_text("## Verdict\nFAIL\n\nold review\n", encoding="utf-8")
+        eval_json.write_text(json.dumps({"verdict": "FAIL", "node_id": "N1"}) + "\n", encoding="utf-8")
+        handoff.write_text("# repaired handoff\n\nnew evidence\n", encoding="utf-8")
+        os.utime(eval_md, (1_700_000_000, 1_700_000_000))
+        os.utime(eval_json, (1_700_000_000, 1_700_000_000))
+        os.utime(handoff, (1_700_000_100, 1_700_000_100))
+        release_calls = []
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: release_calls.append(a) or {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert node["status"] == "reviewing"
+        assert graph["node_results"]["N1"]["status"] == "reviewing"
+        assert handoff.exists()
+        assert not eval_json.exists()
+        assert not eval_md.exists()
+        assert len(release_calls) == 1
+        assert repaired[0]["reason"] == "repair_handoff_newer_than_eval_sidecar"
+        assert Path(repaired[0]["archived_sidecars"]["eval_json"]).exists()
+        assert Path(repaired[0]["archived_sidecars"]["eval_md"]).exists()
+        assert repaired[1] == {
+            "node": "N1",
+            "status": "reviewing",
+            "reason": "handoff_file_exists",
+            "handoff": str(handoff),
+        }
+
     def test_direct_node_verdict_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
         """Primary evaluator node-verdict FAIL uses the same repair path as sidecar reconcile."""
         tmp_path, sprints, sid, graph = tmp_harness
