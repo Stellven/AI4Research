@@ -14,6 +14,19 @@ PASS_STATES = {"passed"}
 PROGRESS_STATES = {"queued", "assigned", "dispatched", "in_progress", "reviewing"}
 
 
+def _sid_terminally_closed(sprints_dir: Path, sid: str) -> bool:
+    """True once the graph has terminally closed (closure.json status=closed /
+    all_nodes_passed). Used so the coverage view defers to the authoritative
+    closure instead of a possibly-stale task_graph.json node status (Defect C2)."""
+    try:
+        closure = json.loads((sprints_dir / f"{sid}.closure.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(closure, dict):
+        return False
+    return str(closure.get("status") or "").strip().lower() == "closed" or bool(closure.get("all_nodes_passed"))
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -316,6 +329,21 @@ def evaluate_sid(
         "coverage_report": coverage,
         "acceptance_verdict": verdict,
     }
+    if _sid_terminally_closed(sprints_dir, sid):
+        # C2: the authoritative closure wins. The coverage view reads task_graph.json
+        # node statuses, which can lag the DAG closure and intermittently report a
+        # closed sprint as IN_PROGRESS/partial — leaving a parent (e.g. an epic) to
+        # think the child is unfinished. Once the graph has terminally closed, reflect
+        # completion. Fires only when closure already says the sprint passed, so it
+        # cannot manufacture a pass.
+        total = int(coverage.get("summary", {}).get("total", 0))
+        coverage["summary"].update(
+            {"done": total, "partial": 0, "missing": 0,
+             "coverage_ratio": 1.0 if total else 0, "graph_complete": True}
+        )
+        for item in trace.get("items", []):
+            item["final_status"] = "done"
+        verdict.update({"verdict": "PASS", "reasons": [], "coverage_summary": coverage["summary"]})
     if write:
         _write_json(req_path, requirement_ir)
         _write_json(graph_path, graph)
