@@ -200,13 +200,25 @@ def build_acceptance_verdict(
         reasons.append("requirement_partial")
     if int(summary.get("missing", 0)) > 0:
         reasons.append("requirement_missing")
+    if ok:
+        verdict = "PASS"
+    elif requested == "pass" and not graph_complete:
+        # A sprint whose graph is still running has NOT failed — it is in progress.
+        # Emitting FAIL mid-run poisons per-node evidence-consistency checks that read
+        # the parent acceptance verdict: every node would inherit a FAIL until the whole
+        # graph closes, a structural deadlock where the first node can never pass. PASS
+        # still requires a complete, fully-covered graph (see `ok` above); FAIL is
+        # reserved for a completed graph that did not meet coverage / requested verdict.
+        verdict = "IN_PROGRESS"
+    else:
+        verdict = "FAIL"
     return {
         "schema_version": "solar.acceptance_verdict.v1",
         "sprint_id": graph.get("sprint_id", "N/A"),
         "requirement_ir_id": requirement_ir.get("id"),
         "requested_verdict": requested_verdict.upper(),
         "coverage_summary": summary,
-        "verdict": "PASS" if ok else "FAIL",
+        "verdict": verdict,
         "reasons": reasons,
     }
 

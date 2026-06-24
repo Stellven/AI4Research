@@ -90,5 +90,8 @@ def test_node_verdict_refreshes_requirement_coverage_artifacts(tmp_path, monkeyp
     assert result["coverage_refresh"]["ok"] is True
     assert trace["items"][0]["mapped_nodes"] == ["N1", "N2"]
     assert coverage["summary"]["partial"] == 1
-    assert verdict["verdict"] == "FAIL"
+    # Mid-run / incomplete-or-uncovered graph is non-PASS (IN_PROGRESS while the
+    # graph is still running, FAIL only once complete-but-uncovered); either way the
+    # refresh must clear a stale `.finalized`.
+    assert verdict["verdict"] != "PASS"
     assert not (sprints / f"{sid}.finalized").exists()
