@@ -3183,7 +3183,10 @@ print(json.dumps({
     _status_server_live_ports() {
       local _p
       for _p in $(seq 8765 8775); do
-        if curl -fsS "http://127.0.0.1:${_p}/healthz" >/dev/null 2>&1; then
+        # Bound the probe: on some hosts (e.g. WSL2) a closed localhost port drops
+        # the SYN instead of refusing, so without --connect-timeout curl falls back
+        # to its ~300s default and `status-server start/stop` wedges (F1 hang).
+        if curl -fsS --connect-timeout 1 --max-time 2 "http://127.0.0.1:${_p}/healthz" >/dev/null 2>&1; then
           printf '%s\n' "$_p"
         fi
       done
