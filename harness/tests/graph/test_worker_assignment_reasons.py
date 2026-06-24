@@ -38,14 +38,32 @@ def test_queue_reason_distinguishes_capacity_from_no_matching_worker() -> None:
     assert "details" in result["queued"][0]
 
 
-def test_queue_reason_remains_no_matching_worker_when_skills_are_missing() -> None:
-    worker = _worker("pane-a")
-    worker["skills"] = ["python"]
-    result = assign_workers([_node("N1")], [worker])
-    assert result["assigned"] == []
-    assert result["queued"][0]["node"] == "N1"
-    assert result["queued"][0]["reason"] == "no_matching_worker"
-    assert "pytest" in result["queued"][0]["details"]["missing_skills"]
+def test_skill_short_worker_is_assignable_but_capability_short_strands() -> None:
+    # graph_scheduler design: required SKILLS are a PREFERENCE (Layer-3 relaxed net) so a node never
+    # permanently strands on a free-form/unregistered skill string, while a required CAPABILITY stays
+    # the HARD gate. So a capability-qualified worker that is merely skill-short is still dispatched,
+    # but a worker missing a genuinely-unsatisfiable required capability strands as no_matching_worker.
+
+    # Skill-short (missing pytest/stub-llm) but capabilities satisfied -> assigned (skills are not a gate).
+    skill_short = _worker("pane-a")
+    skill_short["skills"] = ["python"]
+    relaxed = assign_workers([_node("N1")], [skill_short])
+    assert relaxed["queued"] == []
+    assert relaxed["assigned"][0]["node"] == "N1"
+
+    # GUARDRAIL (the real gate is kept): a genuinely-unsatisfiable required capability strands honestly.
+    cap_short = _worker("pane-b")
+    cap_node = {
+        "id": "N2",
+        "preferred_model": "sonnet",
+        "required_skills": [],
+        "required_capabilities": ["fake.capability.xyz"],
+    }
+    stranded = assign_workers([cap_node], [cap_short])
+    assert stranded["assigned"] == []
+    assert stranded["queued"][0]["node"] == "N2"
+    assert stranded["queued"][0]["reason"] == "no_matching_worker"
+    assert "fake.capability.xyz" in stranded["queued"][0]["details"]["missing_capabilities"]
 
 
 def test_busy_matching_worker_is_queued_instead_of_assigned() -> None:
