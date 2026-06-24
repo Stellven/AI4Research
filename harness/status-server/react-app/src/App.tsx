@@ -2288,6 +2288,19 @@ const CREW_PRESETS = [
   { id: "custom", label: "Custom", hint: "Per-role model choices" },
 ];
 
+const RUNTIME_OPTIONS = [
+  {
+    id: "claude",
+    label: "Claude Code",
+    hint: "Legacy cockpit panes using the Claude CLI",
+  },
+  {
+    id: "codex",
+    label: "Codex CLI",
+    hint: "Uses already-configured Codex operators; no model picker here",
+  },
+];
+
 const API_PROVIDERS = [
   { id: "anthropic", label: "Anthropic", hint: "Claude models" },
   { id: "zai", label: "Z.ai", hint: "GLM models" },
@@ -2462,6 +2475,7 @@ function SettingsView() {
 
   const [roleModels, setRoleModels] = useState<Record<string, string>>({});
   const [labMode, setLabMode] = useState("all-claude");
+  const [paneRuntime, setPaneRuntime] = useState("claude");
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [usage, setUsage] = useState<UsagePayload>();
   const [sprints, setSprints] = useState<SprintSummary[]>([]);
@@ -2489,6 +2503,8 @@ function SettingsView() {
           asString(response.model_lab_matrix?.value) || "all-claude",
         ),
       );
+      const runtime = asString(response.runtime?.value).toLowerCase();
+      setPaneRuntime(runtime === "codex" ? "codex" : "claude");
       setState("ready");
       setError("");
     } catch (err) {
@@ -2513,11 +2529,14 @@ function SettingsView() {
     setSaving(true);
     setSaveMsg("");
     try {
-      const res = await saveSettings(roleModels, apiKeys);
+      const res = await saveSettings(roleModels, apiKeys, paneRuntime);
       if (res.ok) {
         const n = res.written_keys?.length || 0;
+        const runtimeMsg = res.applied_runtime
+          ? `, runtime default ${res.applied_runtime}`
+          : "";
         setSaveMsg(
-          `Saved. Models applied${n ? `, ${n} key(s) stored` : ""}. Restart the cockpit to apply to running panes.`,
+          `Saved. Models applied${runtimeMsg}${n ? `, ${n} key(s) stored` : ""}. Restart the cockpit to apply to running panes.`,
         );
         setApiKeys({}); // clear key inputs after persisting
         void refresh();
@@ -2529,7 +2548,7 @@ function SettingsView() {
     } finally {
       setSaving(false);
     }
-  }, [roleModels, apiKeys, refresh]);
+  }, [roleModels, apiKeys, paneRuntime, refresh]);
   const section = SETTINGS_SECTIONS.find((item) => item.id === activeSection);
 
   return (
@@ -2596,6 +2615,8 @@ function SettingsView() {
                     setRoleModels((prev) => ({ ...prev, [role]: value }));
                     setLabMode("custom");
                   }}
+                  onRuntimeChange={setPaneRuntime}
+                  paneRuntime={paneRuntime}
                   roleModels={roleModels}
                   settings={settings}
                 />
@@ -2614,7 +2635,10 @@ function SettingsView() {
               >
                 <span className="settings-actions-note">
                   {saveMsg ||
-                    "Writes models to the runtime config and API keys to local secrets. Restart the cockpit to apply to running panes."}
+                    (activeSection === "crew" &&
+                    settings?.runtime?.launch_supported !== true
+                      ? "Writes model defaults and the stored runtime value. This checkout does not launch panes from the runtime value yet."
+                      : "Writes model/runtime defaults to the runtime config and API keys to local secrets. Restart the cockpit to apply to running panes.")}
                 </span>
                 <button
                   type="button"
@@ -2692,16 +2716,21 @@ function DefaultCrewPane({
   applyCrewPreset,
   labMode,
   onRoleModelChange,
+  onRuntimeChange,
+  paneRuntime,
   roleModels,
   settings,
 }: {
   applyCrewPreset: (mode: string) => void;
   labMode: string;
   onRoleModelChange: (role: string, value: string) => void;
+  onRuntimeChange: (runtime: string) => void;
+  paneRuntime: string;
   roleModels: Record<string, string>;
   settings?: SettingsPayload;
 }) {
   const hasRoleModels = ROLE_ORDER.some((role) => Boolean(roleModels[role]));
+  const runtimeLaunchSupported = settings?.runtime?.launch_supported === true;
   const activePreset = hasRoleModels
     ? inferCrewPreset(roleModels) || normalizeCrewPreset(labMode)
     : "";
@@ -2715,6 +2744,47 @@ function DefaultCrewPane({
       detail={hasRoleModels ? activePreset : "unavailable"}
       description="Launch defaults for PM, Planner, Builder, and Evaluator. A per-run launch popover can override these before work starts; Save persists the defaults to the local runtime config."
     >
+      <div className="settings-runtime-panel">
+        <div className="settings-runtime-head">
+          <div>
+            <span>Launch runtime</span>
+            <strong>
+              {paneRuntime === "codex" ? "Codex CLI" : "Claude Code"}
+            </strong>
+          </div>
+          <span
+            className={`settings-status-pill ${runtimeLaunchSupported ? "is-ok" : ""}`}
+          >
+            {runtimeLaunchSupported ? "restart applies" : "launch wiring pending"}
+          </span>
+        </div>
+        <div
+          className="segmented settings-runtime-segmented"
+          role="group"
+          aria-label="Launch runtime"
+          aria-disabled={!runtimeLaunchSupported}
+        >
+          {RUNTIME_OPTIONS.map((runtime) => (
+            <button
+              key={runtime.id}
+              type="button"
+              className={`segmented-option ${paneRuntime === runtime.id ? "is-active" : ""}`}
+              aria-pressed={paneRuntime === runtime.id}
+              disabled={!runtimeLaunchSupported}
+              title={runtime.hint}
+              onClick={() => onRuntimeChange(runtime.id)}
+            >
+              {runtime.label}
+            </button>
+          ))}
+        </div>
+        <p className="settings-runtime-note">
+          {runtimeLaunchSupported
+            ? "Saved runtime defaults apply after restarting the cockpit. Codex uses its configured operator pool; Claude model defaults stay below."
+            : settings?.runtime?.note ||
+              "The runtime default is stored in config, but this checkout does not yet launch panes from that field."}
+        </p>
+      </div>
       {!hasRoleModels && (
         <SettingsEmptyState
           title="Model defaults unavailable"

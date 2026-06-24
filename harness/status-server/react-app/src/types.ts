@@ -366,6 +366,12 @@ export type SettingsPayload = {
   sources?: JsonRecord;
   write_supported?: boolean;
   write_note?: string;
+  runtime?: {
+    value?: "claude" | "codex" | string;
+    source?: string;
+    launch_supported?: boolean;
+    note?: string;
+  };
   model_lab_matrix?: {
     value?: string;
     source?: string;

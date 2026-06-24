@@ -3698,6 +3698,51 @@ summary:focus-visible,
   background: var(--solar-accent-wash);
 }
 
+.settings-status-pill.is-ok {
+  border-color: color-mix(in srgb, var(--solar-success, #1f6f5b) 30%, var(--solar-line));
+  color: var(--solar-success, #1f6f5b);
+  background: color-mix(in srgb, var(--solar-success, #1f6f5b) 8%, var(--solar-surface));
+}
+
+.settings-runtime-panel {
+  display: grid;
+  gap: var(--solar-space-3);
+  padding: var(--solar-space-3) 0 var(--solar-space-4);
+  border-bottom: 1px solid var(--solar-line-soft);
+  margin-bottom: var(--solar-space-4);
+}
+
+.settings-runtime-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--solar-space-4);
+}
+
+.settings-runtime-head span,
+.settings-runtime-note {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.settings-runtime-head strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.settings-runtime-segmented {
+  max-width: 420px;
+}
+
+.settings-runtime-note {
+  max-width: 720px;
+  margin: 0;
+  line-height: 1.5;
+}
+
 .settings-preset-note {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);

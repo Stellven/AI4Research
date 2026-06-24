@@ -729,16 +729,29 @@ def _settings_payload() -> dict:
             break
 
     physical = _physical_operator_summary()
+    pane_runtime, pane_runtime_source = _read_user_config_runtime()
+    launch_supported = _runtime_launch_supported()
     return {
         "ok": True,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "source": "status-server read-only config scan",
+        "source": "status-server settings scan",
         "sources": {
             "config_env": _safe_rel(HARNESS_DIR / "config.env", HARNESS_DIR),
             "physical_operators": _safe_rel(HARNESS_DIR / "config" / "physical-operators.json", HARNESS_DIR),
+            "user_config": _safe_rel(_USER_CONFIG_PATH, HARNESS_DIR),
         },
-        "write_supported": False,
-        "write_note": "P0 settings are read-only. Use existing solar-harness model/config commands for writes.",
+        "write_supported": True,
+        "write_note": "Settings writes persist to solar-user-config.json and local secrets; running panes apply changes after a cockpit restart.",
+        "runtime": {
+            "value": pane_runtime,
+            "source": pane_runtime_source,
+            "launch_supported": launch_supported,
+            "note": (
+                "This checkout has the SOLAR_PANE_RUNTIME launch seam."
+                if launch_supported
+                else "Runtime default can be stored, but this checkout lacks the pane-launcher/dispatcher SOLAR_PANE_RUNTIME seam; the UI keeps the selector disabled."
+            ),
+        },
         "model_lab_matrix": {
             "value": lab_matrix,
             "source": lab_source,
@@ -765,6 +778,7 @@ _VALID_MODEL_ALIASES = {
     "anthropic-sonnet", "opus", "sonnet", "zhipu-glm-5.1", "zhipu-glm-4.7",
     "deepseek-v4-pro",
 }
+_VALID_PANE_RUNTIMES = {"claude", "codex"}
 # provider id (frontend) -> env var the runtime reads
 _PROVIDER_KEY_ENV = {
     "anthropic": "ANTHROPIC_API_KEY",
@@ -774,6 +788,34 @@ _PROVIDER_KEY_ENV = {
     "openai": "OPENAI_API_KEY",
     "serper": "SERPER_API_KEY",
 }
+
+
+def _read_user_config() -> dict:
+    try:
+        cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8")) if _USER_CONFIG_PATH.exists() else {}
+    except Exception:
+        cfg = {}
+    return cfg if isinstance(cfg, dict) else {}
+
+
+def _write_user_config(cfg: dict) -> None:
+    _USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _USER_CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+
+
+def _runtime_launch_supported() -> bool:
+    """The persisted runtime selector is only safe to enable when the launch seam
+    is present in this checkout. The proven Codex branch has both pieces; this
+    GUI branch may not."""
+    try:
+        launcher = (HARNESS_DIR / "pane-launcher.sh").read_text(encoding="utf-8", errors="replace")
+        dispatcher = (HARNESS_DIR / "lib" / "graph_node_dispatcher.py").read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+    except Exception:
+        return False
+    return "SOLAR_PANE_RUNTIME" in launcher and "def _pane_runtime(" in dispatcher
 
 
 def _model_id_to_alias(model_id: str) -> str:
@@ -811,22 +853,25 @@ def _alias_to_model_id(alias: str) -> str:
 
 
 def _read_user_config_models() -> dict:
-    try:
-        cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8"))
-        models = cfg.get("models")
-        return models if isinstance(models, dict) else {}
-    except Exception:
-        return {}
+    cfg = _read_user_config()
+    models = cfg.get("models")
+    return models if isinstance(models, dict) else {}
+
+
+def _read_user_config_runtime() -> tuple[str, str]:
+    cfg = _read_user_config()
+    runtime = str(cfg.get("runtime") or "").strip().lower()
+    if runtime in _VALID_PANE_RUNTIMES:
+        return runtime, "solar-user-config.json"
+    env_runtime = str(os.environ.get("SOLAR_PANE_RUNTIME") or "").strip().lower()
+    if env_runtime in _VALID_PANE_RUNTIMES:
+        return env_runtime, "SOLAR_PANE_RUNTIME"
+    return "claude", "default"
 
 
 def _write_user_config_models(role_models: dict) -> dict:
     """Write models.{pm,planner,builder,evaluator} into solar-user-config.json."""
-    try:
-        cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8")) if _USER_CONFIG_PATH.exists() else {}
-    except Exception:
-        cfg = {}
-    if not isinstance(cfg, dict):
-        cfg = {}
+    cfg = _read_user_config()
     models = cfg.get("models") if isinstance(cfg.get("models"), dict) else {}
     applied = {}
     for role in ("pm", "planner", "builder", "evaluator"):
@@ -839,9 +884,18 @@ def _write_user_config_models(role_models: dict) -> dict:
         models[role] = alias
         applied[role] = alias
     cfg["models"] = models
-    _USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _USER_CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    _write_user_config(cfg)
     return applied
+
+
+def _write_user_config_runtime(runtime: str) -> str:
+    value = str(runtime or "").strip().lower()
+    if value not in _VALID_PANE_RUNTIMES:
+        return ""
+    cfg = _read_user_config()
+    cfg["runtime"] = value
+    _write_user_config(cfg)
+    return value
 
 
 def _write_provider_keys(api_keys: dict) -> list:
@@ -878,19 +932,22 @@ def _write_provider_keys(api_keys: dict) -> list:
 def _settings_write_payload(data: dict) -> tuple[dict, int]:
     role_models_in = data.get("role_models") or data.get("models") or {}
     api_keys = data.get("api_keys") or {}
+    runtime_in = data.get("runtime") or data.get("pane_runtime") or ""
     role_models = {}
     for role, val in role_models_in.items():
         role_models[role] = val.get("model") if isinstance(val, dict) else val
     try:
         applied_models = _write_user_config_models(role_models) if role_models else {}
         written_keys = _write_provider_keys(api_keys) if api_keys else []
+        applied_runtime = _write_user_config_runtime(runtime_in) if runtime_in else ""
     except Exception as exc:
         return {"ok": False, "error": "settings_write_failed", "detail": str(exc)}, 500
     return {
         "ok": True,
         "applied_models": applied_models,
+        "applied_runtime": applied_runtime,
         "written_keys": written_keys,
-        "note": "Models -> solar-user-config.json; keys -> ~/.solar/secrets/solar-user-secrets.env. Restart the cockpit to apply to running panes.",
+        "note": "Models/runtime -> solar-user-config.json; keys -> ~/.solar/secrets/solar-user-secrets.env. Restart the cockpit to apply to running panes.",
     }, 200
 
 

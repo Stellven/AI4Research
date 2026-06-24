@@ -118,6 +118,7 @@ export function submitIntake(task: string): Promise<IntakeResponse> {
 export interface SaveSettingsResponse {
   ok: boolean;
   applied_models?: Record<string, string>;
+  applied_runtime?: string;
   written_keys?: string[];
   note?: string;
   error?: string;
@@ -129,10 +130,11 @@ export interface SaveSettingsResponse {
 export function saveSettings(
   roleModels: Record<string, string>,
   apiKeys: Record<string, string>,
+  runtime?: string,
 ): Promise<SaveSettingsResponse> {
   return requestJson<SaveSettingsResponse>("/settings", {
     method: "POST",
-    body: JSON.stringify({ role_models: roleModels, api_keys: apiKeys }),
+    body: JSON.stringify({ role_models: roleModels, api_keys: apiKeys, runtime }),
   });
 }
 
