@@ -3354,3 +3354,54 @@ summary:focus-visible,
     padding: var(--solar-space-5);
   }
 }
+
+/* Activity heatmap — git-contribution-style usage graph (recovered Jun-18 build) */
+.activity-heatmap {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(16px, 1fr));
+  gap: 5px;
+  max-width: 760px;
+  padding: var(--solar-space-3) 0;
+}
+.activity-day {
+  aspect-ratio: 1 / 1;
+  border-radius: 3px;
+  border: 1px solid var(--solar-line);
+  background: var(--solar-surface-quiet);
+  padding: 0;
+  cursor: pointer;
+  transition:
+    outline-color var(--solar-duration-fast, 120ms) ease,
+    transform var(--solar-duration-fast, 120ms) ease;
+}
+.activity-day:hover {
+  transform: translateY(-1px);
+}
+.activity-day:hover,
+.activity-day.is-selected {
+  outline: 2px solid var(--solar-accent);
+  outline-offset: 1px;
+}
+.activity-level-1 {
+  background: color-mix(in srgb, var(--solar-ink) 16%, var(--solar-surface-quiet));
+}
+.activity-level-2 {
+  background: color-mix(in srgb, var(--solar-ink) 38%, var(--solar-surface-quiet));
+}
+.activity-level-3 {
+  background: color-mix(in srgb, var(--solar-ink) 64%, var(--solar-surface-quiet));
+}
+.activity-level-4 {
+  background: var(--solar-ink);
+}
+.activity-summary-line {
+  display: flex;
+  gap: var(--solar-space-4);
+  flex-wrap: wrap;
+  font-size: var(--solar-type-xs);
+  color: var(--solar-muted);
+  padding-top: var(--solar-space-2, 8px);
+}
+.activity-summary-line strong {
+  color: var(--solar-ink);
+}

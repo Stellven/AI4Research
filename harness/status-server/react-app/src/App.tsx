@@ -2286,6 +2286,48 @@ const API_PROVIDERS = [
   { id: "zai", label: "Z.ai", hint: "GLM models" },
 ];
 
+// Activity heatmap (recovered from the Jun-18 build): bucket sprints into the last
+// N calendar days for a git-contribution-style usage graph.
+type ActivityDay = { date: string; count: number; sprints: SprintSummary[] };
+
+function buildActivityDays(
+  sprints: SprintSummary[],
+  dayCount: number,
+): ActivityDay[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const buckets = new Map<string, ActivityDay>();
+  Array.from({ length: dayCount }, (_unused, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (dayCount - index - 1));
+    const key = date.toISOString().slice(0, 10);
+    buckets.set(key, { date: key, count: 0, sprints: [] });
+  });
+  sprints.forEach((sprint) => {
+    // /sprints exposes mtime (unix seconds); fall back to updated_at if present.
+    const mtime = sprint.mtime;
+    const ts =
+      typeof mtime === "number"
+        ? mtime * 1000
+        : Date.parse(asString(sprint.updated_at) || "");
+    if (!ts) return;
+    const key = new Date(ts).toISOString().slice(0, 10);
+    const bucket = buckets.get(key);
+    if (!bucket) return;
+    bucket.sprints.push(sprint);
+    bucket.count += 1;
+  });
+  return Array.from(buckets.values());
+}
+
+function activityLevel(count: number): number {
+  if (count <= 0) return 0;
+  if (count === 1) return 1;
+  if (count <= 3) return 2;
+  if (count <= 6) return 3;
+  return 4;
+}
+
 function SettingsView() {
   const [settings, setSettings] = useState<SettingsPayload>();
   const [state, setState] = useState<LoadState>("loading");
@@ -2296,6 +2338,8 @@ function SettingsView() {
   const [labMode, setLabMode] = useState("all-claude");
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [usage, setUsage] = useState<UsagePayload>();
+  const [sprints, setSprints] = useState<SprintSummary[]>([]);
+  const [selectedDay, setSelectedDay] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -2303,6 +2347,9 @@ function SettingsView() {
       setSettings(response);
       void fetchUsage()
         .then(setUsage)
+        .catch(() => undefined);
+      void fetchSprints()
+        .then((res) => setSprints(res.data?.sprints || []))
         .catch(() => undefined);
       const models: Record<string, string> = {};
       const on: Record<string, boolean> = {};
@@ -2543,6 +2590,64 @@ function SettingsView() {
                   </div>
                 ))}
               </div>
+            </section>
+
+            <section className="settings-block">
+              <SectionHeader
+                icon={<Workflow size={17} />}
+                title="Activity"
+                detail="Last 12 weeks"
+              />
+              <p className="settings-help">
+                Sessions per day — a quick read on how busy the runtime has
+                been.
+              </p>
+              {(() => {
+                const days = buildActivityDays(sprints, 84);
+                const busiest = days.reduce(
+                  (best, day) => (day.count > best.count ? day : best),
+                  days[0] ?? { date: "", count: 0, sprints: [] },
+                );
+                const selected = days.find((day) => day.date === selectedDay);
+                return (
+                  <>
+                    <div
+                      className="activity-heatmap"
+                      aria-label="Sprint activity by day"
+                    >
+                      {days.map((day) => (
+                        <button
+                          key={day.date}
+                          type="button"
+                          className={`activity-day activity-level-${activityLevel(day.count)} ${selectedDay === day.date ? "is-selected" : ""}`}
+                          aria-label={`${day.date}: ${day.count} sessions`}
+                          title={`${day.date}: ${day.count} sessions`}
+                          aria-pressed={selectedDay === day.date}
+                          onClick={() => setSelectedDay(day.date)}
+                        />
+                      ))}
+                    </div>
+                    <div className="activity-summary-line">
+                      <span>
+                        Busiest day:{" "}
+                        <strong>
+                          {busiest.date
+                            ? `${busiest.date} (${busiest.count})`
+                            : "—"}
+                        </strong>
+                      </span>
+                      <span>
+                        Selected:{" "}
+                        <strong>
+                          {selected
+                            ? `${selected.date} (${selected.count})`
+                            : "—"}
+                        </strong>
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
             </section>
 
             <div className="settings-actions">
