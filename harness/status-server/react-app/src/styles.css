@@ -3405,3 +3405,84 @@ summary:focus-visible,
 .activity-summary-line strong {
   color: var(--solar-ink);
 }
+
+/* Settings sidebar-nav layout (recovered Jun-18 build) */
+.settings-shell {
+  display: grid;
+  grid-template-columns: minmax(190px, 230px) 1fr;
+  align-items: stretch;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control, 10px);
+  overflow: hidden;
+  background: var(--solar-surface, #ffffff);
+}
+.settings-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-5, 20px);
+  padding: var(--solar-space-6, 24px) var(--solar-space-5, 20px);
+  border-right: 1px solid var(--solar-line);
+  background: var(--solar-surface-quiet);
+}
+.settings-sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-2, 8px);
+}
+.settings-sidebar-head h1 {
+  margin: 0;
+  font-size: var(--solar-type-xl, 1.25rem);
+  font-weight: var(--solar-weight-strong, 650);
+}
+.settings-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2, 8px);
+  width: fit-content;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm, 0.875rem);
+  font-weight: var(--solar-weight-medium, 550);
+  text-decoration: none;
+  transition: color var(--solar-duration-fast, 120ms) ease;
+}
+.settings-back:hover {
+  color: var(--solar-ink);
+}
+.settings-nav {
+  display: grid;
+  gap: var(--solar-space-1, 4px);
+}
+.settings-nav-item {
+  min-height: 38px;
+  padding: 0 var(--solar-space-3, 12px);
+  border: 1px solid transparent;
+  border-radius: var(--solar-radius-control, 8px);
+  color: var(--solar-muted);
+  background: transparent;
+  font: inherit;
+  font-size: var(--solar-type-sm, 0.875rem);
+  font-weight: var(--solar-weight-medium, 550);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--solar-duration-fast, 120ms) ease,
+    color var(--solar-duration-fast, 120ms) ease,
+    background var(--solar-duration-fast, 120ms) ease;
+}
+.settings-nav-item:hover {
+  color: var(--solar-ink);
+  background: var(--solar-surface, #fff);
+}
+.settings-nav-item.is-active {
+  border-color: var(--solar-line-strong);
+  color: var(--solar-ink);
+  background: var(--solar-surface, #fff);
+  box-shadow: inset 3px 0 0 var(--solar-ink);
+}
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-4, 16px);
+  padding: var(--solar-space-6, 24px);
+  min-width: 0;
+}

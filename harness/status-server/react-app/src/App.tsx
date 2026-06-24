@@ -2328,6 +2328,14 @@ function activityLevel(count: number): number {
   return 4;
 }
 
+type SettingsSectionId = "crew" | "credentials" | "usage" | "about";
+const SETTINGS_SECTIONS: Array<{ id: SettingsSectionId; label: string }> = [
+  { id: "crew", label: "Default crew" },
+  { id: "credentials", label: "Credentials" },
+  { id: "usage", label: "Usage & limits" },
+  { id: "about", label: "About" },
+];
+
 function SettingsView() {
   const [settings, setSettings] = useState<SettingsPayload>();
   const [state, setState] = useState<LoadState>("loading");
@@ -2340,6 +2348,7 @@ function SettingsView() {
   const [usage, setUsage] = useState<UsagePayload>();
   const [sprints, setSprints] = useState<SprintSummary[]>([]);
   const [selectedDay, setSelectedDay] = useState("");
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>("crew");
 
   const refresh = useCallback(async () => {
     try {
@@ -2439,9 +2448,9 @@ function SettingsView() {
         <div className="settings-notice">
           <ShieldCheck size={15} />
           <p>
-            Read from the runtime ({settings?.source || "status-server"}). Edits
-            here are staged in this view only — AI4Research P0 has no write path
-            yet, so nothing is persisted to the runtime or sent anywhere.
+            Read from the runtime ({settings?.source || "status-server"}). Save
+            writes model/crew selection to the runtime config and API keys to
+            local secrets; restart the cockpit to apply to running panes.
           </p>
         </div>
 
@@ -2450,222 +2459,298 @@ function SettingsView() {
           <ErrorWorkbench message={error} onRetry={refresh} />
         )}
         {state === "ready" && (
-          <>
-            <section className="settings-block">
-              <SectionHeader
-                icon={<SquareTerminal size={17} />}
-                title="Lab matrix"
-                detail={labMode}
-              />
-              <p className="settings-help">
-                How agents map to model families. Custom lets you set each agent
-                below.
-              </p>
-              <div
-                className="segmented"
-                role="group"
-                aria-label="Lab matrix mode"
-              >
-                {LAB_MODES.map((mode) => (
+          <div className="settings-shell">
+            <aside className="settings-sidebar">
+              <div className="settings-sidebar-head">
+                <h1>Settings</h1>
+              </div>
+              <NavLink className="settings-back" to="/">
+                <ArrowLeft size={14} />
+                <span>Back to app</span>
+              </NavLink>
+              <nav className="settings-nav" aria-label="Settings sections">
+                {SETTINGS_SECTIONS.map((item) => (
                   <button
-                    key={mode.id}
+                    key={item.id}
                     type="button"
-                    className={`segmented-option ${labMode === mode.id ? "is-active" : ""}`}
-                    aria-pressed={labMode === mode.id}
-                    onClick={() => applyLabMode(mode.id)}
+                    className={`settings-nav-item ${activeSection === item.id ? "is-active" : ""}`}
+                    aria-current={
+                      activeSection === item.id ? "page" : undefined
+                    }
+                    onClick={() => setActiveSection(item.id)}
                   >
-                    {mode.label}
+                    {item.label}
                   </button>
                 ))}
-              </div>
-            </section>
-
-            <section className="settings-block">
-              <SectionHeader
-                icon={<Bot size={17} />}
-                title="Agents & models"
-                detail={`${ROLE_ORDER.length} agents`}
-              />
-              <div className="agent-config-list">
-                {ROLE_ORDER.map((role) => (
-                  <div
-                    className={`agent-config-row ${agentOn[role] ? "" : "is-off"}`}
-                    key={role}
-                  >
-                    <Switch.Root
-                      className="switch-root"
-                      checked={Boolean(agentOn[role])}
-                      onCheckedChange={(value) =>
-                        setAgentOn((prev) => ({ ...prev, [role]: value }))
-                      }
-                      aria-label={`Enable ${ROLE_META[role].title}`}
-                    >
-                      <Switch.Thumb className="switch-thumb" />
-                    </Switch.Root>
-                    <div className="agent-config-id">
-                      <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
-                      <span>{ROLE_META[role].subtitle}</span>
-                    </div>
-                    <div className="model-select">
-                      <select
-                        aria-label={`${ROLE_META[role].title} model`}
-                        value={roleModels[role] || MODEL_OPTIONS[0]}
-                        disabled={!agentOn[role]}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setRoleModels((prev) => ({ ...prev, [role]: value }));
-                          setLabMode("custom");
-                        }}
-                      >
-                        {MODEL_OPTIONS.map((model) => (
-                          <option key={model} value={model}>
-                            {model}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} aria-hidden="true" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="settings-block">
-              <SectionHeader
-                icon={<ShieldCheck size={17} />}
-                title="Provider API keys"
-                detail="local only"
-              />
-              <p className="settings-help">
-                Saved locally to ~/.solar/secrets on this machine (never leaves
-                it). Leave a field blank to keep its existing key. Restart the
-                cockpit to apply.
-              </p>
-              <div className="key-list">
-                {API_PROVIDERS.map((provider) => (
-                  <div className="key-row" key={provider.id}>
-                    <div className="key-id">
-                      <strong>{provider.label}</strong>
-                      <span>{provider.hint}</span>
-                    </div>
-                    <input
-                      type="password"
-                      className="key-input"
-                      placeholder="sk-…"
-                      autoComplete="off"
-                      value={apiKeys[provider.id] || ""}
-                      onChange={(event) =>
-                        setApiKeys((prev) => ({
-                          ...prev,
-                          [provider.id]: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="settings-block">
-              <SectionHeader
-                icon={<Clock3 size={17} />}
-                title="Account token usage"
-                detail={usage?.total_used_tokens_label || "—"}
-              />
-              <p className="settings-help">
-                Total across all sprints, per model, today — the account-wide
-                quota signal. (Per-sprint usage shows on each session.)
-              </p>
-              <div className="usage-models">
-                {(usage?.models || []).length === 0 && (
-                  <EmptyInline label="No usage signal available" />
-                )}
-                {(usage?.models || []).map((model) => (
-                  <div
-                    className="usage-model"
-                    key={`${model.model_key}-${model.date ?? ""}`}
-                  >
-                    <span>{model.model_key}</span>
-                    <strong>{model.used_tokens_label}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="settings-block">
-              <SectionHeader
-                icon={<Workflow size={17} />}
-                title="Activity"
-                detail="Last 12 weeks"
-              />
-              <p className="settings-help">
-                Sessions per day — a quick read on how busy the runtime has
-                been.
-              </p>
-              {(() => {
-                const days = buildActivityDays(sprints, 84);
-                const busiest = days.reduce(
-                  (best, day) => (day.count > best.count ? day : best),
-                  days[0] ?? { date: "", count: 0, sprints: [] },
-                );
-                const selected = days.find((day) => day.date === selectedDay);
-                return (
-                  <>
-                    <div
-                      className="activity-heatmap"
-                      aria-label="Sprint activity by day"
-                    >
-                      {days.map((day) => (
-                        <button
-                          key={day.date}
-                          type="button"
-                          className={`activity-day activity-level-${activityLevel(day.count)} ${selectedDay === day.date ? "is-selected" : ""}`}
-                          aria-label={`${day.date}: ${day.count} sessions`}
-                          title={`${day.date}: ${day.count} sessions`}
-                          aria-pressed={selectedDay === day.date}
-                          onClick={() => setSelectedDay(day.date)}
-                        />
-                      ))}
-                    </div>
-                    <div className="activity-summary-line">
-                      <span>
-                        Busiest day:{" "}
-                        <strong>
-                          {busiest.date
-                            ? `${busiest.date} (${busiest.count})`
-                            : "—"}
-                        </strong>
-                      </span>
-                      <span>
-                        Selected:{" "}
-                        <strong>
-                          {selected
-                            ? `${selected.date} (${selected.count})`
-                            : "—"}
-                        </strong>
-                      </span>
-                    </div>
-                  </>
-                );
-              })()}
-            </section>
-
-            <div className="settings-actions">
-              <span className="settings-actions-note">
-                {saveMsg ||
-                  "Writes models to the runtime config and API keys to local secrets. Restart the cockpit to apply to running panes."}
-              </span>
-              <button
-                type="button"
-                className="primary-button"
-                disabled={saving}
-                onClick={() => void save()}
-                title="Persist model selection + API keys to the local runtime"
+              </nav>
+            </aside>
+            <main className="settings-content">
+              <section
+                className="settings-block"
+                hidden={activeSection !== "crew"}
               >
-                <span>{saving ? "Saving…" : "Save configuration"}</span>
-              </button>
-            </div>
-          </>
+                <SectionHeader
+                  icon={<SquareTerminal size={17} />}
+                  title="Lab matrix"
+                  detail={labMode}
+                />
+                <p className="settings-help">
+                  How agents map to model families. Custom lets you set each
+                  agent below.
+                </p>
+                <div
+                  className="segmented"
+                  role="group"
+                  aria-label="Lab matrix mode"
+                >
+                  {LAB_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      className={`segmented-option ${labMode === mode.id ? "is-active" : ""}`}
+                      aria-pressed={labMode === mode.id}
+                      onClick={() => applyLabMode(mode.id)}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section
+                className="settings-block"
+                hidden={activeSection !== "crew"}
+              >
+                <SectionHeader
+                  icon={<Bot size={17} />}
+                  title="Agents & models"
+                  detail={`${ROLE_ORDER.length} agents`}
+                />
+                <div className="agent-config-list">
+                  {ROLE_ORDER.map((role) => (
+                    <div
+                      className={`agent-config-row ${agentOn[role] ? "" : "is-off"}`}
+                      key={role}
+                    >
+                      <Switch.Root
+                        className="switch-root"
+                        checked={Boolean(agentOn[role])}
+                        onCheckedChange={(value) =>
+                          setAgentOn((prev) => ({ ...prev, [role]: value }))
+                        }
+                        aria-label={`Enable ${ROLE_META[role].title}`}
+                      >
+                        <Switch.Thumb className="switch-thumb" />
+                      </Switch.Root>
+                      <div className="agent-config-id">
+                        <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
+                        <span>{ROLE_META[role].subtitle}</span>
+                      </div>
+                      <div className="model-select">
+                        <select
+                          aria-label={`${ROLE_META[role].title} model`}
+                          value={roleModels[role] || MODEL_OPTIONS[0]}
+                          disabled={!agentOn[role]}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setRoleModels((prev) => ({
+                              ...prev,
+                              [role]: value,
+                            }));
+                            setLabMode("custom");
+                          }}
+                        >
+                          {MODEL_OPTIONS.map((model) => (
+                            <option key={model} value={model}>
+                              {model}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} aria-hidden="true" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section
+                className="settings-block"
+                hidden={activeSection !== "credentials"}
+              >
+                <SectionHeader
+                  icon={<ShieldCheck size={17} />}
+                  title="Provider API keys"
+                  detail="local only"
+                />
+                <p className="settings-help">
+                  Saved locally to ~/.solar/secrets on this machine (never
+                  leaves it). Leave a field blank to keep its existing key.
+                  Restart the cockpit to apply.
+                </p>
+                <div className="key-list">
+                  {API_PROVIDERS.map((provider) => (
+                    <div className="key-row" key={provider.id}>
+                      <div className="key-id">
+                        <strong>{provider.label}</strong>
+                        <span>{provider.hint}</span>
+                      </div>
+                      <input
+                        type="password"
+                        className="key-input"
+                        placeholder="sk-…"
+                        autoComplete="off"
+                        value={apiKeys[provider.id] || ""}
+                        onChange={(event) =>
+                          setApiKeys((prev) => ({
+                            ...prev,
+                            [provider.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section
+                className="settings-block"
+                hidden={activeSection !== "usage"}
+              >
+                <SectionHeader
+                  icon={<Clock3 size={17} />}
+                  title="Account token usage"
+                  detail={usage?.total_used_tokens_label || "—"}
+                />
+                <p className="settings-help">
+                  Total across all sprints, per model, today — the account-wide
+                  quota signal. (Per-sprint usage shows on each session.)
+                </p>
+                <div className="usage-models">
+                  {(usage?.models || []).length === 0 && (
+                    <EmptyInline label="No usage signal available" />
+                  )}
+                  {(usage?.models || []).map((model) => (
+                    <div
+                      className="usage-model"
+                      key={`${model.model_key}-${model.date ?? ""}`}
+                    >
+                      <span>{model.model_key}</span>
+                      <strong>{model.used_tokens_label}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section
+                className="settings-block"
+                hidden={activeSection !== "usage"}
+              >
+                <SectionHeader
+                  icon={<Workflow size={17} />}
+                  title="Activity"
+                  detail="Last 12 weeks"
+                />
+                <p className="settings-help">
+                  Sessions per day — a quick read on how busy the runtime has
+                  been.
+                </p>
+                {(() => {
+                  const days = buildActivityDays(sprints, 84);
+                  const busiest = days.reduce(
+                    (best, day) => (day.count > best.count ? day : best),
+                    days[0] ?? { date: "", count: 0, sprints: [] },
+                  );
+                  const selected = days.find((day) => day.date === selectedDay);
+                  return (
+                    <>
+                      <div
+                        className="activity-heatmap"
+                        aria-label="Sprint activity by day"
+                      >
+                        {days.map((day) => (
+                          <button
+                            key={day.date}
+                            type="button"
+                            className={`activity-day activity-level-${activityLevel(day.count)} ${selectedDay === day.date ? "is-selected" : ""}`}
+                            aria-label={`${day.date}: ${day.count} sessions`}
+                            title={`${day.date}: ${day.count} sessions`}
+                            aria-pressed={selectedDay === day.date}
+                            onClick={() => setSelectedDay(day.date)}
+                          />
+                        ))}
+                      </div>
+                      <div className="activity-summary-line">
+                        <span>
+                          Busiest day:{" "}
+                          <strong>
+                            {busiest.date
+                              ? `${busiest.date} (${busiest.count})`
+                              : "—"}
+                          </strong>
+                        </span>
+                        <span>
+                          Selected:{" "}
+                          <strong>
+                            {selected
+                              ? `${selected.date} (${selected.count})`
+                              : "—"}
+                          </strong>
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </section>
+
+              <section
+                className="settings-block"
+                hidden={activeSection !== "about"}
+              >
+                <SectionHeader
+                  icon={<Bot size={17} />}
+                  title="Profile"
+                  detail={settings?.source || "status-server"}
+                />
+                <p className="settings-help">
+                  Runtime identity and configuration source for this Solar
+                  instance.
+                </p>
+                <div className="usage-models">
+                  <div className="usage-model">
+                    <span>Config source</span>
+                    <strong>{settings?.source || "status-server"}</strong>
+                  </div>
+                  <div className="usage-model">
+                    <span>Lab matrix</span>
+                    <strong>
+                      {asString(settings?.model_lab_matrix?.value) || "—"}
+                    </strong>
+                  </div>
+                </div>
+              </section>
+
+              <div
+                className="settings-actions"
+                hidden={
+                  activeSection !== "crew" && activeSection !== "credentials"
+                }
+              >
+                <span className="settings-actions-note">
+                  {saveMsg ||
+                    "Writes models to the runtime config and API keys to local secrets. Restart the cockpit to apply to running panes."}
+                </span>
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={saving}
+                  onClick={() => void save()}
+                  title="Persist model selection + API keys to the local runtime"
+                >
+                  <span>{saving ? "Saving…" : "Save configuration"}</span>
+                </button>
+              </div>
+            </main>
+          </div>
         )}
       </div>
     </div>
