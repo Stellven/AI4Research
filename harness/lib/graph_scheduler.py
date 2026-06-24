@@ -1791,6 +1791,21 @@ def _role_penalty(node_role: str, worker_role: str) -> int | None:
     return compatibility.get(normalized_node, {"builder": 0}).get(normalized_worker)
 
 
+# Capabilities that are PROVISIONED AT DISPATCH rather than advertised by a worker: resource/guard
+# capsule capabilities (graph_node_dispatcher binds resource_binding + guard_decision per node) and
+# eval-asserted compliance (the eval gate enforces scope_compliance). Requiring a worker to advertise
+# these strands capsule-backed implementation/test/verify nodes as no_matching_worker before the
+# binding/eval ever runs. The "resource."/"guard." prefixes are registry-safe (the capability-capsule
+# registry only declares resource/guard caps under those prefixes).
+_DISPATCH_PROVISIONED_CAP_PREFIXES = ("resource.", "guard.")
+_DISPATCH_PROVISIONED_CAPS = frozenset({"scope_compliance"})
+
+
+def _is_dispatch_provisioned_capability(cap: Any) -> bool:
+    c = str(cap or "")
+    return c in _DISPATCH_PROVISIONED_CAPS or c.startswith(_DISPATCH_PROVISIONED_CAP_PREFIXES)
+
+
 def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, Any]]) -> dict[str, Any]:
     """Assign one batch to available workers.
 
@@ -1809,6 +1824,9 @@ def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, An
         strict_model = bool(node.get("strict_model") or node.get("model_strict"))
         required_skills = [str(s) for s in node.get("required_skills", [])]
         required_capabilities = _capability_list(node)
+        # Layer 0 (dispatch-provisioned): strip resource/guard capsule + eval-asserted caps that are
+        # bound/asserted at dispatch, not advertised by a worker (see _is_dispatch_provisioned_capability).
+        required_capabilities = [c for c in required_capabilities if not _is_dispatch_provisioned_capability(c)]
         node_role = _node_dispatch_role(node)
         # Layer 1 (normalize): drop required_skills that are not in the operator-skill registry.
         # The planner emits unbounded free-form skill strings; unregistered ones are

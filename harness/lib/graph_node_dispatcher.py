@@ -309,13 +309,20 @@ def _json(obj: Any) -> str:
 
 def _dispatch_role_for_pane(pane: str, title: str | None = None) -> str:
     title = _pane_title(pane) if title is None else str(title or "")
-    lowered = title.lower()
-    if "planner" in lowered or "规划者" in title:
+    # Match only the leading ROLE LABEL (before the first "|"), not the whole title. A builder pane
+    # carries a status suffix like "builder | 状态:working/ready_for_planner:..." — matching the full
+    # title would see "planner" inside "ready_for_planner" and mis-classify the builder as a planner
+    # (then builder-role DAG nodes strand with role_candidates_seen=false).
+    role_label = title.split("|", 1)[0]
+    lowered = role_label.lower()
+    if "planner" in lowered or "规划者" in role_label:
         return "planner"
-    if "evaluator" in lowered or "审判官" in title:
+    if "evaluator" in lowered or "审判官" in role_label:
         return "evaluator"
-    if "pm" in lowered or "产品经理" in title:
+    if "pm" in lowered or "产品经理" in role_label:
         return "pm"
+    if "builder" in lowered or "建设者" in role_label:
+        return "builder"
     if infer_pane_dispatch_role is not None:
         try:
             return str(infer_pane_dispatch_role(pane, title) or "builder")
