@@ -323,6 +323,21 @@ def _deepresearch_quality_gate_eval_instruction(node: dict[str, Any], eval_json:
   Local audit reports, packaging-readiness reports, documentation synthesis, and generic `report.compile` outputs are judged by this node's acceptance criteria, proof obligations, session log, write scope, and handoff evidence unless `research_quality_gate_required=true` or explicit `research.*` artifacts/capabilities are present. Leave `research_quality_gate` empty or mark it `{"required": false}`."""
 
 
+def _graph_terminally_closed(sid: str) -> bool:
+    """True once the graph has reached terminal closure. Used to keep the
+    `.finalized` marker sticky so a stale non-PASS coverage verdict (e.g. the
+    in-progress/partial requirement-trace view) cannot strip finalization and
+    reopen an already-closed sprint (Defect C)."""
+    closure_path = SPRINTS_DIR / f"{sid}.closure.json"
+    try:
+        closure = json.loads(closure_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(closure, dict):
+        return False
+    return str(closure.get("status") or "").strip().lower() == "closed" or bool(closure.get("all_nodes_passed"))
+
+
 def _refresh_requirement_coverage_artifacts(sid: str, *, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"ok": True, "skipped": "dry_run"}
@@ -346,7 +361,11 @@ def _refresh_requirement_coverage_artifacts(sid: str, *, dry_run: bool = False) 
     verdict = str((bundle.get("acceptance_verdict") or {}).get("verdict") or "N/A")
     finalized_path = SPRINTS_DIR / f"{sid}.finalized"
     cleared_finalized = False
-    if verdict != "PASS" and finalized_path.exists():
+    # Keep finalization sticky once the graph has terminally closed: a non-PASS
+    # coverage verdict (e.g. the in-progress/partial requirement-trace view) must
+    # not strip the terminal marker and reopen a closed sprint (Defect C). The
+    # anti-stale unlink still fires for a sprint that has NOT terminally closed.
+    if verdict != "PASS" and finalized_path.exists() and not _graph_terminally_closed(sid):
         try:
             finalized_path.unlink()
             cleared_finalized = True
@@ -1400,6 +1419,12 @@ def _sidecar_reconcile_dependency_blockers(graph: dict[str, Any], node: dict[str
 def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path) -> list[dict[str, Any]]:
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     repaired: list[dict[str, Any]] = []
+    # A finalized sprint is terminal and frozen: do not let leftover handoff/eval
+    # sidecars "repair" (revert) its nodes. Without this guard a post-close
+    # reconcile resets a passed node back to `reviewing` from a lingering handoff
+    # file and reopens a closed sprint (Defect C).
+    if (SPRINTS_DIR / f"{sid}.finalized").exists():
+        return repaired
     for node in graph.get("nodes", []):
         node_id = str(node.get("id") or "")
         if not node_id:
