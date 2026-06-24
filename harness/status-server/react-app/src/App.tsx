@@ -58,6 +58,7 @@ import {
   fetchStatus,
   fetchUsage,
   openEventStream,
+  saveSettings,
   submitIntake,
   submitPlanVerdict,
 } from "./api";
@@ -2338,6 +2339,30 @@ function SettingsView() {
     }
   }
 
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+  const save = useCallback(async () => {
+    setSaving(true);
+    setSaveMsg("");
+    try {
+      const res = await saveSettings(roleModels, apiKeys);
+      if (res.ok) {
+        const n = res.written_keys?.length || 0;
+        setSaveMsg(
+          `Saved. Models applied${n ? `, ${n} key(s) stored` : ""}. Restart the cockpit to apply to running panes.`,
+        );
+        setApiKeys({}); // clear key inputs after persisting
+        void refresh();
+      } else {
+        setSaveMsg(res.error || "Save failed");
+      }
+    } catch (err) {
+      setSaveMsg(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }, [roleModels, apiKeys, refresh]);
+
   return (
     <div className="workspace-scroll">
       <header className="topbar">
@@ -2465,8 +2490,9 @@ function SettingsView() {
                 detail="local only"
               />
               <p className="settings-help">
-                Held in this view only; never transmitted until a runtime write
-                path exists.
+                Saved locally to ~/.solar/secrets on this machine (never leaves
+                it). Leave a field blank to keep its existing key. Restart the
+                cockpit to apply.
               </p>
               <div className="key-list">
                 {API_PROVIDERS.map((provider) => (
@@ -2521,15 +2547,17 @@ function SettingsView() {
 
             <div className="settings-actions">
               <span className="settings-actions-note">
-                Saving to the runtime is not enabled in P0.
+                {saveMsg ||
+                  "Writes models to the runtime config and API keys to local secrets. Restart the cockpit to apply to running panes."}
               </span>
               <button
                 type="button"
                 className="primary-button"
-                disabled
-                title="Runtime write path not enabled in P0"
+                disabled={saving}
+                onClick={() => void save()}
+                title="Persist model selection + API keys to the local runtime"
               >
-                <span>Save configuration</span>
+                <span>{saving ? "Saving…" : "Save configuration"}</span>
               </button>
             </div>
           </>

@@ -115,6 +115,27 @@ export function submitIntake(task: string): Promise<IntakeResponse> {
   });
 }
 
+export interface SaveSettingsResponse {
+  ok: boolean;
+  applied_models?: Record<string, string>;
+  written_keys?: string[];
+  note?: string;
+  error?: string;
+}
+
+// Persist model/crew selection (-> solar-user-config.json) and provider API keys
+// (-> ~/.solar/secrets/solar-user-secrets.env). Empty key values are ignored
+// server-side, so unchanged password fields don't overwrite existing secrets.
+export function saveSettings(
+  roleModels: Record<string, string>,
+  apiKeys: Record<string, string>,
+): Promise<SaveSettingsResponse> {
+  return requestJson<SaveSettingsResponse>("/settings", {
+    method: "POST",
+    body: JSON.stringify({ role_models: roleModels, api_keys: apiKeys }),
+  });
+}
+
 export function submitPlanVerdict(
   sprintId: string,
   verdict: "approve" | "reject",

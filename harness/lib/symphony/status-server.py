@@ -709,6 +709,15 @@ def _settings_payload() -> dict:
                 role_models[role] = {"model": value, "source": key}
                 break
 
+    # Authoritative overlay: solar-user-config.json .models.* is what panes
+    # actually use (and what POST /settings writes), so it wins over config.env.
+    for role, alias in _read_user_config_models().items():
+        if role in ("pm", "planner", "builder", "evaluator") and alias:
+            role_models[role] = {
+                "model": _alias_to_model_id(str(alias)),
+                "source": "solar-user-config.json",
+            }
+
     lab_keys = ("SOLAR_LAB_MODEL_MATRIX", "LAB_MODEL_MATRIX", "SOLAR_MODEL_LAB_MATRIX")
     lab_matrix = ""
     lab_source = ""
@@ -737,6 +746,152 @@ def _settings_payload() -> dict:
         "role_models": role_models,
         "physical_operators": physical,
     }
+
+
+# --- Settings WRITE path (model/crew selection + provider keys) ---------------
+# The authoritative pane-model knob is solar-user-config.json .models.{role}
+# (read by solar_persona_model at pane launch). Provider keys persist to
+# ~/.solar/secrets/solar-user-secrets.env, which model-config.sh sources.
+_USER_CONFIG_PATH = HARNESS_DIR / "config" / "solar-user-config.json"
+# Default is the real path model-config.sh sources; env-overridable for isolated tests.
+_USER_SECRETS_PATH = Path(
+    os.environ.get(
+        "SOLAR_USER_SECRETS_FILE",
+        str(Path.home() / ".solar" / "secrets" / "solar-user-secrets.env"),
+    )
+)
+_VALID_MODEL_ALIASES = {
+    "claude-opus", "claude-sonnet", "claude-haiku", "anthropic-opus",
+    "anthropic-sonnet", "opus", "sonnet", "zhipu-glm-5.1", "zhipu-glm-4.7",
+    "deepseek-v4-pro",
+}
+# provider id (frontend) -> env var the runtime reads
+_PROVIDER_KEY_ENV = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "zhipu": "ZHIPU_AUTH_TOKEN",
+    "glm": "ZHIPU_AUTH_TOKEN",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "serper": "SERPER_API_KEY",
+}
+
+
+def _model_id_to_alias(model_id: str) -> str:
+    """Map a dashboard model id to a canonical config alias. CRITICAL: bare
+    'sonnet' canonicalizes to GLM in the registry, so always emit explicit
+    claude-* / zhipu-* aliases."""
+    m = str(model_id or "").strip().lower()
+    if "opus" in m:
+        return "claude-opus"
+    if "sonnet" in m:
+        return "claude-sonnet"
+    if "haiku" in m:
+        return "claude-haiku"
+    if "glm-5" in m or "glm5" in m:
+        return "zhipu-glm-5.1"
+    if "glm" in m:
+        return "zhipu-glm-4.7"
+    if "deepseek" in m:
+        return "deepseek-v4-pro"
+    return m
+
+
+def _alias_to_model_id(alias: str) -> str:
+    """Reverse of _model_id_to_alias: canonical alias -> dashboard display id."""
+    a = str(alias or "").strip().lower()
+    if "opus" in a:
+        return "claude-opus-4.x"
+    if "sonnet" in a:
+        return "claude-sonnet-4.x"
+    if "haiku" in a:
+        return "claude-haiku-4.x"
+    if "glm" in a:
+        return "glm-4.6"
+    return str(alias or "")
+
+
+def _read_user_config_models() -> dict:
+    try:
+        cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8"))
+        models = cfg.get("models")
+        return models if isinstance(models, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_user_config_models(role_models: dict) -> dict:
+    """Write models.{pm,planner,builder,evaluator} into solar-user-config.json."""
+    try:
+        cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8")) if _USER_CONFIG_PATH.exists() else {}
+    except Exception:
+        cfg = {}
+    if not isinstance(cfg, dict):
+        cfg = {}
+    models = cfg.get("models") if isinstance(cfg.get("models"), dict) else {}
+    applied = {}
+    for role in ("pm", "planner", "builder", "evaluator"):
+        rid = role_models.get(role)
+        if not rid:
+            continue
+        alias = _model_id_to_alias(rid)
+        if alias not in _VALID_MODEL_ALIASES:
+            continue
+        models[role] = alias
+        applied[role] = alias
+    cfg["models"] = models
+    _USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _USER_CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    return applied
+
+
+def _write_provider_keys(api_keys: dict) -> list:
+    """Persist provider keys to the local secrets file (local only, 0600)."""
+    _USER_SECRETS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    existing: dict[str, str] = {}
+    if _USER_SECRETS_PATH.exists():
+        for line in _USER_SECRETS_PATH.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if not s or s.startswith("#") or "=" not in s:
+                continue
+            k, v = s.split("=", 1)
+            existing[k.replace("export ", "").strip()] = v
+    written = []
+    for pid, key in (api_keys or {}).items():
+        if not key:
+            continue
+        env = _PROVIDER_KEY_ENV.get(str(pid).strip().lower())
+        if not env:
+            continue
+        existing[env] = json.dumps(str(key))  # shell-safe quoting
+        written.append(env)
+    lines = ["# Solar user secrets — written by the dashboard settings. Local only.\n"]
+    for k, v in existing.items():
+        lines.append(f"export {k}={v}\n")
+    _USER_SECRETS_PATH.write_text("".join(lines), encoding="utf-8")
+    try:
+        _USER_SECRETS_PATH.chmod(0o600)
+    except Exception:
+        pass
+    return written
+
+
+def _settings_write_payload(data: dict) -> tuple[dict, int]:
+    role_models_in = data.get("role_models") or data.get("models") or {}
+    api_keys = data.get("api_keys") or {}
+    role_models = {}
+    for role, val in role_models_in.items():
+        role_models[role] = val.get("model") if isinstance(val, dict) else val
+    try:
+        applied_models = _write_user_config_models(role_models) if role_models else {}
+        written_keys = _write_provider_keys(api_keys) if api_keys else []
+    except Exception as exc:
+        return {"ok": False, "error": "settings_write_failed", "detail": str(exc)}, 500
+    return {
+        "ok": True,
+        "applied_models": applied_models,
+        "written_keys": written_keys,
+        "note": "Models -> solar-user-config.json; keys -> ~/.solar/secrets/solar-user-secrets.env. Restart the cockpit to apply to running panes.",
+    }, 200
 
 
 def _valid_sprint_id(sid: str) -> bool:
@@ -12535,6 +12690,9 @@ class StatusHandler(BaseHTTPRequestHandler):
             if path == "/intake":
                 payload = _intake_payload(data)
                 self._send_json(payload, status=200 if payload.get("ok") else 400)
+            elif path == "/settings":
+                payload, code = _settings_write_payload(data)
+                self._send_json(payload, status=code)
             elif path == "/knowledge/subscriptions/youtube":
                 self._send_json(_append_youtube_subscription(data))
             elif path == "/knowledge/subscriptions/social":
