@@ -2826,6 +2826,11 @@ summary:focus-visible,
   color: var(--solar-ink);
 }
 
+.segmented-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .segmented-option.is-active {
   color: var(--solar-ink);
   background: var(--solar-surface);
@@ -3687,12 +3692,42 @@ summary:focus-visible,
   text-transform: uppercase;
 }
 
+.settings-status-pill.is-edited {
+  border-color: color-mix(in srgb, var(--solar-accent) 34%, var(--solar-line));
+  color: var(--solar-accent-ink);
+  background: var(--solar-accent-wash);
+}
+
+.settings-preset-note {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--solar-space-4);
+  align-items: center;
+  margin-bottom: var(--solar-space-3);
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+}
+
+.settings-preset-note span {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.settings-preset-note strong {
+  color: var(--solar-ink);
+  font-weight: var(--solar-weight-medium);
+}
+
 .settings-agent-list {
   border-top: 1px solid var(--solar-line);
 }
 
 .settings-agent-row {
-  grid-template-columns: 40px minmax(0, 1fr) minmax(180px, 260px);
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 280px) auto;
+}
+
+.settings-agent-row .settings-status-pill {
+  justify-self: end;
 }
 
 .settings-metric-grid,

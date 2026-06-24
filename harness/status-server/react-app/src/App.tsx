@@ -1,6 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Popover from "@radix-ui/react-popover";
-import * as Switch from "@radix-ui/react-switch";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -2278,10 +2277,15 @@ const MODEL_OPTIONS = [
   "glm-4.6",
 ];
 
-const LAB_MODES = [
-  { id: "all-claude", label: "All-Claude" },
-  { id: "all-glm", label: "All-GLM" },
-  { id: "custom", label: "Custom" },
+const CREW_PRESETS = [
+  {
+    id: "all-claude",
+    label: "All-Claude",
+    hint: "Claude Sonnet across every role",
+  },
+  { id: "fast", label: "Fast", hint: "Lower-latency mixed crew" },
+  { id: "high-quality", label: "High-quality", hint: "Opus-led defaults" },
+  { id: "custom", label: "Custom", hint: "Per-role model choices" },
 ];
 
 const API_PROVIDERS = [
@@ -2329,6 +2333,52 @@ function activityLevel(count: number): number {
   if (count <= 3) return 2;
   if (count <= 6) return 3;
   return 4;
+}
+
+function normalizeCrewPreset(value: string): string {
+  const clean = value.trim().toLowerCase().replace(/_/g, "-");
+  if (CREW_PRESETS.some((preset) => preset.id === clean)) return clean;
+  if (clean.includes("fast") || clean.includes("glm")) return "fast";
+  if (clean.includes("quality") || clean.includes("opus")) return "high-quality";
+  if (clean.includes("claude")) return "all-claude";
+  return "custom";
+}
+
+function presetRoleModels(mode: string): Record<string, string> | undefined {
+  if (mode === "all-claude") {
+    return Object.fromEntries(
+      ROLE_ORDER.map((role) => [role, "claude-sonnet-4.x"]),
+    );
+  }
+  if (mode === "fast") {
+    return {
+      pm: "claude-haiku-4.x",
+      planner: "glm-4.6",
+      builder: "glm-4.6",
+      evaluator: "claude-haiku-4.x",
+    };
+  }
+  if (mode === "high-quality") {
+    return Object.fromEntries(
+      ROLE_ORDER.map((role) => [role, "claude-opus-4.x"]),
+    );
+  }
+  return undefined;
+}
+
+function inferCrewPreset(roleModels: Record<string, string>): string {
+  const hasRoleModels = ROLE_ORDER.some((role) => Boolean(roleModels[role]));
+  if (!hasRoleModels) return "";
+  for (const preset of CREW_PRESETS) {
+    const presetModels = presetRoleModels(preset.id);
+    if (
+      presetModels &&
+      ROLE_ORDER.every((role) => roleModels[role] === presetModels[role])
+    ) {
+      return preset.id;
+    }
+  }
+  return "custom";
 }
 
 type SettingsSectionId =
@@ -2411,7 +2461,6 @@ function SettingsView() {
   const [error, setError] = useState("");
 
   const [roleModels, setRoleModels] = useState<Record<string, string>>({});
-  const [agentOn, setAgentOn] = useState<Record<string, boolean>>({});
   const [labMode, setLabMode] = useState("all-claude");
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [usage, setUsage] = useState<UsagePayload>();
@@ -2430,15 +2479,16 @@ function SettingsView() {
         .then((res) => setSprints(res.data?.sprints || []))
         .catch(() => undefined);
       const models: Record<string, string> = {};
-      const on: Record<string, boolean> = {};
       ROLE_ORDER.forEach((role) => {
-        models[role] =
-          asString(response.role_models?.[role]?.model) || MODEL_OPTIONS[0];
-        on[role] = true;
+        const model = asString(response.role_models?.[role]?.model);
+        if (model) models[role] = model;
       });
       setRoleModels(models);
-      setAgentOn(on);
-      setLabMode(asString(response.model_lab_matrix?.value) || "all-claude");
+      setLabMode(
+        normalizeCrewPreset(
+          asString(response.model_lab_matrix?.value) || "all-claude",
+        ),
+      );
       setState("ready");
       setError("");
     } catch (err) {
@@ -2451,17 +2501,10 @@ function SettingsView() {
     void refresh();
   }, [refresh]);
 
-  function applyLabMode(mode: string) {
+  function applyCrewPreset(mode: string) {
     setLabMode(mode);
-    if (mode === "all-claude") {
-      setRoleModels(
-        Object.fromEntries(ROLE_ORDER.map((role) => [role, "claude-opus-4.x"])),
-      );
-    } else if (mode === "all-glm") {
-      setRoleModels(
-        Object.fromEntries(ROLE_ORDER.map((role) => [role, "glm-4.6"])),
-      );
-    }
+    const presetModels = presetRoleModels(mode);
+    if (presetModels) setRoleModels(presetModels);
   }
 
   const [saving, setSaving] = useState(false);
@@ -2547,17 +2590,14 @@ function SettingsView() {
               )}
               {activeSection === "crew" && (
                 <DefaultCrewPane
-                  agentOn={agentOn}
-                  applyLabMode={applyLabMode}
+                  applyCrewPreset={applyCrewPreset}
                   labMode={labMode}
-                  onAgentChange={(role, value) =>
-                    setAgentOn((prev) => ({ ...prev, [role]: value }))
-                  }
                   onRoleModelChange={(role, value) => {
                     setRoleModels((prev) => ({ ...prev, [role]: value }));
                     setLabMode("custom");
                   }}
                   roleModels={roleModels}
+                  settings={settings}
                 />
               )}
               {activeSection === "usage" && <UsageLimitsPane usage={usage} />}
@@ -2649,78 +2689,105 @@ function CredentialsPane({
 }
 
 function DefaultCrewPane({
-  agentOn,
-  applyLabMode,
+  applyCrewPreset,
   labMode,
-  onAgentChange,
   onRoleModelChange,
   roleModels,
+  settings,
 }: {
-  agentOn: Record<string, boolean>;
-  applyLabMode: (mode: string) => void;
+  applyCrewPreset: (mode: string) => void;
   labMode: string;
-  onAgentChange: (role: string, value: boolean) => void;
   onRoleModelChange: (role: string, value: string) => void;
   roleModels: Record<string, string>;
+  settings?: SettingsPayload;
 }) {
+  const hasRoleModels = ROLE_ORDER.some((role) => Boolean(roleModels[role]));
+  const activePreset = hasRoleModels
+    ? inferCrewPreset(roleModels) || normalizeCrewPreset(labMode)
+    : "";
+  const activePresetHint =
+    CREW_PRESETS.find((preset) => preset.id === activePreset)?.hint ||
+    "Runtime model defaults";
+
   return (
     <SettingsSection
       title="Default crew"
-      detail={labMode}
-      description="Default role models used by new runtime panes. Save persists these values to the local runtime config."
+      detail={hasRoleModels ? activePreset : "unavailable"}
+      description="Launch defaults for PM, Planner, Builder, and Evaluator. A per-run launch popover can override these before work starts; Save persists the defaults to the local runtime config."
     >
+      {!hasRoleModels && (
+        <SettingsEmptyState
+          title="Model defaults unavailable"
+          detail="No role_models were returned by /settings. The dropdowns stay unavailable until runtime model defaults exist."
+        />
+      )}
+      <div className="settings-preset-note">
+        <span>Preset</span>
+        <strong>{activePresetHint}</strong>
+      </div>
       <div
         className="segmented settings-segmented"
         role="group"
-        aria-label="Lab matrix mode"
+        aria-label="Crew preset"
       >
-        {LAB_MODES.map((mode) => (
+        {CREW_PRESETS.map((mode) => (
           <button
             key={mode.id}
             type="button"
-            className={`segmented-option ${labMode === mode.id ? "is-active" : ""}`}
-            aria-pressed={labMode === mode.id}
-            onClick={() => applyLabMode(mode.id)}
+            className={`segmented-option ${activePreset === mode.id ? "is-active" : ""}`}
+            aria-pressed={activePreset === mode.id}
+            disabled={!hasRoleModels}
+            title={mode.hint}
+            onClick={() => applyCrewPreset(mode.id)}
           >
             {mode.label}
           </button>
         ))}
       </div>
       <div className="agent-config-list settings-agent-list">
-        {ROLE_ORDER.map((role) => (
-          <div
-            className={`agent-config-row settings-agent-row ${agentOn[role] ? "" : "is-off"}`}
-            key={role}
-          >
-            <Switch.Root
-              className="switch-root"
-              checked={Boolean(agentOn[role])}
-              onCheckedChange={(value) => onAgentChange(role, value)}
-              aria-label={`Enable ${ROLE_META[role].title}`}
-            >
-              <Switch.Thumb className="switch-thumb" />
-            </Switch.Root>
-            <div className="agent-config-id">
-              <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
-              <span>{ROLE_META[role].subtitle}</span>
-            </div>
-            <div className="model-select">
-              <select
-                aria-label={`${ROLE_META[role].title} model`}
-                value={roleModels[role] || MODEL_OPTIONS[0]}
-                disabled={!agentOn[role]}
-                onChange={(event) => onRoleModelChange(role, event.target.value)}
+        {ROLE_ORDER.map((role) => {
+          const model = roleModels[role] || "";
+          const savedModel = asString(settings?.role_models?.[role]?.model);
+          const source = asString(settings?.role_models?.[role]?.source);
+          const changed = Boolean(model && savedModel && model !== savedModel);
+          return (
+            <div className="agent-config-row settings-agent-row" key={role}>
+              <div className="agent-config-id">
+                <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
+                <span>
+                  {changed
+                    ? "edited, not saved"
+                    : source
+                      ? `source: ${source}`
+                      : ROLE_META[role].subtitle}
+                </span>
+              </div>
+              <div className="model-select">
+                <select
+                  aria-label={`${ROLE_META[role].title} model`}
+                  value={model}
+                  disabled={!hasRoleModels}
+                  onChange={(event) =>
+                    onRoleModelChange(role, event.target.value)
+                  }
+                >
+                  {!model && <option value="">Unavailable</option>}
+                  {MODEL_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} aria-hidden="true" />
+              </div>
+              <span
+                className={`settings-status-pill ${changed ? "is-edited" : ""}`}
               >
-                {MODEL_OPTIONS.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} aria-hidden="true" />
+                {changed ? "edited" : "default"}
+              </span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </SettingsSection>
   );
