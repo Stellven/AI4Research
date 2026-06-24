@@ -15,6 +15,8 @@ import {
   Clock3,
   Code2,
   Download,
+  Eye,
+  EyeOff,
   FileCheck2,
   FileText,
   Loader2,
@@ -27,6 +29,7 @@ import {
   Radio,
   RefreshCw,
   Search,
+  Save,
   Settings,
   ShieldCheck,
   SquareTerminal,
@@ -2605,7 +2608,12 @@ function SettingsView() {
 
               <SettingsNotice settings={settings} />
               {activeSection === "credentials" && (
-                <CredentialsPane apiKeys={apiKeys} setApiKeys={setApiKeys} />
+                <CredentialsPane
+                  apiKeys={apiKeys}
+                  onSave={save}
+                  saving={saving}
+                  setApiKeys={setApiKeys}
+                />
               )}
               {activeSection === "crew" && (
                 <DefaultCrewPane
@@ -2673,40 +2681,86 @@ function SettingsNotice({ settings }: { settings?: SettingsPayload }) {
 
 function CredentialsPane({
   apiKeys,
+  onSave,
+  saving,
   setApiKeys,
 }: {
   apiKeys: Record<string, string>;
+  onSave: () => Promise<void>;
+  saving: boolean;
   setApiKeys: (next: (prev: Record<string, string>) => Record<string, string>) => void;
 }) {
+  const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
   return (
     <SettingsSection
       title="Credentials"
       detail="local secrets"
-      description="Provider keys are stored only on this machine. Blank fields keep any existing key."
+      description="Provider keys are stored only on this machine. Leave a row blank to keep its existing key."
     >
       <div className="settings-row-list">
-        {API_PROVIDERS.map((provider) => (
-          <div className="settings-data-row credential-row" key={provider.id}>
-            <div className="settings-row-main">
-              <strong>{provider.label}</strong>
-              <span>{provider.hint}</span>
+        {API_PROVIDERS.map((provider) => {
+          const value = apiKeys[provider.id] || "";
+          const visible = Boolean(visibleKeys[provider.id]);
+          const edited = Boolean(value);
+          return (
+            <div className="settings-data-row credential-row" key={provider.id}>
+              <div className="settings-row-main">
+                <strong>{provider.label}</strong>
+                <span>{provider.hint}</span>
+              </div>
+              <div className="credential-input-shell">
+                <input
+                  type={visible ? "text" : "password"}
+                  className="key-input"
+                  aria-label={`${provider.label} API key`}
+                  placeholder="Leave blank to keep existing"
+                  autoComplete="off"
+                  value={value}
+                  onChange={(event) =>
+                    setApiKeys((prev) => ({
+                      ...prev,
+                      [provider.id]: event.target.value,
+                    }))
+                  }
+                />
+                <button
+                  type="button"
+                  className="credential-icon-button"
+                  aria-label={`${visible ? "Hide" : "Show"} ${provider.label} key`}
+                  disabled={!value}
+                  title={visible ? "Hide key" : "Show key"}
+                  onClick={() =>
+                    setVisibleKeys((prev) => ({
+                      ...prev,
+                      [provider.id]: !prev[provider.id],
+                    }))
+                  }
+                >
+                  {visible ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+                <button
+                  type="button"
+                  className="credential-save-button"
+                  disabled={!edited || saving}
+                  title={
+                    edited
+                      ? `Save ${provider.label} key to local secrets`
+                      : "Enter a key to enable row save"
+                  }
+                  onClick={() => void onSave()}
+                >
+                  <Save size={14} aria-hidden="true" />
+                  <span>{saving ? "Saving" : "Save"}</span>
+                </button>
+              </div>
+              <span
+                className={`settings-status-pill ${edited ? "is-edited" : ""}`}
+              >
+                {edited ? "unsaved key" : "unchanged"}
+              </span>
             </div>
-            <input
-              type="password"
-              className="key-input"
-              placeholder="Leave blank to keep existing"
-              autoComplete="off"
-              value={apiKeys[provider.id] || ""}
-              onChange={(event) =>
-                setApiKeys((prev) => ({
-                  ...prev,
-                  [provider.id]: event.target.value,
-                }))
-              }
-            />
-            <span className="settings-status-pill">local</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </SettingsSection>
   );

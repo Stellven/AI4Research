@@ -3680,6 +3680,59 @@ summary:focus-visible,
   white-space: nowrap;
 }
 
+.credential-row {
+  grid-template-columns: minmax(180px, 1fr) minmax(320px, 520px) auto;
+}
+
+.credential-input-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px auto;
+  gap: var(--solar-space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.credential-input-shell .key-input {
+  min-width: 0;
+}
+
+.credential-icon-button,
+.credential-save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-muted);
+  background: var(--solar-surface);
+  font: inherit;
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-medium);
+}
+
+.credential-icon-button {
+  width: 34px;
+  padding: 0;
+}
+
+.credential-save-button {
+  gap: var(--solar-space-1);
+  padding: 0 var(--solar-space-3);
+}
+
+.credential-icon-button:not(:disabled):hover,
+.credential-save-button:not(:disabled):hover {
+  border-color: var(--solar-line-strong);
+  color: var(--solar-ink);
+}
+
+.credential-icon-button:disabled,
+.credential-save-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .settings-status-pill {
   justify-self: start;
   padding: 3px 8px;
