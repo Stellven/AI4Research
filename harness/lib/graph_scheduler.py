@@ -2775,6 +2775,7 @@ def _normalize_worker_entry(worker: dict[str, Any]) -> dict[str, Any]:
             "harness.context_preflight",
             "harness.dispatch_visibility",
             "harness.dag",
+            "artifact.requirement_trace",
             "browser.browse",
             "code.review",
             "test.tdd",

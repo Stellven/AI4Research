@@ -6359,6 +6359,7 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         "harness.dag", "harness.status", "harness.model_routing", "model.routing",
         "cap.requirement-compiler-planner", "cap.requirement-compiler-implementation",
         "cap.requirement-compiler-verification", "cap.requirement-compiler-audit",
+        "artifact.requirement_trace",
         "policy", "policy.verdict",
         "intent.match", "intent.audit", "dispatch.intent_telemetry",
         "models.show", "models.lab_matrix", "models.footer_labels",

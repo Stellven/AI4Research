@@ -37,6 +37,7 @@ def test_worker_catalog_advertises_requirement_compiler_capsules(monkeypatch) ->
     assert "cap.requirement-compiler-implementation" in capabilities
     assert "cap.requirement-compiler-verification" in capabilities
     assert "cap.requirement-compiler-audit" in capabilities
+    assert "artifact.requirement_trace" in capabilities
 
 
 def test_worker_discovery_keeps_planner_panes_for_role_aware_dispatch(monkeypatch) -> None:
