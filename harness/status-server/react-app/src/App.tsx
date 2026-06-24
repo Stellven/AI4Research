@@ -2345,6 +2345,66 @@ const SETTINGS_SECTIONS: Array<{ id: SettingsSectionId; label: string }> = [
   { id: "about", label: "About" },
 ];
 
+function SettingsLotusMark() {
+  return (
+    <svg
+      className="settings-lotus-mark"
+      viewBox="0 0 48 48"
+      role="img"
+      aria-label="AI4Research lotus"
+    >
+      <defs>
+        <linearGradient id="settings-lotus-front" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#ff4d65" />
+          <stop offset="48%" stopColor="#cf0a2c" />
+          <stop offset="100%" stopColor="#8f061d" />
+        </linearGradient>
+        <linearGradient id="settings-lotus-mid" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#e8324c" />
+          <stop offset="100%" stopColor="#8f061d" />
+        </linearGradient>
+        <linearGradient id="settings-lotus-back" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#b80a27" />
+          <stop offset="100%" stopColor="#5e0615" />
+        </linearGradient>
+        <radialGradient id="settings-lotus-glow" cx="50%" cy="54%" r="44%">
+          <stop offset="0%" stopColor="rgba(207,10,44,0.34)" />
+          <stop offset="100%" stopColor="rgba(207,10,44,0)" />
+        </radialGradient>
+      </defs>
+      <circle cx="24" cy="26" r="18" fill="url(#settings-lotus-glow)" />
+      <path
+        d="M24 39C16.8 34.2 12.5 27.4 11.8 18.6C18.8 20.4 23.1 25.6 24 39Z"
+        fill="url(#settings-lotus-back)"
+      />
+      <path
+        d="M24 39C31.2 34.2 35.5 27.4 36.2 18.6C29.2 20.4 24.9 25.6 24 39Z"
+        fill="url(#settings-lotus-back)"
+      />
+      <path
+        d="M23.8 39C17.8 31.8 16.4 23.5 20.1 14.2C25.7 20.6 27.1 28.8 23.8 39Z"
+        fill="url(#settings-lotus-mid)"
+      />
+      <path
+        d="M24.2 39C30.2 31.8 31.6 23.5 27.9 14.2C22.3 20.6 20.9 28.8 24.2 39Z"
+        fill="url(#settings-lotus-mid)"
+      />
+      <path
+        d="M24 39C19.6 30.7 19.6 21.7 24 9C28.4 21.7 28.4 30.7 24 39Z"
+        fill="url(#settings-lotus-front)"
+      />
+      <path
+        d="M12 36.2C17.5 38.6 21.5 39.2 24 38.9C20.4 34.7 15.7 32.9 9.9 33.5C10.2 34.6 10.9 35.5 12 36.2Z"
+        fill="#7a0a1d"
+      />
+      <path
+        d="M36 36.2C30.5 38.6 26.5 39.2 24 38.9C27.6 34.7 32.3 32.9 38.1 33.5C37.8 34.6 37.1 35.5 36 36.2Z"
+        fill="#7a0a1d"
+      />
+    </svg>
+  );
+}
+
 function SettingsView() {
   const [settings, setSettings] = useState<SettingsPayload>();
   const [state, setState] = useState<LoadState>("loading");
@@ -2356,7 +2416,6 @@ function SettingsView() {
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [usage, setUsage] = useState<UsagePayload>();
   const [sprints, setSprints] = useState<SprintSummary[]>([]);
-  const [selectedDay, setSelectedDay] = useState("");
   const [activeSection, setActiveSection] =
     useState<SettingsSectionId>("credentials");
 
@@ -2428,6 +2487,7 @@ function SettingsView() {
       setSaving(false);
     }
   }, [roleModels, apiKeys, refresh]);
+  const section = SETTINGS_SECTIONS.find((item) => item.id === activeSection);
 
   return (
     <div className="workspace-scroll">
@@ -2444,7 +2504,11 @@ function SettingsView() {
                 <span>Back to app</span>
               </NavLink>
               <div className="settings-sidebar-head">
-                <h1>Settings</h1>
+                <SettingsLotusMark />
+                <div>
+                  <h1>AI4Research</h1>
+                  <span>Settings</span>
+                </div>
               </div>
               <nav className="settings-nav" aria-label="Settings sections">
                 {SETTINGS_SECTIONS.map((item) => (
@@ -2465,10 +2529,7 @@ function SettingsView() {
             <main className="settings-content">
               <div className="settings-content-head">
                 <div>
-                  <h2>
-                    {SETTINGS_SECTIONS.find((item) => item.id === activeSection)
-                      ?.label || "Settings"}
-                  </h2>
+                  <h2>{section?.label || "Settings"}</h2>
                 </div>
                 <button
                   type="button"
@@ -2480,259 +2541,30 @@ function SettingsView() {
                 </button>
               </div>
 
-              <div className="settings-notice">
-                <ShieldCheck size={15} />
-                <p>
-                  Read from the runtime ({settings?.source || "status-server"}).
-                  Save writes model/crew selection to the runtime config and API
-                  keys to local secrets; restart the cockpit to apply to running
-                  panes.
-                </p>
-              </div>
-
-              <section
-                className="settings-block"
-                hidden={activeSection !== "crew"}
-              >
-                <SectionHeader
-                  icon={<SquareTerminal size={17} />}
-                  title="Lab matrix"
-                  detail={labMode}
+              <SettingsNotice settings={settings} />
+              {activeSection === "credentials" && (
+                <CredentialsPane apiKeys={apiKeys} setApiKeys={setApiKeys} />
+              )}
+              {activeSection === "crew" && (
+                <DefaultCrewPane
+                  agentOn={agentOn}
+                  applyLabMode={applyLabMode}
+                  labMode={labMode}
+                  onAgentChange={(role, value) =>
+                    setAgentOn((prev) => ({ ...prev, [role]: value }))
+                  }
+                  onRoleModelChange={(role, value) => {
+                    setRoleModels((prev) => ({ ...prev, [role]: value }));
+                    setLabMode("custom");
+                  }}
+                  roleModels={roleModels}
                 />
-                <p className="settings-help">
-                  How agents map to model families. Custom lets you set each
-                  agent below.
-                </p>
-                <div
-                  className="segmented"
-                  role="group"
-                  aria-label="Lab matrix mode"
-                >
-                  {LAB_MODES.map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      className={`segmented-option ${labMode === mode.id ? "is-active" : ""}`}
-                      aria-pressed={labMode === mode.id}
-                      onClick={() => applyLabMode(mode.id)}
-                    >
-                      {mode.label}
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              <section
-                className="settings-block"
-                hidden={activeSection !== "crew"}
-              >
-                <SectionHeader
-                  icon={<Bot size={17} />}
-                  title="Agents & models"
-                  detail={`${ROLE_ORDER.length} agents`}
-                />
-                <div className="agent-config-list">
-                  {ROLE_ORDER.map((role) => (
-                    <div
-                      className={`agent-config-row ${agentOn[role] ? "" : "is-off"}`}
-                      key={role}
-                    >
-                      <Switch.Root
-                        className="switch-root"
-                        checked={Boolean(agentOn[role])}
-                        onCheckedChange={(value) =>
-                          setAgentOn((prev) => ({ ...prev, [role]: value }))
-                        }
-                        aria-label={`Enable ${ROLE_META[role].title}`}
-                      >
-                        <Switch.Thumb className="switch-thumb" />
-                      </Switch.Root>
-                      <div className="agent-config-id">
-                        <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
-                        <span>{ROLE_META[role].subtitle}</span>
-                      </div>
-                      <div className="model-select">
-                        <select
-                          aria-label={`${ROLE_META[role].title} model`}
-                          value={roleModels[role] || MODEL_OPTIONS[0]}
-                          disabled={!agentOn[role]}
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            setRoleModels((prev) => ({
-                              ...prev,
-                              [role]: value,
-                            }));
-                            setLabMode("custom");
-                          }}
-                        >
-                          {MODEL_OPTIONS.map((model) => (
-                            <option key={model} value={model}>
-                              {model}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown size={14} aria-hidden="true" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section
-                className="settings-block"
-                hidden={activeSection !== "credentials"}
-              >
-                <SectionHeader
-                  icon={<ShieldCheck size={17} />}
-                  title="Provider API keys"
-                  detail="local only"
-                />
-                <p className="settings-help">
-                  Saved locally to ~/.solar/secrets on this machine (never
-                  leaves it). Leave a field blank to keep its existing key.
-                  Restart the cockpit to apply.
-                </p>
-                <div className="key-list">
-                  {API_PROVIDERS.map((provider) => (
-                    <div className="key-row" key={provider.id}>
-                      <div className="key-id">
-                        <strong>{provider.label}</strong>
-                        <span>{provider.hint}</span>
-                      </div>
-                      <input
-                        type="password"
-                        className="key-input"
-                        placeholder="sk-…"
-                        autoComplete="off"
-                        value={apiKeys[provider.id] || ""}
-                        onChange={(event) =>
-                          setApiKeys((prev) => ({
-                            ...prev,
-                            [provider.id]: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section
-                className="settings-block"
-                hidden={activeSection !== "usage"}
-              >
-                <SectionHeader
-                  icon={<Clock3 size={17} />}
-                  title="Account token usage"
-                  detail={usage?.total_used_tokens_label || "—"}
-                />
-                <p className="settings-help">
-                  Total across all sprints, per model, today — the account-wide
-                  quota signal. (Per-sprint usage shows on each session.)
-                </p>
-                <div className="usage-models">
-                  {(usage?.models || []).length === 0 && (
-                    <EmptyInline label="No usage signal available" />
-                  )}
-                  {(usage?.models || []).map((model) => (
-                    <div
-                      className="usage-model"
-                      key={`${model.model_key}-${model.date ?? ""}`}
-                    >
-                      <span>{model.model_key}</span>
-                      <strong>{model.used_tokens_label}</strong>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section
-                className="settings-block"
-                hidden={activeSection !== "activity"}
-              >
-                <SectionHeader
-                  icon={<Workflow size={17} />}
-                  title="Activity"
-                  detail="Last 12 weeks"
-                />
-                <p className="settings-help">
-                  Sessions per day — a quick read on how busy the runtime has
-                  been.
-                </p>
-                {(() => {
-                  const days = buildActivityDays(sprints, 84);
-                  const busiest = days.reduce(
-                    (best, day) => (day.count > best.count ? day : best),
-                    days[0] ?? { date: "", count: 0, sprints: [] },
-                  );
-                  const selected = days.find((day) => day.date === selectedDay);
-                  return (
-                    <>
-                      <div
-                        className="activity-heatmap"
-                        aria-label="Sprint activity by day"
-                      >
-                        {days.map((day) => (
-                          <button
-                            key={day.date}
-                            type="button"
-                            className={`activity-day activity-level-${activityLevel(day.count)} ${selectedDay === day.date ? "is-selected" : ""}`}
-                            aria-label={`${day.date}: ${day.count} sessions`}
-                            title={`${day.date}: ${day.count} sessions`}
-                            aria-pressed={selectedDay === day.date}
-                            onClick={() => setSelectedDay(day.date)}
-                          />
-                        ))}
-                      </div>
-                      <div className="activity-summary-line">
-                        <span>
-                          Busiest day:{" "}
-                          <strong>
-                            {busiest.date
-                              ? `${busiest.date} (${busiest.count})`
-                              : "—"}
-                          </strong>
-                        </span>
-                        <span>
-                          Selected:{" "}
-                          <strong>
-                            {selected
-                              ? `${selected.date} (${selected.count})`
-                              : "—"}
-                          </strong>
-                        </span>
-                      </div>
-                    </>
-                  );
-                })()}
-              </section>
-
-              <section
-                className="settings-block"
-                hidden={activeSection !== "about"}
-              >
-                <SectionHeader
-                  icon={<Bot size={17} />}
-                  title="Profile"
-                  detail={settings?.source || "status-server"}
-                />
-                <p className="settings-help">
-                  Runtime identity and configuration source for this Solar
-                  instance.
-                </p>
-                <div className="usage-models">
-                  <div className="usage-model">
-                    <span>Config source</span>
-                    <strong>{settings?.source || "status-server"}</strong>
-                  </div>
-                  <div className="usage-model">
-                    <span>Lab matrix</span>
-                    <strong>
-                      {asString(settings?.model_lab_matrix?.value) || "—"}
-                    </strong>
-                  </div>
-                </div>
-              </section>
+              )}
+              {activeSection === "usage" && <UsageLimitsPane usage={usage} />}
+              {activeSection === "activity" && <ActivityPane sprints={sprints} />}
+              {activeSection === "about" && (
+                <AboutPane settings={settings} usage={usage} />
+              )}
 
               <div
                 className="settings-actions"
@@ -2758,6 +2590,371 @@ function SettingsView() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function SettingsNotice({ settings }: { settings?: SettingsPayload }) {
+  return (
+    <div className="settings-notice">
+      <ShieldCheck size={15} aria-hidden="true" />
+      <p>
+        Read from the runtime ({settings?.source || "status-server"}). Save
+        writes model/crew selection to the runtime config and API keys to local
+        secrets; restart the cockpit to apply to running panes.
+      </p>
+    </div>
+  );
+}
+
+function CredentialsPane({
+  apiKeys,
+  setApiKeys,
+}: {
+  apiKeys: Record<string, string>;
+  setApiKeys: (next: (prev: Record<string, string>) => Record<string, string>) => void;
+}) {
+  return (
+    <SettingsSection
+      title="Credentials"
+      detail="local secrets"
+      description="Provider keys are stored only on this machine. Blank fields keep any existing key."
+    >
+      <div className="settings-row-list">
+        {API_PROVIDERS.map((provider) => (
+          <div className="settings-data-row credential-row" key={provider.id}>
+            <div className="settings-row-main">
+              <strong>{provider.label}</strong>
+              <span>{provider.hint}</span>
+            </div>
+            <input
+              type="password"
+              className="key-input"
+              placeholder="Leave blank to keep existing"
+              autoComplete="off"
+              value={apiKeys[provider.id] || ""}
+              onChange={(event) =>
+                setApiKeys((prev) => ({
+                  ...prev,
+                  [provider.id]: event.target.value,
+                }))
+              }
+            />
+            <span className="settings-status-pill">local</span>
+          </div>
+        ))}
+      </div>
+    </SettingsSection>
+  );
+}
+
+function DefaultCrewPane({
+  agentOn,
+  applyLabMode,
+  labMode,
+  onAgentChange,
+  onRoleModelChange,
+  roleModels,
+}: {
+  agentOn: Record<string, boolean>;
+  applyLabMode: (mode: string) => void;
+  labMode: string;
+  onAgentChange: (role: string, value: boolean) => void;
+  onRoleModelChange: (role: string, value: string) => void;
+  roleModels: Record<string, string>;
+}) {
+  return (
+    <SettingsSection
+      title="Default crew"
+      detail={labMode}
+      description="Default role models used by new runtime panes. Save persists these values to the local runtime config."
+    >
+      <div
+        className="segmented settings-segmented"
+        role="group"
+        aria-label="Lab matrix mode"
+      >
+        {LAB_MODES.map((mode) => (
+          <button
+            key={mode.id}
+            type="button"
+            className={`segmented-option ${labMode === mode.id ? "is-active" : ""}`}
+            aria-pressed={labMode === mode.id}
+            onClick={() => applyLabMode(mode.id)}
+          >
+            {mode.label}
+          </button>
+        ))}
+      </div>
+      <div className="agent-config-list settings-agent-list">
+        {ROLE_ORDER.map((role) => (
+          <div
+            className={`agent-config-row settings-agent-row ${agentOn[role] ? "" : "is-off"}`}
+            key={role}
+          >
+            <Switch.Root
+              className="switch-root"
+              checked={Boolean(agentOn[role])}
+              onCheckedChange={(value) => onAgentChange(role, value)}
+              aria-label={`Enable ${ROLE_META[role].title}`}
+            >
+              <Switch.Thumb className="switch-thumb" />
+            </Switch.Root>
+            <div className="agent-config-id">
+              <strong>{ROLE_META[role].title.split(" ")[0]}</strong>
+              <span>{ROLE_META[role].subtitle}</span>
+            </div>
+            <div className="model-select">
+              <select
+                aria-label={`${ROLE_META[role].title} model`}
+                value={roleModels[role] || MODEL_OPTIONS[0]}
+                disabled={!agentOn[role]}
+                onChange={(event) => onRoleModelChange(role, event.target.value)}
+              >
+                {MODEL_OPTIONS.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} aria-hidden="true" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </SettingsSection>
+  );
+}
+
+function UsageLimitsPane({ usage }: { usage?: UsagePayload }) {
+  const models = usage?.models || [];
+  return (
+    <SettingsSection
+      title="Usage & limits"
+      detail={usage?.total_used_tokens_label || "unavailable"}
+      description="Account-wide model-day token usage from the runtime quota scan. Per-run numbers stay on the session view."
+    >
+      {!usage && (
+        <SettingsEmptyState
+          title="Usage unavailable"
+          detail="The /usage endpoint did not return model-day token rows."
+        />
+      )}
+      <div className="settings-metric-grid">
+        <MetricBox
+          label="Today"
+          value={usage?.total_used_tokens_label || "-"}
+          detail={usage?.scope || "model-day estimate"}
+        />
+        <MetricBox label="Source" value={usage?.source || "not exposed"} />
+      </div>
+      <div className="usage-models settings-usage-models">
+        {models.length === 0 && <EmptyInline label="No usage signal available" />}
+        {models.map((model) => (
+          <div
+            className="usage-model"
+            key={`${model.model_key}-${model.date ?? ""}`}
+          >
+            <span>{model.model_key}</span>
+            <strong>{model.used_tokens_label}</strong>
+          </div>
+        ))}
+      </div>
+    </SettingsSection>
+  );
+}
+
+function ActivityPane({ sprints }: { sprints: SprintSummary[] }) {
+  const days = useMemo(() => buildActivityDays(sprints, 84), [sprints]);
+  const [selectedDay, setSelectedDay] = useState(
+    days[days.length - 1]?.date || "",
+  );
+  useEffect(() => {
+    if (!selectedDay && days.length > 0) {
+      setSelectedDay(days[days.length - 1].date);
+    }
+  }, [days, selectedDay]);
+  const selected = days.find((day) => day.date === selectedDay);
+  const selectedSprints = selected?.sprints || [];
+  const sevenDayTotal = days.slice(-7).reduce((sum, day) => sum + day.count, 0);
+  const active = sprints.filter((sprint) => sessionTone(sprint) === "working").length;
+  const attention = sprints.filter((sprint) => sessionTone(sprint) === "blocked").length;
+  const done = sprints.filter((sprint) => sessionTone(sprint) === "complete").length;
+  const busiest = days.reduce(
+    (best, day) => (day.count > best.count ? day : best),
+    days[0] || { date: "", count: 0, sprints: [] },
+  );
+
+  return (
+    <SettingsSection
+      title="Activity"
+      detail={`${sevenDayTotal} this week`}
+      description="A read-only activity history from the real sprint index. Select a day to inspect sessions created or updated then."
+    >
+      {sprints.length === 0 && (
+        <SettingsEmptyState
+          title="No activity recorded"
+          detail="The status-server did not return any sessions for the current harness."
+        />
+      )}
+      <div className="activity-metrics" aria-label="Activity metrics">
+        <MetricBox label="Sessions" value={String(sprints.length)} />
+        <MetricBox label="Working" value={String(active)} />
+        <MetricBox label="Needs you" value={String(attention)} />
+        <MetricBox label="Done" value={String(done)} />
+      </div>
+      <div className="activity-heatmap" aria-label="Sprint activity by day">
+        {days.map((day) => (
+          <button
+            key={day.date}
+            type="button"
+            className={`activity-day activity-level-${activityLevel(day.count)} ${selectedDay === day.date ? "is-selected" : ""}`}
+            aria-label={`${day.date}: ${day.count} sessions`}
+            title={`${day.date}: ${day.count} sessions`}
+            aria-pressed={selectedDay === day.date}
+            onClick={() => setSelectedDay(day.date)}
+          />
+        ))}
+      </div>
+      <div className="activity-summary-line">
+        <span>
+          Busiest day:{" "}
+          <strong>
+            {busiest.date ? `${busiest.date} (${busiest.count})` : "not available"}
+          </strong>
+        </span>
+        <span>
+          Selected:{" "}
+          <strong>
+            {selected ? `${selected.date} (${selected.count})` : "not available"}
+          </strong>
+        </span>
+      </div>
+      <div className="settings-row-list activity-session-list">
+        {selectedSprints.length === 0 && (
+          <div className="activity-empty-row">No sessions on the selected day.</div>
+        )}
+        {selectedSprints.slice(0, 10).map((sprint) => (
+          <NavLink
+            key={sprint.sprint_id}
+            className="activity-session-row"
+            to={`/sessions/${encodeURIComponent(sprint.sprint_id)}`}
+          >
+            <span className={`state-dot state-${sessionTone(sprint)}`} />
+            <div>
+              <strong>{titleForSprint(sprint)}</strong>
+              <span>{sprint.sprint_id}</span>
+            </div>
+            <em>
+              {formatDateTime(
+                asString(sprint.updated_at) ||
+                  asString(sprint.latest_event?.ts) ||
+                  (typeof sprint.mtime === "number"
+                    ? new Date(sprint.mtime * 1000).toISOString()
+                    : ""),
+              )}
+            </em>
+          </NavLink>
+        ))}
+      </div>
+    </SettingsSection>
+  );
+}
+
+function AboutPane({
+  settings,
+  usage,
+}: {
+  settings?: SettingsPayload;
+  usage?: UsagePayload;
+}) {
+  return (
+    <SettingsSection
+      title="About"
+      detail="runtime metadata"
+      description="Only values exposed by the local status-server are shown."
+    >
+      <div className="settings-facts">
+        <FactRow label="Settings source" value={settings?.source || "not exposed"} />
+        <FactRow label="Settings generated" value={settings?.generated_at || "not exposed"} />
+        <FactRow
+          label="Settings writes"
+          value={settings?.write_supported ? "supported" : "supported locally"}
+        />
+        <FactRow label="Usage source" value={usage?.source || "not exposed"} />
+        <FactRow label="Usage scope" value={usage?.scope || "not exposed"} />
+        <FactRow
+          label="Lab matrix"
+          value={asString(settings?.model_lab_matrix?.value) || "not exposed"}
+        />
+      </div>
+    </SettingsSection>
+  );
+}
+
+function SettingsSection({
+  title,
+  detail,
+  description,
+  children,
+}: {
+  title: string;
+  detail?: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="settings-section" aria-label={title}>
+      <div className="settings-section-intro">
+        <p className="settings-help">{description}</p>
+        {detail && <span>{detail}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function SettingsEmptyState({
+  title,
+  detail,
+}: {
+  title: string;
+  detail: string;
+}) {
+  return (
+    <div className="settings-empty-state">
+      <Circle size={14} aria-hidden="true" />
+      <div>
+        <strong>{title}</strong>
+        <span>{detail}</span>
+      </div>
+    </div>
+  );
+}
+
+function MetricBox({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+}) {
+  return (
+    <div className="settings-metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {detail && <em>{detail}</em>}
+    </div>
+  );
+}
+
+function FactRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="settings-fact-row">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }

@@ -2757,7 +2757,7 @@ summary:focus-visible,
   font-size: var(--solar-type-micro);
 }
 
-/* Settings — interactive config (honest: staged locally, no write path). */
+/* Settings — runtime-backed local configuration and read-only status panes. */
 .settings-notice {
   display: flex;
   gap: var(--solar-space-3);
@@ -2939,11 +2939,11 @@ summary:focus-visible,
 }
 
 .settings-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: flex-end;
   gap: var(--solar-space-4);
-  max-width: 760px;
+  max-width: 1040px;
   padding-top: var(--solar-space-5);
 }
 
@@ -2954,6 +2954,12 @@ summary:focus-visible,
 .settings-actions-note {
   color: var(--solar-subtle);
   font-size: var(--solar-type-xs);
+  line-height: 1.45;
+}
+
+.settings-actions .primary-button {
+  min-width: 180px;
+  white-space: nowrap;
 }
 
 /* Deliverables — clean artifact list (no redundant doc icons). */
@@ -3368,16 +3374,17 @@ summary:focus-visible,
 /* Activity heatmap — git-contribution-style usage graph (recovered Jun-18 build) */
 .activity-heatmap {
   display: grid;
-  grid-template-columns: repeat(12, minmax(16px, 1fr));
+  grid-template-columns: repeat(12, minmax(18px, 1fr));
   gap: 5px;
   max-width: 760px;
   padding: var(--solar-space-3) 0;
 }
 .activity-day {
-  aspect-ratio: 1 / 1;
-  border-radius: 3px;
+  aspect-ratio: 1;
+  min-width: 0;
+  border-radius: 4px;
   border: 1px solid var(--solar-line);
-  background: var(--solar-surface-quiet);
+  background: var(--solar-surface);
   padding: 0;
   cursor: pointer;
   transition:
@@ -3389,31 +3396,32 @@ summary:focus-visible,
 }
 .activity-day:hover,
 .activity-day.is-selected {
-  outline: 2px solid var(--solar-accent);
-  outline-offset: 1px;
+  border-color: var(--solar-ink);
 }
 .activity-level-1 {
-  background: color-mix(in srgb, var(--solar-ink) 16%, var(--solar-surface-quiet));
+  background: rgba(207, 10, 44, 0.12);
 }
 .activity-level-2 {
-  background: color-mix(in srgb, var(--solar-ink) 38%, var(--solar-surface-quiet));
+  background: rgba(207, 10, 44, 0.24);
 }
 .activity-level-3 {
-  background: color-mix(in srgb, var(--solar-ink) 64%, var(--solar-surface-quiet));
+  background: rgba(207, 10, 44, 0.4);
 }
 .activity-level-4 {
-  background: var(--solar-ink);
+  background: rgba(207, 10, 44, 0.62);
 }
 .activity-summary-line {
   display: flex;
   gap: var(--solar-space-4);
   flex-wrap: wrap;
-  font-size: var(--solar-type-xs);
+  font-size: var(--solar-type-sm);
   color: var(--solar-muted);
   padding-top: var(--solar-space-2, 8px);
 }
 .activity-summary-line strong {
   color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
 }
 
 /* Settings sidebar-nav layout (recovered Jun-18 build) */
@@ -3509,4 +3517,313 @@ summary:focus-visible,
   font-size: var(--solar-type-2xl, 1.5rem);
   font-weight: var(--solar-weight-strong, 650);
   letter-spacing: 0;
+}
+
+/* Settings route polish — transcript-backed pane layout, no Appearance/Capabilities. */
+.settings-shell-route .settings-layout {
+  padding-top: 0;
+}
+
+.settings-shell {
+  grid-template-columns: minmax(220px, 276px) minmax(0, 1fr);
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  background: var(--solar-surface);
+}
+
+.settings-sidebar {
+  min-height: 100vh;
+}
+
+.settings-sidebar-head h1 {
+  line-height: 1.05;
+}
+
+.settings-sidebar-head span {
+  display: block;
+  margin-top: 2px;
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+
+.settings-lotus-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 8px 18px rgba(207, 10, 44, 0.16));
+}
+
+.settings-content {
+  display: grid;
+  align-content: start;
+  gap: var(--solar-space-6);
+  padding: var(--solar-space-7) clamp(var(--solar-space-5), 4vw, var(--solar-space-9));
+}
+
+.settings-content-head h2 {
+  margin: 0;
+}
+
+.settings-notice {
+  max-width: 720px;
+  border-left: 1px solid var(--solar-line);
+  background: var(--solar-surface);
+}
+
+.settings-section {
+  display: grid;
+  gap: var(--solar-space-4);
+  max-width: 1040px;
+}
+
+.settings-section-intro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--solar-space-4);
+  padding-bottom: var(--solar-space-2);
+  border-bottom: 1px solid var(--solar-line-soft);
+}
+
+.settings-section-intro .settings-help {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+  line-height: 1.55;
+}
+
+.settings-section-intro > span {
+  flex: 0 0 auto;
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+}
+
+.settings-empty-state {
+  display: flex;
+  gap: var(--solar-space-3);
+  padding: var(--solar-space-4);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-surface-quiet);
+}
+
+.settings-empty-state svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--solar-subtle);
+}
+
+.settings-empty-state strong,
+.settings-empty-state span {
+  display: block;
+}
+
+.settings-empty-state strong {
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+}
+
+.settings-empty-state span {
+  margin-top: var(--solar-space-1);
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+  line-height: 1.5;
+}
+
+.settings-row-list {
+  display: grid;
+  border-top: 1px solid var(--solar-line);
+}
+
+.settings-data-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 360px) auto;
+  gap: var(--solar-space-3);
+  align-items: center;
+  min-height: 60px;
+  padding: var(--solar-space-3) 0;
+  border-bottom: 1px solid var(--solar-line-soft);
+}
+
+.settings-row-main strong,
+.settings-row-main span {
+  display: block;
+}
+
+.settings-row-main strong {
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: var(--solar-weight-strong);
+}
+
+.settings-row-main span {
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-status-pill {
+  justify-self: start;
+  padding: 3px 8px;
+  border: 1px solid var(--solar-line);
+  border-radius: 999px;
+  color: var(--solar-muted);
+  background: var(--solar-surface);
+  font-size: var(--solar-type-micro);
+  font-weight: var(--solar-weight-medium);
+  text-transform: uppercase;
+}
+
+.settings-agent-list {
+  border-top: 1px solid var(--solar-line);
+}
+
+.settings-agent-row {
+  grid-template-columns: 40px minmax(0, 1fr) minmax(180px, 260px);
+}
+
+.settings-metric-grid,
+.activity-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--solar-space-3);
+}
+
+.settings-metric {
+  display: grid;
+  gap: var(--solar-space-1);
+  padding: var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-surface);
+}
+
+.settings-metric span,
+.settings-metric em {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+  font-style: normal;
+}
+
+.settings-metric strong {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-usage-models {
+  max-width: 560px;
+}
+
+.settings-facts {
+  display: grid;
+  border-top: 1px solid var(--solar-line);
+}
+
+.settings-fact-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: var(--solar-space-4);
+  padding: var(--solar-space-3) 0;
+  border-bottom: 1px solid var(--solar-line-soft);
+}
+
+.settings-fact-row span {
+  color: var(--solar-muted);
+  font-size: var(--solar-type-sm);
+}
+
+.settings-fact-row strong {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  font-weight: var(--solar-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-session-list {
+  max-width: 920px;
+}
+
+.activity-session-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: var(--solar-space-3);
+  align-items: center;
+  min-height: 58px;
+  padding: var(--solar-space-3) 0;
+  border-bottom: 1px solid var(--solar-line-soft);
+  color: inherit;
+  text-decoration: none;
+}
+
+.activity-session-row:hover strong {
+  text-decoration: underline;
+}
+
+.activity-session-row strong,
+.activity-session-row span {
+  display: block;
+}
+
+.activity-session-row strong {
+  overflow: hidden;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-session-row span,
+.activity-session-row em,
+.activity-empty-row {
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+  font-style: normal;
+}
+
+.activity-empty-row {
+  padding: var(--solar-space-4) 0;
+  border-bottom: 1px solid var(--solar-line-soft);
+}
+
+@media (max-width: 840px) {
+  .settings-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-sidebar {
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--solar-line);
+  }
+
+  .settings-nav {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .settings-content-head,
+  .settings-section-intro {
+    display: grid;
+  }
+
+  .settings-data-row,
+  .settings-agent-row,
+  .credential-row,
+  .settings-fact-row,
+  .activity-session-row {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
 }
