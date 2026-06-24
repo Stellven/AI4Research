@@ -2671,9 +2671,9 @@ function SettingsNotice({ settings }: { settings?: SettingsPayload }) {
     <div className="settings-notice">
       <ShieldCheck size={15} aria-hidden="true" />
       <p>
-        Read from the runtime ({settings?.source || "status-server"}). Save
-        writes model/crew selection to the runtime config and API keys to local
-        secrets; restart the cockpit to apply to running panes.
+        Runtime source: {settings?.source || "status-server"}. Saves update the
+        local config and local secrets only; restart the cockpit to apply changes
+        to running panes.
       </p>
     </div>
   );
@@ -2695,7 +2695,7 @@ function CredentialsPane({
     <SettingsSection
       title="Credentials"
       detail="local secrets"
-      description="Provider keys are stored only on this machine. Leave a row blank to keep its existing key."
+      description="Provider keys are stored only on this machine. Leave a row blank to keep its existing key; use row Save for one key or Save configuration for all edited keys."
     >
       <div className="settings-row-list">
         {API_PROVIDERS.map((provider) => {
@@ -2796,7 +2796,7 @@ function DefaultCrewPane({
     <SettingsSection
       title="Default crew"
       detail={hasRoleModels ? activePreset : "unavailable"}
-      description="Launch defaults for PM, Planner, Builder, and Evaluator. A per-run launch popover can override these before work starts; Save persists the defaults to the local runtime config."
+      description="Cockpit restart defaults for PM, Planner, Builder, and Evaluator. Save persists these defaults to the local runtime config; the main-page crew picker remains a preview."
     >
       <div className="settings-runtime-panel">
         <div className="settings-runtime-head">
@@ -2919,6 +2919,7 @@ function DefaultCrewPane({
 
 function UsageLimitsPane({ usage }: { usage?: UsagePayload }) {
   const models = usage?.models || [];
+  const hasUsageRows = models.length > 0;
   return (
     <SettingsSection
       title="Usage & limits"
@@ -2939,8 +2940,13 @@ function UsageLimitsPane({ usage }: { usage?: UsagePayload }) {
         />
         <MetricBox label="Source" value={usage?.source || "not exposed"} />
       </div>
+      {usage && !hasUsageRows && (
+        <SettingsEmptyState
+          title="No usage rows in this harness"
+          detail="The /usage endpoint is reachable, but it has no model-day rows for the current harness data."
+        />
+      )}
       <div className="usage-models settings-usage-models">
-        {models.length === 0 && <EmptyInline label="No usage signal available" />}
         {models.map((model) => (
           <div
             className="usage-model"
@@ -3070,7 +3076,7 @@ function AboutPane({
         <FactRow label="Settings generated" value={settings?.generated_at || "not exposed"} />
         <FactRow
           label="Settings writes"
-          value={settings?.write_supported ? "supported" : "supported locally"}
+          value={settings?.write_supported ? "supported" : "not advertised"}
         />
         <FactRow label="Usage source" value={usage?.source || "not exposed"} />
         <FactRow label="Usage scope" value={usage?.scope || "not exposed"} />

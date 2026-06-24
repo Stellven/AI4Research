@@ -2774,6 +2774,7 @@ summary:focus-visible,
   border-left: 2px solid var(--solar-subtle);
   border-radius: var(--solar-radius-small);
   color: var(--solar-muted);
+  background: color-mix(in srgb, var(--solar-surface) 74%, var(--solar-surface-quiet));
 }
 
 .settings-notice svg {
@@ -2957,6 +2958,7 @@ summary:focus-visible,
   gap: var(--solar-space-4);
   max-width: 1040px;
   padding-top: var(--solar-space-5);
+  border-top: 1px solid var(--solar-line-soft);
 }
 
 .settings-actions[hidden] {
@@ -3578,9 +3580,9 @@ summary:focus-visible,
 }
 
 .settings-notice {
-  max-width: 720px;
-  border-left: 1px solid var(--solar-line);
-  background: var(--solar-surface);
+  max-width: 760px;
+  border-left: 2px solid var(--solar-line-strong);
+  background: color-mix(in srgb, var(--solar-surface) 74%, var(--solar-surface-quiet));
 }
 
 .settings-section {
@@ -3591,7 +3593,7 @@ summary:focus-visible,
 
 .settings-section-intro {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--solar-space-4);
   padding-bottom: var(--solar-space-2);
@@ -3608,9 +3610,11 @@ summary:focus-visible,
 
 .settings-section-intro > span {
   flex: 0 0 auto;
+  padding-top: 2px;
   color: var(--solar-subtle);
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-xs);
+  text-align: right;
 }
 
 .settings-empty-state {
@@ -3656,8 +3660,16 @@ summary:focus-visible,
   gap: var(--solar-space-3);
   align-items: center;
   min-height: 60px;
-  padding: var(--solar-space-3) 0;
+  padding: var(--solar-space-3) var(--solar-space-2);
   border-bottom: 1px solid var(--solar-line-soft);
+  border-radius: var(--solar-radius-small);
+  transition: background var(--solar-duration-fast) var(--solar-ease);
+}
+
+.settings-data-row:hover,
+.settings-fact-row:hover,
+.activity-session-row:hover {
+  background: color-mix(in srgb, var(--solar-surface-quiet) 62%, transparent);
 }
 
 .settings-row-main strong,
@@ -3873,8 +3885,10 @@ summary:focus-visible,
   display: grid;
   grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
   gap: var(--solar-space-4);
-  padding: var(--solar-space-3) 0;
+  padding: var(--solar-space-3) var(--solar-space-2);
   border-bottom: 1px solid var(--solar-line-soft);
+  border-radius: var(--solar-radius-small);
+  transition: background var(--solar-duration-fast) var(--solar-ease);
 }
 
 .settings-fact-row span {
@@ -3902,10 +3916,12 @@ summary:focus-visible,
   gap: var(--solar-space-3);
   align-items: center;
   min-height: 58px;
-  padding: var(--solar-space-3) 0;
+  padding: var(--solar-space-3) var(--solar-space-2);
   border-bottom: 1px solid var(--solar-line-soft);
+  border-radius: var(--solar-radius-small);
   color: inherit;
   text-decoration: none;
+  transition: background var(--solar-duration-fast) var(--solar-ease);
 }
 
 .activity-session-row:hover strong {
