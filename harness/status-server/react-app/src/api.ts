@@ -10,8 +10,17 @@ import type {
   UsagePayload,
 } from "./types";
 
+// Bundled desktop builds (Electron loadFile, file:// origin) set VITE_API_BASE to
+// the absolute runtime URL (e.g. http://127.0.0.1:8765) so cross-origin API calls
+// resolve. Served/dev builds leave it empty, keeping calls same-origin relative.
+const API_BASE =
+  (typeof location !== "undefined" &&
+    new URLSearchParams(location.search).get("api")) ||
+  (import.meta.env.VITE_API_BASE as string | undefined) ||
+  "";
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
@@ -159,7 +168,7 @@ export function openEventStream(
   if (sprintId) {
     params.set("sprint_id", sprintId);
   }
-  const source = new EventSource(`/events?${params.toString()}`);
+  const source = new EventSource(`${API_BASE}/events?${params.toString()}`);
   source.addEventListener("solar-event", (message) => {
     try {
       onEvent(JSON.parse((message as MessageEvent).data));

@@ -203,8 +203,27 @@ function Shell() {
 
   useEffect(() => {
     void refreshSprints();
-    const id = window.setInterval(() => void refreshSprints(), 5000);
-    return () => window.clearInterval(id);
+    // Live updates: refresh the sprint list the moment any event lands (debounced
+    // so a burst of events coalesces into one refresh). Fall back to a slow poll
+    // when SSE is unavailable or the stream drops.
+    let pending: number | undefined;
+    const scheduleRefresh = () => {
+      if (pending) return;
+      pending = window.setTimeout(() => {
+        pending = undefined;
+        void refreshSprints();
+      }, 600);
+    };
+    const stream = openEventStream(undefined, scheduleRefresh, () => {});
+    const id = window.setInterval(
+      () => void refreshSprints(),
+      stream ? 20000 : 5000,
+    );
+    return () => {
+      if (pending) window.clearTimeout(pending);
+      stream?.close();
+      window.clearInterval(id);
+    };
   }, [refreshSprints]);
 
   const onCreated = useCallback(
@@ -611,11 +630,39 @@ function useSessionData(
 
   useEffect(() => {
     if (!sprintId) return undefined;
-    const id = window.setInterval(() => {
-      void refresh();
-      void onSprintChanged();
-    }, 3500);
-    return () => window.clearInterval(id);
+    // Live updates for the open session: stream events and refresh on arrival
+    // (debounced). The interval is a safety net; when SSE is live it runs rarely,
+    // and if SSE is unavailable we degrade to the original poll cadence.
+    let pending: number | undefined;
+    const scheduleRefresh = () => {
+      if (pending) return;
+      pending = window.setTimeout(() => {
+        pending = undefined;
+        void refresh();
+        void onSprintChanged();
+      }, 500);
+    };
+    const stream = openEventStream(
+      sprintId,
+      () => {
+        setStreamState("live");
+        scheduleRefresh();
+      },
+      () => setStreamState("retrying"),
+    );
+    setStreamState(stream ? "live" : "off");
+    const id = window.setInterval(
+      () => {
+        void refresh();
+        void onSprintChanged();
+      },
+      stream ? 15000 : 3500,
+    );
+    return () => {
+      if (pending) window.clearTimeout(pending);
+      stream?.close();
+      window.clearInterval(id);
+    };
   }, [onSprintChanged, refresh, sprintId]);
 
   useEffect(() => {
@@ -740,10 +787,7 @@ function SessionView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <PlanFlow
-              projection={projection}
-              isBlocked={isBlocked}
-            />
+            <PlanFlow projection={projection} isBlocked={isBlocked} />
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
             >
@@ -1082,7 +1126,9 @@ function GateCard({
     ? actions.find((a) => a.id === spec.secondary!.actionId)
     : undefined;
   const gateArtifacts = (gate?.source_artifacts || []).filter(Boolean);
-  const artifacts = gateArtifacts.length ? gateArtifacts : fallbackArtifacts || [];
+  const artifacts = gateArtifacts.length
+    ? gateArtifacts
+    : fallbackArtifacts || [];
   const busy = Boolean(submitting);
 
   async function run(target: "primary" | "secondary") {
@@ -2193,11 +2239,7 @@ function TopBar({
   );
 }
 
-function UsagePanel({
-  usage,
-}: {
-  usage?: UsagePayload;
-}) {
+function UsagePanel({ usage }: { usage?: UsagePayload }) {
   const total = usage?.total_used_tokens_label || "0 tok";
   const models = usage?.models || [];
   return (
