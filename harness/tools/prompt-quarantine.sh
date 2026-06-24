@@ -23,7 +23,8 @@
 #   _QUARANTINE_CAPTURE_OVERRIDE (env)   — set to snapshot string to bypass tmux
 #   _QUARANTINE_DIR (env)                — override base dir (for temp-dir tests)
 
-_QUARANTINE_DIR="${HARNESS_DIR:-$HOME/.solar/harness}/run/quarantine"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+_QUARANTINE_DIR="${HARNESS_DIR}/run/quarantine"
 _QUARANTINE_MAX_FIXKEYS=3       # on the 4th attempt → quarantine
 _QUARANTINE_COOLDOWN_SEC=600    # quarantined pane cannot receive dispatches for 600s
 

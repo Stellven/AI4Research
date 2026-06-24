@@ -23,6 +23,26 @@ def test_discover_role_pool_planner_prefers_planner_then_architect_then_builder(
     assert panes[:3] == ["solar-harness:0.1", "solar-harness-lab:0.4", "solar-harness-lab:0.0"]
 
 
+def test_discover_role_pool_scopes_custom_harness_session(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_HARNESS_SESSION", "solar-codex-cockpit-clean")
+    monkeypatch.setattr(
+        "pane_role_pool.list_tmux_panes",
+        lambda: [
+            {"pane": "solar-codex-cockpit-clean:0.2", "title": "Builder | 模型:Codex"},
+            {"pane": "solar-codex-cockpit-clean-lab:0.0", "title": "Builder | 模型:Codex"},
+            {"pane": "solar-codex-cockpit-old:0.2", "title": "Builder | 模型:Codex"},
+            {"pane": "solar-harness-lab:0.0", "title": "Builder | 模型:Opus"},
+        ],
+    )
+
+    panes = [item["pane"] for item in discover_role_pool("builder")]
+
+    assert panes == [
+        "solar-codex-cockpit-clean-lab:0.0",
+        "solar-codex-cockpit-clean:0.2",
+    ]
+
+
 def test_ensure_clean_for_dispatch_registers_and_clears_ready_footer(tmp_path) -> None:
     registry_path = tmp_path / "pane-hygiene.json"
     reg = PaneHygieneRegistry(str(registry_path))

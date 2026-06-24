@@ -70,6 +70,29 @@ DEFAULT_TASK_TYPE_BY_LOGICAL_OPERATOR = {
     "ArtifactCurator": "evidence",
 }
 
+READ_ONLY_AUDIT_TASK_TYPES = {
+    "audit",
+    "audit_inventory",
+    "inventory",
+    "documentation",
+    "docs",
+    "report",
+    "reporting",
+    "packaging_audit",
+    "packaging_inventory",
+}
+
+READ_ONLY_AUDIT_SIGNALS = {
+    "audit",
+    "inventory",
+    "document",
+    "documentation",
+    "report",
+    "readiness",
+    "packaging",
+    "inspect",
+}
+
 
 def _skill_driven_override(
     logical_operator: str,
@@ -114,6 +137,46 @@ def _looks_like_understand_anything_task(
     ]
     haystack = " ".join(text_parts).lower()
     return any(token in haystack for token in UNDERSTAND_ANYTHING_SIGNAL_TOKENS)
+
+
+def _looks_like_read_only_audit_task(
+    logical_operator: str,
+    *,
+    request_type: str = "",
+    lane_hint: str = "",
+    node: Optional[Dict[str, Any]] = None,
+    goal_text: str = "",
+) -> bool:
+    if str(logical_operator or "") != "ImplementationWorker":
+        return False
+    node_payload = node or {}
+    policy = node_payload.get("architecture_policy") if isinstance(node_payload.get("architecture_policy"), dict) else {}
+    task_markers = {
+        str(node_payload.get("type") or "").lower(),
+        str(node_payload.get("dispatch_task_type") or "").lower(),
+        str(request_type or "").lower(),
+        str(lane_hint or "").lower(),
+    }
+    skills = {str(skill).lower() for skill in (node_payload.get("required_skills") or [])}
+    write_scope = [str(item) for item in (node_payload.get("write_scope") or [])]
+    writes_only_sprint_artifacts = bool(write_scope) and all(
+        item.startswith(("harness/sprints/", "sprints/")) for item in write_scope
+    )
+    core_patch_denied = policy.get("core_patch_allowed") is False
+    text_parts = [
+        goal_text,
+        str(node_payload.get("goal", "")),
+        str(node_payload.get("title", "")),
+        str(node_payload.get("type", "")),
+        str(node_payload.get("dispatch_task_type", "")),
+        " ".join(skills),
+    ]
+    haystack = " ".join(text_parts).lower().replace("_", " ").replace("-", " ")
+    explicit_audit_type = bool(task_markers.intersection(READ_ONLY_AUDIT_TASK_TYPES))
+    audit_signal = explicit_audit_type or any(signal in haystack for signal in READ_ONLY_AUDIT_SIGNALS)
+    docs_skill = bool(skills.intersection({"documentation", "reporting", "harness.reporting"}))
+    non_mutating_policy = core_patch_denied or writes_only_sprint_artifacts or explicit_audit_type
+    return bool((audit_signal or docs_skill) and non_mutating_policy)
 
 
 class CapsuleError(RuntimeError):
@@ -843,6 +906,18 @@ def default_capability_plan_for_logical_operator(
         capsule_id = "cap.understand-anything-indexer"
         dispatch_task_type = "code-understanding"
         selection_mode = "understand_anything_heuristic"
+        fallback_used = False
+        fallback_reason = None
+    elif _looks_like_read_only_audit_task(
+        logical_operator,
+        request_type=request_type,
+        lane_hint=lane_hint,
+        node=node,
+        goal_text=goal_text,
+    ):
+        capsule_id = "cap.requirement-compiler-audit"
+        dispatch_task_type = str((node or {}).get("dispatch_task_type") or (node or {}).get("type") or "audit_inventory")
+        selection_mode = "read_only_audit_heuristic"
         fallback_used = False
         fallback_reason = None
     else:

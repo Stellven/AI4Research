@@ -26,6 +26,19 @@ capsules:
     - builder
     owner: opensolar
     default_operator_profile: mini-claude-sonnet-builder
+  - capability_capsule_id: cap.requirement-compiler-audit
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.requirement-compiler-audit.yaml
+    tags:
+    - requirements
+    - audit
+    - inventory
+    - reporting
+    owner: opensolar
+    default_operator_profile: mini-codex-gpt53-spark-builder-1
   - capability_capsule_id: cap.requirement-compiler-planner
     version: 0.1.0
     capsule_kind: capability

@@ -90,6 +90,63 @@ def test_consumer_dry_run_marks_trusted_pm_dispatch_for_planner_handoff(tmp_path
     assert handoff["source_channel"] == "pm_dispatch"
 
 
+def test_consumer_codex_runtime_suppresses_trusted_pm_operator_handoff(tmp_path):
+    env = _env(tmp_path)
+    env["SOLAR_PANE_RUNTIME"] = "codex"
+    intent_id = _capture(env, text="Codex runtime should use the cockpit planner pane.", channel="pm_dispatch")
+
+    proc = subprocess.run(
+        [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--dry-run", "--json"],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    handoff = json.loads(proc.stdout)["results"][0]["planner_handoff"]
+    assert handoff["requested"] is False
+    assert handoff["suppressed_requested"] is True
+    assert handoff["suppressed_reason"] == "trusted_channel"
+    assert handoff["reason"] == "codex_pane_runtime_uses_coordinator_planner_pane"
+
+
+def test_consumer_codex_runtime_suppresses_explicit_pm_operator_handoff(tmp_path):
+    env = _env(tmp_path)
+    env["SOLAR_PANE_RUNTIME"] = "codex"
+    intent_id = _capture(env, text="Even explicit CLI handoff must not launch Claude under Codex.", channel="test")
+
+    proc = subprocess.run(
+        [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--dry-run", "--dispatch-planner", "--json"],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    handoff = json.loads(proc.stdout)["results"][0]["planner_handoff"]
+    assert handoff["requested"] is False
+    assert handoff["suppressed_requested"] is True
+    assert handoff["suppressed_reason"] == "explicit_cli"
+    assert handoff["reason"] == "codex_pane_runtime_uses_coordinator_planner_pane"
+
+
+def test_consumer_codex_runtime_can_opt_into_pm_operator_handoff(tmp_path):
+    env = _env(tmp_path)
+    env["SOLAR_PANE_RUNTIME"] = "codex"
+    env["SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH"] = "1"
+    intent_id = _capture(env, text="Codex runtime operator dispatch remains explicit opt-in.", channel="pm_dispatch")
+
+    proc = subprocess.run(
+        [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--dry-run", "--json"],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    handoff = json.loads(proc.stdout)["results"][0]["planner_handoff"]
+    assert handoff["requested"] is True
+    assert handoff["reason"] == "trusted_channel"
+    assert "suppressed_requested" not in handoff
+
+
 def test_consumer_no_auto_dispatch_planner_disables_trusted_handoff(tmp_path):
     env = _env(tmp_path)
     intent_id = _capture(env, text="显式关闭 auto handoff 时只编译。", channel="pm_dispatch")

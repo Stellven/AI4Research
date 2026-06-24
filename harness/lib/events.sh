@@ -19,7 +19,7 @@
 #
 # Thread safety: mkdir-based lock prevents torn writes.
 
-HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 _EVENTS_DIR="${_EVENTS_DIR:-${HARNESS_DIR}/events}"
 _SPRINTS_DIR="${_SPRINTS_DIR:-${HARNESS_DIR}/sprints}"
 

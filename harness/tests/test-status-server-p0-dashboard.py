@@ -8,6 +8,9 @@ import datetime
 import json
 import os
 import tempfile
+import threading
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 
@@ -27,6 +30,24 @@ def load_module():
 def write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
+
+
+def request_json(base_url: str, path: str, payload: dict | None = None) -> tuple[int, dict]:
+    body = None
+    headers = {"Accept": "application/json"}
+    method = "GET"
+    if payload is not None:
+        body = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+        method = "POST"
+    request = urllib.request.Request(base_url + path, data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            return response.status, data
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        return exc.code, json.loads(raw or "{}")
 
 
 def main() -> None:
@@ -212,8 +233,65 @@ fi
         assert handoff["projection"]["status"] == "reviewing"
 
         html = mod._p0_dashboard_html()
-        assert "Solar Harness Status" in html
+        assert "AI4Research" in html
         assert "/static/p0.js" in html or "/static/p0-app/" in html
+
+        server = mod.ThreadingHTTPServer(("127.0.0.1", 0), mod.StatusHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+
+            status_code, http_projection = request_json(base_url, f"/orchestration/projection?sprint_id={sid}")
+            assert status_code == 200, http_projection
+            assert http_projection["ok"] is True
+            assert http_projection["data"]["projection_schema"] == "solar.dashboard_projection.v1"
+            assert http_projection["data"]["sprint_id"] == sid
+
+            status_code, fast_projection = request_json(base_url, f"/orchestration/projection?sprint_id={sid}&mode=fast")
+            assert status_code == 200, fast_projection
+            assert fast_projection["ok"] is True
+            assert fast_projection["data"]["projection_mode"] == "fast"
+            assert fast_projection["data"]["events"] == []
+            assert fast_projection["data"]["timeline"] == []
+            assert fast_projection["data"]["lazy_slices"]["events"] == f"/events?sprint_id={sid}&limit=140"
+
+            status_code, api_projection = request_json(base_url, f"/api/sprints/{sid}/projection")
+            assert status_code == 200, api_projection
+            assert api_projection["ok"] is True
+            assert api_projection["data"]["sprint_id"] == sid
+
+            write(
+                sprints / f"{sid}.status.json",
+                json.dumps({"sprint_id": sid, "status": "active", "phase": "planning_complete", "title": "P0 Dashboard"}),
+            )
+            status_code, http_plan = request_json(
+                base_url,
+                f"/api/sprints/{sid}/plan-verdict",
+                {"verdict": "approve", "reason": "scope ok"},
+            )
+            assert status_code == 200, http_plan
+            assert http_plan["ok"] is True
+            assert http_plan["projection"]["status"] == "approved"
+
+            write(sprints / f"{sid}.handoff.md", "# Handoff\n")
+            status_code, http_handoff = request_json(base_url, f"/api/sprints/{sid}/handoff-submit", {})
+            assert status_code == 200, http_handoff
+            assert http_handoff["ok"] is True
+            assert http_handoff["projection"]["status"] == "reviewing"
+
+            status_code, http_eval = request_json(
+                base_url,
+                f"/api/sprints/{sid}/eval-verdict",
+                {"verdict": "pass", "reason": "accepted"},
+            )
+            assert status_code == 200, http_eval
+            assert http_eval["ok"] is True
+            assert http_eval["projection"]["status"] == "passed"
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)
+            server.server_close()
 
     print("PASS status-server p0 dashboard")
 

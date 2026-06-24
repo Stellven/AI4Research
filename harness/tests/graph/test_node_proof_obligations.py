@@ -235,3 +235,69 @@ class TestEvalPassAllowsPassed:
         assert result["ok"] is True
         assert result["status"] == "passed"
         assert result["proof_gate"]["required"] is False
+
+    def test_verdict_pass_materializes_capsule_proof_sidecars(self, tmp_path, monkeypatch):
+        sid = "sprint-ac3-capsule-proof-sidecars"
+        graph_path = _setup_dispatcher_graph(tmp_path, monkeypatch, sid)
+
+        graph = json.loads(graph_path.read_text(encoding="utf-8"))
+        graph["nodes"][0]["proof_obligations"] = [
+            {"kind": "self_check", "source_capsule_id": "guard.secret-leak-guard", "requirement": "check.guard_decision_written"},
+            {"kind": "pass_condition", "source_capsule_id": "guard.secret-leak-guard", "requirement": "guard_decision exists"},
+            {"kind": "postcondition", "source_capsule_id": "guard.secret-leak-guard", "requirement": "output_present", "field": "guard_decision"},
+            {"kind": "self_check", "source_capsule_id": "resource.github-readonly", "requirement": "check.resource_binding_written"},
+            {"kind": "pass_condition", "source_capsule_id": "resource.github-readonly", "requirement": "resource_binding exists"},
+            {"kind": "postcondition", "source_capsule_id": "resource.github-readonly", "requirement": "output_present", "field": "resource_binding"},
+            {"kind": "self_check", "source_capsule_id": "adapter.artifact-type-bridge", "requirement": "check.adapter_output_written"},
+            {"kind": "pass_condition", "source_capsule_id": "adapter.artifact-type-bridge", "requirement": "adapter output exists"},
+            {"kind": "postcondition", "source_capsule_id": "adapter.artifact-type-bridge", "requirement": "output_present", "field": "bridged_artifact"},
+            {
+                "kind": "adapter_contract",
+                "source_capsule_id": "adapter.artifact-type-bridge",
+                "requirement": "type_mismatch_bridge",
+                "target_stage_id": "N1:capability",
+                "missing_required_inputs": ["markdown"],
+                "source_artifacts": ["artifact.guard_decision", "artifact.resource_binding", "json"],
+            },
+        ]
+        graph_path.write_text(json.dumps(graph, ensure_ascii=False), encoding="utf-8")
+
+        sprints = tmp_path / "sprints"
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        handoff.write_text("# Handoff\nNo sensitive values here.\n", encoding="utf-8")
+        patch_diff = sprints / f"{sid}.patch.diff"
+        patch_diff.write_text("# no source patch\n", encoding="utf-8")
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_json.write_text(json.dumps({"node_id": "N1", "verdict": "PASS"}), encoding="utf-8")
+
+        monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **kw: {"released": False})
+        monkeypatch.setattr(gnd, "_mark_parent_sprint_passed_if_ready", lambda *a, **kw: False)
+
+        result = gnd.node_verdict(
+            str(graph_path), "N1", "pass",
+            eval_json=str(eval_json),
+            dry_run=True,
+            dispatch_downstream=False,
+        )
+
+        assert result["ok"] is True
+        assert result["proof_gate"]["ok"] is True
+        guard = sprints / f"{sid}.N1-guard_decision.json"
+        resource = sprints / f"{sid}.N1-resource_binding.json"
+        bridge = sprints / f"{sid}.N1-bridged_artifact.md"
+        assert json.loads(guard.read_text(encoding="utf-8"))["decision"] == "allow"
+        assert json.loads(resource.read_text(encoding="utf-8"))["bound"] is True
+        assert "artifact.guard_decision" in bridge.read_text(encoding="utf-8")
+
+        eval_prompt = gnd.build_eval_dispatch_text(
+            graph,
+            str(graph_path),
+            graph["nodes"][0],
+            "solar-test:0.3",
+            "dispatch-eval-test",
+        )
+        assert "## Proof Support Artifacts" in eval_prompt
+        assert str(guard) in eval_prompt
+        assert str(resource) in eval_prompt
+        assert str(bridge) in eval_prompt

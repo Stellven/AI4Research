@@ -59,6 +59,7 @@ PANE_DISPATCH_FAILED_IDLE_RE = re.compile(
     re.I,
 )
 PANE_PROCESSING_RE = re.compile(
+    r"esc to interrupt|• Working|Working \(|"
     r"Crafting|Cogitating|Orchestrating|Coalescing|Wandering|Sock-hopping|"
     r"Puzzling|Cooking|Baked|Thinking|Considering|Newspapering|"
     r"Reticulating|Scurrying|Roosting|Mustering|Herding|Ruminating|"
@@ -107,6 +108,7 @@ RECOVERABLE_PANE_BLOCKER_FRAGMENTS = {
     "dispatch prompt not dismissed",
     "late_settle_blocked",
 }
+GRAPH_NODE_REPAIR_MAX_ATTEMPTS = int(os.environ.get("SOLAR_GRAPH_NODE_REPAIR_MAX_ATTEMPTS", "1"))
 STATE_READ_PREFLIGHT = """<!-- SOLAR_STATE_READ_PREFLIGHT -->
 ## 必须先读状态 (防写入 hook 卡死)
 
@@ -183,6 +185,33 @@ def _json(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False)
 
 
+def _dispatch_role_for_pane(pane: str, title: str | None = None) -> str:
+    title = _pane_title(pane) if title is None else str(title or "")
+    lowered = title.lower()
+    if "planner" in lowered or "规划者" in title:
+        return "planner"
+    if "evaluator" in lowered or "审判官" in title:
+        return "evaluator"
+    if "pm" in lowered or "产品经理" in title:
+        return "pm"
+    if pane.endswith(":0.0") or pane.endswith(".0"):
+        return "pm"
+    if pane.endswith(":0.1") or pane.endswith(".1"):
+        return "planner"
+    if pane.endswith(":0.3") or pane.endswith(".3"):
+        return "evaluator"
+    return "builder"
+
+
+def _role_file_for_pane(pane: str) -> Path:
+    return HARNESS_DIR / "run" / "pane-codex" / f"{_dispatch_role_for_pane(pane)}.md"
+
+
+def _pane_runtime() -> str:
+    runtime = os.environ.get("SOLAR_PANE_RUNTIME", "claude").strip().lower()
+    return runtime if runtime in {"claude", "codex"} else "claude"
+
+
 def _recoverable_pane_blocker(reason: str) -> bool:
     normalized = str(reason or "").lower()
     if not normalized:
@@ -194,6 +223,7 @@ def _recoverable_pane_blocker(reason: str) -> bool:
         "provider_health_unavailable",
         "multi_task_shell_not_direct_worker",
         "worker_runtime_not_running",
+        "codex_runtime_not_running",
     )
     if any(fragment in normalized for fragment in hard_fragments):
         return False
@@ -282,6 +312,32 @@ def _node_requires_deepresearch_quality_gate(node: dict[str, Any]) -> bool:
     return bool(DEEPRESEARCH_GATE_ARTIFACT_RE.search(artifact_text))
 
 
+def _deepresearch_quality_gate_eval_instruction(node: dict[str, Any], eval_json: str | Path) -> str:
+    if _node_requires_deepresearch_quality_gate(node):
+        return f"""- 本 node 明确涉及 DeepResearch artifacts / research evidence ledger / claim ledger / citation verification / research report compiler，必须先运行 deterministic artifact gate：
+  ```bash
+  solar-harness research eval-artifacts --eval-json "<path-to-research_eval.json>" --json
+  ```
+  并把返回 JSON 原样写入 `{eval_json}` 的 `research_quality_gate` 字段。没有 `research_quality_gate.ok=true` 不允许 PASS。"""
+    return """- DeepResearch deterministic artifact gate is **not required** for this node. Do not run `solar-harness research eval-artifacts`, and do not fail this node only because `research_eval.json`, `report_ast.json`, bibliography, source/evidence/claim counts, or citation-accuracy artifacts are absent.
+  Local audit reports, packaging-readiness reports, documentation synthesis, and generic `report.compile` outputs are judged by this node's acceptance criteria, proof obligations, session log, write scope, and handoff evidence unless `research_quality_gate_required=true` or explicit `research.*` artifacts/capabilities are present. Leave `research_quality_gate` empty or mark it `{"required": false}`."""
+
+
+def _graph_terminally_closed(sid: str) -> bool:
+    """True once the graph has reached terminal closure. Used to keep the
+    `.finalized` marker sticky so a stale non-PASS coverage verdict (e.g. the
+    in-progress/partial requirement-trace view) cannot strip finalization and
+    reopen an already-closed sprint (Defect C)."""
+    closure_path = SPRINTS_DIR / f"{sid}.closure.json"
+    try:
+        closure = json.loads(closure_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(closure, dict):
+        return False
+    return str(closure.get("status") or "").strip().lower() == "closed" or bool(closure.get("all_nodes_passed"))
+
+
 def _refresh_requirement_coverage_artifacts(sid: str, *, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"ok": True, "skipped": "dry_run"}
@@ -305,7 +361,11 @@ def _refresh_requirement_coverage_artifacts(sid: str, *, dry_run: bool = False) 
     verdict = str((bundle.get("acceptance_verdict") or {}).get("verdict") or "N/A")
     finalized_path = SPRINTS_DIR / f"{sid}.finalized"
     cleared_finalized = False
-    if verdict != "PASS" and finalized_path.exists():
+    # Keep finalization sticky once the graph has terminally closed: a non-PASS
+    # coverage verdict (e.g. the in-progress/partial requirement-trace view) must
+    # not strip the terminal marker and reopen a closed sprint (Defect C). The
+    # anti-stale unlink still fires for a sprint that has NOT terminally closed.
+    if verdict != "PASS" and finalized_path.exists() and not _graph_terminally_closed(sid):
         try:
             finalized_path.unlink()
             cleared_finalized = True
@@ -1135,6 +1195,167 @@ def _existing_node_handoff(sid: str, node: dict[str, Any], graph: dict[str, Any]
     return None
 
 
+def _node_repair_attempts(node: dict[str, Any]) -> int:
+    raw = node.get("repair_attempts")
+    if raw in (None, ""):
+        context = node.get("repair_context")
+        raw = context.get("attempt") if isinstance(context, dict) else 0
+    try:
+        return max(0, int(raw or 0))
+    except Exception:
+        return 0
+
+
+def _node_repair_max_attempts(graph: dict[str, Any], node: dict[str, Any]) -> int:
+    candidates: list[Any] = [
+        node.get("max_repair_attempts"),
+        node.get("repair_max_attempts"),
+    ]
+    repair_policy = graph.get("node_repair") if isinstance(graph.get("node_repair"), dict) else {}
+    quality_gates = graph.get("quality_gates") if isinstance(graph.get("quality_gates"), dict) else {}
+    graph_repair_gate = quality_gates.get("repair") if isinstance(quality_gates.get("repair"), dict) else {}
+    candidates.extend([
+        repair_policy.get("max_attempts"),
+        graph_repair_gate.get("max_attempts"),
+        GRAPH_NODE_REPAIR_MAX_ATTEMPTS,
+    ])
+    for raw in candidates:
+        if raw in (None, ""):
+            continue
+        try:
+            return max(0, int(raw))
+        except Exception:
+            continue
+    return 1
+
+
+def _archive_path_for_repair(path: Path, attempt: int) -> Path:
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    base = path.with_name(f"{path.stem}.repair{attempt}.{stamp}{path.suffix}")
+    if not base.exists():
+        return base
+    for index in range(2, 100):
+        candidate = path.with_name(f"{path.stem}.repair{attempt}.{stamp}.{index}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+    return path.with_name(f"{path.stem}.repair{attempt}.{stamp}.{os.getpid()}{path.suffix}")
+
+
+def _archive_node_review_sidecars(sid: str, node_id: str, handoff_file: Path | None, eval_json_path: str | Path, attempt: int) -> dict[str, str]:
+    archived: dict[str, str] = {}
+    candidates: list[tuple[str, Path]] = []
+    if handoff_file is not None:
+        candidates.append(("handoff_md", Path(handoff_file)))
+    for key, path in (
+        ("eval_json", Path(str(eval_json_path))) if str(eval_json_path or "").strip() else ("eval_json", Path()),
+        ("eval_md", _eval_md_file(sid, node_id)),
+    ):
+        if str(path) not in {"", "."}:
+            candidates.append((key, path))
+
+    seen: set[Path] = set()
+    for key, path in candidates:
+        try:
+            resolved = path.expanduser()
+        except Exception:
+            continue
+        if resolved in seen or not resolved.exists():
+            continue
+        seen.add(resolved)
+        archive = _archive_path_for_repair(resolved, attempt)
+        try:
+            resolved.replace(archive)
+        except Exception:
+            continue
+        archived[key] = str(archive)
+    return archived
+
+
+def _short_eval_errors(eval_payload: dict[str, Any]) -> list[dict[str, str]]:
+    errors = eval_payload.get("errors")
+    if not isinstance(errors, list):
+        return []
+    items: list[dict[str, str]] = []
+    for raw in errors[:6]:
+        if not isinstance(raw, dict):
+            continue
+        item: dict[str, str] = {}
+        for key in ("cond", "severity", "evidence", "fix_hint"):
+            value = str(raw.get(key) or "").strip()
+            if value:
+                item[key] = value[:1200]
+        if item:
+            items.append(item)
+    return items
+
+
+def _start_node_repair_from_eval_fail(
+    graph: dict[str, Any],
+    node: dict[str, Any],
+    sid: str,
+    node_id: str,
+    handoff_file: Path,
+    eval_json_path: str,
+    eval_payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    max_attempts = _node_repair_max_attempts(graph, node)
+    prior_attempts = _node_repair_attempts(node)
+    if prior_attempts >= max_attempts:
+        return None
+
+    attempt = prior_attempts + 1
+    archived = _archive_node_review_sidecars(sid, node_id, handoff_file, eval_json_path, attempt)
+    now = _utc_now()
+    failed_conditions = eval_payload.get("failed_conditions")
+    if not isinstance(failed_conditions, list):
+        failed_conditions = []
+    repair_context = {
+        "attempt": attempt,
+        "max_attempts": max_attempts,
+        "verdict": "FAIL",
+        "summary": str(eval_payload.get("summary") or "").strip()[:2000],
+        "failed_conditions": [str(item) for item in failed_conditions if str(item).strip()][:20],
+        "errors": _short_eval_errors(eval_payload),
+        "archived_sidecars": archived,
+        "created_at": now,
+    }
+
+    _clear_eval_assignments(node)
+    for key in (
+        "assigned_to",
+        "dispatch_id",
+        "eval_json",
+        "eval_assigned_to",
+        "eval_dispatch_id",
+        "eval_dispatched_at",
+        "eval_retry_reason",
+        "last_eval_closeout_failure",
+        "last_eval_operator_cooldown_after_closeout",
+        "handoff_md",
+    ):
+        node.pop(key, None)
+
+    artifacts = node.get("artifacts")
+    if isinstance(artifacts, dict):
+        artifacts.pop("eval_json", None)
+        artifacts.pop("handoff_md", None)
+
+    node["status"] = "failed_review"
+    node["repair_attempts"] = attempt
+    node["repair_context"] = repair_context
+    node.setdefault("repair_history", []).append(repair_context)
+    node["updated_at"] = now
+
+    graph.setdefault("node_results", {})
+    graph["node_results"][node_id] = {
+        "status": "failed_review",
+        "updated_at": now,
+        "note": f"repair_requested_from_eval_sidecar:{Path(eval_json_path).name}",
+        "repair_context": repair_context,
+    }
+    return repair_context
+
+
 def _ledger_dispatch_for(sid: str, instruction_file: Path) -> dict[str, Any]:
     if not DISPATCH_LEDGER.exists():
         return {}
@@ -1180,15 +1401,37 @@ def _active_multi_task_status_for(sid: str, node_id: str) -> dict[str, Any] | No
     return newest[1] if newest else None
 
 
+def _sidecar_reconcile_dependency_blockers(graph: dict[str, Any], node: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for dep in node.get("depends_on") or []:
+        dep_id = str(dep or "").strip()
+        if not dep_id or dep_id.startswith("external:") or "://" in dep_id:
+            continue
+        try:
+            dep_status = str(node_status(graph, dep_id) or "").strip().lower()
+        except Exception:
+            dep_status = ""
+        if dep_status != "passed":
+            blockers.append(dep_id)
+    return blockers
+
+
 def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path) -> list[dict[str, Any]]:
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     repaired: list[dict[str, Any]] = []
+    # A finalized sprint is terminal and frozen: do not let leftover handoff/eval
+    # sidecars "repair" (revert) its nodes. Without this guard a post-close
+    # reconcile resets a passed node back to `reviewing` from a lingering handoff
+    # file and reopens a closed sprint (Defect C).
+    if (SPRINTS_DIR / f"{sid}.finalized").exists():
+        return repaired
     for node in graph.get("nodes", []):
         node_id = str(node.get("id") or "")
         if not node_id:
             continue
         status = node_status(graph, node_id)
         handoff_file = _existing_node_handoff(sid, node, graph)
+        dependency_blockers = _sidecar_reconcile_dependency_blockers(graph, node) if handoff_file else []
         eval_json_path = str(node.get("eval_json") or _eval_json_file(sid, node_id))
         if not Path(eval_json_path).exists():
             backfilled_eval = _maybe_backfill_eval_json_from_md(sid, node_id)
@@ -1202,11 +1445,47 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             eval_verdict = "FAIL"
         else:
             eval_verdict = ""
+        if handoff_file and dependency_blockers and eval_verdict in {"PASS", "FAIL"} and status not in {"passed", "failed"}:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "sidecar_reconcile_blocked_by_dependencies",
+                    "handoff": str(handoff_file),
+                    "eval_json": eval_json_path,
+                    "blocked_by": dependency_blockers,
+                }
+            )
+            continue
         if handoff_file and eval_verdict in {"PASS", "FAIL"} and status in {"pending", "queued", "blocked", "assigned", "dispatched", "in_progress", "running", "reviewing", "ready_for_review", "needs_human_review", "failed_review", ""}:
             pane = str(node.get("assigned_to") or "").strip()
             dispatch_id = str(node.get("dispatch_id") or "").strip()
             if pane and dispatch_id:
                 release_lease(pane, dispatch_id, "graph_dispatch_reconcile_eval_verdict")
+            if eval_verdict == "FAIL":
+                repair_context = _start_node_repair_from_eval_fail(
+                    graph,
+                    node,
+                    sid,
+                    node_id,
+                    handoff_file,
+                    eval_json_path,
+                    eval_payload,
+                )
+                if repair_context is not None:
+                    repaired.append(
+                        {
+                            "node": node_id,
+                            "status": "failed_review",
+                            "reason": "eval_sidecar_failed_repair_requested",
+                            "handoff": str(handoff_file),
+                            "eval_json": eval_json_path,
+                            "verdict": eval_verdict,
+                            "repair_attempt": repair_context.get("attempt"),
+                            "max_repair_attempts": repair_context.get("max_attempts"),
+                        }
+                    )
+                    continue
             node.pop("assigned_to", None)
             node.pop("dispatch_id", None)
             verdict_status = "passed" if eval_verdict == "PASS" else "failed"
@@ -1228,6 +1507,17 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     "handoff": str(handoff_file),
                     "eval_json": eval_json_path,
                     "verdict": eval_verdict,
+                }
+            )
+            continue
+        if handoff_file and dependency_blockers and status in {"pending", "queued", "blocked", "worker_blocked", "assigned", "dispatched", "in_progress", "running", ""}:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "handoff_reconcile_blocked_by_dependencies",
+                    "handoff": str(handoff_file),
+                    "blocked_by": dependency_blockers,
                 }
             )
             continue
@@ -1531,12 +1821,30 @@ def _verdict_from_eval_md(eval_md: Path) -> str:
     return ""
 
 
+def _eval_md_is_substantive(eval_md: Path) -> bool:
+    """True iff the evaluator Markdown reads as a genuine independent verification
+    rather than a bare verdict stamp. A real node eval re-runs checks and records
+    evidence across multiple sections (observed genuine evals are ~7-9KB / 11-12
+    sections); a rubber-stamp is a few lines. Thresholds are set far below genuine
+    sizes so this only rejects stamps, never real evals."""
+    try:
+        text = eval_md.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    if len(text.strip()) < 600:
+        return False
+    section_count = len(re.findall(r"(?im)^##\s+\S", text))
+    has_evidence = bool(re.search(r"(?i)\b(evidence|checked|acceptance|re-?ran|re-?run|verif|smoke)", text))
+    return section_count >= 3 or has_evidence
+
+
 def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
     """Recover evaluator sidecar JSON when the Markdown verdict is explicit.
 
     This is intentionally narrow: it only runs for graph node eval sidecars,
     requires a `## Verdict` section with PASS/FAIL, and records that the JSON was
-    derived from evaluator Markdown. It does not invent a verdict.
+    derived from evaluator Markdown. It does not invent a verdict, and (trust gate)
+    it never mints a PASS sidecar from a non-substantive eval .md.
     """
     eval_json = _eval_json_file(sid, node_id)
     if eval_json.exists():
@@ -1546,6 +1854,19 @@ def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
         return None
     verdict = _verdict_from_eval_md(eval_md)
     if verdict not in {"PASS", "FAIL"}:
+        return None
+    # Trust gate (no hollow passes): a PASS must be backed by a substantive
+    # independent eval. A thin/rubber-stamp PASS .md is refused here so the node
+    # stays unverified and is re-evaluated rather than silently marked passed.
+    # FAIL is always honored (fail-safe).
+    if verdict == "PASS" and not _eval_md_is_substantive(eval_md):
+        try:
+            _append_dispatch_ledger(
+                "eval_backfill_refused_thin_pass", sid, "", "",
+                {"node": node_id, "eval_md": str(eval_md)},
+            )
+        except Exception:
+            pass
         return None
     payload = {
         "verdict": verdict,
@@ -1630,6 +1951,277 @@ def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, An
     return []
 
 
+# --- Deterministic secret-leak guard + resource binding (general builder/operator path) ---
+# Mirror of lib/graph_node_dispatcher.py. gitleaks is the release/CI scanner but is NOT on the
+# runtime PATH; mirror the canonical built-in pattern set from runtime_interfaces.RuntimePolicy.
+_SECRET_SCAN_PATTERNS = [
+    r"(?i)api[_-]?key\s*[=:]\s*\S+",
+    r"(?i)token\s*[=:]\s*\S{8,}",
+    r"(?i)password\s*[=:]\s*\S+",
+    r"(?i)secret\s*[=:]\s*\S+",
+    r"(?i)credential\s*[=:]\s*\S+",
+    r"(?i)auth[_-]?token\s*[=:]\s*\S+",
+    r"AKIA[0-9A-Z]{16}",
+    r"ghp_[0-9a-zA-Z]{36}",
+    r"sk-[0-9a-zA-Z]{20,}",
+]
+_GUARD_SCAN_MAX_FILES = 64
+_GUARD_SCAN_MAX_BYTES = 512 * 1024
+
+
+def _node_sidecar_file(sid: str, node_id: str, kind: str) -> Path | None:
+    nid = _safe_node_id(node_id)
+    suffixes = [".md"] if kind == "bridged_artifact" else [".json"]
+    for suffix in suffixes:
+        for cand in (
+            SPRINTS_DIR / f"{sid}.{nid}-{kind}{suffix}",
+            SPRINTS_DIR / f"{sid}.{nid}-{kind.replace('_', '-')}{suffix}",
+        ):
+            if cand.exists():
+                return cand
+    return None
+
+
+def _expected_node_sidecar_file(sid: str, node_id: str, kind: str) -> Path:
+    suffix = ".md" if kind == "bridged_artifact" else ".json"
+    return SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-{kind}{suffix}"
+
+
+def _resolve_write_scope_paths(node: dict[str, Any]) -> list[Path]:
+    roots = [HARNESS_DIR, HARNESS_DIR.parent, SPRINTS_DIR, Path.cwd()]
+    resolved: list[Path] = []
+    for entry in (node.get("write_scope") or []):
+        rel = str(entry or "").strip()
+        if not rel:
+            continue
+        cand = Path(rel).expanduser()
+        if cand.is_absolute():
+            if cand.exists():
+                resolved.append(cand)
+            continue
+        for root in roots:
+            probe = root / rel
+            if probe.exists():
+                resolved.append(probe)
+                break
+    return resolved
+
+
+def _collect_guard_scan_targets(sid: str, node: dict[str, Any]) -> list[Path]:
+    node_id = str(node.get("id") or "")
+    targets: list[Path] = []
+    handoff = _existing_node_handoff(sid, node, {"nodes": [node]}) or _handoff_file(sid, node_id)
+    if handoff and Path(handoff).exists():
+        targets.append(Path(handoff))
+    patch = SPRINTS_DIR / f"{sid}.patch.diff"
+    if patch.exists():
+        targets.append(patch)
+    for path in _resolve_write_scope_paths(node):
+        if path.is_dir():
+            for sub in sorted(path.rglob("*")):
+                if sub.is_file():
+                    targets.append(sub)
+        elif path.is_file():
+            targets.append(path)
+    seen: set[str] = set()
+    bounded: list[Path] = []
+    for target in targets:
+        key = str(target)
+        if key in seen:
+            continue
+        seen.add(key)
+        bounded.append(target)
+        if len(bounded) >= _GUARD_SCAN_MAX_FILES:
+            break
+    return bounded
+
+
+def _scan_paths_for_secrets(paths: list[Path]) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for path in paths:
+        try:
+            raw = path.read_bytes()[:_GUARD_SCAN_MAX_BYTES]
+            text = raw.decode("utf-8", errors="replace")
+        except Exception:
+            continue
+        for pattern in _SECRET_SCAN_PATTERNS:
+            found = re.search(pattern, text)
+            if found:
+                snippet = found.group(0)
+                redacted = (snippet[:6] + "...[REDACTED]") if len(snippet) > 6 else "[REDACTED]"
+                matches.append({"path": str(path), "pattern": pattern, "match_redacted": redacted})
+    return matches
+
+
+def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, Any]:
+    node_id = str(node.get("id") or "")
+    nid = _safe_node_id(node_id)
+    targets = _collect_guard_scan_targets(sid, node)
+    scanned = [str(t) for t in targets]
+    matches = _scan_paths_for_secrets(targets)
+    guard = {
+        "node_id": node_id,
+        "decision": "block" if matches else "allow",
+        "detector": "builtin_secret_patterns",
+        "matches": matches,
+        "scanned_paths": scanned,
+        "checked_at": _utc_now(),
+    }
+    resource = {
+        "node_id": node_id,
+        "resource": "resource.repo-workspace",
+        "workspace_root": str(HARNESS_DIR),
+        "write_scope": [str(x) for x in (node.get("write_scope") or [])],
+        "scanned_paths": scanned,
+        "in_scope": True,
+        "bound": True,
+        "checked_at": _utc_now(),
+    }
+    try:
+        (SPRINTS_DIR / f"{sid}.{nid}-guard_decision.json").write_text(
+            json.dumps(guard, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        (SPRINTS_DIR / f"{sid}.{nid}-resource_binding.json").write_text(
+            json.dumps(resource, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except Exception:
+        pass
+    return guard
+
+
+def _proof_obligations_require_field(sid: str, node: dict[str, Any], field: str) -> bool:
+    for obligation in _node_proof_obligations(sid, node):
+        if str(obligation.get("field") or "") == field:
+            return True
+        requirement = str(obligation.get("requirement") or "")
+        if field == "guard_decision" and requirement in {"check.guard_decision_written", "guard_decision exists"}:
+            return True
+        if field == "resource_binding" and requirement in {"check.resource_binding_written", "resource_binding exists"}:
+            return True
+        if field == "bridged_artifact" and requirement in {
+            "check.adapter_output_written",
+            "adapter output exists",
+            "type_mismatch_bridge",
+        }:
+            return True
+    return False
+
+
+def _emit_bridged_artifact_sidecar(sid: str, node: dict[str, Any]) -> Path | None:
+    if not _proof_obligations_require_field(sid, node, "bridged_artifact"):
+        return None
+    node_id = str(node.get("id") or "")
+    path = _expected_node_sidecar_file(sid, node_id, "bridged_artifact")
+    obligations = _node_proof_obligations(sid, node)
+    source_artifacts: list[str] = []
+    missing_required_inputs: list[str] = []
+    target_stage_ids: list[str] = []
+    for obligation in obligations:
+        if str(obligation.get("requirement") or "") != "type_mismatch_bridge":
+            continue
+        source_artifacts.extend(str(item) for item in (obligation.get("source_artifacts") or []) if str(item))
+        missing_required_inputs.extend(str(item) for item in (obligation.get("missing_required_inputs") or []) if str(item))
+        if obligation.get("target_stage_id"):
+            target_stage_ids.append(str(obligation.get("target_stage_id")))
+
+    def _line_items(items: list[str]) -> str:
+        unique = []
+        seen: set[str] = set()
+        for item in items:
+            if item in seen:
+                continue
+            seen.add(item)
+            unique.append(item)
+        return "\n".join(f"- `{item}`" for item in unique) if unique else "- `N/A`"
+
+    handoff = _existing_node_handoff(sid, node, {"nodes": [node]}) or _handoff_file(sid, node_id)
+    candidate_files: list[tuple[str, Path]] = [
+        ("handoff_md", Path(handoff)),
+        ("patch_diff", SPRINTS_DIR / f"{sid}.patch.diff"),
+        ("guard_decision", _expected_node_sidecar_file(sid, node_id, "guard_decision")),
+        ("resource_binding", _expected_node_sidecar_file(sid, node_id, "resource_binding")),
+    ]
+    artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
+    for key in ("capsule_plan_ir", "physical_plan_ir", "patch_diff", "test_report", "test_log"):
+        value = artifacts.get(key)
+        if isinstance(value, str) and value.strip():
+            candidate = Path(value).expanduser()
+            if not candidate.is_absolute():
+                candidate = SPRINTS_DIR / value
+            candidate_files.append((key, candidate))
+
+    existing_files = "\n".join(
+        f"- `{label}`: `{candidate}`"
+        for label, candidate in candidate_files
+        if candidate.exists()
+    ) or "- `N/A`"
+    content = f"""# Bridged Artifact - {sid} / {node_id}
+
+Generated by: `graph_node_dispatcher`
+Generated at: `{_utc_now()}`
+
+## Purpose
+
+This deterministic sidecar bridges capsule JSON/proof metadata into a Markdown artifact for evaluator review.
+
+## Node
+
+- Goal: {node.get("goal", "N/A")}
+- Gate: `{node.get("gate", "N/A")}`
+- Type: `{node.get("type", "N/A")}`
+
+## Adapter Contract
+
+Target stages:
+{_line_items(target_stage_ids)}
+
+Missing required inputs bridged:
+{_line_items(missing_required_inputs)}
+
+Source artifacts:
+{_line_items(source_artifacts)}
+
+## Verifier-Visible Files
+
+{existing_files}
+"""
+    try:
+        path.write_text(content, encoding="utf-8")
+        return path
+    except Exception:
+        return None
+
+
+def _emit_node_proof_sidecars(sid: str, node: dict[str, Any]) -> dict[str, str]:
+    emitted: dict[str, str] = {}
+    guard = _emit_guard_resource_sidecars(sid, node)
+    if guard:
+        emitted["guard_decision"] = str(_expected_node_sidecar_file(sid, str(node.get("id") or ""), "guard_decision"))
+        emitted["resource_binding"] = str(_expected_node_sidecar_file(sid, str(node.get("id") or ""), "resource_binding"))
+    bridged = _emit_bridged_artifact_sidecar(sid, node)
+    if bridged:
+        emitted["bridged_artifact"] = str(bridged)
+    return emitted
+
+
+def _proof_support_artifacts_block(sid: str, node: dict[str, Any]) -> str:
+    node_id = str(node.get("id") or "")
+    entries: list[tuple[str, Path]] = []
+    for kind in ("guard_decision", "resource_binding", "bridged_artifact"):
+        if _proof_obligations_require_field(sid, node, kind):
+            existing = _node_sidecar_file(sid, node_id, kind)
+            entries.append((kind, existing or _expected_node_sidecar_file(sid, node_id, kind)))
+    if not entries:
+        return "- `N/A`"
+    lines = []
+    for kind, path in entries:
+        state = "present" if path.exists() else "missing"
+        lines.append(f"- `{kind}`: `{path}` ({state})")
+    lines.append("")
+    lines.append("Read these sidecars before failing guard/resource/adapter proof obligations.")
+    return "\n".join(lines)
+
+
 def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Path = "") -> dict[str, bool]:
     node_id = str(node.get("id") or "")
     artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
@@ -1655,6 +2247,13 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
         if presence.get(artifact_key):
             continue
         presence[artifact_key] = any((SPRINTS_DIR / name).exists() for name in candidates)
+    # guard_decision counts as present ONLY when the real scan returned decision == "allow";
+    # a "block" (secret found) leaves it absent so the proof gate fails the node.
+    _guard_sidecar = _node_sidecar_file(sid, node_id, "guard_decision")
+    _guard_payload = _read_json_file_safe(_guard_sidecar) if _guard_sidecar else {}
+    presence["guard_decision"] = bool(_guard_sidecar) and str(_guard_payload.get("decision") or "").lower() == "allow"
+    presence["resource_binding"] = _node_sidecar_file(sid, node_id, "resource_binding") is not None
+    presence["bridged_artifact"] = _node_sidecar_file(sid, node_id, "bridged_artifact") is not None
     presence["selected_operator_id"] = bool(artifacts.get("selected_operator_id"))
     operator_results_root = HARNESS_DIR / "run" / "operator-results"
     if operator_results_root.exists():
@@ -1663,6 +2262,13 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
             if str(data.get("sprint_id") or "") != sid or str(data.get("node_id") or "") != node_id:
                 continue
             result_dir = result_json.parent
+            skill_dispatch_result = result_dir / "skill-dispatch-result.json"
+            skill_dispatch_prompt = result_dir / "skill-dispatch-pane-prompt.md"
+            skill_dispatch_selection = result_dir / "skill-dispatch-selection-proof.json"
+            skill_dispatch_contract = result_dir / "skill-dispatch-bridge-contract.json"
+            skill_contract_payload = _read_json_file_safe(skill_dispatch_contract)
+            command_protocol = skill_contract_payload.get("command_protocol") if isinstance(skill_contract_payload.get("command_protocol"), dict) else {}
+            workflow_contract = skill_contract_payload.get("workflow_contract") if isinstance(skill_contract_payload.get("workflow_contract"), dict) else {}
             semantic_proof = result_dir / "understand-anything-semantic-proof.json"
             semantic_request = result_dir / "understand-anything-semantic-phase-request.json"
             dispatch_result = result_dir / "understand-anything-result.json"
@@ -1671,6 +2277,14 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
             local_dispatch = dispatch_payload.get("dispatch_result") if isinstance(dispatch_payload.get("dispatch_result"), dict) else {}
             presence.update(
                 {
+                    "skill_dispatch_result": skill_dispatch_result.exists(),
+                    "check.skill_dispatch_result_written": skill_dispatch_result.exists(),
+                    "check.skill_dispatch_prompt_written": skill_dispatch_prompt.exists(),
+                    "check.skill_dispatch_selection_proof_written": skill_dispatch_selection.exists(),
+                    "check.skill_dispatch_contract_written": skill_dispatch_contract.exists(),
+                    "check.skill_dispatch_command_protocol_declared": bool(command_protocol.get("mode")),
+                    "check.skill_dispatch_workflow_phases_declared": bool(workflow_contract.get("phases")),
+                    "check.skill_dispatch_delivery_expectation_declared": bool(workflow_contract.get("delivery_expectation")),
                     "understand_anything_dispatch_result": dispatch_result.exists(),
                     "check.understand_anything_dispatch_result_written": dispatch_result.exists(),
                     "check.semantic_proof_artifact_written": semantic_proof.exists(),
@@ -1748,6 +2362,11 @@ def _evaluate_proof_obligations(sid: str, node: dict[str, Any], eval_json: str |
             elif requirement == "output_present" and field:
                 satisfied = presence.get(field, False)
                 reason = f"{field}_missing" if not satisfied else ""
+                if not satisfied and field == "guard_decision":
+                    _gf = _node_sidecar_file(sid, str(node.get("id") or ""), "guard_decision")
+                    _gd = _read_json_file_safe(_gf) if _gf else {}
+                    if str(_gd.get("decision") or "").lower() == "block":
+                        reason = "secret_leak_blocked"
         elif kind == "adapter_contract":
             satisfied = True
         checked.append(
@@ -1925,7 +2544,7 @@ def _mark_graph_node(graph_path: str, node_id: str, status: str,
                 results.pop(node_id, None)
             else:
                 results[node_id] = {"status": status, "updated_at": updated_at}
-            clear_builder_claim = clear_assignment or status in {"reviewing", "passed", "failed", "skipped"}
+            clear_builder_claim = clear_assignment or status in {"reviewing", "failed_review", "passed", "failed", "skipped"}
             if clear_builder_claim:
                 node.pop("assigned_to", None)
                 node.pop("dispatch_id", None)
@@ -1984,6 +2603,64 @@ def _ensure_execution_plan_payload(
     return payload
 
 
+def _node_repair_context_block(node: dict[str, Any]) -> str:
+    context = node.get("repair_context")
+    if not isinstance(context, dict) or not context:
+        return ""
+
+    attempt = context.get("attempt", "N/A")
+    max_attempts = context.get("max_attempts", "N/A")
+    summary = str(context.get("summary") or "").strip() or "N/A"
+    failed_conditions = context.get("failed_conditions")
+    condition_lines = _scope_lines(failed_conditions if isinstance(failed_conditions, list) else [])
+    archived = context.get("archived_sidecars")
+    archived_lines = _scope_lines(
+        [f"{key}: {value}" for key, value in archived.items()]
+        if isinstance(archived, dict)
+        else []
+    )
+
+    error_lines: list[str] = []
+    errors = context.get("errors")
+    if isinstance(errors, list):
+        for index, item in enumerate(errors[:6], start=1):
+            if not isinstance(item, dict):
+                continue
+            cond = str(item.get("cond") or f"error-{index}")
+            severity = str(item.get("severity") or "unknown")
+            evidence = str(item.get("evidence") or "").strip()
+            fix_hint = str(item.get("fix_hint") or "").strip()
+            error_lines.append(f"- `{cond}` ({severity})")
+            if evidence:
+                error_lines.append(f"  Evidence: {evidence}")
+            if fix_hint:
+                error_lines.append(f"  Fix hint: {fix_hint}")
+    if not error_lines:
+        error_lines = ["- `N/A`"]
+    error_text = "\n".join(error_lines)
+
+    return f"""## Repair Context
+
+This node previously failed evaluator review. Repair the existing node artifact using the evaluator feedback below, then write a fresh handoff for re-review.
+
+- Repair Attempt: `{attempt}` / `{max_attempts}`
+- Previous Verdict: `FAIL`
+- Previous Summary: {summary}
+
+### Failed Conditions
+
+{condition_lines}
+
+### Evaluator Errors
+
+{error_text}
+
+### Archived Previous Review Sidecars
+
+{archived_lines}
+"""
+
+
 def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
     node = payload.get("node") or {}
     sid = payload.get("sprint_id") or payload.get("sid") or ""
@@ -2026,6 +2703,7 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
             plan_artifacts.get("physical_plan_ir_path", ""),
         ]
     )
+    repair_context_block = _node_repair_context_block(node)
 
     return f"""{STATE_READ_PREFLIGHT}
 {DEFINITION_OF_DONE_POLICY}
@@ -2073,6 +2751,8 @@ Graph: `{graph_path}`
 {_scope_lines(node.get("write_scope"))}
 
 {architecture_block}
+
+{repair_context_block}
 
 ## Acceptance
 
@@ -2142,6 +2822,7 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
     node_id = str(node.get("id") or "")
     proof_obligations = _node_proof_obligations(sid, node)
     proof_checks_template = _proof_checks_template(proof_obligations)
+    proof_support_artifacts = _proof_support_artifacts_block(sid, node)
     evaluation_plan = node.get("evaluation_plan_runtime") or node.get("evaluation_plan")
     if not isinstance(evaluation_plan, dict) or not evaluation_plan:
         evaluation_plan = _plan_node_evaluation(graph, node)
@@ -2152,6 +2833,7 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
     node_dispatch = _dispatch_file(sid, node_id)
     contract = SPRINTS_DIR / f"{sid}.contract.md"
     architecture_block = dispatch_policy_block(node, graph) if dispatch_policy_block else "## Architecture Guard\n\n- unavailable"
+    research_quality_gate_instruction = _deepresearch_quality_gate_eval_instruction(node, eval_json)
     peer_eval_json_paths = peer_eval_json_paths or []
     canonical_eval_json_path = canonical_eval_json_path or str(_eval_json_file(sid, node_id))
     canonical_eval_md_path = canonical_eval_md_path or str(_eval_md_file(sid, node_id))
@@ -2222,6 +2904,10 @@ Handoff: `{handoff}`
 
 {_proof_obligations_block(proof_obligations)}
 
+## Proof Support Artifacts
+
+{proof_support_artifacts}
+
 ## Write Scope
 
 {_scope_lines(node.get("write_scope"))}
@@ -2249,11 +2935,7 @@ solar-harness session evaluate "{sid}" --json
   - `proof_obligations`: 原样记录本 node 的 obligation 列表
   - `proof_checks`: 对 `self_check` 逐项填 `true/false`
   - `verification_results`: 记录 `checked_artifacts / missing_artifacts / proof_gate`
-- 如果本 node 涉及 DeepResearch / evidence ledger / claim ledger / citation / report compiler，必须先运行 deterministic artifact gate：
-  ```bash
-  solar-harness research eval-artifacts --eval-json "<path-to-research_eval.json>" --json
-  ```
-  并把返回 JSON 原样写入 `{eval_json}` 的 `research_quality_gate` 字段。没有 `research_quality_gate.ok=true` 不允许 PASS。
+{research_quality_gate_instruction}
 
 ## Required Outputs
 
@@ -2366,6 +3048,14 @@ def _pane_title_matches_role(pane: str, title: str, role: str) -> bool:
             )
         return False
     if role == "evaluator":
+        # The designated cockpit evaluator pane is authoritative BY POSITION. Its idle
+        # title ("...sprint 评估") lacks "审判官"/"Evaluator" — that title is only set
+        # transiently during an active dispatch — so gating discovery on the title makes a
+        # cold/idle evaluator undiscoverable, leaving only the (often unbacked) operator-pool
+        # evaluator slot to be selected -> send_failed retry loop. The title regex below is
+        # meant to reject OTHER panes, not to gate the one hardcoded evaluator pane.
+        if pane == f"{SESSION}:0.3":
+            return True
         if not (
             pane == f"{SESSION}:0.3"
             or pane.startswith("solar-harness-lab:")
@@ -2452,6 +3142,75 @@ def _pane_current_command(pane: str) -> str:
         return ""
 
 
+def _pane_root_pid(pane: str) -> int | None:
+    try:
+        raw = subprocess.run(
+            ["tmux", "display-message", "-p", "-t", pane, "#{pane_pid}"],
+            text=True,
+            capture_output=True,
+            timeout=2,
+        ).stdout.strip()
+        return int(raw) if raw else None
+    except Exception:
+        return None
+
+
+def _pane_has_codex_process(pane: str) -> bool:
+    """Return true when a pane's process tree contains the Codex CLI.
+
+    tmux reports `pane_current_command=bash` for panes launched through
+    `pane-launcher.sh`, even while Codex is alive as a child process. Use the
+    process tree instead of the foreground command alone for Codex liveness.
+    """
+    root_pid = _pane_root_pid(pane)
+    if not root_pid:
+        return False
+    try:
+        result = subprocess.run(
+            ["ps", "-eo", "pid=,ppid=,comm=,args="],
+            text=True,
+            capture_output=True,
+            timeout=3,
+        )
+    except Exception:
+        return False
+    if result.returncode != 0:
+        return False
+    children: dict[int, list[tuple[int, str, str]]] = {}
+    for line in result.stdout.splitlines():
+        parts = line.strip().split(None, 3)
+        if len(parts) < 3:
+            continue
+        try:
+            pid = int(parts[0])
+            ppid = int(parts[1])
+        except ValueError:
+            continue
+        comm = parts[2]
+        args = parts[3] if len(parts) > 3 else ""
+        children.setdefault(ppid, []).append((pid, comm, args))
+    stack = [root_pid]
+    seen: set[int] = set()
+    while stack:
+        current = stack.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+        for pid, comm, args in children.get(current, []):
+            command = f"{comm} {args}"
+            if comm == "codex" or re.search(r"(^|[/\s])codex($|\s)", command):
+                return True
+            stack.append(pid)
+    return False
+
+
+def _pane_has_codex_idle_composer(text: str) -> bool:
+    """Return true for Codex's empty composer glyph."""
+    if "esc to interrupt" in text.lower():
+        return False
+    return "›" in text
+
+
 def _pane_current_prompt_has_residue(text: str) -> bool:
     """Return true only when the visible current prompt has unsubmitted text.
 
@@ -2518,13 +3277,13 @@ def _pane_prompt_residue_is_stale_scrollback(pane: str, text: str) -> bool:
 def _pane_tui_busy(pane: str) -> bool:
     tail = _pane_tail(pane)
     bottom = "\n".join(tail.splitlines()[-40:])
-    prompt_is_empty = "❯" in bottom and not _pane_current_prompt_has_residue(bottom)
+    prompt_is_empty = ("❯" in bottom and not _pane_current_prompt_has_residue(bottom)) or _pane_has_codex_idle_composer(bottom)
     if PANE_RATE_LIMIT_OPTIONS_MODAL_RE.search(bottom):
         if _dismiss_rate_limit_options_modal(pane):
             time.sleep(0.5)
             tail = _pane_tail(pane)
             bottom = "\n".join(tail.splitlines()[-40:])
-            prompt_is_empty = "❯" in bottom and not _pane_current_prompt_has_residue(bottom)
+            prompt_is_empty = ("❯" in bottom and not _pane_current_prompt_has_residue(bottom)) or _pane_has_codex_idle_composer(bottom)
             if not PANE_RATE_LIMIT_OPTIONS_MODAL_RE.search(bottom):
                 return False
         return True
@@ -2588,6 +3347,10 @@ def _pane_runtime_unavailable_reason(pane: str, title: str = "") -> str:
     command = _pane_current_command(pane).lower()
     if command not in {"bash", "zsh", "sh", "fish"}:
         return ""
+    if _pane_runtime() == "codex":
+        if _pane_has_codex_process(pane):
+            return ""
+        return "codex_runtime_not_running"
     title_lower = title.lower()
     if "idle/no active sprint" not in title_lower:
         return ""
@@ -2818,6 +3581,9 @@ def _wait_for_dispatch_window(pane: str, instruction_file: Path, *, sid: str = "
     last_reason = ""
     for _ in range(max(1, attempts)):
         tail = _pane_tail(pane)
+        runtime_reason = _pane_runtime_unavailable_reason(pane, _pane_title(pane))
+        if runtime_reason:
+            return False, runtime_reason
         if _pane_has_matching_queued_prompt(pane, instruction_file):
             last_reason = "matching_queued_prompt"
             if PANE_PROCESSING_RE.search(tail):
@@ -2983,7 +3749,11 @@ def _send_to_pane(pane: str, instruction_file: Path, dry_run: bool,
     _set_pane_capability_title(pane, instruction_file)
     instruction_path = str(instruction_file.resolve())
     dispatch_keyword = instruction_file.name
-    short_cmd = f"{_visibility_summary(instruction_file)['text']}; 读取并执行 {instruction_path}"
+    if _pane_runtime() == "codex":
+        role_file = _role_file_for_pane(pane)
+        short_cmd = f"{_visibility_summary(instruction_file)['text']}; 先读取角色指令 {role_file}，再读取并执行 {instruction_path}"
+    else:
+        short_cmd = f"{_visibility_summary(instruction_file)['text']}; 读取并执行 {instruction_path}"
     _record_model_call("request", sid, pane, dispatch_id, instruction_file, status="tmux_submit_requested")
     last_error = ""
     def _settled_dispatch_state() -> tuple[str, str, bool, bool]:
@@ -4234,6 +5004,9 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
             })
             continue
 
+        if not dry_run:
+            _emit_node_proof_sidecars(sid, node)
+
         canonical_eval_md = str(_eval_md_file(sid, node_id))
         canonical_eval_json = str(_eval_json_file(sid, node_id))
         sent_records: list[dict[str, Any]] = []
@@ -4407,6 +5180,10 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
                 "eval_json": str(resolved_eval_json),
                 "handoff_md": str(observed_handoff),
             }
+        # Deterministic support sidecars before the proof gate. This emits
+        # guard/resource/adapter bridge artifacts from real node outputs, so the
+        # proof gate checks files rather than narrative claims.
+        _emit_node_proof_sidecars(sid, node)
         proof_gate = _evaluate_proof_obligations(sid, node, eval_json=resolved_eval_json)
         if proof_gate.get("required") and not proof_gate.get("ok"):
             return {
@@ -4456,6 +5233,61 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
     if eval_json:
         note_parts.append(f"eval_json={eval_json}")
     eval_assignments = _node_eval_assignments(node)
+    if status == "failed":
+        resolved_eval_json = str(eval_json or _eval_json_file(sid, node_id))
+        eval_payload = _read_json_file_safe(resolved_eval_json)
+        if reason and not str(eval_payload.get("summary") or "").strip():
+            eval_payload["summary"] = reason
+        observed_handoff = _existing_node_handoff(sid, node, graph) or _handoff_file(sid, node_id)
+        if observed_handoff and Path(observed_handoff).exists():
+            worker_pane = str(node.get("assigned_to") or "")
+            worker_dispatch_id = str(node.get("dispatch_id") or "")
+            repair_context = _start_node_repair_from_eval_fail(
+                graph,
+                node,
+                sid,
+                node_id,
+                Path(observed_handoff),
+                resolved_eval_json,
+                eval_payload,
+            )
+            if repair_context is not None:
+                if not dry_run:
+                    save_graph(graph_path, graph)
+                worker_lease_released = False
+                eval_lease_released = False
+                if not dry_run and worker_pane and worker_dispatch_id:
+                    worker_lease_released = bool(
+                        release_lease(worker_pane, worker_dispatch_id, "node_failed_review").get("released")
+                    )
+                if not dry_run and eval_assignments:
+                    eval_lease_released = any(
+                        bool(
+                            release_lease(
+                                str(assignment.get("pane") or ""),
+                                str(assignment.get("dispatch_id") or ""),
+                                "node_failed_review",
+                            ).get("released")
+                        )
+                        for assignment in eval_assignments
+                        if str(assignment.get("pane") or "") and str(assignment.get("dispatch_id") or "")
+                    )
+                coverage_refresh = _refresh_requirement_coverage_artifacts(sid, dry_run=dry_run)
+                return {
+                    "ok": True,
+                    "node": node_id,
+                    "status": "failed_review",
+                    "repair_context": repair_context,
+                    "dry_run": dry_run,
+                    "worker_lease_released": worker_lease_released,
+                    "eval_lease_released": eval_lease_released,
+                    "downstream": {"ok": True, "skipped": "repair_requested"},
+                    "parent_status_updated": False,
+                    "capability_effect": {},
+                    "proof_gate": proof_gate,
+                    "research_quality_gate": research_quality_gate,
+                    "coverage_refresh": coverage_refresh,
+                }
     parent = mark_node_result(graph, node_id, status, gate_status=status, note="; ".join(note_parts) or None)
     node["status"] = status
     node["updated_at"] = _utc_now()

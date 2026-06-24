@@ -23,7 +23,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 from runtime_interfaces import ContextView
 from session_log import DuplicateEventError, SessionLog
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = os.path.expanduser(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or "~/.solar/harness"
+)
 
 # Default secret patterns for redaction
 _SECRET_PATTERNS = [

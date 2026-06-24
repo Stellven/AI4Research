@@ -8,6 +8,13 @@ keeps runtime state under `~/.solar/`.
 For repository work, prefer `AGENTS.md` as the detailed maintainer guide. Keep
 this file small, public-safe, and aligned with the shipped tree.
 
+## Frontend Design
+
+Before building or changing the AI4Research GUI under
+`harness/status-server/react-app`, read `./DESIGN.md` and follow it exactly. Its
+token front matter is the single source of truth; never introduce colors,
+fonts, shadows, gradients, or progress bars outside it.
+
 ## Project Boundary
 
 - OpenSolar is being packaged as a community-distributable installer and runtime.

@@ -33,6 +33,13 @@ else
   fail "pane-launcher does not append runtime policy"
 fi
 
+if grep -q 'check_for_update_on_startup=false' "$HARNESS_DIR/pane-launcher.sh" \
+  && grep -q 'SOLAR_CODEX_CHECK_FOR_UPDATE_ON_STARTUP' "$HARNESS_DIR/pane-launcher.sh"; then
+  ok "Codex panes disable startup update prompts by default"
+else
+  fail "Codex pane launcher can still show startup update prompts"
+fi
+
 if grep -q '_runtime_policy=$(inject_runtime_policy "$PERSONA")' "$HARNESS_DIR/start-incarnation.sh" \
   && grep -q '\$CLAUDE_CMD --append-system-prompt "\$_runtime_policy' "$HARNESS_DIR/start-incarnation.sh"; then
   ok "start-incarnation prepends runtime policy in append-system-prompt"

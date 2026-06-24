@@ -407,11 +407,19 @@ def _kick_operatord_once(operator_id: str) -> int:
     """Best-effort bootstrap so submit() progresses beyond leased -> running."""
     env = os.environ.copy()
     env["HARNESS_DIR"] = str(HARNESS_DIR)
+    # Observability: send operatord output to a per-operator log instead of /dev/null,
+    # so a crash/exit is diagnosable (previously discarded -> operatord deaths were invisible).
+    try:
+        _log_dir = HARNESS_DIR / "run" / "operator-daemons"
+        _log_dir.mkdir(parents=True, exist_ok=True)
+        _log_out = open(_log_dir / f"{operator_id}.log", "a", encoding="utf-8")
+    except Exception:
+        _log_out = subprocess.DEVNULL
     proc = subprocess.Popen(
         _operatord_once_command(operator_id),
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=_log_out,
+        stderr=subprocess.STDOUT,
         cwd=str(HARNESS_DIR),
         env=env,
         start_new_session=True,

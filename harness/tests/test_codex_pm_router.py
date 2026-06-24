@@ -37,6 +37,46 @@ def test_build_pm_intake_emits_capsule_plan_for_standard_request():
     assert by_id["S2"]["capability_capsule_id"] == "cap.requirement-compiler-implementation"
     assert by_id["S4"]["capability_capsule_id"] == "cap.requirement-compiler-verification"
     assert by_id["S2"]["capsule_plan"]["required_resource_capsules"] == ["resource.repo-workspace"]
+    validation = router.validate_compiled_package(payload)
+    assert validation["ok"] is True
+    assert validation["errors"] == []
+
+
+def test_standard_compiled_prd_passes_existing_schema_validator(tmp_path):
+    router = _load_router()
+    payload = router.build_pm_intake(
+        "Build a requirement compiler that produces PRD, contracts, and task graphs.",
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+    prd_path = tmp_path / "compiled.prd.md"
+    prd_path.write_text(payload["compiled_artifacts"]["prd_markdown"], encoding="utf-8")
+    result = subprocess.run(
+        ["bash", str(ROOT / "schemas" / "validate.sh"), "prd", str(prd_path)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_parallel_delivery_still_enforces_ready_width_gate():
+    router = _load_router()
+    payload = router.build_pm_intake(
+        "Fix the reliability bug and produce a hotfix rollout plan.",
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+    assert payload["dag_variant"] == "parallel_delivery"
+    assert router.validate_compiled_package(payload)["ok"] is True
+
+    graph = payload["compiled_artifacts"]["task_dag"]
+    graph["nodes"][1]["depends_on"] = ["S1"]
+    graph["nodes"][2]["depends_on"] = ["S1"]
+
+    validation = router.validate_compiled_package(payload)
+    assert validation["ok"] is False
+    assert any(error.startswith("task_graph_ready_width_below_min:") for error in validation["errors"])
 
 
 def test_build_pm_intake_emits_capsule_plan_for_research_request():

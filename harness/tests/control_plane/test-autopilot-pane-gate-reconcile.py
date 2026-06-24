@@ -369,6 +369,88 @@ def test_ready_for_planner_finding_bypasses_fixed_pane_busy(monkeypatch) -> None
     assert actions[0]["role_pool_dispatch"]["role"] == "planner"
 
 
+def test_codex_runtime_disables_role_pool_handoff_by_default(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+    monkeypatch.delenv("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", raising=False)
+
+    assert mod.finding_uses_operator_role_pool("ready_for_planner") is False
+
+    monkeypatch.setenv("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", "1")
+    assert mod.finding_uses_operator_role_pool("ready_for_planner") is True
+
+
+def test_codex_runtime_ready_for_planner_uses_wake_not_role_pool(monkeypatch) -> None:
+    sid = "sprint-codex-planner"
+    finding = {
+        "sid": sid,
+        "type": "ready_for_planner",
+        "target": "solar-harness:0.1",
+        "message": "planner dispatch",
+        "severity": "info",
+    }
+    state: dict = {"actions": {}, "target_actions": {}}
+    monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+    monkeypatch.delenv("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", raising=False)
+    monkeypatch.setattr(mod, "should_act", lambda state, f, cooldown: True)
+    monkeypatch.setattr(mod, "target_recently_dispatched", lambda state, target, cooldown: False)
+    monkeypatch.setattr(mod, "pane_gate", lambda target, sid: (True, "ok", {}))
+    monkeypatch.setattr(mod, "pane_is_busy", lambda target: False)
+    monkeypatch.setattr(mod, "clear_current_prompt", lambda target: None)
+    monkeypatch.setattr(mod, "save_json", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod, "append_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod, "load_json", lambda path: {
+        "sprint_id": sid,
+        "status": "drafting",
+        "phase": "prd_ready",
+        "handoff_to": "planner",
+    })
+    monkeypatch.setattr(mod, "mark_action", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        mod,
+        "dispatch_role_handoff",
+        lambda s, t: (_ for _ in ()).throw(AssertionError("role pool should be skipped")),
+    )
+    wake_calls: list[str] = []
+    monkeypatch.setattr(mod, "wake_sid", lambda s: wake_calls.append(s) or True)
+
+    actions = mod.apply_findings([finding], dispatch=True, state=state, cooldown=0)
+
+    assert wake_calls == [sid]
+    assert actions[0]["dispatched"] is True
+    assert "role_pool_dispatch" not in actions[0]
+
+
+def test_wake_sid_uses_current_harness_command(tmp_path, monkeypatch) -> None:
+    harness_dir = tmp_path / "harness"
+    harness_dir.mkdir()
+    harness_cmd = harness_dir / "solar-harness.sh"
+    harness_cmd.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "HARNESS", harness_dir)
+    monkeypatch.setattr(mod, "SESSION", "solar-codex-test")
+    monkeypatch.setenv("SOLAR_PANE_RUNTIME", "codex")
+    calls = []
+
+    class Proc:
+        returncode = 0
+
+    def fake_run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return Proc()
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    assert mod.wake_sid("sprint-local-harness") is True
+
+    assert calls
+    cmd, kwargs = calls[0]
+    assert cmd == ["bash", str(harness_cmd), "wake", "sprint-local-harness"]
+    assert str(mod.HOME / ".solar" / "bin" / "solar-harness") not in cmd
+    assert kwargs["env"]["HARNESS_DIR"] == str(harness_dir)
+    assert kwargs["env"]["SOLAR_HARNESS_DIR"] == str(harness_dir)
+    assert kwargs["env"]["SOLAR_HARNESS_SESSION"] == "solar-codex-test"
+    assert kwargs["env"]["SOLAR_PANE_RUNTIME"] == "codex"
+
+
 def test_role_pool_handoffs_do_not_share_fixed_target_cooldown(monkeypatch) -> None:
     findings = [
         {"sid": "sprint-a", "type": "ready_for_planner", "target": "solar-harness:0.1", "message": "a"},

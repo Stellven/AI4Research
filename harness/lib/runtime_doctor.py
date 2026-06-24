@@ -18,7 +18,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = os.path.expanduser(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or "~/.solar/harness"
+)
 SPRINTS_DIR = os.path.join(HARNESS_DIR, "sprints")
 SESSIONS_DIR = os.path.join(HARNESS_DIR, "sessions")
 

@@ -10,6 +10,8 @@
 set -eu
 
 HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
+COORDINATOR_SH="${HARNESS_DIR}/coordinator.sh"
+export COORDINATOR_SH
 
 # ── Safety guards ──
 [[ "${SESSION_NAME:-}" == "solar-harness" ]] && {
@@ -51,11 +53,16 @@ EOF
 python3 - <<'PYEOF'
 import re, sys
 
-with open(f"{__import__('os').environ['HOME']}/.solar/harness/coordinator.sh") as f:
+with open(__import__('os').environ["COORDINATOR_SH"]) as f:
     src = f.read()
 
 # Extract discover_pane_by_persona, choose_* functions and pane_title_persona
 funcs_to_extract = [
+    "pane_is_idle_snapshot",
+    "pane_has_processing_snapshot",
+    "pane_has_prompt_snapshot",
+    "pane_prompt_input_snapshot",
+    "ensure_ack_contract",
     "pane_title_persona",
     "discover_pane_by_persona",
     "choose_builder_pane",
@@ -165,6 +172,83 @@ assert "exact 'Persona: evaluator' line matches strict pattern" \
 TEST_WITH_SUFFIX="Persona: evaluator-pending"
 assert "'evaluator-pending' does not match strict pattern" \
   '! printf "%s\n" "$TEST_WITH_SUFFIX" | grep -qE "$PATTERN"'
+echo ""
+
+# ── TC6: Coordinator honors custom tmux session env ──
+echo "TC6: coordinator.sh session defaults honor custom-session env"
+assert "SESSION_NAME reads SOLAR_HARNESS_SESSION" \
+  'grep -qF '\''SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"'\'' "$COORDINATOR_SH"'
+assert "LAB_SESSION_NAME derives from custom session unless explicitly set" \
+  'grep -qF '\''LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"'\'' "$COORDINATOR_SH"'
+echo ""
+
+# ── TC7: Codex idle composer is dispatchable ──
+echo "TC7: Codex idle composer is treated as idle, slash residue is not"
+CODEX_IDLE_SNAPSHOT=$'╭────────────────────────╮\n│ >_ OpenAI Codex       │\n│ permissions: YOLO mode│\n╰────────────────────────╯\n\n› Find and fix a bug in @filename\n\n  gpt-5.5 xhigh fast · /tmp/repo'
+CODEX_SLASH_SNAPSHOT=$'╭────────────────────────╮\n│ >_ OpenAI Codex       │\n│ permissions: YOLO mode│\n╰────────────────────────╯\n\n› /clear\n\n  gpt-5.5 xhigh fast · /tmp/repo'
+assert "Codex suggestion composer is idle" \
+  'pane_is_idle_snapshot "$CODEX_IDLE_SNAPSHOT"'
+assert "Codex slash residue is not idle" \
+  '! pane_is_idle_snapshot "$CODEX_SLASH_SNAPSHOT"'
+assert "Codex prompt glyph is detected" \
+  'pane_has_prompt_snapshot "$CODEX_IDLE_SNAPSHOT"'
+PROMPT_INPUT="$(pane_prompt_input_snapshot "$CODEX_IDLE_SNAPSHOT")"
+assert "Codex default suggestion is not treated as typed residue" \
+  '[[ -z "$PROMPT_INPUT" ]]'
+SLASH_INPUT="$(pane_prompt_input_snapshot "$CODEX_SLASH_SNAPSHOT")"
+assert "Codex slash residue remains visible to quarantine logic" \
+  '[[ "$SLASH_INPUT" == "/clear" ]]'
+echo ""
+
+# ── TC8: Codex processing markers satisfy coordinator direct-dispatch verification ──
+echo "TC8: Codex processing markers count as real direct-dispatch processing"
+CODEX_WORKING_SNAPSHOT=$'› Read and execute /tmp/sprint.dispatch.md\n\n• Working (12s · esc to interrupt)\n'
+assert "Codex Working marker is processing" \
+  'pane_has_processing_snapshot "$CODEX_WORKING_SNAPSHOT"'
+assert "Codex esc-to-interrupt marker is processing" \
+  'pane_has_processing_snapshot "esc to interrupt"'
+echo ""
+
+# ── TC9: ACK contract follows active SPRINTS_DIR, not installed ~/.solar path ──
+echo "TC9: ACK contract uses active worktree SPRINTS_DIR"
+ACK_TMP="$TEST_TMP/ack-path"
+mkdir -p "$ACK_TMP/sprints"
+OLD_SPRINTS_DIR="${SPRINTS_DIR:-}"
+SPRINTS_DIR="$ACK_TMP/sprints"
+DISPATCH_FILE="$ACK_TMP/sprints/sprint-test.dispatch.md"
+printf 'dispatch body\n' > "$DISPATCH_FILE"
+ensure_ack_contract "$DISPATCH_FILE" "sprint-test" "dispatch-123" "solar-codex-cockpit-smoke:0.1"
+assert "ACK path points at active SPRINTS_DIR" \
+  'grep -qF "$ACK_TMP/sprints/sprint-test.ack-dispatch-123.json" "$DISPATCH_FILE"'
+assert "ACK contract no longer hard-codes Path.home ~/.solar harness" \
+  '! grep -qF '\''Path.home() / ".solar" / "harness" / "sprints"'\'' "$DISPATCH_FILE"'
+SPRINTS_DIR="$OLD_SPRINTS_DIR"
+echo ""
+
+# ── TC10: tmux dispatch text is sent literally ──
+echo "TC10: coordinator sends dispatch command as literal tmux text"
+assert "dispatch_to_pane uses tmux send-keys -l for short command" \
+  'grep -qF '\''tmux send-keys -t "$pane" -l "$short_cmd"'\'' "$COORDINATOR_SH"'
+assert "dispatch_to_pane no longer sends short command through key-name parser" \
+  '! grep -qF '\''tmux send-keys -t "$pane" "$short_cmd"'\'' "$COORDINATOR_SH"'
+echo ""
+
+# ── TC11: generated worker prompts do not route isolated runs to installed harness ──
+echo "TC11: coordinator prompt text is harness-dir aware"
+assert "coordinator.sh no longer hard-codes ~/.solar/harness in worker prompts" \
+  '! grep -qF '\''~/.solar/harness'\'' "$COORDINATOR_SH"'
+assert "coordinator.sh prompt text uses active SPRINTS_DIR" \
+  'grep -qF '\''${SPRINTS_DIR}/${sid}.contract.md'\'' "$COORDINATOR_SH"'
+assert "coordinator.sh prompt text uses active HARNESS_DIR for helper commands" \
+  'grep -qF '\''${HARNESS_DIR}/solar-harness.sh handoff-submit'\'' "$COORDINATOR_SH"'
+echo ""
+
+# ── TC12: capture-verified direct dispatch materializes ACK to avoid false timeouts ──
+echo "TC12: capture-verified direct dispatch writes control-plane ACK"
+assert "dispatch_to_pane writes in-progress ACK after capture verification" \
+  'grep -qF '\''write_ack_file "$sid" "$_dispatch_id" "$role" "in_progress"'\'' "$COORDINATOR_SH"'
+assert "ACK watcher still launches after capture ACK" \
+  'grep -qF '\''ack_watcher_bg "$sid" "${_dispatch_id:-unknown}" 300'\'' "$COORDINATOR_SH"'
 echo ""
 
 # ── Summary ──

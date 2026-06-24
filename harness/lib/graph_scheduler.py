@@ -28,12 +28,16 @@ from typing import Any
 from prerequisite_resolver import evaluate_prerequisite, iter_blocked
 
 HOME = Path.home()
-HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or HOME / ".solar" / "harness"
+)
 STATE_DB = Path(os.environ.get("HARNESS_STATE_DB", HARNESS_DIR / "run" / "state.db"))
 
 TERMINAL_STATUSES = {"passed", "failed", "skipped", "cancelled", "skipped_parent_passed"}
 ACTIVE_STATUSES = {"assigned", "dispatched", "in_progress", "running", "reviewing"}
-READY_STATUSES = {"pending", "queued", "blocked", "worker_blocked", ""}
+READY_STATUSES = {"pending", "queued", "blocked", "worker_blocked", "failed_review", ""}
 PASS_STATUSES = {"passed"}
 CLOSED_NON_PASS_STATUSES = {"skipped", "cancelled", "skipped_parent_passed"}
 SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR", HARNESS_DIR / "sprints"))
@@ -159,8 +163,10 @@ LABEL_ALIAS_GROUPS = [
         "schema",
     },
     {
+        "gstack",
         "browser.browse",
         "browser.qa",
+        "code.review",
         "browser",
         "browser-automation",
         "browser.automation",
@@ -170,6 +176,16 @@ LABEL_ALIAS_GROUPS = [
         "scraping",
         "crawler",
         "collector",
+    },
+    {
+        "ATLAS",
+        "atlas",
+        "repair.pr-cot",
+        "failure.structured_repair",
+        "routing.complexity_budget",
+        "debug.systematic",
+        "regression",
+        "regression-tests",
     },
     {
         "social",
@@ -399,11 +415,17 @@ def _status_path_for_graph(graph: dict[str, Any], graph_path: str | Path | None 
 
 
 def _status_has_terminal_evidence(sid: str, status: dict[str, Any] | None = None, graph_path: str | Path | None = None) -> bool:
-    payload = status or {}
-    state = str(payload.get("status", "")).lower()
-    if state in {"passed", "completed", "eval_passed"}:
-        return True
     base_dir = Path(graph_path).expanduser().parent if graph_path else SPRINTS_DIR
+    if (base_dir / f"{sid}.finalized").exists():
+        return True
+    try:
+        closure = json.loads((base_dir / f"{sid}.closure.json").read_text(encoding="utf-8"))
+        if closure.get("all_nodes_passed") and closure.get("all_required_gates_passed"):
+            return True
+    except Exception:
+        pass
+    if graph_path:
+        return False
     handoff = (base_dir / f"{sid}.handoff.md").exists() or any(base_dir.glob(f"{sid}.*-handoff.md"))
     eval_exists = (
         (base_dir / f"{sid}.eval.md").exists()
@@ -1334,8 +1356,13 @@ def blocked_external_prerequisites(graph: dict[str, Any]) -> list[dict[str, Any]
 
 def ready_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
     validation = validate_graph(graph)
-    if not validation["ok"]:
-        raise ValueError("; ".join(validation["errors"]))
+    runtime_errors = [
+        str(error)
+        for error in validation.get("errors", [])
+        if not str(error).startswith("parallelism_quality:")
+    ]
+    if runtime_errors:
+        raise ValueError("; ".join(runtime_errors))
     if blocked_external_prerequisites(graph):
         return []
 
@@ -1547,6 +1574,54 @@ def _skill_aliases(value: Any) -> set[str]:
     return _label_aliases(value)
 
 
+_REGISTERED_SKILLS_CACHE: set[str] | None = None
+
+
+def _registered_skill_ids() -> set[str]:
+    """Skill IDs defined in the operator-skill registry (skill-operator-bindings.yaml).
+
+    Used to normalize node.required_skills: free-form/unregistered strings the planner
+    invents are unenforceable (no worker advertises them) and would falsely strand nodes.
+    Fail-open: if the registry is unreadable, return empty so normalization is a no-op.
+    """
+    global _REGISTERED_SKILLS_CACHE
+    if _REGISTERED_SKILLS_CACHE is not None:
+        return _REGISTERED_SKILLS_CACHE
+    ids: set[str] = set()
+    try:
+        import yaml  # noqa: WPS433
+        path = HARNESS_DIR / "config" / "skill-operator-bindings.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+        def _collect(obj: Any) -> None:
+            if isinstance(obj, dict):
+                sid = obj.get("skill_id")
+                if sid:
+                    ids.add(str(sid))
+                for value in obj.values():
+                    _collect(value)
+            elif isinstance(obj, list):
+                for value in obj:
+                    _collect(value)
+
+        _collect(data)
+    except Exception:
+        return set()
+    _REGISTERED_SKILLS_CACHE = ids
+    return ids
+
+
+def _is_registered_skill(skill: str) -> bool:
+    registered = _registered_skill_ids()
+    if not registered:
+        return True  # fail-open: registry unreadable -> do not strip (preserve behavior)
+    aliases = _skill_aliases(skill)
+    for known in registered:
+        if _skill_aliases(known) & aliases:
+            return True
+    return False
+
+
 def _skill_match_count(worker: dict[str, Any], required_skills: list[str]) -> int:
     if not required_skills:
         return 0
@@ -1735,7 +1810,18 @@ def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, An
         required_skills = [str(s) for s in node.get("required_skills", [])]
         required_capabilities = _capability_list(node)
         node_role = _node_dispatch_role(node)
+        # Layer 1 (normalize): drop required_skills that are not in the operator-skill registry.
+        # The planner emits unbounded free-form skill strings; unregistered ones are
+        # unenforceable (no worker advertises them) and would falsely strand the node forever.
+        required_skills = [s for s in required_skills if _is_registered_skill(s)]
+        # Layer 2 (honest capability floor): an ImplementationWorker node genuinely needs
+        # code_impl. Make the honest hard gate bite (it is otherwise empty for these nodes),
+        # so a real capability gap strands honestly and the Layer-3 relaxed pass stays
+        # capability-gated rather than role-only.
+        if not required_capabilities and str(node.get("logical_operator") or "") == "ImplementationWorker":
+            required_capabilities = ["code_impl"]
         candidates: list[tuple[int, float, int, int, int, str, dict[str, Any]]] = []
+        relaxed_candidates: list[tuple[int, float, int, int, int, str, dict[str, Any]]] = []
         blocked_by_capacity = False
         blocked_by_runtime = False
         runtime_unavailable_reasons: set[str] = set()
@@ -1757,8 +1843,9 @@ def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, An
                 missing_skill_union.add(item)
             for item in _missing_capabilities(worker, required_capabilities):
                 missing_cap_union.add(item)
-            if not _skills_match(worker, required_skills, required_capabilities):
-                continue
+            # Capability match is the HONEST hard gate (never relaxed): a worker missing a
+            # required capability is genuinely unqualified and is skipped for BOTH the strict
+            # and the relaxed pass.
             if not _capabilities_match(worker, required_capabilities):
                 continue
             if _worker_quota_exhausted(worker, preferred_model):
@@ -1780,8 +1867,41 @@ def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, An
             skill_score = _skill_match_count(worker, required_skills)
             model_penalty = 0 if _model_match(worker, preferred_model) else 10
             load = int(worker.get("load", 0) or 0)
-            candidates.append((role_penalty, -cap_score, -skill_score, model_penalty, load, pane, worker))
+            entry = (role_penalty, -cap_score, -skill_score, model_penalty, load, pane, worker)
+            # Skills are a PREFERENCE, not a hard gate. A worker that clears role + capability +
+            # quota + model + runtime + capacity goes to the strict list if skills match, else to
+            # the relaxed list (Layer 3 safety net) so the node can never permanently strand on
+            # a skill string while a capability-qualified worker is free.
+            if _skills_match(worker, required_skills, required_capabilities):
+                candidates.append(entry)
+            else:
+                relaxed_candidates.append(entry)
 
+        if not candidates and relaxed_candidates:
+            # Layer 3 (liveness net): no worker matched the (possibly drifted/free-form) skill
+            # strings, but capability-qualified role-appropriate workers ARE free. Dispatch to
+            # the best one rather than permanently strand the DAG. Capabilities/role/quota/busy
+            # were already enforced hard above, so this can NOT dispatch to an unqualified worker
+            # (a genuine capability gap has empty relaxed_candidates and still strands honestly).
+            relaxed_candidates.sort(key=lambda item: (item[0], item[1], item[2], item[3], item[4], item[5]))
+            role_rank, cap_rank, skill_rank, _model_penalty, _load, _pane, worker = relaxed_candidates[0]
+            used_panes.add(str(worker.get("pane")))
+            assigned.append({
+                "node": node["id"],
+                "pane": worker.get("pane"),
+                "dispatch_role": node_role,
+                "worker_role": _worker_role(worker),
+                "preferred_model": preferred_model,
+                "selected_models": worker.get("models", []),
+                "fallback_model": not _model_match(worker, preferred_model),
+                "required_capabilities": required_capabilities,
+                "role_penalty": int(role_rank),
+                "capability_score": round(-cap_rank, 3),
+                "skill_match_count": int(-skill_rank),
+                "skills_relaxed": True,
+                "relaxed_unmatched_skills": sorted(missing_skill_union),
+            })
+            continue
         if not candidates:
             if blocked_by_runtime:
                 if len(runtime_unavailable_reasons) == 1:
@@ -2643,6 +2763,23 @@ def _normalize_worker_entry(worker: dict[str, Any]) -> dict[str, Any]:
     if pane and not normalized.get("pane"):
         normalized["pane"] = pane
     role = str(normalized.get("role") or "").lower()
+    if role == "planner" and not normalized.get("skills"):
+        normalized["skills"] = [
+            "workflow.planning",
+            "browser.qa",
+            "debug.systematic",
+            "skill.methodology",
+        ]
+    if role == "planner" and not normalized.get("capabilities"):
+        normalized["capabilities"] = [
+            "harness.context_preflight",
+            "harness.dispatch_visibility",
+            "harness.dag",
+            "artifact.requirement_trace",
+            "browser.browse",
+            "code.review",
+            "test.tdd",
+        ]
     if (role in {"builder", "lab", "lab-builder", "evaluator"} or "harness-lab" in pane) and not normalized.get("skills"):
         normalized["skills"] = [
             "bash",

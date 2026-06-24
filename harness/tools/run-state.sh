@@ -3,8 +3,8 @@
 # Phase A.2: extend rs_transition to also manage phase field
 [[ -n "${RS_LOADED:-}" ]] && return 0
 RS_LOADED=1
-HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
-SPRINTS_DIR="${SPRINTS_DIR:-$HOME/.solar/harness/sprints}"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+SPRINTS_DIR="${SPRINTS_DIR:-$HARNESS_DIR/sprints}"
 [[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 # ─── 读 ───
@@ -39,7 +39,7 @@ rs_transition() {
   [[ -z "$extra_json" ]] && extra_json="{}"
   local sf="$SPRINTS_DIR/${sid}.status.json"
   [[ -f "$sf" ]] || { echo "rs_transition: sprint not found: $sid" >&2; return 1; }
-  python3 "${HOME}/.solar/harness/lib/runtime_status.py" "$sf" "$new_status" "$event" "$by" "$extra_json"
+  python3 "$HARNESS_DIR/lib/runtime_status.py" "$sf" "$new_status" "$event" "$by" "$extra_json"
 }
 
 # 状态推进 + round 递增 (handoff/eval-fail 专用)
@@ -49,7 +49,7 @@ rs_transition_with_round_bump() {
   [[ -z "$extra_json" ]] && extra_json="{}"
   local sf="$SPRINTS_DIR/${sid}.status.json"
   [[ -f "$sf" ]] || { echo "rs_transition_with_round_bump: sprint not found: $sid" >&2; return 1; }
-  python3 "${HOME}/.solar/harness/lib/runtime_status.py" "$sf" "$new_status" "$event" "$by" "$extra_json" --bump-round
+  python3 "$HARNESS_DIR/lib/runtime_status.py" "$sf" "$new_status" "$event" "$by" "$extra_json" --bump-round
 }
 
 # ─── 工具 ───

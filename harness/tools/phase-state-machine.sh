@@ -17,7 +17,7 @@
 # ================================================================
 set -eu
 
-HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
 
 # ---- Helpers ----

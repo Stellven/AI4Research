@@ -27,6 +27,19 @@ def test_fake_worker_catalog_includes_spec_and_codex_bridge(monkeypatch) -> None
     assert "pane3.bridge" in worker["capabilities"]
 
 
+def test_worker_catalog_advertises_requirement_compiler_capsules(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_GRAPH_DISPATCH_FAKE_WORKERS", "1")
+    monkeypatch.delenv("SOLAR_GRAPH_DISPATCH_RESTRICT_SESSION", raising=False)
+    worker = mod._discover_workers(dry_run=True)[0]
+    capabilities = set(worker["capabilities"])
+
+    assert "cap.requirement-compiler-planner" in capabilities
+    assert "cap.requirement-compiler-implementation" in capabilities
+    assert "cap.requirement-compiler-verification" in capabilities
+    assert "cap.requirement-compiler-audit" in capabilities
+    assert "artifact.requirement_trace" in capabilities
+
+
 def test_worker_discovery_keeps_planner_panes_for_role_aware_dispatch(monkeypatch) -> None:
     monkeypatch.setattr(
         mod.subprocess,

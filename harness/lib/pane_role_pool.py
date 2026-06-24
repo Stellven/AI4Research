@@ -29,6 +29,62 @@ PHYSICAL_OPERATORS_PATH = Path(
 )
 
 
+def _current_harness_session() -> str:
+    session = str(os.environ.get("SOLAR_HARNESS_SESSION") or SESSION or "solar-harness").strip()
+    return session or "solar-harness"
+
+
+def _pane_session_name(pane: str) -> str:
+    return str(pane or "").split(":", 1)[0].strip()
+
+
+def _allowed_pane_sessions() -> set[str]:
+    session = _current_harness_session()
+    allowed = {session, f"{session}-lab", f"{session}-multi-task"}
+    for env_name in (
+        "SOLAR_HARNESS_LAB_SESSION",
+        "SOLAR_HARNESS_BG_SESSION",
+        "SOLAR_HARNESS_MULTI_TASK_SESSION",
+    ):
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            allowed.add(value)
+    for value in str(os.environ.get("SOLAR_HARNESS_ALLOWED_EXTRA_SESSIONS") or "").split(","):
+        value = value.strip()
+        if value:
+            allowed.add(value)
+    if session == "solar-harness":
+        allowed.update({"solar-harness-lab", "solar-harness-multi-task"})
+    return allowed
+
+
+def _pane_in_harness_session_scope(pane: str) -> bool:
+    return _pane_session_name(pane) in _allowed_pane_sessions()
+
+
+def _pane_in_lab_session(pane: str) -> bool:
+    session = _current_harness_session()
+    names = {f"{session}-lab"}
+    for env_name in ("SOLAR_HARNESS_LAB_SESSION", "SOLAR_HARNESS_BG_SESSION"):
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            names.add(value)
+    if session == "solar-harness":
+        names.add("solar-harness-lab")
+    return _pane_session_name(pane) in names
+
+
+def _pane_in_multi_task_session(pane: str) -> bool:
+    session = _current_harness_session()
+    names = {f"{session}-multi-task"}
+    value = str(os.environ.get("SOLAR_HARNESS_MULTI_TASK_SESSION") or "").strip()
+    if value:
+        names.add(value)
+    if session == "solar-harness":
+        names.add("solar-harness-multi-task")
+    return _pane_session_name(pane) in names
+
+
 def list_tmux_panes() -> list[dict[str, str]]:
     try:
         result = subprocess.run(
@@ -51,7 +107,7 @@ def list_tmux_panes() -> list[dict[str, str]]:
 
 
 def _allowed_session(pane: str) -> bool:
-    return pane.startswith(f"{SESSION}:") or pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:")
+    return _pane_in_harness_session_scope(pane)
 
 
 def _normalize_role(role: str) -> str:
@@ -112,7 +168,8 @@ def infer_role(pane: str, title: str) -> str:
     base = normalized.split("|", 1)[0].strip()
     lowered = base.lower()
     registry_roles = _registry_roles_for_pane(pane)
-    if pane.endswith(":0.0") and pane.startswith(f"{SESSION}:") and ("pm" in lowered or "产品经理" in base):
+    session = _current_harness_session()
+    if pane.endswith(":0.0") and pane.startswith(f"{session}:") and ("pm" in lowered or "产品经理" in base):
         return "pm"
     if "planner" in lowered or "规划者" in base:
         return "planner"
@@ -127,13 +184,13 @@ def infer_role(pane: str, title: str) -> str:
     for candidate in ("planner", "evaluator", "architect", "builder", "pm"):
         if candidate in registry_roles:
             return candidate
-    if pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:"):
+    if _pane_in_lab_session(pane) or _pane_in_multi_task_session(pane):
         return "builder"
-    if pane == f"{SESSION}:0.0":
+    if pane == f"{session}:0.0":
         return "pm"
-    if pane == f"{SESSION}:0.1":
+    if pane == f"{session}:0.1":
         return "planner"
-    if pane == f"{SESSION}:0.3":
+    if pane == f"{session}:0.3":
         return "evaluator"
     return "builder"
 
@@ -142,9 +199,9 @@ def _planner_rank(item: dict[str, str]) -> tuple[int, str]:
     role = item["host_role"]
     pane = item["pane"]
     if role == "planner":
-        if pane.startswith(f"{SESSION}:"):
+        if pane.startswith(f"{_current_harness_session()}:"):
             return (0, pane)
-        if pane.startswith("solar-harness-multi-task:"):
+        if _pane_in_multi_task_session(pane):
             return (1, pane)
         return (0, pane)
     if role == "architect":
@@ -158,9 +215,9 @@ def _evaluator_rank(item: dict[str, str]) -> tuple[int, str]:
     role = item["host_role"]
     pane = item["pane"]
     if role == "evaluator":
-        if pane.startswith(f"{SESSION}:"):
+        if pane.startswith(f"{_current_harness_session()}:"):
             return (0, pane)
-        if pane.startswith("solar-harness-multi-task:"):
+        if _pane_in_multi_task_session(pane):
             return (1, pane)
         return (0, pane)
     if role == "builder":
@@ -170,9 +227,9 @@ def _evaluator_rank(item: dict[str, str]) -> tuple[int, str]:
 
 def _builder_rank(item: dict[str, str]) -> tuple[int, str]:
     pane = item["pane"]
-    if pane.startswith("solar-harness-lab:"):
+    if _pane_in_lab_session(pane):
         return (0, pane)
-    if pane.startswith("solar-harness-multi-task:"):
+    if _pane_in_multi_task_session(pane):
         return (1, pane)
     return (2, pane)
 
@@ -237,12 +294,90 @@ def _entry_for_boundary(registry: PaneHygieneRegistry, pane: str, role: str):
     return entry
 
 
+def _pane_capture_tail(pane: str, lines: int = 14) -> str:
+    try:
+        out = subprocess.run(
+            ["tmux", "capture-pane", "-t", pane, "-p"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return ""
+    if out.returncode != 0:
+        return ""
+    return "\n".join(out.stdout.splitlines()[-lines:])
+
+
+def _pane_actively_working(pane: str) -> bool:
+    # Claude Code prints "esc to interrupt" while a turn is in flight. Never
+    # reconcile a pane that is mid-task.
+    return "esc to interrupt" in _pane_capture_tail(pane).lower()
+
+
+def _pane_active_lease(pane: str) -> bool:
+    safe = pane.replace(":", "_").replace(".", "_")
+    lease = HARNESS_DIR / "run" / "pane-leases" / f"{safe}.json"
+    if not lease.exists():
+        return False
+    try:
+        data = json.loads(lease.read_text(encoding="utf-8"))
+    except Exception:
+        return True
+    expires = str(data.get("expires") or data.get("expires_at") or "")
+    if not expires:
+        return True
+    try:
+        from datetime import datetime, timezone
+
+        return datetime.fromisoformat(expires.replace("Z", "+00:00")) > datetime.now(timezone.utc)
+    except Exception:
+        return True
+
+
+def _reconcile_stranded_main_pane(
+    registry: PaneHygieneRegistry,
+    manager: PaneClearManager,
+    pane: str,
+    state: PaneState,
+) -> bool:
+    """Unattended recovery for a MAIN cockpit pane stranded in a severe hygiene
+    state (needs_respawn / needs_recover).
+
+    pane_doctor never auto-respawns or repairs PROTECTED main panes, so a single
+    exhausted /clear can strand a main pane — and the whole pipeline — forever
+    (observed: PM pane stuck `needs_respawn` from a stale clear-exhaust, blocking
+    every sprint at pm_prd_fix with "no usable pm"). Reconcile a pane back to
+    `running` ONLY when it is unleased, not actively working, and not sitting on
+    a real confirm/queued overlay — i.e. a live idle pane whose only problem is
+    the stale severe-state latch. It then rejoins the normal dispatch-boundary
+    clear path and clear_with_retry cleans any input residue. A genuinely wedged
+    pane fails these guards and stays flagged (no fake recovery — that case still
+    needs a real respawn)."""
+    if state not in {PaneState.needs_respawn, PaneState.needs_recover}:
+        return False
+    if _pane_active_lease(pane):
+        return False
+    if _pane_actively_working(pane):
+        return False
+    _empty, no_queued, no_confirm = manager.verify_clear_success(pane)
+    if not (no_queued and no_confirm):
+        return False
+    registry.transition_state(
+        pane, PaneState.running, reason="stranded_main_pane_idle_reconcile"
+    )
+    return True
+
+
 def ensure_clean_for_dispatch(pane: str, role: str, registry_path: Path | None = None) -> dict[str, Any]:
     registry = PaneHygieneRegistry(str((registry_path or REGISTRY_PATH).expanduser()))
     entry = _entry_for_boundary(registry, pane, role)
-    if entry.state in {PaneState.cooling, PaneState.needs_recover, PaneState.needs_respawn}:
-        return {"ok": False, "pane": pane, "role": role, "reason": entry.state.value}
     manager = PaneClearManager(registry, RecoverDetector())
+    if entry.state in {PaneState.cooling, PaneState.needs_recover, PaneState.needs_respawn}:
+        if _reconcile_stranded_main_pane(registry, manager, pane, entry.state):
+            entry = _entry_for_boundary(registry, pane, role)
+        else:
+            return {"ok": False, "pane": pane, "role": role, "reason": entry.state.value}
     result = manager.clear_with_retry(pane)
     if result.success:
         registry.update_context_fields(pane, persona=role)
@@ -259,6 +394,20 @@ def ensure_clean_for_dispatch(pane: str, role: str, registry_path: Path | None =
     }
 
 
+def reset_pane_hygiene_after_respawn(pane: str, registry_path: Path | None = None) -> dict[str, Any]:
+    """Drop a pane's hygiene entry after it has been respawned (Fix C). A respawn
+    launches a brand-new Claude process, so any prior severe state (needs_respawn /
+    dirty / cooling / cooldown) no longer describes the live pane and must not strand
+    it from dispatch. The next dispatch boundary re-registers the pane clean.
+    Idempotent: a no-op if the pane has no entry."""
+    registry = PaneHygieneRegistry(str((registry_path or REGISTRY_PATH).expanduser()))
+    try:
+        registry.unregister_pane(pane)
+        return {"ok": True, "pane": pane, "reset": "unregistered"}
+    except KeyError:
+        return {"ok": True, "pane": pane, "reset": "absent"}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Pane role-pool + hygiene utilities")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -271,6 +420,10 @@ def main(argv: list[str] | None = None) -> int:
     clear_cmd.add_argument("--role", required=True)
     clear_cmd.add_argument("--registry", default=str(REGISTRY_PATH))
 
+    reset_cmd = sub.add_parser("reset-hygiene")
+    reset_cmd.add_argument("--pane", required=True)
+    reset_cmd.add_argument("--registry", default=str(REGISTRY_PATH))
+
     args = parser.parse_args(argv)
     if args.cmd == "discover-role-pool":
         print(json.dumps({"role": args.role, "panes": discover_role_pool(args.role)}, ensure_ascii=False))
@@ -281,6 +434,10 @@ def main(argv: list[str] | None = None) -> int:
             args.role,
             registry_path=Path(args.registry).expanduser(),
         )
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("ok") else 1
+    if args.cmd == "reset-hygiene":
+        result = reset_pane_hygiene_after_respawn(args.pane, registry_path=Path(args.registry).expanduser())
         print(json.dumps(result, ensure_ascii=False))
         return 0 if result.get("ok") else 1
     return 1

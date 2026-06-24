@@ -51,7 +51,14 @@ PY
 fi
 
 # 3. 自动 git checkpoint (WIP commit)
+# Disabled by default: this used git add -A on SessionEnd and could sweep
+# unrelated in-progress work into unsolicited WIP commits.
 auto_git_checkpoint() {
+  if [ "${SOLAR_SESSION_END_GIT_CHECKPOINT:-0}" != "1" ]; then
+    echo "[SessionEnd] Git checkpoint disabled (set SOLAR_SESSION_END_GIT_CHECKPOINT=1 to opt in)"
+    return
+  fi
+
   # 检查是否在 git 仓库中
   if ! git rev-parse --is-inside-work-tree &>/dev/null; then
     return

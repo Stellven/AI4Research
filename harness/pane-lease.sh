@@ -13,7 +13,8 @@
 #   - release only succeeds when dispatch_id in file matches argument
 #   - TTL default 600s; reaper called by coordinator main loop or doctor
 
-_PANE_LEASE_DIR="${HARNESS_DIR:-$HOME/.solar/harness}/run/pane-leases"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+_PANE_LEASE_DIR="${HARNESS_DIR}/run/pane-leases"
 
 _pane_safe()  { echo "${1//:/_}" | tr '.' '_'; }
 _lease_file() { echo "${_PANE_LEASE_DIR}/$(_pane_safe "$1").json"; }

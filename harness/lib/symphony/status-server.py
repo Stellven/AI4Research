@@ -50,7 +50,11 @@ except Exception:  # pragma: no cover
     yaml = None
 
 # ── Paths ──
-HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", str(Path.home() / ".solar" / "harness")))
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or str(Path.home() / ".solar" / "harness")
+)
 SOURCE_HARNESS_DIR = Path(os.environ.get("SOLAR_SOURCE_HARNESS_DIR", str(Path.home() / "Solar" / "harness")))
 if str(HARNESS_DIR / "lib") not in sys.path:
     sys.path.insert(0, str(HARNESS_DIR / "lib"))
@@ -426,7 +430,7 @@ def _orchestration_dashboard_payload(sprint_id: str = "") -> dict:
     }
 
 
-def _orchestration_projection_payload(sprint_id: str = "") -> dict:
+def _orchestration_projection_payload(sprint_id: str = "", mode: str = "full") -> dict:
     mod = _load_orchestration_routes_module()
     builder = getattr(mod, "build_projection_payload", None)
     if not callable(builder):
@@ -439,7 +443,7 @@ def _orchestration_projection_payload(sprint_id: str = "") -> dict:
             "degraded_sources": ["projection_builder:missing"],
             "data": {},
         }
-    data, degraded = builder(sprint_id or None)
+    data, degraded = builder(sprint_id or None, mode=mode)
     return {
         "ok": True,
         "schema_version": getattr(mod, "SCHEMA_VERSION", "solar.orchestration.v1"),
@@ -12838,8 +12842,9 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif path == "/orchestration/projection":
             sprint_id = params.get("sprint_id", [""])[0]
+            mode = params.get("mode", [""])[0] or ("fast" if params.get("fast", ["0"])[0].lower() in ("1", "true", "yes") else "full")
             try:
-                self._send_json(_orchestration_projection_payload(sprint_id))
+                self._send_json(_orchestration_projection_payload(sprint_id, mode=mode))
             except Exception as exc:
                 self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
 
@@ -13071,8 +13076,9 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif re.match(r"^/api/sprints/[^/]+/projection$", path):
             sid = urllib.parse.unquote(path.split("/api/sprints/", 1)[1].split("/projection", 1)[0])
+            mode = params.get("mode", [""])[0] or ("fast" if params.get("fast", ["0"])[0].lower() in ("1", "true", "yes") else "full")
             try:
-                self._send_json(_orchestration_projection_payload(sid))
+                self._send_json(_orchestration_projection_payload(sid, mode=mode))
             except Exception as exc:
                 self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
 

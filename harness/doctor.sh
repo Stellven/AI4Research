@@ -11,9 +11,11 @@
 # ================================================================
 set -eu
 
-HARNESS_DIR="$HOME/.solar/harness"
-SESSION_NAME="solar-harness"
-LAB_SESSION_NAME="solar-harness-lab"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+export HARNESS_DIR
+SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"
+LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"
+SOLAR_PANE_RUNTIME="${SOLAR_PANE_RUNTIME:-claude}"
 
 # --- JSON 模式 (默认) ---
 doctor_json() {
@@ -21,9 +23,18 @@ doctor_json() {
 import json, subprocess, os, re, shutil, sys
 from pathlib import Path
 
-SESSION_NAME = "solar-harness"
-LAB_SESSION_NAME = "solar-harness-lab"
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+SESSION_NAME = os.environ.get("SOLAR_HARNESS_SESSION", "solar-harness")
+LAB_SESSION_NAME = os.environ.get("SOLAR_HARNESS_LAB_SESSION", f"{SESSION_NAME}-lab")
+PANE_RUNTIME = os.environ.get("SOLAR_PANE_RUNTIME", "claude").strip().lower()
+if PANE_RUNTIME not in {"claude", "codex"}:
+    PANE_RUNTIME = "claude"
+RUNTIME_COMMAND = "codex" if PANE_RUNTIME == "codex" else "claude"
+RUNTIME_LABEL = "Codex" if PANE_RUNTIME == "codex" else "Claude"
+HARNESS_DIR = os.path.abspath(os.path.expanduser(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or "~/.solar/harness"
+))
 sys.path.insert(0, os.path.join(HARNESS_DIR, "lib"))
 try:
     from qmd_resolver import resolve_qmd_bin
@@ -43,6 +54,7 @@ result = {
     "bash_major": 0,
     "panes": [],
     "warnings": [],
+    "pane_runtime": PANE_RUNTIME,
     "required_checks": [],
     "manual_checks": [],
     "optional_checks": [],
@@ -60,7 +72,7 @@ result = {
     "gateway_compat": {
         "checked": False,
         "ok": False,
-        "script": os.path.join(os.path.expanduser("~/.solar/harness"), "test-gateway-compat.sh")
+        "script": os.path.join(HARNESS_DIR, "test-gateway-compat.sh")
     },
     "task_graph_gate_audit": {
         "present": False,
@@ -88,7 +100,7 @@ def add_check(bucket, name, status, detail="", hint=""):
 def run_quiet(args, timeout=5, env=None):
     return subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=env)
 
-def classify_claude_tail(text):
+def classify_runtime_tail(text):
     if re.search(r"You(?:'|’)ve hit .*limit|rate[- ]limit|quota exhausted|RESOURCE_EXHAUSTED|429|/rate-limit-options|Upgrade your plan", text, re.I):
         return "auth_or_quota_blocked"
     if re.search(r"trust|trusted|Do you trust|permission|auth|login|Press Enter|press enter", text, re.I):
@@ -100,7 +112,7 @@ layout_path = os.path.join(HARNESS_DIR, "farm-layout.json")
 if os.path.isfile(layout_path):
     try:
         layout = json.load(open(layout_path))
-        default_session = layout.get("session_name", SESSION_NAME)
+        default_session = SESSION_NAME
         for w in layout.get("windows", []):
             session = w.get("session") or default_session
             win = w.get("index", 0)
@@ -114,6 +126,7 @@ required_hints = {
     "python3": "macOS: brew install python; Ubuntu/Debian: sudo apt-get install python3",
     "tmux": "macOS: brew install tmux; Ubuntu/Debian: sudo apt-get install tmux",
     "claude": "Install the Claude Code CLI and confirm 'claude --version' works before launching panes",
+    "codex": "Install the Codex CLI and confirm 'codex --version' works before launching panes",
     "jq": "macOS: brew install jq; Ubuntu/Debian: sudo apt-get install jq",
 }
 
@@ -151,7 +164,7 @@ else:
     detail = f"{result['bash_path']} ({result['bash_version']})" if result["bash_path"] else "not found"
     add_check("required_checks", "bash>=4", "fail", detail, "macOS: brew install bash; Ubuntu/Debian: sudo apt-get install bash")
 
-for cmd in ["python3", "tmux", "claude", "jq"]:
+for cmd in ["python3", "tmux", RUNTIME_COMMAND, "jq"]:
     path = command_path(cmd)
     if path:
         add_check("required_checks", cmd, "ok", path)
@@ -243,8 +256,9 @@ def scan_session(session):
                 "persona": "",
                 "persona_source": "",
                 "layout_persona": layout_personas.get(f"{parts[0]}:{parts[1]}", ""),
-                "claude_alive": False,
-                "claude_state": "unknown"
+                "runtime": PANE_RUNTIME,
+                "runtime_alive": False,
+                "runtime_state": "unknown"
             }
             # Prefer the launch wrapper argv. Pane scrollback can lose the
             # Persona header after long conversations; argv remains reliable.
@@ -260,9 +274,13 @@ def scan_session(session):
                         ["ps", "-p", str(pid), "-o", "args="],
                         capture_output=True, text=True, timeout=2
                     ).stdout.strip()
-                    if re.search(r"(^|/)(claude|claude\.exe)(\s|$)", args):
-                        pane["claude_alive"] = True
-                    m = re.search(r"start-(?:incarnation|launcher)\.sh\s+([A-Za-z0-9_-]+)", args)
+                    if PANE_RUNTIME == "codex":
+                        runtime_re = r"(^|[/\s])codex($|\s)"
+                    else:
+                        runtime_re = r"(^|/)(claude|claude\.exe)(\s|$)"
+                    if re.search(runtime_re, args):
+                        pane["runtime_alive"] = True
+                    m = re.search(r"(?:start-(?:incarnation|launcher)|pane-launcher)\.sh\s+([A-Za-z0-9_-]+)", args)
                     if m and not pane["persona"]:
                         pane["persona"] = m.group(1)
                         pane["persona_source"] = "process"
@@ -293,10 +311,10 @@ def scan_session(session):
                 tail = run_quiet(["tmux", "capture-pane", "-t", pane["target"], "-p", "-S", "-80"]).stdout
             except Exception:
                 tail = ""
-            if pane["claude_alive"]:
-                pane["claude_state"] = "live_child_present"
+            if pane["runtime_alive"]:
+                pane["runtime_state"] = "live_child_present"
             else:
-                pane["claude_state"] = classify_claude_tail(tail)
+                pane["runtime_state"] = classify_runtime_tail(tail)
             panes.append(pane)
     except Exception as e:
         result["warnings"].append(f"pane scan failed for {session}: {e}")
@@ -318,22 +336,22 @@ for p in result["panes"]:
         result["warnings"].append(
             f"pane {p['target']} persona mismatch: layout={layout_persona}, actual={actual_persona}, source={p.get('persona_source','?')}"
         )
-    if layout_persona and not p.get("claude_alive"):
-        state = p.get("claude_state") or "manual_pending"
+    if layout_persona and not p.get("runtime_alive"):
+        state = p.get("runtime_state") or "manual_pending"
         add_check(
             "manual_checks",
-            f"pane {p['target']} claude",
+            f"pane {p['target']} {PANE_RUNTIME}",
             state,
             f"layout={layout_persona}, actual={actual_persona or '?'}",
-            "press Enter in the pane and resolve Claude trust/auth/quota prompts",
+            f"start the pane runtime and resolve {RUNTIME_LABEL} trust/auth/quota prompts",
         )
-    elif layout_persona and p.get("claude_alive"):
+    elif layout_persona and p.get("runtime_alive"):
         add_check(
             "manual_checks",
-            f"pane {p['target']} claude",
+            f"pane {p['target']} {PANE_RUNTIME}",
             "live_child_present",
             f"layout={layout_persona}, actual={actual_persona or '?'}",
-            "child process is present; real Claude response/delegation still requires owner manual verification",
+            f"child process is present; real {RUNTIME_LABEL} response/delegation still requires owner manual verification",
         )
 
 # repairs available
@@ -546,6 +564,8 @@ required = d.get("required_checks", [])
 manual = d.get("manual_checks", [])
 optional = d.get("optional_checks", [])
 required_fail = [c for c in required if c.get("status") != "ok"]
+pane_runtime = d.get("pane_runtime") or "claude"
+runtime_label = "Codex" if pane_runtime == "codex" else "Claude"
 
 print("")
 print("  ┌─ Harness Runtime Status ─────────────────────────")
@@ -563,7 +583,7 @@ if manual:
         if c.get("hint"):
             print(f"  │      {c.get('hint')}"[:140])
 else:
-    print("  │   [MANUAL-PENDING] live Claude panes are not verified until the owner starts Claude and observes a response")
+    print(f"  │   [MANUAL-PENDING] live {runtime_label} panes are not verified until the owner starts {runtime_label} and observes a response")
 
 print("  │ optional:")
 for c in optional[:12]:
@@ -574,7 +594,7 @@ if len(optional) > 12:
 print(f"  │ panes: {len(d.get('panes', []))}")
 print(f"  │ task-graph gates: {d.get('task_graph_gate_audit', {}).get('summary', 'N/A')}")
 print("  └──────────────────────────────────────────────────")
-print("  deterministic status only; real Claude response/delegation remains owner-manual until quota/auth allows it.")
+print(f"  deterministic status only; real {runtime_label} response/delegation remains owner-manual until quota/auth allows it.")
 
 for w in d.get("warnings", []):
     print(f"  warning: {w}")

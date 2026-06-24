@@ -71,6 +71,8 @@ def tmp_harness(tmp_path, monkeypatch):
     import graph_node_dispatcher
     monkeypatch.setattr(graph_node_dispatcher, "SPRINTS_DIR", sprints)
     monkeypatch.setattr(graph_node_dispatcher, "HARNESS_DIR", tmp_path)
+    import graph_scheduler
+    monkeypatch.setattr(graph_scheduler, "SPRINTS_DIR", sprints)
 
     return tmp_path, sprints, sid, graph
 
@@ -104,8 +106,8 @@ class TestSendToPaneLiteral:
         literal_calls = [c for c in calls_log if "-l" in c]
         assert len(literal_calls) > 0, "Expected -l (literal) flag in tmux send-keys"
 
-    def test_sprint_level_handoff_only_reconciles_owner_node(self, tmp_harness):
-        """A sprint-level handoff must not make sibling same-gate nodes reviewing."""
+    def test_sprint_level_handoff_does_not_reconcile_before_dependencies_pass(self, tmp_harness):
+        """A sprint-level handoff must not advance a node before its deps pass."""
         tmp_path, sprints, sid, graph = tmp_harness
         import graph_node_dispatcher as gnd
 
@@ -137,13 +139,109 @@ class TestSendToPaneLiteral:
         assert repaired == [
             {
                 "node": "N10",
+                "status": "pending",
+                "reason": "handoff_reconcile_blocked_by_dependencies",
+                "handoff": str(sprints / f"{sid}.handoff.md"),
+                "blocked_by": ["N8"],
+            }
+        ]
+        assert graph["nodes"][0]["status"] == "pending"
+        assert graph["nodes"][1]["status"] == "pending"
+
+    def test_sprint_level_handoff_reconciles_owner_node_after_dependencies_pass(self, tmp_harness):
+        """A sprint-level handoff may advance its owner node once deps passed."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph["required_gates"] = ["gate-shared"]
+        graph["nodes"] = [
+            {
+                "id": "N8",
+                "goal": "Prerequisite",
+                "depends_on": [],
+                "write_scope": [f"sprints/{sid}.prep.md"],
+                "acceptance": ["prep exists"],
+                "status": "passed",
+                "gate": "gate-shared",
+            },
+            {
+                "id": "N9",
+                "goal": "Render planning.html",
+                "depends_on": ["N8"],
+                "write_scope": [f"sprints/{sid}.planning.html"],
+                "acceptance": ["planning.html exists"],
+                "status": "pending",
+                "gate": "gate-shared",
+            },
+            {
+                "id": "N10",
+                "goal": "Write sprint handoff",
+                "depends_on": ["N8"],
+                "write_scope": [f"sprints/{sid}.handoff.md"],
+                "acceptance": ["handoff exists"],
+                "status": "pending",
+                "gate": "gate-shared",
+            },
+        ]
+        graph["node_results"] = {"N8": {"status": "passed"}}
+        (sprints / f"{sid}.handoff.md").write_text("# Sprint handoff\n", encoding="utf-8")
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert repaired == [
+            {
+                "node": "N10",
                 "status": "reviewing",
                 "reason": "handoff_file_exists",
                 "handoff": str(sprints / f"{sid}.handoff.md"),
             }
         ]
-        assert graph["nodes"][0]["status"] == "pending"
+        assert graph["nodes"][1]["status"] == "pending"
+        assert graph["nodes"][2]["status"] == "reviewing"
+
+    def test_eval_sidecar_does_not_reconcile_before_dependencies_pass(self, tmp_harness):
+        """A downstream eval sidecar cannot fail/pass a node before deps pass."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph["nodes"] = [
+            {
+                "id": "N8",
+                "goal": "Prerequisite",
+                "depends_on": [],
+                "write_scope": [f"sprints/{sid}.prep.md"],
+                "acceptance": ["prep exists"],
+                "status": "pending",
+            },
+            {
+                "id": "N10",
+                "goal": "Write sprint handoff",
+                "depends_on": ["N8"],
+                "write_scope": [f"sprints/{sid}.handoff.md"],
+                "acceptance": ["handoff exists"],
+                "status": "reviewing",
+            },
+        ]
+        (sprints / f"{sid}.handoff.md").write_text("# Sprint handoff\n", encoding="utf-8")
+        (sprints / f"{sid}.N10-eval.json").write_text(
+            json.dumps({"verdict": "FAIL", "node_id": "N10"}) + "\n",
+            encoding="utf-8",
+        )
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert repaired == [
+            {
+                "node": "N10",
+                "status": "reviewing",
+                "reason": "sidecar_reconcile_blocked_by_dependencies",
+                "handoff": str(sprints / f"{sid}.handoff.md"),
+                "eval_json": str(sprints / f"{sid}.N10-eval.json"),
+                "blocked_by": ["N8"],
+            }
+        ]
         assert graph["nodes"][1]["status"] == "reviewing"
+        assert "N10" not in graph["node_results"]
 
     def test_stale_submit_ack_without_live_lease_does_not_resurrect_dispatch(self, tmp_harness, monkeypatch):
         """Old ack files are not proof of a current dispatch after the lease expired."""
@@ -255,6 +353,328 @@ class TestSendToPaneLiteral:
             }
         ]
 
+    def test_eval_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
+        """A first evaluator FAIL feeds critique back to the node instead of terminal-failing."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["assigned_to"] = "solar-harness-lab:0.2"
+        node["dispatch_id"] = "dispatch-N1"
+        node["max_repair_attempts"] = 1
+        graph["node_results"]["N1"] = {
+            "status": "reviewing",
+            "assigned_to": node["assigned_to"],
+            "dispatch_id": node["dispatch_id"],
+        }
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_md = sprints / f"{sid}.N1-eval.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_md.write_text("## Verdict\nFAIL\n\nEvidence\n", encoding="utf-8")
+        eval_json.write_text(
+            json.dumps(
+                {
+                    "verdict": "FAIL",
+                    "node_id": "N1",
+                    "summary": "Missing required entrypoint coverage.",
+                    "failed_conditions": ["AC1", "AC2"],
+                    "errors": [
+                        {
+                            "cond": "AC1",
+                            "severity": "high",
+                            "evidence": "inventory omitted a required launcher",
+                            "fix_hint": "Add the missing launcher row with cwd/env assumptions.",
+                        }
+                    ],
+                }
+            ) + "\n",
+            encoding="utf-8",
+        )
+        release_calls = []
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: release_calls.append(a) or {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert node["status"] == "failed_review"
+        assert graph["node_results"]["N1"]["status"] == "failed_review"
+        assert node["repair_attempts"] == 1
+        assert node["repair_context"]["summary"] == "Missing required entrypoint coverage."
+        assert node["repair_context"]["failed_conditions"] == ["AC1", "AC2"]
+        assert node["repair_context"]["errors"][0]["fix_hint"] == "Add the missing launcher row with cwd/env assumptions."
+        assert "assigned_to" not in node
+        assert "dispatch_id" not in node
+        assert "eval_json" not in node
+        assert not handoff.exists()
+        assert not eval_json.exists()
+        assert not eval_md.exists()
+        archived = node["repair_context"]["archived_sidecars"]
+        assert Path(archived["handoff_md"]).exists()
+        assert Path(archived["eval_json"]).exists()
+        assert Path(archived["eval_md"]).exists()
+        assert len(release_calls) == 1
+        assert repaired == [
+            {
+                "node": "N1",
+                "status": "failed_review",
+                "reason": "eval_sidecar_failed_repair_requested",
+                "handoff": str(handoff),
+                "eval_json": str(eval_json),
+                "verdict": "FAIL",
+                "repair_attempt": 1,
+                "max_repair_attempts": 1,
+            }
+        ]
+
+    def test_eval_fail_after_repair_limit_marks_terminal_failed(self, tmp_harness, monkeypatch):
+        """A node still fails terminally once the capped repair attempts are exhausted."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["repair_attempts"] = 1
+        node["max_repair_attempts"] = 1
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_json.write_text(json.dumps({"verdict": "FAIL", "node_id": "N1"}) + "\n", encoding="utf-8")
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert node["status"] == "failed"
+        assert graph["node_results"]["N1"]["status"] == "failed"
+        assert handoff.exists()
+        assert eval_json.exists()
+        assert repaired == [
+            {
+                "node": "N1",
+                "status": "failed",
+                "reason": "eval_sidecar_exists",
+                "handoff": str(handoff),
+                "eval_json": str(eval_json),
+                "verdict": "FAIL",
+            }
+        ]
+
+    def test_repair_handoff_newer_than_eval_sidecar_gets_fresh_review(self, tmp_harness, monkeypatch):
+        """A repaired handoff must not terminal-fail from the previous round's eval sidecar."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "dispatched"
+        node["assigned_to"] = "solar-harness-lab:0.2"
+        node["dispatch_id"] = "dispatch-N1-repair"
+        node["repair_attempts"] = 1
+        node["max_repair_attempts"] = 1
+        node["repair_context"] = {"attempt": 1, "max_attempts": 1, "verdict": "FAIL"}
+        graph["node_results"]["N1"] = {
+            "status": "dispatched",
+            "assigned_to": node["assigned_to"],
+            "dispatch_id": node["dispatch_id"],
+        }
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_md = sprints / f"{sid}.N1-eval.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_md.write_text("## Verdict\nFAIL\n\nold review\n", encoding="utf-8")
+        eval_json.write_text(json.dumps({"verdict": "FAIL", "node_id": "N1"}) + "\n", encoding="utf-8")
+        handoff.write_text("# repaired handoff\n\nnew evidence\n", encoding="utf-8")
+        os.utime(eval_md, (1_700_000_000, 1_700_000_000))
+        os.utime(eval_json, (1_700_000_000, 1_700_000_000))
+        os.utime(handoff, (1_700_000_100, 1_700_000_100))
+        release_calls = []
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: release_calls.append(a) or {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert node["status"] == "reviewing"
+        assert graph["node_results"]["N1"]["status"] == "reviewing"
+        assert handoff.exists()
+        assert not eval_json.exists()
+        assert not eval_md.exists()
+        assert len(release_calls) == 1
+        assert repaired[0]["reason"] == "repair_handoff_newer_than_eval_sidecar"
+        assert Path(repaired[0]["archived_sidecars"]["eval_json"]).exists()
+        assert Path(repaired[0]["archived_sidecars"]["eval_md"]).exists()
+        assert repaired[1] == {
+            "node": "N1",
+            "status": "reviewing",
+            "reason": "handoff_file_exists",
+            "handoff": str(handoff),
+        }
+
+    def test_direct_node_verdict_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
+        """Primary evaluator node-verdict FAIL uses the same repair path as sidecar reconcile."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph_path = sprints / f"{sid}.task_graph.json"
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["assigned_to"] = "solar-harness-lab:0.2"
+        node["dispatch_id"] = "dispatch-N1"
+        node["eval_assignments"] = [
+            {
+                "pane": "solar-harness-lab:0.3",
+                "dispatch_id": "eval-N1",
+                "role": "primary",
+                "eval_md_path": str(sprints / f"{sid}.N1-eval.md"),
+                "eval_json_path": str(sprints / f"{sid}.N1-eval.json"),
+            }
+        ]
+        node["max_repair_attempts"] = 1
+        graph["node_results"]["N1"] = {
+            "status": "reviewing",
+            "assigned_to": node["assigned_to"],
+            "dispatch_id": node["dispatch_id"],
+        }
+        graph_path.write_text(json.dumps(graph) + "\n", encoding="utf-8")
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_md = sprints / f"{sid}.N1-eval.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_md.write_text("## Verdict\nFAIL\n\nEvidence\n", encoding="utf-8")
+        eval_json.write_text(
+            json.dumps(
+                {
+                    "verdict": "FAIL",
+                    "node_id": "N1",
+                    "summary": "Artifact omitted package manifests.",
+                    "failed_conditions": ["ACC-003"],
+                    "errors": [
+                        {
+                            "cond": "ACC-003",
+                            "severity": "high",
+                            "evidence": "package.json exists but was reported absent",
+                            "fix_hint": "Correct the manifest inventory.",
+                        }
+                    ],
+                }
+            ) + "\n",
+            encoding="utf-8",
+        )
+        release_calls = []
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: release_calls.append(a) or {"released": True})
+
+        result = gnd.node_verdict(str(graph_path), "N1", "fail", reason="manifest inventory wrong", eval_json=str(eval_json))
+        saved = gnd.load_graph(graph_path)
+        saved_node = saved["nodes"][0]
+
+        assert result["ok"] is True
+        assert result["status"] == "failed_review"
+        assert saved_node["status"] == "failed_review"
+        assert saved["node_results"]["N1"]["status"] == "failed_review"
+        assert saved_node["repair_attempts"] == 1
+        assert saved_node["repair_context"]["summary"] == "Artifact omitted package manifests."
+        assert saved_node["repair_context"]["failed_conditions"] == ["ACC-003"]
+        assert saved_node["repair_context"]["errors"][0]["fix_hint"] == "Correct the manifest inventory."
+        assert "assigned_to" not in saved_node
+        assert "dispatch_id" not in saved_node
+        assert "eval_assignments" not in saved_node
+        assert "eval_json" not in saved_node
+        assert not handoff.exists()
+        assert not eval_json.exists()
+        assert not eval_md.exists()
+        archived = saved_node["repair_context"]["archived_sidecars"]
+        assert Path(archived["handoff_md"]).exists()
+        assert Path(archived["eval_json"]).exists()
+        assert Path(archived["eval_md"]).exists()
+        assert ("solar-harness-lab:0.2", "dispatch-N1", "node_failed_review") in release_calls
+        assert ("solar-harness-lab:0.3", "eval-N1", "node_failed_review") in release_calls
+
+    def test_direct_node_verdict_fail_after_repair_limit_marks_terminal_failed(self, tmp_harness, monkeypatch):
+        """Direct evaluator FAIL still terminal-fails once repair attempts are exhausted."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph_path = sprints / f"{sid}.task_graph.json"
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["repair_attempts"] = 1
+        node["max_repair_attempts"] = 1
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        graph_path.write_text(json.dumps(graph) + "\n", encoding="utf-8")
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_json.write_text(json.dumps({"verdict": "FAIL", "node_id": "N1"}) + "\n", encoding="utf-8")
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        result = gnd.node_verdict(str(graph_path), "N1", "fail", eval_json=str(eval_json))
+        saved = gnd.load_graph(graph_path)
+
+        assert result["ok"] is True
+        assert result["status"] == "failed"
+        assert saved["nodes"][0]["status"] == "failed"
+        assert saved["node_results"]["N1"]["status"] == "failed"
+        assert handoff.exists()
+        assert eval_json.exists()
+
+    def test_failed_review_nodes_are_ready_for_repair_dispatch(self, tmp_harness):
+        """Graph scheduler treats failed_review as a repairable ready node."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        from graph_scheduler import ready_nodes
+
+        graph["nodes"] = [
+            {"id": "N1", "status": "passed", "depends_on": [], "write_scope": ["/tmp/a"]},
+            {
+                "id": "N2",
+                "status": "failed_review",
+                "depends_on": ["N1"],
+                "write_scope": ["/tmp/b"],
+                "repair_context": {"attempt": 1, "max_attempts": 1},
+            },
+        ]
+        graph["node_results"] = {
+            "N1": {"status": "passed"},
+            "N2": {"status": "failed_review"},
+        }
+
+        ready = ready_nodes(graph)
+
+        assert [node["id"] for node in ready] == ["N2"]
+
+    def test_dispatch_text_includes_repair_feedback(self, tmp_harness):
+        """A repair dispatch gives the builder evaluator errors and fix hints."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = {
+            "id": "N1",
+            "goal": "Repair audit artifact",
+            "depends_on": [],
+            "write_scope": [f"sprints/{sid}.audit.md"],
+            "acceptance": ["covers required entrypoints"],
+            "repair_context": {
+                "attempt": 1,
+                "max_attempts": 1,
+                "summary": "Missing required entrypoint coverage.",
+                "failed_conditions": ["AC1"],
+                "errors": [
+                    {
+                        "cond": "AC1",
+                        "severity": "high",
+                        "evidence": "artifact omitted status-server route modules",
+                        "fix_hint": "Add route modules and launch assumptions.",
+                    }
+                ],
+                "archived_sidecars": {"eval_json": str(sprints / f"{sid}.N1-eval.repair1.json")},
+            },
+        }
+
+        text = gnd.build_dispatch_text({"sprint_id": sid, "node": node}, "solar-harness-lab:0.2")
+
+        assert "## Repair Context" in text
+        assert "Missing required entrypoint coverage." in text
+        assert "`AC1` (high)" in text
+        assert "artifact omitted status-server route modules" in text
+        assert "Add route modules and launch assumptions." in text
+        assert "eval_json:" in text
+
     def test_assigned_pane_plan_mode_prompt_is_unavailable(self, tmp_harness, monkeypatch):
         """A pane blocked in Claude plan-mode confirmation is not dispatchable."""
         import graph_node_dispatcher as gnd
@@ -354,6 +774,38 @@ class TestSendToPaneLiteral:
         assert result["ok"] is True
         assert injection_calls == []
 
+    def test_dispatch_text_canonicalizes_harness_sprint_outputs(self, tmp_path, monkeypatch):
+        """Builder worktrees need absolute canonical paths for sprint artifacts."""
+        import graph_node_dispatcher as gnd
+
+        repo = tmp_path / "repo"
+        harness = repo / "harness"
+        sprints = harness / "sprints"
+        sprints.mkdir(parents=True)
+        monkeypatch.setattr(gnd, "HARNESS_DIR", harness)
+        monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+
+        sid = "sprint-canonical-output"
+        raw_output = f"harness/sprints/{sid}.entrypoints_inventory.md"
+        expected = sprints / f"{sid}.entrypoints_inventory.md"
+        payload = {
+            "sprint_id": sid,
+            "node": {
+                "id": "S1",
+                "goal": "Write inventory",
+                "write_scope": [raw_output, "harness/lib/source_file.py"],
+                "outputs": [raw_output],
+                "acceptance": ["canonical artifact exists"],
+            },
+        }
+
+        text = gnd.build_dispatch_text(payload, "solar-codex-cockpit:0.2")
+
+        assert "## Canonical Output Paths" in text
+        assert f"`write_scope` `{raw_output}` -> `{expected}`" in text
+        assert f"`outputs` `{raw_output}` -> `{expected}`" in text
+        assert "harness/lib/source_file.py` ->" not in text
+
 
 # ---------------------------------------------------------------------------
 # Test: submit creates ack/submit evidence
@@ -402,6 +854,8 @@ class TestSubmitFailureRecovery:
 
         tmp_path, sprints, sid, graph = tmp_harness
 
+        monkeypatch.setenv("SOLAR_HARNESS_SESSION", "test")
+        monkeypatch.setattr(gnd, "SESSION", "test")
         # Mock pane exists
         monkeypatch.setattr(gnd, "_pane_exists", lambda p: True)
         # Mock lease acquire success

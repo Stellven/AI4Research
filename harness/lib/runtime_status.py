@@ -100,7 +100,11 @@ def _harness_dir_from_status_path(path: Path) -> str:
     try:
         return str(path.parent.parent)
     except Exception:
-        return os.path.expanduser("~/.solar/harness")
+        return os.path.expanduser(
+            os.environ.get("HARNESS_DIR")
+            or os.environ.get("SOLAR_HARNESS_DIR")
+            or "~/.solar/harness"
+        )
 
 
 def transition_status(

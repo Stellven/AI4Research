@@ -62,6 +62,73 @@ PANE_QUOTA_EXHAUSTED_RE = re.compile(
 )
 PANE_RATE_LIMIT_FALLBACK_SEC = int(os.environ.get("SOLAR_PANE_RATE_LIMIT_FALLBACK_SEC", "900"))
 OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC = int(os.environ.get("SOLAR_GRAPH_OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC", "900"))
+GRAPH_NODE_REPAIR_MAX_ATTEMPTS = int(os.environ.get("SOLAR_GRAPH_NODE_REPAIR_MAX_ATTEMPTS", "1"))
+# Fix F: faster recovery from an eval input-submit jam (wall #5). Caps the EVAL
+# lease + the re-dispatch gate so a stuck eval re-dispatches before the full 900s
+# TTL. Safety is the existing busy-check: a still-working eval pane reads busy and
+# is never re-dispatched, so this only accelerates the genuinely-stuck case.
+EVAL_RECOVER_SEC = int(os.environ.get("SOLAR_GRAPH_EVAL_RECOVER_SEC", "600"))
+
+
+def _current_harness_session() -> str:
+    session = str(os.environ.get("SOLAR_HARNESS_SESSION") or SESSION or "solar-harness").strip()
+    return session or "solar-harness"
+
+
+def _pane_session_name(pane: str) -> str:
+    return str(pane or "").split(":", 1)[0].strip()
+
+
+def _allowed_pane_sessions() -> set[str]:
+    session = _current_harness_session()
+    allowed = {session, f"{session}-lab", f"{session}-multi-task"}
+    for env_name in (
+        "SOLAR_HARNESS_LAB_SESSION",
+        "SOLAR_HARNESS_BG_SESSION",
+        "SOLAR_HARNESS_MULTI_TASK_SESSION",
+    ):
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            allowed.add(value)
+    for value in str(os.environ.get("SOLAR_HARNESS_ALLOWED_EXTRA_SESSIONS") or "").split(","):
+        value = value.strip()
+        if value:
+            allowed.add(value)
+    if session == "solar-harness":
+        allowed.update({"solar-harness-lab", "solar-harness-multi-task"})
+    return allowed
+
+
+def _pane_in_harness_session_scope(pane: str) -> bool:
+    return _pane_session_name(pane) in _allowed_pane_sessions()
+
+
+def _pane_in_helper_session(pane: str) -> bool:
+    pane_session = _pane_session_name(pane)
+    return bool(pane_session and pane_session != _current_harness_session() and pane_session in _allowed_pane_sessions())
+
+
+def _pane_in_lab_session(pane: str) -> bool:
+    session = _current_harness_session()
+    names = {f"{session}-lab"}
+    for env_name in ("SOLAR_HARNESS_LAB_SESSION", "SOLAR_HARNESS_BG_SESSION"):
+        value = str(os.environ.get(env_name) or "").strip()
+        if value:
+            names.add(value)
+    if session == "solar-harness":
+        names.add("solar-harness-lab")
+    return _pane_session_name(pane) in names
+
+
+def _pane_in_multi_task_session(pane: str) -> bool:
+    session = _current_harness_session()
+    names = {f"{session}-multi-task"}
+    value = str(os.environ.get("SOLAR_HARNESS_MULTI_TASK_SESSION") or "").strip()
+    if value:
+        names.add(value)
+    if session == "solar-harness":
+        names.add("solar-harness-multi-task")
+    return _pane_session_name(pane) in names
 
 
 def _effective_graph_max_parallel(default: int = 8) -> int:
@@ -93,6 +160,7 @@ PANE_DISPATCH_FAILED_IDLE_RE = re.compile(
     re.I,
 )
 PANE_PROCESSING_RE = re.compile(
+    r"esc to interrupt|• Working|Working \(|"
     r"Crafting|Cogitating|Orchestrating|Coalescing|Wandering|Sock-hopping|"
     r"Puzzling|Cooking|Baked|Thinking|Considering|Newspapering|"
     r"Reticulating|Scurrying|Roosting|Mustering|Herding|Ruminating|"
@@ -131,6 +199,7 @@ RECOVERABLE_DISPATCH_PROMPT_REASONS = {
     "edit_confirmation_prompt",
     "queued_prompt_residue",
     "plan_mode_blocked",
+    "survey_prompt_blocked",
 }
 RECOVERABLE_PANE_BLOCKER_FRAGMENTS = {
     "proceed_confirmation_prompt",
@@ -255,8 +324,17 @@ def _dispatch_role_for_pane(pane: str, title: str | None = None) -> str:
     return "builder"
 
 
+def _role_file_for_pane(pane: str) -> Path:
+    return HARNESS_DIR / "run" / "pane-codex" / f"{_dispatch_role_for_pane(pane)}.md"
+
+
+def _pane_runtime() -> str:
+    runtime = os.environ.get("SOLAR_PANE_RUNTIME", "claude").strip().lower()
+    return runtime if runtime in {"claude", "codex"} else "claude"
+
+
 def _clear_dispatch_boundary(pane: str, sid: str, dispatch_id: str) -> tuple[bool, str]:
-    if not (pane.startswith("solar-harness:") or pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:")):
+    if not _pane_in_harness_session_scope(pane):
         return True, "non_harness_pane"
     if ensure_clean_for_dispatch_boundary is None:
         return True, "helper_unavailable"
@@ -284,6 +362,7 @@ def _recoverable_pane_blocker(reason: str) -> bool:
         "provider_health_unavailable",
         "multi_task_shell_not_direct_worker",
         "worker_runtime_not_running",
+        "codex_runtime_not_running",
     )
     if any(fragment in normalized for fragment in hard_fragments):
         return False
@@ -372,6 +451,32 @@ def _node_requires_deepresearch_quality_gate(node: dict[str, Any]) -> bool:
     return bool(DEEPRESEARCH_GATE_ARTIFACT_RE.search(artifact_text))
 
 
+def _deepresearch_quality_gate_eval_instruction(node: dict[str, Any], eval_json: str | Path) -> str:
+    if _node_requires_deepresearch_quality_gate(node):
+        return f"""- 本 node 明确涉及 DeepResearch artifacts / research evidence ledger / claim ledger / citation verification / research report compiler，必须先运行 deterministic artifact gate：
+  ```bash
+  solar-harness research eval-artifacts --eval-json "<path-to-research_eval.json>" --json
+  ```
+  并把返回 JSON 原样写入 `{eval_json}` 的 `research_quality_gate` 字段。没有 `research_quality_gate.ok=true` 不允许 PASS。"""
+    return """- DeepResearch deterministic artifact gate is **not required** for this node. Do not run `solar-harness research eval-artifacts`, and do not fail this node only because `research_eval.json`, `report_ast.json`, bibliography, source/evidence/claim counts, or citation-accuracy artifacts are absent.
+  Local audit reports, packaging-readiness reports, documentation synthesis, and generic `report.compile` outputs are judged by this node's acceptance criteria, proof obligations, session log, write scope, and handoff evidence unless `research_quality_gate_required=true` or explicit `research.*` artifacts/capabilities are present. Leave `research_quality_gate` empty or mark it `{"required": false}`."""
+
+
+def _graph_terminally_closed(sid: str) -> bool:
+    """True once the graph has reached terminal closure. Used to keep the
+    `.finalized` marker sticky so a stale non-PASS coverage verdict (e.g. the
+    in-progress/partial requirement-trace view) cannot strip finalization and
+    reopen an already-closed sprint (Defect C)."""
+    closure_path = SPRINTS_DIR / f"{sid}.closure.json"
+    try:
+        closure = json.loads(closure_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(closure, dict):
+        return False
+    return str(closure.get("status") or "").strip().lower() == "closed" or bool(closure.get("all_nodes_passed"))
+
+
 def _refresh_requirement_coverage_artifacts(sid: str, *, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"ok": True, "skipped": "dry_run"}
@@ -395,7 +500,11 @@ def _refresh_requirement_coverage_artifacts(sid: str, *, dry_run: bool = False) 
     verdict = str((bundle.get("acceptance_verdict") or {}).get("verdict") or "N/A")
     finalized_path = SPRINTS_DIR / f"{sid}.finalized"
     cleared_finalized = False
-    if verdict != "PASS" and finalized_path.exists():
+    # Keep finalization sticky once the graph has terminally closed: a non-PASS
+    # coverage verdict (e.g. the in-progress/partial requirement-trace view) must
+    # not strip the terminal marker and reopen a closed sprint (Defect C). The
+    # anti-stale unlink still fires for a sprint that has NOT terminally closed.
+    if verdict != "PASS" and finalized_path.exists() and not _graph_terminally_closed(sid):
         try:
             finalized_path.unlink()
             cleared_finalized = True
@@ -1051,11 +1160,12 @@ def _configured_lab_model_for_pane(pane: str) -> str:
 
 
 def _models_for_pane(pane: str, title: str = "") -> list[str]:
-    if pane == f"{SESSION}:0.2":
+    session = _current_harness_session()
+    if pane == f"{session}:0.2":
         return _model_alias_set(_configured_main_model("builder"))
-    if pane == f"{SESSION}:0.3":
+    if pane == f"{session}:0.3":
         return _model_alias_set(_configured_main_model("evaluator"))
-    if pane.startswith("solar-harness-lab:"):
+    if _pane_in_lab_session(pane):
         return _model_alias_set(_configured_lab_model_for_pane(pane))
     title_lower = title.lower()
     if "deepseek" in title_lower:
@@ -1200,6 +1310,65 @@ def _scope_lines(values: Any) -> str:
     return "\n".join(f"- `{v}`" for v in values)
 
 
+def _iter_scope_values(values: Any) -> list[str]:
+    if not values:
+        return []
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, list):
+        return []
+    return [str(value).strip() for value in values if str(value).strip()]
+
+
+def _canonical_sprint_artifact_path(raw: str) -> Path | None:
+    """Resolve sprint artifact paths to the canonical harness sprint directory.
+
+    Builder panes run inside role worktrees, so a relative path such as
+    `harness/sprints/foo.md` otherwise lands under `.worktrees/builder`.
+    Source-code paths are intentionally not rewritten; only sprint artifacts
+    get canonical absolute guidance.
+    """
+    scope = str(raw or "").strip()
+    if not scope or any(ch in scope for ch in "*?[]"):
+        return None
+    expanded = Path(scope).expanduser()
+    if expanded.is_absolute():
+        return expanded
+    parts = expanded.parts
+    if len(parts) >= 2 and parts[0] == "harness" and parts[1] == "sprints":
+        return (HARNESS_DIR.parent / expanded).resolve()
+    if parts and parts[0] == "sprints":
+        return (HARNESS_DIR / expanded).resolve()
+    return None
+
+
+def _canonical_output_paths_block(node: dict[str, Any]) -> str:
+    seen: set[tuple[str, str]] = set()
+    rows: list[str] = []
+    for field in ("write_scope", "outputs"):
+        for raw in _iter_scope_values(node.get(field)):
+            canonical = _canonical_sprint_artifact_path(raw)
+            if canonical is None:
+                continue
+            key = (field, raw)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(f"- `{field}` `{raw}` -> `{canonical}`")
+    if not rows:
+        return (
+            "## Canonical Output Paths\n\n"
+            "- No sprint artifact outputs declared. For source-code files, use the current repository/worktree path."
+        )
+    return (
+        "## Canonical Output Paths\n\n"
+        "Builder panes may run from an isolated role worktree. For sprint artifacts, do not rely on "
+        "relative `harness/sprints/...` paths; write to the canonical absolute paths below so the "
+        "scheduler and evaluator can find them:\n\n"
+        + "\n".join(rows)
+    )
+
+
 def _write_scope_preflight_block(sid: str, node: dict[str, Any]) -> str:
     """Warn builders when write-scope artifacts already exist from another sprint.
 
@@ -1207,16 +1376,15 @@ def _write_scope_preflight_block(sid: str, node: dict[str, Any]) -> str:
     `sprints/s01-req-N5-handoff.md`. Those paths can survive from a different
     sprint and must not be treated as current evidence.
     """
-    scopes = node.get("write_scope") or []
-    if isinstance(scopes, str):
-        scopes = [scopes]
     rows: list[str] = []
     sprint_re = re.compile(r"sprint-[A-Za-z0-9_.\-\u4e00-\u9fff]+")
-    for raw in scopes:
+    for raw in _iter_scope_values(node.get("write_scope")):
         scope = str(raw or "").strip()
         if not scope or any(ch in scope for ch in "*?[]"):
             continue
-        path = (HARNESS_DIR / scope).expanduser() if not scope.startswith("/") else Path(scope).expanduser()
+        path = _canonical_sprint_artifact_path(scope)
+        if path is None:
+            path = (HARNESS_DIR / scope).expanduser() if not scope.startswith("/") else Path(scope).expanduser()
         if not path.exists() or not path.is_file():
             continue
         try:
@@ -1347,6 +1515,209 @@ def _existing_node_handoff(sid: str, node: dict[str, Any], graph: dict[str, Any]
         if candidate.exists():
             return candidate
     return None
+
+
+def _node_repair_attempts(node: dict[str, Any]) -> int:
+    raw = node.get("repair_attempts")
+    if raw in (None, ""):
+        context = node.get("repair_context")
+        raw = context.get("attempt") if isinstance(context, dict) else 0
+    try:
+        return max(0, int(raw or 0))
+    except Exception:
+        return 0
+
+
+def _node_repair_max_attempts(graph: dict[str, Any], node: dict[str, Any]) -> int:
+    candidates: list[Any] = [
+        node.get("max_repair_attempts"),
+        node.get("repair_max_attempts"),
+    ]
+    repair_policy = graph.get("node_repair") if isinstance(graph.get("node_repair"), dict) else {}
+    quality_gates = graph.get("quality_gates") if isinstance(graph.get("quality_gates"), dict) else {}
+    graph_repair_gate = quality_gates.get("repair") if isinstance(quality_gates.get("repair"), dict) else {}
+    candidates.extend([
+        repair_policy.get("max_attempts"),
+        graph_repair_gate.get("max_attempts"),
+        GRAPH_NODE_REPAIR_MAX_ATTEMPTS,
+    ])
+    for raw in candidates:
+        if raw in (None, ""):
+            continue
+        try:
+            return max(0, int(raw))
+        except Exception:
+            continue
+    return 1
+
+
+def _archive_path_for_repair(path: Path, attempt: int) -> Path:
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    base = path.with_name(f"{path.stem}.repair{attempt}.{stamp}{path.suffix}")
+    if not base.exists():
+        return base
+    for index in range(2, 100):
+        candidate = path.with_name(f"{path.stem}.repair{attempt}.{stamp}.{index}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+    return path.with_name(f"{path.stem}.repair{attempt}.{stamp}.{os.getpid()}{path.suffix}")
+
+
+def _archive_node_review_sidecars(sid: str, node_id: str, handoff_file: Path | None, eval_json_path: str | Path, attempt: int) -> dict[str, str]:
+    archived: dict[str, str] = {}
+    candidates: list[tuple[str, Path]] = []
+    if handoff_file is not None:
+        candidates.append(("handoff_md", Path(handoff_file)))
+    for key, path in (
+        ("eval_json", Path(str(eval_json_path))) if str(eval_json_path or "").strip() else ("eval_json", Path()),
+        ("eval_md", _eval_md_file(sid, node_id)),
+    ):
+        if str(path) not in {"", "."}:
+            candidates.append((key, path))
+
+    seen: set[Path] = set()
+    for key, path in candidates:
+        try:
+            resolved = path.expanduser()
+        except Exception:
+            continue
+        if resolved in seen or not resolved.exists():
+            continue
+        seen.add(resolved)
+        archive = _archive_path_for_repair(resolved, attempt)
+        try:
+            resolved.replace(archive)
+        except Exception:
+            continue
+        archived[key] = str(archive)
+    return archived
+
+
+def _archive_stale_repair_eval_sidecars(
+    sid: str,
+    node: dict[str, Any],
+    node_id: str,
+    handoff_file: Path | None,
+    eval_json_path: str | Path,
+    status: str,
+) -> dict[str, str]:
+    if status in {"passed", "failed"}:
+        return {}
+    attempt = _node_repair_attempts(node)
+    if attempt <= 0 or handoff_file is None:
+        return {}
+    try:
+        handoff = Path(handoff_file).expanduser()
+        handoff_mtime = handoff.stat().st_mtime
+    except Exception:
+        return {}
+
+    archived: dict[str, str] = {}
+    candidates: list[tuple[str, Path]] = []
+    if str(eval_json_path or "").strip():
+        candidates.append(("eval_json", Path(str(eval_json_path))))
+    candidates.append(("eval_md", _eval_md_file(sid, node_id)))
+
+    seen: set[Path] = set()
+    for key, raw_path in candidates:
+        try:
+            path = raw_path.expanduser()
+            if path in seen or not path.exists():
+                continue
+            seen.add(path)
+            if path.stat().st_mtime >= handoff_mtime:
+                continue
+            archive = _archive_path_for_repair(path, attempt)
+            path.replace(archive)
+        except Exception:
+            continue
+        archived[key] = str(archive)
+    return archived
+
+
+def _short_eval_errors(eval_payload: dict[str, Any]) -> list[dict[str, str]]:
+    errors = eval_payload.get("errors")
+    if not isinstance(errors, list):
+        return []
+    items: list[dict[str, str]] = []
+    for raw in errors[:6]:
+        if not isinstance(raw, dict):
+            continue
+        item: dict[str, str] = {}
+        for key in ("cond", "severity", "evidence", "fix_hint"):
+            value = str(raw.get(key) or "").strip()
+            if value:
+                item[key] = value[:1200]
+        if item:
+            items.append(item)
+    return items
+
+
+def _start_node_repair_from_eval_fail(
+    graph: dict[str, Any],
+    node: dict[str, Any],
+    sid: str,
+    node_id: str,
+    handoff_file: Path,
+    eval_json_path: str,
+    eval_payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    max_attempts = _node_repair_max_attempts(graph, node)
+    prior_attempts = _node_repair_attempts(node)
+    if prior_attempts >= max_attempts:
+        return None
+
+    attempt = prior_attempts + 1
+    archived = _archive_node_review_sidecars(sid, node_id, handoff_file, eval_json_path, attempt)
+    now = _utc_now()
+    failed_conditions = eval_payload.get("failed_conditions")
+    if not isinstance(failed_conditions, list):
+        failed_conditions = []
+    repair_context = {
+        "attempt": attempt,
+        "max_attempts": max_attempts,
+        "verdict": "FAIL",
+        "summary": str(eval_payload.get("summary") or "").strip()[:2000],
+        "failed_conditions": [str(item) for item in failed_conditions if str(item).strip()][:20],
+        "errors": _short_eval_errors(eval_payload),
+        "archived_sidecars": archived,
+        "created_at": now,
+    }
+
+    _clear_eval_assignments(node)
+    for key in (
+        "assigned_to",
+        "dispatch_id",
+        "eval_json",
+        "eval_assigned_to",
+        "eval_dispatch_id",
+        "eval_dispatched_at",
+        "eval_retry_reason",
+        "last_eval_closeout_failure",
+        "last_eval_operator_cooldown_after_closeout",
+        "handoff_md",
+    ):
+        node.pop(key, None)
+
+    artifacts = node.get("artifacts")
+    if isinstance(artifacts, dict):
+        artifacts.pop("eval_json", None)
+        artifacts.pop("handoff_md", None)
+
+    node["status"] = "failed_review"
+    node["repair_attempts"] = attempt
+    node["repair_context"] = repair_context
+    node.setdefault("repair_history", []).append(repair_context)
+    node["updated_at"] = now
+
+    graph.setdefault("node_results", {})
+    graph["node_results"][node_id] = {
+        "status": "failed_review",
+        "updated_at": now,
+        "note": f"repair_requested_from_eval_sidecar:{Path(eval_json_path).name}",
+        "repair_context": repair_context,
+    }
+    return repair_context
 
 
 def _ledger_dispatch_for(sid: str, instruction_file: Path) -> dict[str, Any]:
@@ -1548,21 +1919,61 @@ def _cooldown_operator_after_contract_closeout(operator_id: str, closeout: dict[
         return {"ok": False, "reason": f"{type(exc).__name__}: {exc}", "operator_id": operator_id}
 
 
+def _sidecar_reconcile_dependency_blockers(graph: dict[str, Any], node: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for dep in node.get("depends_on") or []:
+        dep_id = str(dep or "").strip()
+        if not dep_id or dep_id.startswith("external:") or "://" in dep_id:
+            continue
+        try:
+            dep_status = str(node_status(graph, dep_id) or "").strip().lower()
+        except Exception:
+            dep_status = ""
+        if dep_status != "passed":
+            blockers.append(dep_id)
+    return blockers
+
+
 def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path) -> list[dict[str, Any]]:
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     repaired: list[dict[str, Any]] = []
+    # A finalized sprint is terminal and frozen: do not let leftover handoff/eval
+    # sidecars "repair" (revert) its nodes. Without this guard a post-close
+    # reconcile resets a passed node back to `reviewing` from a lingering handoff
+    # file and reopens a closed sprint (Defect C).
+    if (SPRINTS_DIR / f"{sid}.finalized").exists():
+        return repaired
     for node in graph.get("nodes", []):
         node_id = str(node.get("id") or "")
         if not node_id:
             continue
         status = node_status(graph, node_id)
         handoff_file = _existing_node_handoff(sid, node, graph)
+        dependency_blockers = _sidecar_reconcile_dependency_blockers(graph, node) if handoff_file else []
         eval_json_path = str(node.get("eval_json") or _eval_json_file(sid, node_id))
-        if not Path(eval_json_path).exists():
+        stale_eval_archived = _archive_stale_repair_eval_sidecars(
+            sid,
+            node,
+            node_id,
+            handoff_file,
+            eval_json_path,
+            str(status or "").strip().lower(),
+        )
+        if stale_eval_archived:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "repair_handoff_newer_than_eval_sidecar",
+                    "handoff": str(handoff_file),
+                    "archived_sidecars": stale_eval_archived,
+                }
+            )
+        if not stale_eval_archived and not Path(eval_json_path).exists():
             backfilled_eval = _maybe_backfill_eval_json_from_md(sid, node_id)
             if backfilled_eval is not None:
                 eval_json_path = str(backfilled_eval)
-        eval_payload = _read_json_file_safe(eval_json_path) if eval_json_path else {}
+        eval_payload = {} if stale_eval_archived else (_read_json_file_safe(eval_json_path) if eval_json_path else {})
         raw_eval_verdict = str(eval_payload.get("verdict") or eval_payload.get("status") or "").strip().lower()
         if raw_eval_verdict in {"pass", "passed", "ok", "success", "succeeded"}:
             eval_verdict = "PASS"
@@ -1595,11 +2006,47 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     }
                 )
             continue
+        if handoff_file and dependency_blockers and eval_verdict in {"PASS", "FAIL"} and status not in {"passed", "failed"}:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "sidecar_reconcile_blocked_by_dependencies",
+                    "handoff": str(handoff_file),
+                    "eval_json": eval_json_path,
+                    "blocked_by": dependency_blockers,
+                }
+            )
+            continue
         if handoff_file and eval_verdict in {"PASS", "FAIL"} and status in {"pending", "queued", "blocked", "assigned", "dispatched", "in_progress", "running", "reviewing", "ready_for_review", "needs_human_review", "failed_review", ""}:
             pane = str(node.get("assigned_to") or "").strip()
             dispatch_id = str(node.get("dispatch_id") or "").strip()
             if pane and dispatch_id:
                 release_lease(pane, dispatch_id, "graph_dispatch_reconcile_eval_verdict")
+            if eval_verdict == "FAIL":
+                repair_context = _start_node_repair_from_eval_fail(
+                    graph,
+                    node,
+                    sid,
+                    node_id,
+                    handoff_file,
+                    eval_json_path,
+                    eval_payload,
+                )
+                if repair_context is not None:
+                    repaired.append(
+                        {
+                            "node": node_id,
+                            "status": "failed_review",
+                            "reason": "eval_sidecar_failed_repair_requested",
+                            "handoff": str(handoff_file),
+                            "eval_json": eval_json_path,
+                            "verdict": eval_verdict,
+                            "repair_attempt": repair_context.get("attempt"),
+                            "max_repair_attempts": repair_context.get("max_attempts"),
+                        }
+                    )
+                    continue
             node.pop("assigned_to", None)
             node.pop("dispatch_id", None)
             verdict_status = "passed" if eval_verdict == "PASS" else "failed"
@@ -1621,6 +2068,17 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     "handoff": str(handoff_file),
                     "eval_json": eval_json_path,
                     "verdict": eval_verdict,
+                }
+            )
+            continue
+        if handoff_file and dependency_blockers and status in {"pending", "queued", "blocked", "worker_blocked", "assigned", "dispatched", "in_progress", "running", ""}:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "handoff_reconcile_blocked_by_dependencies",
+                    "handoff": str(handoff_file),
+                    "blocked_by": dependency_blockers,
                 }
             )
             continue
@@ -2061,12 +2519,30 @@ def _verdict_from_eval_md(eval_md: Path) -> str:
     return ""
 
 
+def _eval_md_is_substantive(eval_md: Path) -> bool:
+    """True iff the evaluator Markdown reads as a genuine independent verification
+    rather than a bare verdict stamp. A real node eval re-runs checks and records
+    evidence across multiple sections (observed genuine evals are ~7-9KB / 11-12
+    sections); a rubber-stamp is a few lines. Thresholds are set far below genuine
+    sizes so this only rejects stamps, never real evals."""
+    try:
+        text = eval_md.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    if len(text.strip()) < 600:
+        return False
+    section_count = len(re.findall(r"(?im)^##\s+\S", text))
+    has_evidence = bool(re.search(r"(?i)\b(evidence|checked|acceptance|re-?ran|re-?run|verif|smoke)", text))
+    return section_count >= 3 or has_evidence
+
+
 def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
     """Recover evaluator sidecar JSON when the Markdown verdict is explicit.
 
     This is intentionally narrow: it only runs for graph node eval sidecars,
     requires a `## Verdict` section with PASS/FAIL, and records that the JSON was
-    derived from evaluator Markdown. It does not invent a verdict.
+    derived from evaluator Markdown. It does not invent a verdict, and (trust gate)
+    it never mints a PASS sidecar from a non-substantive eval .md.
     """
     eval_json = _eval_json_file(sid, node_id)
     if eval_json.exists():
@@ -2076,6 +2552,19 @@ def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
         return None
     verdict = _verdict_from_eval_md(eval_md)
     if verdict not in {"PASS", "FAIL"}:
+        return None
+    # Trust gate (no hollow passes): a PASS must be backed by a substantive
+    # independent eval. A thin/rubber-stamp PASS .md is refused here so the node
+    # stays unverified and is re-evaluated rather than silently marked passed.
+    # FAIL is always honored (fail-safe).
+    if verdict == "PASS" and not _eval_md_is_substantive(eval_md):
+        try:
+            _append_dispatch_ledger(
+                "eval_backfill_refused_thin_pass", sid, "", "",
+                {"node": node_id, "eval_md": str(eval_md)},
+            )
+        except Exception:
+            pass
         return None
     payload = {
         "verdict": verdict,
@@ -2160,6 +2649,297 @@ def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, An
     return []
 
 
+# --- Deterministic secret-leak guard + resource binding (general builder/operator path) ---
+# gitleaks is the release/CI/git-hook scanner but is NOT on the runtime PATH; mirror the
+# canonical built-in pattern set from runtime_interfaces.RuntimePolicy.secret_patterns.
+# (Weaker coverage than gitleaks — keyword + a few high-signal provider tokens — but real
+# and deterministic, unlike the previous LLM "guard_decision_written" narrative attestation.)
+_SECRET_SCAN_PATTERNS = [
+    r"(?i)api[_-]?key\s*[=:]\s*\S+",
+    r"(?i)token\s*[=:]\s*\S{8,}",
+    r"(?i)password\s*[=:]\s*\S+",
+    r"(?i)secret\s*[=:]\s*\S+",
+    r"(?i)credential\s*[=:]\s*\S+",
+    r"(?i)auth[_-]?token\s*[=:]\s*\S+",
+    r"AKIA[0-9A-Z]{16}",
+    r"ghp_[0-9a-zA-Z]{36}",
+    r"sk-[0-9a-zA-Z]{20,}",
+]
+_GUARD_SCAN_MAX_FILES = 64
+_GUARD_SCAN_MAX_BYTES = 512 * 1024
+
+
+def _node_sidecar_file(sid: str, node_id: str, kind: str) -> Path | None:
+    """Return the existing guard/resource sidecar for a node, or None.
+
+    Accepts both underscore and dash filename spellings ({sid}.{node}-guard_decision.json
+    / -guard-decision.json) for parity with the tools/ dispatcher copy.
+    """
+    nid = _safe_node_id(node_id)
+    suffixes = [".md"] if kind == "bridged_artifact" else [".json"]
+    for suffix in suffixes:
+        for cand in (
+            SPRINTS_DIR / f"{sid}.{nid}-{kind}{suffix}",
+            SPRINTS_DIR / f"{sid}.{nid}-{kind.replace('_', '-')}{suffix}",
+        ):
+            if cand.exists():
+                return cand
+    return None
+
+
+def _expected_node_sidecar_file(sid: str, node_id: str, kind: str) -> Path:
+    suffix = ".md" if kind == "bridged_artifact" else ".json"
+    return SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-{kind}{suffix}"
+
+
+def _resolve_write_scope_paths(node: dict[str, Any]) -> list[Path]:
+    """Resolve a node's write_scope entries to existing filesystem paths, scoped to known roots."""
+    roots = [HARNESS_DIR, HARNESS_DIR.parent, SPRINTS_DIR, Path.cwd()]
+    resolved: list[Path] = []
+    for entry in (node.get("write_scope") or []):
+        rel = str(entry or "").strip()
+        if not rel:
+            continue
+        cand = Path(rel).expanduser()
+        if cand.is_absolute():
+            if cand.exists():
+                resolved.append(cand)
+            continue
+        for root in roots:
+            probe = root / rel
+            if probe.exists():
+                resolved.append(probe)
+                break
+    return resolved
+
+
+def _collect_guard_scan_targets(sid: str, node: dict[str, Any]) -> list[Path]:
+    """Scan targets = the node's OWN outputs only (handoff, patch.diff, write_scope files).
+
+    Deliberately scoped — never the whole repo / unrelated files.
+    """
+    node_id = str(node.get("id") or "")
+    targets: list[Path] = []
+    handoff = _existing_node_handoff(sid, node, {"nodes": [node]}) or _handoff_file(sid, node_id)
+    if handoff and Path(handoff).exists():
+        targets.append(Path(handoff))
+    patch = SPRINTS_DIR / f"{sid}.patch.diff"
+    if patch.exists():
+        targets.append(patch)
+    for path in _resolve_write_scope_paths(node):
+        if path.is_dir():
+            for sub in sorted(path.rglob("*")):
+                if sub.is_file():
+                    targets.append(sub)
+        elif path.is_file():
+            targets.append(path)
+    seen: set[str] = set()
+    bounded: list[Path] = []
+    for target in targets:
+        key = str(target)
+        if key in seen:
+            continue
+        seen.add(key)
+        bounded.append(target)
+        if len(bounded) >= _GUARD_SCAN_MAX_FILES:
+            break
+    return bounded
+
+
+def _scan_paths_for_secrets(paths: list[Path]) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for path in paths:
+        try:
+            raw = path.read_bytes()[:_GUARD_SCAN_MAX_BYTES]
+            text = raw.decode("utf-8", errors="replace")
+        except Exception:
+            continue
+        for pattern in _SECRET_SCAN_PATTERNS:
+            found = re.search(pattern, text)
+            if found:
+                snippet = found.group(0)
+                redacted = (snippet[:6] + "...[REDACTED]") if len(snippet) > 6 else "[REDACTED]"
+                matches.append({"path": str(path), "pattern": pattern, "match_redacted": redacted})
+    return matches
+
+
+def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, Any]:
+    """Deterministic guard (secret scan) + resource binding for the general builder/operator path.
+
+    Replaces the bespoke understand_anything S1 closeout (which hardcoded node S1 and wrote a
+    constant "allow"). Scans the node's own outputs for secrets and writes:
+      {sid}.{node}-guard_decision.json  -> {decision: allow|block, matches, scanned_paths, detector}
+      {sid}.{node}-resource_binding.json -> {write_scope, scanned_paths, in_scope, bound}
+    Returns the guard decision dict. Idempotent (re-scans + overwrites on each node-verdict).
+    """
+    node_id = str(node.get("id") or "")
+    nid = _safe_node_id(node_id)
+    targets = _collect_guard_scan_targets(sid, node)
+    scanned = [str(t) for t in targets]
+    matches = _scan_paths_for_secrets(targets)
+    guard = {
+        "node_id": node_id,
+        "decision": "block" if matches else "allow",
+        "detector": "builtin_secret_patterns",
+        "matches": matches,
+        "scanned_paths": scanned,
+        "checked_at": _utc_now(),
+    }
+    resource = {
+        "node_id": node_id,
+        "resource": "resource.repo-workspace",
+        "workspace_root": str(HARNESS_DIR),
+        "write_scope": [str(x) for x in (node.get("write_scope") or [])],
+        "scanned_paths": scanned,
+        "in_scope": True,
+        "bound": True,
+        "checked_at": _utc_now(),
+    }
+    try:
+        (SPRINTS_DIR / f"{sid}.{nid}-guard_decision.json").write_text(
+            json.dumps(guard, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        (SPRINTS_DIR / f"{sid}.{nid}-resource_binding.json").write_text(
+            json.dumps(resource, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except Exception:
+        pass
+    return guard
+
+
+def _proof_obligations_require_field(sid: str, node: dict[str, Any], field: str) -> bool:
+    for obligation in _node_proof_obligations(sid, node):
+        if str(obligation.get("field") or "") == field:
+            return True
+        requirement = str(obligation.get("requirement") or "")
+        if field == "guard_decision" and requirement in {"check.guard_decision_written", "guard_decision exists"}:
+            return True
+        if field == "resource_binding" and requirement in {"check.resource_binding_written", "resource_binding exists"}:
+            return True
+        if field == "bridged_artifact" and requirement in {
+            "check.adapter_output_written",
+            "adapter output exists",
+            "type_mismatch_bridge",
+        }:
+            return True
+    return False
+
+
+def _emit_bridged_artifact_sidecar(sid: str, node: dict[str, Any]) -> Path | None:
+    if not _proof_obligations_require_field(sid, node, "bridged_artifact"):
+        return None
+    node_id = str(node.get("id") or "")
+    path = _expected_node_sidecar_file(sid, node_id, "bridged_artifact")
+    obligations = _node_proof_obligations(sid, node)
+    source_artifacts: list[str] = []
+    missing_required_inputs: list[str] = []
+    target_stage_ids: list[str] = []
+    for obligation in obligations:
+        if str(obligation.get("requirement") or "") != "type_mismatch_bridge":
+            continue
+        source_artifacts.extend(str(item) for item in (obligation.get("source_artifacts") or []) if str(item))
+        missing_required_inputs.extend(str(item) for item in (obligation.get("missing_required_inputs") or []) if str(item))
+        if obligation.get("target_stage_id"):
+            target_stage_ids.append(str(obligation.get("target_stage_id")))
+
+    def _line_items(items: list[str]) -> str:
+        unique = []
+        seen: set[str] = set()
+        for item in items:
+            if item in seen:
+                continue
+            seen.add(item)
+            unique.append(item)
+        return "\n".join(f"- `{item}`" for item in unique) if unique else "- `N/A`"
+
+    handoff = _existing_node_handoff(sid, node, {"nodes": [node]}) or _handoff_file(sid, node_id)
+    candidate_files: list[tuple[str, Path]] = [
+        ("handoff_md", Path(handoff)),
+        ("patch_diff", SPRINTS_DIR / f"{sid}.patch.diff"),
+        ("guard_decision", _expected_node_sidecar_file(sid, node_id, "guard_decision")),
+        ("resource_binding", _expected_node_sidecar_file(sid, node_id, "resource_binding")),
+    ]
+    artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
+    for key in ("capsule_plan_ir", "physical_plan_ir", "patch_diff", "test_report", "test_log"):
+        value = artifacts.get(key)
+        if isinstance(value, str) and value.strip():
+            candidate = Path(value).expanduser()
+            if not candidate.is_absolute():
+                candidate = SPRINTS_DIR / value
+            candidate_files.append((key, candidate))
+
+    existing_files = "\n".join(
+        f"- `{label}`: `{candidate}`"
+        for label, candidate in candidate_files
+        if candidate.exists()
+    ) or "- `N/A`"
+    content = f"""# Bridged Artifact - {sid} / {node_id}
+
+Generated by: `graph_node_dispatcher`
+Generated at: `{_utc_now()}`
+
+## Purpose
+
+This deterministic sidecar bridges capsule JSON/proof metadata into a Markdown artifact for evaluator review.
+
+## Node
+
+- Goal: {node.get("goal", "N/A")}
+- Gate: `{node.get("gate", "N/A")}`
+- Type: `{node.get("type", "N/A")}`
+
+## Adapter Contract
+
+Target stages:
+{_line_items(target_stage_ids)}
+
+Missing required inputs bridged:
+{_line_items(missing_required_inputs)}
+
+Source artifacts:
+{_line_items(source_artifacts)}
+
+## Verifier-Visible Files
+
+{existing_files}
+"""
+    try:
+        path.write_text(content, encoding="utf-8")
+        return path
+    except Exception:
+        return None
+
+
+def _emit_node_proof_sidecars(sid: str, node: dict[str, Any]) -> dict[str, str]:
+    emitted: dict[str, str] = {}
+    guard = _emit_guard_resource_sidecars(sid, node)
+    if guard:
+        emitted["guard_decision"] = str(_expected_node_sidecar_file(sid, str(node.get("id") or ""), "guard_decision"))
+        emitted["resource_binding"] = str(_expected_node_sidecar_file(sid, str(node.get("id") or ""), "resource_binding"))
+    bridged = _emit_bridged_artifact_sidecar(sid, node)
+    if bridged:
+        emitted["bridged_artifact"] = str(bridged)
+    return emitted
+
+
+def _proof_support_artifacts_block(sid: str, node: dict[str, Any]) -> str:
+    node_id = str(node.get("id") or "")
+    entries: list[tuple[str, Path]] = []
+    for kind in ("guard_decision", "resource_binding", "bridged_artifact"):
+        if _proof_obligations_require_field(sid, node, kind):
+            existing = _node_sidecar_file(sid, node_id, kind)
+            entries.append((kind, existing or _expected_node_sidecar_file(sid, node_id, kind)))
+    if not entries:
+        return "- `N/A`"
+    lines = []
+    for kind, path in entries:
+        state = "present" if path.exists() else "missing"
+        lines.append(f"- `{kind}`: `{path}` ({state})")
+    lines.append("")
+    lines.append("Read these sidecars before failing guard/resource/adapter proof obligations.")
+    return "\n".join(lines)
+
+
 def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Path = "") -> dict[str, bool]:
     node_id = str(node.get("id") or "")
     artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
@@ -2175,6 +2955,14 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
         "patch_diff": bool(str(patch_path) not in {"", "."} and patch_path.exists()) or bool(handoff and node.get("write_scope")),
         "test_log": bool(str(test_path) not in {"", "."} and test_path.exists()),
     }
+    # Deterministic guard/resource sidecars (lib/ previously had no lookup — tools/ did).
+    # guard_decision counts as present ONLY when the real scan returned decision == "allow";
+    # a "block" (secret found) leaves it absent so the proof gate fails the node.
+    guard_sidecar = _node_sidecar_file(sid, node_id, "guard_decision")
+    guard_payload = _read_json_file_safe(guard_sidecar) if guard_sidecar else {}
+    presence["guard_decision"] = bool(guard_sidecar) and str(guard_payload.get("decision") or "").lower() == "allow"
+    presence["resource_binding"] = _node_sidecar_file(sid, node_id, "resource_binding") is not None
+    presence["bridged_artifact"] = _node_sidecar_file(sid, node_id, "bridged_artifact") is not None
     for artifact_key, artifact_value in artifacts.items():
         if artifact_key in presence:
             continue
@@ -2190,6 +2978,13 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
             if str(data.get("sprint_id") or "") != sid or str(data.get("node_id") or "") != node_id:
                 continue
             result_dir = result_json.parent
+            skill_dispatch_result = result_dir / "skill-dispatch-result.json"
+            skill_dispatch_prompt = result_dir / "skill-dispatch-pane-prompt.md"
+            skill_dispatch_selection = result_dir / "skill-dispatch-selection-proof.json"
+            skill_dispatch_contract = result_dir / "skill-dispatch-bridge-contract.json"
+            skill_contract_payload = _read_json_file_safe(skill_dispatch_contract)
+            command_protocol = skill_contract_payload.get("command_protocol") if isinstance(skill_contract_payload.get("command_protocol"), dict) else {}
+            workflow_contract = skill_contract_payload.get("workflow_contract") if isinstance(skill_contract_payload.get("workflow_contract"), dict) else {}
             semantic_proof = result_dir / "understand-anything-semantic-proof.json"
             semantic_request = result_dir / "understand-anything-semantic-phase-request.json"
             dispatch_result = result_dir / "understand-anything-result.json"
@@ -2198,6 +2993,14 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
             local_dispatch = dispatch_payload.get("dispatch_result") if isinstance(dispatch_payload.get("dispatch_result"), dict) else {}
             presence.update(
                 {
+                    "skill_dispatch_result": skill_dispatch_result.exists(),
+                    "check.skill_dispatch_result_written": skill_dispatch_result.exists(),
+                    "check.skill_dispatch_prompt_written": skill_dispatch_prompt.exists(),
+                    "check.skill_dispatch_selection_proof_written": skill_dispatch_selection.exists(),
+                    "check.skill_dispatch_contract_written": skill_dispatch_contract.exists(),
+                    "check.skill_dispatch_command_protocol_declared": bool(command_protocol.get("mode")),
+                    "check.skill_dispatch_workflow_phases_declared": bool(workflow_contract.get("phases")),
+                    "check.skill_dispatch_delivery_expectation_declared": bool(workflow_contract.get("delivery_expectation")),
                     "understand_anything_dispatch_result": dispatch_result.exists(),
                     "check.understand_anything_dispatch_result_written": dispatch_result.exists(),
                     "check.semantic_proof_artifact_written": semantic_proof.exists(),
@@ -2261,6 +3064,11 @@ def _evaluate_proof_obligations(sid: str, node: dict[str, Any], eval_json: str |
             elif requirement == "output_present" and field:
                 satisfied = presence.get(field, False)
                 reason = f"{field}_missing" if not satisfied else ""
+                if not satisfied and field == "guard_decision":
+                    _gf = _node_sidecar_file(sid, str(node.get("id") or ""), "guard_decision")
+                    _gd = _read_json_file_safe(_gf) if _gf else {}
+                    if str(_gd.get("decision") or "").lower() == "block":
+                        reason = "secret_leak_blocked"
         elif kind == "adapter_contract":
             satisfied = True
         checked.append(
@@ -2438,7 +3246,7 @@ def _mark_graph_node(graph_path: str, node_id: str, status: str,
                 results.pop(node_id, None)
             else:
                 results[node_id] = {"status": status, "updated_at": updated_at}
-            clear_builder_claim = clear_assignment or status in {"reviewing", "passed", "failed", "skipped"}
+            clear_builder_claim = clear_assignment or status in {"reviewing", "failed_review", "passed", "failed", "skipped"}
             if clear_builder_claim:
                 node.pop("assigned_to", None)
                 node.pop("dispatch_id", None)
@@ -2506,6 +3314,7 @@ def _save_graph_preserving_runtime_progress(graph_path: str, graph: dict[str, An
             "in_progress",
             "running",
             "reviewing",
+            "failed_review",
             "passed",
             "failed",
             "skipped",
@@ -2581,6 +3390,64 @@ def _ensure_execution_plan_payload(
     return payload
 
 
+def _node_repair_context_block(node: dict[str, Any]) -> str:
+    context = node.get("repair_context")
+    if not isinstance(context, dict) or not context:
+        return ""
+
+    attempt = context.get("attempt", "N/A")
+    max_attempts = context.get("max_attempts", "N/A")
+    summary = str(context.get("summary") or "").strip() or "N/A"
+    failed_conditions = context.get("failed_conditions")
+    condition_lines = _scope_lines(failed_conditions if isinstance(failed_conditions, list) else [])
+    archived = context.get("archived_sidecars")
+    archived_lines = _scope_lines(
+        [f"{key}: {value}" for key, value in archived.items()]
+        if isinstance(archived, dict)
+        else []
+    )
+
+    error_lines: list[str] = []
+    errors = context.get("errors")
+    if isinstance(errors, list):
+        for index, item in enumerate(errors[:6], start=1):
+            if not isinstance(item, dict):
+                continue
+            cond = str(item.get("cond") or f"error-{index}")
+            severity = str(item.get("severity") or "unknown")
+            evidence = str(item.get("evidence") or "").strip()
+            fix_hint = str(item.get("fix_hint") or "").strip()
+            error_lines.append(f"- `{cond}` ({severity})")
+            if evidence:
+                error_lines.append(f"  Evidence: {evidence}")
+            if fix_hint:
+                error_lines.append(f"  Fix hint: {fix_hint}")
+    if not error_lines:
+        error_lines = ["- `N/A`"]
+    error_text = "\n".join(error_lines)
+
+    return f"""## Repair Context
+
+This node previously failed evaluator review. Repair the existing node artifact using the evaluator feedback below, then write a fresh handoff for re-review.
+
+- Repair Attempt: `{attempt}` / `{max_attempts}`
+- Previous Verdict: `FAIL`
+- Previous Summary: {summary}
+
+### Failed Conditions
+
+{condition_lines}
+
+### Evaluator Errors
+
+{error_text}
+
+### Archived Previous Review Sidecars
+
+{archived_lines}
+"""
+
+
 def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
     node = payload.get("node") or {}
     sid = payload.get("sprint_id") or payload.get("sid") or ""
@@ -2624,6 +3491,8 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
         ]
     )
     write_scope_preflight = _write_scope_preflight_block(str(sid), node)
+    canonical_output_paths = _canonical_output_paths_block(node)
+    repair_context_block = _node_repair_context_block(node)
 
     return f"""{STATE_READ_PREFLIGHT}
 {DEFINITION_OF_DONE_POLICY}
@@ -2670,9 +3539,13 @@ Graph: `{graph_path}`
 
 {_scope_lines(node.get("write_scope"))}
 
+{canonical_output_paths}
+
 {write_scope_preflight}
 
 {architecture_block}
+
+{repair_context_block}
 
 ## Acceptance
 
@@ -2682,6 +3555,7 @@ Graph: `{graph_path}`
 
 - 只做本节点，不接手其他 DAG node。
 - 只允许修改 `Write Scope` 里的文件/目录；需要扩大范围时写入 handoff 的 `Scope Change Request`，不要直接扩大。
+- 如果 `Write Scope` / `outputs` 包含 `harness/sprints/...` 或 `sprints/...`，必须写入上方 `Canonical Output Paths` 中的绝对路径；不要把 sprint artifact 只写到当前 builder worktree 的相对路径。
 - 不要把 parent sprint 标成 passed。
 - 不要等待用户确认；遇到阻塞先写清楚证据和最小修复建议。
 - 不要停在“继续/要不要继续/等待 review”提示；只要本节点 acceptance 未完成，就自主继续执行。
@@ -2742,6 +3616,7 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
     node_id = str(node.get("id") or "")
     proof_obligations = _node_proof_obligations(sid, node)
     proof_checks_template = _proof_checks_template(proof_obligations)
+    proof_support_artifacts = _proof_support_artifacts_block(sid, node)
     evaluation_plan = node.get("evaluation_plan_runtime") or node.get("evaluation_plan")
     if not isinstance(evaluation_plan, dict) or not evaluation_plan:
         evaluation_plan = _plan_node_evaluation(graph, node)
@@ -2752,6 +3627,7 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
     node_dispatch = _dispatch_file(sid, node_id)
     contract = SPRINTS_DIR / f"{sid}.contract.md"
     architecture_block = dispatch_policy_block(node, graph) if dispatch_policy_block else "## Architecture Guard\n\n- unavailable"
+    research_quality_gate_instruction = _deepresearch_quality_gate_eval_instruction(node, eval_json)
     peer_eval_json_paths = peer_eval_json_paths or []
     canonical_eval_json_path = canonical_eval_json_path or str(_eval_json_file(sid, node_id))
     canonical_eval_md_path = canonical_eval_md_path or str(_eval_md_file(sid, node_id))
@@ -2822,6 +3698,10 @@ Handoff: `{handoff}`
 
 {_proof_obligations_block(proof_obligations)}
 
+## Proof Support Artifacts
+
+{proof_support_artifacts}
+
 ## Write Scope
 
 {_scope_lines(node.get("write_scope"))}
@@ -2849,11 +3729,7 @@ solar-harness session evaluate "{sid}" --json
   - `proof_obligations`: 原样记录本 node 的 obligation 列表
   - `proof_checks`: 对 `self_check` 逐项填 `true/false`
   - `verification_results`: 记录 `checked_artifacts / missing_artifacts / proof_gate`
-- 如果本 node 涉及 DeepResearch / evidence ledger / claim ledger / citation / report compiler，必须先运行 deterministic artifact gate：
-  ```bash
-  solar-harness research eval-artifacts --eval-json "<path-to-research_eval.json>" --json
-  ```
-  并把返回 JSON 原样写入 `{eval_json}` 的 `research_quality_gate` 字段。没有 `research_quality_gate.ok=true` 不允许 PASS。
+{research_quality_gate_instruction}
 
 ## Required Outputs
 
@@ -2957,20 +3833,26 @@ def _pane_title_matches_role(pane: str, title: str, role: str) -> bool:
     title = re.split(r"\s+\|\s+状态:", title or "", maxsplit=1)[0].strip()
     negative = re.compile(r"PM|产品经理|Planner|规划者|Builder|建设者|Evaluator|审判官", re.I)
     if role == "builder":
-        if (
-            pane.startswith("solar-harness-lab:")
-            or pane.startswith("solar-harness-multi-task:")
-        ):
+        if _pane_in_lab_session(pane) or _pane_in_multi_task_session(pane):
             return bool(re.search(r"Builder|建设者|lab-builder", title, re.I)) and not bool(
                 re.search(r"PM|产品经理|Planner|规划者|Evaluator|审判官", title, re.I)
             )
         return False
     if role == "evaluator":
+        # The designated cockpit evaluator pane is authoritative BY POSITION. Its idle
+        # title ("...sprint 评估") lacks "审判官"/"Evaluator" — that title is only set
+        # transiently during an active dispatch — so gating discovery on the title makes a
+        # cold/idle evaluator undiscoverable, leaving only the (often unbacked) operator-pool
+        # evaluator slot to be selected -> send_failed retry loop. The title regex below is
+        # meant to reject OTHER panes, not to gate the one hardcoded evaluator pane.
+        session = _current_harness_session()
+        if pane == f"{session}:0.3":
+            return True
         if not (
-            pane == f"{SESSION}:0.3"
-            or pane.startswith("solar-harness-lab:")
-            or pane.startswith("solar-harness-multi-task:")
-            or pane.startswith(f"{SESSION}:")
+            pane == f"{session}:0.3"
+            or _pane_in_lab_session(pane)
+            or _pane_in_multi_task_session(pane)
+            or pane.startswith(f"{session}:")
         ):
             return False
         non_role_title = re.sub(r"Evaluator|审判官", "", title, flags=re.I)
@@ -2981,11 +3863,12 @@ def _pane_title_matches_role(pane: str, title: str, role: str) -> bool:
 
 
 def _pane_execution_priority(pane: str) -> tuple[int, str]:
-    if pane.startswith("solar-harness-multi-task:"):
+    session = _current_harness_session()
+    if _pane_in_multi_task_session(pane):
         return (0, pane)
-    if pane.startswith("solar-harness-lab:"):
+    if _pane_in_lab_session(pane):
         return (1, pane)
-    if pane.startswith(f"{SESSION}:"):
+    if pane.startswith(f"{session}:"):
         return (2, pane)
     return (9, pane)
 
@@ -2997,15 +3880,16 @@ def _pane_evaluator_priority(pane: str, title: str = "") -> tuple[int, str]:
     eval sidecar should stay anchored to the main Evaluator when it is
     available. Lab panes are capacity spillover, not the first choice.
     """
-    if pane == f"{SESSION}:0.3":
+    session = _current_harness_session()
+    if pane == f"{session}:0.3":
         return (0, pane)
     if re.search(r"Evaluator|审判官", title or _pane_title(pane), re.I):
         return (1, pane)
-    if pane.startswith("solar-harness-multi-task:"):
+    if _pane_in_multi_task_session(pane):
         return (2, pane)
-    if pane.startswith("solar-harness-lab:"):
+    if _pane_in_lab_session(pane):
         return (3, pane)
-    if pane.startswith(f"{SESSION}:"):
+    if pane.startswith(f"{session}:"):
         return (4, pane)
     return (9, pane)
 
@@ -3020,7 +3904,7 @@ def _lab_builder_can_host_evaluator(pane: str, title: str) -> bool:
     """
     if os.environ.get("SOLAR_GRAPH_ALLOW_LAB_BUILDER_EVALUATOR", "1") == "0":
         return False
-    if not (pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:")):
+    if not (_pane_in_lab_session(pane) or _pane_in_multi_task_session(pane)):
         return False
     normalized_title = re.split(r"\s+\|\s+状态:", title or "", maxsplit=1)[0].strip()
     if re.search(r"PM|产品经理|Planner|规划者", normalized_title, re.I):
@@ -3050,6 +3934,80 @@ def _pane_current_command(pane: str) -> str:
         ).stdout.strip()
     except Exception:
         return ""
+
+
+def _pane_root_pid(pane: str) -> int | None:
+    try:
+        raw = subprocess.run(
+            ["tmux", "display-message", "-p", "-t", pane, "#{pane_pid}"],
+            text=True,
+            capture_output=True,
+            timeout=2,
+        ).stdout.strip()
+        return int(raw) if raw else None
+    except Exception:
+        return None
+
+
+def _pane_has_codex_process(pane: str) -> bool:
+    """Return true when a pane's process tree contains the Codex CLI.
+
+    tmux reports `pane_current_command=bash` for panes launched through
+    `pane-launcher.sh`, even while Codex is alive as a child process. Use the
+    process tree instead of the foreground command alone for Codex liveness.
+    """
+    root_pid = _pane_root_pid(pane)
+    if not root_pid:
+        return False
+    try:
+        result = subprocess.run(
+            ["ps", "-eo", "pid=,ppid=,comm=,args="],
+            text=True,
+            capture_output=True,
+            timeout=3,
+        )
+    except Exception:
+        return False
+    if result.returncode != 0:
+        return False
+    children: dict[int, list[tuple[int, str, str]]] = {}
+    for line in result.stdout.splitlines():
+        parts = line.strip().split(None, 3)
+        if len(parts) < 3:
+            continue
+        try:
+            pid = int(parts[0])
+            ppid = int(parts[1])
+        except ValueError:
+            continue
+        comm = parts[2]
+        args = parts[3] if len(parts) > 3 else ""
+        children.setdefault(ppid, []).append((pid, comm, args))
+    stack = [root_pid]
+    seen: set[int] = set()
+    while stack:
+        current = stack.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+        for pid, comm, args in children.get(current, []):
+            command = f"{comm} {args}"
+            if comm == "codex" or re.search(r"(^|[/\s])codex($|\s)", command):
+                return True
+            stack.append(pid)
+    return False
+
+
+def _pane_has_codex_idle_composer(text: str) -> bool:
+    """Return true for Codex's empty composer glyph.
+
+    Codex shows a placeholder after `›`, so text following that glyph is not
+    necessarily unsubmitted user input. During active turns the footer includes
+    `esc to interrupt`, which keeps this from being treated as idle.
+    """
+    if "esc to interrupt" in text.lower():
+        return False
+    return "›" in text
 
 
 def _pane_current_prompt_has_residue(text: str) -> bool:
@@ -3156,21 +4114,57 @@ def _pane_prompt_residue_is_stale_scrollback(pane: str, text: str) -> bool:
     )
 
 
+def _clear_pane_scrollback(pane: str) -> bool:
+    """Fix #7b: drop a pane's tmux scrollback buffer to evict a stale, already-
+    resolved rate-limit banner ("resets X") that would otherwise keep matching
+    PANE_TUI_UNAVAILABLE_RE and wedge the pane out of dispatch forever (a /clear
+    clears the conversation, NOT the terminal scrollback). Does not touch the
+    Claude turn/conversation — only the terminal backbuffer."""
+    try:
+        subprocess.run(["tmux", "clear-history", "-t", pane], timeout=3)
+        return True
+    except Exception:
+        return False
+
+
 def _pane_tui_busy(pane: str) -> bool:
     tail = _pane_tail(pane)
     bottom = "\n".join(tail.splitlines()[-40:])
     overlay = pane_overlay_detail(tail) if pane_overlay_detail else {"state": "none", "type": ""}
-    prompt_is_empty = "❯" in bottom and not _pane_current_prompt_has_residue(bottom)
+    prompt_is_empty = ("❯" in bottom and not _pane_current_prompt_has_residue(bottom)) or _pane_has_codex_idle_composer(bottom)
     if PANE_RATE_LIMIT_OPTIONS_MODAL_RE.search(bottom):
         if _dismiss_rate_limit_options_modal(pane):
             time.sleep(0.5)
             tail = _pane_tail(pane)
             bottom = "\n".join(tail.splitlines()[-40:])
-            prompt_is_empty = "❯" in bottom and not _pane_current_prompt_has_residue(bottom)
+            prompt_is_empty = ("❯" in bottom and not _pane_current_prompt_has_residue(bottom)) or _pane_has_codex_idle_composer(bottom)
             if not PANE_RATE_LIMIT_OPTIONS_MODAL_RE.search(bottom):
                 return False
         return True
     if PANE_TUI_UNAVAILABLE_RE.search(bottom):
+        # Fix #7b: a rate-limit / API-error banner means BUSY only while it is the
+        # pane's LIVE state. A RESOLVED limit leaves a stale "resets X" banner in
+        # scrollback while the pane returns to an idle, ready prompt — that must not
+        # wedge the pane forever. LIVE = banner in the immediate active region (last
+        # screen), or the options modal / quota-exhausted marker present. STALE =
+        # only matches higher in scrollback with an idle, empty, non-spinning prompt
+        # below. CONSERVATIVE: anything not provably stale stays BUSY (never dispatch
+        # into a genuinely-limited pane). On a provably-stale banner, evict it from
+        # the scrollback so it stops matching, and report available.
+        active_region = "\n".join(tail.splitlines()[-10:])
+        banner_live_now = bool(
+            PANE_TUI_UNAVAILABLE_RE.search(active_region)
+            or PANE_RATE_LIMIT_OPTIONS_MODAL_RE.search(bottom)
+            or PANE_QUOTA_EXHAUSTED_RE.search(active_region)
+        )
+        stale_resolved = (
+            not banner_live_now
+            and prompt_is_empty
+            and not PANE_LIVE_SPINNER_RE.search(bottom)
+        )
+        if stale_resolved:
+            _clear_pane_scrollback(pane)
+            return False
         return True
     if PANE_PROCESSING_RE.search(bottom):
         if _pane_prompt_residue_is_stale_scrollback(pane, tail):
@@ -3192,6 +4186,14 @@ def _pane_tui_busy(pane: str) -> bool:
     if PANE_SURVEY_PROMPT_RE.search(bottom):
         if overlay.get("state") == "stale_scrollback_ignored" or prompt_is_empty:
             return False
+        # Fix #7a: the survey is an idle-time modal blocking dispatch. Reaching this
+        # branch means no working turn (the processing branch returns earlier), so it
+        # is safe to auto-dismiss the survey and re-check before reporting busy.
+        if _dismiss_dispatch_prompt(pane, "survey_prompt_blocked"):
+            time.sleep(0.4)
+            bottom = "\n".join(_pane_tail(pane).splitlines()[-40:])
+            if not PANE_SURVEY_PROMPT_RE.search(bottom):
+                return False
         return True
     confirmation_match = PANE_CONFIRMATION_PROMPT_RE.search(bottom)
     if confirmation_match and not _prompt_match_followed_by_idle_default_prompt(bottom, confirmation_match):
@@ -3239,6 +4241,10 @@ def _pane_runtime_unavailable_reason(pane: str, title: str = "") -> str:
     command = _pane_current_command(pane).lower()
     if command not in {"bash", "zsh", "sh", "fish"}:
         return ""
+    if _pane_runtime() == "codex":
+        if _pane_has_codex_process(pane):
+            return ""
+        return "codex_runtime_not_running"
     title_lower = title.lower()
     if "idle/no active sprint" not in title_lower:
         return ""
@@ -3266,7 +4272,7 @@ def _multi_task_direct_dispatch_unavailable_reason(
     shells; the multi-task runner is responsible for starting a model process
     there first.
     """
-    if not pane.startswith("solar-harness-multi-task:"):
+    if not _pane_in_multi_task_session(pane):
         return ""
     command = (current_command if current_command is not None else _pane_current_command(pane)).lower()
     if command in {"bash", "zsh", "sh", "fish", ""}:
@@ -3418,13 +4424,152 @@ def _pane_hygiene_entries() -> dict[str, Any]:
 
 
 def _recover_pane_hygiene_if_idle(pane: str, state: str) -> bool:
-    if state not in {"cooling", "needs_recover"}:
+    if state not in {"cooling", "needs_recover", "dirty"}:
         return False
-    if _pane_has_active_lease(pane):
-        return False
+    # Fix (Wall #4): do NOT bail on an active lease. A dirty/cooling/needs_recover
+    # pane that is IDLE (not tui-busy) is safe to recover regardless of who holds the
+    # lease -- the dirty state is a stale dispatch-boundary marker, not active work.
+    # Bailing on the lease deadlocked a same-pane node (it pre-acquires the lease,
+    # then the boundary-dirty pane won't recover under its OWN lease). tui-busy below
+    # is the real safety; pane-stealing is prevented at lease ACQUISITION, not here.
     if _pane_tui_busy(pane):
         return False
     return True
+
+
+_HUNG_PANE_SAMPLES = 3
+_HUNG_PANE_SAMPLE_GAP_S = 6.0  # 3 samples across ~12s
+_SPINNER_TIMER_RE = re.compile(r"\((\d+(?:h|m|s)(?:\s+\d+(?:m|s))*)\)")
+
+
+def _pane_shows_spinner(pane: str) -> bool:
+    bottom = "\n".join(_pane_tail(pane, lines=12).splitlines()[-12:])
+    return bool(PANE_PROCESSING_RE.search(bottom))
+
+
+_COCKPIT_PERSONA_BY_INDEX = {"0.0": "pm", "0.1": "planner", "0.2": "builder", "0.3": "evaluator"}
+_CLAUDE_CLEAN_ENV = (
+    "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_EXECPATH "
+    "-u ANTHROPIC_BASE_URL -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY "
+    "-u ANTHROPIC_DEFAULT_OPUS_MODEL -u ANTHROPIC_DEFAULT_SONNET_MODEL -u ANTHROPIC_DEFAULT_HAIKU_MODEL"
+)
+
+
+def _respawn_cockpit_pane(pane: str) -> bool:
+    """Force-kill a wedged cockpit pane and relaunch its persona fresh, mirroring
+    solar-harness.sh apply_product_delivery_models (clean env + pane-launcher).
+    pane_doctor refuses to respawn PROTECTED main panes, so this is the only path
+    that recovers a main pane whose turn is hung beyond key-interrupt recovery."""
+    persona = _COCKPIT_PERSONA_BY_INDEX.get(pane.split(":")[-1], "builder")
+    try:
+        pane_id = subprocess.check_output(
+            ["tmux", "display-message", "-p", "-t", pane, "#{pane_id}"], timeout=3
+        ).decode().strip()
+        work_dir = subprocess.check_output(
+            ["tmux", "display-message", "-p", "-t", pane, "#{pane_current_path}"], timeout=3
+        ).decode().strip()
+    except Exception:
+        return False
+    if not pane_id:
+        return False
+    if not work_dir:
+        work_dir = str(Path.home() / "solar-cleanrun")
+    launcher = str(HARNESS_DIR / "pane-launcher.sh")
+    cmd = (
+        f"{_CLAUDE_CLEAN_ENV} TMUX_PANE={pane_id} SOLAR_CLAUDE_BYPASS=1 "
+        f"bash '{launcher}' {persona} '{work_dir}'"
+    )
+    try:
+        subprocess.run(["tmux", "respawn-pane", "-k", "-t", pane, cmd], timeout=10, check=True)
+        return True
+    except Exception:
+        return False
+
+
+def _set_pane_boot_grace(pane: str, seconds: int, *, sid: str = "", dispatch_id: str = "") -> None:
+    """Hold a freshly-respawned pane out of dispatch while its Claude boots, via a
+    short custom recover-cooldown (the default PANE_RECOVER_COOLDOWN_SEC is too
+    long). Mirrors _mark_pane_recover_cooldown's entry shape so it stays valid."""
+    until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=seconds)
+    data = _pane_cooldowns()
+    data[pane] = {
+        "reason": "hung_pane_respawn_booting",
+        "sid": sid,
+        "dispatch_id": dispatch_id,
+        "marked_at": _utc_now(),
+        "until": until.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    _write_pane_cooldowns(data)
+
+
+def _recover_hung_pane(pane: str, *, sid: str = "", node_id: str = "", dispatch_id: str = "") -> bool:
+    """Recover a FROZEN (hung) cockpit pane so an assigned node stops looping.
+
+    A wedged Claude turn leaves a processing spinner on screen with no progress,
+    stranding the node assigned to it (observed: builder pane stuck on a frozen
+    `Prestidigitating… (0s)` turn whose elapsed-time counter never advances, after
+    a transient opus stall; opus recovered but the pane did not, and pane_doctor
+    never recovers PROTECTED main panes). The fragile part is the busy/lease
+    CLASSIFICATION — the same frozen render was read tui-busy in one moment and
+    not-busy (with a stale dispatch lease) the next — so we deliberately do NOT
+    gate on _pane_tui_busy or on the lease here.
+
+    The robust, sufficient discriminator is the spinner's ELAPSED TIMER. A working
+    turn counts up — (5s) -> (12s) — and/or streams output; a frozen turn is stuck.
+    Sample several times across a window and bail if the timer advances, the render
+    streams, the spinner clears, or no live timer can be parsed. Act ONLY when a
+    live elapsed-timer is present-and-stuck across the whole window AND the render
+    is byte-static — that is the safety (a real working pane is never interrupted).
+    On a confirmed freeze, interrupt the hung turn (Escape, then C-c), clear any
+    recover-cooldown, and log the action; the subsequent dispatch goes through
+    _send_to_pane's normal C-u residue clear, and the reconcile path re-dispatches
+    the (now released) node onto the recovered pane.
+
+    Returns True iff the interrupt fired AND the spinner cleared.
+    """
+    if not _pane_shows_spinner(pane):
+        return False
+    renders: list[str] = []
+    timers: list[str | None] = []
+    for i in range(_HUNG_PANE_SAMPLES):
+        if i:
+            time.sleep(_HUNG_PANE_SAMPLE_GAP_S)
+        render = _pane_tail(pane, lines=40)
+        bottom = "\n".join(render.splitlines()[-12:])
+        timer: str | None = None
+        if PANE_PROCESSING_RE.search(bottom):
+            found = _SPINNER_TIMER_RE.findall(bottom)
+            timer = found[-1] if found else None
+        renders.append(render)
+        timers.append(timer)
+    if not _pane_shows_spinner(pane):
+        return False  # spinner cleared during sampling -> not hung
+    if any(t is None for t in timers):
+        return False  # no parseable elapsed-timer -> cannot confirm a stuck spinner
+    if any(t != timers[0] for t in timers):
+        return False  # spinner elapsed-timer advanced -> genuinely working
+    if any(r != renders[0] for r in renders):
+        return False  # render changed (streaming) -> genuinely working
+    for keys in (("Escape",), ("C-c",), ("Escape", "C-u")):
+        try:
+            subprocess.run(["tmux", "send-keys", "-t", pane, *keys], timeout=2)
+        except Exception:
+            return False
+        time.sleep(0.4)
+        if not _pane_shows_spinner(pane):
+            cooldowns = _pane_cooldowns()
+            if cooldowns.pop(pane, None) is not None:
+                _write_pane_cooldowns(cooldowns)
+            _append_dispatch_ledger(
+                "hung_pane_recovered", sid, pane, dispatch_id,
+                {"node": node_id, "keys": "+".join(keys), "elapsed": timers[0] or "", "detector": "frozen_timer"},
+            )
+            return True
+    _append_dispatch_ledger(
+        "hung_pane_recover_failed", sid, pane, dispatch_id,
+        {"node": node_id, "detector": "frozen_timer"},
+    )
+    return False
 
 
 def _pane_hygiene_unavailable_reason(pane: str) -> str:
@@ -3437,6 +4582,8 @@ def _pane_hygiene_unavailable_reason(pane: str) -> str:
     if state == "needs_respawn":
         return "pane_hygiene_needs_respawn"
     if state == "dirty":
+        if _recover_pane_hygiene_if_idle(pane, state):
+            return ""
         return "pane_hygiene_dirty"
     if state in {"cooling", "needs_recover"}:
         if _recover_pane_hygiene_if_idle(pane, state):
@@ -3469,6 +4616,8 @@ def _assigned_pane_unavailable_reason(pane: str) -> str:
     target immediately before lease/send so a later quota hit or TUI block does
     not strand the node in dispatched state.
     """
+    if not _pane_in_harness_session_scope(pane):
+        return "pane_outside_harness_session"
     title = _pane_title(pane)
     health = _pane_health(pane)
     models = _models_for_pane(pane, title)
@@ -3544,6 +4693,16 @@ def _dismiss_dispatch_prompt(pane: str, reason: str) -> bool:
                 if not PANE_PLAN_MODE_RE.search(after):
                     return True
             return False
+        if reason == "survey_prompt_blocked":
+            # Fix #7a: dismiss the "How is Claude doing?" survey modal (0 = Dismiss;
+            # Escape as fallback), verifying it actually cleared.
+            for keys in (("0",), ("Escape",)):
+                subprocess.run(["tmux", "send-keys", "-t", pane, *keys], timeout=2)
+                time.sleep(0.4)
+                after = "\n".join(_pane_tail(pane).splitlines()[-40:])
+                if not PANE_SURVEY_PROMPT_RE.search(after):
+                    return True
+            return False
     except Exception:
         return False
     return False
@@ -3562,6 +4721,9 @@ def _wait_for_dispatch_window(pane: str, instruction_file: Path, *, sid: str = "
     instruction_path = str(instruction_file.resolve())
     for _ in range(max(1, attempts)):
         tail = _pane_tail(pane)
+        runtime_reason = _pane_runtime_unavailable_reason(pane, _pane_title(pane))
+        if runtime_reason:
+            return False, runtime_reason
         if (
             (instruction_file.name in tail or instruction_path in tail)
             and PANE_PROCESSING_RE.search(tail)
@@ -3742,7 +4904,11 @@ def _send_to_pane(pane: str, instruction_file: Path, dry_run: bool,
     _set_pane_capability_title(pane, instruction_file)
     instruction_path = str(instruction_file.resolve())
     dispatch_keyword = instruction_file.name
-    short_cmd = f"{_visibility_summary(instruction_file)['text']}; 读取并执行 {instruction_path}"
+    if _pane_runtime() == "codex":
+        role_file = _role_file_for_pane(pane)
+        short_cmd = f"{_visibility_summary(instruction_file)['text']}; 先读取角色指令 {role_file}，再读取并执行 {instruction_path}"
+    else:
+        short_cmd = f"{_visibility_summary(instruction_file)['text']}; 读取并执行 {instruction_path}"
     _record_model_call("request", sid, pane, dispatch_id, instruction_file, status="tmux_submit_requested")
     last_error = ""
     def _settled_dispatch_state() -> tuple[str, str, bool, bool]:
@@ -4358,7 +5524,7 @@ def _ensure_lease(pane: str, sid: str, dispatch_id: str, ttl: int, dry_run: bool
 
 
 def _builder_operator_pool_enabled() -> bool:
-    return str(os.environ.get("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", "1")).strip().lower() not in {
+    return str(os.environ.get("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", "0")).strip().lower() not in {
         "0",
         "false",
         "off",
@@ -4376,8 +5542,8 @@ def _builder_operator_pool_allowed_for_pane(pane: str) -> bool:
         return True
     return (
         pane.startswith("operator-pool:builder")
-        or pane.startswith("solar-harness-lab:")
-        or pane.startswith("solar-harness-multi-task:")
+        or _pane_in_lab_session(pane)
+        or _pane_in_multi_task_session(pane)
     )
 
 
@@ -5216,6 +6382,9 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         "env-passthrough", "metrics", "quota", "quota-management", "quota_fallback", "quota.fallback",
         "harness.context_preflight", "harness.intent", "harness.dispatch_visibility", "harness.contracts",
         "harness.dag", "harness.status", "harness.model_routing", "model.routing",
+        "cap.requirement-compiler-planner", "cap.requirement-compiler-implementation",
+        "cap.requirement-compiler-verification", "cap.requirement-compiler-audit",
+        "artifact.requirement_trace",
         "policy", "policy.verdict",
         "intent.match", "intent.audit", "dispatch.intent_telemetry",
         "models.show", "models.lab_matrix", "models.footer_labels",
@@ -5268,11 +6437,16 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
     if dry_run and os.environ.get("SOLAR_GRAPH_DISPATCH_FAKE_WORKERS") == "1":
         if restrict_to_session:
             return []
+        lab_session = str(os.environ.get("SOLAR_HARNESS_LAB_SESSION") or "").strip()
+        if not lab_session:
+            current_session = _current_harness_session()
+            lab_session = "solar-harness-lab" if current_session == "solar-harness" else f"{current_session}-lab"
+        fake_panes = [f"{lab_session}:0.{idx}" for idx in range(4)]
         return [
-            {"pane": "solar-harness-lab:0.0", "models": _models_for_pane("solar-harness-lab:0.0"), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
-            {"pane": "solar-harness-lab:0.1", "models": _models_for_pane("solar-harness-lab:0.1"), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
-            {"pane": "solar-harness-lab:0.2", "models": _models_for_pane("solar-harness-lab:0.2"), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
-            {"pane": "solar-harness-lab:0.3", "models": _models_for_pane("solar-harness-lab:0.3"), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
+            {"pane": fake_panes[0], "models": _models_for_pane(fake_panes[0]), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
+            {"pane": fake_panes[1], "models": _models_for_pane(fake_panes[1]), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
+            {"pane": fake_panes[2], "models": _models_for_pane(fake_panes[2]), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
+            {"pane": fake_panes[3], "models": _models_for_pane(fake_panes[3]), "skills": worker_skills, "capabilities": worker_capabilities, "role": "builder", "dispatch_role": "builder", "host_role": "builder"},
         ]
     try:
         out = subprocess.check_output(
@@ -5289,24 +6463,28 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         pane = row[0].strip()
         title = row[1].strip() if len(row) > 1 else ""
         dispatch_role = _dispatch_role_for_pane(pane, title)
-        if restrict_to_session:
+        if restrict_to_session and not pane.startswith(f"{_current_harness_session()}:"):
             continue
-        if not (
-            pane.startswith(f"{SESSION}:")
-            or
-            pane.startswith("solar-harness-lab:")
-            or pane.startswith("solar-harness-multi-task:")
-        ):
+        if not _pane_in_harness_session_scope(pane):
             continue
-        if dispatch_role != "builder":
+        if dispatch_role not in {"builder", "planner", "architect"}:
             continue
+        # Unattended hung-pane recovery, before availability is sampled: a MAIN
+        # cockpit builder pane wedged on a frozen turn (a processing spinner whose
+        # elapsed-timer never advances) strands its assigned node — regardless of
+        # whether worker discovery happens to read it busy and regardless of a
+        # stale dispatch lease. The frozen-timer detection inside _recover_hung_pane
+        # is the safety (a working turn advances its timer / streams), so we do NOT
+        # gate on the fragile tui-busy/lease classification here.
+        if pane.startswith(f"{_current_harness_session()}:"):
+            _recover_hung_pane(pane)
         models = _models_for_pane(pane, title)
         tail = _pane_tail(pane)
         health = _pane_health(pane)
         quota_exhausted = _quota_exhausted_models(title, tail, health, models)
         rate_limit_blocks = _persist_pane_rate_limit_block(pane, title, tail, quota_exhausted) if quota_exhausted else []
         cooldown_reason = _pane_cooldown_reason(pane)
-        if pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:"):
+        if _pane_in_helper_session(pane):
             if not cooldown_reason:
                 _clear_stale_prompt_residue(pane)
         current_command = _pane_current_command(pane)
@@ -5349,13 +6527,14 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
 def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
     _prune_expired_operator_blocks()
     if dry_run and os.environ.get("SOLAR_GRAPH_DISPATCH_FAKE_EVALUATORS") == "1":
-        return [{"pane": f"{SESSION}:0.3", "models": _models_for_pane(f"{SESSION}:0.3"), "skills": ["review", "testing", "bash"]}]
+        session = _current_harness_session()
+        return [{"pane": f"{session}:0.3", "models": _models_for_pane(f"{session}:0.3"), "skills": ["review", "testing", "bash"]}]
     # Graph node evaluation mutates graph verdict state. Keep it on evaluator
     # personas only, but allow a pool of evaluator hosts instead of pinning the
     # runtime to one pane. Planning still decides whether a node may use a
     # single evaluator or require quorum semantics.
     restrict_to_session = os.environ.get("SOLAR_GRAPH_DISPATCH_RESTRICT_SESSION") == "1"
-    candidates = [f"{SESSION}:0.3"]
+    candidates = [f"{_current_harness_session()}:0.3"]
     try:
         out = subprocess.check_output(
             ["tmux", "list-panes", "-a", "-F", "#{session_name}:#{window_index}.#{pane_index}\t#{pane_title}"],
@@ -5370,15 +6549,10 @@ def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
         if not pane or pane in candidates:
             continue
         if restrict_to_session:
-            if not pane.startswith(f"{SESSION}:"):
+            if not pane.startswith(f"{_current_harness_session()}:"):
                 continue
-        else:
-            if not (
-                pane.startswith(f"{SESSION}:")
-                or pane.startswith("solar-harness-lab:")
-                or pane.startswith("solar-harness-multi-task:")
-            ):
-                continue
+        elif not _pane_in_harness_session_scope(pane):
+            continue
         candidates.append(pane)
     evaluators: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -5394,7 +6568,7 @@ def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
                 continue
             current_command = _pane_current_command(pane)
             cooldown_reason = _pane_cooldown_reason(pane)
-            if (pane.startswith("solar-harness-lab:") or pane.startswith("solar-harness-multi-task:")) and not cooldown_reason:
+            if _pane_in_helper_session(pane) and not cooldown_reason:
                 _clear_stale_prompt_residue(pane)
             tail = _pane_tail(pane)
             models = _models_for_pane(pane, title)
@@ -5473,7 +6647,7 @@ def _node_eval_needed(graph: dict[str, Any], sid: str, node: dict[str, Any], for
         dispatched_at = _parse_utc(str(node.get("eval_dispatched_at") or ""))
         if assignments and dispatched_at:
             age = datetime.datetime.now(datetime.timezone.utc) - dispatched_at
-            if age.total_seconds() < 900:
+            if age.total_seconds() < EVAL_RECOVER_SEC:
                 return False
         lease_matches = False
         for assignment in assignments:
@@ -5632,7 +6806,7 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                     str(assignment["pane"]),
                     sid,
                     str(assignment["dispatch_id"]),
-                    ttl,
+                    min(ttl, EVAL_RECOVER_SEC),
                     dry_run,
                 )
             lease_results.append(lease_result)
@@ -5652,6 +6826,9 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 "evaluation_plan": runtime_plan,
             })
             continue
+
+        if not dry_run:
+            _emit_node_proof_sidecars(sid, node)
 
         canonical_eval_md = str(_eval_md_file(sid, node_id))
         canonical_eval_json = str(_eval_json_file(sid, node_id))
@@ -5844,6 +7021,10 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
                 "eval_json": str(resolved_eval_json),
                 "handoff_md": str(observed_handoff),
             }
+        # Deterministic support sidecars before the proof gate. This emits
+        # guard/resource/adapter bridge artifacts from real node outputs, so the
+        # proof gate checks files rather than narrative claims.
+        _emit_node_proof_sidecars(sid, node)
         proof_gate = _evaluate_proof_obligations(sid, node, eval_json=resolved_eval_json)
         if proof_gate.get("required") and not proof_gate.get("ok"):
             return {
@@ -5893,6 +7074,61 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
     if eval_json:
         note_parts.append(f"eval_json={eval_json}")
     eval_assignments = _node_eval_assignments(node)
+    if status == "failed":
+        resolved_eval_json = str(eval_json or _eval_json_file(sid, node_id))
+        eval_payload = _read_json_file_safe(resolved_eval_json)
+        if reason and not str(eval_payload.get("summary") or "").strip():
+            eval_payload["summary"] = reason
+        observed_handoff = _existing_node_handoff(sid, node, graph) or _handoff_file(sid, node_id)
+        if observed_handoff and Path(observed_handoff).exists():
+            worker_pane = str(node.get("assigned_to") or "")
+            worker_dispatch_id = str(node.get("dispatch_id") or "")
+            repair_context = _start_node_repair_from_eval_fail(
+                graph,
+                node,
+                sid,
+                node_id,
+                Path(observed_handoff),
+                resolved_eval_json,
+                eval_payload,
+            )
+            if repair_context is not None:
+                if not dry_run:
+                    save_graph(graph_path, graph)
+                worker_lease_released = False
+                eval_lease_released = False
+                if not dry_run and worker_pane and worker_dispatch_id:
+                    worker_lease_released = bool(
+                        release_lease(worker_pane, worker_dispatch_id, "node_failed_review").get("released")
+                    )
+                if not dry_run and eval_assignments:
+                    eval_lease_released = any(
+                        bool(
+                            release_lease(
+                                str(assignment.get("pane") or ""),
+                                str(assignment.get("dispatch_id") or ""),
+                                "node_failed_review",
+                            ).get("released")
+                        )
+                        for assignment in eval_assignments
+                        if str(assignment.get("pane") or "") and str(assignment.get("dispatch_id") or "")
+                    )
+                coverage_refresh = _refresh_requirement_coverage_artifacts(sid, dry_run=dry_run)
+                return {
+                    "ok": True,
+                    "node": node_id,
+                    "status": "failed_review",
+                    "repair_context": repair_context,
+                    "dry_run": dry_run,
+                    "worker_lease_released": worker_lease_released,
+                    "eval_lease_released": eval_lease_released,
+                    "downstream": {"ok": True, "skipped": "repair_requested"},
+                    "parent_status_updated": False,
+                    "capability_effect": {},
+                    "proof_gate": proof_gate,
+                    "research_quality_gate": research_quality_gate,
+                    "coverage_refresh": coverage_refresh,
+                }
     parent = mark_node_result(graph, node_id, status, gate_status=status, note="; ".join(note_parts) or None)
     node["status"] = status
     node["updated_at"] = _utc_now()
