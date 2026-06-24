@@ -3054,19 +3054,19 @@ PY
    ${SPRINTS_DIR}/${sid}.task_graph.json
 
 5.1 显式维护需求映射:
-   - task_graph.json 的每个节点都必须写出 `requirement_ids`，表示它覆盖哪些 requirement
-   - 每个节点都必须写出 `acceptance_ids`
+   - task_graph.json 的每个节点都必须写出 \`requirement_ids\`，表示它覆盖哪些 requirement
+   - 每个节点都必须写出 \`acceptance_ids\`
    - 禁止只依赖默认占位映射；Planner 必须把 requirement -> node 的关系写清楚
 
 6. 额外写人读 HTML artifact 到:
    ${SPRINTS_DIR}/${sid}.design.html
    ${SPRINTS_DIR}/${sid}.planning.html
    HTML 是给用户阅读和审阅的可视化 artifact，不能替代 design.md、plan.md 或 task_graph.json。必须 self-contained，不依赖外部 CSS/JS/CDN。
-   `design.html` 用来承载架构设计视图，`planning.html` 用来承载执行计划 / DAG 视图；两者必须属于同一套 html-anything 默认视觉系统。
+   \`design.html\` 用来承载架构设计视图，\`planning.html\` 用来承载执行计划 / DAG 视图；两者必须属于同一套 html-anything 默认视觉系统。
    优先使用统一渲染器生成:
    python3 ${HARNESS_DIR}/lib/render_sprint_html.py render --sid ${sid} --kind design --register
    python3 ${HARNESS_DIR}/lib/render_sprint_html.py render --sid ${sid} --kind planning --register
-   \`design.html\` / \`planning.html\` 必须和 PM 侧 \`prd.html\` 保持同一套 richer 视觉系统：深色 hero、锚点目录 TOC、卡片分区、流程/架构图、技术栈/算子绑定区、风险矩阵；禁止回退成旧的朴素米色 planning 页。`design.html` 必须突出架构方案与技术栈绑定，`planning.html` 必须突出 DAG/并发边界、文件级写范围、验证命令、风险矩阵和 stop rules。
+   \`design.html\` / \`planning.html\` 必须和 PM 侧 \`prd.html\` 保持同一套 richer 视觉系统：深色 hero、锚点目录 TOC、卡片分区、流程/架构图、技术栈/算子绑定区、风险矩阵；禁止回退成旧的朴素米色 planning 页。\`design.html\` 必须突出架构方案与技术栈绑定，\`planning.html\` 必须突出 DAG/并发边界、文件级写范围、验证命令、风险矩阵和 stop rules。
 
 7. 写完 HTML 后注册并自动打开:
    python3 ${HARNESS_DIR}/lib/html_artifact.py register --sid ${sid} --kind design_html --path ${SPRINTS_DIR}/${sid}.design.html
