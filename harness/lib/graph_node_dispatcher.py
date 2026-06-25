@@ -6609,6 +6609,31 @@ def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
     return evaluators
 
 
+def _node_eval_self_graded(sid: str, node_id: str) -> bool:
+    """The node's eval.json was written by the EXECUTING agent itself (generation_mode=manual_node_eval)
+    with no INDEPENDENT evaluator report (no non-empty {node}-eval.md and no {node}-eval-dispatch sidecar).
+    A self-graded verdict must not stand in for a real evaluation -- the node still needs one dispatched
+    to an independent evaluator (the eval-backfill false-positive vector)."""
+    try:
+        eval_md = _eval_md_file(sid, node_id)
+        if eval_md.exists() and eval_md.stat().st_size > 0:
+            return False
+    except Exception:
+        pass
+    if _eval_dispatch_file(sid, node_id).exists() or any(
+        SPRINTS_DIR.glob(f"{sid}.{_safe_node_id(node_id)}-eval-dispatch*.md")
+    ):
+        return False
+    eval_json = _eval_json_file(sid, node_id)
+    if not eval_json.exists():
+        return False
+    try:
+        data = _read_json_file(eval_json)
+    except Exception:
+        return False
+    return str((data or {}).get("generation_mode") or "").strip().lower() == "manual_node_eval"
+
+
 def _node_eval_needed(graph: dict[str, Any], sid: str, node: dict[str, Any], force: bool = False) -> bool:
     node_id = str(node.get("id") or "")
     if not node_id:
@@ -6621,7 +6646,14 @@ def _node_eval_needed(graph: dict[str, Any], sid: str, node: dict[str, Any], for
         return False
     if result_status in {"failed", "skipped"} and not force:
         return False
-    if _eval_json_file(sid, node_id).exists() and not force and not repair_mode:
+    # A self-graded eval.json (executing agent wrote its own manual_node_eval, no independent report)
+    # does NOT satisfy the eval requirement -- the node still needs a real evaluator dispatched.
+    if (
+        _eval_json_file(sid, node_id).exists()
+        and not force
+        and not repair_mode
+        and not _node_eval_self_graded(sid, node_id)
+    ):
         return False
     if not force:
         recovered: list[dict[str, Any]] = []

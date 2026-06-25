@@ -1023,9 +1023,57 @@ def _node_has_handoff(graph: dict[str, Any], node_id: str) -> bool:
     return any(path.exists() for path in _node_handoff_candidates(graph, node_id))
 
 
+def _node_has_independent_eval_report(graph: dict[str, Any], node_id: str) -> bool:
+    """True if an INDEPENDENT evaluator reviewed this node -- a non-empty ``{node}-eval.md`` or an
+    ``{node}-eval-dispatch`` sidecar exists (an evaluator other than the executing agent was run)."""
+    for json_path in _node_eval_json_candidates(graph, node_id):
+        name = json_path.name
+        if not name.endswith("-eval.json"):
+            continue
+        stem = name[: -len("-eval.json")]
+        try:
+            md_path = json_path.with_name(f"{stem}-eval.md")
+            if md_path.exists() and md_path.stat().st_size > 0:
+                return True
+            if any(json_path.parent.glob(f"{stem}-eval-dispatch*.md")):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _node_eval_is_self_graded(graph: dict[str, Any], node_id: str) -> bool:
+    """The node's verdict was written by the EXECUTING agent itself (generation_mode=manual_node_eval)
+    with no independent evaluator report. A self-graded verdict is not a genuine evaluation and must
+    not certify PASS -- the back-half of a DAG was passing on self-reported JSON with no eval.md (the
+    eval-backfill false-positive vector)."""
+    if _node_has_independent_eval_report(graph, node_id):
+        return False
+    # Gate/verifier nodes verify via a write_scope verdict artifact (e.g. review_decision.yaml) consumed
+    # by _node_gate_verdict_ok, not a per-node eval.md, and produce NO handoff. Only EXECUTOR nodes (which
+    # produce a handoff) are at risk of self-grading their own work; gate nodes are governed by the
+    # verdict-artifact gate, so do not flag them here.
+    if not _node_has_handoff(graph, node_id):
+        return False
+    for path in _node_eval_json_candidates(graph, node_id):
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if str(data.get("generation_mode") or "").strip().lower() == "manual_node_eval":
+            return True
+    return False
+
+
 def _passed_without_required_eval(graph: dict[str, Any], node_id: str) -> bool:
-    """Treat handoff-backed passed nodes without eval sidecar as not yet passed."""
-    return _node_has_handoff(graph, node_id) and not _node_has_eval_json(graph, node_id)
+    """Treat handoff-backed passed nodes without a GENUINE eval as not yet passed (fail-closed)."""
+    if _node_has_handoff(graph, node_id) and not _node_has_eval_json(graph, node_id):
+        return True
+    # Fail-closed on the eval-backfill vector: a self-graded verdict (executing agent wrote its own
+    # manual_node_eval with no independent evaluator report) is NOT a genuine evaluation -> unverified.
+    return _node_eval_is_self_graded(graph, node_id)
 
 
 def _assert_pass_mark_allowed(graph: dict[str, Any], node_id: str, status: str) -> None:
