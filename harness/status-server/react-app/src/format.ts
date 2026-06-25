@@ -31,10 +31,10 @@ export type AgentCardModel = {
 
 export const ROLE_META: Record<AgentRole, { title: string; subtitle: string }> =
   {
-    pm: { title: "PM 产品经理", subtitle: "Intake and scope" },
-    planner: { title: "Planner 规划者", subtitle: "DAG and routing" },
-    builder: { title: "Builder 主建设者", subtitle: "Implementation" },
-    evaluator: { title: "Evaluator 审判官", subtitle: "Review and gates" },
+    pm: { title: "PM", subtitle: "Intake and scope" },
+    planner: { title: "Planner", subtitle: "Plan and routing" },
+    builder: { title: "Builder", subtitle: "Implementation" },
+    evaluator: { title: "Evaluator", subtitle: "Review and gates" },
   };
 
 export function asString(value: unknown, fallback = ""): string {
@@ -68,8 +68,23 @@ export function normalizeRole(value: unknown): AgentRole | "" {
   return "";
 }
 
+// Events arrive wrapped in a generic "log_message" envelope. The real event is in
+// payload.legacy_event — sometimes a kind STRING ("plan_verdict"), sometimes the full nested
+// event OBJECT ({event, actor, payload, …}). Flatten both so the stream shows the real story.
+export function unwrapEvent(event: EventRecord): EventRecord {
+  const le = payload(event).legacy_event;
+  if (le && typeof le === "object" && !Array.isArray(le)) {
+    return { ...event, ...(le as Partial<EventRecord>), type: "" };
+  }
+  if (typeof le === "string" && le) {
+    return { ...event, type: "", event: le };
+  }
+  return event;
+}
+
 export function eventType(event: EventRecord): string {
-  return asString(event.type || event.event, "event");
+  const e = unwrapEvent(event);
+  return asString(e.type || e.event, "event");
 }
 
 export function eventTimestamp(event: EventRecord): string {

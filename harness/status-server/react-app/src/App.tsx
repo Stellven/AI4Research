@@ -83,6 +83,7 @@ import {
   asString,
   compactNumber,
   eventActor,
+  eventType,
   eventTimestamp,
   formatDateTime,
   humanEvent,
@@ -95,6 +96,7 @@ import {
   stallCopy,
   statusTone,
   titleForSprint,
+  unwrapEvent,
 } from "./format";
 import type {
   DagNode,
@@ -2191,9 +2193,16 @@ function buildProcessSteps(
   options: { showStallSummary?: boolean; stall?: StallSummary } = {},
 ): ProcessStep[] {
   const steps: ProcessStep[] = [];
-  const orderedEvents = [...events].sort(
-    (a, b) => eventTimeValue(a) - eventTimeValue(b),
-  );
+  const orderedEvents = [...events]
+    .filter((event) => {
+      // Drop internal autopilot diagnostics (kb_probe_failed, ipv4_unavailable, doctor_passed,
+      // route_normalized, …) — they're machine noise, not part of the agent story the user reads.
+      const u = unwrapEvent(event);
+      const a = asString(u.actor);
+      const kind = eventType(u);
+      return a !== "solar-autopilot" && !kind.startsWith("autopilot_");
+    })
+    .sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
 
   orderedEvents.forEach((event, index) => {
     steps.push(processStepFromEvent(event, index === orderedEvents.length - 1));
@@ -2285,9 +2294,14 @@ function processStepFromEvent(
   event: EventRecord,
   latest: boolean,
 ): ProcessStep {
+  event = unwrapEvent(event);
   const body = payload(event);
-  const type = event.type || event.event || "event";
-  const actor = eventActor(event);
+  const type = eventType(event);
+  // Narrative: attribute the step to the AGENT the coordinator dispatched to (PM/Builder/
+  // Evaluator/Planner) when the payload names a role, so the stream reads "PM did X, Builder did
+  // Y" instead of everything being "coordinator".
+  const stepRole = normalizeRole(body.role || body.target_role || event.role);
+  const actor = stepRole ? ROLE_META[stepRole].title : eventActor(event);
   const node = asString(body.node_id || body.node || event.node_id);
   const phase = asString(body.phase || event.phase);
   const decision = asString(body.decision || event.decision);
