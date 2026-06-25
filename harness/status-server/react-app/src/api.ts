@@ -85,6 +85,61 @@ export function fetchSettings(): Promise<SettingsPayload> {
   return requestJson<SettingsPayload>("/settings");
 }
 
+export interface AuthStatus {
+  ok: boolean;
+  codex: string;
+  claude: string;
+  glm: string;
+  source?: string;
+  detail?: Record<string, boolean>;
+}
+
+export type AuthLoginState = "idle" | "started" | "pending" | "done" | "failed";
+
+export interface AuthLoginStatus {
+  ok: boolean;
+  provider: string;
+  state: AuthLoginState;
+  url?: string | null;
+  code?: string | null;
+  tail?: string;
+  exit_code?: number;
+  note?: string;
+  auth?: AuthStatus;
+  error?: string;
+}
+
+// Subscription-first auth: detect provider sign-in state (no token values ever returned).
+export function fetchAuthStatus(): Promise<AuthStatus> {
+  return requestJson<AuthStatus>("/auth/status");
+}
+
+// Zero-step path (WSL): copy creds the user already has on the Windows side.
+export function reuseHostCreds(
+  provider: string,
+): Promise<{ ok: boolean; provider: string; reused: boolean }> {
+  return requestJson("/auth/reuse-host-creds", {
+    method: "POST",
+    body: JSON.stringify({ provider }),
+  });
+}
+
+// Start a headless device-code login; poll fetchAuthLoginStatus for the URL+code and completion.
+export function startAuthLogin(provider: string): Promise<AuthLoginStatus> {
+  return requestJson<AuthLoginStatus>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ provider }),
+  });
+}
+
+export function fetchAuthLoginStatus(
+  provider: string,
+): Promise<AuthLoginStatus> {
+  return requestJson<AuthLoginStatus>(
+    `/auth/login/status?provider=${encodeURIComponent(provider)}`,
+  );
+}
+
 // The read-only content URL for a deliverable. Prefer the server-provided view_url
 // (real status-server already exposes it); fall back to the documented path query.
 export function deliverableUrl(
@@ -134,7 +189,11 @@ export function saveSettings(
 ): Promise<SaveSettingsResponse> {
   return requestJson<SaveSettingsResponse>("/settings", {
     method: "POST",
-    body: JSON.stringify({ role_models: roleModels, api_keys: apiKeys, runtime }),
+    body: JSON.stringify({
+      role_models: roleModels,
+      api_keys: apiKeys,
+      runtime,
+    }),
   });
 }
 

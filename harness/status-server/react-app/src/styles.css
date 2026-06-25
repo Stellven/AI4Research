@@ -3983,3 +3983,175 @@ summary:focus-visible,
     justify-items: start;
   }
 }
+
+/* ── AuthGate ─────────────────────────────────────────────────────────────
+   Subscription-first sign-in. Full-bleed centered card over the app canvas;
+   automatic path renders the app directly so this only shows when sign-in is
+   genuinely needed. Matches the light/lotus token set above. */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--solar-space-6);
+  background: var(--solar-surface);
+  z-index: 60;
+}
+.auth-card {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--solar-space-4);
+  padding: var(--solar-space-8) var(--solar-space-7);
+  background: var(--solar-canvas);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-modal);
+  box-shadow: 0 1px 2px rgba(26, 27, 29, 0.04),
+    0 12px 40px rgba(26, 27, 29, 0.08);
+  text-align: center;
+}
+.auth-card-slim {
+  flex-direction: row;
+  gap: var(--solar-space-3);
+  padding: var(--solar-space-5) var(--solar-space-6);
+  color: var(--solar-muted);
+  font-size: 0.95rem;
+}
+.auth-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--solar-ink);
+}
+.auth-sub {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--solar-muted);
+}
+.auth-sub strong {
+  color: var(--solar-ink);
+  font-weight: 600;
+}
+.auth-primary,
+.auth-secondary {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--solar-space-2);
+  height: 42px;
+  border-radius: var(--solar-radius-control);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+}
+.auth-primary {
+  background: var(--solar-accent);
+  color: #fff;
+  border: 1px solid var(--solar-accent);
+}
+.auth-primary:hover:not(:disabled) {
+  background: var(--solar-accent-ink);
+  border-color: var(--solar-accent-ink);
+}
+.auth-secondary {
+  background: var(--solar-canvas);
+  color: var(--solar-ink);
+  border: 1px solid var(--solar-line-strong);
+}
+.auth-secondary:hover:not(:disabled) {
+  background: var(--solar-surface-quiet);
+}
+.auth-primary:disabled,
+.auth-secondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.auth-device-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: var(--solar-space-4);
+  background: var(--solar-surface-quiet);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+}
+.auth-device-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--solar-muted);
+}
+.auth-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--solar-accent-ink);
+  word-break: break-all;
+}
+.auth-code {
+  font-family: var(--solar-font-mono);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--solar-ink);
+  padding: var(--solar-space-2) var(--solar-space-4);
+  background: var(--solar-canvas);
+  border: 1px solid var(--solar-line-strong);
+  border-radius: var(--solar-radius-small);
+  user-select: all;
+}
+.auth-tail {
+  max-width: 100%;
+  margin: 0;
+  font-family: var(--solar-font-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--solar-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+}
+.auth-waiting,
+.auth-done {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  font-size: 0.85rem;
+}
+.auth-waiting {
+  color: var(--solar-muted);
+}
+.auth-done {
+  color: var(--solar-success);
+  font-weight: 600;
+}
+.auth-message {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--solar-warning);
+}
+.auth-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-1);
+  margin-top: var(--solar-space-2);
+}
+.auth-ghost {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--solar-subtle);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.auth-ghost:hover {
+  color: var(--solar-ink);
+}
