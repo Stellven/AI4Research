@@ -10,7 +10,9 @@ Type=simple
 Environment=HARNESS_DIR=%h/.solar/harness
 Environment=PYTHONPATH=%h/.solar/harness/lib
 WorkingDirectory=%h/.solar/harness
-ExecStart=/usr/bin/python3 %h/.solar/harness/lib/symphony/status-server.py
+# __PYTHON_BIN__ is rendered to the resolved python3 by install-linux-service.sh (systemd has no
+# PATH, so this needs an absolute interpreter — /usr/bin/python3 isn't guaranteed under WSL/distros).
+ExecStart=__PYTHON_BIN__ %h/.solar/harness/lib/symphony/status-server.py
 Restart=on-failure
 RestartSec=3
 
