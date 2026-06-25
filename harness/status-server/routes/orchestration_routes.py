@@ -97,6 +97,50 @@ def _read_json(path: Path) -> tuple[Any, bool]:
         return None, False
 
 
+def _clean_sprint_title(sid: str, fallback: str) -> str:
+    """Human-friendly session title.
+
+    The stored title comes from the PRD's first heading, which is the user's intent
+    truncated mid-word at 80 chars (and is occasionally a non-English planner heading).
+    Prefer the user's full original intent from raw_intent.json, then truncate at a
+    word boundary. Falls back to the stored title when no raw intent is recorded.
+    """
+    fallback = re.sub(r"\s+", " ", str(fallback or "")).strip()
+    full = ""
+    data, ok = _read_json(SPRINTS_DIR / f"{sid}.raw_intent.json")
+    if ok and isinstance(data, dict):
+        candidate = data.get("raw")
+        if candidate is None:
+            candidate = data.get("text") or data.get("intent")
+        if isinstance(candidate, dict):
+            full = str(candidate.get("text") or candidate.get("prompt") or "")
+        elif isinstance(candidate, str):
+            s = candidate.strip()
+            if s.startswith("{"):
+                # raw is a stringified dict — JSON or a Python repr ({'text': "..."}).
+                import ast
+
+                parsed = None
+                for loader in (json.loads, ast.literal_eval):
+                    try:
+                        parsed = loader(s)
+                        break
+                    except Exception:
+                        parsed = None
+                if isinstance(parsed, dict):
+                    full = str(parsed.get("text") or parsed.get("prompt") or "")
+            else:
+                full = s
+    title = re.sub(r"\s+", " ", full).strip() or fallback
+    if not title:
+        return sid
+    limit = 76
+    if len(title) > limit:
+        head = title[:limit].rsplit(" ", 1)[0].rstrip(" ,.;:-—")
+        title = (head or title[:limit].rstrip()) + "…"
+    return title
+
+
 def _sprint_status_rows(limit: int = 80) -> list[dict]:
     active = {"active", "dispatched", "reviewing", "ready_for_review", "failed_review"}
     # Pass 1 (cheap): read ONLY status.json per sprint. The sidebar list needs just
@@ -158,7 +202,7 @@ def _sprint_status_rows(limit: int = 80) -> list[dict]:
             node_counts[st] = node_counts.get(st, 0) + 1
         rows.append({
             "sprint_id": sid,
-            "title": item["title"],
+            "title": _clean_sprint_title(sid, item["title"]),
             "status": item["status"],
             "phase": item["phase"],
             "is_active": item["is_active"],
@@ -1614,14 +1658,14 @@ def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -
         "projection_schema": "solar.dashboard_projection.v1",
         "projection_mode": projection_mode,
         "sprint_id": sid,
-        "title": dashboard.get("title") or status.get("title") or sid,
+        "title": _clean_sprint_title(sid, dashboard.get("title") or status.get("title") or ""),
         "status": status.get("status") or dashboard.get("sprint_status") or "",
         "phase": status.get("phase") or dashboard.get("phase") or "",
         "lazy_slices": _projection_lazy_slices(sid),
         "sprint": {
             "sprint_id": sid,
             "epic_id": dashboard.get("epic_id") or status.get("epic_id") or "",
-            "title": dashboard.get("title") or status.get("title") or sid,
+            "title": _clean_sprint_title(sid, dashboard.get("title") or status.get("title") or ""),
             "status": status.get("status") or dashboard.get("sprint_status") or "",
             "phase": status.get("phase") or dashboard.get("phase") or "",
             "raw_status": status,
