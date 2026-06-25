@@ -88,6 +88,38 @@ function Enable-WslSystemd {
     }
 }
 
+function Set-WslMirroredNetworking {
+    # Mirrored networking (Win11 22H2+) makes host<->WSL localhost bidirectional, so the runtime
+    # binds 127.0.0.1 (secure, no LAN exposure) instead of the 0.0.0.0 NAT fallback. Global setting
+    # in %UserProfile%\.wslconfig [wsl2]. Conservative + idempotent: never overrides an existing
+    # explicit networkingMode (e.g. a Docker Desktop user on 'nat') — the runtime's NAT fallback
+    # still works there. Harmlessly ignored on Windows older than 22H2.
+    $cfg = Join-Path $env:USERPROFILE '.wslconfig'
+    if (-not (Test-Path $cfg)) {
+        Set-Content -Path $cfg -Value "[wsl2]`r`nnetworkingMode=mirrored" -Encoding ASCII
+        Write-Host '[solar] wrote .wslconfig with mirrored networking (secure localhost path).'
+        & wsl.exe --shutdown
+        return
+    }
+    $lines = Get-Content $cfg
+    if ($lines -match '^\s*networkingMode\s*=\s*mirrored\s*$') {
+        Write-Host '[solar] WSL mirrored networking already set.'
+        return
+    }
+    if ($lines -match '^\s*networkingMode\s*=') {
+        Write-Host '[solar] .wslconfig pins a networkingMode already; leaving it (runtime uses the 0.0.0.0 fallback). For the secure loopback path, set networkingMode=mirrored (Win11 22H2+).'
+        return
+    }
+    if ($lines -match '^\s*\[wsl2\]\s*$') {
+        $out = foreach ($l in $lines) { $l; if ($l -match '^\s*\[wsl2\]\s*$') { 'networkingMode=mirrored' } }
+        Set-Content -Path $cfg -Value $out
+    } else {
+        Add-Content -Path $cfg -Value "`r`n[wsl2]`r`nnetworkingMode=mirrored"
+    }
+    Write-Host '[solar] set WSL mirrored networking (.wslconfig); applies after the next wsl --shutdown.'
+    & wsl.exe --shutdown
+}
+
 function Install-Wsl {
     if (-not (Test-Admin)) {
         Write-Host '[solar] WSL2 install needs administrator rights; re-launching elevated...'
@@ -111,6 +143,7 @@ if (-not (Test-WslReady)) {
     Install-Wsl
 } else {
     Enable-WslSystemd
+    Set-WslMirroredNetworking
     Invoke-LinuxInstaller
     Write-Host '[solar] Windows (WSL2) install complete.'
 }
