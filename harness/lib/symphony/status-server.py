@@ -35,6 +35,7 @@ import math
 import importlib.util
 import shutil
 import time
+import threading
 import datetime
 import urllib.parse
 import urllib.error
@@ -850,6 +851,105 @@ def _auth_status_payload() -> dict:
     except Exception:
         pass
     return fallback
+
+
+# In-flight device-code logins, keyed by provider. ThreadingHTTPServer serves each request on
+# its own thread, so the registry is lock-guarded. We NEVER store token values — only the process
+# handle and a logfile the CLI writes its (non-secret) device-code prompt to.
+_AUTH_LOGIN_LOCK = threading.Lock()
+_AUTH_LOGINS: dict = {}
+_AUTH_LOGIN_URL_RE = re.compile(r"https?://[^\s'\"]+")
+_AUTH_LOGIN_CODE_RE = re.compile(r"\b([A-Z0-9]{4,8}-[A-Z0-9]{4,8})\b")
+
+
+def _auth_run_dir() -> Path:
+    d = HARNESS_DIR / "run"
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
+    return d
+
+
+def _auth_reuse_host_creds(provider: str) -> dict:
+    """Zero-step path: on WSL, copy creds the user already has on the Windows side. Delegates to
+    auth-helpers.sh (which only copies when the runtime-home target is absent — never overwrites)."""
+    if provider not in ("codex", "claude"):
+        return {"ok": False, "error": "unknown provider"}
+    helper = HARNESS_DIR / "auth-helpers.sh"
+    if not helper.exists():
+        return {"ok": False, "error": "auth helper unavailable"}
+    try:
+        out = subprocess.run(
+            ["bash", str(helper), "reuse-host-creds", provider],
+            capture_output=True, text=True, timeout=20,
+        )
+        data = json.loads((out.stdout or "").strip() or "{}")
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    return {"ok": False, "error": "reuse failed", "provider": provider}
+
+
+def _auth_login_start(provider: str) -> dict:
+    """Start a headless device-code login (codex login --device-auth / claude setup-token) as a
+    detached background process whose stdout goes to a logfile. The dashboard polls
+    /auth/login/status to read the device URL+code and completion."""
+    if provider not in ("codex", "claude"):
+        return {"ok": False, "error": "unknown provider"}
+    helper = HARNESS_DIR / "auth-helpers.sh"
+    if not helper.exists():
+        return {"ok": False, "error": "auth helper unavailable"}
+    with _AUTH_LOGIN_LOCK:
+        existing = _AUTH_LOGINS.get(provider)
+        if existing and existing["proc"].poll() is None:
+            return {"ok": True, "provider": provider, "state": "pending", "note": "already running"}
+        log_path = _auth_run_dir() / f"auth-login-{provider}.log"
+        try:
+            log_fh = open(log_path, "wb")
+        except OSError as exc:
+            return {"ok": False, "error": f"log open failed: {exc}"}
+        try:
+            proc = subprocess.Popen(
+                ["bash", str(helper), "login", provider],
+                stdout=log_fh, stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL, start_new_session=True,
+            )
+        except Exception as exc:
+            log_fh.close()
+            return {"ok": False, "error": f"spawn failed: {exc}"}
+        _AUTH_LOGINS[provider] = {"proc": proc, "log": log_path, "fh": log_fh, "started": time.time()}
+    return {"ok": True, "provider": provider, "state": "started"}
+
+
+def _auth_login_status(provider: str) -> dict:
+    """Poll an in-flight login: surface the parsed device URL+code plus a raw tail (so the UI
+    shows the CLI's real prompt even if parsing misses the format), and detect completion by
+    re-checking actual auth state."""
+    if provider not in ("codex", "claude"):
+        return {"ok": False, "error": "unknown provider"}
+    with _AUTH_LOGIN_LOCK:
+        entry = _AUTH_LOGINS.get(provider)
+    if not entry:
+        return {"ok": True, "provider": provider, "state": "idle"}
+    rc = entry["proc"].poll()
+    raw = ""
+    try:
+        raw = entry["log"].read_text(errors="replace")
+    except OSError:
+        pass
+    url_m = _AUTH_LOGIN_URL_RE.search(raw)
+    code_m = _AUTH_LOGIN_CODE_RE.search(raw)
+    url = url_m.group(0) if url_m else None
+    code = code_m.group(1) if code_m else None
+    tail = "\n".join(raw.splitlines()[-12:]).strip()
+    if rc is None:
+        return {"ok": True, "provider": provider, "state": "pending", "url": url, "code": code, "tail": tail}
+    final = _auth_status_payload()
+    state = "done" if final.get(provider) == "ok" else "failed"
+    return {"ok": True, "provider": provider, "state": state, "exit_code": rc,
+            "url": url, "code": code, "tail": tail, "auth": final}
 
 
 def _model_id_to_alias(model_id: str) -> str:
@@ -12808,6 +12908,10 @@ class StatusHandler(BaseHTTPRequestHandler):
                 self._send_json(_ai_influence_youtube_videos_deep_analysis(data))
             elif path == "/ai-influence/youtube-videos/regenerate-daily":
                 self._send_json(_ai_influence_youtube_videos_regenerate_daily(data))
+            elif path == "/auth/login":
+                self._send_json(_auth_login_start(str(data.get("provider", "")).strip()))
+            elif path == "/auth/reuse-host-creds":
+                self._send_json(_auth_reuse_host_creds(str(data.get("provider", "")).strip()))
             elif path == "/api/thunderomlx/start":
                 self._send_json(_start_thunderomlx_from_status())
             elif path == "/api/collector-schedules":
@@ -12914,6 +13018,9 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif path == "/auth/status":
             self._send_json(_auth_status_payload())
+
+        elif path == "/auth/login/status":
+            self._send_json(_auth_login_status(params.get("provider", [""])[0].strip()))
 
         elif path == "/events":
             sprint_id = params.get("sprint_id", [""])[0]
