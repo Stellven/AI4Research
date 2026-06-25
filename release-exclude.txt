@@ -56,6 +56,11 @@ harness/BUG5-ROOT-CAUSE.md
 harness/TODO-next-session.md
 harness/needs-improvement.md
 
+# --- transient runtime/orchestration state (a specific task's .pm artifacts:
+# --- PRD, task DAG, handoffs, eval results — NOT release content. v1.0.0-rc.3
+# --- shipped zero of these; they leaked in via the consolidation base.) ---
+harness/.pm
+
 # --- legacy/internal LaunchAgent plists ---
 # The shipped daemons component uses templates/daemons/solar-daemon.*.template.
 # These static com.solar.* plists belong to parked/internal jobs or legacy
