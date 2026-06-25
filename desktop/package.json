@@ -1,6 +1,6 @@
 {
   "name": "solar-desktop",
-  "version": "1.0.0-rc.4",
+  "version": "1.0.0-rc.5",
   "private": true,
   "description": "Solar desktop app — native shell that spawns the status-server backend and renders the bundled dashboard frontend. One codebase for macOS + Windows + Linux.",
   "author": "OpenSolar",
