@@ -147,8 +147,14 @@ export function deliverableUrl(
   sprintId: string,
   item: { rel_path: string; view_url?: string },
 ): string {
-  if (item.view_url && item.view_url.startsWith("/")) return item.view_url;
-  return `/sprints/${encodeURIComponent(sprintId)}/deliverables?path=${encodeURIComponent(item.rel_path)}`;
+  const rel =
+    item.view_url && item.view_url.startsWith("/")
+      ? item.view_url
+      : `/sprints/${encodeURIComponent(sprintId)}/deliverables?path=${encodeURIComponent(item.rel_path)}`;
+  // Absolute against the runtime API base — in the desktop the dashboard origin is the
+  // bundled file/app, so a bare relative URL "failed to fetch". Same-origin web builds
+  // leave API_BASE empty, so this stays relative there.
+  return `${API_BASE}${rel}`;
 }
 
 export async function fetchDeliverableText(

@@ -164,9 +164,29 @@ export function shortText(value: unknown, max = 92): string {
 }
 
 export function payload(event: EventRecord): JsonRecord {
-  return event.payload && typeof event.payload === "object"
-    ? event.payload
-    : {};
+  const p: unknown = event.payload;
+  if (p && typeof p === "object") return p as JsonRecord;
+  // The harness sometimes emits payload as a stringified dict — JSON, or a Python
+  // repr ({'k': 'v', 'n': None, 'b': True}). Parse tolerantly so the detail isn't lost.
+  if (typeof p === "string" && p.trim().startsWith("{")) {
+    const s = p.trim();
+    try {
+      return JSON.parse(s) as JsonRecord;
+    } catch {
+      try {
+        const j = s
+          .replace(/'/g, '"')
+          .replace(/\bNone\b/g, "null")
+          .replace(/\bTrue\b/g, "true")
+          .replace(/\bFalse\b/g, "false");
+        const parsed = JSON.parse(j);
+        if (parsed && typeof parsed === "object") return parsed as JsonRecord;
+      } catch {
+        /* leave empty — fall through */
+      }
+    }
+  }
+  return {};
 }
 
 export function eventActor(event: EventRecord): string {
@@ -190,6 +210,29 @@ export function humanEvent(event: EventRecord): {
   const target = asString(body.target_pane || body.pane || event.target_pane);
   const model = asString(body.model || event.model);
   const message = asString(event.message || body.message);
+  const status = asString(body.status);
+  const stage = asString(body.stage);
+  const role = asString(body.role);
+  const intent = asString(body.intent);
+  const severity = asString((event as { severity?: unknown }).severity);
+  // A compact, human detail pulled from whatever the payload carries, so events read
+  // like "stage prd · reason: invalid prd" instead of the generic fallback line.
+  const summary =
+    [
+      stage && `stage ${stage}`,
+      role && `role ${role}`,
+      intent && intent.replace(/_/g, " "),
+      status && status.replace(/_/g, " "),
+      node && `node ${node}`,
+      target && `pane ${target}`,
+      reason && `reason: ${reason.replace(/_/g, " ")}`,
+    ]
+      .filter(Boolean)
+      .join(" · ") || message;
+  // Title-case the event kind: dispatch_failed -> "Dispatch failed".
+  const humanTitle =
+    type.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) || "Event";
+  const sevTone = severity === "warn" || severity === "error" ? "blocked" : "";
 
   if (type.includes("phase")) {
     return {
@@ -199,14 +242,14 @@ export function humanEvent(event: EventRecord): {
     };
   }
   if (type.includes("dispatch")) {
-    const action = decision ? decision.replace(/_/g, " ") : "dispatch decision";
     return {
-      title: `Dispatch ${action}`,
-      detail:
-        [node && `node ${node}`, target && `pane ${target}`]
-          .filter(Boolean)
-          .join(" -> ") || message,
-      tone: decision.includes("no_matching") ? "blocked" : "working",
+      title: humanTitle,
+      detail: summary,
+      tone:
+        sevTone ||
+        (decision.includes("no_matching") || type.includes("fail")
+          ? "blocked"
+          : "working"),
     };
   }
   if (
@@ -217,6 +260,7 @@ export function humanEvent(event: EventRecord): {
     return {
       title: "Gate blocked",
       detail:
+        summary ||
         reason ||
         message ||
         [node && `node ${node}`, phase && `phase ${phase}`]
@@ -252,9 +296,9 @@ export function humanEvent(event: EventRecord): {
     type.includes("passed")
   ) {
     return {
-      title: type.replace(/_/g, " "),
+      title: humanTitle,
       detail:
-        message ||
+        summary ||
         [node && `node ${node}`, phase && `phase ${phase}`]
           .filter(Boolean)
           .join(" · "),
@@ -262,9 +306,10 @@ export function humanEvent(event: EventRecord): {
     };
   }
   return {
-    title: type.replace(/_/g, " "),
-    detail: message || "The harness recorded this process event.",
-    tone: statusTone(asString(event.status || body.status)),
+    title: humanTitle,
+    detail: summary || "Process event.",
+    tone:
+      sevTone || statusTone(asString(event.status || body.status || status)),
   };
 }
 
