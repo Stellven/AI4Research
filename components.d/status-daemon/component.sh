@@ -45,12 +45,13 @@ component_install() {
                 render_template "$SOURCE_DIR/templates/status-daemon/solar-status-server.service.template" \
                     "$ud/solar-status-server.service"
                 printf 'systemd\tsolar-status-server.service\t%s\n' "$ud/solar-status-server.service" >> "$SOLAR_HOME/registered-daemons.txt"
+                # enable-linger so the service runs without an active login (required under WSL,
+                # where there's no graphical session to hold the user manager open).
+                loginctl enable-linger "$USER" >/dev/null 2>&1 || true
                 if systemctl --user enable --now solar-status-server.service >/dev/null 2>&1; then
-                    info "enabled systemd --user service solar-status-server"
-                    info "note: run 'loginctl enable-linger $USER' so it survives logout (needed under WSL)"
+                    info "enabled systemd --user service solar-status-server (+ enable-linger)"
                 else
                     yellow "rendered unit; enable with: systemctl --user enable --now solar-status-server.service"
-                    yellow "and (for boot/logout persistence): loginctl enable-linger $USER"
                 fi
             else
                 yellow "no systemd detected; skipping status-daemon install (the desktop app still starts the runtime on launch)"

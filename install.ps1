@@ -60,8 +60,18 @@ function Test-WslReady {
 }
 
 function Get-ForwardString {
-    if ($ForwardArgs.Count -eq 0) { return '' }
-    return ($ForwardArgs -join ' ')
+    $list = @($ForwardArgs)
+    $joined = ($list -join ' ')
+    # The Windows desktop shell reaches a runtime running in WSL, so the install MUST set up the
+    # persistent status-daemon login service (otherwise a backgrounded runtime dies when wsl.exe
+    # returns). If the caller didn't pick their own components, install the desktop set.
+    if ($joined -notmatch '--components') {
+        $list += @('--components', 'kernel,harness,status-daemon')
+    }
+    if ($joined -notmatch '(^|\s)--yes(\s|$)') {
+        $list += '--yes'
+    }
+    return ($list -join ' ')
 }
 
 function Invoke-LinuxInstaller {

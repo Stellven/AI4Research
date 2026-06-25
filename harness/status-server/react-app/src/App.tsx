@@ -1285,6 +1285,17 @@ function artifactPath(ref?: string | { rel_path?: unknown }): string {
   return asString(ref?.rel_path);
 }
 
+// Deliverable file names repeat the full sprint id (e.g.
+// "sprint-20260623-…--de49b5a4.acceptance_verdict.json"). Strip that prefix so the
+// list shows the meaningful part ("acceptance_verdict.json").
+function deliverableLabel(item: { name?: string; rel_path?: string }): string {
+  const base = asString(item.name || item.rel_path)
+    .split("/")
+    .pop() as string;
+  const stripped = base.replace(/^sprint-.*?--[0-9a-f]{6,}\./i, "");
+  return (stripped || base).replace(/_/g, " ");
+}
+
 function projectionGateArtifacts(
   data: ProjectionResponse["data"],
   kind: string,
@@ -1867,7 +1878,9 @@ function RailList({
               onClick={() => onOpen(item.rel_path)}
             >
               <FileText className="artifact-icon" size={15} />
-              <span className="artifact-name">{item.name}</span>
+              <span className="artifact-name" title={item.name}>
+                {deliverableLabel(item)}
+              </span>
               <span className="artifact-meta">{item.kind.toUpperCase()}</span>
               <ChevronRight size={14} className="artifact-chevron" />
             </button>
