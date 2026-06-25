@@ -18,7 +18,8 @@ Endpoints:
 Startup: solar-harness status-server start  (writes pidfile, nohup)
          solar-harness status-server stop|restart|status
 
-Binds to 127.0.0.1:8765 only. No auth, no TLS (internal use).
+Binds 127.0.0.1:8765 (loopback) on mac/Linux; 0.0.0.0 under WSL so the Windows host can reach it
+(localhostForwarding edge case). SOLAR_BIND_HOST overrides. No auth, no TLS (internal use).
 Port fallback: 8765-8775 if primary is occupied.
 """
 
@@ -124,7 +125,25 @@ OPEN_ALLOWED_ROOTS = [
     Path.home() / "Knowledge",
 ]
 
-BIND_HOST = "127.0.0.1"
+def _detect_wsl() -> bool:
+    """True on WSL. Used to widen the listen interface so the Windows host can reach the server
+    via the WSL VM interface when WSL2 localhostForwarding intermittently drops 127.0.0.1
+    (microsoft/WSL #9516) — the keystone for the Windows path."""
+    try:
+        with open("/proc/version", "r", errors="ignore") as fh:
+            return "microsoft" in fh.read().lower()
+    except OSError:
+        return False
+
+
+# Listen interface. Default loopback-only (127.0.0.1). Under WSL we bind 0.0.0.0 so the Windows
+# host reaches the server even when localhostForwarding hits the 127.0.0.1 edge case; 0.0.0.0 still
+# includes loopback, so mac/Linux semantics and forwarding are unchanged. SOLAR_BIND_HOST overrides.
+# SECURITY: this widens the listen surface to the WSL VM's interfaces (behind the Windows firewall);
+# the intended guard is the loopback auth token (security M1, deferred) — keep it on a trusted host.
+BIND_HOST = os.environ.get("SOLAR_BIND_HOST") or (
+    "0.0.0.0" if _detect_wsl() else "127.0.0.1"
+)
 PORT_RANGE = range(8765, 8776)
 
 
@@ -13414,7 +13433,13 @@ def main():
     pid_dir = HARNESS_DIR / "run"
     pid_dir.mkdir(parents=True, exist_ok=True)
     (pid_dir / "status-server.port").write_text(str(port))
-    print(f"Solar Harness status server listening on http://{BIND_HOST}:{port}/", flush=True)
+    # Clients connect over loopback; 0.0.0.0 binds include it, so advertise 127.0.0.1 and note bind.
+    connect_host = "127.0.0.1" if BIND_HOST in ("0.0.0.0", "::") else BIND_HOST
+    bind_note = f" (bind {BIND_HOST})" if BIND_HOST != connect_host else ""
+    print(
+        f"Solar Harness status server listening on http://{connect_host}:{port}/{bind_note}",
+        flush=True,
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:
