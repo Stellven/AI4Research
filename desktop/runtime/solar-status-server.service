@@ -1,0 +1,18 @@
+[Unit]
+# Solar status-server (dashboard + API) as a per-user background service.
+# Used on Linux and inside WSL2 (the Windows runtime host). Pairs with the
+# desktop app's detect-or-start: the app attaches if this has the server healthy.
+Description=Solar status-server (dashboard + API)
+After=default.target
+
+[Service]
+Type=simple
+Environment=HARNESS_DIR=%h/.solar/harness
+Environment=PYTHONPATH=%h/.solar/harness/lib
+WorkingDirectory=%h/.solar/harness
+ExecStart=/usr/bin/python3 %h/.solar/harness/lib/symphony/status-server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,48 @@
+{
+  "name": "solar-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Solar desktop app — native shell that spawns the status-server backend and renders the bundled dashboard frontend. One codebase for macOS + Windows + Linux.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "selftest": "SOLAR_DESKTOP_SELFTEST=1 electron .",
+    "gate": "node verify.js",
+    "build:renderer": "bash build-renderer.sh",
+    "build:win": "bash build-renderer.sh && electron-builder --win portable",
+    "build:mac": "bash build-renderer.sh && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg",
+    "build:linux": "bash build-renderer.sh && electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^26.15.3",
+    "playwright": "^1.61.1"
+  },
+  "build": {
+    "appId": "dev.opensolar.desktop",
+    "productName": "Solar",
+    "files": [
+      "src/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icon.png"
+    }
+  }
+}
