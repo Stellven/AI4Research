@@ -99,10 +99,17 @@ def _read_json(path: Path) -> tuple[Any, bool]:
 
 def _sprint_status_rows(limit: int = 80) -> list[dict]:
     active = {"active", "dispatched", "reviewing", "ready_for_review", "failed_review"}
-    rows: list[dict] = []
+    # Pass 1 (cheap): read ONLY status.json per sprint. The sidebar list needs just
+    # id/title/status/phase/recency — no task-graph. The old code called _load_task_graph()
+    # per sprint, which globs every file in sprints/ three times; with ~1.3k artifacts across
+    # ~50 sprints that took 13s and left the sidebar stuck on skeletons.
+    prelim: list[dict] = []
     for sf in SPRINTS_DIR.glob("*.status.json"):
         data, ok = _read_json(sf)
         if not ok or not isinstance(data, dict):
+            continue
+        if data.get("archived"):
+            # Owner-archived sessions are kept on disk but hidden from the list.
             continue
         sid = str(data.get("sprint_id") or data.get("id") or sf.name.removesuffix(".status.json"))
         try:
@@ -110,28 +117,57 @@ def _sprint_status_rows(limit: int = 80) -> list[dict]:
         except OSError:
             mtime = 0.0
         status = str(data.get("status") or "")
-        phase = str(data.get("phase") or "")
-        tg, tg_ok = _load_task_graph(sid)
-        nodes = tg.get("nodes") if isinstance(tg.get("nodes"), list) else []
+        prelim.append({
+            "sprint_id": sid,
+            "title": data.get("title") or sid,
+            "status": status,
+            "phase": str(data.get("phase") or ""),
+            "is_active": status.lower() in active,
+            "mtime": mtime,
+        })
+    # Sort active-first then by recency, and CAP before touching any task graph.
+    prelim.sort(key=lambda item: (not bool(item.get("is_active")), -float(item.get("mtime") or 0), str(item.get("sprint_id") or "")))
+    prelim = prelim[:limit]
+    # Pass 2: node counts for the capped set only, via DIRECT path reads (no dir globbing).
+    rows: list[dict] = []
+    for item in prelim:
+        sid = item["sprint_id"]
+        nodes: list = []
+        runtime_state: dict = {}
+        tg_ok = False
+        for name in (
+            f"{sid}.task_graph.json",
+            f"{sid}.task_dag.state.json",
+            f"{sid}.task_graph.state.json",
+            f"{sid}.closure.json",
+        ):
+            tg_data, tg_read = _read_json(SPRINTS_DIR / name)
+            if tg_read and isinstance(tg_data, dict):
+                tg = _normalize_task_graph_payload(tg_data)
+                raw_nodes = tg.get("nodes")
+                if isinstance(raw_nodes, list):
+                    nodes = raw_nodes
+                    runtime_state = tg.get("runtime_state") or {}
+                    tg_ok = True
+                    break
         node_counts: dict[str, int] = {}
         for node in nodes:
             if not isinstance(node, dict):
                 continue
-            st = _node_status(node, tg.get("runtime_state") or {})
+            st = _node_status(node, runtime_state)
             node_counts[st] = node_counts.get(st, 0) + 1
         rows.append({
             "sprint_id": sid,
-            "title": data.get("title") or sid,
-            "status": status,
-            "phase": phase,
-            "is_active": status.lower() in active,
-            "mtime": mtime,
+            "title": item["title"],
+            "status": item["status"],
+            "phase": item["phase"],
+            "is_active": item["is_active"],
+            "mtime": item["mtime"],
             "node_count": len(nodes),
             "node_status_counts": node_counts,
             "task_graph_present": tg_ok,
         })
-    rows.sort(key=lambda item: (not bool(item.get("is_active")), -float(item.get("mtime") or 0), str(item.get("sprint_id") or "")))
-    return rows[:limit]
+    return rows
 
 
 def _active_sprint_ids(limit: int = 8) -> list[str]:
