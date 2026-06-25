@@ -3,6 +3,7 @@ import type {
   DeliverablesPayload,
   EventRecord,
   IntakeResponse,
+  ProjectionData,
   ProjectionResponse,
   SettingsPayload,
   SprintIndexResponse,
@@ -256,6 +257,47 @@ export function openEventStream(
       onEvent(JSON.parse((message as MessageEvent).data));
     } catch {
       // Ignore malformed stream fragments; the next event can still render.
+    }
+  });
+  source.onerror = onError;
+  return source;
+}
+
+export interface ProjectionStreamMessage {
+  type: "snapshot" | "delta";
+  sprint_id: string;
+  generated_at?: string;
+  data: ProjectionData;
+  // What moved since the previous push — node status transitions plus phase/verdict/gate/stall
+  // changes. Empty on the initial snapshot. The dashboard uses this to know what to highlight.
+  changed?: {
+    nodes?: Array<{ id: string; from?: string | null; to?: string | null }>;
+    gates?: Array<{ id: string; from?: string | null; to?: string | null }>;
+    phase?: { from?: string; to?: string };
+    eval_verdict?: { from?: string; to?: string };
+    [key: string]: unknown;
+  };
+}
+
+// Live projection over SSE. The server pushes a full `snapshot` on connect, then a `delta`
+// (full fast `data` + a `changed` summary) only when the projection's semantic signature
+// changes — so a quiet sprint produces no traffic. Replaces refetch-on-every-raw-event.
+export function openProjectionStream(
+  sprintId: string,
+  onMessage: (msg: ProjectionStreamMessage) => void,
+  onError: () => void,
+): EventSource | null {
+  if (typeof EventSource === "undefined") {
+    return null;
+  }
+  const source = new EventSource(
+    `${API_BASE}/api/sprints/${encodeURIComponent(sprintId)}/projection?stream=1`,
+  );
+  source.addEventListener("projection", (message) => {
+    try {
+      onMessage(JSON.parse((message as MessageEvent).data));
+    } catch {
+      // Ignore malformed fragments; the next push still reconciles state.
     }
   });
   source.onerror = onError;

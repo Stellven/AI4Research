@@ -71,6 +71,7 @@ import {
   fetchStatus,
   fetchUsage,
   openEventStream,
+  openProjectionStream,
   saveSettings,
   submitIntake,
   submitPlanVerdict,
@@ -863,9 +864,12 @@ function useSessionData(
 
   useEffect(() => {
     if (!sprintId) return undefined;
-    // Live updates for the open session: stream events and refresh on arrival
-    // (debounced). The interval is a safety net; when SSE is live it runs rarely,
-    // and if SSE is unavailable we degrade to the original poll cadence.
+    // Live projection: the server streams a snapshot on connect, then a delta only when the
+    // sprint's semantic signature changes (node status / phase / verdict / gate / stall). We
+    // apply the authoritative fast projection in place — no refetching all five endpoints on
+    // every raw event. A debounced secondary refresh pulls the non-streamed slices
+    // (status / usage / deliverables) when something meaningful moves; a slow interval reconciles
+    // everything as a safety net and becomes the sole poll when SSE is unavailable.
     let pending: number | undefined;
     const scheduleRefresh = () => {
       if (pending) return;
@@ -875,25 +879,55 @@ function useSessionData(
         void onSprintChanged();
       }, 500);
     };
-    const stream = openEventStream(
+    const isCurrent = () => selectedSprintRef.current === sprintId;
+    const cacheProjection = (projectionResponse: ProjectionResponse) => {
+      const base: SessionCacheEntry = sessionDataCache.get(sprintId) || {
+        status: undefined,
+        projection: undefined,
+        events: [],
+        usage: undefined,
+        deliverables: [],
+      };
+      sessionDataCache.set(sprintId, {
+        ...base,
+        projection: projectionResponse,
+      });
+    };
+    const projStream = openProjectionStream(
       sprintId,
-      () => {
+      (msg) => {
+        if (!isCurrent()) return;
         setStreamState("live");
-        scheduleRefresh();
+        const projectionResponse: ProjectionResponse = {
+          ok: true,
+          data: msg.data,
+          generated_at: msg.generated_at,
+          schema_version: msg.data?.projection_schema,
+        };
+        setProjection(projectionResponse);
+        cacheProjection(projectionResponse);
+        const changed = msg.changed || {};
+        const moved =
+          msg.type === "snapshot" ||
+          !!changed.phase ||
+          !!changed.eval_verdict ||
+          (Array.isArray(changed.nodes) && changed.nodes.length > 0) ||
+          (Array.isArray(changed.gates) && changed.gates.length > 0);
+        if (moved) scheduleRefresh();
       },
       () => setStreamState("retrying"),
     );
-    setStreamState(stream ? "live" : "off");
+    setStreamState(projStream ? "live" : "off");
     const id = window.setInterval(
       () => {
         void refresh();
         void onSprintChanged();
       },
-      stream ? 15000 : 3500,
+      projStream ? 20000 : 3500,
     );
     return () => {
       if (pending) window.clearTimeout(pending);
-      stream?.close();
+      projStream?.close();
       window.clearInterval(id);
     };
   }, [onSprintChanged, refresh, sprintId]);

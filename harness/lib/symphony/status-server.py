@@ -454,6 +454,81 @@ def _orchestration_projection_payload(sprint_id: str = "", mode: str = "full") -
     }
 
 
+def _projection_signature(data: dict) -> dict:
+    """Compact, comparable signature of the projection bits that drive live UI — phase, per-node
+    status, gate/verdict state, active node, stall. The projection stream emits an SSE update only
+    when this signature changes, so a quiet sprint produces no traffic beyond heartbeats."""
+    if not isinstance(data, dict):
+        return {}
+    nodes: dict = {}
+    for bucket in ((data.get("nodes") or []), ((data.get("task_graph") or {}).get("nodes") or [])):
+        for n in bucket:
+            if isinstance(n, dict):
+                nid = n.get("id") or n.get("node_id")
+                if nid:
+                    nodes.setdefault(str(nid), str(n.get("status") or ""))
+    gates: dict = {}
+    for g in (data.get("human_gates") or []):
+        if isinstance(g, dict):
+            gid = g.get("id") or g.get("node_id") or g.get("type")
+            if gid:
+                gates[str(gid)] = str(g.get("status") or g.get("state") or "")
+    ev = data.get("evaluation") or {}
+    req = data.get("requirements") or {}
+    plan = data.get("plan") or {}
+    summ = data.get("summary") or {}
+    har = data.get("human_action_required") or {}
+    stall = (summ.get("stall") or {}) or ((data.get("dispatch") or {}).get("stall") or {})
+    return {
+        "phase": str(data.get("phase") or ""),
+        "status": str(data.get("status") or ""),
+        "nodes": nodes,
+        "gates": gates,
+        "eval_verdict": str(ev.get("verdict") or ev.get("requested_verdict") or ""),
+        "req_verdict": str(req.get("verdict") or ""),
+        "plan_status": str(plan.get("status") or ""),
+        "active_node": str(summ.get("active_node") or ""),
+        "stalled": bool(stall.get("is_stalled")),
+        "action": str(har.get("type") or ""),
+        "actions": sorted(
+            str(a.get("id") or a.get("action") or "")
+            for a in (data.get("available_actions") or [])
+            if isinstance(a, dict)
+        ),
+    }
+
+
+def _projection_delta(prev: dict, cur: dict) -> dict:
+    """Human-meaningful diff between two signatures — node status transitions plus phase/verdict/
+    gate/stall changes. Drives the 'changed' field the dashboard uses to know what moved."""
+    prev = prev if isinstance(prev, dict) else {}
+    cur = cur if isinstance(cur, dict) else {}
+    changed: dict = {}
+    pn = prev.get("nodes") or {}
+    cn = cur.get("nodes") or {}
+    node_changes = [
+        {"id": nid, "from": pn.get(nid), "to": st}
+        for nid, st in cn.items()
+        if pn.get(nid) != st
+    ]
+    if node_changes:
+        changed["nodes"] = node_changes
+    pg = prev.get("gates") or {}
+    cg = cur.get("gates") or {}
+    gate_changes = [
+        {"id": gid, "from": pg.get(gid), "to": st}
+        for gid, st in cg.items()
+        if pg.get(gid) != st
+    ]
+    if gate_changes:
+        changed["gates"] = gate_changes
+    for key in ("phase", "status", "eval_verdict", "req_verdict",
+                "plan_status", "active_node", "stalled", "action"):
+        if prev.get(key) != cur.get(key):
+            changed[key] = {"from": prev.get(key), "to": cur.get(key)}
+    return changed
+
+
 def _orchestration_verdict_payload(kind: str, sprint_id: str, data: dict) -> tuple[dict, int]:
     mod = _load_orchestration_routes_module()
     fn_by_kind = {
@@ -12863,6 +12938,54 @@ class StatusHandler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError, OSError):
             return
 
+    def _send_projection_stream(self, sprint_id: str):
+        """Live projection over SSE: recompute the fast projection on a short cadence and push an
+        `event: projection` message only when its signature changes. The first message is a full
+        snapshot so the client syncs; subsequent messages carry the full fast `data` plus a
+        `changed` delta (node-status transitions, phase/verdict/gate/stall changes). A quiet sprint
+        emits nothing but heartbeats, so this replaces the old refetch-on-every-raw-event storm."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        prev_sig: dict | None = None
+        last_heartbeat = 0.0
+        try:
+            while True:
+                data: dict = {}
+                generated_at = ""
+                try:
+                    payload = _orchestration_projection_payload(sprint_id, mode="fast")
+                    data = payload.get("data") or {}
+                    generated_at = payload.get("generated_at") or ""
+                except Exception:
+                    data = {}
+                sig = _projection_signature(data)
+                if sig != prev_sig:
+                    first = prev_sig is None
+                    message = {
+                        "type": "snapshot" if first else "delta",
+                        "sprint_id": sprint_id,
+                        "generated_at": generated_at,
+                        "data": data,
+                        "changed": {} if first else _projection_delta(prev_sig or {}, sig),
+                    }
+                    body = json.dumps(message, ensure_ascii=False, default=str)
+                    self.wfile.write(f"event: projection\ndata: {body}\n\n".encode("utf-8"))
+                    prev_sig = sig
+                now = time.monotonic()
+                if now - last_heartbeat > 15:
+                    self.wfile.write(b": heartbeat\n\n")
+                    last_heartbeat = now
+                self.wfile.flush()
+                time.sleep(1.2)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            return
+
     def _read_json_body(self) -> dict:
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -13216,11 +13339,18 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif re.match(r"^/api/sprints/[^/]+/projection$", path):
             sid = urllib.parse.unquote(path.split("/api/sprints/", 1)[1].split("/projection", 1)[0])
-            mode = params.get("mode", [""])[0] or ("fast" if params.get("fast", ["0"])[0].lower() in ("1", "true", "yes") else "full")
-            try:
-                self._send_json(_orchestration_projection_payload(sid, mode=mode))
-            except Exception as exc:
-                self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
+            wants_sse = (
+                params.get("stream", ["0"])[0].lower() in ("1", "true", "yes")
+                or "text/event-stream" in str(self.headers.get("Accept", ""))
+            )
+            if wants_sse:
+                self._send_projection_stream(sid)
+            else:
+                mode = params.get("mode", [""])[0] or ("fast" if params.get("fast", ["0"])[0].lower() in ("1", "true", "yes") else "full")
+                try:
+                    self._send_json(_orchestration_projection_payload(sid, mode=mode))
+                except Exception as exc:
+                    self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
 
         elif path.startswith("/mermaid/assets/"):
             asset = _asset_path(path.removeprefix("/mermaid/assets/"))
