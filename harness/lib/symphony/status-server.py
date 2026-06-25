@@ -829,6 +829,29 @@ def _runtime_launch_supported() -> bool:
     )
 
 
+def _auth_status_payload() -> dict:
+    """Subscription-first auth state per provider via auth-helpers.sh (file-presence based;
+    NEVER returns token values). The dashboard's AuthGate consumes this to decide first-run
+    sign-in vs. proceed. Degrades to 'unknown' (never blocks) if the helper is absent/errors."""
+    helper = HARNESS_DIR / "auth-helpers.sh"
+    fallback = {"ok": True, "codex": "unknown", "claude": "unknown", "glm": "unknown", "source": "unavailable"}
+    if not helper.exists():
+        return fallback
+    try:
+        out = subprocess.run(
+            ["bash", str(helper), "status"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        data = json.loads((out.stdout or "").strip() or "{}")
+        if isinstance(data, dict) and data.get("ok"):
+            return data
+    except Exception:
+        pass
+    return fallback
+
+
 def _model_id_to_alias(model_id: str) -> str:
     """Map a dashboard model id to a canonical config alias. CRITICAL: bare
     'sonnet' canonicalizes to GLM in the registry, so always emit explicit
@@ -12888,6 +12911,9 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif path == "/settings":
             self._send_json(_settings_payload())
+
+        elif path == "/auth/status":
+            self._send_json(_auth_status_payload())
 
         elif path == "/events":
             sprint_id = params.get("sprint_id", [""])[0]
