@@ -1055,16 +1055,10 @@ def _node_eval_is_self_graded(graph: dict[str, Any], node_id: str) -> bool:
     # verdict-artifact gate, so do not flag them here.
     if not _node_has_handoff(graph, node_id):
         return False
-    for path in _node_eval_json_candidates(graph, node_id):
-        if not path.exists():
-            continue
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        if str(data.get("generation_mode") or "").strip().lower() == "manual_node_eval":
-            return True
-    return False
+    # The executor produced a handoff AND a verdict (eval.json) but NO independent evaluator report
+    # (no non-empty {node}-eval.md, no {node}-eval-dispatch). The verdict is self-graded/backfilled
+    # regardless of how it was written (generation_mode varies / may be absent) -- not a genuine eval.
+    return _node_has_eval_json(graph, node_id)
 
 
 def _passed_without_required_eval(graph: dict[str, Any], node_id: str) -> bool:

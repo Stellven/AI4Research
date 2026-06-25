@@ -2054,6 +2054,28 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                         }
                     )
                     continue
+            # Self-graded guard: a PASS verdict from an eval.json sidecar the EXECUTING agent wrote
+            # itself, with NO independent evaluator report (no non-empty {node}-eval.md, no
+            # {node}-eval-dispatch), must NOT auto-close the node to passed here -- that is the
+            # eval-backfill false-positive vector (a self-reported verdict standing in for a real
+            # evaluation). Clear the finished worker's claim and leave the node in review so
+            # dispatch_node_evals routes it to a real evaluator; only a genuinely-evaluated PASS may
+            # close here. FAIL is unaffected (a fail is safe to honor without an independent report).
+            # (handoff_file is already a real, existing handoff per the branch condition above.)
+            if eval_verdict == "PASS" and _node_eval_self_graded(sid, node_id):
+                node.pop("assigned_to", None)
+                node.pop("dispatch_id", None)
+                repaired.append(
+                    {
+                        "node": node_id,
+                        "status": status,
+                        "reason": "self_graded_pass_needs_independent_eval",
+                        "handoff": str(handoff_file),
+                        "eval_json": eval_json_path,
+                        "verdict": eval_verdict,
+                    }
+                )
+                continue
             node.pop("assigned_to", None)
             node.pop("dispatch_id", None)
             verdict_status = "passed" if eval_verdict == "PASS" else "failed"
@@ -6624,14 +6646,10 @@ def _node_eval_self_graded(sid: str, node_id: str) -> bool:
         SPRINTS_DIR.glob(f"{sid}.{_safe_node_id(node_id)}-eval-dispatch*.md")
     ):
         return False
-    eval_json = _eval_json_file(sid, node_id)
-    if not eval_json.exists():
-        return False
-    try:
-        data = _read_json_file(eval_json)
-    except Exception:
-        return False
-    return str((data or {}).get("generation_mode") or "").strip().lower() == "manual_node_eval"
+    # A verdict (eval.json) exists but with no independent evaluator report -> self-graded/backfilled
+    # regardless of how it was written (generation_mode varies / may be absent); the node still needs a
+    # real evaluator dispatched.
+    return _eval_json_file(sid, node_id).exists()
 
 
 def _node_eval_needed(graph: dict[str, Any], sid: str, node: dict[str, Any], force: bool = False) -> bool:
@@ -7168,6 +7186,24 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
                     "research_quality_gate": research_quality_gate,
                     "coverage_refresh": coverage_refresh,
                 }
+    # Self-graded guard (final gate before marking passed): an EXECUTOR node (real handoff present)
+    # whose verdict (eval.json) has NO independent evaluator report -- no non-empty {node}-eval.md and
+    # no {node}-eval-dispatch sidecar -- must never certify PASS. Block it gracefully as unverified
+    # rather than letting mark_node_result raise passed_requires_eval_json uncaught (which would wedge
+    # the coordinator). Runs AFTER the proof/research gates so their more specific block reasons win;
+    # mirrors the scheduler's mark_node_result backstop (in-runtime gnd.SPRINTS_DIR == gs.SPRINTS_DIR).
+    # Gate/verifier nodes produce no handoff -> exempt (they verify via their decision artifact, not a
+    # per-node eval). Closes the eval-backfill false-positive vector at the node_verdict entry point.
+    self_graded_handoff = _existing_node_handoff(sid, node, graph)
+    if status == "passed" and self_graded_handoff and _node_eval_self_graded(sid, node_id):
+        return {
+            "ok": False,
+            "reason": "self_graded_eval_requires_independent_report",
+            "node": node_id,
+            "status": "blocked",
+            "eval_json": str(eval_json or _eval_json_file(sid, node_id)),
+            "handoff_md": str(self_graded_handoff),
+        }
     parent = mark_node_result(graph, node_id, status, gate_status=status, note="; ".join(note_parts) or None)
     node["status"] = status
     node["updated_at"] = _utc_now()

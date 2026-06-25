@@ -335,6 +335,10 @@ class TestSendToPaneLiteral:
             json.dumps({"verdict": "passed", "node_id": "N1"}) + "\n",
             encoding="utf-8",
         )
+        # New contract: reconcile only auto-closes a PASS sidecar that has a GENUINE independent eval
+        # report (eval.md); a self-graded sidecar (eval.json only) is left for a real eval dispatch.
+        # This test verifies lowercase "passed" verdict normalization, so give it a real eval report.
+        (sprints / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
         monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
 
         repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
@@ -352,6 +356,38 @@ class TestSendToPaneLiteral:
                 "verdict": "PASS",
             }
         ]
+
+    def test_reconcile_blocks_self_graded_pass_eval_sidecar(self, tmp_harness, monkeypatch):
+        """Eval-backfill guard on the reconcile path: a PASS eval.json sidecar the executing agent
+        wrote itself, with NO independent eval report (no {sid}.N1-eval.md, no eval-dispatch sidecar),
+        must NOT auto-close the node to passed. It stays in review for a real evaluator dispatch;
+        only a genuinely-evaluated PASS (or any FAIL) closes via reconcile."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        (sprints / f"{sid}.N1-handoff.md").write_text("# handoff\n", encoding="utf-8")
+        # Self-graded verdict: eval.json only -- NO sibling {sid}.N1-eval.md and NO eval-dispatch sidecar.
+        (sprints / f"{sid}.N1-eval.json").write_text(
+            json.dumps({"verdict": "PASS", "node_id": "N1"}) + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        # The node is NOT closed to passed -- it remains unverified, awaiting a genuine eval dispatch.
+        assert graph["nodes"][0]["status"] != "passed"
+        assert graph["node_results"]["N1"]["status"] != "passed"
+        reasons = [r["reason"] for r in repaired]
+        assert "self_graded_pass_needs_independent_eval" in reasons
+        assert "eval_sidecar_exists" not in reasons
+        entry = next(r for r in repaired if r["reason"] == "self_graded_pass_needs_independent_eval")
+        assert entry["node"] == "N1"
+        assert entry["verdict"] == "PASS"
+        assert entry["eval_json"] == str(sprints / f"{sid}.N1-eval.json")
 
     def test_eval_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
         """A first evaluator FAIL feeds critique back to the node instead of terminal-failing."""

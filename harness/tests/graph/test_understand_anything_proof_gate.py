@@ -86,6 +86,11 @@ def test_understand_anything_proof_gate_passes_from_operator_artifacts(tmp_path,
     monkeypatch.setattr(gnd, "release_lease", lambda *a, **kw: {"released": False})
     monkeypatch.setattr(gnd, "_mark_parent_sprint_passed_if_ready", lambda *a, **kw: False)
 
+    # New contract: the executor's self-written eval.json needs an INDEPENDENT eval report (eval.md)
+    # for the node to certify PASS; without it the self-graded guard blocks the verdict. This test
+    # exercises the proof gate, so give the node a genuine evaluator report alongside the handoff.
+    (tmp_path / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
+
     result = gnd.node_verdict(str(graph_path), "N1", "pass", eval_json=str(eval_json), dispatch_downstream=False)
     assert result["ok"] is True
     assert result["proof_gate"]["ok"] is True

@@ -78,6 +78,9 @@ class TestHandoffOnlyPassReportsReviewing:
         handoff.write_text("# Handoff\n")
         eval_json = tmp_path / f"{sid}.N1-eval.json"
         eval_json.write_text(json.dumps({"verdict": "PASS"}))
+        # New contract: an independent eval REPORT (eval.md), not just a self-written verdict JSON,
+        # is required to certify PASS (closes the eval-backfill self-grade vector).
+        (tmp_path / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n")
 
         assert gs.node_status(graph, "N1") == "passed"
 
@@ -161,6 +164,35 @@ class TestNodeVerdictBlocksPassWithoutEval:
         with pytest.raises(ValueError, match="passed_requires_eval_json"):
             gs._assert_pass_mark_allowed(graph, "N1", "passed")
 
+    def test_verdict_pass_blocked_self_graded_without_independent_report(self, tmp_path, monkeypatch):
+        # Guard for the eval-backfill false-positive vector: an executor node (has a handoff) wrote
+        # its OWN verdict JSON (eval.json) but there is NO independent evaluator report -- no non-empty
+        # {node}-eval.md and no {node}-eval-dispatch sidecar. A self-graded verdict must never stand in
+        # for a real evaluation: the node stays UNVERIFIED (blocked), never PASS.
+        sid = "sprint-ac2-self-graded"
+        graph_path = _setup_dispatcher_graph(tmp_path, monkeypatch, sid)
+
+        sprints = tmp_path / "sprints"
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        handoff.write_text("# Handoff\n")
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        # Self-graded verdict with NO sibling {sid}.N1-eval.md and NO eval-dispatch sidecar.
+        eval_json.write_text(json.dumps({"node_id": "N1", "verdict": "PASS", "summary": "self"}))
+
+        result = gnd.node_verdict(
+            str(graph_path), "N1", "pass",
+            eval_json=str(eval_json),
+            dry_run=True,
+        )
+        assert result["ok"] is False
+        assert result["reason"] == "self_graded_eval_requires_independent_report"
+        assert result["status"] == "blocked"
+
+        # Scheduler-level backstop: the same self-graded node must not be mark-able as passed.
+        graph = json.loads(graph_path.read_text(encoding="utf-8"))
+        with pytest.raises(ValueError, match="passed_requires_eval_json"):
+            gs._assert_pass_mark_allowed(graph, "N1", "passed")
+
 
 # ── AC3: eval PASS allows passed ────────────────────────────────────────
 
@@ -179,6 +211,9 @@ class TestEvalPassAllowsPassed:
             "verdict": "PASS",
             "summary": "All ACs verified",
         }))
+        # New contract: a genuine independent eval REPORT (eval.md) -- not just a self-written verdict
+        # JSON -- is required to certify PASS (closes the eval-backfill self-grade vector).
+        (tmp_path / "sprints" / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n")
 
         result = gnd.node_verdict(
             str(graph_path), "N1", "pass",
@@ -210,6 +245,8 @@ class TestEvalPassAllowsPassed:
         handoff.write_text("# Handoff\n")
         eval_json = tmp_path / f"{sid}.N1-eval.json"
         eval_json.write_text(json.dumps({"verdict": "PASS"}))
+        # New contract: an independent eval REPORT (eval.md) is required to certify PASS.
+        (tmp_path / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n")
 
         gs._assert_pass_mark_allowed(graph, "N1", "passed")
 
@@ -226,6 +263,8 @@ class TestEvalPassAllowsPassed:
             "summary": "Full integration",
             "acceptance_results": {"ac1": True, "ac2": True, "ac3": True},
         }))
+        # New contract: an independent eval REPORT (eval.md) is required to certify PASS.
+        (tmp_path / "sprints" / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n")
 
         result = gnd.node_verdict(
             str(graph_path), "N1", "pass",
@@ -269,6 +308,8 @@ class TestEvalPassAllowsPassed:
         patch_diff.write_text("# no source patch\n", encoding="utf-8")
         eval_json = sprints / f"{sid}.N1-eval.json"
         eval_json.write_text(json.dumps({"node_id": "N1", "verdict": "PASS"}), encoding="utf-8")
+        # New contract: an independent eval REPORT (eval.md) is required to certify PASS.
+        (sprints / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
 
         monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
         monkeypatch.setattr(gnd, "release_lease", lambda *a, **kw: {"released": False})
