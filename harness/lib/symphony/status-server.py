@@ -126,9 +126,7 @@ OPEN_ALLOWED_ROOTS = [
 ]
 
 def _detect_wsl() -> bool:
-    """True on WSL. Used to widen the listen interface so the Windows host can reach the server
-    via the WSL VM interface when WSL2 localhostForwarding intermittently drops 127.0.0.1
-    (microsoft/WSL #9516) — the keystone for the Windows path."""
+    """True on WSL."""
     try:
         with open("/proc/version", "r", errors="ignore") as fh:
             return "microsoft" in fh.read().lower()
@@ -136,14 +134,35 @@ def _detect_wsl() -> bool:
         return False
 
 
-# Listen interface. Default loopback-only (127.0.0.1). Under WSL we bind 0.0.0.0 so the Windows
-# host reaches the server even when localhostForwarding hits the 127.0.0.1 edge case; 0.0.0.0 still
-# includes loopback, so mac/Linux semantics and forwarding are unchanged. SOLAR_BIND_HOST overrides.
-# SECURITY: this widens the listen surface to the WSL VM's interfaces (behind the Windows firewall);
-# the intended guard is the loopback auth token (security M1, deferred) — keep it on a trusted host.
-BIND_HOST = os.environ.get("SOLAR_BIND_HOST") or (
-    "0.0.0.0" if _detect_wsl() else "127.0.0.1"
-)
+def _wsl_networking_mode() -> str:
+    """WSL networking mode via `wslinfo --networking-mode` ('mirrored' | 'nat' | ''). Empty when
+    wslinfo is absent (older WSL) — treated as NAT for bind purposes."""
+    try:
+        out = subprocess.run(
+            ["wslinfo", "--networking-mode"], capture_output=True, text=True, timeout=3
+        )
+        return (out.stdout or "").strip().lower()
+    except Exception:
+        return ""
+
+
+def _default_bind_host() -> str:
+    """Listen interface, chosen for the Windows-path keystone WITHOUT needlessly widening the
+    surface:
+      - non-WSL            -> 127.0.0.1 (loopback only).
+      - WSL mirrored mode  -> 127.0.0.1. Mirrored networking makes host<->WSL localhost
+        bidirectional, so the Windows host reaches the server on 127.0.0.1 with NO LAN exposure.
+      - WSL NAT mode       -> 0.0.0.0. NAT's localhostForwarding intermittently drops 127.0.0.1
+        (microsoft/WSL #9516); binding all interfaces lets the host reach the WSL VM IP. This is
+        the only case that widens the surface (behind the Windows firewall); the intended guard is
+        the loopback auth token (security M1, deferred).
+    SOLAR_BIND_HOST overrides explicitly. Prefer setting WSL to mirrored mode (the secure path)."""
+    if not _detect_wsl():
+        return "127.0.0.1"
+    return "127.0.0.1" if _wsl_networking_mode() == "mirrored" else "0.0.0.0"
+
+
+BIND_HOST = os.environ.get("SOLAR_BIND_HOST") or _default_bind_host()
 PORT_RANGE = range(8765, 8776)
 
 
