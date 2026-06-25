@@ -15,6 +15,13 @@
 set -eu
 
 HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+# Operator-owned config: when SOLAR_PANE_RUNTIME isn't set in the env, default to the pane
+# runtime the dashboard's runtime selector persisted (config key "runtime"). Env still wins.
+# Source the config helper early (it only needs HARNESS_DIR); harmless if re-sourced below.
+[[ -f "$HARNESS_DIR/lib/harness-config.sh" ]] && . "$HARNESS_DIR/lib/harness-config.sh"
+if [[ -z "${SOLAR_PANE_RUNTIME:-}" ]] && declare -F solar_config_json_get >/dev/null 2>&1; then
+  SOLAR_PANE_RUNTIME="$(solar_config_json_get "runtime" "claude" 2>/dev/null || echo claude)"
+fi
 SOLAR_PANE_RUNTIME="${SOLAR_PANE_RUNTIME:-claude}"
 case "$SOLAR_PANE_RUNTIME" in
   claude|codex) ;;

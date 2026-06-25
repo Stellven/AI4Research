@@ -808,10 +808,13 @@ def _write_user_config(cfg: dict) -> None:
 
 
 def _runtime_launch_supported() -> bool:
-    """The persisted runtime selector is only safe to enable when the launch seam
-    is present in this checkout. The proven Codex branch has both pieces; this
-    GUI branch may not."""
+    """The persisted runtime selector is only safe to enable when the FULL launch chain is
+    wired: solar-harness.sh reads the config 'runtime' as the SOLAR_PANE_RUNTIME default,
+    pane-launcher.sh consumes it, and the dispatcher honors it. The config-read is what makes
+    the stored toggle value actually drive the panes (else the toggle is a no-op), so it is
+    required here too — not just the launch seam."""
     try:
+        harness = (HARNESS_DIR / "solar-harness.sh").read_text(encoding="utf-8", errors="replace")
         launcher = (HARNESS_DIR / "pane-launcher.sh").read_text(encoding="utf-8", errors="replace")
         dispatcher = (HARNESS_DIR / "lib" / "graph_node_dispatcher.py").read_text(
             encoding="utf-8",
@@ -819,7 +822,11 @@ def _runtime_launch_supported() -> bool:
         )
     except Exception:
         return False
-    return "SOLAR_PANE_RUNTIME" in launcher and "def _pane_runtime(" in dispatcher
+    return (
+        'solar_config_json_get "runtime"' in harness
+        and "SOLAR_PANE_RUNTIME" in launcher
+        and "def _pane_runtime(" in dispatcher
+    )
 
 
 def _model_id_to_alias(model_id: str) -> str:
