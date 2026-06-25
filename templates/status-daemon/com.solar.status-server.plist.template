@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.solar.status-server</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{SOLAR_STATUS_PYTHON}}</string>
+    <string>{{SOLAR_HOME}}/harness/lib/symphony/status-server.py</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HARNESS_DIR</key>
+    <string>{{SOLAR_HOME}}/harness</string>
+    <key>PYTHONPATH</key>
+    <string>{{SOLAR_HOME}}/harness/lib</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>WorkingDirectory</key>
+  <string>{{SOLAR_HOME}}/harness</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>{{SOLAR_HOME}}/logs/status-server.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{SOLAR_HOME}}/logs/status-server.log</string>
+</dict>
+</plist>

@@ -56,5 +56,38 @@ PY
     echo "ok: $tpl renders clean and is structurally valid"
 done
 
+# status-daemon templates (the status-server login service). They reference {{SOLAR_STATUS_PYTHON}}
+# (an exported SOLAR_ var) — set a sample absolute interpreter so they resolve.
+export SOLAR_STATUS_PYTHON="/usr/bin/python3"
+for tpl in com.solar.status-server.plist.template solar-status-server.service.template; do
+    out="$work/${tpl%.template}"
+    render_template "templates/status-daemon/$tpl" "$out"
+    if grep -nE "$FORBIDDEN" "$out"; then echo "FAIL: forbidden token in $tpl" >&2; fail=1; fi
+    if grep -nF '{{' "$out"; then echo "FAIL: unresolved {{ in $tpl" >&2; fail=1; fi
+    grep -qF "$SOLAR_HOME/harness/lib/symphony/status-server.py" "$out" \
+        || { echo "FAIL: $tpl missing status-server entrypoint" >&2; fail=1; }
+    case "$tpl" in
+        *.service.template)
+            for sec in Unit Service Install; do
+                grep -qE "^\[$sec\]" "$out" || { echo "FAIL: $tpl missing [$sec] section" >&2; fail=1; }
+            done
+            grep -qE '^ExecStart=/' "$out" || { echo "FAIL: $tpl ExecStart is not an absolute path" >&2; fail=1; }
+            ;;
+        *.plist.template)
+            plist_rc=0
+            OUT="$out" python3 - <<'PY' || plist_rc=$?
+import os, plistlib
+with open(os.environ["OUT"], "rb") as f:
+    d = plistlib.load(f)
+assert d.get("Label"), "plist missing Label"
+pa = d.get("ProgramArguments")
+assert isinstance(pa, list) and pa and pa[0].startswith("/"), "ProgramArguments[0] not absolute"
+PY
+            [ "$plist_rc" -eq 0 ] || { echo "FAIL: $tpl is not a structurally valid plist" >&2; fail=1; }
+            ;;
+    esac
+    echo "ok: $tpl renders clean and is structurally valid"
+done
+
 [ "$fail" -eq 0 ] || { echo "daemons-render-check FAILED" >&2; exit 1; }
-echo "daemons-render-check passed"
+echo "daemons-render-check passed (daemons + status-daemon)"

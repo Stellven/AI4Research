@@ -27,6 +27,7 @@ Linux, and WSL2.
 | `solar-max` | off | all | — | `kernel` | no | Opt-in Solar-Max project mode (Gate-driven workflow over a personal ~/Solar-MAX dir) |
 | `mempalace` | off | darwin linux wsl | `python3` | `kernel` | yes | Semantic memory MCP server (off by default) |
 | `daemons` | off | darwin linux wsl | `bun` | `core-runtime` | no | User-level daemon for the Solar runtime (off by default) |
+| `status-daemon` | off | darwin linux wsl | `python3` | `harness` | no | Auto-start the Solar status-server (dashboard + API) at login (off by default) |
 
 ## Required configuration
 
