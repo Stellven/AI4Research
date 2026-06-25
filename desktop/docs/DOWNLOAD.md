@@ -26,6 +26,17 @@ you open it. This is expected for an unsigned app — here's how to allow it (on
 chmod +x Solar-*.AppImage && ./Solar-*.AppImage
 ```
 
+The app starts the runtime on launch. To also have the runtime **auto-start at login** (so it's
+already running before you open the app, and survives logout), install the `status-daemon`
+component — either with the full installer:
+```sh
+./install.sh --components kernel,harness,status-daemon
+```
+or, if the runtime is already installed, the standalone helper:
+```sh
+bash desktop/runtime/install-linux-service.sh   # systemd --user; runs loginctl enable-linger for you
+```
+
 ---
 Once allowed, Solar opens normally on every launch — the runtime auto-starts in the background and the
 dashboard loads. If something looks wrong, use **Help → Copy diagnostics** in the app to grab a local
