@@ -42,6 +42,14 @@
         {
           "from": "../get-solar.sh",
           "to": "get-solar.sh"
+        },
+        {
+          "from": "runtime/install-windows-autostart.ps1",
+          "to": "runtime/install-windows-autostart.ps1"
+        },
+        {
+          "from": "runtime/start-solar-wsl.vbs",
+          "to": "runtime/start-solar-wsl.vbs"
         }
       ]
     },
