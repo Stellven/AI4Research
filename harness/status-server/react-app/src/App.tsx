@@ -120,18 +120,58 @@ type SessionData = {
   events: EventRecord[];
   usage?: UsagePayload;
   deliverables: Deliverable[];
+  provenance: SessionProvenance;
   state: LoadState;
   error: string;
   streamState: "connecting" | "live" | "retrying" | "off";
   refresh: () => Promise<void>;
 };
 
+type SessionProvenance = {
+  sprintId: string;
+  recentEventsScope?: string;
+  recentEventsSource?: string;
+  statusCache?: string;
+  lastStatusAt?: string;
+  lastEventsAt?: string;
+  lastProjectionAt?: string;
+  degradedSources?: string[];
+  eventCount?: number;
+};
+
 type SessionCacheEntry = Pick<
   SessionData,
-  "status" | "projection" | "events" | "usage" | "deliverables"
+  "status" | "projection" | "events" | "usage" | "deliverables" | "provenance"
 >;
 
 const sessionDataCache = new Map<string, SessionCacheEntry>();
+
+function emptySessionProvenance(sprintId: string): SessionProvenance {
+  return { sprintId };
+}
+
+function isEventForSprint(event: EventRecord, sprintId: string): boolean {
+  return asString(event.sprint_id) === sprintId;
+}
+
+function intakeErrorMessage(response: {
+  error?: string;
+  stdout_tail?: string;
+  request_id?: string;
+  attribution?: string;
+  ambiguous?: boolean;
+  candidate_sprint_ids?: string[];
+}): string {
+  if (response.ambiguous) {
+    const candidates = (response.candidate_sprint_ids || []).filter(Boolean);
+    return `Could not safely identify the new session for request ${asString(response.request_id, "(unknown)")}. Candidate sessions: ${candidates.join(", ") || "none"}.`;
+  }
+  return (
+    response.error ||
+    response.stdout_tail ||
+    `Intake did not return a sprint id for request ${asString(response.request_id, "(unknown)")}`
+  );
+}
 
 type ProcessStepState = "active" | "blocked" | "completed" | "pending";
 
@@ -421,13 +461,20 @@ function Shell() {
   const selectedSprintId = selectedSprintFromPath(location.pathname);
   const isSettingsRoute = location.pathname === "/settings";
 
+  // C2 sequence guard: refreshSprints fires from mount, the debounced SSE handler, AND the interval
+  // poll, so calls overlap. Tag each call; if a newer call started while this fetch was in flight,
+  // drop the result — otherwise a slow older response can land last and clobber the fresh list.
+  const refreshSprintsSeq = useRef(0);
   const refreshSprints = useCallback(async () => {
+    const seq = ++refreshSprintsSeq.current;
     try {
       const response = await fetchSprints();
+      if (seq !== refreshSprintsSeq.current) return;
       setSprints(response.data?.sprints || []);
       setState("ready");
       setError("");
     } catch (err) {
+      if (seq !== refreshSprintsSeq.current) return;
       setState("error");
       setError(err instanceof Error ? err.message : "Unable to load sprints");
     }
@@ -649,11 +696,7 @@ function NewTaskDialog({
     try {
       const response = await submitIntake(cleanTask);
       if (!response.ok || !response.sprint_id) {
-        throw new Error(
-          response.error ||
-            response.stdout_tail ||
-            "Intake did not return a sprint id",
-        );
+        throw new Error(intakeErrorMessage(response));
       }
       setTask("");
       setOpen(false);
@@ -732,17 +775,41 @@ function SessionRoute({
 }) {
   const { sprintId = "" } = useParams();
   const decodedSprintId = decodeURIComponent(sprintId);
-  const session = useSessionData(decodedSprintId, onSprintChanged);
-  const sprint = sprints.find((item) => item.sprint_id === decodedSprintId);
-
   if (!decodedSprintId) {
     return <HomeLanding sprints={sprints} onCreated={onCreated} />;
   }
+  // key by sprintId so switching sessions REMOUNTS the data owner: useSessionData state
+  // (status/projection/events/provenance) and all child component state (GateCard verdict/notice,
+  // deliverable preview) reset, instead of briefly painting the previous session's data into the
+  // new one (the rapid-switch stale-paint / gate-state-leak class).
+  return (
+    <SessionRouteView
+      key={decodedSprintId}
+      sprintId={decodedSprintId}
+      sprints={sprints}
+      onCreated={onCreated}
+      onSprintChanged={onSprintChanged}
+    />
+  );
+}
 
+function SessionRouteView({
+  sprintId,
+  sprints,
+  onCreated,
+  onSprintChanged,
+}: {
+  sprintId: string;
+  sprints: SprintSummary[];
+  onCreated: (sprintId: string) => Promise<void>;
+  onSprintChanged: () => Promise<void>;
+}) {
+  const session = useSessionData(sprintId, onSprintChanged);
+  const sprint = sprints.find((item) => item.sprint_id === sprintId);
   return (
     <SessionView
       sprint={sprint as SprintSummary | undefined}
-      sprintId={decodedSprintId}
+      sprintId={sprintId}
       session={session}
       onCreated={onCreated}
     />
@@ -758,6 +825,9 @@ function useSessionData(
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [usage, setUsage] = useState<UsagePayload>();
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
+  const [provenance, setProvenance] = useState<SessionProvenance>(
+    emptySessionProvenance(sprintId),
+  );
   const [state, setState] = useState<LoadState>("ready");
   const [error, setError] = useState("");
   const [streamState, setStreamState] = useState<
@@ -779,12 +849,20 @@ function useSessionData(
         events: [],
         usage: undefined,
         deliverables: [],
+        provenance: emptySessionProvenance(sprintId),
       };
       sessionDataCache.set(sprintId, { ...base, ...patch });
     };
+    const patchProvenance = (patch: Partial<SessionProvenance>) => {
+      setProvenance((prev) => {
+        const next = { ...prev, sprintId, ...patch };
+        cachePatch({ provenance: next });
+        return next;
+      });
+    };
 
     setError("");
-    setState("ready");
+    setState(sessionDataCache.has(sprintId) ? "ready" : "loading");
 
     // Each endpoint applies its own slice as soon as it resolves. A slow
     // endpoint (e.g. /usage, /status) never holds back the process stream,
@@ -795,26 +873,39 @@ function useSessionData(
         if (!isCurrent()) return;
         setProjection(projectionResponse);
         cachePatch({ projection: projectionResponse });
+        patchProvenance({
+          lastProjectionAt:
+            projectionResponse.generated_at || new Date().toISOString(),
+          degradedSources: projectionResponse.degraded_sources || [],
+        });
       }),
       fetchStatus(sprintId).then((statusResponse) => {
         if (!isCurrent()) return;
         setStatus(statusResponse);
         cachePatch({ status: statusResponse });
+        patchProvenance({
+          recentEventsScope: asString(statusResponse.recent_events_scope),
+          recentEventsSource: asString(statusResponse.recent_events_source),
+          statusCache: asString(statusResponse.status_cache),
+          lastStatusAt: new Date().toISOString(),
+        });
       }),
       fetchEvents(sprintId, 140).then((eventsResponse) => {
         if (!isCurrent()) return;
-        const scopedEvents = eventsResponse.filter(
-          (event) => !event.sprint_id || event.sprint_id === sprintId,
+        const scopedEvents = eventsResponse.filter((event) =>
+          isEventForSprint(event, sprintId),
         );
         setEvents((existing) => {
           const merged = mergeEvents(
-            existing.filter(
-              (event) => !event.sprint_id || event.sprint_id === sprintId,
-            ),
+            existing.filter((event) => isEventForSprint(event, sprintId)),
             scopedEvents,
           );
           cachePatch({ events: merged });
           return merged;
+        });
+        patchProvenance({
+          eventCount: scopedEvents.length,
+          lastEventsAt: new Date().toISOString(),
         });
       }),
       fetchUsage().then((usageResponse) => {
@@ -846,6 +937,8 @@ function useSessionData(
         reason instanceof Error ? reason.message : "Unable to load session",
       );
       setState("error");
+    } else {
+      setState("ready");
     }
   }, [sprintId]);
 
@@ -857,6 +950,7 @@ function useSessionData(
       setEvents(cached.events);
       setUsage(cached.usage);
       setDeliverables(cached.deliverables);
+      setProvenance(cached.provenance || emptySessionProvenance(sprintId));
       setState("ready");
       setError("");
     } else {
@@ -865,7 +959,8 @@ function useSessionData(
       setUsage(undefined);
       setDeliverables([]);
       setEvents([]);
-      setState("ready");
+      setProvenance(emptySessionProvenance(sprintId));
+      setState("loading");
       setError("");
     }
     setStreamState("connecting");
@@ -897,16 +992,23 @@ function useSessionData(
         events: [],
         usage: undefined,
         deliverables: [],
+        provenance: emptySessionProvenance(sprintId),
       };
       sessionDataCache.set(sprintId, {
         ...base,
         projection: projectionResponse,
+        provenance: {
+          ...(base.provenance || emptySessionProvenance(sprintId)),
+          lastProjectionAt:
+            projectionResponse.generated_at || new Date().toISOString(),
+        },
       });
     };
     const projStream = openProjectionStream(
       sprintId,
       (msg) => {
         if (!isCurrent()) return;
+        if (msg.sprint_id !== sprintId) return; // require an exact sprint match (drop missing/other)
         setStreamState("live");
         const projectionResponse: ProjectionResponse = {
           ok: true,
@@ -915,6 +1017,12 @@ function useSessionData(
           schema_version: msg.data?.projection_schema,
         };
         setProjection(projectionResponse);
+        setProvenance((prev) => ({
+          ...prev,
+          sprintId,
+          lastProjectionAt:
+            projectionResponse.generated_at || new Date().toISOString(),
+        }));
         cacheProjection(projectionResponse);
         const changed = msg.changed || {};
         const moved =
@@ -950,7 +1058,7 @@ function useSessionData(
     const source = openEventStream(
       sprintId,
       (event) => {
-        if (event.sprint_id && event.sprint_id !== selectedSprintRef.current) {
+        if (!isEventForSprint(event, selectedSprintRef.current)) {
           return;
         }
         setStreamState("live");
@@ -961,10 +1069,21 @@ function useSessionData(
             sessionDataCache.set(selectedSprintRef.current, {
               ...cached,
               events: merged,
+              provenance: {
+                ...(cached.provenance ||
+                  emptySessionProvenance(selectedSprintRef.current)),
+                eventCount: merged.length,
+                lastEventsAt: new Date().toISOString(),
+              },
             });
           }
           return merged;
         });
+        setProvenance((prev) => ({
+          ...prev,
+          eventCount: Math.max(prev.eventCount || 0, 1),
+          lastEventsAt: new Date().toISOString(),
+        }));
       },
       () => setStreamState("retrying"),
     );
@@ -982,6 +1101,7 @@ function useSessionData(
     events,
     usage,
     deliverables,
+    provenance,
     state,
     error,
     streamState,
@@ -1044,6 +1164,7 @@ function SessionView({
       <TopBar
         sprint={currentSprint}
         streamState={session.streamState}
+        provenance={session.provenance}
         rail={rail}
         deliverableCount={session.deliverables.length}
       />
@@ -2519,19 +2640,46 @@ function timestampValue(value: string): number {
 function TopBar({
   sprint,
   streamState,
+  provenance,
   rail,
   deliverableCount,
 }: {
   sprint: SprintSummary;
   streamState: string;
+  provenance: SessionProvenance;
   rail: RailController;
   deliverableCount: number;
 }) {
+  const scope = asString(provenance.recentEventsScope);
+  const source = asString(provenance.recentEventsSource);
+  const cache = asString(provenance.statusCache);
+  const updatedAt =
+    provenance.lastEventsAt ||
+    provenance.lastProjectionAt ||
+    provenance.lastStatusAt ||
+    "";
   return (
     <header className="topbar">
       <div className="topbar-title-block">
         <div className="topbar-title">
           <span>{titleForSprint(sprint)}</span>
+        </div>
+        <div className="topbar-provenance" aria-label="Session data provenance">
+          <span className="tech-id">
+            {asString(sprint.sprint_id, provenance.sprintId)}
+          </span>
+          {scope && (
+            <span className={`provenance-chip scope-${scope}`}>
+              events: {scope}
+              {source ? `/${source}` : ""}
+            </span>
+          )}
+          {cache && <span className="provenance-chip">status: {cache}</span>}
+          {updatedAt && (
+            <span className="provenance-chip">
+              updated {formatDateTime(updatedAt)}
+            </span>
+          )}
         </div>
       </div>
       <div className="topbar-actions">
@@ -3708,11 +3856,7 @@ function HomeLanding({
     try {
       const response = await submitIntake(clean);
       if (!response.ok || !response.sprint_id) {
-        throw new Error(
-          response.error ||
-            response.stdout_tail ||
-            "Intake did not return a sprint id",
-        );
+        throw new Error(intakeErrorMessage(response));
       }
       setTask("");
       await onCreated(response.sprint_id);

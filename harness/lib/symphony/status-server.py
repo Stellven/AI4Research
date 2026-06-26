@@ -274,7 +274,11 @@ def _read_jsonl(path: Path, limit: int = 50, sprint_id: str = "", filter_synthet
 
 
 def _runtime_events_path(sprint_id: str) -> Path:
-    """Prefer session-log v2 events, fall back to legacy sprint/global events."""
+    """Prefer session-log v2 events, fall back to legacy sprint/global events. SECURITY: never
+    join an unsafe id into a path (traversal via /status, /events, SSE) — an id that isn't a strict
+    slug falls back to the global log instead of escaping SESSIONS_DIR/SPRINTS_DIR."""
+    if not _valid_sprint_id(sprint_id):
+        return ALL_EVENTS
     session_path = SESSIONS_DIR / sprint_id / "events.jsonl"
     if session_path.exists():
         return session_path
@@ -289,7 +293,26 @@ def _events_for_request(sprint_id: str, limit: int = 50) -> list:
     sid = str(sprint_id or "").strip()
     src = _runtime_events_path(sid) if sid else ALL_EVENTS
     filter_sid = sid if src == ALL_EVENTS else ""
-    return _read_jsonl(src, limit=limit, sprint_id=filter_sid)
+    events = _read_jsonl(src, limit=limit, sprint_id=filter_sid)
+    if not sid:
+        return events
+    # Session-local and legacy sprint event files are scoped by their path. Older event writers
+    # sometimes omitted sprint_id; normalize those so the React view can enforce a strict
+    # one-session-only event policy. If a scoped file somehow contains another sprint_id, drop it.
+    normalized = []
+    source_kind = "session_file" if src == SESSIONS_DIR / sid / "events.jsonl" else "sprint_file" if src == SPRINTS_DIR / f"{sid}.events.jsonl" else "global_file"
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        event_sid = str(event.get("sprint_id") or "").strip()
+        if event_sid and event_sid != sid:
+            continue
+        next_event = dict(event)
+        next_event["sprint_id"] = sid
+        next_event["_event_scope"] = "requested"
+        next_event["_event_source"] = source_kind
+        normalized.append(next_event)
+    return normalized
 
 
 def _safe_rel(path: Path, root: Path) -> str:
@@ -483,6 +506,8 @@ def _load_orchestration_routes_module():
 
 
 def _orchestration_dashboard_payload(sprint_id: str = "") -> dict:
+    if sprint_id and not _valid_sprint_id(sprint_id):
+        sprint_id = ""  # unsafe id -> unscoped; never reaches a path join downstream
     mod = _load_orchestration_routes_module()
     data, degraded = mod.build_dashboard_payload(sprint_id or None)
     return {
@@ -495,6 +520,8 @@ def _orchestration_dashboard_payload(sprint_id: str = "") -> dict:
 
 
 def _orchestration_projection_payload(sprint_id: str = "", mode: str = "full") -> dict:
+    if sprint_id and not _valid_sprint_id(sprint_id):
+        sprint_id = ""  # unsafe id -> unscoped; never reaches a path join downstream
     mod = _load_orchestration_routes_module()
     builder = getattr(mod, "build_projection_payload", None)
     if not callable(builder):
@@ -657,7 +684,7 @@ def _extract_intake_id(text: str) -> str:
     return ""
 
 
-def _latest_sprint_id_after(after_ts: float) -> str:
+def _latest_sprint_candidate_after(after_ts: float, request_id: str = "") -> dict:
     rows: list[tuple[float, str]] = []
     try:
         paths = list(SPRINTS_DIR.glob("*.status.json"))
@@ -670,11 +697,25 @@ def _latest_sprint_id_after(after_ts: float) -> str:
                 continue
             data = json.loads(path.read_text(encoding="utf-8"))
             sid = str(data.get("sprint_id") or data.get("id") or path.name.removesuffix(".status.json"))
+            if request_id and str(data.get("request_id") or data.get("intake_request_id") or "") == request_id:
+                return {"sprint_id": sid, "attribution": "request_id", "ambiguous": False, "candidates": [sid]}
             rows.append((mtime, sid))
         except Exception:
             continue
     rows.sort(reverse=True)
-    return rows[0][1] if rows else ""
+    candidates = [sid for _, sid in rows]
+    if not candidates:
+        return {"sprint_id": "", "attribution": "none", "ambiguous": False, "candidates": []}
+    if len(candidates) == 1:
+        return {"sprint_id": candidates[0], "attribution": "latest_status_file", "ambiguous": False, "candidates": candidates}
+    # Multiple status files appeared in the intake window. Returning the newest one would attach
+    # the desktop UI to a possibly wrong chat. Surface ambiguity instead; the UI should show an
+    # error rather than navigate to another session's logs.
+    return {"sprint_id": "", "attribution": "ambiguous_latest_status_file", "ambiguous": True, "candidates": candidates[:8]}
+
+
+def _latest_sprint_id_after(after_ts: float) -> str:
+    return str(_latest_sprint_candidate_after(after_ts).get("sprint_id") or "")
 
 
 def _intake_command(task: str) -> list[str]:
@@ -693,16 +734,30 @@ def _intake_command(task: str) -> list[str]:
 
 def _intake_payload(data: dict) -> dict:
     task = str(data.get("task") or data.get("request") or "").strip()
+    request_id = re.sub(r"[^A-Za-z0-9_.:-]", "-", str(data.get("request_id") or "").strip())[:96]
+    if not request_id:
+        request_id = f"intake-{int(time.time() * 1000)}-{secrets.token_hex(4)}"
     if not task:
-        return {"ok": False, "status": "error", "error": "missing_task"}
+        return {"ok": False, "status": "error", "error": "missing_task", "request_id": request_id}
     if len(task) > 12000:
-        return {"ok": False, "status": "error", "error": "task_too_long", "max_chars": 12000}
+        return {"ok": False, "status": "error", "error": "task_too_long", "max_chars": 12000, "request_id": request_id}
     cmd = _intake_command(task)
     if not Path(cmd[0]).exists() and shutil.which(cmd[0]) is None:
-        return {"ok": False, "status": "error", "error": "intake_cli_not_found", "command": cmd[0]}
+        return {"ok": False, "status": "error", "error": "intake_cli_not_found", "command": cmd[0], "request_id": request_id}
     before = time.time()
+    try:
+        req_dir = HARNESS_DIR / "run" / "intake-requests"
+        req_dir.mkdir(parents=True, exist_ok=True)
+        (req_dir / f"{request_id}.json").write_text(json.dumps({
+            "request_id": request_id,
+            "task_preview": task[:500],
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
     env = dict(os.environ)
     env["HARNESS_DIR"] = str(HARNESS_DIR)
+    env["SOLAR_INTAKE_REQUEST_ID"] = request_id
     try:
         proc = subprocess.run(
             cmd,
@@ -714,19 +769,32 @@ def _intake_payload(data: dict) -> dict:
         )
     except subprocess.TimeoutExpired as exc:
         output = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") + "\n" + ((exc.stderr or "") if isinstance(exc.stderr, str) else "")
+        parsed = _extract_intake_id(output)
+        candidate = {"sprint_id": parsed, "attribution": "stdout", "ambiguous": False, "candidates": [parsed]} if parsed else _latest_sprint_candidate_after(before, request_id)
         return {
             "ok": False,
             "status": "error",
             "error": "intake_timeout",
-            "sprint_id": _extract_intake_id(output) or _latest_sprint_id_after(before),
+            "request_id": request_id,
+            "sprint_id": candidate.get("sprint_id", ""),
+            "attribution": candidate.get("attribution", "none"),
+            "ambiguous": bool(candidate.get("ambiguous")),
+            "candidate_sprint_ids": candidate.get("candidates", []),
             "stdout_tail": output[-4000:],
         }
     output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
-    sprint_id = _extract_intake_id(output) or _latest_sprint_id_after(before)
+    parsed = _extract_intake_id(output)
+    candidate = {"sprint_id": parsed, "attribution": "stdout", "ambiguous": False, "candidates": [parsed]} if parsed else _latest_sprint_candidate_after(before, request_id)
+    sprint_id = str(candidate.get("sprint_id") or "")
     return {
-        "ok": proc.returncode == 0,
-        "status": "ok" if proc.returncode == 0 else "error",
+        "ok": proc.returncode == 0 and bool(sprint_id),
+        "status": "ok" if proc.returncode == 0 and sprint_id else "error",
         "sprint_id": sprint_id,
+        "request_id": request_id,
+        "attribution": candidate.get("attribution", "none"),
+        "ambiguous": bool(candidate.get("ambiguous")),
+        "candidate_sprint_ids": candidate.get("candidates", []),
+        "error": "ambiguous_sprint_attribution" if candidate.get("ambiguous") else ("" if sprint_id else "sprint_id_not_found"),
         "returncode": proc.returncode,
         "command": " ".join(cmd[:3]),
         "stdout_tail": output[-4000:],
@@ -939,6 +1007,12 @@ _PROVIDER_KEY_ENV = {
     "serper": "SERPER_API_KEY",
 }
 
+# Serialize all settings read-modify-write so concurrent POST /settings (two tabs / a double
+# submit) can't lose each other's keys. RLock is re-entrant, so _settings_write_payload can hold
+# it across the whole POST while the per-key writers re-acquire it harmlessly. Cross-PROCESS
+# readers (panes) are protected by the atomic os.replace in _write_user_config, not this lock.
+_USER_CONFIG_LOCK = threading.RLock()
+
 
 def _read_user_config() -> dict:
     try:
@@ -949,8 +1023,14 @@ def _read_user_config() -> dict:
 
 
 def _write_user_config(cfg: dict) -> None:
+    # Atomic write: a pane reading solar-user-config.json mid-write must never see a truncated
+    # file (which _read_user_config would silently swallow as {} and revert pane models/runtime to
+    # default). Write a temp file in the same dir, then os.replace (atomic on POSIX). Callers hold
+    # _USER_CONFIG_LOCK so the surrounding read-modify-write is serialized across request threads.
     _USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _USER_CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    tmp = _USER_CONFIG_PATH.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, _USER_CONFIG_PATH)
 
 
 def _runtime_launch_supported() -> bool:
@@ -1225,11 +1305,15 @@ def _write_provider_keys(api_keys: dict) -> list:
     lines = ["# Solar user secrets — written by the dashboard settings. Local only.\n"]
     for k, v in existing.items():
         lines.append(f"export {k}={v}\n")
-    _USER_SECRETS_PATH.write_text("".join(lines), encoding="utf-8")
+    # Atomic + 0600-before-publish so a reader never sees a half-written secrets file and the
+    # file is never momentarily world-readable. Caller holds _USER_CONFIG_LOCK.
+    tmp = _USER_SECRETS_PATH.with_suffix(".env.tmp")
+    tmp.write_text("".join(lines), encoding="utf-8")
     try:
-        _USER_SECRETS_PATH.chmod(0o600)
+        tmp.chmod(0o600)
     except Exception:
         pass
+    os.replace(tmp, _USER_SECRETS_PATH)
     return written
 
 
@@ -1242,10 +1326,13 @@ def _settings_write_payload(data: dict) -> tuple[dict, int]:
     for role, val in role_models_in.items():
         role_models[role] = val.get("model") if isinstance(val, dict) else val
     try:
-        applied_models = _write_user_config_models(role_models) if role_models else {}
-        written_keys = _write_provider_keys(api_keys) if api_keys else []
-        applied_runtime = _write_user_config_runtime(runtime_in) if runtime_in else ""
-        applied_codex = _write_user_config_codex(codex_in) if codex_in else {}
+        # Hold the lock across the WHOLE POST so a concurrent settings write can't interleave
+        # between the models/keys/runtime/codex sub-writes and lose one of them (lost update).
+        with _USER_CONFIG_LOCK:
+            applied_models = _write_user_config_models(role_models) if role_models else {}
+            written_keys = _write_provider_keys(api_keys) if api_keys else []
+            applied_runtime = _write_user_config_runtime(runtime_in) if runtime_in else ""
+            applied_codex = _write_user_config_codex(codex_in) if codex_in else {}
     except Exception as exc:
         return {"ok": False, "error": "settings_write_failed", "detail": str(exc)}, 500
     return {
@@ -1259,7 +1346,13 @@ def _settings_write_payload(data: dict) -> tuple[dict, int]:
 
 
 def _valid_sprint_id(sid: str) -> bool:
-    return bool(re.match(r"^[A-Za-z0-9._-]+$", sid or ""))
+    sid = sid or ""
+    # Reject the path-special segments '.' and '..' (the regex already excludes '/' and '\'). A
+    # sprint id is used as a filesystem path SEGMENT (sessions/<id>/, sprints/<id>.events.jsonl),
+    # so anything that isn't a strict slug must not reach a path join (traversal).
+    if sid in (".", ".."):
+        return False
+    return bool(re.match(r"^[A-Za-z0-9._-]+$", sid))
 
 
 def _deliverable_content_type(path: Path) -> str:
@@ -9720,17 +9813,23 @@ def _collector_scheduler_update(data: dict) -> dict:
     return {"ok": True, "status": "ok", "task": _collector_task_payload(defn), "operations": operations}
 
 
-def _status_payload_signature(sprint_id: str) -> tuple[int, int]:
+def _file_signature(path: Path) -> tuple[int, int]:
+    try:
+        stat = path.stat()
+        return (stat.st_mtime_ns, stat.st_size)
+    except OSError:
+        return (0, 0)
+
+
+def _status_payload_signature(sprint_id: str) -> tuple[int, ...]:
     sid = str(sprint_id or "").strip()
     if sid:
-        path = SPRINTS_DIR / f"{sid}.status.json"
-        try:
-            stat = path.stat()
-            return (1, stat.st_mtime_ns)
-        except OSError:
-            return (0, 0)
+        status_mtime, status_size = _file_signature(SPRINTS_DIR / f"{sid}.status.json")
+        event_mtime, event_size = _file_signature(_runtime_events_path(sid))
+        return (1 if status_mtime else 0, status_mtime, status_size, event_mtime, event_size)
     count = 0
     newest = 0
+    event_mtime, event_size = _file_signature(ALL_EVENTS)
     try:
         paths = list(SPRINTS_DIR.glob("*.status.json"))
     except OSError:
@@ -9742,11 +9841,13 @@ def _status_payload_signature(sprint_id: str) -> tuple[int, int]:
             continue
         count += 1
         newest = max(newest, stat.st_mtime_ns)
-    return (count, newest)
+    return (count, newest, event_mtime, event_size)
 
 
 def _status_payload(limit: int = 50, sprint_id: str = "") -> dict:
     requested_sid = str(sprint_id or "").strip()
+    if requested_sid and not _valid_sprint_id(requested_sid):
+        requested_sid = ""  # unsafe id -> unscoped (global); never build a traversed path
     cache_key = f"{requested_sid}|{limit}"
     now = time.monotonic()
     status_signature = _status_payload_signature(requested_sid)
@@ -9784,7 +9885,9 @@ def _status_payload(limit: int = 50, sprint_id: str = "") -> dict:
         "multi_task_panes": multi_task_panes,
         "multi_task_pane_pool": multi_task_pool,
         "thunderomlx": _thunderomlx_status(),
-        "recent_events": _read_jsonl(ALL_EVENTS, limit=limit, filter_synthetic=True),
+        "recent_events": _events_for_request(requested_sid, limit=limit) if requested_sid else _read_jsonl(ALL_EVENTS, limit=limit, filter_synthetic=True),
+        "recent_events_scope": "requested" if requested_sid else "global",
+        "recent_events_source": "session_or_sprint" if requested_sid else "global",
         "kpi": _kpi(),
         "obsidian_wiki": _obsidian_wiki_readiness(),
         "mirage": _mirage_status(),
@@ -13249,7 +13352,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, HEAD, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Solar-Token")
         self.send_header("Access-Control-Max-Age", "86400")
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -13273,6 +13376,12 @@ class StatusHandler(BaseHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
         if not self._authorized(path):
             self._send_json({"ok": False, "error": "unauthorized"}, status=403)
+            return
+        # Fail closed: the /api/sprints/<id>/ verdict/eval/handoff routes advance state by sprint_id;
+        # an invalid id must be rejected, not coerced into a path.
+        _m = re.match(r"^/api/sprints/([^/]+)/", path + "/")
+        if _m and not _valid_sprint_id(urllib.parse.unquote(_m.group(1))):
+            self._send_json({"ok": False, "error": "invalid_sprint_id"}, status=400)
             return
         try:
             data = self._read_json_body()
@@ -13338,6 +13447,18 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         if not self._authorized(path):
             self._send_json({"error": "unauthorized"}, status=403)
+            return
+
+        # Fail closed: a PRESENT-but-invalid sprint_id (query param or /api/sprints/<id>/ path) must
+        # not silently fall back to global / another-session data — reject it. (An ABSENT sprint_id
+        # is the legitimate global/home view and passes through.)
+        _scoped = params.get("sprint_id", [""])[0]
+        if not _scoped:
+            _m = re.match(r"^/api/sprints/([^/]+)/", path + "/")
+            if _m:
+                _scoped = urllib.parse.unquote(_m.group(1))
+        if _scoped and not _valid_sprint_id(_scoped):
+            self._send_json({"ok": False, "error": "invalid_sprint_id"}, status=400)
             return
 
         if path.startswith("/static/"):

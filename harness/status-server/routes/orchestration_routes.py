@@ -1649,14 +1649,29 @@ def _projection_events(sid: str, limit: int = 80) -> list[dict]:
         if not path.exists():
             continue
         events: list[dict] = []
+        scoped_path = path == SESSIONS_DIR / sid / "events.jsonl" or path == SPRINTS_DIR / f"{sid}.events.jsonl"
         try:
             for line in path.read_text(encoding="utf-8", errors="ignore").splitlines()[-500:]:
                 try:
                     ev = json.loads(line)
                 except Exception:
                     continue
-                if isinstance(ev, dict) and (path.name != "all.jsonl" and path != EVENTS_JSONL or ev.get("sprint_id") == sid):
-                    events.append(ev)
+                if not isinstance(ev, dict):
+                    continue
+                event_sid = str(ev.get("sprint_id") or "").strip()
+                if scoped_path:
+                    if event_sid and event_sid != sid:
+                        continue
+                    next_ev = dict(ev)
+                    next_ev["sprint_id"] = sid
+                    next_ev["_event_scope"] = "requested"
+                    next_ev["_event_source"] = "session_file" if path == SESSIONS_DIR / sid / "events.jsonl" else "sprint_file"
+                    events.append(next_ev)
+                elif event_sid == sid:
+                    next_ev = dict(ev)
+                    next_ev["_event_scope"] = "requested"
+                    next_ev["_event_source"] = "global_file"
+                    events.append(next_ev)
         except OSError:
             continue
         if events:

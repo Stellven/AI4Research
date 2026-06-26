@@ -4,9 +4,14 @@ export type StatusPayload = {
   current_sprint?: SprintStatus | null;
   panes?: PaneState[];
   recent_events?: EventRecord[];
+  recent_events_scope?: "requested" | "global" | string;
+  recent_events_source?: string;
+  requested_sprint_id?: string;
+  status_cache?: "hit" | "miss" | string;
   kpi?: JsonRecord;
   physical_operators?: JsonRecord;
   lab_screen?: JsonRecord;
+  degraded_sources?: string[];
 };
 
 export type SprintStatus = {
@@ -359,6 +364,10 @@ export type IntakeResponse = {
   ok: boolean;
   status?: string;
   sprint_id?: string;
+  request_id?: string;
+  attribution?: string;
+  ambiguous?: boolean;
+  candidate_sprint_ids?: string[];
   error?: string;
   stdout_tail?: string;
   returncode?: number;

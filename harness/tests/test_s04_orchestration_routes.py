@@ -418,6 +418,7 @@ def test_projection_scenario_map_for_frontend_states(tmp_path: Path) -> None:
     )
     assert partial_plan["plan"]["status"] == "partial"
     assert partial_plan["human_gates"][0]["status"] == "waiting"
+
     assert "plan_approve" not in {item["id"] for item in partial_plan["available_actions"]}
 
     plan_review, _ = _scenario_projection(
@@ -534,3 +535,29 @@ def test_projection_scenario_map_for_frontend_states(tmp_path: Path) -> None:
     readiness = {item["operator_id"]: item["readiness"] for item in operator_blocked["operators"]}
     assert readiness["op-auth"] == "auth_blocked"
     assert readiness["op-quota"] == "quota_blocked"
+
+
+def test_projection_events_are_scoped_and_normalized(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "event-scope")
+    _patch_dirs(mod, tree)
+    sid = "sprint-event-scope"
+    (tree["sessions"] / sid).mkdir(parents=True)
+    _write_text(
+        tree["sessions"] / sid / "events.jsonl",
+        "\n".join(
+            [
+                json.dumps({"ts": "2026-06-26T00:00:01Z", "type": "missing_id"}),
+                json.dumps({"ts": "2026-06-26T00:00:02Z", "type": "right_id", "sprint_id": sid}),
+                json.dumps({"ts": "2026-06-26T00:00:03Z", "type": "wrong_id", "sprint_id": "sprint-other"}),
+            ]
+        )
+        + "\n",
+    )
+
+    events = mod._projection_events(sid, limit=10)
+
+    assert [event["type"] for event in events] == ["missing_id", "right_id"]
+    assert {event["sprint_id"] for event in events} == {sid}
+    assert {event["_event_scope"] for event in events} == {"requested"}
+    assert {event["_event_source"] for event in events} == {"session_file"}

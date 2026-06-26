@@ -366,6 +366,7 @@ export function mergeEvents(
   const seen = new Set<string>();
   const rows = [...incoming, ...existing].filter((event) => {
     const key = JSON.stringify([
+      event.sprint_id,
       eventTimestamp(event),
       eventType(event),
       eventActor(event),

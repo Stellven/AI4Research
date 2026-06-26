@@ -215,10 +215,19 @@ export async function fetchDeliverableText(
   };
 }
 
+function newRequestId(prefix: string): string {
+  const cryptoApi = typeof crypto !== "undefined" ? crypto : undefined;
+  const raw =
+    cryptoApi && "randomUUID" in cryptoApi
+      ? cryptoApi.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}-${raw}`;
+}
+
 export function submitIntake(task: string): Promise<IntakeResponse> {
   return requestJson<IntakeResponse>("/intake", {
     method: "POST",
-    body: JSON.stringify({ task }),
+    body: JSON.stringify({ task, request_id: newRequestId("webapp-intake") }),
   });
 }
 
