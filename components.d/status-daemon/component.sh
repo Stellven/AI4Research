@@ -29,6 +29,10 @@ component_install() {
         darwin)
             la="$HOME/Library/LaunchAgents"
             mkdir -p "$la"
+            # Set HOME in the plist so the LaunchAgent's Python resolves ~ (SOLAR_DB, secrets, state)
+            # correctly even if launchd doesn't propagate HOME. SOLAR_USER_HOME (a SOLAR_* var) is
+            # substituted into the template by render_template.
+            export SOLAR_USER_HOME="$HOME"
             render_template "$SOURCE_DIR/templates/status-daemon/com.solar.status-server.plist.template" \
                 "$la/com.solar.status-server.plist"
             printf 'launchd\tcom.solar.status-server\t%s\n' "$la/com.solar.status-server.plist" >> "$SOLAR_HOME/registered-daemons.txt"

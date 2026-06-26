@@ -11,6 +11,8 @@
   </array>
   <key>EnvironmentVariables</key>
   <dict>
+    <key>HOME</key>
+    <string>{{SOLAR_USER_HOME}}</string>
     <key>HARNESS_DIR</key>
     <string>{{SOLAR_HOME}}/harness</string>
     <key>PYTHONPATH</key>

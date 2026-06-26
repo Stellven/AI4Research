@@ -19,9 +19,14 @@ const os = require("os");
 const path = require("path");
 const http = require("http");
 
-// WSL/headless commonly cannot init Chromium's setuid sandbox; these keep the renderer
-// from crashing in constrained envs. Native Windows/macOS ignore them.
-if (process.env.SOLAR_ELECTRON_DISABLE_SANDBOX !== "0") {
+// Chromium's setuid sandbox commonly can't init on Linux/WSL/headless; disabling it there keeps
+// the renderer from crashing. On Windows/macOS the sandbox works, so KEEP it (don't weaken the
+// posture). SOLAR_ELECTRON_DISABLE_SANDBOX=1 forces it off anywhere (CI); =0 forces it on.
+const disableSandbox =
+  process.env.SOLAR_ELECTRON_DISABLE_SANDBOX === "1" ||
+  (process.env.SOLAR_ELECTRON_DISABLE_SANDBOX !== "0" &&
+    process.platform === "linux");
+if (disableSandbox) {
   app.commandLine.appendSwitch("no-sandbox");
   app.commandLine.appendSwitch("disable-gpu-sandbox");
 }
@@ -52,6 +57,7 @@ let win = null;
 let dashboardURL = null;
 let firstAttachDone = false; // first-run gets a longer, patient startup budget
 let bootstrapOffered = false; // Windows: auto-offer WSL2 setup at most once per session
+let installPoll = null; // live "installing" poll: auto-advance to the dashboard when the runtime appears
 
 // --- logging: ring buffer so a packaged app (no stdout) can still emit diagnostics ---
 const LOG_RING = [];
@@ -171,7 +177,10 @@ function runUnixBootstrap() {
     const out = fs.openSync(path.join(LOG_DIR, "install.log"), "a");
     const child = spawn(
       "bash",
-      [sh, "--yes", "--components", "kernel,harness"],
+      // Include status-daemon so the in-app install also sets up the persistent
+      // launchd/systemd service (parity with Windows), not just a runtime the app
+      // must respawn each launch. status-daemon load is best-effort, never fatal.
+      [sh, "--yes", "--components", "kernel,harness,status-daemon"],
       { detached: true, stdio: ["ignore", out, out] },
     );
     child.unref();
@@ -207,11 +216,11 @@ function clearPortCache() {
   _portCache = null;
 }
 
-function probeHealth(port, timeoutMs = 1500) {
+function probeHealth(port, timeoutMs = 1500, host = "127.0.0.1") {
   return new Promise((resolve) => {
     if (!port) return resolve(false);
     const req = http.get(
-      { host: "127.0.0.1", port, path: "/healthz", timeout: timeoutMs },
+      { host, port, path: "/healthz", timeout: timeoutMs },
       (res) => {
         res.resume();
         resolve(res.statusCode === 200);
@@ -361,6 +370,12 @@ async function classifyRuntimeState() {
         "hostname -I 2>/dev/null | awk '{print $1}'",
         5000,
       ).stdout;
+      // W8: forwarding is broken but the server IS up in WSL. Under NAT it binds 0.0.0.0,
+      // so attach directly via the WSL VM IP before surfacing an error screen.
+      if (wslIp && (await probeHealth(port, 2000, wslIp))) {
+        log("127.0.0.1 forwarding broken; attaching via WSL IP", wslIp);
+        return { mode: "ok", baseUrl: `http://${wslIp}:${port}/` };
+      }
       return { mode: "forwarding-broken", detail: { port, wslIp } };
     }
   }
@@ -412,7 +427,9 @@ const SCREENS = {
   "not-installed": (d) =>
     screenHTML({
       title: "Solar runtime isn't installed",
-      sub: `The background runtime that powers Solar wasn't found at <code>~/.solar/harness</code>. Install the Solar runtime, then reload.`,
+      sub: IS_WIN
+        ? "The Solar engine isn't set up inside WSL2 yet. Install it (one click), then reload."
+        : `The background runtime that powers Solar wasn't found at <code>~/.solar/harness</code>. Install the Solar runtime, then reload.`,
       tone: "#f0b429",
       actions: [
         { id: "run-installer", label: "Install Solar runtime", primary: true },
@@ -434,14 +451,18 @@ const SCREENS = {
     }),
   // Shown while the bundled install.ps1 runs (or if it couldn't launch). Always has
   // actions so the user is never stranded on an indefinite spinner during setup.
-  installing: (launched) =>
+  installing: (launched, logTail) =>
     screenHTML({
       title: launched ? "Setting up Solar…" : "Couldn't start setup",
-      sub: launched
-        ? IS_WIN
-          ? "Approve the Windows prompt to install WSL2 and the runtime. Your PC reboots once, then Solar resumes. When it's finished, click Check again."
-          : "Installing the Solar runtime in the background — this can take a few minutes (macOS may need Homebrew Python). When it's finished, click Check again."
-        : "We couldn't launch the installer automatically — retry, or open setup help.",
+      sub:
+        (launched
+          ? IS_WIN
+            ? "Approve the Windows prompt to install WSL2 and the runtime. Your PC reboots once, then Solar resumes — the dashboard opens automatically when it's ready."
+            : "Installing the Solar runtime in the background — this can take a few minutes (macOS may need Homebrew Python). The dashboard opens automatically when it's ready."
+          : "We couldn't launch the installer automatically — retry, or open setup help.") +
+        (logTail
+          ? `<pre style="text-align:left;margin:14px auto 0;max-width:520px;max-height:200px;overflow:auto;background:#111114;padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.45;opacity:.75;white-space:pre-wrap">${esc(logTail)}</pre>`
+          : ""),
       tone: "#f0b429",
       actions: [
         { id: "retry", label: "Check again", primary: true },
@@ -577,9 +598,46 @@ function collectDiagnostics() {
   return redact(parts.join("\n"));
 }
 
+// --- install progress: live setup-log tail + auto-advance to the dashboard -----------
+function installLogPath() {
+  return IS_WIN
+    ? path.join(process.env.LOCALAPPDATA || os.homedir(), "Solar", "setup.log")
+    : path.join(LOG_DIR, "install.log");
+}
+function installLogTail(n = 16) {
+  return redact(tail(installLogPath(), n));
+}
+function stopInstallPoll() {
+  if (installPoll) {
+    clearInterval(installPoll);
+    installPoll = null;
+  }
+}
+// Show the "installing" screen with the current setup-log tail, then poll: refresh the tail and,
+// the moment the runtime answers, load the dashboard so the user never hunts for "Check again".
+function showInstalling(launched) {
+  if (!win || win.isDestroyed()) return;
+  stopInstallPoll();
+  win.loadURL(SCREENS.installing(launched, installLogTail()));
+  if (!launched) return;
+  let ticks = 0;
+  installPoll = setInterval(async () => {
+    if (!win || win.isDestroyed()) return stopInstallPoll();
+    const url = await detectRunning(1200);
+    if (url) {
+      stopInstallPoll();
+      dashboardURL = url;
+      return loadDashboard(url);
+    }
+    if (++ticks > 600) return stopInstallPoll(); // ~20 min safety cap
+    win.loadURL(SCREENS.installing(launched, installLogTail()));
+  }, 2000);
+}
+
 // --- recovery actions (the solar-action: protocol handler dispatches to these) -----
 async function runAction(id) {
   log("action:", id);
+  stopInstallPoll(); // any explicit action supersedes a running install poll
   if (id === "copy-diagnostics") {
     clipboard.writeText(collectDiagnostics());
     if (win && !win.isDestroyed())
@@ -601,7 +659,7 @@ async function runAction(id) {
     // macOS/Linux: bundled get-solar.sh (headless runtime install). Both then show the
     // installing screen so "Check again" re-classifies once the runtime appears.
     const ok = IS_WIN ? runWindowsBootstrap() : runUnixBootstrap();
-    if (win && !win.isDestroyed()) win.loadURL(SCREENS.installing(ok));
+    showInstalling(ok);
     return;
   }
   if (id === "restart-runtime") {
@@ -652,10 +710,11 @@ async function createWindow(reuse) {
       webPreferences: {
         contextIsolation: true,
         preload: path.join(__dirname, "preload.js"),
-        // The renderer loads ONLY our own bundled build + the local 127.0.0.1 API. ES
-        // modules/stylesheets are CORS-blocked over file:// (origin null); all content is
-        // local+trusted, so relaxing webSecurity is the standard local-desktop trade-off.
-        webSecurity: false,
+        // Primary load is the runtime dashboard over http://127.0.0.1 (a normal secure origin,
+        // same-origin with its API); the offline fallback is served over the registered secure
+        // app:// scheme — so webSecurity stays ON. (Was false only to let the file:// fallback
+        // load ES modules; app:// removes that need.)
+        webSecurity: true,
       },
     });
     win.webContents.on("console-message", (_e, _lvl, msg) =>
@@ -666,6 +725,17 @@ async function createWindow(reuse) {
     win.webContents.on("will-navigate", (e, url) => {
       if (url.startsWith("solar-action:")) {
         e.preventDefault();
+        // Only OUR control screens (data: URLs) may invoke privileged recovery actions
+        // (installer / restart / wsl --shutdown). NEVER honor solar-action: from the
+        // runtime-served dashboard or any other loaded content.
+        const current = win.webContents.getURL() || "";
+        if (!current.startsWith("data:")) {
+          log(
+            "ignored solar-action from non-control origin:",
+            current.slice(0, 48),
+          );
+          return;
+        }
         runAction(
           decodeURIComponent(
             url.slice("solar-action:".length).replace(/^\/+/, ""),
@@ -689,28 +759,32 @@ async function createWindow(reuse) {
   // confirm) and run the bundled bootstrap, rather than waiting for a button click.
   if (
     IS_WIN &&
-    state.mode === "wsl-missing" &&
+    (state.mode === "wsl-missing" || state.mode === "not-installed") &&
     !bootstrapOffered &&
     !SELFTEST &&
     !SIMULATE
   ) {
     bootstrapOffered = true;
+    const needWsl = state.mode === "wsl-missing";
     const choice = dialog.showMessageBoxSync(win, {
       type: "question",
       buttons: ["Set up Solar", "Not now"],
       defaultId: 0,
       cancelId: 1,
       title: "Set up Solar",
-      message: "Solar needs to install WSL2 and its runtime.",
-      detail:
-        "One-time setup: approve one Windows prompt and your PC reboots once. Solar resumes automatically afterward.",
+      message: needWsl
+        ? "Solar needs to install WSL2 and its runtime."
+        : "Solar needs to finish setting up its runtime in WSL2.",
+      detail: needWsl
+        ? "One-time setup: approve one Windows prompt and your PC reboots once. Solar resumes automatically afterward."
+        : "Solar installs its engine inside WSL2 — this can take a few minutes; the dashboard opens automatically when it's ready.",
     });
     if (choice === 0) {
       const ok = runWindowsBootstrap();
-      win.loadURL(SCREENS.installing(ok));
+      showInstalling(ok);
       return;
     }
-    // "Not now" → fall through to the existing wsl-missing screen (manual button stays).
+    // "Not now" → fall through to the existing screen (manual button stays).
   }
 
   if (state.mode === "ok" && state.baseUrl) {
@@ -759,29 +833,26 @@ function loadDashboard(url) {
       } else finish();
     }
   });
+  // Load the RUNTIME's served dashboard, not the app's bundled copy. Keeps the dashboard
+  // version-matched with the runtime and same-origin with its API. The bundled renderer stays
+  // only as an offline fallback, served over the secure app:// scheme (so webSecurity stays on).
+  // ONE did-fail-load handler: try the app:// fallback on a hard load failure, else show error.
+  const RENDERER_INDEX = path.join(__dirname, "..", "renderer", "index.html");
   win.webContents.once("did-fail-load", (_e, code, desc) => {
     log("FAIL-LOAD", code, desc);
+    if (code <= -100 && fs.existsSync(RENDERER_INDEX)) {
+      log("runtime UI failed; falling back to bundled renderer (app://)");
+      win.loadURL("app://index.html?api=http://" + new URL(url).host);
+      return;
+    }
     win.loadURL(SCREENS.error("Error " + code + ": " + desc));
     if (SELFTEST) {
       log("SELFTEST FAIL");
       app.quit();
     }
   });
-  // Load the RUNTIME's served dashboard, not the app's bundled copy. Keeps the dashboard
-  // version-matched with the runtime (no "new dashboard vs older runtime" mismatch) and means
-  // dashboard updates ship with a runtime sync — no app rebuild / re-download. Same-origin with
-  // the API too (no ?api=, no CORS). The bundled renderer stays only as an offline fallback.
-  const RENDERER_INDEX = path.join(__dirname, "..", "renderer", "index.html");
   log("loading runtime dashboard:", url);
   win.loadURL(url);
-  win.webContents.once("did-fail-load", (_e, code) => {
-    if (code <= -100 && fs.existsSync(RENDERER_INDEX)) {
-      log("runtime UI failed; falling back to bundled renderer");
-      win.loadFile(RENDERER_INDEX, {
-        search: "api=http://127.0.0.1:" + new URL(url).port,
-      });
-    }
-  });
 }
 
 function buildMenu() {

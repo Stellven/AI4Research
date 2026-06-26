@@ -14,6 +14,17 @@ you open it. This is expected for an unsigned app — here's how to allow it (on
 
 > Solar's runtime needs **Homebrew Python 3.11+** on macOS. If prompted, install it with `brew install python@3.11`.
 
+The app starts the runtime on launch, and the in-app **Install** button now also sets up auto-start.
+To enable it manually (so the runtime is already running before you open the app, and survives
+logout), install the `status-daemon` component — either with the full installer:
+```sh
+./install.sh --components kernel,harness,status-daemon
+```
+or, if the runtime is already installed, the standalone helper:
+```sh
+bash desktop/runtime/install-macos-agent.sh   # registers the launchd LaunchAgent
+```
+
 ## Windows (`.exe`)
 1. Run **Solar.exe** — it's a portable app, so there's nothing to install. Windows SmartScreen
    shows *"Windows protected your PC… Publisher: Unknown."*
