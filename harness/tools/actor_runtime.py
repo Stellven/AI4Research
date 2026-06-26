@@ -76,8 +76,8 @@ class ActorRuntime:
         self.harness_dir = harness_dir or HARNESS_DIR
         self.broker = lease_broker or LeaseBroker(self.harness_dir / "run" / "actor-leases")
         self.mailbox_base = mailbox_base or self.harness_dir / "actors"
-        self.ledger = evidence_ledger or EvidenceLedger()
-        self.ctx_store = context_store or ContextStore()
+        self.ledger = evidence_ledger or EvidenceLedger(self.harness_dir / "run" / "actor-evidence")
+        self.ctx_store = context_store or ContextStore(self.harness_dir / "run" / "context-store")
         self.profiles = load_profiles(profiles_path)
         self.router = LogicalOperatorRouter(bindings_path)
 

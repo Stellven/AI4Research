@@ -6,11 +6,14 @@ without pane-memory dependence.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 HOME = Path.home()
-HARNESS_DIR = Path.home() / ".solar" / "harness"
+# Honor HARNESS_DIR so an isolated runtime root stores context packets under THAT root, not the
+# user's real ~/.solar/harness (mirrors actor_runtime.py / activity_runtime.py).
+HARNESS_DIR = Path(os.environ.get("HARNESS_DIR") or (HOME / ".solar" / "harness"))
 CONTEXT_STORE_DIR = HARNESS_DIR / "run" / "context-store"
 
 
