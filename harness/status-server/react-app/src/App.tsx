@@ -1294,8 +1294,10 @@ function deliverableLabel(item: { name?: string; rel_path?: string }): string {
   const base = asString(item.name || item.rel_path)
     .split("/")
     .pop() as string;
-  const stripped = base.replace(/^sprint-.*?--[0-9a-f]{6,}\./i, "");
-  return (stripped || base).replace(/_/g, " ");
+  // Strip the sprint-id prefix (handles single- or double-dash before the hash);
+  // keep the real filename intact (no underscore→space mangling of code/data files).
+  const stripped = base.replace(/^sprint-.*?-+[0-9a-f]{6,}\./i, "");
+  return stripped || base;
 }
 
 function projectionGateArtifacts(
@@ -1851,12 +1853,32 @@ function RailList({
     if (focusPath && focusRowRef.current) focusRowRef.current.focus();
   }, [focusPath]);
 
+  const output = deliverables.filter((item) => item.primary);
+  const process = deliverables.filter((item) => !item.primary);
+
+  const renderRow = (item: Deliverable) => (
+    <button
+      type="button"
+      key={item.rel_path}
+      ref={focusPath === item.rel_path ? focusRowRef : undefined}
+      className="artifact-row"
+      onClick={() => onOpen(item.rel_path)}
+    >
+      <FileText className="artifact-icon" size={15} />
+      <span className="artifact-name" title={item.name}>
+        {deliverableLabel(item)}
+      </span>
+      <span className="artifact-meta">{item.kind.toUpperCase()}</span>
+      <ChevronRight size={14} className="artifact-chevron" />
+    </button>
+  );
+
   return (
     <div className="rail-list" data-testid="deliverables-panel">
       <div className="rail-head">
         <div className="rail-head-title">
           <span>Deliverables</span>
-          <span className="rail-count">{deliverables.length}</span>
+          <span className="rail-count">{output.length || deliverables.length}</span>
         </div>
         <button
           type="button"
@@ -1870,24 +1892,23 @@ function RailList({
       {deliverables.length === 0 ? (
         <EmptyInline label="No deliverables yet" />
       ) : (
-        <div className="artifact-list">
-          {deliverables.map((item) => (
-            <button
-              type="button"
-              key={item.rel_path}
-              ref={focusPath === item.rel_path ? focusRowRef : undefined}
-              className="artifact-row"
-              onClick={() => onOpen(item.rel_path)}
-            >
-              <FileText className="artifact-icon" size={15} />
-              <span className="artifact-name" title={item.name}>
-                {deliverableLabel(item)}
-              </span>
-              <span className="artifact-meta">{item.kind.toUpperCase()}</span>
-              <ChevronRight size={14} className="artifact-chevron" />
-            </button>
-          ))}
-        </div>
+        <>
+          {output.length > 0 && (
+            <div className="artifact-group">
+              <div className="artifact-group-label">Output</div>
+              <div className="artifact-list">{output.map(renderRow)}</div>
+            </div>
+          )}
+          {process.length > 0 && (
+            <div className="artifact-group">
+              <div className="artifact-group-label">
+                Process artifacts
+                <span className="rail-count">{process.length}</span>
+              </div>
+              <div className="artifact-list">{process.map(renderRow)}</div>
+            </div>
+          )}
+        </>
       )}
       <div className="rail-divider" />
       <UsagePanel usage={usage} />
@@ -2615,12 +2636,16 @@ function buildActivityDays(
     buckets.set(key, { date: key, count: 0, sprints: [] });
   });
   sprints.forEach((sprint) => {
-    // /sprints exposes mtime (unix seconds); fall back to updated_at if present.
+    // Bucket by true creation time (created_ts from the sprint_id); fall back to
+    // mtime/updated_at only when it is missing, so the activity map reflects real days.
+    const createdTs = sprint.created_ts;
     const mtime = sprint.mtime;
     const ts =
-      typeof mtime === "number"
-        ? mtime * 1000
-        : Date.parse(asString(sprint.updated_at) || "");
+      typeof createdTs === "number"
+        ? createdTs * 1000
+        : typeof mtime === "number"
+          ? mtime * 1000
+          : Date.parse(asString(sprint.created_at) || asString(sprint.updated_at) || "");
     if (!ts) return;
     const key = new Date(ts).toISOString().slice(0, 10);
     const bucket = buckets.get(key);
@@ -3351,7 +3376,8 @@ function ActivityPane({ sprints }: { sprints: SprintSummary[] }) {
             </div>
             <em>
               {formatDateTime(
-                asString(sprint.updated_at) ||
+                asString(sprint.created_at) ||
+                  asString(sprint.updated_at) ||
                   asString(sprint.latest_event?.ts) ||
                   (typeof sprint.mtime === "number"
                     ? new Date(sprint.mtime * 1000).toISOString()

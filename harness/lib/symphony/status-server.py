@@ -1218,7 +1218,64 @@ def _deliverable_content_type(path: Path) -> str:
         return "image/png"
     if suffix in (".jpg", ".jpeg"):
         return "image/jpeg"
+    # Code / config / data outputs: serve as readable text so the dashboard can preview them.
+    if suffix in (
+        ".py", ".sh", ".ts", ".tsx", ".js", ".jsx", ".css", ".yaml", ".yml",
+        ".toml", ".csv", ".diff", ".patch", ".ini", ".cfg", ".sql", ".rs",
+        ".go", ".java", ".rb", ".ipynb", ".xml", ".env",
+    ):
+        return "text/plain; charset=utf-8"
     return "application/octet-stream"
+
+
+def _find_cwd_value(obj) -> str:
+    """Recursively find a 'cwd' string in a nested JSON structure."""
+    if isinstance(obj, dict):
+        v = obj.get("cwd")
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+        for vv in obj.values():
+            r = _find_cwd_value(vv)
+            if r:
+                return r
+    elif isinstance(obj, list):
+        for vv in obj:
+            r = _find_cwd_value(vv)
+            if r:
+                return r
+    return ""
+
+
+def _sprint_workdir(sid: str) -> Path | None:
+    """Discover the sprint's working directory (where the builder produced the REAL
+    output — code, reports). That output lives in the workdir, not under SPRINTS_DIR,
+    so without surfacing it the deliverables rail shows only process plumbing. The
+    `cwd` field is recorded in the sprint's raw_intent / eval artifacts."""
+    if not _valid_sprint_id(sid):
+        return None
+    cwd = ""
+    for name in (f"{sid}.raw_intent.json", f"{sid}.S1-eval.json", f"{sid}.S2-eval.json", f"{sid}.S3-eval.json"):
+        p = SPRINTS_DIR / name
+        if not p.exists():
+            continue
+        try:
+            cwd = _find_cwd_value(json.loads(p.read_text(encoding="utf-8", errors="replace")))
+        except (OSError, ValueError):
+            continue
+        if cwd:
+            break
+    if not cwd:
+        return None
+    try:
+        wd = Path(cwd).expanduser().resolve()
+    except OSError:
+        return None
+    # Sanity: a real task dir — not /, $HOME, or the harness/sprints tree itself.
+    if not wd.is_dir():
+        return None
+    if wd in (Path("/"), Path.home().resolve()) or _is_within(wd, HARNESS_DIR) or _is_within(SPRINTS_DIR, wd):
+        return None
+    return wd
 
 
 def _discover_sprint_deliverables(sid: str) -> list[dict]:
@@ -1266,11 +1323,79 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                 "kind": resolved.suffix.lower().lstrip(".") or "file",
                 "size": stat.st_size,
                 "mtime": stat.st_mtime,
+                "source": "process",
+                "primary": False,
                 "view_url": f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(key)}",
             })
         except OSError:
             continue
-    rows.sort(key=lambda item: (-float(item.get("mtime") or 0), str(item.get("name") or "")))
+
+    # Surface the REAL produced output from the sprint's working directory. The
+    # builder writes code/reports to the workdir (cwd), not under SPRINTS_DIR, so
+    # without this the rail shows only process plumbing and never the deliverable.
+    workdir = _sprint_workdir(sid)
+    if workdir is not None:
+        # Only surface files PRODUCED during the sprint (mtime at/after start), so a
+        # workdir that is a populated repo doesn't dump pre-existing files as deliverables.
+        cutoff = 0.0
+        try:
+            import datetime as _dt
+            _sf = SPRINTS_DIR / f"{sid}.status.json"
+            _ca = str((json.loads(_sf.read_text(encoding="utf-8", errors="replace")) if _sf.exists() else {}).get("created_at") or "")
+            if _ca:
+                cutoff = _dt.datetime.fromisoformat(_ca.replace("Z", "+00:00")).timestamp() - 300
+        except Exception:
+            cutoff = 0.0
+        output_suffixes = allowed_suffixes | {
+            ".py", ".sh", ".ts", ".tsx", ".js", ".jsx", ".css", ".yaml", ".yml",
+            ".toml", ".csv", ".diff", ".patch", ".sql", ".rs", ".go", ".java", ".rb", ".ipynb",
+        }
+        skip_dirs = {
+            ".git", "__pycache__", ".pytest_cache", "node_modules", ".venv", "venv",
+            "dist", "build", ".vite", ".mypy_cache", ".ruff_cache", ".idea", ".cache", "site-packages",
+        }
+        wd_count = 0
+        try:
+            for path in sorted(workdir.rglob("*"), key=lambda p: str(p)):
+                if wd_count >= 80:
+                    break
+                try:
+                    parts = path.relative_to(workdir).parts
+                except ValueError:
+                    continue
+                if len(parts) > 3:
+                    continue
+                if any(part in skip_dirs or part.startswith(".") for part in parts):
+                    continue
+                if not path.is_file() or path.suffix.lower() not in output_suffixes:
+                    continue
+                try:
+                    resolved = path.resolve()
+                    key = _safe_rel(resolved, HARNESS_DIR)  # absolute string for workdir files
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    stat = resolved.stat()
+                except OSError:
+                    continue
+                if cutoff and stat.st_mtime < cutoff:
+                    continue
+                rows.append({
+                    "name": resolved.name,
+                    "rel_path": key,
+                    "kind": resolved.suffix.lower().lstrip(".") or "file",
+                    "size": stat.st_size,
+                    "mtime": stat.st_mtime,
+                    "source": "output",
+                    "primary": True,
+                    "view_url": f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(key)}",
+                })
+                wd_count += 1
+        except OSError:
+            pass
+
+    # Primary (real output) first, then most-recent process artifacts.
+    rows.sort(key=lambda item: (0 if item.get("primary") else 1, -float(item.get("mtime") or 0), str(item.get("name") or "")))
     return rows
 
 
@@ -13034,6 +13159,32 @@ class StatusHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length).decode("utf-8", errors="replace")
         return json.loads(raw or "{}")
 
+    def _cors_preflight(self):
+        # CORS preflight: the dashboard / Electron shell may issue a cross-origin
+        # OPTIONS before a POST. BaseHTTPRequestHandler has no do_OPTIONS, so the
+        # old default was a 501 that broke preflight. Answer 204 + CORS headers.
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, HEAD, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def do_OPTIONS(self):
+        self._cors_preflight()
+
+    def do_HEAD(self):
+        # Liveness probes (incl. the desktop shell) may use HEAD. Without a
+        # do_HEAD, BaseHTTPRequestHandler returned 501. Mirror a GET's headers
+        # with no body so probes see 200.
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
@@ -13108,6 +13259,20 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif path == "/healthz":
             self._send_text("ok")
+
+        elif path == "/runtime-info":
+            # Lightweight runtime identity for the desktop shell / health checks.
+            try:
+                bound_port = self.server.server_address[1]
+            except Exception:
+                bound_port = None
+            self._send_json({
+                "ok": True,
+                "pid": os.getpid(),
+                "port": bound_port,
+                "bind_host": BIND_HOST,
+                "python": sys.executable,
+            })
 
         elif path == "/status":
             sprint_id = params.get("sprint_id", [""])[0]

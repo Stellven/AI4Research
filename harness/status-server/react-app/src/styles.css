@@ -3002,6 +3002,22 @@ summary:focus-visible,
   flex-direction: column;
 }
 
+.artifact-group + .artifact-group {
+  margin-top: 14px;
+}
+
+.artifact-group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted, #8a8f98);
+}
+
 .artifact-row {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto 14px;

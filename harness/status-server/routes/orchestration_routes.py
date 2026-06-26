@@ -141,6 +141,23 @@ def _clean_sprint_title(sid: str, fallback: str) -> str:
     return title
 
 
+def _sprint_created(sid: str, fallback_mtime: float) -> tuple[float, str]:
+    """Real creation time from the sprint_id (sprint-YYYYMMDD-HHMMSS-…, UTC). Used
+    for stable recency + display instead of the file mtime, which gets bumped by
+    background re-projection / reads and pollutes ordering and timestamps."""
+    import datetime as _dt
+    m = re.match(r"^sprint-(\d{8})-(\d{6})-", sid or "")
+    if m:
+        try:
+            dt = _dt.datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S").replace(tzinfo=_dt.timezone.utc)
+            return dt.timestamp(), dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            pass
+    ts = float(fallback_mtime or 0.0)
+    iso = _dt.datetime.fromtimestamp(ts, _dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if ts else ""
+    return ts, iso
+
+
 def _sprint_status_rows(limit: int = 80) -> list[dict]:
     active = {"active", "dispatched", "reviewing", "ready_for_review", "failed_review"}
     # Pass 1 (cheap): read ONLY status.json per sprint. The sidebar list needs just
@@ -161,6 +178,7 @@ def _sprint_status_rows(limit: int = 80) -> list[dict]:
         except OSError:
             mtime = 0.0
         status = str(data.get("status") or "")
+        created_ts, created_at = _sprint_created(sid, mtime)
         prelim.append({
             "sprint_id": sid,
             "title": data.get("title") or sid,
@@ -168,9 +186,13 @@ def _sprint_status_rows(limit: int = 80) -> list[dict]:
             "phase": str(data.get("phase") or ""),
             "is_active": status.lower() in active,
             "mtime": mtime,
+            "created_ts": created_ts,
+            "created_at": created_at,
         })
-    # Sort active-first then by recency, and CAP before touching any task graph.
-    prelim.sort(key=lambda item: (not bool(item.get("is_active")), -float(item.get("mtime") or 0), str(item.get("sprint_id") or "")))
+    # Sort by true creation time (newest first). The old code sorted by file mtime,
+    # which background re-projection bumps — pushing a brand-new session below stale
+    # ones. created_ts comes from the sprint_id and is stable.
+    prelim.sort(key=lambda item: (-float(item.get("created_ts") or 0), str(item.get("sprint_id") or "")))
     prelim = prelim[:limit]
     # Pass 2: node counts for the capped set only, via DIRECT path reads (no dir globbing).
     rows: list[dict] = []
@@ -207,6 +229,8 @@ def _sprint_status_rows(limit: int = 80) -> list[dict]:
             "phase": item["phase"],
             "is_active": item["is_active"],
             "mtime": item["mtime"],
+            "created_ts": item.get("created_ts"),
+            "created_at": item.get("created_at"),
             "node_count": len(nodes),
             "node_status_counts": node_counts,
             "task_graph_present": tg_ok,
@@ -669,7 +693,73 @@ def _build_blocker_diagnostics(sid: str, status: dict, nodes: list[dict], node_c
     return diagnostics
 
 
-def _build_stall_summary(status: dict, node_cards: list[dict], diagnostics: list[dict], tg_ok: bool) -> dict:
+def _recent_sprint_events(sid: str, limit: int = 24) -> list[dict]:
+    """Tail of the sprint event log — used to tell 'actively working' from 'stuck looping'."""
+    if not sid:
+        return []
+    try:
+        lines = (SPRINTS_DIR / f"{sid}.events.jsonl").read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    out: list[dict] = []
+    for line in lines[-limit:]:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            d = json.loads(line)
+            if isinstance(d, dict):
+                out.append(d)
+        except ValueError:
+            continue
+    return out
+
+
+# Repeated low-level events that mean "retrying / can't start work", not progress.
+_STALL_CHURN_REASONS = {
+    "invalid_prd", "no_free_worker", "clear_gate_failed", "pane_not_idle",
+    "worker_capacity_exhausted", "clear_gate", "duplicate",
+}
+_STALL_CHURN_EVENTS = {"gate_blocked", "dispatch_failed", "dispatch_queued", "planner_notified"}
+_STALL_PROGRESS_HINTS = (
+    "passed", "model_session", "prd_completed", "compiled_requirement",
+    "node_dispatch", "graph_node", "eval_dispatch", "finalized", "completed",
+)
+
+
+def _loop_stall_reasons(events: list[dict]) -> list[str] | None:
+    """Detect a sprint stuck in a dispatch/gate retry loop with no forward progress."""
+    if not events:
+        return None
+    churn = 0
+    progress = 0
+    reasons: list[str] = []
+    for e in events[-18:]:
+        ev = str(e.get("event") or "")
+        reason = str((e.get("payload") or {}).get("reason") or e.get("reason") or "").strip()
+        if any(h in ev for h in _STALL_PROGRESS_HINTS):
+            progress += 1
+        elif ev in _STALL_CHURN_EVENTS or reason in _STALL_CHURN_REASONS:
+            churn += 1
+            if reason:
+                reasons.append(reason)
+    if churn >= 4 and progress == 0:
+        return sorted(set(reasons))
+    return None
+
+
+def _stall_human_reason(reasons: list[str]) -> str:
+    rs = set(reasons)
+    if rs & {"no_free_worker", "worker_capacity_exhausted"}:
+        return "No available worker — the runtime can't hand the task to an agent pane."
+    if "invalid_prd" in rs:
+        return "Stuck at the spec gate — the PRD isn't passing validation and isn't being repaired."
+    if rs & {"clear_gate_failed", "pane_not_idle"}:
+        return "Can't reach a worker pane to continue (pane busy or unresponsive)."
+    return "Repeated retries with no forward progress."
+
+
+def _build_stall_summary(status: dict, node_cards: list[dict], diagnostics: list[dict], tg_ok: bool, events: list[dict] | None = None) -> dict:
     sprint_status = str(status.get("status") or "").strip().lower()
     phase = str(status.get("phase") or "").strip().lower()
     blocked = [card for card in node_cards if str(card.get("status") or "").lower() in {"blocked", "gate_blocked", "failed"} or card.get("blocked_reason")]
@@ -713,6 +803,16 @@ def _build_stall_summary(status: dict, node_cards: list[dict], diagnostics: list
             "title": "One or more DAG nodes are blocked",
             "detail": "At least one node is blocked or failed. Check node details before expecting completion.",
             "reasons": reasons,
+        }
+    loop_reasons = _loop_stall_reasons(events or [])
+    if loop_reasons is not None and sprint_status not in {"passed", "finalized", "completed", "done"}:
+        return {
+            "is_stalled": True,
+            "state": "retry_loop",
+            "severity": "warn",
+            "title": "Stalled before execution could start",
+            "detail": _stall_human_reason(loop_reasons),
+            "reasons": loop_reasons,
         }
     return {
         "is_stalled": False,
@@ -1723,7 +1823,7 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
     registry = _capability_registry()
     node_cards = _build_node_cards(sid, nodes, tg.get("runtime_state") or {}, routing)
     diagnostics = _build_blocker_diagnostics(sid, status, nodes, node_cards, tg_ok)
-    stall = _build_stall_summary(status, node_cards, diagnostics, tg_ok)
+    stall = _build_stall_summary(status, node_cards, diagnostics, tg_ok, events=_recent_sprint_events(sid))
 
     status_counts: dict[str, int] = {}
     cost_by_status: dict[str, float] = {}

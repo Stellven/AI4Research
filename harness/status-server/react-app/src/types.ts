@@ -63,6 +63,9 @@ export type SprintSummary = {
   phase?: string;
   is_active?: boolean;
   updated_at?: string;
+  created_at?: string;
+  created_ts?: number;
+  mtime?: number;
   node_status_counts?: Record<string, number>;
   progress?: JsonRecord;
   stall?: StallSummary;
@@ -348,6 +351,8 @@ export type Deliverable = {
   size?: number;
   mtime?: number;
   view_url: string;
+  source?: string;
+  primary?: boolean;
 };
 
 export type IntakeResponse = {

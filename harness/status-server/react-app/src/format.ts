@@ -229,17 +229,21 @@ export function humanEvent(event: EventRecord): {
   const stage = asString(body.stage);
   const role = asString(body.role);
   const intent = asString(body.intent);
+  const handoffTo = asString(body.handoff_to || body.target_role);
+  const toState = asString(body.to);
   const severity = asString((event as { severity?: unknown }).severity);
   // A compact, human detail pulled from whatever the payload carries, so events read
   // like "stage prd · reason: invalid prd" instead of the generic fallback line.
   const summary =
     [
       stage && `stage ${stage}`,
+      phase && `phase ${phase}`,
       role && `role ${role}`,
       intent && intent.replace(/_/g, " "),
       status && status.replace(/_/g, " "),
       node && `node ${node}`,
       target && `pane ${target}`,
+      handoffTo && `→ ${handoffTo}`,
       reason && `reason: ${reason.replace(/_/g, " ")}`,
     ]
       .filter(Boolean)
@@ -320,9 +324,23 @@ export function humanEvent(event: EventRecord): {
       tone: "complete",
     };
   }
+  if (type.includes("state_chang") || type.includes("state_transition")) {
+    // `to` looks like "<sid>:<status>:<phase>:<role>:<hash>" — surface the move.
+    const parts = toState.split(":");
+    const toStatus = parts[1] || status;
+    const toPhase = parts[2] || phase;
+    const moved = [toStatus, toPhase]
+      .filter((x) => x && x !== "_" && x !== "None")
+      .join(" / ");
+    return {
+      title: type.includes("transition") ? "State transition" : "State changed",
+      detail: moved ? `→ ${moved}` : summary,
+      tone: statusTone(toStatus || status),
+    };
+  }
   return {
     title: humanTitle,
-    detail: summary || "Process event.",
+    detail: summary || message || "",
     tone:
       sevTone || statusTone(asString(event.status || body.status || status)),
   };
