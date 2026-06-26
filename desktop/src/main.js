@@ -195,6 +195,7 @@ function runUnixBootstrap() {
 // Port discovery. On Windows the port file lives in WSL; cache it for the poll loop so
 // we don't spawn a cold `wsl bash -lc` every tick.
 let _portCache = null;
+let _tokenCache = null;
 function readPort() {
   if (IS_WIN) {
     if (_portCache) return _portCache;
@@ -214,6 +215,32 @@ function readPort() {
 }
 function clearPortCache() {
   _portCache = null;
+  _tokenCache = null;
+}
+
+// Loopback auth token (security M1) — only needed for the app:// fallback (the disk-served
+// renderer the server can't inject into; the primary http dashboard gets the token injected).
+// Mirrors readPort: in WSL it lives next to the port file.
+function readToken() {
+  if (_tokenCache !== null) return _tokenCache;
+  try {
+    if (IS_WIN) {
+      _tokenCache = (
+        wslExec(`cat ${WSL_HARNESS}/run/status-server.token 2>/dev/null`, 5000)
+          .stdout || ""
+      ).trim();
+    } else {
+      _tokenCache = fs
+        .readFileSync(
+          path.join(HARNESS_DIR, "run", "status-server.token"),
+          "utf8",
+        )
+        .trim();
+    }
+  } catch {
+    _tokenCache = "";
+  }
+  return _tokenCache;
 }
 
 function probeHealth(port, timeoutMs = 1500, host = "127.0.0.1") {
@@ -842,7 +869,12 @@ function loadDashboard(url) {
     log("FAIL-LOAD", code, desc);
     if (code <= -100 && fs.existsSync(RENDERER_INDEX)) {
       log("runtime UI failed; falling back to bundled renderer (app://)");
-      win.loadURL("app://index.html?api=http://" + new URL(url).host);
+      const tok = readToken();
+      win.loadURL(
+        "app://index.html?api=http://" +
+          new URL(url).host +
+          (tok ? "&token=" + encodeURIComponent(tok) : ""),
+      );
       return;
     }
     win.loadURL(SCREENS.error("Error " + code + ": " + desc));

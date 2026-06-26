@@ -32,6 +32,8 @@ import sys
 import re
 import html
 import hashlib
+import hmac
+import secrets
 import math
 import importlib.util
 import shutil
@@ -164,6 +166,20 @@ def _default_bind_host() -> str:
 
 BIND_HOST = os.environ.get("SOLAR_BIND_HOST") or _default_bind_host()
 PORT_RANGE = range(8765, 8776)
+
+# Loopback auth token (security M1). The only case we bind beyond loopback is WSL NAT mode
+# (0.0.0.0, behind the Windows firewall) — there we REQUIRE this token on API requests so a
+# NAT-exposed server isn't unauthenticated. On 127.0.0.1 the token is still issued and injected
+# into the served dashboard, but NOT enforced, so same-origin browser/desktop flows are unchanged.
+# SOLAR_REQUIRE_TOKEN=1/0 forces enforcement on/off (testing/opt-out); SOLAR_AUTH_TOKEN pins it.
+AUTH_TOKEN = os.environ.get("SOLAR_AUTH_TOKEN") or secrets.token_urlsafe(32)
+_require_token_env = (os.environ.get("SOLAR_REQUIRE_TOKEN") or "").strip().lower()
+if _require_token_env in ("1", "true", "yes"):
+    TOKEN_ENFORCED = True
+elif _require_token_env in ("0", "false", "no"):
+    TOKEN_ENFORCED = False
+else:
+    TOKEN_ENFORCED = BIND_HOST not in ("127.0.0.1", "::1", "localhost")
 
 
 _SYNTHETIC_SID_PREFIXES = ("test-hooks-", "test-sid-", "sprint-race-test-", "sprint-test-smoke-", "sprint-test-workspace-", "test-verify-")
@@ -426,18 +442,27 @@ def _static_content_type(path: Path) -> str:
     return "application/octet-stream"
 
 
+def _inject_auth_token(html_text: str) -> str:
+    # Expose the loopback token to the dashboard JS (window.__SOLAR_TOKEN__) so any client the
+    # server itself serves (browser, desktop over http, WSL) authenticates automatically.
+    tag = "<script>window.__SOLAR_TOKEN__=%s;</script>" % json.dumps(AUTH_TOKEN)
+    if "</head>" in html_text:
+        return html_text.replace("</head>", tag + "</head>", 1)
+    return tag + html_text
+
+
 def _p0_dashboard_html() -> str:
     app_index = _status_server_path("static", "p0-app/index.html")
     if app_index:
-        return app_index.read_text(encoding="utf-8")
+        return _inject_auth_token(app_index.read_text(encoding="utf-8"))
     template = _status_server_path("templates", "p0_dashboard.html")
     if template:
-        return template.read_text(encoding="utf-8")
-    return """<!doctype html>
+        return _inject_auth_token(template.read_text(encoding="utf-8"))
+    return _inject_auth_token("""<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solar Harness Status</title></head>
-<body><h1>Solar Harness Status</h1><p>P0 dashboard template missing.</p></body></html>"""
+<body><h1>Solar Harness Status</h1><p>P0 dashboard template missing.</p></body></html>""")
 
 
 def _load_orchestration_routes_module():
@@ -13060,6 +13085,29 @@ class StatusHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # suppress access log noise
 
+    def _client_token(self):
+        tok = self.headers.get("X-Solar-Token")
+        if tok:
+            return tok
+        try:
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            return q.get("token", [""])[0]
+        except Exception:
+            return ""
+
+    def _authorized(self, path: str) -> bool:
+        if not TOKEN_ENFORCED:
+            return True
+        # Exempt the bootstrap surface the page needs BEFORE it can read/send the token: the
+        # dashboard HTML, its static assets, and the health/identity probes.
+        if (
+            path == "/"
+            or path in ("/healthz", "/runtime-info", "/favicon.ico")
+            or path.startswith("/static/")
+        ):
+            return True
+        return hmac.compare_digest(self._client_token() or "", AUTH_TOKEN)
+
     def _send_json(self, data, status=200):
         body = json.dumps(data, default=str).encode()
         self.send_response(status)
@@ -13223,6 +13271,9 @@ class StatusHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
+        if not self._authorized(path):
+            self._send_json({"ok": False, "error": "unauthorized"}, status=403)
+            return
         try:
             data = self._read_json_body()
             if path == "/intake":
@@ -13284,6 +13335,10 @@ class StatusHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
         path = parsed.path.rstrip("/") or "/"
+
+        if not self._authorized(path):
+            self._send_json({"error": "unauthorized"}, status=403)
+            return
 
         if path.startswith("/static/"):
             asset = _status_server_path("static", path.removeprefix("/static/"))
@@ -13652,6 +13707,14 @@ def main():
     pid_dir = HARNESS_DIR / "run"
     pid_dir.mkdir(parents=True, exist_ok=True)
     (pid_dir / "status-server.port").write_text(str(port))
+    # Loopback auth token next to the port file so a same-host client (e.g. the desktop's app://
+    # fallback) can read it. 0600 — this user only. Enforced only when bound beyond loopback.
+    token_file = pid_dir / "status-server.token"
+    token_file.write_text(AUTH_TOKEN)
+    try:
+        os.chmod(token_file, 0o600)
+    except OSError:
+        pass
     # Clients connect over loopback; 0.0.0.0 binds include it, so advertise 127.0.0.1 and note bind.
     connect_host = "127.0.0.1" if BIND_HOST in ("0.0.0.0", "::") else BIND_HOST
     bind_note = f" (bind {BIND_HOST})" if BIND_HOST != connect_host else ""
@@ -13665,6 +13728,7 @@ def main():
         pass
     finally:
         (pid_dir / "status-server.port").unlink(missing_ok=True)
+        (pid_dir / "status-server.token").unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

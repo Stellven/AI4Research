@@ -20,6 +20,27 @@ const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ||
   "";
 
+// Loopback auth token (security M1): the server injects window.__SOLAR_TOKEN__ into the served
+// dashboard, and the desktop's app:// fallback passes it via ?token=. Sent as a header on fetch
+// and a query param on EventSource (which can't set headers). The server only ENFORCES it when it
+// binds beyond loopback (WSL NAT); it's harmless to send everywhere else.
+const AUTH_TOKEN =
+  (typeof window !== "undefined" &&
+    (window as { __SOLAR_TOKEN__?: string }).__SOLAR_TOKEN__) ||
+  (typeof location !== "undefined" &&
+    new URLSearchParams(location.search).get("token")) ||
+  "";
+
+function withToken(url: string): string {
+  if (!AUTH_TOKEN) return url;
+  return (
+    url +
+    (url.includes("?") ? "&" : "?") +
+    "token=" +
+    encodeURIComponent(AUTH_TOKEN)
+  );
+}
+
 // Bound every request so a hung backend (first-run auth, start-work, a wedged runtime) can't
 // freeze the UI forever. 30s is generous for the slowest endpoints (they return quickly and
 // stream/poll for the rest); a timeout surfaces as a normal error the caller can display.
@@ -35,6 +56,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
       signal: controller.signal,
       headers: {
         Accept: "application/json",
+        ...(AUTH_TOKEN ? { "X-Solar-Token": AUTH_TOKEN } : {}),
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
         ...(init?.headers || {}),
       },
@@ -172,13 +194,18 @@ export function deliverableUrl(
   // Absolute against the runtime API base — in the desktop the dashboard origin is the
   // bundled file/app, so a bare relative URL "failed to fetch". Same-origin web builds
   // leave API_BASE empty, so this stays relative there.
-  return `${API_BASE}${rel}`;
+  return withToken(`${API_BASE}${rel}`);
 }
 
 export async function fetchDeliverableText(
   url: string,
 ): Promise<{ text: string; contentType: string }> {
-  const response = await fetch(url, { headers: { Accept: "text/plain, */*" } });
+  const response = await fetch(url, {
+    headers: {
+      Accept: "text/plain, */*",
+      ...(AUTH_TOKEN ? { "X-Solar-Token": AUTH_TOKEN } : {}),
+    },
+  });
   if (!response.ok) {
     throw new Error(`Couldn’t load this file (HTTP ${response.status})`);
   }
@@ -278,7 +305,9 @@ export function openEventStream(
   if (sprintId) {
     params.set("sprint_id", sprintId);
   }
-  const source = new EventSource(`${API_BASE}/events?${params.toString()}`);
+  const source = new EventSource(
+    withToken(`${API_BASE}/events?${params.toString()}`),
+  );
   source.addEventListener("solar-event", (message) => {
     try {
       onEvent(JSON.parse((message as MessageEvent).data));
@@ -318,7 +347,9 @@ export function openProjectionStream(
     return null;
   }
   const source = new EventSource(
-    `${API_BASE}/api/sprints/${encodeURIComponent(sprintId)}/projection?stream=1`,
+    withToken(
+      `${API_BASE}/api/sprints/${encodeURIComponent(sprintId)}/projection?stream=1`,
+    ),
   );
   source.addEventListener("projection", (message) => {
     try {
