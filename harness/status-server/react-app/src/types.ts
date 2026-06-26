@@ -377,6 +377,11 @@ export type SettingsPayload = {
     launch_supported?: boolean;
     note?: string;
   };
+  codex?: {
+    search?: boolean;
+    effort?: string;
+    note?: string;
+  };
   model_lab_matrix?: {
     value?: string;
     source?: string;

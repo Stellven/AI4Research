@@ -193,6 +193,7 @@ export function saveSettings(
   roleModels: Record<string, string>,
   apiKeys: Record<string, string>,
   runtime?: string,
+  codex?: { search?: boolean; effort?: string },
 ): Promise<SaveSettingsResponse> {
   return requestJson<SaveSettingsResponse>("/settings", {
     method: "POST",
@@ -200,6 +201,7 @@ export function saveSettings(
       role_models: roleModels,
       api_keys: apiKeys,
       runtime,
+      codex,
     }),
   });
 }

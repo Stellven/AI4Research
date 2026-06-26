@@ -1878,7 +1878,9 @@ function RailList({
       <div className="rail-head">
         <div className="rail-head-title">
           <span>Deliverables</span>
-          <span className="rail-count">{output.length || deliverables.length}</span>
+          <span className="rail-count">
+            {output.length || deliverables.length}
+          </span>
         </div>
         <button
           type="button"
@@ -2645,7 +2647,9 @@ function buildActivityDays(
         ? createdTs * 1000
         : typeof mtime === "number"
           ? mtime * 1000
-          : Date.parse(asString(sprint.created_at) || asString(sprint.updated_at) || "");
+          : Date.parse(
+              asString(sprint.created_at) || asString(sprint.updated_at) || "",
+            );
     if (!ts) return;
     const key = new Date(ts).toISOString().slice(0, 10);
     const bucket = buckets.get(key);
@@ -2793,6 +2797,8 @@ function SettingsView() {
   const [roleModels, setRoleModels] = useState<Record<string, string>>({});
   const [labMode, setLabMode] = useState("all-claude");
   const [paneRuntime, setPaneRuntime] = useState("claude");
+  const [codexSearch, setCodexSearch] = useState(true);
+  const [codexEffort, setCodexEffort] = useState("medium");
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [usage, setUsage] = useState<UsagePayload>();
   const [sprints, setSprints] = useState<SprintSummary[]>([]);
@@ -2822,6 +2828,8 @@ function SettingsView() {
       );
       const runtime = asString(response.runtime?.value).toLowerCase();
       setPaneRuntime(runtime === "codex" ? "codex" : "claude");
+      setCodexSearch(response.codex?.search !== false);
+      setCodexEffort(asString(response.codex?.effort) || "medium");
       setState("ready");
       setError("");
     } catch (err) {
@@ -2846,7 +2854,10 @@ function SettingsView() {
     setSaving(true);
     setSaveMsg("");
     try {
-      const res = await saveSettings(roleModels, apiKeys, paneRuntime);
+      const res = await saveSettings(roleModels, apiKeys, paneRuntime, {
+        search: codexSearch,
+        effort: codexEffort,
+      });
       if (res.ok) {
         const n = res.written_keys?.length || 0;
         const runtimeMsg = res.applied_runtime
@@ -2865,7 +2876,7 @@ function SettingsView() {
     } finally {
       setSaving(false);
     }
-  }, [roleModels, apiKeys, paneRuntime, refresh]);
+  }, [roleModels, apiKeys, paneRuntime, codexSearch, codexEffort, refresh]);
   const section = SETTINGS_SECTIONS.find((item) => item.id === activeSection);
 
   return (
@@ -2939,6 +2950,10 @@ function SettingsView() {
                   }}
                   onRuntimeChange={setPaneRuntime}
                   paneRuntime={paneRuntime}
+                  codexSearch={codexSearch}
+                  onCodexSearchChange={setCodexSearch}
+                  codexEffort={codexEffort}
+                  onCodexEffortChange={setCodexEffort}
                   roleModels={roleModels}
                   settings={settings}
                 />
@@ -3090,6 +3105,10 @@ function DefaultCrewPane({
   onRoleModelChange,
   onRuntimeChange,
   paneRuntime,
+  codexSearch,
+  onCodexSearchChange,
+  codexEffort,
+  onCodexEffortChange,
   roleModels,
   settings,
 }: {
@@ -3098,6 +3117,10 @@ function DefaultCrewPane({
   onRoleModelChange: (role: string, value: string) => void;
   onRuntimeChange: (runtime: string) => void;
   paneRuntime: string;
+  codexSearch: boolean;
+  onCodexSearchChange: (value: boolean) => void;
+  codexEffort: string;
+  onCodexEffortChange: (value: string) => void;
   roleModels: Record<string, string>;
   settings?: SettingsPayload;
 }) {
@@ -3158,6 +3181,35 @@ function DefaultCrewPane({
             : settings?.runtime?.note ||
               "The runtime default is stored in config, but this checkout does not yet launch panes from that field."}
         </p>
+        {paneRuntime === "codex" && (
+          <div className="settings-codex-options">
+            <label className="settings-codex-toggle">
+              <input
+                type="checkbox"
+                checked={codexSearch}
+                disabled={!runtimeLaunchSupported}
+                onChange={(e) => onCodexSearchChange(e.target.checked)}
+              />
+              <span>
+                Web search (<code>--search</code>) — required for research runs
+              </span>
+            </label>
+            <label className="settings-codex-effort">
+              <span>Reasoning effort</span>
+              <select
+                value={codexEffort}
+                disabled={!runtimeLaunchSupported}
+                onChange={(e) => onCodexEffortChange(e.target.value)}
+              >
+                {["minimal", "low", "medium", "high", "xhigh"].map((eff) => (
+                  <option key={eff} value={eff}>
+                    {eff}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
       </div>
       {!hasRoleModels && (
         <SettingsEmptyState
