@@ -32,6 +32,17 @@ else
   echo "SKIP: playwright not installed (npm install --no-save playwright@1.61.1) — render gate skipped"
 fi
 
+echo; echo "-- gate: first-run screens (Electron via SOLAR_SIMULATE) --"
+if [ ! -d node_modules/playwright ]; then
+  echo "SKIP: playwright not installed — screen gate skipped"
+elif [ -n "${DISPLAY:-}" ]; then
+  node screens.test.js || fail=1            # display already available (incl. an outer xvfb-run)
+elif command -v xvfb-run >/dev/null 2>&1; then
+  xvfb-run -a node screens.test.js || fail=1
+else
+  echo "SKIP: no display/xvfb for the Electron screen gate"
+fi
+
 echo
 if [ "$fail" -eq 0 ]; then echo "AUTOTEST PASS"; else echo "AUTOTEST FAIL"; fi
 exit "$fail"
