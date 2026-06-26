@@ -102,7 +102,7 @@ function Set-WslMirroredNetworking {
     # Mirrored networking (Win11 22H2+) makes host<->WSL localhost bidirectional, so the runtime
     # binds 127.0.0.1 (secure, no LAN exposure) instead of the 0.0.0.0 NAT fallback. Global setting
     # in %UserProfile%\.wslconfig [wsl2]. Conservative + idempotent: never overrides an existing
-    # explicit networkingMode (e.g. a Docker Desktop user on 'nat') — the runtime's NAT fallback
+    # explicit networkingMode (e.g. a Docker Desktop user on 'nat') - the runtime's NAT fallback
     # still works there. Harmlessly ignored on Windows older than 22H2.
     $cfg = Join-Path $env:USERPROFILE '.wslconfig'
     if (-not (Test-Path $cfg)) {

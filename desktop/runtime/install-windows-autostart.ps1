@@ -2,7 +2,7 @@
 <#
   Register a per-user logon task that brings WSL2 up and starts the Solar status-server
   at every login. WSL2 does not auto-start until first invoked, so this is the Windows
-  half of "the runtime is already running locally" — it pairs with the in-WSL systemd
+  half of "the runtime is already running locally" - it pairs with the in-WSL systemd
   user unit + `loginctl enable-linger` (install-linux-service.sh, run inside WSL).
   Idempotent. No admin required (the one-time WSL2 install already happened via install.ps1).
 #>
@@ -13,7 +13,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
-# The VBS launcher (wscript host) lives next to this script — it runs wsl.exe with no console flash.
+# The VBS launcher (wscript host) lives next to this script - it runs wsl.exe with no console flash.
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $vbs  = Join-Path $here "start-solar-wsl.vbs"
 if (-not (Test-Path $vbs)) { throw "Missing launcher: $vbs" }
@@ -26,7 +26,7 @@ $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $trigger.Delay = "PT5S"   # let WSL/networking settle before firing (cold-start can be slow)
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
               -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero)
-# "Run only when user is logged on" (Interactive) — NOT session-0, so the user's WSL/systemd
+# "Run only when user is logged on" (Interactive) - NOT session-0, so the user's WSL/systemd
 # instance and 127.0.0.1 localhostForwarding are correct. Limited run-level = no admin prompt.
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
 
