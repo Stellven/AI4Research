@@ -63,7 +63,9 @@ function Start-SetupLog {
         $dir = Split-Path -Parent $SetupLog
         if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
         Start-Transcript -Path $SetupLog -Append | Out-Null
-    } catch { }
+    } catch {
+        Write-Verbose "setup-log transcript unavailable: $($_.Exception.Message)"
+    }
 }
 
 function Test-Admin {
@@ -73,7 +75,7 @@ function Test-Admin {
 }
 
 # Registered WSL distros (parallel to the desktop app's runtime-detect.js: `wsl -l -q`).
-function Get-RegisteredDistros {
+function Get-RegisteredDistro {
     try { $out = & wsl.exe -l -q 2>$null } catch { return @() }
     if ($LASTEXITCODE -ne 0) { return @() }
     return @($out -split "`r?`n" |
@@ -85,7 +87,7 @@ function Get-RegisteredDistros {
 # first-distro pick so detect/install/start/diagnostics all target the SAME distro); else
 # the default (nothing registered yet -> we will install it).
 function Resolve-Distro {
-    $distros = Get-RegisteredDistros
+    $distros = Get-RegisteredDistro
     if ($distros -contains $Distro) { return $Distro }
     if ($distros.Count -gt 0) { return $distros[0] }
     return $Distro
@@ -96,7 +98,7 @@ function Resolve-Distro {
 function Test-WslReady {
     try { $null = & wsl.exe --status 2>$null } catch { return $false }
     if ($LASTEXITCODE -ne 0) { return $false }
-    return ((Get-RegisteredDistros).Count -gt 0)
+    return ((Get-RegisteredDistro).Count -gt 0)
 }
 
 function Get-ForwardString {
@@ -120,7 +122,7 @@ function Get-ForwardString {
 
 # Fresh Ubuntu-24.04 ships python3.12 but NOT git / python3-pip / python3-venv / tmux / jq.
 # get-solar.sh needs git and install.sh needs pip+venv, so install them before the installer runs.
-function Install-WslPrereqs {
+function Install-WslPrerequisite {
     Write-Host '[solar] ensuring WSL prerequisites (git, python3-venv/pip, tmux, jq)...'
     $sh = 'if command -v apt-get >/dev/null 2>&1; then ' +
           'sudo apt-get update && ' +
@@ -254,7 +256,7 @@ try {
     if (-not (Test-WslReady)) {
         Install-Wsl
     } else {
-        Install-WslPrereqs
+        Install-WslPrerequisite
         Enable-WslSystemd
         Set-WslMirroredNetworking
         Invoke-LinuxInstaller
@@ -262,5 +264,5 @@ try {
         Write-Host '[solar] Windows (WSL2) install complete.'
     }
 } finally {
-    try { Stop-Transcript | Out-Null } catch { }
+    try { Stop-Transcript | Out-Null } catch { Write-Verbose "Stop-Transcript: $($_.Exception.Message)" }
 }

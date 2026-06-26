@@ -57,8 +57,9 @@ PY
 done
 
 # status-daemon templates (the status-server login service). They reference {{SOLAR_STATUS_PYTHON}}
-# (an exported SOLAR_ var) — set a sample absolute interpreter so they resolve.
+# and {{SOLAR_USER_HOME}} (exported SOLAR_ vars) — set sample values so they resolve.
 export SOLAR_STATUS_PYTHON="/usr/bin/python3"
+export SOLAR_USER_HOME="/tmp/solar-daemon-check"
 for tpl in com.solar.status-server.plist.template solar-status-server.service.template; do
     out="$work/${tpl%.template}"
     render_template "templates/status-daemon/$tpl" "$out"
