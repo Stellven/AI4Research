@@ -15,11 +15,16 @@ you open it. This is expected for an unsigned app — here's how to allow it (on
 > Solar's runtime needs **Homebrew Python 3.11+** on macOS. If prompted, install it with `brew install python@3.11`.
 
 ## Windows (`.exe`)
-1. Run the installer. Windows SmartScreen shows *"Windows protected your PC… Publisher: Unknown."*
-2. Click **More info → Run anyway**, then finish the install. Solar launches from the Start menu.
+1. Run **Solar.exe** — it's a portable app, so there's nothing to install. Windows SmartScreen
+   shows *"Windows protected your PC… Publisher: Unknown."*
+2. Click **More info → Run anyway**.
+3. On first launch, if WSL2 isn't set up yet, Solar offers to do it for you: click **Set up Solar**,
+   approve the one Windows prompt, and let your PC reboot once. Solar resumes and finishes setup
+   on its own, then the dashboard opens.
 
-> Windows runs Solar's engine inside **WSL2**. If you haven't set it up, run `install.ps1` first
-> (it installs WSL2 + the runtime and registers login-autostart).
+> Windows runs Solar's engine inside **WSL2**, and the app installs it for you on first launch — you
+> no longer need to run `install.ps1` by hand. (`install.ps1` is still available for a fully manual or
+> CI/unattended install; see the repo's `docs/WINDOWS.md`.)
 
 ## Linux (`.AppImage`)
 ```sh
