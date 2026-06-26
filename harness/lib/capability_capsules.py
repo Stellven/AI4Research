@@ -920,6 +920,26 @@ def default_capability_plan_for_logical_operator(
         selection_mode = "read_only_audit_heuristic"
         fallback_used = False
         fallback_reason = None
+    elif (
+        str(request_type).strip().lower() == "research"
+        or str(logical_operator).strip().lower()
+        in {"researcher", "researchscout", "researchsynthesizer", "artifactcurator"}
+        or str((node or {}).get("type", "")).strip().lower() == "research"
+    ):
+        # Research nodes must NOT bind code-capability capsules. Their goal text routinely
+        # contains code keywords ("autocomplete latency", "refactoring", "benchmark",
+        # "throughput") that mis-trigger the code-task classifier — e.g. the CAPABILITIES
+        # research dimension pulled cap.flashmlx-performance-debugger, whose
+        # root_cause_report/benchmark_report proof obligations a research node can never
+        # produce → permanent eval FAIL → the research gate wedges (observed: S2a failed while
+        # sibling S2b–S2e, identical Researcher nodes, passed with no capsule). Research
+        # capability capsules are bound via the skill-driven override (Priority 1:
+        # ResearchScout/Synthesizer/ArtifactCurator); a plain Researcher node correctly gets none.
+        capsule_id = None
+        dispatch_task_type = ""
+        fallback_used = False
+        fallback_reason = "research_node_skips_code_capability_classifier"
+        selection_mode = "research_node_no_code_capsule"
     else:
         # ── Priority 2: goal-driven classifier → capsule query ─────────────
         effective_goal = goal_text or str((node or {}).get("goal", "")) or request_type
