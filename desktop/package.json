@@ -52,12 +52,24 @@
       "hardenedRuntime": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "extraResources": [
+        {
+          "from": "../get-solar.sh",
+          "to": "get-solar.sh"
+        }
+      ]
     },
     "linux": {
       "target": "AppImage",
       "icon": "build/icon.png",
-      "category": "Development"
+      "category": "Development",
+      "extraResources": [
+        {
+          "from": "../get-solar.sh",
+          "to": "get-solar.sh"
+        }
+      ]
     }
   }
 }

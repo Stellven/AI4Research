@@ -187,6 +187,57 @@ function runWindowsBootstrap() {
   }
 }
 
+function docsUrl() {
+  return (
+    "https://github.com/" +
+    (process.env.SOLAR_REPO || "suraj-subrahmanyan/OpenSolar") +
+    "#install"
+  );
+}
+
+// macOS/Linux first-run bootstrap: install the runtime with the bundled standalone
+// get-solar.sh (install.sh isn't standalone — it sources lib/installer/*). Runs headless
+// and detached so the app never freezes; progress goes to ~/.solar/logs/install.log and
+// the "Check again" button re-classifies once the runtime appears.
+function getSolarScriptPath() {
+  const candidates = [
+    path.join(process.resourcesPath || "", "get-solar.sh"),
+    path.join(__dirname, "..", "..", "get-solar.sh"),
+  ];
+  return (
+    candidates.find((p) => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    }) || ""
+  );
+}
+
+function runUnixBootstrap() {
+  const sh = getSolarScriptPath();
+  if (!sh) {
+    log("bootstrap: no bundled get-solar.sh found; opening docs");
+    shell.openExternal(docsUrl());
+    return false;
+  }
+  try {
+    const out = fs.openSync(path.join(LOG_DIR, "install.log"), "a");
+    const child = spawn(
+      "bash",
+      [sh, "--yes", "--components", "kernel,harness"],
+      { detached: true, stdio: ["ignore", out, out] },
+    );
+    child.unref();
+    return true;
+  } catch (e) {
+    log("unix bootstrap launch failed:", String(e).slice(0, 200));
+    shell.openExternal(docsUrl());
+    return false;
+  }
+}
+
 // Port discovery. On Windows the port file lives in WSL; cache it for the poll loop so
 // we don't spawn a cold `wsl bash -lc` every tick.
 let _portCache = null;
@@ -442,7 +493,9 @@ const SCREENS = {
     screenHTML({
       title: launched ? "Setting up Solar…" : "Couldn't start setup",
       sub: launched
-        ? "Approve the Windows prompt to install WSL2 and the runtime. Your PC reboots once, then Solar resumes. When it's finished, click Check again."
+        ? IS_WIN
+          ? "Approve the Windows prompt to install WSL2 and the runtime. Your PC reboots once, then Solar resumes. When it's finished, click Check again."
+          : "Installing the Solar runtime in the background — this can take a few minutes (macOS may need Homebrew Python). When it's finished, click Check again."
         : "We couldn't launch the installer automatically — retry, or open setup help.",
       tone: "#f0b429",
       actions: [
@@ -599,19 +652,11 @@ async function runAction(id) {
     return;
   }
   if (id === "run-installer") {
-    // Windows: launch the bundled install.ps1 (installs WSL2 + runtime, self-elevates,
-    // resumes after the reboot). Other platforms: the desktop auto-install isn't wired
-    // yet, so fall back to the setup docs.
-    if (IS_WIN) {
-      const ok = runWindowsBootstrap();
-      if (win && !win.isDestroyed()) win.loadURL(SCREENS.installing(ok));
-    } else {
-      shell.openExternal(
-        "https://github.com/" +
-          (process.env.SOLAR_REPO || "suraj-subrahmanyan/OpenSolar") +
-          "#install",
-      );
-    }
+    // Windows: bundled install.ps1 (WSL2 + runtime; self-elevating; RunOnce reboot-resume).
+    // macOS/Linux: bundled get-solar.sh (headless runtime install). Both then show the
+    // installing screen so "Check again" re-classifies once the runtime appears.
+    const ok = IS_WIN ? runWindowsBootstrap() : runUnixBootstrap();
+    if (win && !win.isDestroyed()) win.loadURL(SCREENS.installing(ok));
     return;
   }
   if (id === "restart-runtime") {
