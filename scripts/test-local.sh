@@ -54,6 +54,12 @@ run "dashboard typecheck+build" dashboard_build
 run "desktop main.js syntax"    node --check desktop/src/main.js
 run "desktop autotest"          bash -c 'cd desktop && bash autotest.sh'
 
+if command -v shellcheck >/dev/null 2>&1; then
+  run "shellcheck (installer shell)" shellcheck -S warning install.sh get-solar.sh lib/installer/*.sh
+else
+  echo; echo "SKIP: shellcheck (not installed locally; CI install-matrix runs it)"; skip=$((skip + 1))
+fi
+
 if command -v powershell.exe >/dev/null 2>&1; then
   PSFILE="$(wslpath -w "$repo/install.ps1" 2>/dev/null || echo "$repo/install.ps1")"
   PSTEST="$(wslpath -w "$repo/tests/install.Tests.ps1" 2>/dev/null || echo "$repo/tests/install.Tests.ps1")"

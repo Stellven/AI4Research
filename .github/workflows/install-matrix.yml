@@ -71,6 +71,27 @@ jobs:
           }
           Write-Output "install.ps1 lint clean"
 
+  ps1-pester:
+    name: install.ps1 Pester unit tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Unit-tests install.ps1's logic on real Windows (mocks wsl.exe / Get-RegisteredDistro), so
+      # the WSL2-bootstrap behavior is gated in CI, not just owner-Phase-F. Windows PowerShell 5.1
+      # matches the env install.ps1 actually runs in. Pester pinned to 5.x (6.x is alpha).
+      - name: Pester
+        shell: powershell
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0 -MaximumVersion 5.99 -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module Pester -MinimumVersion 5.0 -Force
+          $r = Invoke-Pester -Path ./tests/install.Tests.ps1 -Output Detailed -PassThru
+          if ($r.FailedCount -gt 0) {
+            Write-Output "::error title=install.ps1 pester::$($r.FailedCount) test(s) failed"
+            exit 1
+          }
+          Write-Output "install.ps1 Pester clean: $($r.PassedCount) passed"
+
   mempalace-check:
     name: mempalace deps-light check
     runs-on: ubuntu-latest
