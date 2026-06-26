@@ -87,7 +87,10 @@ def test_ai_influence_html_splits_reports_and_resources_tabs(tmp_path, monkeypat
     mod = _load_module()
     legacy_root = tmp_path / "legacy-ai-influence"
     hotspot_root = tmp_path / "tech-hotspot-radar"
-    planned_report = hotspot_root / "ai-influence-planned" / "2026-05-26" / "reports" / "planned-one"
+    # Today-relative so the report stays inside the default 30-day discovery window (a hardcoded
+    # calendar date made this a time-bomb that aged past _ai_influence_period_cutoff's cutoff).
+    recent = datetime.date.today().isoformat()
+    planned_report = hotspot_root / "ai-influence-planned" / recent / "reports" / "planned-one"
     planned_report.mkdir(parents=True, exist_ok=True)
 
     (planned_report / "report.html").write_text("<html>planned</html>", encoding="utf-8")
