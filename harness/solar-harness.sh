@@ -27,6 +27,22 @@ case "$SOLAR_PANE_RUNTIME" in
   claude|codex) ;;
   *) echo "ERROR: unsupported SOLAR_PANE_RUNTIME='$SOLAR_PANE_RUNTIME' (expected claude|codex)" >&2; exit 64 ;;
 esac
+# Default codex launch flags from operator config (config keys codex.search / codex.effort) when
+# the env didn't set them and the runtime is codex. This is what makes a dashboard-selected codex
+# runtime actually use web search + the chosen reasoning effort — without it codex panes launch
+# with no --search and research stalls on the human-search gate. Env SOLAR_CODEX_EXTRA_FLAGS wins.
+if [[ "$SOLAR_PANE_RUNTIME" == "codex" && -z "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] && declare -F solar_config_json_get >/dev/null 2>&1; then
+  _codex_search="$(solar_config_json_get "codex.search" "true" 2>/dev/null || echo true)"
+  _codex_effort="$(solar_config_json_get "codex.effort" "medium" 2>/dev/null || echo medium)"
+  _codex_flags=""
+  case "$_codex_search" in [Tt]rue|1|yes|on|ON) _codex_flags="--search" ;; esac
+  case "$_codex_effort" in
+    low|medium|high|xhigh|minimal)
+      _codex_flags="${_codex_flags:+$_codex_flags }-c model_reasoning_effort=${_codex_effort}" ;;
+  esac
+  [[ -n "$_codex_flags" ]] && export SOLAR_CODEX_EXTRA_FLAGS="$_codex_flags"
+  unset _codex_search _codex_effort _codex_flags
+fi
 case "$SOLAR_PANE_RUNTIME" in
   codex) PANE_RUNTIME_LABEL="Codex" ;;
   *) PANE_RUNTIME_LABEL="Claude" ;;
