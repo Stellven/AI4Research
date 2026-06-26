@@ -118,57 +118,11 @@ import sys
 from pathlib import Path
 
 
-def normalize(name):
-    return re.sub(r"[-_.]+", "-", name).lower()
-
-
-def requirement_name(text):
-    text = text.strip()
-    if not text or text.startswith("#") or text.startswith("-"):
-        return ""
-    text = text.split("#", 1)[0].split(";", 1)[0].strip()
-    match = re.match(r"([A-Za-z0-9][A-Za-z0-9._-]*)", text)
-    return normalize(match.group(1)) if match else ""
-
-
 def read_names(path):
     try:
         return {line.strip() for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()}
     except FileNotFoundError:
         return set()
-
-
-def user_site_requirement_closure(reqs_path, user_site):
-    user_dists = {}
-    for dist in metadata.distributions(path=[user_site]):
-        name = dist.metadata.get("Name")
-        if name:
-            user_dists[normalize(name)] = dist
-
-    roots = []
-    for line in Path(reqs_path).read_text(encoding="utf-8").splitlines():
-        name = requirement_name(line)
-        if name:
-            roots.append(name)
-
-    keep = set()
-    queue = [name for name in roots if name in user_dists]
-    while queue:
-        name = queue.pop(0)
-        if name in keep:
-            continue
-        dist = user_dists.get(name)
-        if dist is None:
-            continue
-        keep.add(name)
-        for dep in dist.requires or []:
-            parts = dep.split(";", 1)
-            if len(parts) > 1 and "extra" in parts[1].lower():
-                continue
-            dep_name = requirement_name(parts[0])
-            if dep_name and dep_name in user_dists and dep_name not in keep:
-                queue.append(dep_name)
-    return keep
 
 
 before = read_names(sys.argv[1])
@@ -180,7 +134,9 @@ reqs = os.environ["PY_DEPS_REQS"]
 user_site = site.getusersitepackages()
 user_base = site.getuserbase()
 python_executable = sys.executable
-ensured = user_site_requirement_closure(reqs, user_site)
+# L1: record ONLY the packages THIS install actually added (after - before). The previous code
+# also folded in the full requirement closure, which captured dependencies the user already had
+# installed in user-site — so `solar uninstall` could remove packages Solar never installed.
 
 if manifest_path.exists():
     try:
@@ -209,7 +165,7 @@ if entry is None:
     }
     entries.append(entry)
 
-packages = sorted(set(entry.get("packages") or []) | set(added) | ensured)
+packages = sorted(set(entry.get("packages") or []) | set(added))
 if not packages:
     raise SystemExit(0)
 
