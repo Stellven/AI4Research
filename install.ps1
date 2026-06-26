@@ -250,19 +250,23 @@ function Install-Wsl {
 }
 
 # ---- main ----
-Start-SetupLog
-try {
-    $Distro = Resolve-Distro
-    if (-not (Test-WslReady)) {
-        Install-Wsl
-    } else {
-        Install-WslPrerequisite
-        Enable-WslSystemd
-        Set-WslMirroredNetworking
-        Invoke-LinuxInstaller
-        Enable-WindowsAutostart
-        Write-Host '[solar] Windows (WSL2) install complete.'
+# Guarded so dot-sourcing the script (e.g. Pester: . ./install.ps1) loads the functions WITHOUT
+# running the installer. Dot-sourcing sets $MyInvocation.InvocationName to '.'; -File / & runs it.
+if ($MyInvocation.InvocationName -ne '.') {
+    Start-SetupLog
+    try {
+        $Distro = Resolve-Distro
+        if (-not (Test-WslReady)) {
+            Install-Wsl
+        } else {
+            Install-WslPrerequisite
+            Enable-WslSystemd
+            Set-WslMirroredNetworking
+            Invoke-LinuxInstaller
+            Enable-WindowsAutostart
+            Write-Host '[solar] Windows (WSL2) install complete.'
+        }
+    } finally {
+        try { Stop-Transcript | Out-Null } catch { Write-Verbose "Stop-Transcript: $($_.Exception.Message)" }
     }
-} finally {
-    try { Stop-Transcript | Out-Null } catch { Write-Verbose "Stop-Transcript: $($_.Exception.Message)" }
 }

@@ -38,6 +38,9 @@ ps_parse() {
 ps_lint() {
   powershell.exe -ExecutionPolicy Bypass -NoProfile -Command 'if(-not $env:PSFILE -or -not (Test-Path $env:PSFILE)){ Write-Host "PSFILE not set/readable"; exit 1 }; if(-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)){ Write-Host "PSScriptAnalyzer not installed (Install-Module PSScriptAnalyzer -Scope CurrentUser)"; exit 2 }; Import-Module PSScriptAnalyzer; $x=@("PSAvoidUsingWriteHost","PSUseShouldProcessForStateChangingFunctions","PSReviewUnusedParameter"); $i=Invoke-ScriptAnalyzer -Path $env:PSFILE -Severity Error,Warning -ExcludeRule $x; if($i){ $i | Format-Table RuleName,Line,Message -Auto | Out-String | Write-Host; exit 1 } else { Write-Host "lint clean" }'
 }
+ps_pester() {
+  powershell.exe -ExecutionPolicy Bypass -NoProfile -Command 'if(-not $env:PSTEST -or -not (Test-Path $env:PSTEST)){ Write-Host "PSTEST not set/readable"; exit 1 }; if(-not (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 })){ Write-Host "Pester 5 not installed (Install-Module Pester -MinimumVersion 5.0 -Scope CurrentUser -Force -SkipPublisherCheck)"; exit 2 }; Import-Module Pester -MinimumVersion 5.0 -Force; $r = Invoke-Pester -Path $env:PSTEST -Output None -PassThru; Write-Host ("Pester passed="+$r.PassedCount+" failed="+$r.FailedCount); if($r.FailedCount -gt 0){ exit 1 }'
+}
 
 echo "== Solar local test gate =="
 echo "repo: $repo"
@@ -53,12 +56,14 @@ run "desktop autotest"          bash -c 'cd desktop && bash autotest.sh'
 
 if command -v powershell.exe >/dev/null 2>&1; then
   PSFILE="$(wslpath -w "$repo/install.ps1" 2>/dev/null || echo "$repo/install.ps1")"
-  export PSFILE
-  export WSLENV="${WSLENV:+$WSLENV:}PSFILE"  # WSL env vars only reach powershell.exe via WSLENV
+  PSTEST="$(wslpath -w "$repo/tests/install.Tests.ps1" 2>/dev/null || echo "$repo/tests/install.Tests.ps1")"
+  export PSFILE PSTEST
+  export WSLENV="${WSLENV:+$WSLENV:}PSFILE:PSTEST"  # WSL env vars only reach powershell.exe via WSLENV
   run "install.ps1 parse (Windows PowerShell)" ps_parse
   run "install.ps1 lint (PSScriptAnalyzer, CI rules)" ps_lint
+  run "install.ps1 Pester unit tests" ps_pester
 else
-  echo; echo "SKIP: Windows-host install.ps1 parse+lint (no powershell.exe; runs in WSL/Windows)"; skip=$((skip + 1))
+  echo; echo "SKIP: Windows-host install.ps1 parse+lint+pester (no powershell.exe; runs in WSL/Windows)"; skip=$((skip + 1))
 fi
 
 echo
