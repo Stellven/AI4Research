@@ -849,6 +849,8 @@ def _settings_payload() -> dict:
     physical = _physical_operator_summary()
     pane_runtime, pane_runtime_source = _read_user_config_runtime()
     launch_supported = _runtime_launch_supported()
+    _codex_cfg = _read_user_config().get("codex")
+    _codex_cfg = _codex_cfg if isinstance(_codex_cfg, dict) else {}
     return {
         "ok": True,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -869,6 +871,11 @@ def _settings_payload() -> dict:
                 if launch_supported
                 else "Runtime default can be stored, but this checkout lacks the pane-launcher/dispatcher SOLAR_PANE_RUNTIME seam; the UI keeps the selector disabled."
             ),
+        },
+        "codex": {
+            "search": bool(_codex_cfg.get("search", True)),
+            "effort": str(_codex_cfg.get("effort") or "medium"),
+            "note": "Codex web search + reasoning effort; applied as SOLAR_CODEX_EXTRA_FLAGS when the codex runtime launches.",
         },
         "model_lab_matrix": {
             "value": lab_matrix,
@@ -1145,6 +1152,31 @@ def _write_user_config_runtime(runtime: str) -> str:
     return value
 
 
+_VALID_CODEX_EFFORTS = {"minimal", "low", "medium", "high", "xhigh"}
+
+
+def _write_user_config_codex(codex_in: dict) -> dict:
+    """Write codex launch options {search: bool, effort: str} into solar-user-config.json.
+    solar-harness.sh turns these into SOLAR_CODEX_EXTRA_FLAGS (--search + reasoning effort) when
+    the codex runtime launches, so the dashboard's codex choice actually uses web search."""
+    if not isinstance(codex_in, dict):
+        return {}
+    cfg = _read_user_config()
+    codex = cfg.get("codex") if isinstance(cfg.get("codex"), dict) else {}
+    applied: dict = {}
+    if "search" in codex_in:
+        codex["search"] = bool(codex_in["search"])
+        applied["search"] = codex["search"]
+    eff = str(codex_in.get("effort") or "").strip().lower()
+    if eff in _VALID_CODEX_EFFORTS:
+        codex["effort"] = eff
+        applied["effort"] = eff
+    if applied:
+        cfg["codex"] = codex
+        _write_user_config(cfg)
+    return applied
+
+
 def _write_provider_keys(api_keys: dict) -> list:
     """Persist provider keys to the local secrets file (local only, 0600)."""
     _USER_SECRETS_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -1180,6 +1212,7 @@ def _settings_write_payload(data: dict) -> tuple[dict, int]:
     role_models_in = data.get("role_models") or data.get("models") or {}
     api_keys = data.get("api_keys") or {}
     runtime_in = data.get("runtime") or data.get("pane_runtime") or ""
+    codex_in = data.get("codex") if isinstance(data.get("codex"), dict) else {}
     role_models = {}
     for role, val in role_models_in.items():
         role_models[role] = val.get("model") if isinstance(val, dict) else val
@@ -1187,14 +1220,16 @@ def _settings_write_payload(data: dict) -> tuple[dict, int]:
         applied_models = _write_user_config_models(role_models) if role_models else {}
         written_keys = _write_provider_keys(api_keys) if api_keys else []
         applied_runtime = _write_user_config_runtime(runtime_in) if runtime_in else ""
+        applied_codex = _write_user_config_codex(codex_in) if codex_in else {}
     except Exception as exc:
         return {"ok": False, "error": "settings_write_failed", "detail": str(exc)}, 500
     return {
         "ok": True,
         "applied_models": applied_models,
         "applied_runtime": applied_runtime,
+        "applied_codex": applied_codex,
         "written_keys": written_keys,
-        "note": "Models/runtime -> solar-user-config.json; keys -> ~/.solar/secrets/solar-user-secrets.env. Restart the cockpit to apply to running panes.",
+        "note": "Models/runtime/codex -> solar-user-config.json; keys -> ~/.solar/secrets/solar-user-secrets.env. Restart the cockpit to apply to running panes.",
     }, 200
 
 
