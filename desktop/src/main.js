@@ -67,70 +67,15 @@ function log(...a) {
 // On Windows the Electron app runs on the HOST; the runtime lives in WSL2. We drive
 // it through wsl.exe and reach it over localhost (WSL2 localhostForwarding maps
 // 127.0.0.1:<port> in the distro to the host). Distro is discovered, not hardcoded.
-let _distroCache = null;
-function wslDistro() {
-  if (process.env.SOLAR_WSL_DISTRO) return process.env.SOLAR_WSL_DISTRO;
-  if (_distroCache !== null) return _distroCache;
-  try {
-    const r = spawnSync("wsl.exe", ["-l", "-q"], {
-      timeout: 5000,
-      encoding: "utf8",
-    });
-    const first = (r.stdout || "")
-      .replace(/\x00/g, "")
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .filter(Boolean)[0];
-    _distroCache = first || "Ubuntu-24.04";
-  } catch {
-    _distroCache = "Ubuntu-24.04";
-  }
-  return _distroCache;
-}
-
-function wslExec(cmd, timeoutMs = 8000) {
-  const r = spawnSync(
-    "wsl.exe",
-    ["-d", wslDistro(), "--", "bash", "-lc", cmd],
-    { timeout: timeoutMs, encoding: "utf8" },
-  );
-  return {
-    ok: r.status === 0,
-    status: r.status,
-    stdout: (r.stdout || "").trim(),
-    stderr: (r.stderr || "").trim(),
-  };
-}
-
-// Does WSL have at least one registered distro? `wsl.exe -l -q` lists them; on a PC with
-// the wsl.exe stub present but no distro this is empty — a case `wsl --status` alone misses
-// (it can exit 0), which would mis-route the user to "runtime not installed" instead of here.
-function wslHasDistro() {
-  const r = spawnSync("wsl.exe", ["-l", "-q"], {
-    timeout: 5000,
-    encoding: "utf8",
-  });
-  if (r.error || r.status !== 0) return false;
-  return (
-    (r.stdout || "")
-      .replace(/\x00/g, "")
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .filter(Boolean).length > 0
-  );
-}
-
-// 'missing' (WSL/distro not usable) | 'stopped' (installed, VM cold) | 'up'.
-function wslState() {
-  const status = spawnSync("wsl.exe", ["--status"], {
-    timeout: 6000,
-    encoding: "utf8",
-  });
-  if (status.error) return "missing"; // wsl.exe absent entirely
-  if (!wslHasDistro()) return "missing"; // stub present but no distro → needs install
-  const probe = wslExec("echo solar-wsl-up", 10000);
-  return probe.ok && probe.stdout.includes("solar-wsl-up") ? "up" : "stopped";
-}
+// WSL detection lives in a no-electron module so it's unit-testable (see runtime-detect.test.js).
+// Call sites below are unchanged.
+const {
+  wslDistro,
+  wslExec,
+  wslHasDistro,
+  wslState,
+  resetDistroCache,
+} = require("./runtime-detect");
 
 // First-run Windows bootstrap: install WSL2 + the Linux runtime via the bundled
 // install.ps1. That script self-elevates, runs `wsl --install`, and registers a RunOnce
@@ -683,7 +628,7 @@ async function runAction(id) {
   if (id === "restart-wsl-net") {
     spawnSync("wsl.exe", ["--shutdown"], { timeout: 15000 });
     clearPortCache();
-    _distroCache = null;
+    resetDistroCache();
     return reload();
   }
   if (id === "reconnect" || id === "retry" || id === "keep-waiting") {
