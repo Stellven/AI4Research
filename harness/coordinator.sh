@@ -1133,7 +1133,7 @@ pane_is_thinking_snapshot() {
 
 pane_has_runtime_blocker_snapshot() {
   local snapshot="$1"
-  printf '%s\n' "$snapshot" | grep -qiE "You've hit your limit|hit your limit|rate[- ]limit|usage limit|/upgrade to increase your usage limit|resets .*\\(America/Toronto\\)|How is Claude doing this session|1:[[:space:]]*Bad[[:space:]]+2:[[:space:]]*Fine[[:space:]]+3:[[:space:]]*Good[[:space:]]+0:[[:space:]]*Dismiss"
+  printf '%s\n' "$snapshot" | grep -qiE "You've hit your limit|hit your limit|rate[- ]limit|usage limit reached|usage limit exceeded|monthly usage limit|/upgrade to increase your usage limit|resets .*\\(America/Toronto\\)|How is Claude doing this session|1:[[:space:]]*Bad[[:space:]]+2:[[:space:]]*Fine[[:space:]]+3:[[:space:]]*Good[[:space:]]+0:[[:space:]]*Dismiss"
 }
 
 pane_has_processing_snapshot() {
@@ -2053,7 +2053,7 @@ dispatch_to_pane() {
     # Quota/rate-limit errors also render with the generic "⎿" marker.  Do not
     # treat those as successful dispatch evidence, otherwise the pane assignment
     # is persisted while the worker never actually accepts the task.
-    printf '%s\n' "$verify_output" | grep -qiE "You've hit your limit|hit your limit|rate[- ]limit|usage limit|/upgrade to increase your usage limit|resets .*\\(America/Toronto\\)" && has_runtime_blocker=1
+    printf '%s\n' "$verify_output" | grep -qiE "You've hit your limit|hit your limit|rate[- ]limit|usage limit reached|usage limit exceeded|monthly usage limit|/upgrade to increase your usage limit|resets .*\\(America/Toronto\\)" && has_runtime_blocker=1
     # Claude Code survey prompts can contain generic activity glyphs/keywords, but
     # they are modal human-feedback screens and cannot accept dispatch input.
     printf '%s\n' "$verify_output" | grep -qiE "How is Claude doing this session|1:[[:space:]]*Bad[[:space:]]+2:[[:space:]]*Fine[[:space:]]+3:[[:space:]]*Good[[:space:]]+0:[[:space:]]*Dismiss" && has_runtime_blocker=1
@@ -2853,17 +2853,76 @@ gate_check() {
 # 状态转换处理器
 # ================================================================
 
+# Canonical worker pane for a drafting stage (PM=0.0, Planner=0.1). Used by the
+# liveness check to avoid re-dispatching a pane that is still actively working.
+drafting_stage_worker_busy() {
+  local stage="$1" pane=""
+  case "$stage" in
+    pm) pane="$SESSION_NAME:0.0" ;;
+    planner) pane="$SESSION_NAME:0.1" ;;
+    *) return 1 ;;
+  esac
+  pane_target_exists "$pane" || return 1
+  tmux capture-pane -t "$pane" -p 2>/dev/null | tail -8 | grep -qi "esc to interrupt"
+}
+
+# Remove the dispatched-latch line(s) for sid:stage so the next handle_drafting
+# iteration re-dispatches. sid/stage contain no ':' so an awk field match is exact.
+drafting_flow_clear() {
+  local sid="$1" stage="$2"
+  local marker="$HARNESS_DIR/.drafting-flow-dispatched"
+  [[ -f "$marker" ]] || return 0
+  local tmp
+  tmp=$(mktemp "${marker}.XXXXXX") || return 0
+  if awk -F: -v s="$sid" -v g="$stage" '!($1==s && $2==g)' "$marker" > "$tmp" 2>/dev/null; then
+    mv "$tmp" "$marker"
+  else
+    rm -f "$tmp"
+  fi
+}
+
+# Fix 1 (drafting liveness reconciliation): the dispatched-latch is no longer
+# fire-once-forever. dispatch_to_role returns 0 when the PROMPT IS SENT, not when
+# the artifact is produced; if the pane then latches needs_respawn / the model
+# errors / nothing is produced, the old permanent latch stalled the run forever
+# (coordinator polled but never re-attempted). We now timestamp the latch and, at
+# the (artifact-absent) skip points, drop it once the dispatch is stale AND the
+# canonical worker pane is idle — so a dead dispatch re-attempts but a genuinely
+# working agent is never interrupted. Mirrors the back-half graph-dispatch reconcile.
 drafting_flow_marked() {
   local sid="$1" stage="$2"
   local marker="$HARNESS_DIR/.drafting-flow-dispatched"
-  [[ -f "$marker" ]] && grep -qx "${sid}:${stage}" "$marker" 2>/dev/null
+  [[ -f "$marker" ]] || return 1
+  local line ts now stall
+  line=$(awk -F: -v s="$sid" -v g="$stage" '$1==s && $2==g {print}' "$marker" 2>/dev/null | tail -1)
+  [[ -n "$line" ]] || return 1
+  ts=$(printf '%s' "$line" | awk -F: '{print $3}')
+  stall="${SOLAR_DRAFTING_FLOW_STALL_SEC:-240}"
+  if [[ "$ts" =~ ^[0-9]+$ ]]; then
+    now=$(date +%s)
+    if (( now - ts > stall )); then
+      if drafting_stage_worker_busy "$stage"; then
+        return 0  # still actively working; keep the latch, don't interrupt
+      fi
+      drafting_flow_clear "$sid" "$stage"
+      log "${Y}[drafting-liveness] ${sid}:${stage} dispatched $((now-ts))s ago, artifact still absent + pane idle → re-attempt${N}"
+      return 1
+    fi
+    return 0
+  fi
+  # Legacy line without a timestamp (pre-Fix-1): cannot prove liveness → drop once
+  # so it re-enters the normal (cooldown-paced) dispatch path with a fresh stamp.
+  drafting_flow_clear "$sid" "$stage"
+  return 1
 }
 
 drafting_retry_blocked() {
   local sid="$1" stage="$2"
   local marker="$HARNESS_DIR/.drafting-flow-retry"
   local now last_ts cooldown
-  cooldown="${DRAFTING_RETRY_COOLDOWN_SEC:-900}"
+  # Was 900s (15 min): a transient pane-busy at boot stalled the sprint for 15 min
+  # before retry. 90s lets a settled pane be re-dispatched quickly so runs self-recover.
+  cooldown="${DRAFTING_RETRY_COOLDOWN_SEC:-90}"
   [[ -f "$marker" ]] || return 1
   now=$(date +%s)
   last_ts=$(awk -F: -v key="${sid}:${stage}" '$1 ":" $2 == key {print $3}' "$marker" 2>/dev/null | tail -1)
@@ -2879,7 +2938,7 @@ mark_drafting_retry() {
   ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   touch "$marker"
   echo "${sid}:${stage}:${now}:${reason}" >> "$marker"
-  printf '%s\n' "- [ ] [${ts}] [DRAFTING-DISPATCH-COOLDOWN] ${sid} ${stage} dispatch failed (${reason}); cooldown ${DRAFTING_RETRY_COOLDOWN_SEC:-900}s, no pane spam" \
+  printf '%s\n' "- [ ] [${ts}] [DRAFTING-DISPATCH-COOLDOWN] ${sid} ${stage} dispatch failed (${reason}); cooldown ${DRAFTING_RETRY_COOLDOWN_SEC:-90}s, no pane spam" \
     >> "$HARNESS_DIR/PLANNER-INBOX.md"
 }
 
@@ -2887,7 +2946,10 @@ mark_drafting_flow() {
   local sid="$1" stage="$2"
   local marker="$HARNESS_DIR/.drafting-flow-dispatched"
   touch "$marker"
-  grep -qx "${sid}:${stage}" "$marker" 2>/dev/null || echo "${sid}:${stage}" >> "$marker"
+  # Re-stamp (drop any prior line for this sid:stage, then append with epoch) so the
+  # liveness check has a fresh dispatch time to measure staleness against.
+  drafting_flow_clear "$sid" "$stage"
+  echo "${sid}:${stage}:$(date +%s)" >> "$marker"
 }
 
 builder_flow_marked() {
@@ -3328,6 +3390,32 @@ handle_active() {
 
   local phase
   phase=$(get_field "$sf" "phase")
+
+  # Fix 0 (artifact/status backfill): an epic-child can be canonicalized to
+  # status=active while its phase is still prd_ready/planner even though the planner
+  # already produced design+plan+task_graph. In that split state handle_drafting
+  # skips it (status!=drafting) and the DAG branch below skips it (phase!=planning_complete)
+  # — a dead zone that loops back to the planner forever. If workflow_guard says the
+  # planner artifacts + task_graph are ready, promote phase to planning_complete/builder_main
+  # so DAG dispatch can proceed. Gated on task_graph presence + guard=builder_main so it
+  # only fires when artifacts are genuinely complete; idempotent (next loop skips).
+  case "$phase" in
+    planning_complete|graph_dispatch_active|g0_passed|slices_dispatched|s[0-7]_*|building_parallel|reviewing*|architect_*|eval*) : ;;
+    *)
+      if [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
+        local _guard_role _old_phase="$phase"
+        _guard_role="$(workflow_guard_route_role "$sid" 2>/dev/null || true)"
+        if [[ "$_guard_role" == "builder_main" || "$_guard_role" == "builder" ]]; then
+          log "${G}[backfill] ${sid} active/${_old_phase} but planner artifacts+task_graph ready (guard=${_guard_role}) → promote planning_complete/builder_main${N}"
+          drafting_flow_clear "$sid" "planner"
+          runtime_status_transition "$sid" "active" "active_artifacts_ready_backfill" "coordinator" '{"status_fields":{"phase":"planning_complete","handoff_to":"builder_main","target_role":"builder_main"},"note":"Backfilled split active/prd_ready state: planner artifacts and task_graph are complete."}' || true
+          phase="planning_complete"
+          emit_event "$sid" "phase_backfilled" "coordinator" "{\"from\":\"${_old_phase}\",\"to\":\"planning_complete\",\"guard\":\"${_guard_role}\"}"
+        fi
+      fi
+      ;;
+  esac
+
   case "$phase" in
     g0_passed)
       log "${Y}Sprint ${sid} G0 passed; waiting for S1/S2/S6 slice dispatch${N}"

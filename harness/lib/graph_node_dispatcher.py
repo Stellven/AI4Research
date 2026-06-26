@@ -36,7 +36,9 @@ MULTI_TASK_RUN_DIR = HARNESS_DIR / "run" / "multi-task"
 SESSION = os.environ.get("SOLAR_HARNESS_SESSION", "solar-harness")
 NO_DISPATCH_FLAG = HARNESS_DIR / "run" / "no-dispatch.flag"
 DISPATCH_LEDGER = HARNESS_DIR / "run" / "dispatch-ledger.jsonl"
-PANE_RECOVER_COOLDOWN_SEC = int(os.environ.get("SOLAR_GRAPH_PANE_RECOVER_COOLDOWN_SEC", "900"))
+# Was 900s (15 min): a pane marked needs_respawn was unavailable for 15 min, stalling
+# the node stage. 90s lets a settled pane be re-dispatched quickly so runs self-recover.
+PANE_RECOVER_COOLDOWN_SEC = int(os.environ.get("SOLAR_GRAPH_PANE_RECOVER_COOLDOWN_SEC", "90"))
 PANE_TUI_BUSY_RE = re.compile(
     r"Compacting conversation|压缩上下文|Reticulating|Scurrying|Roosting|"
     r"Mustering|Herding|Baking|Cogitating|Churning|Ruminating|Thinking|"

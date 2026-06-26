@@ -72,6 +72,44 @@ human_prefix() {
 
 ensure_dirs() { mkdir -p "$SPRINTS_DIR" "$HARNESS_DIR/personas" "$HARNESS_DIR/templates"; }
 
+# Fix 4 (clean-cockpit-start): reset stale runtime coordination state that otherwise
+# carries across restarts and walls fresh runs — a needs_respawn hygiene latch, stale
+# pane leases, stale pane assignments, and the fire-once drafting/builder dispatch
+# markers. NEVER touches sprint state (sprints/), logs, model config, or venvs. Safe on a
+# fresh session (no in-flight work); for an already-running cockpit the caller gates this
+# behind explicit --clean / SOLAR_HARNESS_CLEAN_START so in-flight work is preserved.
+reset_stale_runtime_state() {
+  local why="${1:-fresh-session}"
+  local run_dir="$HARNESS_DIR/run"
+  local reset_count=0 lease_dir marker
+
+  # 1) Hygiene registry → empty, so freshly-launched panes re-register clean (clears any
+  #    stale needs_respawn/needs_recover latch). Recreated on first registry access.
+  if [[ -f "$run_dir/pane-hygiene.json" ]]; then
+    printf '{}\n' > "$run_dir/pane-hygiene.json"
+    reset_count=$((reset_count+1))
+  fi
+
+  # 2) Pane/actor leases: on a clean start no pane holds a live lease.
+  for lease_dir in "$run_dir/pane-leases" "$run_dir/actor-leases"; do
+    if [[ -d "$lease_dir" ]]; then
+      find "$lease_dir" -maxdepth 1 -type f \( -name '*.json' -o -name '*.json.lock' \) -delete 2>/dev/null || true
+      reset_count=$((reset_count+1))
+    fi
+  done
+
+  # 3) Stale pane assignments + fire-once dispatch markers (root dotfiles). These reserve
+  #    panes / suppress re-dispatch for sprints that may be long gone; rebuilt on demand.
+  for marker in .pane-assignments .drafting-flow-dispatched .drafting-flow-retry .builder-flow-dispatched; do
+    if [[ -f "$HARNESS_DIR/$marker" ]]; then
+      rm -f "$HARNESS_DIR/$marker"
+      reset_count=$((reset_count+1))
+    fi
+  done
+
+  log "${G:-}[clean-start] reset ${reset_count} stale runtime state item(s) (${why})${N:-}"
+}
+
 bg_now_iso() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
 bg_write_status() {
@@ -893,6 +931,12 @@ start_harness() {
   local work_dir="${2:-$(pwd)}"
   local skip_doctor="${3:-}"
 
+  # Fix 4: clean-start opt-in for an ALREADY-RUNNING cockpit (a fresh session always
+  # resets). Triggered by SOLAR_HARNESS_CLEAN_START=1 or a --clean argument.
+  local clean_start=0 _a
+  [[ "${SOLAR_HARNESS_CLEAN_START:-0}" == "1" ]] && clean_start=1
+  for _a in "$@"; do [[ "$_a" == "--clean" ]] && clean_start=1; done
+
   cleanup_legacy_sessions
 
   # 启动前自检 (除非 --skip-doctor)
@@ -923,6 +967,9 @@ start_harness() {
     fi
     warn_if_product_delivery_layout_incomplete || true
     configure_product_delivery_labels
+    if (( clean_start )); then
+      reset_stale_runtime_state "already-running --clean"
+    fi
     start_coordinator_sync || { err "Coordinator 启动失败，中止"; exit 1; }
     start_watchdog_sync
     attach_or_print
@@ -930,6 +977,10 @@ start_harness() {
   fi
 
   ensure_dirs
+
+  # Fix 4: a brand-new cockpit must start from clean coordination state (no in-flight
+  # work exists yet), so stale latches/leases/assignments from a prior session can't wall it.
+  reset_stale_runtime_state "fresh-session"
 
   log "启动 Solar Harness (${mode} 化身 + 监控)..."
   log "工作目录: ${work_dir}"
