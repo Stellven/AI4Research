@@ -68,7 +68,7 @@ version = compute_version(source)
 channel = os.environ.get("SOLAR_CHANNEL") or "v1.0.0-rc.5"
 repo = (
     os.environ.get("SOLAR_REPO")
-    or "https://github.com/Stellven/OpenSolar.git"
+    or "https://github.com/suraj-subrahmanyan/OpenSolar.git"
 )
 
 components = [c for c in os.environ.get("SELECTED_COMPONENTS", "").split() if c]

@@ -11,7 +11,7 @@ Chinese labels because the v1.0 persona is Chinese-first.
 Command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Stellven/OpenSolar/v1.0.0-rc.5/get-solar.sh | bash -s -- --yes --components kernel,harness
+curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.5/get-solar.sh | bash -s -- --yes --components kernel,harness
 export PATH="$HOME/.solar/bin:$PATH"
 solar doctor
 solar status

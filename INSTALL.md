@@ -54,7 +54,7 @@ No root/`sudo` is needed. Nothing is written outside your home directory.
 Clone and run the installer:
 
 ```bash
-git clone --branch v1.0.0-rc.5 https://github.com/Stellven/OpenSolar.git
+git clone --branch v1.0.0-rc.5 https://github.com/suraj-subrahmanyan/OpenSolar.git
 cd OpenSolar
 ./install.sh
 ```
@@ -202,7 +202,7 @@ Solar for you, hold it to this protocol:
 A minimal agent install + self-check:
 
 ```bash
-git clone --branch v1.0.0-rc.5 https://github.com/Stellven/OpenSolar.git && cd OpenSolar
+git clone --branch v1.0.0-rc.5 https://github.com/suraj-subrahmanyan/OpenSolar.git && cd OpenSolar
 ./install.sh --yes --components kernel,harness
 ~/.solar/bin/solar doctor --json   # expect "verdict": "ok"
 ```

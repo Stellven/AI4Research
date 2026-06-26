@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # get-solar.sh — curl|bash bootstrap for Solar.
 #
-#   curl -fsSL https://raw.githubusercontent.com/Stellven/OpenSolar/v1.0.0-rc.5/get-solar.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.5/get-solar.sh | bash
 #   curl -fsSL <url> | bash -s -- --yes --components kernel,harness
 #
 # Clones the published Solar channel and runs install.sh, forwarding every
@@ -14,7 +14,7 @@ set -eu
 
 # NOTE: SOLAR_CHANNEL defaults to the published rc.5 tag. For local
 # development, override SOLAR_CHANNEL and/or SOLAR_REPO.
-SOLAR_REPO="${SOLAR_REPO:-https://github.com/Stellven/OpenSolar.git}"
+SOLAR_REPO="${SOLAR_REPO:-https://github.com/suraj-subrahmanyan/OpenSolar.git}"
 SOLAR_CHANNEL="${SOLAR_CHANNEL:-v1.0.0-rc.5}"
 SOLAR_SRC="${SOLAR_SRC:-$HOME/.solar-src/OpenSolar}"
 
