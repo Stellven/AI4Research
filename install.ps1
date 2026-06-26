@@ -47,7 +47,7 @@
 [CmdletBinding()]
 param(
     [string]$Distro = 'Ubuntu-24.04',
-    [string]$BootstrapUrl = 'https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.5/get-solar.sh',
+    [string]$BootstrapUrl = 'https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.6/get-solar.sh',
     [string]$RepoUrl = 'https://github.com/suraj-subrahmanyan/OpenSolar.git',
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$ForwardArgs = @()
