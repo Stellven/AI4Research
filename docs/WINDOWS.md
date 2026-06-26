@@ -53,3 +53,18 @@ On a clean Windows 11 host:
 5. `wsl -d Ubuntu-24.04 -- ~/.solar/bin/solar doctor --json` → verdict ok.
 
 This end-to-end run is owner-held (GitHub runners lack nested virtualization).
+
+## Troubleshooting first-install ("WSL2 keeps not working")
+
+If Windows/WSL2 setup fails or behaves oddly, run the evidence doctor on the affected machine and
+attach its output to a bug report:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows-evidence-doctor.ps1
+# machine-readable: add -Json   |   save to a file: add -OutFile solar-evidence.txt
+```
+
+It reports admin/UAC context, WSL version/state/distros, the distro's default user, networking
+mode, the in-WSL prerequisites and Solar runtime status, and Windows<->WSL reachability, plus a
+short "likely issues" interpretation. It is read-only. The desktop app also writes a setup
+transcript to `%LOCALAPPDATA%\Solar\setup.log` during first-install.

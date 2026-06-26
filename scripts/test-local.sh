@@ -28,6 +28,14 @@ dashboard_build() {
   ( cd harness/status-server/react-app && npm run typecheck && npm run build >/dev/null )
 }
 
+# .ps1 files must be ASCII-only: Windows PowerShell 5.1 mangles non-ASCII (e.g. em-dashes) without a
+# BOM, breaking parsing. (PSScriptAnalyzer flags this only for install.ps1; this covers every .ps1.)
+ps1_ascii() {
+  bad=$(grep -rlP '[^\x00-\x7F]' --include='*.ps1' . 2>/dev/null | grep -v node_modules || true)
+  if [ -n "$bad" ]; then echo "non-ASCII (breaks Windows PowerShell 5.1) in:"; echo "$bad"; return 1; fi
+  echo "all .ps1 are ASCII-only"
+}
+
 # --- Windows-host gates (only when powershell.exe is reachable) ---
 # NOTE: WSL env vars do NOT cross into powershell.exe unless shared via WSLENV — and an empty
 # $env:PSFILE makes Invoke-ScriptAnalyzer silently analyze NOTHING (a false pass). Both helpers
@@ -46,6 +54,7 @@ echo "== Solar local test gate =="
 echo "repo: $repo"
 
 run "git diff --check"          git diff --check
+run "ps1 ASCII-only (PS 5.1 safe)" ps1_ascii
 run "check-privacy"             bash scripts/check-privacy.sh
 run "check-daemons-render"      bash scripts/check-daemons-render.sh
 run "check-harness-plumbing"    bash scripts/check-harness-plumbing.sh
