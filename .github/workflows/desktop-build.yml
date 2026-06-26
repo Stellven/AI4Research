@@ -115,14 +115,15 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # autotest.sh runs all deterministic desktop gates: WSL/runtime-detection logic
-      # (runtime-detect.test.js — stub-but-no-distro classification etc.), the backend HTTP
-      # contract (contract.js — CORS/OPTIONS/HEAD/auth, no token leak), and the dashboard render
-      # (verify.js — spawns the real status-server on an isolated HARNESS_DIR, renders in chromium,
-      # asserts the UI). Deterministic, no live runtime. (Mocked install.ps1 first-run cases and
-      # launching the packaged artifact remain owner-Phase-F — see docs/WINDOWS.md.)
-      - name: Run desktop autotest (bootstrap + contract + render gates)
+      # (runtime-detect.test.js), the backend HTTP contract (contract.js — CORS/OPTIONS/HEAD/auth,
+      # no token leak), the dashboard render (verify.js — spawns the real status-server, renders in
+      # headless chromium, asserts the UI), and the first-run/recovery screens (screens.test.js).
+      # autotest.sh self-manages xvfb for the Electron screen gate, so we don't wrap it here (no
+      # nested xvfb). Deterministic, no live runtime. (The real Windows .exe / WSL2 provisioning +
+      # packaged-artifact launch remain owner-Phase-F — see docs/WINDOWS.md.)
+      - name: Run desktop autotest (bootstrap + contract + render + screens)
         working-directory: desktop
-        run: xvfb-run -a bash autotest.sh
+        run: bash autotest.sh
 
       - name: Upload gate screenshot
         if: always()

@@ -33,12 +33,15 @@ else
 fi
 
 echo; echo "-- gate: first-run screens (Electron via SOLAR_SIMULATE) --"
+# Prefer xvfb (a headless virtual display) so the test windows NEVER pop onto the user's real
+# screen. Only fall back to an existing $DISPLAY if xvfb is unavailable (and say so).
 if [ ! -d node_modules/playwright ]; then
   echo "SKIP: playwright not installed — screen gate skipped"
-elif [ -n "${DISPLAY:-}" ]; then
-  node screens.test.js || fail=1            # display already available (incl. an outer xvfb-run)
 elif command -v xvfb-run >/dev/null 2>&1; then
   xvfb-run -a node screens.test.js || fail=1
+elif [ -n "${DISPLAY:-}" ]; then
+  echo "(no xvfb; rendering to \$DISPLAY=$DISPLAY — windows may briefly appear)"
+  node screens.test.js || fail=1
 else
   echo "SKIP: no display/xvfb for the Electron screen gate"
 fi
