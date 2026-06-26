@@ -8,11 +8,11 @@ push release branches, or create a GitHub Release.
 Current release candidate:
 
 ```bash
-VERSION=1.0.0-rc.5
-PYPI_VERSION=1.0.0rc3
-TAG=v1.0.0-rc.5
-RELEASE_BRANCH=release/v1.0.0-rc.5
-RELEASE_TITLE="OpenJiuwen Solar v1.0.0-rc.5"
+VERSION=1.0.0-rc.6
+PYPI_VERSION=1.0.0rc6
+TAG=v1.0.0-rc.6
+RELEASE_BRANCH=release/v1.0.0-rc.6
+RELEASE_TITLE="OpenJiuwen Solar v1.0.0-rc.6"
 ```
 
 ## 1. Start From The Reviewed Candidate
@@ -191,7 +191,7 @@ Create release notes for the GitHub Release:
 
 ```bash
 cat > release-artifacts/RELEASE_NOTES.md <<'EOF'
-OpenJiuwen Solar v1.0.0-rc.5
+OpenJiuwen Solar v1.0.0-rc.6
 
 Release candidate for the public OpenJiuwen Solar package.
 
