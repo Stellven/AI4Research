@@ -20,15 +20,33 @@ const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ||
   "";
 
+// Bound every request so a hung backend (first-run auth, start-work, a wedged runtime) can't
+// freeze the UI forever. 30s is generous for the slowest endpoints (they return quickly and
+// stream/poll for the rest); a timeout surfaces as a normal error the caller can display.
+const REQUEST_TIMEOUT_MS = 30000;
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...(init?.headers || {}),
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...(init?.headers || {}),
+      },
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message =
@@ -181,6 +199,7 @@ export interface SaveSettingsResponse {
   ok: boolean;
   applied_models?: Record<string, string>;
   applied_runtime?: string;
+  applied_codex?: { search?: boolean; effort?: string };
   written_keys?: string[];
   note?: string;
   error?: string;

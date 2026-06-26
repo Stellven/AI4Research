@@ -446,15 +446,23 @@ function Shell() {
         void refreshSprints();
       }, 600);
     };
-    const stream = openEventStream(undefined, scheduleRefresh, () => {});
-    const id = window.setInterval(
-      () => void refreshSprints(),
-      stream ? 20000 : 5000,
+    // Poll fast when there's no live stream; slow when there is. If the stream drops we switch
+    // back to the fast poll (so the list never silently stops updating) and speed down again on
+    // reconnect.
+    let pollId: number | undefined;
+    const startPoll = (ms: number) => {
+      if (pollId) window.clearInterval(pollId);
+      pollId = window.setInterval(() => void refreshSprints(), ms);
+    };
+    const stream = openEventStream(undefined, scheduleRefresh, () =>
+      startPoll(5000),
     );
+    if (stream) stream.onopen = () => startPoll(20000);
+    startPoll(stream ? 20000 : 5000);
     return () => {
       if (pending) window.clearTimeout(pending);
       stream?.close();
-      window.clearInterval(id);
+      if (pollId) window.clearInterval(pollId);
     };
   }, [refreshSprints]);
 
@@ -3338,11 +3346,17 @@ function ActivityPane({ sprints }: { sprints: SprintSummary[] }) {
   const [selectedDay, setSelectedDay] = useState(
     days[days.length - 1]?.date || "",
   );
+  // Keep the selected day valid as `days` changes: keep the current pick if it still exists,
+  // otherwise fall back to the latest. Depends only on `days` (the functional update reads the
+  // current value), so it doesn't re-run on every selection change.
   useEffect(() => {
-    if (!selectedDay && days.length > 0) {
-      setSelectedDay(days[days.length - 1].date);
-    }
-  }, [days, selectedDay]);
+    if (days.length === 0) return;
+    setSelectedDay((cur) =>
+      cur && days.some((day) => day.date === cur)
+        ? cur
+        : days[days.length - 1].date,
+    );
+  }, [days]);
   const selected = days.find((day) => day.date === selectedDay);
   const selectedSprints = selected?.sprints || [];
   const sevenDayTotal = days.slice(-7).reduce((sum, day) => sum + day.count, 0);
