@@ -3,6 +3,12 @@
 Native (non-WSL) Windows is out of scope. The Windows runtime path is WSL2,
 auto-provisioned by `install.ps1`.
 
+**Status: experimental.** The WSL2 path is implemented and covered by deterministic
+gates (WSL-detection logic, backend contract, dashboard render) plus code review, but
+full first-run verification on real Windows hardware is owner-manual. The desktop app
+(`Solar.exe`) runs this same bootstrap automatically on first launch — see
+[desktop/docs/DOWNLOAD.md](../desktop/docs/DOWNLOAD.md).
+
 ## Quick start
 
 From an elevated or normal PowerShell:

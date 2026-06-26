@@ -83,7 +83,7 @@ full bilingual kernel translation is post-v1.0 work.
 |---|---|---|
 | macOS | Primary | Main target for the tmux/Claude cockpit. Bash 4+, tmux, jq, Python 3, git, and Claude Code are needed for live harness work. |
 | Linux | Supported | Installer/lifecycle and deterministic smoke are covered in CI. Live Claude behavior still depends on local Claude Code auth/trust/quota. |
-| Windows / WSL2 | Deferred / untested for v1.0 | `install.ps1` exists as a WSL2 bootstrapper, but the full Windows hardware path is owner-manual and not part of the current support claim. |
+| Windows / WSL2 | Experimental (WSL2) | The desktop app and `install.ps1` auto-provision WSL2 and install the runtime inside it (pinned release channel, prerequisite bootstrap, reboot-resume, logon autostart); the host reaches it over localhost. Covered by deterministic gates + code review; full real-hardware confirmation is owner-manual — see [docs/WINDOWS.md](docs/WINDOWS.md). |
 
 ## Basic Workflow
 
@@ -141,7 +141,7 @@ See:
   cockpit, intake, and model-selection walkthrough.
 - [docs/COMPONENTS.md](docs/COMPONENTS.md) for the generated component list.
 - [docs/UNINSTALL.md](docs/UNINSTALL.md) for residue-free uninstall behavior.
-- [docs/WINDOWS.md](docs/WINDOWS.md) for the deferred WSL2 bootstrap path.
+- [docs/WINDOWS.md](docs/WINDOWS.md) for the WSL2 bootstrap path (experimental).
 
 Default install:
 
