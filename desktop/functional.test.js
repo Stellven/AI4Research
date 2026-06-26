@@ -84,6 +84,16 @@ const check = (name, ok) => {
     const page = await browser.newPage({
       viewport: { width: 1440, height: 920 },
     });
+    // Catch uncaught JS exceptions (a crash / blank screen) and note console.error output.
+    const pageErrors = [];
+    const consoleErrors = [];
+    page.on("pageerror", (e) =>
+      pageErrors.push(String(e.message).slice(0, 200)),
+    );
+    page.on("console", (m) => {
+      if (m.type() === "error")
+        consoleErrors.push(String(m.text()).slice(0, 160));
+    });
     await page.goto(`${base}/`, {
       waitUntil: "domcontentloaded",
       timeout: 20000,
@@ -209,6 +219,21 @@ const check = (name, ok) => {
       { b: base, t: tok },
     );
     check("SSE /events stream opens", sseOk === true);
+
+    // T6: no uncaught JS exceptions during the whole run (catches the crash / blank-screen class).
+    // console.error output is noted but not failed on (apps log benign errors).
+    if (consoleErrors.length) {
+      console.log(
+        `  (console.error noted x${consoleErrors.length}; not failing)`,
+      );
+    }
+    if (pageErrors.length) {
+      console.log("  page errors:\n   " + pageErrors.slice(0, 5).join("\n   "));
+    }
+    check(
+      "no uncaught page errors (no JS crash / blank screen)",
+      pageErrors.length === 0,
+    );
   } catch (e) {
     console.log("FUNCTIONAL ERROR:", e.message);
     if (stderr)
