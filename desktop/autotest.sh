@@ -32,6 +32,13 @@ else
   echo "SKIP: playwright not installed (npm install --no-save playwright@1.61.1) — render gate skipped"
 fi
 
+echo; echo "-- gate: functional e2e (real backend: intake form, Settings persistence, SSE) --"
+if [ -d node_modules/playwright ]; then
+  node functional.test.js || fail=1     # isolated temp HARNESS_DIR+SOLAR_DB; headless chromium
+else
+  echo "SKIP: playwright not installed — functional gate skipped"
+fi
+
 echo; echo "-- gate: first-run screens (Electron via SOLAR_SIMULATE) --"
 # Prefer xvfb (a headless virtual display) so the test windows NEVER pop onto the user's real
 # screen. Only fall back to an existing $DISPLAY if xvfb is unavailable (and say so).
