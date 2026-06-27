@@ -87,6 +87,7 @@ import {
   eventTimestamp,
   formatDateTime,
   humanEvent,
+  localTimeZoneName,
   mergeEvents,
   nodeId,
   nodeTitle,
@@ -1191,6 +1192,7 @@ function SessionView({
             >
               <ProcessStream
                 steps={processSteps}
+                rawEventCount={projectionEvents.length}
                 onOpenArtifact={rail.openArtifact}
                 decision={
                   <DecisionZone
@@ -1745,15 +1747,27 @@ function SystemStall({
 
 function ProcessStream({
   steps,
+  rawEventCount,
   decision,
   onOpenArtifact,
 }: {
   steps: ProcessStep[];
+  rawEventCount: number;
   decision?: React.ReactNode;
   onOpenArtifact: (path: string) => void;
 }) {
+  const shown =
+    rawEventCount > 0 ? Math.min(steps.length, rawEventCount) : steps.length;
   return (
     <section className="process-stream-panel" data-testid="process-stream">
+      <div className="process-stream-head">
+        <h2>Session timeline</h2>
+        <span>
+          {rawEventCount > 0
+            ? `${shown} shown / ${rawEventCount} events`
+            : `${steps.length} steps`}
+        </span>
+      </div>
       <div className="process-step-list">
         {steps.length === 0 && (
           <EmptyInline label="Waiting for agent process events" />
@@ -2356,8 +2370,10 @@ function buildProcessSteps(
     })
     .sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
 
-  orderedEvents.forEach((event, index) => {
-    steps.push(processStepFromEvent(event, index === orderedEvents.length - 1));
+  const visibleEvents = compactProcessEvents(orderedEvents);
+
+  visibleEvents.forEach((event, index) => {
+    steps.push(processStepFromEvent(event, index === visibleEvents.length - 1));
   });
 
   const nodes =
@@ -2440,6 +2456,41 @@ function buildProcessSteps(
       step.state === "blocked" ||
       (index === sorted.length - 1 && step.state === "active"),
   }));
+}
+
+const PROCESS_EVENT_LIMIT = 28;
+
+function isSignificantProcessEvent(event: EventRecord): boolean {
+  const u = unwrapEvent(event);
+  const type = eventType(u).toLowerCase();
+  const body = payload(u);
+  const decision = asString(body.decision || u.decision).toLowerCase();
+  return (
+    /intake|phase|dispatch|model_session|operator_result|handoff|deliverable|artifact|verdict|eval|gate|blocked|failed|error|complete|passed/.test(
+      type,
+    ) || decision.includes("no_matching")
+  );
+}
+
+function compactProcessEvents(events: EventRecord[]): EventRecord[] {
+  const significant = events.filter(isSignificantProcessEvent);
+  const source = significant.length ? significant : events;
+  if (source.length <= PROCESS_EVENT_LIMIT) return source;
+
+  const keep = new Set<EventRecord>();
+  const firstIntake = source.find((event) =>
+    eventType(unwrapEvent(event)).toLowerCase().includes("intake"),
+  );
+  if (firstIntake) keep.add(firstIntake);
+  source
+    .filter((event) =>
+      /blocked|failed|error|gate/.test(
+        eventType(unwrapEvent(event)).toLowerCase(),
+      ),
+    )
+    .forEach((event) => keep.add(event));
+  source.slice(-PROCESS_EVENT_LIMIT).forEach((event) => keep.add(event));
+  return source.filter((event) => keep.has(event));
 }
 
 function processStepFromEvent(
@@ -2658,6 +2709,9 @@ function TopBar({
     provenance.lastProjectionAt ||
     provenance.lastStatusAt ||
     "";
+  const eventCount =
+    typeof provenance.eventCount === "number" ? provenance.eventCount : 0;
+  const tz = localTimeZoneName(updatedAt || new Date());
   return (
     <header className="topbar">
       <div className="topbar-title-block">
@@ -2674,27 +2728,29 @@ function TopBar({
               {source ? `/${source}` : ""}
             </span>
           )}
+          <span className="provenance-chip">{eventCount} events</span>
           {cache && <span className="provenance-chip">status: {cache}</span>}
           {updatedAt && (
             <span className="provenance-chip">
-              updated {formatDateTime(updatedAt)}
+              refreshed {formatDateTime(updatedAt)}
             </span>
           )}
+          {tz && <span className="provenance-chip">timezone: {tz}</span>}
         </div>
       </div>
       <div className="topbar-actions">
-        {streamState !== "live" && (
-          <div className={`stream-chip stream-${streamState}`}>
-            <Radio size={14} />
-            <span>
-              {streamState === "retrying"
+        <div className={`stream-chip stream-${streamState}`}>
+          <Radio size={14} />
+          <span>
+            {streamState === "live"
+              ? "live"
+              : streamState === "retrying"
                 ? "reconnecting"
                 : streamState === "off"
                   ? "offline"
                   : streamState}
-            </span>
-          </div>
-        )}
+          </span>
+        </div>
         <button
           type="button"
           className={`rail-toggle ${rail.open ? "is-open" : ""}`}

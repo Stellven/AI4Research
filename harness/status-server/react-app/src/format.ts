@@ -91,28 +91,45 @@ export function eventTimestamp(event: EventRecord): string {
   return asString(event.ts || event.timestamp || event.time);
 }
 
+function parseDate(value: unknown): Date | null {
+  const raw = asString(value);
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function localTimeZoneName(value: unknown = new Date()): string {
+  const parsed = parseDate(value) || new Date();
+  const part = new Intl.DateTimeFormat([], { timeZoneName: "short" })
+    .formatToParts(parsed)
+    .find((item) => item.type === "timeZoneName");
+  return part?.value || "";
+}
+
 export function formatTime(value: unknown): string {
   const raw = asString(value);
-  if (!raw) return "now";
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return raw;
+  if (!raw) return "pending";
+  const parsed = parseDate(raw);
+  if (!parsed) return raw;
   return parsed.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    timeZoneName: "short",
   });
 }
 
 export function formatDateTime(value: unknown): string {
   const raw = asString(value);
-  if (!raw) return "Unknown time";
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return raw;
+  if (!raw) return "pending";
+  const parsed = parseDate(raw);
+  if (!parsed) return raw;
   return parsed.toLocaleString([], {
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZoneName: "short",
   });
 }
 

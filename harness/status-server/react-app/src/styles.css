@@ -588,6 +588,10 @@ summary:focus-visible,
   color: var(--solar-warning);
 }
 
+.stream-live svg {
+  color: var(--solar-success);
+}
+
 .usage-chip {
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-micro);
@@ -709,6 +713,30 @@ summary:focus-visible,
 .process-stream-panel {
   min-height: 680px;
   padding-right: var(--solar-space-6);
+}
+
+.process-stream-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--solar-space-4);
+  padding-bottom: var(--solar-space-3);
+  border-bottom: 1px solid var(--solar-line-soft);
+}
+
+.process-stream-head h2 {
+  margin: 0;
+  color: var(--solar-ink);
+  font-size: var(--solar-type-lg);
+  font-weight: 690;
+  letter-spacing: 0;
+}
+
+.process-stream-head span {
+  flex: 0 0 auto;
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
 }
 
 .process-step-list {
