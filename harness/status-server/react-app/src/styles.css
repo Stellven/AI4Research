@@ -4649,3 +4649,55 @@ summary:focus-visible,
 .decision-last-verdict strong {
   color: var(--solar-ink);
 }
+
+/* ============================================================================
+   Dashboard overhaul — Run health + richer stall (WS6)
+   ========================================================================== */
+
+.run-health {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--solar-space-4);
+  padding: var(--solar-space-2) 0 var(--solar-space-5);
+  margin-bottom: var(--solar-space-5);
+  border-bottom: 1px solid var(--solar-line);
+}
+.run-health-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+}
+.run-health-label {
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--solar-subtle);
+}
+.run-health-value {
+  font-size: var(--solar-type-xs);
+  color: var(--solar-ink);
+}
+.run-health-warn {
+  color: var(--solar-warning);
+}
+.run-health-blocker {
+  color: var(--solar-warning);
+  font-size: var(--solar-type-xs);
+}
+
+.stall-waiting {
+  font-size: var(--solar-type-xs);
+  color: var(--solar-subtle);
+}
+.stall-waiting-ids {
+  font-family: var(--solar-font-mono);
+  color: var(--solar-ink);
+}
+.stall-diagnostics {
+  margin: var(--solar-space-2) 0 0;
+  padding-left: var(--solar-space-5);
+  color: var(--solar-warning);
+  font-size: var(--solar-type-xs);
+}

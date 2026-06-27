@@ -1379,6 +1379,7 @@ function SessionView({
               deliverables={session.deliverables}
               onOpenResult={rail.openArtifact}
             />
+            <RunHealth projection={projection} />
             <PlanFlow projection={projection} isBlocked={isBlocked} />
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
@@ -1736,15 +1737,11 @@ function projectionGateArtifacts(
   return Array.from(new Set(fromProjection.filter(Boolean)));
 }
 
-// One attention surface above the stream: the operator's current decision (a human
-// gate) when one is open, otherwise an honest system-pause when the run is stalled.
-// Live-worker readiness from whatever the projection carries (runtime_health or
-// operators). "ready" counts any worker that could pick work up (ready or busy);
-// total 0 means nothing is connected to act on a verdict at all.
-function projectionWorkersReady(projection?: ProjectionData): {
-  total: number;
-  ready: number;
-} {
+// Deduplicated operator rows from whatever the projection carries (runtime_health
+// and/or operators), keyed so the same worker isn't counted twice.
+function collectOperatorRows(
+  projection?: ProjectionData,
+): Array<Record<string, unknown>> {
   const rows: Array<Record<string, unknown>> = [];
   const rh = (projection as { runtime_health?: unknown } | undefined)
     ?.runtime_health;
@@ -1752,26 +1749,115 @@ function projectionWorkersReady(projection?: ProjectionData): {
   if (Array.isArray(rh)) rows.push(...(rh as Array<Record<string, unknown>>));
   if (Array.isArray(ops)) rows.push(...(ops as Array<Record<string, unknown>>));
   const seen = new Set<string>();
-  let total = 0;
-  let ready = 0;
+  const out: Array<Record<string, unknown>> = [];
   for (const row of rows) {
     const id = asString(
       row.pane_id || row.operator_id || row.actor_id || row.display_name,
     );
     if (id && seen.has(id)) continue;
     if (id) seen.add(id);
-    total += 1;
-    const readiness = asString(row.readiness).toLowerCase();
-    if (
-      readiness === "ready" ||
-      readiness === "busy" ||
-      row.available === true
-    ) {
-      ready += 1;
-    }
+    out.push(row);
   }
-  return { total, ready };
+  return out;
 }
+
+function operatorReadiness(
+  row: Record<string, unknown>,
+): "ready" | "busy" | "blocked" | "unknown" {
+  const r = asString(row.readiness).toLowerCase();
+  if (r === "ready" || r === "busy" || r === "blocked") return r;
+  if (row.available === false) return "blocked";
+  const state = asString(row.runtime_state || row.state).toLowerCase();
+  if (/auth|quota|blocked|error|permission/.test(state)) return "blocked";
+  if (/run|busy|active|dispatch|progress/.test(state)) return "busy";
+  if (/idle|ready|wait/.test(state) || row.available === true) return "ready";
+  return "unknown";
+}
+
+function workerStats(projection?: ProjectionData): {
+  total: number;
+  ready: number;
+  busy: number;
+  blocked: number;
+} {
+  const rows = collectOperatorRows(projection);
+  let ready = 0;
+  let busy = 0;
+  let blocked = 0;
+  for (const row of rows) {
+    const state = operatorReadiness(row);
+    if (state === "ready") ready += 1;
+    else if (state === "busy") busy += 1;
+    else if (state === "blocked") blocked += 1;
+  }
+  return { total: rows.length, ready, busy, blocked };
+}
+
+// "ready" here means any worker that could pick work up (ready or busy); total 0
+// means nothing is connected to act on a verdict at all.
+function projectionWorkersReady(projection?: ProjectionData): {
+  total: number;
+  ready: number;
+} {
+  const stats = workerStats(projection);
+  return { total: stats.total, ready: stats.ready + stats.busy };
+}
+
+// A compact health strip surfacing the transparency data the backend already computes:
+// worker readiness, estimated cost, and the active blocker — none of which the UI showed.
+function RunHealth({ projection }: { projection?: ProjectionResponse }) {
+  const data = projection?.data;
+  if (!data) return null;
+  const stats = workerStats(data);
+  const resources = ((data.dispatch || {}) as { resources?: unknown })
+    .resources as Record<string, unknown> | undefined;
+  const cost = Number(resources?.estimated_total_cost) || 0;
+  const mismatch = data.capability_mismatch;
+  const hasBlocker = Boolean(mismatch?.present);
+  const blockedNode = asString(mismatch?.blocked_node);
+  const missing = asString(mismatch?.missing_capability);
+  if (stats.total === 0 && !cost && !hasBlocker) return null;
+  return (
+    <section
+      className="run-health"
+      data-testid="run-health"
+      aria-label="Run health"
+    >
+      <div className="run-health-item">
+        <span className="run-health-label">Workers</span>
+        {stats.total > 0 ? (
+          <span className="run-health-value">
+            {stats.ready} ready
+            {stats.busy ? ` · ${stats.busy} busy` : ""}
+            {stats.blocked ? ` · ${stats.blocked} blocked` : ""} / {stats.total}
+          </span>
+        ) : (
+          <span className="run-health-value run-health-warn">
+            none connected
+          </span>
+        )}
+      </div>
+      {cost > 0 && (
+        <div className="run-health-item">
+          <span className="run-health-label">Est. cost</span>
+          <span className="run-health-value">${cost.toFixed(2)}</span>
+        </div>
+      )}
+      {hasBlocker && (
+        <div className="run-health-item run-health-blocker">
+          <AlertTriangle size={13} aria-hidden="true" />
+          <span>
+            Blocked{blockedNode ? ` at ${blockedNode}` : ""}
+            {missing ? ` — needs ${missing}` : ""}
+          </span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// One attention surface above the stream: the operator's current decision (a human
+// gate) when one is open, otherwise an honest system-pause when the run is stalled.
 
 // Honest after-state for a verdict: what state it moved to and whether a worker is
 // actually running to act on it (recording a verdict advances state; it does not by
@@ -1855,7 +1941,7 @@ function DecisionZone({
     stall?.is_stalled ||
     mismatch?.present
   ) {
-    return <SystemStall mismatch={mismatch} actions={actions} />;
+    return <SystemStall mismatch={mismatch} actions={actions} data={data} />;
   }
   return null;
 }
@@ -2084,15 +2170,48 @@ function GateCard({
 function SystemStall({
   mismatch,
   actions,
+  data,
 }: {
   mismatch?: {
     present?: boolean;
     missing_capability?: string;
     blocked_node?: string;
+    [key: string]: unknown;
   };
   actions: ProjectionAction[];
+  data?: ProjectionData;
 }) {
   const missing = asString(mismatch?.missing_capability);
+  const blockedNodes = Array.isArray(mismatch?.blocked_nodes)
+    ? (mismatch!.blocked_nodes as Array<Record<string, unknown>>)
+    : [];
+  const primaryBlocked = blockedNodes[0] || {};
+  const blockedNode = asString(
+    mismatch?.blocked_node || primaryBlocked.node_id,
+  );
+  const waiting = (
+    Array.isArray(primaryBlocked.waiting_nodes)
+      ? (primaryBlocked.waiting_nodes as unknown[])
+      : []
+  )
+    .map((node) => asString(node))
+    .filter(Boolean);
+  const diagnostics = (
+    Array.isArray(
+      (data?.dispatch as { blocker_diagnostics?: unknown })
+        ?.blocker_diagnostics,
+    )
+      ? ((data!.dispatch as { blocker_diagnostics?: unknown[] })
+          .blocker_diagnostics as unknown[])
+      : []
+  )
+    .map((entry) =>
+      typeof entry === "string"
+        ? entry
+        : asString((entry as { reason?: unknown })?.reason),
+    )
+    .filter(Boolean)
+    .slice(0, 3);
   const unsafe = actions.filter(
     (action) =>
       action.enabled === false &&
@@ -2109,10 +2228,28 @@ function SystemStall({
         System paused
       </h2>
       <p className="stall-resolve">
+        {blockedNode ? (
+          <>
+            Node <code>{blockedNode}</code> can’t run:{" "}
+          </>
+        ) : null}
         Connect a worker that provides{" "}
         {missing ? <code>{missing}</code> : "the missing capability"} and the
         run continues.
       </p>
+      {waiting.length > 0 && (
+        <p className="stall-waiting">
+          {waiting.length} node{waiting.length > 1 ? "s" : ""} waiting on this:{" "}
+          <span className="stall-waiting-ids">{waiting.join(", ")}</span>
+        </p>
+      )}
+      {diagnostics.length > 0 && (
+        <ul className="stall-diagnostics">
+          {diagnostics.map((reason, index) => (
+            <li key={index}>{reason}</li>
+          ))}
+        </ul>
+      )}
       {unsafe.length > 0 && (
         <ul className="stall-unsafe">
           {unsafe.map((action) => (
