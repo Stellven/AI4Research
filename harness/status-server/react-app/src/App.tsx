@@ -1585,7 +1585,13 @@ function PlanFlow({
                   /_/g,
                   " ",
                 );
-                const blockedReason = nodeBlockedReason(node);
+                // Only show a blocked reason for an actually-blocked node (a pending node
+                // can carry a long missing_capabilities list that isn't a live blocker), and
+                // keep it short so one node can't balloon the card.
+                const blockedReason =
+                  tone === "blocked"
+                    ? shortText(nodeBlockedReason(node), 90)
+                    : "";
                 const deps = (node.depends_on || []).filter(Boolean);
                 const isActive = Boolean(activeId) && id === activeId;
                 return (
@@ -1594,14 +1600,16 @@ function PlanFlow({
                     className={`plan-card tone-${tone} ${isActive ? "is-active" : ""}`}
                     key={id}
                     onClick={() => scrollToNode(id)}
-                    title={deps.length ? `depends on ${deps.join(", ")}` : id}
+                    title={nodeTitle(node)}
                   >
                     <span className="plan-card-head">
                       <span className="plan-card-dot" aria-hidden="true" />
                       <span className="plan-card-role">{nodeActor(node)}</span>
                       <span className="plan-card-status">{status}</span>
                     </span>
-                    <span className="plan-card-title">{nodeTitle(node)}</span>
+                    <span className="plan-card-title">
+                      {shortText(nodeTitle(node), 120)}
+                    </span>
                     {blockedReason && (
                       <span className="plan-card-blocked">{blockedReason}</span>
                     )}
@@ -2089,7 +2097,7 @@ function GateCard({
               onClick={() => onOpenArtifact(path)}
               title={path}
             >
-              {shortArtifact(path)}
+              {deliverableLabel({ rel_path: path })}
             </button>
           ))}
         </div>
@@ -3632,11 +3640,7 @@ function inferCrewPreset(roleModels: Record<string, string>): string {
 }
 
 type SettingsSectionId =
-  | "credentials"
-  | "crew"
-  | "usage"
-  | "activity"
-  | "about";
+  "credentials" | "crew" | "usage" | "activity" | "about";
 const SETTINGS_SECTIONS: Array<{ id: SettingsSectionId; label: string }> = [
   { id: "credentials", label: "Credentials" },
   { id: "crew", label: "Default crew" },

@@ -4549,6 +4549,10 @@ summary:focus-visible,
 .plan-card-blocked {
   font-size: var(--solar-type-micro);
   color: var(--solar-warning);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .plan-card-deps {
   font-family: var(--solar-font-mono);
@@ -4700,4 +4704,24 @@ summary:focus-visible,
   padding-left: var(--solar-space-5);
   color: var(--solar-warning);
   font-size: var(--solar-type-xs);
+}
+
+/* Dashboard overhaul — topbar responsiveness (long titles/provenance overflowed mobile) */
+.topbar-title span {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 720px) {
+  .topbar {
+    margin: 0 calc(-1 * var(--solar-space-5));
+    padding: var(--solar-space-3) var(--solar-space-5);
+    gap: var(--solar-space-3);
+  }
+  .topbar-title span {
+    display: block;
+    max-width: 62vw;
+  }
+  .topbar-provenance .tech-id {
+    max-width: 60vw;
+  }
 }

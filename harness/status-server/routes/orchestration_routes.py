@@ -1777,6 +1777,17 @@ def _narrative_role(payload: dict, event: dict) -> str:
     return raw.title()
 
 
+def _clean_to_state(to_status: str) -> str:
+    """A state_changed `to` is often '<sid>:<status>:<phase>:<role>:<hash>' — surface just the
+    status/phase so the narrative reads 'Moved to active / planning_complete', not a raw blob."""
+    if ":" not in to_status:
+        return to_status
+    parts = [p for p in to_status.split(":") if p and p not in ("_", "None")]
+    if parts and parts[0].startswith("sprint-"):
+        parts = parts[1:]
+    return " / ".join(parts[:2]) if parts else to_status
+
+
 def _narrative_title(token: str, role: str, node: str, phase: str, decision: str, to_status: str) -> str:
     """Map an internal coordinator token to a plain human title."""
     t = token.lower()
@@ -1841,24 +1852,37 @@ def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
         role = _narrative_role(payload, event)
         phase = str(payload.get("phase") or event.get("phase") or "")
         decision = str(payload.get("decision") or event.get("decision") or "")
-        to_status = str(payload.get("to") or payload.get("status") or "")
+        to_status = _clean_to_state(str(payload.get("to") or payload.get("status") or ""))
         round_num = str(payload.get("round") or "")
         ts = str(event.get("ts") or event.get("timestamp") or event.get("time") or "")
+        reason = str(payload.get("reason") or payload.get("blocked_reason") or event.get("reason") or "")
+        message = str(
+            payload.get("message") or payload.get("summary") or payload.get("text")
+            or event.get("message") or payload.get("thought") or ""
+        ).strip()
+        # A bare log_message / event envelope with no action token and no message is internal
+        # noise (its meaningful form is dual-written as a structured event). Dropping it keeps
+        # the narrative a story instead of a wall of "Log message" — the dominant real-world shape.
+        if token in {"log_message", "event"} and not message:
+            continue
         # Collapse the dual-write: the same token+node+role+round is one human step.
         key = (token, node, role, round_num or ts[:19])
         if key in seen:
             continue
         seen.add(key)
-        reason = str(payload.get("reason") or payload.get("blocked_reason") or event.get("reason") or "")
-        message = str(payload.get("message") or event.get("message") or payload.get("thought") or "")
-        summary = reason or message or decision.replace("_", " ")
+        title = _narrative_title(token, role, node, phase, decision, to_status)
+        summary = reason or decision.replace("_", " ")
+        if token in {"log_message", "event"} and message:
+            title = message[:100]
+        elif message and not summary:
+            summary = message
         rows.append({
             "id": f"{ts}-{token}-{node}",
             "ts": ts,
             "role": role,
             "actor": role,
             "node_id": node,
-            "title": _narrative_title(token, role, node, phase, decision, to_status),
+            "title": title,
             "summary": summary[:240],
             "tone": _narrative_tone(token, decision, to_status),
             "token": token,
