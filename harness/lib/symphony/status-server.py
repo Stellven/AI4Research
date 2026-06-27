@@ -580,6 +580,8 @@ def _projection_signature(data: dict) -> dict:
         "active_node": str(summ.get("active_node") or ""),
         "stalled": bool(stall.get("is_stalled")),
         "action": str(har.get("type") or ""),
+        # New narrative steps should push an SSE update even when no node status changed.
+        "narrative": len(data.get("narrative") or []),
         "actions": sorted(
             str(a.get("id") or a.get("action") or "")
             for a in (data.get("available_actions") or [])

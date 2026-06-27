@@ -159,6 +159,8 @@ export type ProjectionData = {
     [key: string]: unknown;
   };
   events?: EventRecord[];
+  // Server-built de-noised narrative (one human step per coordinator action).
+  narrative?: NarrativeStep[];
   summary?: {
     progress?: JsonRecord;
     stall?: StallSummary;
@@ -179,6 +181,19 @@ export type ProjectionData = {
   };
   artifacts?: ProjectionArtifact[];
   [key: string]: unknown;
+};
+
+export type NarrativeStep = {
+  id?: string;
+  ts?: string;
+  role?: string;
+  actor?: string;
+  node_id?: string;
+  title?: string;
+  summary?: string;
+  tone?: string;
+  token?: string;
+  phase?: string;
 };
 
 export type ProjectionArtifactRef = {

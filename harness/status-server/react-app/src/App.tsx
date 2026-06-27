@@ -105,6 +105,7 @@ import type {
   Deliverable,
   EventRecord,
   HumanGate,
+  NarrativeStep,
   ProjectionAction,
   ProjectionResponse,
   SettingsPayload,
@@ -180,6 +181,7 @@ type ProcessStepState = "active" | "blocked" | "completed" | "pending";
 type ProcessStep = {
   id: string;
   actor: string;
+  node?: string;
   title: string;
   summary: string;
   detail: string;
@@ -1311,6 +1313,13 @@ function SessionView({
     projectionData?.phase || currentSprint.phase || currentSprint.status,
   );
   const isBlocked = isSystemBlocked(stall, humanActionType);
+  const status = asString(projectionData?.status || currentSprint.status);
+  const gateOpen = Boolean(GATE_KINDS[humanActionType]);
+  const terminal = isTerminalRun(status, phase);
+  // The run is genuinely "active" (latest step spins) only when it isn't finished,
+  // isn't paused on a human gate, and isn't blocked.
+  const runActive = !terminal && !gateOpen && !isBlocked;
+  const narrativeCount = projectionData?.narrative?.length || 0;
   const projectionEvents =
     projectionData?.events && projectionData.events.length > 0
       ? projectionData.events
@@ -1322,7 +1331,7 @@ function SessionView({
         projectionEvents,
         session.deliverables,
         phase,
-        { showStallSummary: isBlocked, stall },
+        { showStallSummary: isBlocked, stall, runActive },
       ),
     [
       projection,
@@ -1331,6 +1340,7 @@ function SessionView({
       session.deliverables,
       phase,
       stall,
+      runActive,
     ],
   );
   const rail = useDeliverablesRail();
@@ -1374,7 +1384,7 @@ function SessionView({
             >
               <ProcessStream
                 steps={processSteps}
-                rawEventCount={projectionEvents.length}
+                rawEventCount={narrativeCount || projectionEvents.length}
                 onOpenArtifact={rail.openArtifact}
                 decision={
                   <DecisionZone
@@ -2037,10 +2047,10 @@ function ProcessStream({
         {steps.length === 0 && (
           <EmptyInline label="Waiting for agent process events" />
         )}
-        {steps.map((step) => (
-          <ProcessStepItem
-            key={step.id}
-            step={step}
+        {groupProcessSteps(steps).map((group) => (
+          <ProcessGroup
+            key={group.key}
+            group={group}
             onOpenArtifact={onOpenArtifact}
           />
         ))}
@@ -2073,6 +2083,7 @@ function ProcessStepItem({
     <article
       className={`process-step process-step-${step.state}`}
       data-testid={`process-step-${step.state}`}
+      data-node={step.node || undefined}
     >
       <span className="process-step-icon">{icon}</span>
       <div className="process-step-main">
@@ -2122,6 +2133,76 @@ function ProcessStepItem({
         )}
       </div>
     </article>
+  );
+}
+
+type StepGroup = {
+  key: string;
+  actor: string;
+  node: string;
+  steps: ProcessStep[];
+};
+
+// Collapse a run of consecutive same-actor/same-node steps into one group so a busy
+// agent turn reads as "Builder · 6 steps" instead of six near-identical lines. Active
+// and blocked steps never merge — they always stay prominent.
+function groupProcessSteps(steps: ProcessStep[]): StepGroup[] {
+  const groups: StepGroup[] = [];
+  for (const step of steps) {
+    const node = step.node || "";
+    const last = groups[groups.length - 1];
+    const lastStep = last?.steps[last.steps.length - 1];
+    const mergeable =
+      last &&
+      lastStep &&
+      last.actor === step.actor &&
+      last.node === node &&
+      step.state !== "blocked" &&
+      step.state !== "active" &&
+      lastStep.state !== "blocked" &&
+      lastStep.state !== "active";
+    if (mergeable) {
+      last.steps.push(step);
+    } else {
+      groups.push({ key: step.id, actor: step.actor, node, steps: [step] });
+    }
+  }
+  return groups;
+}
+
+function ProcessGroup({
+  group,
+  onOpenArtifact,
+}: {
+  group: StepGroup;
+  onOpenArtifact: (path: string) => void;
+}) {
+  if (group.steps.length <= 1) {
+    return (
+      <ProcessStepItem step={group.steps[0]} onOpenArtifact={onOpenArtifact} />
+    );
+  }
+  const earlier = group.steps.slice(0, -1);
+  const latest = group.steps[group.steps.length - 1];
+  return (
+    <div className="process-group" data-node={group.node || undefined}>
+      <details className="process-group-collapsed">
+        <summary className="process-group-summary">
+          {group.actor} · {earlier.length} earlier step
+          {earlier.length > 1 ? "s" : ""}
+        </summary>
+        <div className="process-group-earlier">
+          {earlier.map((step) => (
+            <ProcessStepItem
+              key={step.id}
+              step={step}
+              onOpenArtifact={onOpenArtifact}
+            />
+          ))}
+        </div>
+      </details>
+      <ProcessStepItem step={latest} onOpenArtifact={onOpenArtifact} />
+    </div>
   );
 }
 
@@ -2660,25 +2741,52 @@ function buildProcessSteps(
   events: EventRecord[],
   deliverables: Deliverable[],
   phase: string,
-  options: { showStallSummary?: boolean; stall?: StallSummary } = {},
+  options: {
+    showStallSummary?: boolean;
+    stall?: StallSummary;
+    runActive?: boolean;
+  } = {},
 ): ProcessStep[] {
   const steps: ProcessStep[] = [];
-  const orderedEvents = [...events]
-    .filter((event) => {
-      // Drop internal autopilot diagnostics (kb_probe_failed, ipv4_unavailable, doctor_passed,
-      // route_normalized, …) — they're machine noise, not part of the agent story the user reads.
-      const u = unwrapEvent(event);
-      const a = asString(u.actor);
-      const kind = eventType(u);
-      return a !== "solar-autopilot" && !kind.startsWith("autopilot_");
-    })
-    .sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
+  // Only spin the latest step while the run is genuinely live; a finished/paused run
+  // must not leave a perpetual spinner on its last log line.
+  const runActive = options.runActive !== false;
+  const narrative = projection?.data?.narrative || [];
 
-  const visibleEvents = compactProcessEvents(orderedEvents);
+  if (narrative.length > 0) {
+    // Authoritative server narrative: already de-noised + de-duplicated. Render it
+    // directly instead of reverse-engineering the raw event wall on the client.
+    narrative.forEach((entry, index) => {
+      const step = processStepFromNarrative(
+        entry,
+        index === narrative.length - 1,
+        runActive,
+      );
+      if (step) steps.push(step);
+    });
+  } else {
+    const orderedEvents = [...events]
+      .filter((event) => {
+        // Drop internal autopilot diagnostics (kb_probe_failed, ipv4_unavailable, doctor_passed,
+        // route_normalized, …) — machine noise, not part of the agent story the user reads.
+        const u = unwrapEvent(event);
+        const a = asString(u.actor);
+        const kind = eventType(u);
+        return a !== "solar-autopilot" && !kind.startsWith("autopilot_");
+      })
+      .sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
 
-  visibleEvents.forEach((event, index) => {
-    steps.push(processStepFromEvent(event, index === visibleEvents.length - 1));
-  });
+    const visibleEvents = compactProcessEvents(orderedEvents);
+
+    visibleEvents.forEach((event, index) => {
+      steps.push(
+        processStepFromEvent(
+          event,
+          index === visibleEvents.length - 1 && runActive,
+        ),
+      );
+    });
+  }
 
   const nodes =
     projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
@@ -2801,6 +2909,46 @@ function compactProcessEvents(events: EventRecord[]): EventRecord[] {
   return source.filter((event) => keep.has(event));
 }
 
+// Map one server narrative step (already human-titled + de-duplicated) to a stream step.
+function processStepFromNarrative(
+  entry: NarrativeStep,
+  latest: boolean,
+  runActive: boolean,
+): ProcessStep | null {
+  const title = asString(entry.title);
+  if (!title) return null;
+  const tone = asString(entry.tone, "working");
+  const node = asString(entry.node_id);
+  const actor = asString(entry.role || entry.actor, "Harness");
+  const blocked = tone === "blocked";
+  const complete = tone === "complete";
+  const state: ProcessStepState = blocked
+    ? "blocked"
+    : latest && runActive && !complete
+      ? "active"
+      : "completed";
+  const facts = [
+    node && { label: "node", value: node },
+    entry.phase && {
+      label: "phase",
+      value: asString(entry.phase).replace(/_/g, " "),
+    },
+  ].filter(Boolean) as Array<{ label: string; value: string }>;
+  return {
+    id: asString(entry.id) || `${asString(entry.ts)}-${title}`,
+    actor,
+    node,
+    title,
+    summary: asString(entry.summary),
+    detail: "",
+    timestamp: asString(entry.ts),
+    state,
+    tone: blocked ? "blocked" : complete ? "complete" : "working",
+    defaultExpanded: blocked || (latest && runActive && !complete),
+    facts,
+  };
+}
+
 function processStepFromEvent(
   event: EventRecord,
   latest: boolean,
@@ -2856,12 +3004,10 @@ function processStepFromEvent(
   return {
     id: `${eventTimestamp(event) || "event"}-${type}-${actor}-${node || facts.length}`,
     actor,
+    node,
     title,
     summary,
-    detail:
-      thought ||
-      readable.detail ||
-      "The harness recorded this process step from the live event stream.",
+    detail: thought || readable.detail || "",
     timestamp: eventTimestamp(event),
     state,
     tone: blocked ? "blocked" : completed ? "complete" : "working",
@@ -2905,6 +3051,7 @@ function processStepFromNode(
   return {
     id: `node-${nodeId(node)}`,
     actor: nodeActor(node),
+    node: nodeId(node),
     title: `${nodeId(node)} is ${status.replace(/_/g, " ")}`,
     summary: nodeTitle(node),
     detail: `Planner DAG node ${nodeId(node)} is currently ${status.replace(/_/g, " ")}.`,

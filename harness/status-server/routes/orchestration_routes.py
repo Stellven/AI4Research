@@ -1741,6 +1741,132 @@ def _timeline_from_events(events: list[dict], dashboard: dict, generated_at: str
     return rows
 
 
+# Machine-noise tokens that never belong in the human narrative.
+_NARRATIVE_DROP = ("autopilot_", "kb_probe", "route_normalized", "doctor_", "ipv4_", "heartbeat")
+
+
+def _event_token(event: dict, payload: dict) -> str:
+    """The real coordinator action token. The runtime wraps events as 'log_message'
+    with the actual token in payload.legacy_event; its command/activity sibling carries
+    the same legacy_event — so reading this first lets us collapse the double-write."""
+    legacy = payload.get("legacy_event")
+    if isinstance(legacy, str) and legacy:
+        return legacy
+    return str(event.get("type") or event.get("event") or "event")
+
+
+def _narrative_role(payload: dict, event: dict) -> str:
+    raw = str(
+        payload.get("role")
+        or payload.get("target_role")
+        or event.get("role")
+        or payload.get("actor")
+        or event.get("actor")
+        or ""
+    ).lower()
+    if "plan" in raw:
+        return "Planner"
+    if "build" in raw or "impl" in raw:
+        return "Builder"
+    if "eval" in raw or "judge" in raw or "review" in raw:
+        return "Evaluator"
+    if raw == "pm" or "product" in raw or "manager" in raw:
+        return "PM"
+    if not raw or raw in {"coordinator", "harness", "autopilot", "solar-autopilot"}:
+        return "Coordinator"
+    return raw.title()
+
+
+def _narrative_title(token: str, role: str, node: str, phase: str, decision: str, to_status: str) -> str:
+    """Map an internal coordinator token to a plain human title."""
+    t = token.lower()
+    n = f" {node}" if node else ""
+    who = role if role and role != "Coordinator" else ""
+    if "intake" in t:
+        return "Task scoped"
+    if "plan_verdict" in t:
+        return "Plan verdict recorded"
+    if "eval_pass" in t:
+        return "Result accepted"
+    if "eval_fail" in t:
+        return "Sent back for fixes"
+    if "handoff" in t:
+        return f"{who or 'Builder'} handed off{n}".strip()
+    if "no_matching" in decision or ("dispatch" in t and "fail" in t):
+        return f"Dispatch blocked{n}"
+    if t in {"dispatched", "round_dispatched", "slice_dispatched", "mixture_dispatched", "graph_nodes_dispatched", "dispatch_queued"}:
+        return f"Routed{n}{f' to {who}' if who else ''}"
+    if "planner_notified" in t:
+        return "Planner notified"
+    if "model_session_started" in t:
+        return f"{who or 'Agent'} started work{n}".strip()
+    if "model_session_ended" in t:
+        return f"{who or 'Agent'} finished work{n}".strip()
+    if t in {"handle_passed_completed", "graph_parent_ready_passed"}:
+        return f"{who or 'Agent'} completed{n}".strip()
+    if t in {"parallel_integrated", "mixture_merged"}:
+        return "Work integrated"
+    if "state_chang" in t or "phase_transition" in t:
+        dest = to_status or phase
+        return f"Moved to {dest}".strip() if dest else "State changed"
+    if "phase" in t:
+        return f"Phase: {phase}".strip() if phase else "Phase advanced"
+    return token.replace("_", " ").strip().capitalize() or "Event"
+
+
+def _narrative_tone(token: str, decision: str, to_status: str) -> str:
+    blob = f"{token} {decision} {to_status}".lower()
+    if "fail" in blob or "blocked" in blob or "no_matching" in blob or "error" in blob:
+        return "blocked"
+    if any(word in blob for word in ("passed", "completed", "accepted", "ended", "integrated", "done", "ready")):
+        return "complete"
+    return "working"
+
+
+def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
+    """A de-noised, de-duplicated human narrative from the raw coordinator event stream.
+    Each real action is double-written (a log_message plus a command/activity event, both
+    carrying payload.legacy_event); we collapse those to one step, map the internal token to
+    a human title, and drop machine noise — so the UI shows a story, not a jargon wall."""
+    rows: list[dict] = []
+    seen: set = set()
+    for event in events:
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        token = _event_token(event, payload)
+        tl = token.lower()
+        actor_raw = str(event.get("actor") or payload.get("actor") or "").lower()
+        if tl.startswith(_NARRATIVE_DROP) or actor_raw == "solar-autopilot":
+            continue
+        node = str(payload.get("node_id") or payload.get("node") or event.get("node_id") or "")
+        role = _narrative_role(payload, event)
+        phase = str(payload.get("phase") or event.get("phase") or "")
+        decision = str(payload.get("decision") or event.get("decision") or "")
+        to_status = str(payload.get("to") or payload.get("status") or "")
+        round_num = str(payload.get("round") or "")
+        ts = str(event.get("ts") or event.get("timestamp") or event.get("time") or "")
+        # Collapse the dual-write: the same token+node+role+round is one human step.
+        key = (token, node, role, round_num or ts[:19])
+        if key in seen:
+            continue
+        seen.add(key)
+        reason = str(payload.get("reason") or payload.get("blocked_reason") or event.get("reason") or "")
+        message = str(payload.get("message") or event.get("message") or payload.get("thought") or "")
+        summary = reason or message or decision.replace("_", " ")
+        rows.append({
+            "id": f"{ts}-{token}-{node}",
+            "ts": ts,
+            "role": role,
+            "actor": role,
+            "node_id": node,
+            "title": _narrative_title(token, role, node, phase, decision, to_status),
+            "summary": summary[:240],
+            "tone": _narrative_tone(token, decision, to_status),
+            "token": token,
+            "phase": phase,
+        })
+    return rows[-limit:]
+
+
 def _projection_lazy_slices(sid: str) -> dict:
     quoted = urllib.parse.quote(sid) if sid else ""
     return {
@@ -1763,6 +1889,10 @@ def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -
     generated_at = _now()
     events = [] if projection_mode == "fast" else _projection_events(sid)
     timeline = [] if projection_mode == "fast" else _timeline_from_events(events, dashboard, generated_at)
+    # The de-noised narrative is compact, so it ships in BOTH modes (the client renders it
+    # instead of reverse-engineering the raw /events wall). Read independently of `events`,
+    # which stays empty in fast mode.
+    narrative = _narrative_from_events(_projection_events(sid, limit=160)) if sid else []
     requirements = _projection_requirements(sid, artifacts)
     plan = _projection_plan(dashboard, artifacts)
     task_graph = _projection_task_graph(dashboard)
@@ -1800,6 +1930,7 @@ def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -
         "human_gates": human_gates,
         "evaluation": evaluation,
         "events": events,
+        "narrative": narrative,
         "summary": {
             "progress": dashboard.get("progress") or {},
             "stall": dashboard.get("stall") or {},

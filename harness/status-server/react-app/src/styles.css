@@ -4558,3 +4558,46 @@ summary:focus-visible,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ============================================================================
+   Dashboard overhaul — Narrative timeline grouping (WS3)
+   ========================================================================== */
+
+.process-group {
+  display: flex;
+  flex-direction: column;
+}
+.process-group-collapsed {
+  margin: 0 0 var(--solar-space-1) 0;
+}
+.process-group-collapsed > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: 4px var(--solar-space-3);
+  margin-left: 28px;
+  border-radius: var(--solar-radius-pill);
+  background: var(--solar-surface-quiet);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-micro);
+  font-family: var(--solar-font-mono);
+  width: fit-content;
+}
+.process-group-collapsed > summary::-webkit-details-marker {
+  display: none;
+}
+.process-group-collapsed > summary::before {
+  content: "▸";
+}
+.process-group-collapsed[open] > summary::before {
+  content: "▾";
+}
+.process-group-earlier {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--solar-space-1);
+  padding-left: var(--solar-space-2);
+  border-left: 1px solid var(--solar-line-soft);
+}
