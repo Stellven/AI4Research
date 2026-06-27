@@ -4237,3 +4237,212 @@ summary:focus-visible,
 .auth-ghost:hover {
   color: var(--solar-ink);
 }
+
+/* ============================================================================
+   Dashboard overhaul — Run Overview (WS1) + deliverables hierarchy (WS4)
+   ========================================================================== */
+
+.run-overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-4);
+  padding-bottom: var(--solar-space-6);
+  margin-bottom: var(--solar-space-6);
+  border-bottom: 1px solid var(--solar-line);
+}
+
+.run-overview-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--solar-space-4);
+  flex-wrap: wrap;
+}
+
+.run-state {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.run-state-kicker {
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--solar-subtle);
+}
+
+.run-state-line {
+  font-size: var(--solar-type-lg);
+  font-weight: 690;
+  color: var(--solar-ink);
+  line-height: 1.2;
+}
+
+.run-state-detail {
+  font-size: var(--solar-type-sm);
+  color: var(--solar-subtle);
+}
+
+.run-state-decision .run-state-kicker {
+  color: var(--solar-accent-ink);
+}
+.run-state-blocked .run-state-line {
+  color: var(--solar-warning);
+}
+.run-state-complete .run-state-line {
+  color: var(--solar-success);
+}
+
+/* Primary "Open result" call-to-action */
+.run-result-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: var(--solar-space-2) var(--solar-space-4);
+  border: 1px solid var(--solar-accent);
+  border-radius: var(--solar-radius-control);
+  background: var(--solar-accent);
+  color: #fff;
+  font-size: var(--solar-type-sm);
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 100%;
+}
+.run-result-cta:hover {
+  filter: brightness(0.95);
+}
+.run-result-name {
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 18ch;
+}
+
+/* PM -> Planner -> Builder -> Evaluator stepper */
+.run-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--solar-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.run-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  padding: 4px var(--solar-space-3);
+  border-radius: var(--solar-radius-pill);
+  background: var(--solar-surface-quiet);
+  font-size: var(--solar-type-xs);
+  color: var(--solar-subtle);
+}
+.run-stage:not(:last-child)::after {
+  content: "";
+  width: 14px;
+  height: 1px;
+  margin-left: var(--solar-space-2);
+  background: var(--solar-line-strong);
+}
+.run-stage-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--solar-line-strong);
+  flex: 0 0 auto;
+}
+.run-stage-done {
+  color: var(--solar-ink);
+}
+.run-stage-done .run-stage-dot {
+  background: var(--solar-success);
+}
+.run-stage-active {
+  background: var(--solar-accent-wash);
+  color: var(--solar-accent-ink);
+  font-weight: 650;
+}
+.run-stage-active .run-stage-dot {
+  background: var(--solar-accent);
+}
+.run-stage-blocked {
+  background: var(--solar-warning-fill);
+  color: var(--solar-warning);
+}
+.run-stage-blocked .run-stage-dot {
+  background: var(--solar-warning);
+}
+.run-stage-now {
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Step progress bar */
+.run-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-3);
+}
+.run-progress-track {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--solar-surface-quiet);
+  overflow: hidden;
+}
+.run-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--solar-success);
+  transition: width 0.4s ease;
+}
+.run-progress-label {
+  flex: 0 0 auto;
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  color: var(--solar-subtle);
+}
+
+/* Deliverables: canonical result emphasis + collapsed source group */
+.artifact-row.is-result {
+  border: 1px solid var(--solar-accent);
+  background: var(--solar-accent-wash);
+}
+.artifact-row.is-result .artifact-icon {
+  color: var(--solar-accent);
+}
+.artifact-source-group > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.artifact-source-group > summary::-webkit-details-marker {
+  display: none;
+}
+.artifact-source-group > summary::before {
+  content: "▸";
+  margin-right: var(--solar-space-2);
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-micro);
+}
+.artifact-source-group[open] > summary::before {
+  content: "▾";
+}
+
+@media (max-width: 720px) {
+  .run-overview-main {
+    flex-direction: column;
+  }
+  .run-result-cta {
+    width: 100%;
+    justify-content: center;
+  }
+}

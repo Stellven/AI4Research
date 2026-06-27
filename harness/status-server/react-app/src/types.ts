@@ -358,6 +358,10 @@ export type Deliverable = {
   view_url: string;
   source?: string;
   primary?: boolean;
+  // The single canonical output of the run (server picks exactly one).
+  result?: boolean;
+  // Producing pipeline stage: report | prd | design | plan | task_graph | handoff | eval | source | other.
+  stage?: string;
 };
 
 export type IntakeResponse = {

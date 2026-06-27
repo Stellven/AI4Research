@@ -1431,6 +1431,96 @@ def _sprint_workdir(sid: str) -> Path | None:
     return wd
 
 
+# Pipeline order of a deliverable's producing stage. Drives the rail hierarchy
+# (result first, then process artifacts in the order they were produced, then raw
+# source) instead of an mtime jumble. "report" is the produced output; the single
+# canonical result is chosen separately and floated above everything.
+_PIPELINE_STAGE_ORDER = {
+    "report": 0,
+    "prd": 1,
+    "design": 2,
+    "plan": 3,
+    "task_graph": 4,
+    "handoff": 5,
+    "eval": 6,
+    "source": 7,
+    "other": 8,
+}
+
+
+def _deliverable_stage(name: str, rel_path: str, source: str) -> str:
+    """Classify a deliverable by its producing pipeline stage from the file name/dir
+    token — never the sprint id, which can itself contain words like 'plan'."""
+    base = (name or rel_path or "").rsplit("/", 1)[-1].lower()
+    dot = base.split(".")
+    # "<sid>.<token>.<ext>" -> the token segment; else the leading name.
+    token = dot[-2] if len(dot) >= 3 else (dot[0] if dot else base)
+    text = f"{token} {(rel_path or '').lower()}"
+
+    def has(*words: str) -> bool:
+        return any(word in text for word in words)
+
+    # Order matters: check the most specific tokens first so e.g. task_graph does
+    # not fall through to "plan", and acceptance_verdict lands in "eval".
+    if has("task_graph", "task-graph", "dag"):
+        return "task_graph"
+    if has("acceptance", "verdict", "eval", "coverage", "review"):
+        return "eval"
+    if has("handoff"):
+        return "handoff"
+    if has("prd", "spec", "intake", "scope", "contract", "requirement"):
+        return "prd"
+    if has("design"):
+        return "design"
+    if has("plan", "closure"):
+        return "plan"
+    if has("report", "result", "summary") or base in ("index.html", "report.html"):
+        return "report"
+    if source == "output":
+        # A produced workdir file with no named stage: a rendered doc is the output,
+        # everything else (code/config) is raw source.
+        if base.endswith((".html", ".htm", ".md", ".markdown", ".pdf")):
+            return "report"
+        return "source"
+    return "other"
+
+
+def _select_result_index(rows: list[dict]) -> int:
+    """Pick the single canonical result among discovered rows. Preference: the
+    evaluator-accepted artifact, then a rendered report (HTML, then md/pdf), then the
+    largest produced output, then any produced output, then the newest primary."""
+    if not rows:
+        return -1
+
+    def kind(row: dict) -> str:
+        return str(row.get("kind") or "").lower()
+
+    def name_l(row: dict) -> str:
+        return str(row.get("name") or "").lower()
+
+    def renderable(row: dict) -> bool:
+        return kind(row) in {"html", "htm", "md", "markdown", "pdf"}
+
+    tiers = (
+        lambda r: "accepted" in name_l(r) and renderable(r),
+        lambda r: r.get("stage") == "report" and kind(r) in {"html", "htm"},
+        lambda r: r.get("stage") == "report" and renderable(r),
+        lambda r: r.get("source") == "output" and renderable(r),
+        lambda r: r.get("source") == "output",
+        lambda r: bool(r.get("primary")),
+        lambda r: True,
+    )
+    for predicate in tiers:
+        matched = [i for i, row in enumerate(rows) if predicate(row)]
+        if matched:
+            # A real result is the most substantial / most recent of its tier.
+            return max(
+                matched,
+                key=lambda i: (float(rows[i].get("size") or 0), float(rows[i].get("mtime") or 0)),
+            )
+    return -1
+
+
 def _discover_sprint_deliverables(sid: str) -> list[dict]:
     if not _valid_sprint_id(sid):
         return []
@@ -1478,6 +1568,7 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                 "mtime": stat.st_mtime,
                 "source": "process",
                 "primary": False,
+                "stage": _deliverable_stage(resolved.name, key, "process"),
                 "view_url": f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(key)}",
             })
         except OSError:
@@ -1541,14 +1632,27 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                     "mtime": stat.st_mtime,
                     "source": "output",
                     "primary": True,
+                    "stage": _deliverable_stage(resolved.name, key, "output"),
                     "view_url": f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(key)}",
                 })
                 wd_count += 1
         except OSError:
             pass
 
-    # Primary (real output) first, then most-recent process artifacts.
-    rows.sort(key=lambda item: (0 if item.get("primary") else 1, -float(item.get("mtime") or 0), str(item.get("name") or "")))
+    # Flag exactly one canonical result so the UI can answer "where is the output".
+    result_index = _select_result_index(rows)
+    for index, row in enumerate(rows):
+        row["result"] = index == result_index
+
+    # Result first, then process artifacts in pipeline order (prd -> design -> plan ->
+    # task_graph -> handoff -> eval), then raw source files. mtime/name break ties so
+    # the order is meaningful instead of an arbitrary mtime jumble.
+    rows.sort(key=lambda item: (
+        0 if item.get("result") else 1,
+        _PIPELINE_STAGE_ORDER.get(str(item.get("stage") or "other"), 8),
+        -float(item.get("mtime") or 0),
+        str(item.get("name") or ""),
+    ))
     return rows
 
 

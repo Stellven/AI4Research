@@ -77,6 +77,7 @@ import {
   submitPlanVerdict,
 } from "./api";
 import type { AuthLoginStatus, AuthStatus } from "./api";
+import type { AgentRole } from "./format";
 import {
   ROLE_META,
   ROLE_ORDER,
@@ -1110,6 +1111,180 @@ function useSessionData(
   };
 }
 
+// Progress numbers straight from the projection summary the backend already computes,
+// tolerating either a 0–1 fraction or a 0–100 percent for percent_complete.
+function projectionProgress(projection?: ProjectionResponse): {
+  total: number;
+  done: number;
+  percent: number;
+} {
+  const p = (projection?.data?.summary?.progress || {}) as Record<
+    string,
+    unknown
+  >;
+  const total = Number(p.total_nodes) || 0;
+  const done = Number(p.passed_nodes ?? p.completed_nodes) || 0;
+  const raw = Number(p.percent_complete);
+  let percent = 0;
+  if (Number.isFinite(raw) && raw > 0) {
+    percent = raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
+  } else if (total > 0) {
+    percent = Math.round((done / total) * 100);
+  }
+  return { total, done, percent: Math.min(100, Math.max(0, percent)) };
+}
+
+function isTerminalRun(status: string, phase: string): boolean {
+  return /\b(passed|done|completed|eval_pass|eval_passed)\b/.test(
+    `${status} ${phase}`.toLowerCase(),
+  );
+}
+
+// The PM -> Planner -> Builder -> Evaluator pipeline, matched against the projection's
+// phase/status/gate so the user can see which stage the run is actually in.
+const RUN_PIPELINE: Array<{ role: AgentRole; match: RegExp }> = [
+  { role: "pm", match: /intake|spec|prd|scope/ },
+  { role: "planner", match: /plan|design|dag|rout/ },
+  { role: "builder", match: /build|implement|dispatch|handoff/ },
+  {
+    role: "evaluator",
+    match: /review|eval|accept|verdict|passed|done|complete/,
+  },
+];
+
+type StageState = "done" | "active" | "blocked" | "pending";
+
+function pipelineStages(
+  phase: string,
+  status: string,
+  isBlocked: boolean,
+  terminal: boolean,
+  actionType: string,
+): Array<{ role: AgentRole; state: StageState }> {
+  const text = `${phase} ${status}`.toLowerCase();
+  let activeIdx = 0;
+  RUN_PIPELINE.forEach((stage, index) => {
+    if (stage.match.test(text)) activeIdx = Math.max(activeIdx, index);
+  });
+  // A live human gate is the most reliable signal of the current stage.
+  if (actionType === "plan_review") activeIdx = 1;
+  else if (actionType === "handoff_submit") activeIdx = 2;
+  else if (actionType === "eval_review") activeIdx = 3;
+  return RUN_PIPELINE.map((stage, index) => {
+    let state: StageState;
+    if (terminal) state = "done";
+    else if (index < activeIdx) state = "done";
+    else if (index === activeIdx) state = isBlocked ? "blocked" : "active";
+    else state = "pending";
+    return { role: stage.role, state };
+  });
+}
+
+// The one surface above the stream that answers: where are we, what's done, what's
+// next, what's blocking, and — when there is one — where the result is.
+function RunOverview({
+  projection,
+  isBlocked,
+  stall,
+  deliverables,
+  onOpenResult,
+}: {
+  projection?: ProjectionResponse;
+  isBlocked: boolean;
+  stall?: StallSummary;
+  deliverables: Deliverable[];
+  onOpenResult: (path: string) => void;
+}) {
+  const data = projection?.data;
+  const phase = asString(data?.phase || data?.sprint?.phase || data?.status);
+  const status = asString(data?.status || data?.sprint?.status);
+  const humanAction = (data?.human_action_required || {}) as {
+    type?: string;
+    title?: string;
+    detail?: string;
+  };
+  const actionType = asString(humanAction.type);
+  const gate = GATE_KINDS[actionType];
+  const activeNode = asString(data?.summary?.active_node);
+  const progress = projectionProgress(projection);
+  const result =
+    deliverables.find((item) => item.result) ||
+    deliverables.find((item) => item.primary);
+  const terminal = isTerminalRun(status, phase);
+  const stages = pipelineStages(phase, status, isBlocked, terminal, actionType);
+
+  let kicker = "In progress";
+  let line = activeNode ? `Working on ${activeNode}` : "Agents are working…";
+  let tone: "working" | "blocked" | "complete" | "decision" = "working";
+  if (gate) {
+    kicker = "Your decision";
+    line = asString(humanAction.title) || gate.title;
+    tone = "decision";
+  } else if (isBlocked || stall?.is_stalled) {
+    kicker = "Paused";
+    line = stallCopy(stall) || "Blocked — needs your attention.";
+    tone = "blocked";
+  } else if (terminal) {
+    kicker = "Done";
+    line = result ? "The result is ready." : "Run complete.";
+    tone = "complete";
+  }
+
+  return (
+    <section className="run-overview" data-testid="run-overview">
+      <div className="run-overview-main">
+        <div className={`run-state run-state-${tone}`}>
+          <span className="run-state-kicker">{kicker}</span>
+          <strong className="run-state-line">{line}</strong>
+          {gate && humanAction.detail && (
+            <span className="run-state-detail">
+              {asString(humanAction.detail)}
+            </span>
+          )}
+        </div>
+        {result && (
+          <button
+            type="button"
+            className="run-result-cta"
+            data-testid="run-result-cta"
+            onClick={() => onOpenResult(result.rel_path)}
+          >
+            <FileCheck2 size={16} aria-hidden="true" />
+            <span className="run-result-label">Open result</span>
+            <span className="run-result-name">{deliverableLabel(result)}</span>
+          </button>
+        )}
+      </div>
+      <ol className="run-pipeline" aria-label="Pipeline progress">
+        {stages.map((stage) => (
+          <li key={stage.role} className={`run-stage run-stage-${stage.state}`}>
+            <span className="run-stage-dot" aria-hidden="true" />
+            <span className="run-stage-label">
+              {ROLE_META[stage.role].title}
+            </span>
+            {stage.state === "active" && (
+              <span className="run-stage-now">now</span>
+            )}
+          </li>
+        ))}
+      </ol>
+      {progress.total > 0 && (
+        <div className="run-progress" aria-label="Step progress">
+          <div className="run-progress-track">
+            <div
+              className="run-progress-fill"
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          <span className="run-progress-label">
+            {progress.done}/{progress.total} steps · {progress.percent}%
+          </span>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SessionView({
   sprint,
   sprintId,
@@ -1186,6 +1361,13 @@ function SessionView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
+            <RunOverview
+              projection={projection}
+              isBlocked={isBlocked}
+              stall={stall}
+              deliverables={session.deliverables}
+              onOpenResult={rail.openArtifact}
+            />
             <PlanFlow projection={projection} isBlocked={isBlocked} />
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
@@ -1996,22 +2178,35 @@ function RailList({
     if (focusPath && focusRowRef.current) focusRowRef.current.focus();
   }, [focusPath]);
 
-  const output = deliverables.filter((item) => item.primary);
-  const process = deliverables.filter((item) => !item.primary);
+  // Result hierarchy: the one canonical output floats to the top, process artifacts
+  // sit in the middle (already pipeline-ordered by the server), raw source files are
+  // tucked into a collapsed group so they never bury the result.
+  const result = deliverables.find((item) => item.result);
+  const rest = result
+    ? deliverables.filter((item) => item !== result)
+    : deliverables;
+  const sourceFiles = rest.filter((item) => item.stage === "source");
+  const processArtifacts = rest.filter((item) => item.stage !== "source");
 
-  const renderRow = (item: Deliverable) => (
+  const renderRow = (item: Deliverable, emphasis = false) => (
     <button
       type="button"
       key={item.rel_path}
       ref={focusPath === item.rel_path ? focusRowRef : undefined}
-      className="artifact-row"
+      className={`artifact-row ${emphasis ? "is-result" : ""}`}
       onClick={() => onOpen(item.rel_path)}
     >
-      <FileText className="artifact-icon" size={15} />
+      {emphasis ? (
+        <FileCheck2 className="artifact-icon" size={15} />
+      ) : (
+        <FileText className="artifact-icon" size={15} />
+      )}
       <span className="artifact-name" title={item.name}>
         {deliverableLabel(item)}
       </span>
-      <span className="artifact-meta">{item.kind.toUpperCase()}</span>
+      <span className="artifact-meta">
+        {stageLabel(item.stage) || item.kind.toUpperCase()}
+      </span>
       <ChevronRight size={14} className="artifact-chevron" />
     </button>
   );
@@ -2021,9 +2216,7 @@ function RailList({
       <div className="rail-head">
         <div className="rail-head-title">
           <span>Deliverables</span>
-          <span className="rail-count">
-            {output.length || deliverables.length}
-          </span>
+          <span className="rail-count">{deliverables.length}</span>
         </div>
         <button
           type="button"
@@ -2038,20 +2231,33 @@ function RailList({
         <EmptyInline label="No deliverables yet" />
       ) : (
         <>
-          {output.length > 0 && (
-            <div className="artifact-group">
-              <div className="artifact-group-label">Output</div>
-              <div className="artifact-list">{output.map(renderRow)}</div>
+          {result && (
+            <div className="artifact-group" data-testid="rail-result-group">
+              <div className="artifact-group-label">Result</div>
+              <div className="artifact-list">{renderRow(result, true)}</div>
             </div>
           )}
-          {process.length > 0 && (
+          {processArtifacts.length > 0 && (
             <div className="artifact-group">
               <div className="artifact-group-label">
                 Process artifacts
-                <span className="rail-count">{process.length}</span>
+                <span className="rail-count">{processArtifacts.length}</span>
               </div>
-              <div className="artifact-list">{process.map(renderRow)}</div>
+              <div className="artifact-list">
+                {processArtifacts.map((item) => renderRow(item))}
+              </div>
             </div>
+          )}
+          {sourceFiles.length > 0 && (
+            <details className="artifact-group artifact-source-group">
+              <summary className="artifact-group-label">
+                Source files
+                <span className="rail-count">{sourceFiles.length}</span>
+              </summary>
+              <div className="artifact-list">
+                {sourceFiles.map((item) => renderRow(item))}
+              </div>
+            </details>
           )}
         </>
       )}
@@ -2059,6 +2265,21 @@ function RailList({
       <UsagePanel usage={usage} />
     </div>
   );
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  report: "Report",
+  prd: "PRD",
+  design: "Design",
+  plan: "Plan",
+  task_graph: "Task graph",
+  handoff: "Handoff",
+  eval: "Eval",
+  source: "Source",
+};
+
+function stageLabel(stage?: string): string {
+  return stage ? STAGE_LABELS[stage] || "" : "";
 }
 
 function formatDeliverableTime(mtime?: number): string {
@@ -2411,31 +2632,35 @@ function buildProcessSteps(
     });
   }
 
-  const primaryDeliverable = deliverables.find(
-    (item) => item.kind === "html" || item.name.endsWith(".html"),
-  );
-  if (primaryDeliverable && !stall?.is_stalled) {
+  // Surface the canonical result as a stream milestone regardless of file type
+  // (was HTML-only, so a markdown/pdf/code result never got a "ready" step).
+  const resultDeliverable =
+    deliverables.find((item) => item.result) ||
+    deliverables.find(
+      (item) => item.kind === "html" || item.name.endsWith(".html"),
+    );
+  if (resultDeliverable && !stall?.is_stalled) {
     steps.push({
-      id: `deliverable-${primaryDeliverable.rel_path}`,
+      id: `deliverable-${resultDeliverable.rel_path}`,
       actor: "Harness",
-      title: "Deliverable is ready",
-      summary: `${primaryDeliverable.name} is ready to open.`,
+      title: "Result is ready",
+      summary: `${deliverableLabel(resultDeliverable)} is ready to open.`,
       detail:
         "The output is separated from the process stream so review can happen without digging through agent telemetry.",
-      timestamp: primaryDeliverable.mtime
-        ? new Date(primaryDeliverable.mtime * 1000).toISOString()
+      timestamp: resultDeliverable.mtime
+        ? new Date(resultDeliverable.mtime * 1000).toISOString()
         : projection?.generated_at || "",
       state: "completed",
       tone: "complete",
       defaultExpanded: false,
       facts: [
-        { label: "kind", value: primaryDeliverable.kind.toUpperCase() },
+        { label: "kind", value: resultDeliverable.kind.toUpperCase() },
         {
           label: "size",
-          value: `${compactNumber(primaryDeliverable.size || 0)}B`,
+          value: `${compactNumber(resultDeliverable.size || 0)}B`,
         },
       ],
-      result: primaryDeliverable,
+      result: resultDeliverable,
     });
   }
 
