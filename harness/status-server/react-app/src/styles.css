@@ -4446,3 +4446,115 @@ summary:focus-visible,
     justify-content: center;
   }
 }
+
+/* ============================================================================
+   Dashboard overhaul — Legible DAG (WS2)
+   ========================================================================== */
+
+.plan-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--solar-space-3);
+  margin-left: auto;
+  font-size: var(--solar-type-micro);
+  color: var(--solar-subtle);
+}
+.plan-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.plan-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.plan-stage-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solar-space-2);
+}
+
+/* Node card: goal + role + live status + blocked reason */
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 200px;
+  max-width: 60vw;
+  padding: var(--solar-space-2) var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.plan-card:hover {
+  border-color: var(--solar-line-strong);
+}
+.plan-card.is-active {
+  border-color: var(--solar-accent);
+  box-shadow: 0 0 0 1px var(--solar-accent-wash);
+}
+.plan-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+}
+.plan-card-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--solar-line-strong);
+  flex: 0 0 auto;
+}
+.plan-card.tone-complete .plan-card-dot {
+  background: var(--solar-success);
+}
+.plan-card.tone-working .plan-card-dot {
+  background: var(--solar-accent);
+}
+.plan-card.tone-blocked .plan-card-dot {
+  background: var(--solar-warning);
+}
+.plan-card-role {
+  font-size: var(--solar-type-xs);
+  font-weight: 650;
+  color: var(--solar-ink);
+}
+.plan-card-status {
+  margin-left: auto;
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  color: var(--solar-subtle);
+  text-transform: lowercase;
+}
+.plan-card.tone-blocked .plan-card-status {
+  color: var(--solar-warning);
+}
+.plan-card-title {
+  font-size: var(--solar-type-xs);
+  color: var(--solar-ink);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.plan-card-blocked {
+  font-size: var(--solar-type-micro);
+  color: var(--solar-warning);
+}
+.plan-card-deps {
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  color: var(--solar-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

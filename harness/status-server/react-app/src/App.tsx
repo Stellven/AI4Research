@@ -1475,7 +1475,59 @@ function buildPlanLevels(nodes: DagNode[]): DagNode[][] {
   return levels.filter((stage) => stage && stage.length);
 }
 
-// The Planner's plan made legible: the DAG nodes as a left-to-right flow of stages.
+// Blocked-reason for a node, from whatever the projection carries: an explicit
+// blocked_reason, the missing capabilities, or a no-matching-worker route decision.
+function nodeBlockedReason(node: DagNode): string {
+  const missing = (
+    Array.isArray(
+      (node as { missing_capabilities?: unknown }).missing_capabilities,
+    )
+      ? ((node as { missing_capabilities?: unknown[] })
+          .missing_capabilities as unknown[])
+      : []
+  )
+    .map((cap) => asString(cap))
+    .filter(Boolean);
+  const route = asString(
+    node.route_decision || (node as { decision?: unknown }).decision,
+  );
+  return (
+    asString(node.blocked_reason) ||
+    (missing.length ? `needs ${missing.join(", ")}` : "") ||
+    (route.includes("no_matching") ? "no matching worker" : "")
+  );
+}
+
+// Clicking a plan node jumps to its activity in the stream (anchored by data-node),
+// falling back to the stream panel so the click is never a dead end.
+function scrollToNode(id: string): void {
+  const target =
+    document.querySelector(`[data-node="${CSS.escape(id)}"]`) ||
+    document.querySelector('[data-testid="process-stream"]');
+  target?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function PlanLegend() {
+  const items: Array<{ tone: string; label: string }> = [
+    { tone: "complete", label: "done" },
+    { tone: "working", label: "active" },
+    { tone: "blocked", label: "blocked" },
+    { tone: "idle", label: "pending" },
+  ];
+  return (
+    <span className="plan-legend" aria-hidden="true">
+      {items.map((item) => (
+        <span key={item.tone} className={`plan-legend-item tone-${item.tone}`}>
+          <span className="plan-legend-dot" />
+          {item.label}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+// The Planner's plan made legible: the DAG nodes as a left-to-right flow of stages,
+// each node showing its goal, owning role, live status, and — when blocked — why.
 function PlanFlow({
   projection,
   isBlocked,
@@ -1483,19 +1535,31 @@ function PlanFlow({
   projection?: ProjectionResponse;
   isBlocked: boolean;
 }) {
-  const projectionNodes =
-    projection?.data?.task_graph?.nodes || projection?.data?.nodes || [];
-  const nodes = projectionNodes;
+  const data = projection?.data;
+  const nodes = data?.task_graph?.nodes || data?.nodes || [];
   const levels = useMemo(() => buildPlanLevels(nodes), [nodes]);
+  const activeId = asString(data?.summary?.active_node);
   if (!levels.length) return null;
+  const total = nodes.length;
+  const done = nodes.filter(
+    (node) => statusTone(asString(node.status)) === "complete",
+  ).length;
+  const headMeta = isBlocked
+    ? "blocked at a capability gate"
+    : activeId
+      ? `active: ${activeId}`
+      : total
+        ? "in progress"
+        : "";
+
   return (
     <section className="plan-flow" aria-label="Plan" data-testid="plan-flow">
       <div className="plan-flow-head">
         <span className="plan-flow-title">Plan</span>
         <span className="plan-flow-meta">
-          {nodes.length} steps
-          {isBlocked ? " · blocked at a capability gate" : ""}
+          {done}/{total} steps{headMeta ? ` · ${headMeta}` : ""}
         </span>
+        <PlanLegend />
       </div>
       <ol className="plan-flow-track">
         {levels.map((stage, index) => (
@@ -1504,17 +1568,36 @@ function PlanFlow({
               {stage.map((node) => {
                 const id = asString(node.node_id || node.id);
                 const tone = statusTone(asString(node.status));
+                const status = asString(node.status, "pending").replace(
+                  /_/g,
+                  " ",
+                );
+                const blockedReason = nodeBlockedReason(node);
+                const deps = (node.depends_on || []).filter(Boolean);
+                const isActive = Boolean(activeId) && id === activeId;
                 return (
-                  <span
-                    className={`plan-node tone-${tone}`}
+                  <button
+                    type="button"
+                    className={`plan-card tone-${tone} ${isActive ? "is-active" : ""}`}
                     key={id}
-                    title={asString(node.title) || id}
+                    onClick={() => scrollToNode(id)}
+                    title={deps.length ? `depends on ${deps.join(", ")}` : id}
                   >
-                    <span className="plan-node-dot" aria-hidden="true" />
-                    <span className="plan-node-label">
-                      {planNodeLabel(node)}
+                    <span className="plan-card-head">
+                      <span className="plan-card-dot" aria-hidden="true" />
+                      <span className="plan-card-role">{nodeActor(node)}</span>
+                      <span className="plan-card-status">{status}</span>
                     </span>
-                  </span>
+                    <span className="plan-card-title">{nodeTitle(node)}</span>
+                    {blockedReason && (
+                      <span className="plan-card-blocked">{blockedReason}</span>
+                    )}
+                    {deps.length > 0 && (
+                      <span className="plan-card-deps">
+                        ← {deps.join(", ")}
+                      </span>
+                    )}
+                  </button>
                 );
               })}
             </div>
