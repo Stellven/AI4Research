@@ -107,6 +107,7 @@ import type {
   HumanGate,
   NarrativeStep,
   ProjectionAction,
+  ProjectionData,
   ProjectionResponse,
   SettingsPayload,
   StallSummary,
@@ -1391,6 +1392,7 @@ function SessionView({
                     projection={projection}
                     sprintId={sprintId}
                     onRefresh={session.refresh}
+                    onOpenArtifact={rail.openArtifact}
                   />
                 }
               />
@@ -1736,14 +1738,85 @@ function projectionGateArtifacts(
 
 // One attention surface above the stream: the operator's current decision (a human
 // gate) when one is open, otherwise an honest system-pause when the run is stalled.
+// Live-worker readiness from whatever the projection carries (runtime_health or
+// operators). "ready" counts any worker that could pick work up (ready or busy);
+// total 0 means nothing is connected to act on a verdict at all.
+function projectionWorkersReady(projection?: ProjectionData): {
+  total: number;
+  ready: number;
+} {
+  const rows: Array<Record<string, unknown>> = [];
+  const rh = (projection as { runtime_health?: unknown } | undefined)
+    ?.runtime_health;
+  const ops = projection?.operators;
+  if (Array.isArray(rh)) rows.push(...(rh as Array<Record<string, unknown>>));
+  if (Array.isArray(ops)) rows.push(...(ops as Array<Record<string, unknown>>));
+  const seen = new Set<string>();
+  let total = 0;
+  let ready = 0;
+  for (const row of rows) {
+    const id = asString(
+      row.pane_id || row.operator_id || row.actor_id || row.display_name,
+    );
+    if (id && seen.has(id)) continue;
+    if (id) seen.add(id);
+    total += 1;
+    const readiness = asString(row.readiness).toLowerCase();
+    if (
+      readiness === "ready" ||
+      readiness === "busy" ||
+      row.available === true
+    ) {
+      ready += 1;
+    }
+  }
+  return { total, ready };
+}
+
+// Honest after-state for a verdict: what state it moved to and whether a worker is
+// actually running to act on it (recording a verdict advances state; it does not by
+// itself guarantee a fresh agent pass).
+function gateOutcomeMessage(
+  target: "primary" | "secondary",
+  kind: string,
+  projection?: ProjectionData,
+): string {
+  if (target === "secondary") {
+    return kind === "plan_review"
+      ? "Sent back to the planner with your guidance."
+      : "Sent back to the builder with your guidance.";
+  }
+  const phase = asString(projection?.phase || projection?.status).replace(
+    /_/g,
+    " ",
+  );
+  const base =
+    kind === "plan_review"
+      ? "Plan approved."
+      : kind === "eval_review"
+        ? "Result accepted."
+        : "Handoff submitted.";
+  const now = phase ? ` Now ${phase}.` : "";
+  const workers = projectionWorkersReady(projection);
+  const worker =
+    workers.total === 0
+      ? " No worker is currently running to pick this up — connect one to continue."
+      : workers.ready === 0
+        ? " All workers are blocked (auth/quota); it will run once one is ready."
+        : "";
+  return `${base}${now}${worker}`;
+}
+
 function DecisionZone({
   projection,
   sprintId,
   onRefresh,
+  onOpenArtifact,
 }: {
   projection?: ProjectionResponse;
   sprintId: string;
   onRefresh: () => Promise<void>;
+  onOpenArtifact: (path: string) => void;
 }) {
   const data = projection?.data;
   if (!data) return null;
@@ -1761,6 +1834,7 @@ function DecisionZone({
       <GateCard
         kind={actionType}
         gate={gate}
+        data={data}
         fallbackArtifacts={projectionGateArtifacts(
           data,
           actionType,
@@ -1769,6 +1843,7 @@ function DecisionZone({
         actions={actions}
         sprintId={sprintId}
         onRefresh={onRefresh}
+        onOpenArtifact={onOpenArtifact}
       />
     );
   }
@@ -1788,17 +1863,21 @@ function DecisionZone({
 function GateCard({
   kind,
   gate,
+  data,
   fallbackArtifacts,
   actions,
   sprintId,
   onRefresh,
+  onOpenArtifact,
 }: {
   kind: string;
   gate?: HumanGate;
+  data?: ProjectionData;
   fallbackArtifacts?: string[];
   actions: ProjectionAction[];
   sprintId: string;
   onRefresh: () => Promise<void>;
+  onOpenArtifact: (path: string) => void;
 }) {
   const spec = GATE_KINDS[kind];
   const [reason, setReason] = useState("");
@@ -1818,6 +1897,19 @@ function GateCard({
     ? gateArtifacts
     : fallbackArtifacts || [];
   const busy = Boolean(submitting);
+  const workers = projectionWorkersReady(data);
+  const lastVerdict =
+    gate?.last_verdict && typeof gate.last_verdict === "object"
+      ? (gate.last_verdict as Record<string, unknown>)
+      : null;
+  const lastVerdictText = lastVerdict
+    ? asString(
+        lastVerdict.verdict ||
+          lastVerdict.decision ||
+          lastVerdict.requested_verdict,
+      )
+    : "";
+  const lastVerdictReason = lastVerdict ? asString(lastVerdict.reason) : "";
 
   async function run(target: "primary" | "secondary") {
     const cleanReason = reason.trim();
@@ -1855,11 +1947,7 @@ function GateCard({
       }
       setReason("");
       setRejecting(false);
-      setNotice(
-        target === "primary"
-          ? "Recorded — Solar is advancing."
-          : "Sent back with your guidance.",
-      );
+      setNotice(gateOutcomeMessage(target, kind, response.projection));
       await onRefresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Action failed");
@@ -1890,10 +1978,34 @@ function GateCard({
         <h2 className="decision-title">{spec.title}</h2>
       </div>
       <p className="decision-desc">{spec.description}</p>
+      {lastVerdictText && (
+        <div className="decision-last-verdict">
+          Last verdict: <strong>{lastVerdictText}</strong>
+          {lastVerdictReason ? ` — ${shortText(lastVerdictReason, 80)}` : ""}
+        </div>
+      )}
+      {workers.total === 0 && (
+        <div className="decision-worker-note">
+          No worker is currently running — your decision is recorded, but it
+          won’t execute until one connects.
+        </div>
+      )}
       {artifacts.length > 0 && (
         <div className="decision-artifacts">
-          <FileText size={13} aria-hidden="true" />
-          <span>Review {artifacts.map(shortArtifact).join(" · ")}</span>
+          <span className="decision-artifacts-label">
+            <FileText size={13} aria-hidden="true" /> Review
+          </span>
+          {artifacts.map((path) => (
+            <button
+              type="button"
+              key={path}
+              className="decision-artifact-chip"
+              onClick={() => onOpenArtifact(path)}
+              title={path}
+            >
+              {shortArtifact(path)}
+            </button>
+          ))}
         </div>
       )}
       {rejecting && spec.secondary && (

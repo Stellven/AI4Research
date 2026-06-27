@@ -4601,3 +4601,51 @@ summary:focus-visible,
   padding-left: var(--solar-space-2);
   border-left: 1px solid var(--solar-line-soft);
 }
+
+/* ============================================================================
+   Dashboard overhaul — Gate clarity (WS5)
+   ========================================================================== */
+
+.decision-artifacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--solar-space-2);
+}
+.decision-artifacts-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--solar-subtle);
+  font-size: var(--solar-type-xs);
+}
+.decision-artifact-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-pill);
+  background: var(--solar-surface);
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+  cursor: pointer;
+}
+.decision-artifact-chip:hover {
+  border-color: var(--solar-accent);
+  color: var(--solar-accent-ink);
+}
+.decision-worker-note {
+  padding: var(--solar-space-2) var(--solar-space-3);
+  border-radius: var(--solar-radius-small);
+  background: var(--solar-warning-fill);
+  color: var(--solar-warning);
+  font-size: var(--solar-type-xs);
+}
+.decision-last-verdict {
+  font-size: var(--solar-type-xs);
+  color: var(--solar-subtle);
+}
+.decision-last-verdict strong {
+  color: var(--solar-ink);
+}
