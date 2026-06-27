@@ -41,14 +41,20 @@ function withToken(url: string): string {
   );
 }
 
-// Bound every request so a hung backend (first-run auth, start-work, a wedged runtime) can't
-// freeze the UI forever. 30s is generous for the slowest endpoints (they return quickly and
-// stream/poll for the rest); a timeout surfaces as a normal error the caller can display.
+// Bound every request so a hung backend (first-run auth, a wedged runtime) can't freeze the
+// UI forever. Read endpoints return fast, so 30s is plenty. But the SHELL-OUT endpoints
+// (intake, plan/eval verdicts, handoff) run a CLI synchronously that can take 1-3 minutes —
+// they pass LONG_REQUEST_TIMEOUT_MS so a slow-but-succeeding intake isn't killed at 30s.
 const REQUEST_TIMEOUT_MS = 30000;
+const LONG_REQUEST_TIMEOUT_MS = 210000;
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+async function requestJson<T>(
+  path: string,
+  init?: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -63,7 +69,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      throw new Error(`Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+      throw new Error(`Request timed out after ${timeoutMs / 1000}s`);
     }
     throw err;
   } finally {
@@ -225,10 +231,14 @@ function newRequestId(prefix: string): string {
 }
 
 export function submitIntake(task: string): Promise<IntakeResponse> {
-  return requestJson<IntakeResponse>("/intake", {
-    method: "POST",
-    body: JSON.stringify({ task, request_id: newRequestId("webapp-intake") }),
-  });
+  return requestJson<IntakeResponse>(
+    "/intake",
+    {
+      method: "POST",
+      body: JSON.stringify({ task, request_id: newRequestId("webapp-intake") }),
+    },
+    LONG_REQUEST_TIMEOUT_MS,
+  );
 }
 
 export interface SaveSettingsResponse {
@@ -272,6 +282,7 @@ export function submitPlanVerdict(
       method: "POST",
       body: JSON.stringify({ verdict, reason }),
     },
+    LONG_REQUEST_TIMEOUT_MS,
   );
 }
 
@@ -286,6 +297,7 @@ export function submitEvalVerdict(
       method: "POST",
       body: JSON.stringify({ verdict, reason }),
     },
+    LONG_REQUEST_TIMEOUT_MS,
   );
 }
 
@@ -299,6 +311,7 @@ export function submitHandoff(sprintId: string): Promise<ActionResponse> {
       method: "POST",
       body: JSON.stringify({}),
     },
+    LONG_REQUEST_TIMEOUT_MS,
   );
 }
 
