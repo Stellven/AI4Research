@@ -561,3 +561,45 @@ def test_projection_events_are_scoped_and_normalized(tmp_path: Path) -> None:
     assert {event["sprint_id"] for event in events} == {sid}
     assert {event["_event_scope"] for event in events} == {"requested"}
     assert {event["_event_source"] for event in events} == {"session_file"}
+
+
+def test_projection_narrative_dedups_and_humanizes(tmp_path: Path) -> None:
+    """WS3 contract: build_projection_payload emits a de-noised, de-duplicated human
+    narrative — the coordinator double-write is collapsed, machine noise is dropped, the
+    internal tokens are humanized, and it ships in fast mode (what the client fetches)."""
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "narrative")
+    _patch_dirs(mod, tree)
+    sid = "sprint-narrative"
+    _write_json(
+        tree["sprints"] / f"{sid}.status.json",
+        {"sprint_id": sid, "status": "active", "phase": "build_complete", "title": "Narrative"},
+    )
+    sess = tree["sessions"] / sid
+    sess.mkdir(parents=True, exist_ok=True)
+    events = [
+        {"sprint_id": sid, "ts": "2026-06-26T10:00:00Z", "type": "log_message", "actor": "coordinator",
+         "payload": {"legacy_event": "dispatched", "node_id": "build-api", "role": "builder", "round": 1}},
+        # dual-write sibling of the same action (carries the same legacy_event)
+        {"sprint_id": sid, "ts": "2026-06-26T10:00:00Z", "type": "command_issued", "actor": "coordinator",
+         "payload": {"legacy_event": "dispatched", "node_id": "build-api", "role": "builder", "round": 1}},
+        # machine noise — must be dropped
+        {"sprint_id": sid, "ts": "2026-06-26T10:00:30Z", "type": "log_message", "actor": "solar-autopilot",
+         "payload": {"legacy_event": "autopilot_probe_failed"}},
+        {"sprint_id": sid, "ts": "2026-06-26T10:01:00Z", "type": "log_message", "actor": "coordinator",
+         "payload": {"legacy_event": "handle_passed_completed", "node_id": "build-api", "role": "builder", "round": 1}},
+    ]
+    (sess / "events.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
+
+    payload, _ = mod.build_projection_payload(sid)
+    narrative = payload.get("narrative")
+    assert isinstance(narrative, list) and narrative, "narrative must be present and non-empty"
+    titles = [str(row.get("title") or "") for row in narrative]
+    tokens = [str(row.get("token") or "") for row in narrative]
+    assert sum(1 for t in tokens if t == "dispatched") == 1, f"dual-write not collapsed: {tokens}"
+    assert not any("autopilot" in t for t in tokens), f"machine noise leaked: {tokens}"
+    assert any(t.startswith("Routed") for t in titles), f"not humanized: {titles}"
+    assert any("completed" in t.lower() for t in titles), f"missing completion: {titles}"
+
+    fast, _ = mod.build_projection_payload(sid, mode="fast")
+    assert fast.get("narrative"), "narrative must ship in fast mode too"
