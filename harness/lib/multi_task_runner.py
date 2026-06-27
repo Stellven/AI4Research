@@ -2978,6 +2978,11 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
     task_dir = RUN_DIR / dispatch_id
     handoff = SPRINTS_DIR / f"{sid}.{node_id}-handoff.md"
     task_dir.mkdir(parents=True, exist_ok=True)
+    # Default the agent's working directory to a clean per-sprint workspace so produced
+    # deliverables land predictably (and the dashboard's SPRINTS_DIR scan finds them),
+    # instead of wherever multi-task happened to be launched (os.getcwd()).
+    sprint_workdir = SPRINTS_DIR / sid / "workdir"
+    sprint_workdir.mkdir(parents=True, exist_ok=True)
 
     dispatch = build_dispatch_text(graph_path, graph, node, dispatch_id, window, profile)
     (task_dir / "dispatch.md").write_text(dispatch, encoding="utf-8")
@@ -3010,7 +3015,7 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         "write_scope": node.get("write_scope") or [],
         "handoff": str(handoff),
         "dispatch_file": str(task_dir / "dispatch.md"),
-        "work_dir": str(Path.cwd()),
+        "work_dir": str(os.environ.get("SOLAR_MULTI_TASK_WORK_DIR") or sprint_workdir),
         "created_at": now_iso(),
         "updated_at": now_iso(),
         "exit_code": None,
