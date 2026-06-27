@@ -92,6 +92,20 @@ desktop_rapid_switch() {
   return "${PIPESTATUS[0]}"
 }
 
+# Dashboard overhaul (WS1-WS6): seed a realistic mid-run sprint and render the REAL session
+# view at DESKTOP + MOBILE — assert every overhaul surface renders, the result CTA names the
+# canonical output, no raw coordinator jargon leaks, the gate shows chips + the honest
+# no-worker note, and there is no mobile horizontal overflow.
+desktop_overhaul_visual() {
+  command -v node >/dev/null || { need "node not on PATH" "install Node.js 18+"; return 1; }
+  [ -f desktop/overhaul-visual.test.js ] || { need "desktop/overhaul-visual.test.js absent" "checkout the desktop tests"; return 1; }
+  if [ ! -d desktop/node_modules/playwright ]; then
+    need "desktop Playwright deps missing" "( cd desktop && npm ci && npx playwright install chromium )"; return 1
+  fi
+  node desktop/overhaul-visual.test.js 2>&1 | tail -6
+  return "${PIPESTATUS[0]}"
+}
+
 echo "== webapp session-verification gate =="
 echo "repo: $repo   tree: $(git rev-parse --short HEAD 2>/dev/null || echo '?')"
 
@@ -103,6 +117,7 @@ run "frontend build (vite -> static/p0-app)" frontend_build
 run "static bundle consistency"            bundle_consistency
 run "desktop functional e2e (real backend + headless chromium)" desktop_functional
 run "desktop session-isolation regression (rapid switch)" desktop_rapid_switch
+run "dashboard overhaul visual (desktop+mobile, real backend + chromium)" desktop_overhaul_visual
 
 echo
 echo "================================"
