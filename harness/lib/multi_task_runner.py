@@ -1001,6 +1001,37 @@ def _operator_provider_requested(operator: dict[str, Any], selector_values: set[
     return False
 
 
+# --- Proactive operator backend health: deprioritize operators whose CLI is not installed ----------
+# operator_dispatchable() can't tell a configured operator whose backend CLI is missing (e.g. a
+# gemini/antigravity `command` operator on a host with no gemini CLI -> exit 1) from a working one. This
+# is the proactive complement to the post-failure cooldown: deprioritize BEFORE the first wasted attempt.
+_CLI_AVAILABLE_CACHE: dict[str, bool] = {}
+
+
+def _cli_available(name: str) -> bool:
+    if name not in _CLI_AVAILABLE_CACHE:
+        _CLI_AVAILABLE_CACHE[name] = shutil.which(name) is not None
+    return _CLI_AVAILABLE_CACHE[name]
+
+
+def _operator_backend_runnable(operator: dict[str, Any]) -> bool:
+    """Best-effort, cheap (cached which()) check that the operator's backend CLI exists. Conservative:
+    returns True for backends we cannot cheaply verify, so it only deprioritizes a known-missing CLI."""
+    backend = str(operator.get("backend") or "").strip().lower()
+    provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower()
+    if backend == "claude-cli":
+        return _cli_available("claude")
+    if backend in {"gemini-cli", "gemini-sdk"}:
+        return _cli_available("gemini")
+    if backend == "command":
+        if provider == "openai":
+            return _cli_available("codex")
+        if provider == "google":
+            return _cli_available("gemini")
+        return True  # deepseek/glm/local/browser command operators: cannot cheaply verify -> don't penalize
+    return True
+
+
 def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
     preferred = str(node.get("preferred_operator") or "").strip()
     if preferred:
@@ -1117,6 +1148,11 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
             op_provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower()
             if op_provider and op_provider not in DEFAULT_OPERATOR_PROVIDERS and not _operator_provider_requested(operator, selector_values):
                 score -= 100000
+
+        # Proactive backend health: an operator whose backend CLI is not installed will fail at runtime;
+        # deprioritize it before the first wasted attempt (complements the post-failure cooldown).
+        if not _operator_backend_runnable(operator):
+            score -= 100000
 
         if pref_classes:
             classes_list = [pref_classes] if isinstance(pref_classes, str) else list(pref_classes)
