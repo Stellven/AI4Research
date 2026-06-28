@@ -904,6 +904,134 @@ def operator_matches_class(operator: dict[str, Any], class_name: str) -> bool:
     return str(op_class).lower() == class_name.lower()
 
 
+# --- Role-compatible operator selection -----------------------------------------------------------
+# A node's role-ish fields sometimes hold a backend/model token (e.g. owner="codex") instead of a real
+# role. role_from_node() returns that token verbatim, and operator_score() then rewards a planner operator
+# whose id contains "codex" -> a planner-role operator wins a builder node (Run G: S1/S2 ran on
+# mini-codex-gpt55-medium-planner-2). This is SELECTION-only role resolution: it skips backend/model/
+# provider tokens so the real role surfaces, then a hard-role mismatch is heavily penalized. role_from_node
+# (and therefore profile selection) is intentionally left unchanged for now.
+_HARD_ROLES = frozenset({"builder", "planner", "evaluator", "pm"})
+_SELECTION_ROLE_ALIASES = {
+    "builder-main": "builder", "build": "builder", "implementation": "builder", "implementer": "builder",
+    "implementationworker": "builder",
+    "judge": "evaluator", "reviewer": "evaluator", "verifier": "evaluator", "critic": "evaluator",
+    "artifact-curator": "evaluator", "testrunner": "evaluator",
+    "product": "pm", "product-manager": "pm",
+    "planning": "planner", "architect": "planner", "deeparchitect": "planner",
+}
+_SELECTION_NON_ROLE_TOKENS = frozenset({
+    "codex", "claude", "gpt", "gpt-5.5", "gpt5", "sonnet", "opus", "haiku", "gemini", "glm", "deepseek",
+    "thunderomlx", "antigravity", "claude-cli", "gemini-cli", "gemini-sdk", "command", "anthropic",
+    "openai", "google", "zhipu", "local", "mistral", "qwen",
+})
+_SELECTION_NON_ROLE_PREFIXES = (
+    "gpt-", "gpt5", "gemini-", "gemini3", "glm-", "claude-", "deepseek-", "thunderomlx-", "antigravity-", "codex-",
+)
+
+
+def _is_non_role_token(value: str) -> bool:
+    v = str(value or "").strip().lower()
+    if not v:
+        return False
+    if v in _SELECTION_NON_ROLE_TOKENS:
+        return True
+    return any(v.startswith(p) for p in _SELECTION_NON_ROLE_PREFIXES)
+
+
+def _normalize_selection_role(value: Any) -> str:
+    v = str(value or "").strip().lower().replace("_", "-")
+    return _SELECTION_ROLE_ALIASES.get(v, v)
+
+
+def _selection_node_role(node: dict[str, Any]) -> str:
+    """Resolve a node's INTENDED role for operator selection, skipping backend/model/provider tokens.
+
+    Returns the first field that resolves to a recognized HARD role (builder/planner/evaluator/pm), or ""
+    when none does -- in which case the mismatch guard does not fire and selection is unchanged. Backend/
+    model/provider tokens and other non-role junk (e.g. owner="codex", owner="solar-harness") are skipped so
+    the real role (e.g. logical_operator="ImplementationWorker"->builder, "Verifier"->evaluator) surfaces.
+    Does NOT touch role_from_node/profile selection."""
+    for field in ("target_role", "role", "owner", "persona", "worker_role", "handoff_to", "logical_operator"):
+        raw = node.get(field)
+        if raw is None or str(raw).strip() == "":
+            continue
+        if _is_non_role_token(raw):
+            continue
+        role = _normalize_selection_role(raw)
+        if role in _HARD_ROLES:
+            return role
+    return ""
+
+
+# --- Default provider policy: prefer Claude/Anthropic + Codex/OpenAI for normal dispatch ------------
+# Non-default providers (gemini/google, glm/zhipu, deepseek, local/thunderomlx, browser, ...) stay fully
+# functional but are deprioritized in OPERATOR selection unless the dispatch explicitly wants them:
+#   * pinned          -> node.preferred_operator (bypasses scoring entirely; unaffected)
+#   * profile/backend -> the base profile already targets a non-default provider (--profile gemini-builder,
+#                        --backend gemini-cli, --model gemini, node.preferred_profile=...) -> policy is off
+#   * requested       -> the node's operator_selector names that provider/vendor/model/operator id
+# Configurable; SOLAR_MULTI_TASK_DEFAULT_PROVIDERS="" disables the policy (all providers equal).
+DEFAULT_OPERATOR_PROVIDERS = frozenset(
+    p.strip().lower()
+    for p in os.environ.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS", "anthropic,openai").split(",")
+    if p.strip()
+)
+_NON_DEFAULT_PROVIDER_PROFILE_TOKENS = ("gemini", "glm", "zhipu", "deepseek", "thunder", "omlx", "antigravity")
+
+
+def _profile_targets_nondefault_provider(profile: dict[str, Any]) -> bool:
+    """True when the base profile explicitly targets a non-default provider (explicit override -> don't
+    apply the default-provider policy). Uses backend/model/name tokens (model_provider() can't name openai)."""
+    backend = str(profile.get("backend") or "").strip().lower()
+    if backend in {"gemini-cli", "gemini-sdk"}:
+        return True
+    blob = f"{backend} {str(profile.get('model') or '').lower()} {str(profile.get('name') or '').lower()}"
+    return any(token in blob for token in _NON_DEFAULT_PROVIDER_PROFILE_TOKENS)
+
+
+def _operator_provider_requested(operator: dict[str, Any], selector_values: set[str]) -> bool:
+    """True when the node's operator_selector explicitly names this operator's provider/vendor/model/id."""
+    if not selector_values:
+        return False
+    for key in ("provider", "vendor", "model", "operator_id"):
+        value = str(operator.get(key) or "").strip().lower()
+        if value and value in selector_values:
+            return True
+    return False
+
+
+# --- Proactive operator backend health: deprioritize operators whose CLI is not installed ----------
+# operator_dispatchable() can't tell a configured operator whose backend CLI is missing (e.g. a
+# gemini/antigravity `command` operator on a host with no gemini CLI -> exit 1) from a working one. This
+# is the proactive complement to the post-failure cooldown: deprioritize BEFORE the first wasted attempt.
+_CLI_AVAILABLE_CACHE: dict[str, bool] = {}
+
+
+def _cli_available(name: str) -> bool:
+    if name not in _CLI_AVAILABLE_CACHE:
+        _CLI_AVAILABLE_CACHE[name] = shutil.which(name) is not None
+    return _CLI_AVAILABLE_CACHE[name]
+
+
+def _operator_backend_runnable(operator: dict[str, Any]) -> bool:
+    """Best-effort, cheap (cached which()) check that the operator's backend CLI exists. Conservative:
+    returns True for backends we cannot cheaply verify, so it only deprioritizes a known-missing CLI."""
+    backend = str(operator.get("backend") or "").strip().lower()
+    provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower()
+    if backend == "claude-cli":
+        return _cli_available("claude")
+    if backend in {"gemini-cli", "gemini-sdk"}:
+        return _cli_available("gemini")
+    if backend == "command":
+        if provider == "openai":
+            return _cli_available("codex")
+        if provider == "google":
+            return _cli_available("gemini")
+        return True  # deepseek/glm/local/browser command operators: cannot cheaply verify -> don't penalize
+    return True
+
+
 def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
     preferred = str(node.get("preferred_operator") or "").strip()
     if preferred:
@@ -950,6 +1078,10 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
     ]
     
     scored: list[tuple[int, dict[str, Any]]] = []
+    selection_node_role = _selection_node_role(node)
+    # Default-provider policy is active only for normal dispatch; an explicitly non-default base profile
+    # (e.g. --profile gemini-builder / --backend gemini-cli) turns it off so the override is preserved.
+    provider_policy_active = bool(DEFAULT_OPERATOR_PROVIDERS) and not _profile_targets_nondefault_provider(base_profile)
     selector_values = set(_selector_values(selector))
     if task_type:
         selector_values.update(_expand_str(task_type))
@@ -994,7 +1126,34 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
             continue
             
         score = operator_score(operator, node, selector)
-        
+
+        # Deprioritize operators that recently failed at runtime (e.g. an unconfigured backend CLI that
+        # exits non-zero). operator_dispatchable can't see this. Heavy penalty, not a hard exclude, so a
+        # cooled-down operator is still a last resort if nothing healthy matches.
+        if operator_in_failure_cooldown(str(operator.get("operator_id") or "")):
+            score -= 100000
+
+        # Hard role-mismatch guard: a builder node must not prefer a planner/evaluator/pm operator just
+        # because of keyword overlap (e.g. node owner="codex" matching a "...codex...planner" operator id).
+        # Penalty, not a hard exclude, so a mismatched operator is still a last resort if nothing matches.
+        if selection_node_role in _HARD_ROLES:
+            op_role = _normalize_selection_role(operator.get("role"))
+            if op_role in _HARD_ROLES and op_role != selection_node_role:
+                score -= 100000
+
+        # Default-provider policy: deprioritize non-default providers (gemini/glm/deepseek/local/browser/...)
+        # for normal dispatch, unless this node explicitly requests this operator's provider/vendor/model/id.
+        # Penalty, not a hard exclude, so a provider that is the only viable option (e.g. vision-only) still wins.
+        if provider_policy_active:
+            op_provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower()
+            if op_provider and op_provider not in DEFAULT_OPERATOR_PROVIDERS and not _operator_provider_requested(operator, selector_values):
+                score -= 100000
+
+        # Proactive backend health: an operator whose backend CLI is not installed will fail at runtime;
+        # deprioritize it before the first wasted attempt (complements the post-failure cooldown).
+        if not _operator_backend_runnable(operator):
+            score -= 100000
+
         if pref_classes:
             classes_list = [pref_classes] if isinstance(pref_classes, str) else list(pref_classes)
             for c in classes_list:
@@ -2076,6 +2235,43 @@ def enrich_task_row(row: dict[str, Any], windows: dict[str, dict[str, str]]) -> 
     return enriched
 
 
+def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
+    """Durably backfill the node-keyed completion attribution (exit_code/status) for a terminal task.
+
+    The tmux runner writes the final exit_code to the worker's RUN_DIR status.json but never co-locates it
+    with the sprint; this mirrors it into the durable per-node snapshot. Idempotent (skips when the snapshot
+    already records this completion) so the hot status path does not write-amplify. Best-effort."""
+    try:
+        status = str(row.get("status") or "").lower()
+        if status not in TERMINAL_TASK_STATUSES:
+            return
+        sid = str(row.get("sprint_id") or "").strip()
+        node_id = str(row.get("node_id") or "").strip()
+        if not sid or not node_id:
+            return
+        import node_runstate
+
+        snap = node_runstate.read_snapshot(SPRINTS_DIR, sid, node_id)
+        attr = snap.get("attribution") if isinstance(snap.get("attribution"), dict) else {}
+        if attr.get("phase") == "completed" and attr.get("status") == status and attr.get("exit_code") == row.get("exit_code"):
+            return
+        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+            "phase": "completed",
+            "status": status,
+            "exit_code": row.get("exit_code"),
+            "backend": row.get("backend"),
+            "vendor": row.get("operator_vendor") or row.get("provider"),
+            "model": row.get("operator_model") or row.get("model"),
+            "provider": row.get("provider"),
+            "operator_id": row.get("operator_id"),
+            "profile": row.get("profile"),
+            "role": row.get("role"),
+            "dispatch_id": row.get("id"),
+        })
+    except Exception:
+        pass
+
+
 def list_task_rows() -> list[dict[str, Any]]:
     if not RUN_DIR.exists():
         return []
@@ -2084,6 +2280,7 @@ def list_task_rows() -> list[dict[str, Any]]:
     for path in sorted(RUN_DIR.glob("*/status.json"), key=lambda p: p.stat().st_mtime, reverse=True):
         row = read_task_status(path)
         if row:
+            _finalize_terminal_attribution(row)
             rows.append(enrich_task_row(row, windows))
     return rows
 
@@ -2620,6 +2817,34 @@ def build_dispatch_text(graph_path: Path, graph: dict[str, Any], node: dict[str,
             return "\n".join(f"- {k}: {v}" for k, v in value.items()) if value else "- N/A"
         return f"- {value}"
 
+    def _structured_validation_block(write_scope: Any) -> str:
+        # Closeout/review nodes emit machine-parsed files (e.g. review_decision.yaml). A common LLM error
+        # is malformed YAML/JSON (e.g. a mapping key at the same indent as block-sequence items), which the
+        # evaluator correctly fails. Require the worker to validate each structured deliverable parses.
+        items = write_scope if isinstance(write_scope, (list, tuple)) else ([write_scope] if write_scope else [])
+        cmds: list[str] = []
+        for raw in items:
+            path = str(raw).strip()
+            low = path.lower()
+            if low.endswith((".yaml", ".yml")):
+                cmds.append('python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1])); print(\'YAML_OK\')" ' + path)
+            elif low.endswith(".json"):
+                cmds.append('python3 -c "import json,sys; json.load(open(sys.argv[1])); print(\'JSON_OK\')" ' + path)
+        if not cmds:
+            return ""
+        body = "\n".join(cmds)
+        return (
+            "\n## Structured Output Validation (REQUIRED)\n\n"
+            "Your Write Scope includes machine-parsed file(s). BEFORE writing the handoff you MUST run the"
+            " check(s) below and FIX any syntax error until each prints OK:\n\n"
+            "```bash\n" + body + "\n```\n\n"
+            "A structured deliverable that does not parse FAILS acceptance even if its content is correct."
+            " Common YAML error: a mapping key (`key:`) at the SAME indent as block-sequence items (`- item`)"
+            " under the same parent -- give the mapping its own key or nest it correctly.\n"
+        )
+
+    structured_validation = _structured_validation_block(node.get("write_scope"))
+
     return f"""<!-- SOLAR_MULTI_TASK_DISPATCH -->
 # Solar Harness Multi-Task DAG Dispatch
 
@@ -2663,7 +2888,7 @@ Persona file: `{persona_path}`
 ## Write Scope
 
 {lines(node.get("write_scope"))}
-
+{structured_validation}
 ## Required Skills
 
 {lines(node.get("required_skills"))}
@@ -2967,6 +3192,35 @@ def _poll_operator_result(result_path: Path, timeout_sec: float, interval_sec: f
     return None
 
 
+def _record_node_attribution(sid: str, node_id: str, payload: dict[str, Any], task_dir: Path, phase: str) -> None:
+    """Persist a durable, node-keyed worker-attribution record next to the sprint.
+
+    The same facts already live in RUN_DIR/<dispatch_id>/status.json, but that is keyed by dispatch_id
+    and reaped after SOLAR_MULTI_TASK_REAP_TTL_MIN. This co-locates a node-keyed copy with the sprint so
+    "node N1 ran on backend/vendor/model/operator X (exit_code Y)" stays provable after reaping. Best-effort."""
+    try:
+        import node_runstate
+
+        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+            "dispatch_id": payload.get("id"),
+            "backend": payload.get("backend"),
+            "vendor": payload.get("operator_vendor") or payload.get("provider"),
+            "model": payload.get("operator_model") or payload.get("model"),
+            "provider": payload.get("provider"),
+            "operator_id": payload.get("operator_id"),
+            "profile": payload.get("profile"),
+            "role": payload.get("role"),
+            "work_dir": payload.get("work_dir"),
+            "status_path": str(status_path(task_dir)),
+            "phase": phase or payload.get("status"),
+            "status": payload.get("status"),
+            "exit_code": payload.get("exit_code"),
+            "created_at": payload.get("created_at"),
+        })
+    except Exception:
+        pass
+
+
 def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], args: argparse.Namespace,
                 dry_run: bool = False) -> dict[str, Any]:
     sid = sprint_id_for(graph, graph_path)
@@ -2978,6 +3232,11 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
     task_dir = RUN_DIR / dispatch_id
     handoff = SPRINTS_DIR / f"{sid}.{node_id}-handoff.md"
     task_dir.mkdir(parents=True, exist_ok=True)
+    # Default the agent's working directory to a clean per-sprint workspace so produced
+    # deliverables land predictably (and the dashboard's SPRINTS_DIR scan finds them),
+    # instead of wherever multi-task happened to be launched (os.getcwd()).
+    sprint_workdir = SPRINTS_DIR / sid / "workdir"
+    sprint_workdir.mkdir(parents=True, exist_ok=True)
 
     dispatch = build_dispatch_text(graph_path, graph, node, dispatch_id, window, profile)
     (task_dir / "dispatch.md").write_text(dispatch, encoding="utf-8")
@@ -3010,12 +3269,13 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         "write_scope": node.get("write_scope") or [],
         "handoff": str(handoff),
         "dispatch_file": str(task_dir / "dispatch.md"),
-        "work_dir": str(Path.cwd()),
+        "work_dir": str(os.environ.get("SOLAR_MULTI_TASK_WORK_DIR") or sprint_workdir),
         "created_at": now_iso(),
         "updated_at": now_iso(),
         "exit_code": None,
     }
     json_write(status_path(task_dir), payload)
+    _record_node_attribution(sid, node_id, payload, task_dir, "dispatched")
 
     if _operator_submit_eligible(profile, dry_run=dry_run):
         try:
@@ -3042,12 +3302,18 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
                 )
                 if result is None:
                     payload["status"] = "result_timeout"
+                    _record_operator_runtime_failure(operator_id, "result_timeout")
                 else:
                     payload["status"] = str(result.get("status") or "completed")
                     payload["exit_code"] = result.get("exit_code")
                     payload["operator_result"] = result
+                    if str(payload["status"]).lower() in {"failed", "error"} or (
+                        result.get("exit_code") not in (0, None)
+                    ):
+                        _record_operator_runtime_failure(operator_id, f"status={payload['status']} exit={result.get('exit_code')}")
                 payload["updated_at"] = now_iso()
                 json_write(status_path(task_dir), payload)
+                _record_node_attribution(sid, node_id, payload, task_dir, "completed")
             return payload
         except (RuntimeError, ValueError) as exc:
             payload["operator_submit_fallback"] = "legacy"
@@ -3074,9 +3340,116 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
     return payload
 
 
+# --- Operator runtime-failure cooldown -------------------------------------------------------------
+# operator_dispatchable() only checks config/quota/auth, not whether the backend actually runs. An
+# operator whose CLI fails at runtime (e.g. an unconfigured gemini/antigravity command -> exit 1) would
+# otherwise keep getting selected over a working Claude builder. Record runtime failures and deprioritize
+# recently-failed operators in selection (cooldown auto-expires; never a hard exclude).
+OPERATOR_FAILURE_LEDGER_PATH = Path(os.environ.get("SOLAR_MULTI_TASK_OPERATOR_FAILURE_LEDGER", RUN_DIR / "operator-failures.json"))
+OPERATOR_FAILURE_COOLDOWN_SEC = int(os.environ.get("SOLAR_MULTI_TASK_OPERATOR_FAILURE_COOLDOWN_SEC", "900") or "900")
+
+
+def _read_operator_failures() -> dict[str, Any]:
+    try:
+        data = json.loads(OPERATOR_FAILURE_LEDGER_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _record_operator_runtime_failure(operator_id: str, reason: str = "") -> None:
+    op = str(operator_id or "").strip()
+    if not op or op == "N/A":
+        return
+    try:
+        data = _read_operator_failures()
+        prior = data.get(op) if isinstance(data.get(op), dict) else {}
+        data[op] = {"at": now_iso(), "reason": str(reason)[:200], "count": int(prior.get("count") or 0) + 1}
+        json_write(OPERATOR_FAILURE_LEDGER_PATH, data)
+    except Exception:
+        pass
+
+
+def operator_in_failure_cooldown(operator_id: str) -> bool:
+    if OPERATOR_FAILURE_COOLDOWN_SEC <= 0:
+        return False
+    op = str(operator_id or "").strip()
+    if not op:
+        return False
+    rec = _read_operator_failures().get(op)
+    if not isinstance(rec, dict):
+        return False
+    ts = parse_iso(str(rec.get("at") or ""))
+    if ts is None:
+        return False
+    return (time.time() - ts) < OPERATOR_FAILURE_COOLDOWN_SEC
+
+
+# --- Auto-advance: make a multi-task DAG self-complete build -> eval -> verdict -> next node ---------
+AUTO_ADVANCE_ENABLED = os.environ.get("SOLAR_MULTI_TASK_AUTO_ADVANCE", "1").strip().lower() not in {"0", "false", "off", "no"}
+# Consecutive no-progress ticks (no active task, nothing ready, not all-terminal, no eval/reconcile
+# progress) before the loop exits cleanly instead of spinning on a FAIL/needs_human_review deadlock.
+STUCK_EXIT_TICKS = int(os.environ.get("SOLAR_MULTI_TASK_STUCK_EXIT_TICKS", "3") or "3")
+
+
+def _advance_graph(graph_path: Path | str) -> dict[str, Any]:
+    """Self-advance one multi-task DAG by a step the build scheduler does NOT do: dispatch evals for
+    `reviewing` nodes (through the operator pool) and reconcile results (apply eval verdicts ->
+    passed/failed, reset failed builds to pending + cooldown their operator, escalate stuck evals).
+    Dispatch of newly-ready downstream nodes stays with schedule_once. Best-effort; never raises.
+    Does NOT weaken gates -- it just runs the same dispatch_node_evals + reconcile the coordinator would."""
+    summary: dict[str, Any] = {"graph": str(graph_path), "eval_dispatched": [], "reconciled": [], "terminalized": []}
+    try:
+        # Auto-advance evaluates multi-task DAG nodes that finish in `reviewing` with no cockpit
+        # evaluator pane; route those evals through the operatord evaluator pool (builder-safe flag).
+        os.environ.setdefault("SOLAR_GRAPH_EVAL_OPERATOR_POOL", "1")
+        import graph_node_dispatcher as gnd
+
+        try:
+            ev = gnd.dispatch_node_evals(str(graph_path))
+            summary["eval_dispatched"] = [str(x.get("node")) for x in (ev.get("dispatched") or [])]
+            summary["terminalized"] = ev.get("terminalized") or []
+        except Exception as exc:
+            summary["eval_error"] = f"{type(exc).__name__}: {exc}"
+        try:
+            graph = gnd.load_graph(str(graph_path))
+            reconciled = gnd._reconcile_existing_dispatches(graph, str(graph_path))
+            if reconciled:
+                gnd.save_graph(str(graph_path), graph)
+                summary["reconciled"] = [
+                    {"node": r.get("node"), "status": r.get("status"), "reason": r.get("reason")}
+                    for r in reconciled
+                ]
+                # Cooldown operators whose build closeout failed, so re-dispatch avoids them.
+                for r in reconciled:
+                    closeout = r.get("last_operator_closeout_failure") if isinstance(r, dict) else None
+                    op_id = ""
+                    if isinstance(closeout, dict):
+                        op_id = str(closeout.get("operator_id") or "")
+                    if op_id:
+                        _record_operator_runtime_failure(op_id, str(r.get("reason") or "closeout"))
+        except Exception as exc:
+            summary["reconcile_error"] = f"{type(exc).__name__}: {exc}"
+    except Exception as exc:
+        summary["error"] = f"{type(exc).__name__}: {exc}"
+    return summary
+
+
+def _advance_graphs(graph_arg: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for graph_path in graph_files(graph_arg):
+        out.append(_advance_graph(graph_path))
+    return out
+
+
 def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     max_workers = effective_scheduler_max_workers(max(1, int(args.max_workers)))
+    # Self-advance reviewing nodes (eval dispatch + verdict reconcile) BEFORE dispatching builds, so a
+    # node that just passed unblocks its downstream in the same tick. Gated + best-effort.
+    advance: list[dict[str, Any]] = []
+    if AUTO_ADVANCE_ENABLED and getattr(args, "graph", None):
+        advance = _advance_graphs(getattr(args, "graph", []))
     recovered_quota_failures = 0
     for graph_path in graph_files(args.graph):
         try:
@@ -3112,6 +3485,7 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
             "dispatches": recent_dispatch_rows(),
             "capability": cap_summary,
             "recovered_quota_failures": recovered_quota_failures,
+            "advance": advance,
         }
 
     for graph_path in graph_files(args.graph):
@@ -3182,6 +3556,7 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
         "dispatches": recent_dispatch_rows(),
         "capability": cap_summary,
         "recovered_quota_failures": recovered_quota_failures,
+        "advance": advance,
     }
 
 
@@ -4699,6 +5074,7 @@ def main(argv: list[str] | None = None) -> int:
             if explicit_graphs:
                 _register_scheduler_pid(explicit_graphs)
                 registered = True
+            no_progress_ticks = 0
             while True:
                 result = schedule_once(args)
                 render_result(result, args)
@@ -4707,6 +5083,27 @@ def main(argv: list[str] | None = None) -> int:
                 if explicit_graphs and _all_graphs_terminal(explicit_graphs) and not active_tasks():
                     _append_scheduler_log("all_graphs_terminal_no_active_tasks_exit")
                     return 0
+                # Stuck/deadlock exit: a FAIL or needs_human_review blocks all remaining nodes (none
+                # active, nothing ready, not all-terminal) and there is no eval/reconcile/launch progress.
+                # Without this the loop would spin forever. Require STUCK_EXIT_TICKS consecutive dead ticks
+                # to avoid exiting on a transient settle window.
+                if explicit_graphs and not args.dry_run:
+                    states = [_graph_runner_state(gp) for gp in graph_files(explicit_graphs)]
+                    deadlocked = bool(states) and all(
+                        s.get("ok") and not s.get("has_active") and not s.get("ready_nodes") and not s.get("all_terminal")
+                        for s in states
+                    ) and not active_tasks()
+                    progressed = bool(result.get("launched")) or any(
+                        a.get("eval_dispatched") or a.get("reconciled") or a.get("terminalized")
+                        for a in (result.get("advance") or [])
+                    )
+                    if deadlocked and not progressed:
+                        no_progress_ticks += 1
+                    else:
+                        no_progress_ticks = 0
+                    if no_progress_ticks >= STUCK_EXIT_TICKS:
+                        _append_scheduler_log(f"multi_task_dag_deadlocked_no_progress_exit:{no_progress_ticks}_ticks")
+                        return 0
                 time.sleep(max(1, int(args.interval)))
         finally:
             if registered:

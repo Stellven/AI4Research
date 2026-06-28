@@ -3498,6 +3498,25 @@ EOF
   if [[ "$phase" == "graph_dispatch_active" || "$phase" == "planning_complete" ]]; then
     if [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
       log "${G}Sprint ${sid} ${phase} + task_graph → DAG graph_node 派发${N}"
+      # Option A self-complete: for an APPROVED sprint (graph_dispatch_active), hand the DAG to the PROVEN
+      # multi-task pool (build->eval->verdict->advance->clean exit) instead of the graph-dispatch panes.
+      # That path is codex-safe (honors the provider policy / role-compat / backend-health / sonnet eval)
+      # and is the one that produced the first fully-green DAG. Gated + default off so existing behavior is
+      # unchanged until the owner opts in (SOLAR_COORD_MULTITASK_SELFCOMPLETE=1). Respects the plan gate
+      # (only graph_dispatch_active, i.e. post-approval). pgrep guard prevents duplicate pools; the pool
+      # self-exits when the DAG is terminal.
+      if [[ "${SOLAR_COORD_MULTITASK_SELFCOMPLETE:-0}" == "1" && "$phase" == "graph_dispatch_active" ]]; then
+        if ! pgrep -f "multi_task_runner.py start .*${sid}.task_graph.json" >/dev/null 2>&1; then
+          SOLAR_GRAPH_EVAL_OPERATOR_POOL="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-1}" \
+            nohup python3 "$HARNESS_DIR/lib/multi_task_runner.py" start \
+              --graph "$SPRINTS_DIR/${sid}.task_graph.json" \
+              --max-workers "${SOLAR_COORD_MULTITASK_WORKERS:-1}" --interval 20 --renderer plain \
+              >> "$HARNESS_DIR/run/coord-multitask-${sid}.log" 2>&1 &
+          log "${G}[graph-dispatch] launched multi-task self-complete pool for ${sid}${N}"
+          emit_event "$sid" "multi_task_selfcomplete_launched" "coordinator" "{\"workers\":\"${SOLAR_COORD_MULTITASK_WORKERS:-1}\"}"
+        fi
+        return 0
+      fi
       if type queue_consume_intent_prefix &>/dev/null; then
         local pm_fix_consumed
         pm_fix_consumed=$(queue_consume_intent_prefix "$sid" "pm_prd_fix|" "superseded_by_graph_dispatch" 2>/dev/null || echo 0)
@@ -3515,11 +3534,16 @@ EOF
       fi
       local graph_rc=0 graph_out="" graph_eval_out="" graph_eval_rc=0
       local graph_dispatch_timeout="${SOLAR_GRAPH_DISPATCH_TIMEOUT_SEC:-35}"
+      # Self-advance cockpit/multi-task sprints: cockpit evaluator panes are usually idle, so eval needs the
+      # operatord evaluator pool to find an evaluator (otherwise dispatch-evals returns no_available_evaluator
+      # and the DAG never leaves `reviewing`). Honors an explicit SOLAR_GRAPH_EVAL_OPERATOR_POOL; otherwise
+      # defaults on. Set SOLAR_COORD_EVAL_OPERATOR_POOL=0 to disable. The eval pool itself stays builder-safe.
+      local coord_eval_pool="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-${SOLAR_COORD_EVAL_OPERATOR_POOL:-1}}"
       if [[ -n "${SOLAR_COORD_DRY_RUN:-}" ]]; then
-        graph_eval_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-evals --graph "$SPRINTS_DIR/${sid}.task_graph.json" --dry-run 2>&1)" || graph_eval_rc=$?
+        graph_eval_out="$(SOLAR_GRAPH_EVAL_OPERATOR_POOL="$coord_eval_pool" run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-evals --graph "$SPRINTS_DIR/${sid}.task_graph.json" --dry-run 2>&1)" || graph_eval_rc=$?
         graph_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-ready --graph "$SPRINTS_DIR/${sid}.task_graph.json" --dry-run 2>&1)" || graph_rc=$?
       else
-        graph_eval_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-evals --graph "$SPRINTS_DIR/${sid}.task_graph.json" 2>&1)" || graph_eval_rc=$?
+        graph_eval_out="$(SOLAR_GRAPH_EVAL_OPERATOR_POOL="$coord_eval_pool" run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-evals --graph "$SPRINTS_DIR/${sid}.task_graph.json" 2>&1)" || graph_eval_rc=$?
         graph_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-ready --graph "$SPRINTS_DIR/${sid}.task_graph.json" 2>&1)" || graph_rc=$?
       fi
       if (( graph_eval_rc != 0 )); then

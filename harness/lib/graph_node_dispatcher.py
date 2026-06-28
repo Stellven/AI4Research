@@ -65,6 +65,20 @@ PANE_QUOTA_EXHAUSTED_RE = re.compile(
 PANE_RATE_LIMIT_FALLBACK_SEC = int(os.environ.get("SOLAR_PANE_RATE_LIMIT_FALLBACK_SEC", "900"))
 OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC = int(os.environ.get("SOLAR_GRAPH_OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC", "900"))
 GRAPH_NODE_REPAIR_MAX_ATTEMPTS = int(os.environ.get("SOLAR_GRAPH_NODE_REPAIR_MAX_ATTEMPTS", "1"))
+# Bounded eval-dispatch failure escalation. A node whose evaluator dispatch keeps failing for a
+# capacity reason (e.g. no evaluator pane in the pool) would otherwise sit in `reviewing` forever
+# (Run D: 246x no_available_evaluator with no terminal state). After this many consecutive
+# capacity-class failures, the node is escalated to a durable needs_human_review with a reason +
+# next_action instead of retrying silently. 0 = unlimited (legacy infinite-retry behavior).
+GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES = int(os.environ.get("SOLAR_GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES", "8"))
+# Eval-dispatch skip reasons that mean "the node cannot be evaluated right now for a capacity reason"
+# (as opposed to a transient within-batch lease collision). Only these accrue toward escalation.
+_EVAL_STUCK_REASONS = frozenset({
+    "no_available_evaluator",
+    "insufficient_evaluator_capacity",
+    "insufficient_selected_evaluators",
+    "multi_evaluator_quorum_not_implemented",
+})
 # Fix F: faster recovery from an eval input-submit jam (wall #5). Caps the EVAL
 # lease + the re-dispatch gate so a stuck eval re-dispatches before the full 900s
 # TTL. Safety is the existing busy-check: a still-working eval pane reads busy and
@@ -1674,6 +1688,16 @@ def _start_node_repair_from_eval_fail(
     max_attempts = _node_repair_max_attempts(graph, node)
     prior_attempts = _node_repair_attempts(node)
     if prior_attempts >= max_attempts:
+        # Repair budget exhausted: the reconcile caller falls through and marks this node terminal
+        # `failed`. Record the (otherwise silent) exhaustion so the terminal cause is provable from disk.
+        _record_node_runstate(sid, node_id, {
+            "repair_attempt": prior_attempts,
+            "max_repair_attempts": max_attempts,
+            "last_eval_result": "FAIL",
+            "last_eval_reason": "repair_budget_exhausted",
+            "next_action": "terminal_failed",
+            "status": str(node.get("status") or ""),
+        })
         return None
 
     attempt = prior_attempts + 1
@@ -1726,6 +1750,14 @@ def _start_node_repair_from_eval_fail(
         "note": f"repair_requested_from_eval_sidecar:{Path(eval_json_path).name}",
         "repair_context": repair_context,
     }
+    _record_node_runstate(sid, node_id, {
+        "repair_attempt": attempt,
+        "max_repair_attempts": max_attempts,
+        "last_eval_result": "FAIL",
+        "last_eval_reason": repair_context.get("summary") or "eval_failed",
+        "next_action": "rebuild_and_reeval",
+        "status": "failed_review",
+    })
     return repair_context
 
 
@@ -5464,6 +5496,19 @@ def _utc_now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _record_node_runstate(sid: str, node_id: str, fields: dict[str, Any]) -> None:
+    """Persist durable per-node eval/repair state next to the sprint (best-effort).
+
+    Surfaces repair_attempt / max / eval_dispatch_failures / last verdict+reason / next_action / status in
+    one file per node, so a stuck node is provable from disk instead of grepping hundreds of events."""
+    try:
+        import node_runstate
+
+        node_runstate.record(SPRINTS_DIR, sid, node_id, "eval_state", fields)
+    except Exception:
+        pass
+
+
 def _append_event(sid: str, event: dict[str, Any]) -> None:
     event_file = SPRINTS_DIR / f"{sid}.events.jsonl"
     event = dict(event)
@@ -5618,8 +5663,27 @@ def _builder_operator_pool_available_count() -> int:
     return max(0, available)
 
 
+def _eval_operator_pool_enabled() -> bool:
+    """Whether eval may dispatch to an operator-pool (operatord) evaluator.
+
+    True if the broad builder operator pool is on, OR the eval-only flag is set. The eval-only flag lets a
+    multi-task DAG (whose nodes finish in `reviewing` with no cockpit evaluator pane) get an evaluator from
+    the operatord pool WITHOUT also turning on operator-pool builders (which would change build dispatch).
+    Default off (component-gated)."""
+    if _builder_operator_pool_enabled():
+        return True
+    return str(os.environ.get("SOLAR_GRAPH_EVAL_OPERATOR_POOL", "0")).strip().lower() not in {
+        "0",
+        "false",
+        "off",
+        "no",
+        "",
+    }
+
+
 def _operator_pool_role_available(role: str) -> bool:
-    if not _builder_operator_pool_enabled():
+    enabled = _eval_operator_pool_enabled() if str(role).strip().lower() == "evaluator" else _builder_operator_pool_enabled()
+    if not enabled:
         return False
     cmd = [
         sys.executable,
@@ -6985,10 +7049,23 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
 
         node["status"] = "reviewing"
         node["eval_dispatch_group_id"] = dispatch_group_id
+        # A successful dispatch clears the consecutive-failure streak so a later transient
+        # unavailability does not inherit an old count and escalate prematurely.
+        node.pop("eval_dispatch_failures", None)
+        node.pop("last_eval_dispatch_failure_reason", None)
         _store_eval_assignments(node, planned_assignments, _utc_now())
+        _record_node_runstate(sid, node_id, {
+            "eval_dispatch_failures": 0,
+            "max_eval_dispatch_failures": GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES,
+            "last_eval_result": "DISPATCHED",
+            "last_eval_reason": "evaluator_dispatched",
+            "next_action": "await_eval_verdict",
+            "status": "reviewing",
+        })
         for item in sent_records:
             dispatched.append(item)
 
+    terminalized = _account_eval_dispatch_failures(graph, sid, skipped, dry_run)
     if not dry_run:
         save_graph(graph_path, graph)
     return {
@@ -6996,7 +7073,84 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
         "sprint_id": sid,
         "dispatched": dispatched,
         "skipped": skipped,
+        "terminalized": terminalized,
     }
+
+
+def _account_eval_dispatch_failures(
+    graph: dict[str, Any],
+    sid: str,
+    skipped: list[dict[str, Any]],
+    dry_run: bool,
+) -> list[dict[str, Any]]:
+    """Count consecutive capacity-class eval-dispatch failures per node and, past the configured cap,
+    escalate the node to a durable terminal `needs_human_review` instead of retrying silently forever.
+
+    This is the fix for the Run D limbo (246x no_available_evaluator with the node stuck in `reviewing`).
+    It never auto-passes or auto-fails -- it converts an invisible infinite retry into one clear human gate
+    (a later human eval-verdict still reopens/closes the node normally). Gated by
+    GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES (0 = unlimited/legacy). Records durable eval_state either way."""
+    terminalized: list[dict[str, Any]] = []
+    if dry_run or not skipped:
+        return terminalized
+    node_index = {str(node.get("id") or ""): node for node in graph.get("nodes", [])}
+    max_fail = GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES
+    for item in skipped:
+        reason = str(item.get("reason") or "")
+        node_id = str(item.get("node") or "")
+        node = node_index.get(node_id)
+        if node is None or reason not in _EVAL_STUCK_REASONS:
+            continue
+        failures = int(node.get("eval_dispatch_failures") or 0) + 1
+        node["eval_dispatch_failures"] = failures
+        node["last_eval_dispatch_failure_reason"] = reason
+        node["last_eval_dispatch_failure_at"] = _utc_now()
+        current = str(node_status(graph, node_id) or node.get("status") or "").strip().lower()
+        next_action = "retry_eval_dispatch"
+        if (
+            max_fail > 0
+            and failures >= max_fail
+            and current not in {"passed", "failed", "skipped", "cancelled", "needs_human_review"}
+        ):
+            now = _utc_now()
+            next_action = "connect_evaluator_or_submit_human_verdict"
+            blocked_reason = f"eval_dispatch_unavailable:{reason}:{failures}_consecutive_failures"
+            # Set node + node_results directly: graph_scheduler._status_rank ranks reviewing(4) above
+            # needs_human_review(0), so set_node_status would refuse this transition. This mirrors the
+            # direct-write pattern already used by _start_node_repair_from_eval_fail.
+            node["status"] = "needs_human_review"
+            node["eval_blocked_reason"] = blocked_reason
+            node["next_action"] = next_action
+            node["updated_at"] = now
+            graph.setdefault("node_results", {})
+            graph["node_results"][node_id] = {
+                "status": "needs_human_review",
+                "updated_at": now,
+                "note": blocked_reason,
+                "next_action": next_action,
+            }
+            _append_event(sid, {
+                "event": "graph_eval_dispatch_escalated_to_human",
+                "by": "graph-dispatch",
+                "severity": "warn",
+                "data": {
+                    "node": node_id,
+                    "reason": reason,
+                    "consecutive_failures": failures,
+                    "max_failures": max_fail,
+                    "next_action": next_action,
+                },
+            })
+            terminalized.append({"node": node_id, "status": "needs_human_review", "reason": blocked_reason})
+        _record_node_runstate(sid, node_id, {
+            "eval_dispatch_failures": failures,
+            "max_eval_dispatch_failures": max_fail,
+            "last_eval_result": "DISPATCH_FAILED",
+            "last_eval_reason": reason,
+            "next_action": node.get("next_action") or next_action,
+            "status": str(node.get("status") or ""),
+        })
+    return terminalized
 
 
 def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,

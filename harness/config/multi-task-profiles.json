@@ -188,6 +188,56 @@
         "low-cost"
       ],
       "max_parallel": 2
+    },
+    "codex-builder": {
+      "role": "builder",
+      "label": "Codex Builder (gpt-5.5)",
+      "persona": "builder",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "approval_mode": "default",
+      "best_for": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "code-edit",
+        "research-synthesis"
+      ],
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "max_parallel": 2
+    },
+    "codex-planner": {
+      "role": "planner",
+      "label": "Codex Planner (gpt-5.5)",
+      "persona": "planner",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "approval_mode": "default",
+      "best_for": [
+        "planning",
+        "architecture",
+        "decomposition",
+        "risk"
+      ],
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "max_parallel": 1
+    },
+    "codex-evaluator": {
+      "role": "evaluator",
+      "label": "Codex Evaluator (gpt-5.5)",
+      "persona": "evaluator",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "approval_mode": "default",
+      "best_for": [
+        "verification",
+        "review",
+        "evidence",
+        "regression"
+      ],
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "max_parallel": 1
     }
   }
 }
