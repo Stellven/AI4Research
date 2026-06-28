@@ -354,7 +354,7 @@
       "quota_cycle": "monthly",
       "quota_refresh_at": null,
       "quota_guard_state": "ok",
-      "enabled": true,
+      "enabled": false,
       "enabled_at": "2026-05-22T00:12:00Z",
       "available": true,
       "health_status": "ok",
@@ -411,7 +411,8 @@
           }
         }
       },
-      "deprecated": true
+      "deprecated": true,
+      "disabled_reason": "retired_deprecated_opus_evaluator_in_favor_of_sonnet_2026-06-28"
     },
     "mini-thunderomlx-qwen36-knowledge": {
       "display_name": "Mac mini ThunderOMLX Qwen3.6 knowledge",
@@ -1468,7 +1469,7 @@
       "quota_cycle": "monthly",
       "quota_refresh_at": null,
       "quota_guard_state": "ok",
-      "enabled": true,
+      "enabled": false,
       "enabled_at": "2026-05-23T00:53:00Z",
       "available": true,
       "health_status": "ok",
@@ -1537,7 +1538,8 @@
           }
         }
       },
-      "deprecated": true
+      "deprecated": true,
+      "disabled_reason": "retired_deprecated_opus_evaluator_in_favor_of_sonnet_2026-06-28"
     },
     "webapp_research_operator": {
       "display_name": "Browser Agent Webapp Research Operator",
@@ -4151,6 +4153,105 @@
         }
       },
       "deprecated": true
+    },
+    "mini-claude-sonnet-evaluator-print": {
+      "display_name": "Claude Sonnet evaluator (print)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "evaluator",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "model_config": "print_once",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "claude --print --model sonnet"
+      },
+      "billing_surface": "anthropic_agent_sdk_credit",
+      "billing_pool": "anthropic_agent_sdk_credit",
+      "launch_cmd_kind": "print_once",
+      "compat_alias_for": "tmux_pane",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-23T00:53:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "evaluator"
+      ],
+      "task_classes": [
+        "verification",
+        "review",
+        "evidence"
+      ],
+      "strengths": [
+        "review",
+        "risk",
+        "quality-gate"
+      ],
+      "preferred_for": [
+        "evaluator",
+        "review",
+        "verification"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "FANOUT",
+        "BULK_EDIT",
+        "TEST_RUN",
+        "LOW_VALUE_SCAN"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "quota": {
+        "quota_type": "monthly-agent-credit",
+        "period": "monthly",
+        "reserve_for": [
+          "FINAL_REVIEW",
+          "ROOT_CAUSE_DEBUG",
+          "ARCH_DECISION"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "evaluator"
+          }
+        }
+      },
+      "deprecated": false
     }
   },
   "_meta": {
