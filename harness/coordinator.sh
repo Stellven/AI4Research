@@ -3515,11 +3515,16 @@ EOF
       fi
       local graph_rc=0 graph_out="" graph_eval_out="" graph_eval_rc=0
       local graph_dispatch_timeout="${SOLAR_GRAPH_DISPATCH_TIMEOUT_SEC:-35}"
+      # Self-advance cockpit/multi-task sprints: cockpit evaluator panes are usually idle, so eval needs the
+      # operatord evaluator pool to find an evaluator (otherwise dispatch-evals returns no_available_evaluator
+      # and the DAG never leaves `reviewing`). Honors an explicit SOLAR_GRAPH_EVAL_OPERATOR_POOL; otherwise
+      # defaults on. Set SOLAR_COORD_EVAL_OPERATOR_POOL=0 to disable. The eval pool itself stays builder-safe.
+      local coord_eval_pool="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-${SOLAR_COORD_EVAL_OPERATOR_POOL:-1}}"
       if [[ -n "${SOLAR_COORD_DRY_RUN:-}" ]]; then
-        graph_eval_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-evals --graph "$SPRINTS_DIR/${sid}.task_graph.json" --dry-run 2>&1)" || graph_eval_rc=$?
+        graph_eval_out="$(SOLAR_GRAPH_EVAL_OPERATOR_POOL="$coord_eval_pool" run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-evals --graph "$SPRINTS_DIR/${sid}.task_graph.json" --dry-run 2>&1)" || graph_eval_rc=$?
         graph_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-ready --graph "$SPRINTS_DIR/${sid}.task_graph.json" --dry-run 2>&1)" || graph_rc=$?
       else
-        graph_eval_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-evals --graph "$SPRINTS_DIR/${sid}.task_graph.json" 2>&1)" || graph_eval_rc=$?
+        graph_eval_out="$(SOLAR_GRAPH_EVAL_OPERATOR_POOL="$coord_eval_pool" run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-evals --graph "$SPRINTS_DIR/${sid}.task_graph.json" 2>&1)" || graph_eval_rc=$?
         graph_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-ready --graph "$SPRINTS_DIR/${sid}.task_graph.json" 2>&1)" || graph_rc=$?
       fi
       if (( graph_eval_rc != 0 )); then
