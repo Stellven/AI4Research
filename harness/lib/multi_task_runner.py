@@ -994,7 +994,13 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
             continue
             
         score = operator_score(operator, node, selector)
-        
+
+        # Deprioritize operators that recently failed at runtime (e.g. an unconfigured backend CLI that
+        # exits non-zero). operator_dispatchable can't see this. Heavy penalty, not a hard exclude, so a
+        # cooled-down operator is still a last resort if nothing healthy matches.
+        if operator_in_failure_cooldown(str(operator.get("operator_id") or "")):
+            score -= 100000
+
         if pref_classes:
             classes_list = [pref_classes] if isinstance(pref_classes, str) else list(pref_classes)
             for c in classes_list:
@@ -3115,10 +3121,15 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
                 )
                 if result is None:
                     payload["status"] = "result_timeout"
+                    _record_operator_runtime_failure(operator_id, "result_timeout")
                 else:
                     payload["status"] = str(result.get("status") or "completed")
                     payload["exit_code"] = result.get("exit_code")
                     payload["operator_result"] = result
+                    if str(payload["status"]).lower() in {"failed", "error"} or (
+                        result.get("exit_code") not in (0, None)
+                    ):
+                        _record_operator_runtime_failure(operator_id, f"status={payload['status']} exit={result.get('exit_code')}")
                 payload["updated_at"] = now_iso()
                 json_write(status_path(task_dir), payload)
                 _record_node_attribution(sid, node_id, payload, task_dir, "completed")
@@ -3148,9 +3159,116 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
     return payload
 
 
+# --- Operator runtime-failure cooldown -------------------------------------------------------------
+# operator_dispatchable() only checks config/quota/auth, not whether the backend actually runs. An
+# operator whose CLI fails at runtime (e.g. an unconfigured gemini/antigravity command -> exit 1) would
+# otherwise keep getting selected over a working Claude builder. Record runtime failures and deprioritize
+# recently-failed operators in selection (cooldown auto-expires; never a hard exclude).
+OPERATOR_FAILURE_LEDGER_PATH = Path(os.environ.get("SOLAR_MULTI_TASK_OPERATOR_FAILURE_LEDGER", RUN_DIR / "operator-failures.json"))
+OPERATOR_FAILURE_COOLDOWN_SEC = int(os.environ.get("SOLAR_MULTI_TASK_OPERATOR_FAILURE_COOLDOWN_SEC", "900") or "900")
+
+
+def _read_operator_failures() -> dict[str, Any]:
+    try:
+        data = json.loads(OPERATOR_FAILURE_LEDGER_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _record_operator_runtime_failure(operator_id: str, reason: str = "") -> None:
+    op = str(operator_id or "").strip()
+    if not op or op == "N/A":
+        return
+    try:
+        data = _read_operator_failures()
+        prior = data.get(op) if isinstance(data.get(op), dict) else {}
+        data[op] = {"at": now_iso(), "reason": str(reason)[:200], "count": int(prior.get("count") or 0) + 1}
+        json_write(OPERATOR_FAILURE_LEDGER_PATH, data)
+    except Exception:
+        pass
+
+
+def operator_in_failure_cooldown(operator_id: str) -> bool:
+    if OPERATOR_FAILURE_COOLDOWN_SEC <= 0:
+        return False
+    op = str(operator_id or "").strip()
+    if not op:
+        return False
+    rec = _read_operator_failures().get(op)
+    if not isinstance(rec, dict):
+        return False
+    ts = parse_iso(str(rec.get("at") or ""))
+    if ts is None:
+        return False
+    return (time.time() - ts) < OPERATOR_FAILURE_COOLDOWN_SEC
+
+
+# --- Auto-advance: make a multi-task DAG self-complete build -> eval -> verdict -> next node ---------
+AUTO_ADVANCE_ENABLED = os.environ.get("SOLAR_MULTI_TASK_AUTO_ADVANCE", "1").strip().lower() not in {"0", "false", "off", "no"}
+# Consecutive no-progress ticks (no active task, nothing ready, not all-terminal, no eval/reconcile
+# progress) before the loop exits cleanly instead of spinning on a FAIL/needs_human_review deadlock.
+STUCK_EXIT_TICKS = int(os.environ.get("SOLAR_MULTI_TASK_STUCK_EXIT_TICKS", "3") or "3")
+
+
+def _advance_graph(graph_path: Path | str) -> dict[str, Any]:
+    """Self-advance one multi-task DAG by a step the build scheduler does NOT do: dispatch evals for
+    `reviewing` nodes (through the operator pool) and reconcile results (apply eval verdicts ->
+    passed/failed, reset failed builds to pending + cooldown their operator, escalate stuck evals).
+    Dispatch of newly-ready downstream nodes stays with schedule_once. Best-effort; never raises.
+    Does NOT weaken gates -- it just runs the same dispatch_node_evals + reconcile the coordinator would."""
+    summary: dict[str, Any] = {"graph": str(graph_path), "eval_dispatched": [], "reconciled": [], "terminalized": []}
+    try:
+        # Auto-advance evaluates multi-task DAG nodes that finish in `reviewing` with no cockpit
+        # evaluator pane; route those evals through the operatord evaluator pool (builder-safe flag).
+        os.environ.setdefault("SOLAR_GRAPH_EVAL_OPERATOR_POOL", "1")
+        import graph_node_dispatcher as gnd
+
+        try:
+            ev = gnd.dispatch_node_evals(str(graph_path))
+            summary["eval_dispatched"] = [str(x.get("node")) for x in (ev.get("dispatched") or [])]
+            summary["terminalized"] = ev.get("terminalized") or []
+        except Exception as exc:
+            summary["eval_error"] = f"{type(exc).__name__}: {exc}"
+        try:
+            graph = gnd.load_graph(str(graph_path))
+            reconciled = gnd._reconcile_existing_dispatches(graph, str(graph_path))
+            if reconciled:
+                gnd.save_graph(str(graph_path), graph)
+                summary["reconciled"] = [
+                    {"node": r.get("node"), "status": r.get("status"), "reason": r.get("reason")}
+                    for r in reconciled
+                ]
+                # Cooldown operators whose build closeout failed, so re-dispatch avoids them.
+                for r in reconciled:
+                    closeout = r.get("last_operator_closeout_failure") if isinstance(r, dict) else None
+                    op_id = ""
+                    if isinstance(closeout, dict):
+                        op_id = str(closeout.get("operator_id") or "")
+                    if op_id:
+                        _record_operator_runtime_failure(op_id, str(r.get("reason") or "closeout"))
+        except Exception as exc:
+            summary["reconcile_error"] = f"{type(exc).__name__}: {exc}"
+    except Exception as exc:
+        summary["error"] = f"{type(exc).__name__}: {exc}"
+    return summary
+
+
+def _advance_graphs(graph_arg: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for graph_path in graph_files(graph_arg):
+        out.append(_advance_graph(graph_path))
+    return out
+
+
 def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     max_workers = effective_scheduler_max_workers(max(1, int(args.max_workers)))
+    # Self-advance reviewing nodes (eval dispatch + verdict reconcile) BEFORE dispatching builds, so a
+    # node that just passed unblocks its downstream in the same tick. Gated + best-effort.
+    advance: list[dict[str, Any]] = []
+    if AUTO_ADVANCE_ENABLED and getattr(args, "graph", None):
+        advance = _advance_graphs(getattr(args, "graph", []))
     recovered_quota_failures = 0
     for graph_path in graph_files(args.graph):
         try:
@@ -3186,6 +3304,7 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
             "dispatches": recent_dispatch_rows(),
             "capability": cap_summary,
             "recovered_quota_failures": recovered_quota_failures,
+            "advance": advance,
         }
 
     for graph_path in graph_files(args.graph):
@@ -3256,6 +3375,7 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
         "dispatches": recent_dispatch_rows(),
         "capability": cap_summary,
         "recovered_quota_failures": recovered_quota_failures,
+        "advance": advance,
     }
 
 
@@ -4773,6 +4893,7 @@ def main(argv: list[str] | None = None) -> int:
             if explicit_graphs:
                 _register_scheduler_pid(explicit_graphs)
                 registered = True
+            no_progress_ticks = 0
             while True:
                 result = schedule_once(args)
                 render_result(result, args)
@@ -4781,6 +4902,27 @@ def main(argv: list[str] | None = None) -> int:
                 if explicit_graphs and _all_graphs_terminal(explicit_graphs) and not active_tasks():
                     _append_scheduler_log("all_graphs_terminal_no_active_tasks_exit")
                     return 0
+                # Stuck/deadlock exit: a FAIL or needs_human_review blocks all remaining nodes (none
+                # active, nothing ready, not all-terminal) and there is no eval/reconcile/launch progress.
+                # Without this the loop would spin forever. Require STUCK_EXIT_TICKS consecutive dead ticks
+                # to avoid exiting on a transient settle window.
+                if explicit_graphs and not args.dry_run:
+                    states = [_graph_runner_state(gp) for gp in graph_files(explicit_graphs)]
+                    deadlocked = bool(states) and all(
+                        s.get("ok") and not s.get("has_active") and not s.get("ready_nodes") and not s.get("all_terminal")
+                        for s in states
+                    ) and not active_tasks()
+                    progressed = bool(result.get("launched")) or any(
+                        a.get("eval_dispatched") or a.get("reconciled") or a.get("terminalized")
+                        for a in (result.get("advance") or [])
+                    )
+                    if deadlocked and not progressed:
+                        no_progress_ticks += 1
+                    else:
+                        no_progress_ticks = 0
+                    if no_progress_ticks >= STUCK_EXIT_TICKS:
+                        _append_scheduler_log(f"multi_task_dag_deadlocked_no_progress_exit:{no_progress_ticks}_ticks")
+                        return 0
                 time.sleep(max(1, int(args.interval)))
         finally:
             if registered:
