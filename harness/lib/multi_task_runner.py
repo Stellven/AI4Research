@@ -2781,6 +2781,34 @@ def build_dispatch_text(graph_path: Path, graph: dict[str, Any], node: dict[str,
             return "\n".join(f"- {k}: {v}" for k, v in value.items()) if value else "- N/A"
         return f"- {value}"
 
+    def _structured_validation_block(write_scope: Any) -> str:
+        # Closeout/review nodes emit machine-parsed files (e.g. review_decision.yaml). A common LLM error
+        # is malformed YAML/JSON (e.g. a mapping key at the same indent as block-sequence items), which the
+        # evaluator correctly fails. Require the worker to validate each structured deliverable parses.
+        items = write_scope if isinstance(write_scope, (list, tuple)) else ([write_scope] if write_scope else [])
+        cmds: list[str] = []
+        for raw in items:
+            path = str(raw).strip()
+            low = path.lower()
+            if low.endswith((".yaml", ".yml")):
+                cmds.append('python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1])); print(\'YAML_OK\')" ' + path)
+            elif low.endswith(".json"):
+                cmds.append('python3 -c "import json,sys; json.load(open(sys.argv[1])); print(\'JSON_OK\')" ' + path)
+        if not cmds:
+            return ""
+        body = "\n".join(cmds)
+        return (
+            "\n## Structured Output Validation (REQUIRED)\n\n"
+            "Your Write Scope includes machine-parsed file(s). BEFORE writing the handoff you MUST run the"
+            " check(s) below and FIX any syntax error until each prints OK:\n\n"
+            "```bash\n" + body + "\n```\n\n"
+            "A structured deliverable that does not parse FAILS acceptance even if its content is correct."
+            " Common YAML error: a mapping key (`key:`) at the SAME indent as block-sequence items (`- item`)"
+            " under the same parent -- give the mapping its own key or nest it correctly.\n"
+        )
+
+    structured_validation = _structured_validation_block(node.get("write_scope"))
+
     return f"""<!-- SOLAR_MULTI_TASK_DISPATCH -->
 # Solar Harness Multi-Task DAG Dispatch
 
@@ -2824,7 +2852,7 @@ Persona file: `{persona_path}`
 ## Write Scope
 
 {lines(node.get("write_scope"))}
-
+{structured_validation}
 ## Required Skills
 
 {lines(node.get("required_skills"))}
