@@ -964,6 +964,43 @@ def _selection_node_role(node: dict[str, Any]) -> str:
     return ""
 
 
+# --- Default provider policy: prefer Claude/Anthropic + Codex/OpenAI for normal dispatch ------------
+# Non-default providers (gemini/google, glm/zhipu, deepseek, local/thunderomlx, browser, ...) stay fully
+# functional but are deprioritized in OPERATOR selection unless the dispatch explicitly wants them:
+#   * pinned          -> node.preferred_operator (bypasses scoring entirely; unaffected)
+#   * profile/backend -> the base profile already targets a non-default provider (--profile gemini-builder,
+#                        --backend gemini-cli, --model gemini, node.preferred_profile=...) -> policy is off
+#   * requested       -> the node's operator_selector names that provider/vendor/model/operator id
+# Configurable; SOLAR_MULTI_TASK_DEFAULT_PROVIDERS="" disables the policy (all providers equal).
+DEFAULT_OPERATOR_PROVIDERS = frozenset(
+    p.strip().lower()
+    for p in os.environ.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS", "anthropic,openai").split(",")
+    if p.strip()
+)
+_NON_DEFAULT_PROVIDER_PROFILE_TOKENS = ("gemini", "glm", "zhipu", "deepseek", "thunder", "omlx", "antigravity")
+
+
+def _profile_targets_nondefault_provider(profile: dict[str, Any]) -> bool:
+    """True when the base profile explicitly targets a non-default provider (explicit override -> don't
+    apply the default-provider policy). Uses backend/model/name tokens (model_provider() can't name openai)."""
+    backend = str(profile.get("backend") or "").strip().lower()
+    if backend in {"gemini-cli", "gemini-sdk"}:
+        return True
+    blob = f"{backend} {str(profile.get('model') or '').lower()} {str(profile.get('name') or '').lower()}"
+    return any(token in blob for token in _NON_DEFAULT_PROVIDER_PROFILE_TOKENS)
+
+
+def _operator_provider_requested(operator: dict[str, Any], selector_values: set[str]) -> bool:
+    """True when the node's operator_selector explicitly names this operator's provider/vendor/model/id."""
+    if not selector_values:
+        return False
+    for key in ("provider", "vendor", "model", "operator_id"):
+        value = str(operator.get(key) or "").strip().lower()
+        if value and value in selector_values:
+            return True
+    return False
+
+
 def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
     preferred = str(node.get("preferred_operator") or "").strip()
     if preferred:
@@ -1011,6 +1048,9 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
     
     scored: list[tuple[int, dict[str, Any]]] = []
     selection_node_role = _selection_node_role(node)
+    # Default-provider policy is active only for normal dispatch; an explicitly non-default base profile
+    # (e.g. --profile gemini-builder / --backend gemini-cli) turns it off so the override is preserved.
+    provider_policy_active = bool(DEFAULT_OPERATOR_PROVIDERS) and not _profile_targets_nondefault_provider(base_profile)
     selector_values = set(_selector_values(selector))
     if task_type:
         selector_values.update(_expand_str(task_type))
@@ -1068,6 +1108,14 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
         if selection_node_role in _HARD_ROLES:
             op_role = _normalize_selection_role(operator.get("role"))
             if op_role in _HARD_ROLES and op_role != selection_node_role:
+                score -= 100000
+
+        # Default-provider policy: deprioritize non-default providers (gemini/glm/deepseek/local/browser/...)
+        # for normal dispatch, unless this node explicitly requests this operator's provider/vendor/model/id.
+        # Penalty, not a hard exclude, so a provider that is the only viable option (e.g. vision-only) still wins.
+        if provider_policy_active:
+            op_provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower()
+            if op_provider and op_provider not in DEFAULT_OPERATOR_PROVIDERS and not _operator_provider_requested(operator, selector_values):
                 score -= 100000
 
         if pref_classes:
