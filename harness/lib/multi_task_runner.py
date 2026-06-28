@@ -2076,6 +2076,43 @@ def enrich_task_row(row: dict[str, Any], windows: dict[str, dict[str, str]]) -> 
     return enriched
 
 
+def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
+    """Durably backfill the node-keyed completion attribution (exit_code/status) for a terminal task.
+
+    The tmux runner writes the final exit_code to the worker's RUN_DIR status.json but never co-locates it
+    with the sprint; this mirrors it into the durable per-node snapshot. Idempotent (skips when the snapshot
+    already records this completion) so the hot status path does not write-amplify. Best-effort."""
+    try:
+        status = str(row.get("status") or "").lower()
+        if status not in TERMINAL_TASK_STATUSES:
+            return
+        sid = str(row.get("sprint_id") or "").strip()
+        node_id = str(row.get("node_id") or "").strip()
+        if not sid or not node_id:
+            return
+        import node_runstate
+
+        snap = node_runstate.read_snapshot(SPRINTS_DIR, sid, node_id)
+        attr = snap.get("attribution") if isinstance(snap.get("attribution"), dict) else {}
+        if attr.get("phase") == "completed" and attr.get("status") == status and attr.get("exit_code") == row.get("exit_code"):
+            return
+        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+            "phase": "completed",
+            "status": status,
+            "exit_code": row.get("exit_code"),
+            "backend": row.get("backend"),
+            "vendor": row.get("operator_vendor") or row.get("provider"),
+            "model": row.get("operator_model") or row.get("model"),
+            "provider": row.get("provider"),
+            "operator_id": row.get("operator_id"),
+            "profile": row.get("profile"),
+            "role": row.get("role"),
+            "dispatch_id": row.get("id"),
+        })
+    except Exception:
+        pass
+
+
 def list_task_rows() -> list[dict[str, Any]]:
     if not RUN_DIR.exists():
         return []
@@ -2084,6 +2121,7 @@ def list_task_rows() -> list[dict[str, Any]]:
     for path in sorted(RUN_DIR.glob("*/status.json"), key=lambda p: p.stat().st_mtime, reverse=True):
         row = read_task_status(path)
         if row:
+            _finalize_terminal_attribution(row)
             rows.append(enrich_task_row(row, windows))
     return rows
 
@@ -2967,6 +3005,35 @@ def _poll_operator_result(result_path: Path, timeout_sec: float, interval_sec: f
     return None
 
 
+def _record_node_attribution(sid: str, node_id: str, payload: dict[str, Any], task_dir: Path, phase: str) -> None:
+    """Persist a durable, node-keyed worker-attribution record next to the sprint.
+
+    The same facts already live in RUN_DIR/<dispatch_id>/status.json, but that is keyed by dispatch_id
+    and reaped after SOLAR_MULTI_TASK_REAP_TTL_MIN. This co-locates a node-keyed copy with the sprint so
+    "node N1 ran on backend/vendor/model/operator X (exit_code Y)" stays provable after reaping. Best-effort."""
+    try:
+        import node_runstate
+
+        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+            "dispatch_id": payload.get("id"),
+            "backend": payload.get("backend"),
+            "vendor": payload.get("operator_vendor") or payload.get("provider"),
+            "model": payload.get("operator_model") or payload.get("model"),
+            "provider": payload.get("provider"),
+            "operator_id": payload.get("operator_id"),
+            "profile": payload.get("profile"),
+            "role": payload.get("role"),
+            "work_dir": payload.get("work_dir"),
+            "status_path": str(status_path(task_dir)),
+            "phase": phase or payload.get("status"),
+            "status": payload.get("status"),
+            "exit_code": payload.get("exit_code"),
+            "created_at": payload.get("created_at"),
+        })
+    except Exception:
+        pass
+
+
 def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], args: argparse.Namespace,
                 dry_run: bool = False) -> dict[str, Any]:
     sid = sprint_id_for(graph, graph_path)
@@ -3021,6 +3088,7 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         "exit_code": None,
     }
     json_write(status_path(task_dir), payload)
+    _record_node_attribution(sid, node_id, payload, task_dir, "dispatched")
 
     if _operator_submit_eligible(profile, dry_run=dry_run):
         try:
@@ -3053,6 +3121,7 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
                     payload["operator_result"] = result
                 payload["updated_at"] = now_iso()
                 json_write(status_path(task_dir), payload)
+                _record_node_attribution(sid, node_id, payload, task_dir, "completed")
             return payload
         except (RuntimeError, ValueError) as exc:
             payload["operator_submit_fallback"] = "legacy"
