@@ -5663,8 +5663,27 @@ def _builder_operator_pool_available_count() -> int:
     return max(0, available)
 
 
+def _eval_operator_pool_enabled() -> bool:
+    """Whether eval may dispatch to an operator-pool (operatord) evaluator.
+
+    True if the broad builder operator pool is on, OR the eval-only flag is set. The eval-only flag lets a
+    multi-task DAG (whose nodes finish in `reviewing` with no cockpit evaluator pane) get an evaluator from
+    the operatord pool WITHOUT also turning on operator-pool builders (which would change build dispatch).
+    Default off (component-gated)."""
+    if _builder_operator_pool_enabled():
+        return True
+    return str(os.environ.get("SOLAR_GRAPH_EVAL_OPERATOR_POOL", "0")).strip().lower() not in {
+        "0",
+        "false",
+        "off",
+        "no",
+        "",
+    }
+
+
 def _operator_pool_role_available(role: str) -> bool:
-    if not _builder_operator_pool_enabled():
+    enabled = _eval_operator_pool_enabled() if str(role).strip().lower() == "evaluator" else _builder_operator_pool_enabled()
+    if not enabled:
         return False
     cmd = [
         sys.executable,
