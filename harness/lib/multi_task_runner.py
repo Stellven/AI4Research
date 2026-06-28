@@ -904,6 +904,66 @@ def operator_matches_class(operator: dict[str, Any], class_name: str) -> bool:
     return str(op_class).lower() == class_name.lower()
 
 
+# --- Role-compatible operator selection -----------------------------------------------------------
+# A node's role-ish fields sometimes hold a backend/model token (e.g. owner="codex") instead of a real
+# role. role_from_node() returns that token verbatim, and operator_score() then rewards a planner operator
+# whose id contains "codex" -> a planner-role operator wins a builder node (Run G: S1/S2 ran on
+# mini-codex-gpt55-medium-planner-2). This is SELECTION-only role resolution: it skips backend/model/
+# provider tokens so the real role surfaces, then a hard-role mismatch is heavily penalized. role_from_node
+# (and therefore profile selection) is intentionally left unchanged for now.
+_HARD_ROLES = frozenset({"builder", "planner", "evaluator", "pm"})
+_SELECTION_ROLE_ALIASES = {
+    "builder-main": "builder", "build": "builder", "implementation": "builder", "implementer": "builder",
+    "implementationworker": "builder",
+    "judge": "evaluator", "reviewer": "evaluator", "verifier": "evaluator", "critic": "evaluator",
+    "artifact-curator": "evaluator", "testrunner": "evaluator",
+    "product": "pm", "product-manager": "pm",
+    "planning": "planner", "architect": "planner", "deeparchitect": "planner",
+}
+_SELECTION_NON_ROLE_TOKENS = frozenset({
+    "codex", "claude", "gpt", "gpt-5.5", "gpt5", "sonnet", "opus", "haiku", "gemini", "glm", "deepseek",
+    "thunderomlx", "antigravity", "claude-cli", "gemini-cli", "gemini-sdk", "command", "anthropic",
+    "openai", "google", "zhipu", "local", "mistral", "qwen",
+})
+_SELECTION_NON_ROLE_PREFIXES = (
+    "gpt-", "gpt5", "gemini-", "gemini3", "glm-", "claude-", "deepseek-", "thunderomlx-", "antigravity-", "codex-",
+)
+
+
+def _is_non_role_token(value: str) -> bool:
+    v = str(value or "").strip().lower()
+    if not v:
+        return False
+    if v in _SELECTION_NON_ROLE_TOKENS:
+        return True
+    return any(v.startswith(p) for p in _SELECTION_NON_ROLE_PREFIXES)
+
+
+def _normalize_selection_role(value: Any) -> str:
+    v = str(value or "").strip().lower().replace("_", "-")
+    return _SELECTION_ROLE_ALIASES.get(v, v)
+
+
+def _selection_node_role(node: dict[str, Any]) -> str:
+    """Resolve a node's INTENDED role for operator selection, skipping backend/model/provider tokens.
+
+    Returns the first field that resolves to a recognized HARD role (builder/planner/evaluator/pm), or ""
+    when none does -- in which case the mismatch guard does not fire and selection is unchanged. Backend/
+    model/provider tokens and other non-role junk (e.g. owner="codex", owner="solar-harness") are skipped so
+    the real role (e.g. logical_operator="ImplementationWorker"->builder, "Verifier"->evaluator) surfaces.
+    Does NOT touch role_from_node/profile selection."""
+    for field in ("target_role", "role", "owner", "persona", "worker_role", "handoff_to", "logical_operator"):
+        raw = node.get(field)
+        if raw is None or str(raw).strip() == "":
+            continue
+        if _is_non_role_token(raw):
+            continue
+        role = _normalize_selection_role(raw)
+        if role in _HARD_ROLES:
+            return role
+    return ""
+
+
 def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
     preferred = str(node.get("preferred_operator") or "").strip()
     if preferred:
@@ -950,6 +1010,7 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
     ]
     
     scored: list[tuple[int, dict[str, Any]]] = []
+    selection_node_role = _selection_node_role(node)
     selector_values = set(_selector_values(selector))
     if task_type:
         selector_values.update(_expand_str(task_type))
@@ -1000,6 +1061,14 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
         # cooled-down operator is still a last resort if nothing healthy matches.
         if operator_in_failure_cooldown(str(operator.get("operator_id") or "")):
             score -= 100000
+
+        # Hard role-mismatch guard: a builder node must not prefer a planner/evaluator/pm operator just
+        # because of keyword overlap (e.g. node owner="codex" matching a "...codex...planner" operator id).
+        # Penalty, not a hard exclude, so a mismatched operator is still a last resort if nothing matches.
+        if selection_node_role in _HARD_ROLES:
+            op_role = _normalize_selection_role(operator.get("role"))
+            if op_role in _HARD_ROLES and op_role != selection_node_role:
+                score -= 100000
 
         if pref_classes:
             classes_list = [pref_classes] if isinstance(pref_classes, str) else list(pref_classes)
