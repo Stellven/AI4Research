@@ -7,6 +7,18 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const harnessDir = path.join(root, "harness");
 const failures = [];
+const ignoredDirNames = new Set([
+  "node_modules",
+  "__pycache__",
+  ".git",
+  "run",
+  "state",
+  "logs",
+  "cache",
+  "venvs",
+  "vendor",
+  "quarantine",
+]);
 
 function rel(p) {
   return path.relative(root, p).split(path.sep).join("/");
@@ -24,6 +36,10 @@ function walk(dir) {
   for (const entry of entries) {
     const abs = path.join(dir, entry.name);
     const entryRel = rel(abs);
+    if (entry.isDirectory() && ignoredDirNames.has(entry.name)) {
+      continue;
+    }
+
     let stat;
     try {
       stat = fs.lstatSync(abs);

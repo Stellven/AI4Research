@@ -42,6 +42,7 @@
           "!venvs/**",
           "!vendor/**",
           "!quarantine/**",
+          "!**/node_modules/**",
           "!**/__pycache__/**",
           "!**/*.pyc"
         ]
