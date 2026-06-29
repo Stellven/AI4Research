@@ -94,6 +94,18 @@
         {
           "from": "../get-solar.sh",
           "to": "get-solar.sh"
+        },
+        {
+          "from": "runtime/install-macos-agent.sh",
+          "to": "runtime/install-macos-agent.sh"
+        },
+        {
+          "from": "runtime/uninstall-macos-agent.sh",
+          "to": "runtime/uninstall-macos-agent.sh"
+        },
+        {
+          "from": "runtime/com.solar.status-server.plist",
+          "to": "runtime/com.solar.status-server.plist"
         }
       ]
     },

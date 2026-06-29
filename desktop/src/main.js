@@ -78,11 +78,19 @@ let installPoll = null; // live "installing" poll: auto-advance to the dashboard
 // --- logging: ring buffer so a packaged app (no stdout) can still emit diagnostics ---
 const LOG_RING = [];
 const LOG_RING_MAX = 500;
+function appendDesktopLog(line) {
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    fs.appendFileSync(path.join(LOG_DIR, "desktop.log"), line + "\n");
+  } catch {}
+}
 function log(...a) {
   const line = "[solar-desktop] " + a.map((x) => String(x)).join(" ");
-  LOG_RING.push(new Date().toISOString() + " " + line);
+  const stamped = new Date().toISOString() + " " + line;
+  LOG_RING.push(stamped);
   if (LOG_RING.length > LOG_RING_MAX) LOG_RING.shift();
   console.log(line);
+  appendDesktopLog(stamped);
 }
 
 // --- Windows / WSL2 helpers ---------------------------------------------------
@@ -178,6 +186,20 @@ function readText(p) {
   }
 }
 
+function xmlEsc(s) {
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&apos;",
+      })[c],
+  );
+}
+
 function shQuote(s) {
   return "'" + String(s).replace(/'/g, "'\\''") + "'";
 }
@@ -212,6 +234,21 @@ function markerVersionPath() {
   return path.join(HARNESS_DIR, ".desktop-runtime-version");
 }
 
+function runtimeSymlinkIssue() {
+  if (IS_WIN || process.env.SOLAR_DESKTOP_ALLOW_SYMLINK_RUNTIME === "1")
+    return null;
+  try {
+    const stat = fs.lstatSync(HARNESS_DIR);
+    if (!stat.isSymbolicLink()) return null;
+    return {
+      path: HARNESS_DIR,
+      target: fs.readlinkSync(HARNESS_DIR),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function installedRuntimeVersion() {
   const marker = readText(markerVersionPath());
   if (marker) return marker;
@@ -234,7 +271,11 @@ function installedRuntimeVersionWindows() {
 function runtimeNeedsBundledSync() {
   const expected = packagedRuntimeVersion();
   const bundled = packagedHarnessDir();
-  if (!expected || !bundled || !runtimeInstalled()) return false;
+  if (!expected || !bundled || runtimeSymlinkIssue()) return false;
+  if (IS_WIN && wslState() === "missing") return false;
+  if (!runtimeInstalled()) {
+    return app.isPackaged || process.env.SOLAR_DESKTOP_ALLOW_DEV_RUNTIME_SYNC === "1";
+  }
   const current = IS_WIN ? installedRuntimeVersionWindows() : installedRuntimeVersion();
   return current !== expected;
 }
@@ -272,6 +313,13 @@ function unixBootstrapEnv() {
 }
 
 function runUnixBootstrap() {
+  if (runtimeNeedsBundledSync()) {
+    const expected = packagedRuntimeVersion();
+    log("install action: using bundled harness before network installer", expected);
+    stopRuntimeForBundledSync();
+    return syncBundledHarnessLocal(expected);
+  }
+
   const sh = getSolarScriptPath();
   if (!sh) {
     log("bootstrap: no bundled get-solar.sh found; opening docs");
@@ -321,6 +369,26 @@ function readPort() {
 function clearPortCache() {
   _portCache = null;
   _tokenCache = null;
+}
+
+function clearRuntimeStateMarkers() {
+  if (IS_WIN) {
+    wslExec(
+      `rm -f ${WSL_HARNESS}/run/status-server.port ${WSL_HARNESS}/run/status-server.token ${WSL_HARNESS}/run/status-server.pid`,
+      7000,
+    );
+  } else {
+    for (const p of [
+      PORT_FILE,
+      path.join(HARNESS_DIR, "run", "status-server.token"),
+      path.join(HARNESS_DIR, "run", "status-server.pid"),
+    ]) {
+      try {
+        fs.unlinkSync(p);
+      } catch {}
+    }
+  }
+  clearPortCache();
 }
 
 // Loopback auth token (security M1) — only needed for the app:// fallback (the disk-served
@@ -413,6 +481,16 @@ function stopRuntimeForBundledSync() {
 }
 
 function syncBundledHarnessLocal(expectedVersion) {
+  const symlink = runtimeSymlinkIssue();
+  if (symlink) {
+    log(
+      "refusing bundled harness sync into symlinked runtime:",
+      symlink.path,
+      "->",
+      symlink.target,
+    );
+    return false;
+  }
   const bundled = packagedHarnessDir();
   const syncScript = packagedSyncScript();
   if (!bundled || !syncScript) return false;
@@ -451,8 +529,111 @@ function syncBundledHarnessLocal(expectedVersion) {
   } catch (e) {
     log("bundled harness marker write failed:", String(e).slice(0, 200));
   }
+  if (process.platform === "darwin") installMacLaunchAgent();
   log("bundled harness synced:", expectedVersion);
   return true;
+}
+
+function resolveMacPython() {
+  const script = [
+    'PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"',
+    "for c in python3.13 python3.12 python3.11 python3 /opt/homebrew/bin/python3 /usr/local/bin/python3; do",
+    "  p=$(command -v \"$c\" 2>/dev/null || true)",
+    "  [ -n \"$p\" ] || continue",
+    "  \"$p\" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)' >/dev/null 2>&1 && { printf '%s\\n' \"$p\"; exit 0; }",
+    "done",
+    "exit 1",
+  ].join("; ");
+  const r = spawnSync("bash", ["-lc", script], {
+    timeout: 8000,
+    encoding: "utf8",
+    env: unixBootstrapEnv(),
+  });
+  return r.status === 0 ? String(r.stdout || "").trim() : "";
+}
+
+function installMacLaunchAgent() {
+  if (process.platform !== "darwin") return true;
+  const py = resolveMacPython();
+  if (!py) {
+    log("LaunchAgent skipped: no Python 3.11+ found on PATH");
+    return false;
+  }
+  try {
+    fs.mkdirSync(path.join(os.homedir(), "Library", "LaunchAgents"), {
+      recursive: true,
+    });
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    const plist = path.join(
+      os.homedir(),
+      "Library",
+      "LaunchAgents",
+      "com.solar.status-server.plist",
+    );
+    const body = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.solar.status-server</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${xmlEsc(py)}</string>
+    <string>${xmlEsc(STATUS_SERVER)}</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>${xmlEsc(os.homedir())}</string>
+    <key>HARNESS_DIR</key>
+    <string>${xmlEsc(HARNESS_DIR)}</string>
+    <key>PYTHONPATH</key>
+    <string>${xmlEsc(path.join(HARNESS_DIR, "lib"))}</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>WorkingDirectory</key>
+  <string>${xmlEsc(HARNESS_DIR)}</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>${xmlEsc(path.join(LOG_DIR, "status-server-stdout.log"))}</string>
+  <key>StandardErrorPath</key>
+  <string>${xmlEsc(path.join(LOG_DIR, "status-server-stderr.log"))}</string>
+</dict>
+</plist>
+`;
+    fs.writeFileSync(plist, body);
+    const lint = spawnSync("plutil", ["-lint", plist], {
+      timeout: 5000,
+      encoding: "utf8",
+    });
+    if (lint.status !== 0) {
+      log("LaunchAgent plist lint failed:", (lint.stderr || lint.stdout || "").slice(0, 300));
+      return false;
+    }
+    spawnSync("launchctl", ["unload", plist], { timeout: 5000 });
+    const load = spawnSync("launchctl", ["load", plist], {
+      timeout: 8000,
+      encoding: "utf8",
+    });
+    if (load.status !== 0) {
+      log("LaunchAgent load failed:", (load.stderr || load.stdout || "").slice(0, 300));
+      return false;
+    }
+    spawnSync(
+      "launchctl",
+      ["kickstart", "-k", `gui/${process.getuid()}/com.solar.status-server`],
+      { timeout: 8000 },
+    );
+    log("LaunchAgent installed:", plist);
+    return true;
+  } catch (e) {
+    log("LaunchAgent install failed:", String(e).slice(0, 300));
+    return false;
+  }
 }
 
 function syncBundledHarnessWindows(expectedVersion) {
@@ -569,6 +750,11 @@ async function classifyRuntimeState() {
     return { mode: "ok", baseUrl: PRESET_URL };
   }
 
+  const symlink = runtimeSymlinkIssue();
+  if (symlink) {
+    return { mode: "runtime-symlink", detail: symlink };
+  }
+
   // If the app bundles a newer harness than ~/.solar/harness, update the installed
   // runtime first. Otherwise a new desktop shell can keep serving an old dashboard
   // and runtime forever because "any status-server exists" used to be treated as OK.
@@ -587,6 +773,7 @@ async function classifyRuntimeState() {
     log("attached to already-running runtime", existing);
     return { mode: "ok", baseUrl: existing };
   }
+  clearRuntimeStateMarkers();
 
   // 2. (Windows) rule out WSL-not-up before blaming the server.
   if (IS_WIN) {
@@ -679,6 +866,21 @@ const SCREENS = {
         { id: "run-installer", label: "Install Solar runtime", primary: true },
         { id: "retry", label: "Retry" },
         { id: "install-help", label: "Learn more" },
+        DIAG,
+      ],
+    }),
+  "runtime-symlink": (d) =>
+    screenHTML({
+      title: "Solar runtime path is a symlink",
+      sub:
+        `Solar found <code>${esc(d?.path || "~/.solar/harness")}</code> pointing to ` +
+        `<code>${esc(d?.target || "(unknown)")}</code>. To protect your repo checkout, ` +
+        "the desktop app will not sync or start the packaged runtime through a symlink. " +
+        "Move or remove that symlink, then retry.",
+      tone: "#f0b429",
+      actions: [
+        { id: "retry", label: "Retry", primary: true },
+        { id: "install-help", label: "Setup help" },
         DIAG,
       ],
     }),
@@ -794,6 +996,7 @@ function collectDiagnostics() {
     "\n--- desktop-app log (ring buffer) ---\n" +
       LOG_RING.slice(-200).join("\n"),
   );
+  parts.push("\n--- desktop-app log (file) ---\n" + tail(path.join(LOG_DIR, "desktop.log")));
   if (IS_WIN) {
     parts.push(
       "\n--- status-server (journald, in WSL) ---\n" +
@@ -964,6 +1167,10 @@ async function createWindow(reuse) {
     win.webContents.on("console-message", (_e, _lvl, msg) =>
       log("renderer:", String(msg).slice(0, 200)),
     );
+    win.webContents.on("render-process-gone", (_e, details) =>
+      log("renderer-process-gone:", JSON.stringify(details).slice(0, 300)),
+    );
+    win.on("unresponsive", () => log("window-unresponsive"));
     // Recovery buttons on the error screens are <a href="solar-action:<id>"> links.
     // Intercept the navigation (don't actually navigate), run the action instead.
     win.webContents.on("will-navigate", (e, url) => {

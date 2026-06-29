@@ -15,6 +15,11 @@ const CASES = [
     buttons: ["Retry", "Copy diagnostics"],
   },
   {
+    mode: "runtime-symlink",
+    title: "Solar runtime path is a symlink",
+    buttons: ["Retry", "Setup help"],
+  },
+  {
     mode: "wsl-missing",
     title: "WSL2 isn't installed",
     buttons: ["Install WSL2 now", "Learn more"],

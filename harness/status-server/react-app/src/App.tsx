@@ -39,10 +39,12 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import {
   useCallback,
+  Component,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type ErrorInfo,
   type ReactNode,
 } from "react";
 import {
@@ -149,6 +151,65 @@ type SessionCacheEntry = Pick<
 >;
 
 const sessionDataCache = new Map<string, SessionCacheEntry>();
+
+type ErrorBoundaryState = {
+  error: string;
+};
+
+class AppErrorBoundary extends Component<
+  { children: ReactNode },
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = { error: "" };
+
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "The session view hit a rendering error.",
+    };
+  }
+
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    console.error("Solar UI error boundary", error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="app-fallback">
+        <div className="empty-card">
+          <AlertTriangle size={24} />
+          <h2>Session view could not render</h2>
+          <p>{this.state.error}</p>
+          <div className="empty-actions">
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw size={16} />
+              <span>Reload</span>
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => {
+                this.setState({ error: "" });
+                window.history.pushState({}, "", "/");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>Back to sessions</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
 
 function emptySessionProvenance(sprintId: string): SessionProvenance {
   return { sprintId };
@@ -451,7 +512,9 @@ function App() {
   return (
     <Tooltip.Provider delayDuration={220}>
       <AuthGate>
-        <Shell />
+        <AppErrorBoundary>
+          <Shell />
+        </AppErrorBoundary>
       </AuthGate>
     </Tooltip.Provider>
   );

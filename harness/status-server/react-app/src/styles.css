@@ -159,6 +159,40 @@ summary:focus-visible,
   grid-template-columns: minmax(0, 1fr);
 }
 
+.app-fallback {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--solar-space-6);
+  background: var(--solar-canvas);
+}
+
+.empty-card {
+  display: grid;
+  width: min(100%, 520px);
+  gap: var(--solar-space-4);
+  justify-items: start;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-modal);
+  padding: var(--solar-space-7);
+  background: var(--solar-surface);
+}
+
+.empty-card h2,
+.empty-card p {
+  margin: 0;
+}
+
+.empty-card svg {
+  color: var(--solar-warning);
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--solar-space-3);
+}
+
 .settings-shell-route .workspace-scroll {
   padding: 0;
 }
