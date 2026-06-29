@@ -684,6 +684,30 @@ EVALUATOR_VERIFICATION_TASK_TYPES = {
     "acceptance",
 }
 VERIFICATION_CAPSULE_ID = "cap.requirement-compiler-verification"
+AUDIT_CAPSULE_ID = "cap.requirement-compiler-audit"
+AUDIT_CAPSULE_TASK_TYPE_ALIASES = {
+    "": "audit_inventory",
+    "analysis": "audit_inventory",
+    "audit": "audit_inventory",
+    "audit_inventory": "audit_inventory",
+    "inventory": "audit_inventory",
+    "inspection": "audit_inventory",
+    "scope": "audit_inventory",
+    "scope_review": "audit_inventory",
+    "documentation": "documentation",
+    "docs": "documentation",
+    "report": "reporting",
+    "reporting": "reporting",
+    "evidence": "evidence",
+}
+
+
+def _canonicalize_capsule_task_type(capsule_submit: dict[str, Any], task_type: str) -> str:
+    capsule_id = str(capsule_submit.get("capability_capsule_id") or "").strip()
+    value = str(task_type or "").strip().lower()
+    if capsule_id == AUDIT_CAPSULE_ID:
+        return AUDIT_CAPSULE_TASK_TYPE_ALIASES.get(value, value or "audit_inventory")
+    return value
 
 
 def _apply_role_capsule_override(
@@ -1720,6 +1744,11 @@ def cmd_submit(args: argparse.Namespace) -> int:
         capsule_submit=capsule_submit,
         logical_operator=logical_operator,
     )
+    task_type = _canonicalize_capsule_task_type(capsule_submit, task_type)
+    if capsule_submit.get("capability_capsule_id"):
+        capsule_submit["dispatch_task_type"] = task_type
+        if isinstance(capsule_submit.get("capsule_plan"), dict):
+            capsule_submit["capsule_plan"]["dispatch_task_type"] = task_type
 
     resolved_capsule: dict[str, Any] | None = None
     if capsule_submit.get("capability_capsule_id"):

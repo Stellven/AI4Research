@@ -252,3 +252,33 @@ def test_read_only_audit_nodes_use_audit_capsule_not_patch_capsule():
     assert audit["capability_capsule_id"] == "cap.requirement-compiler-audit"
     assert audit["dispatch_task_type"] == "audit_inventory"
     assert audit["selection_mode"] == "read_only_audit_heuristic"
+
+
+def test_read_only_analysis_scope_node_canonicalizes_to_admitted_audit_type():
+    audit = caps.default_capability_plan_for_logical_operator(
+        "ImplementationWorker",
+        request_type="analysis",
+        lane_hint="",
+        node={
+            "id": "S1",
+            "goal": "Inspect repository scope and confirm the targeted CLI placement before implementation.",
+            "type": "analysis",
+            "dispatch_task_type": "analysis",
+            "required_skills": ["python", "cli-design"],
+            "write_scope": ["sprints/sprint-x.S1.scope.md"],
+        },
+        registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
+    )
+    assert audit["capability_capsule_id"] == "cap.requirement-compiler-audit"
+    assert audit["dispatch_task_type"] == "audit_inventory"
+    assert audit["selection_mode"] == "read_only_audit_heuristic"
+
+    resolved = caps.resolve_capability_capsule_for_task(
+        {
+            "task_type": audit["dispatch_task_type"],
+            "objective": "Inspect repository scope and report the chosen CLI placement.",
+            "capability_capsule_id": audit["capability_capsule_id"],
+        },
+        registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
+    )
+    assert resolved["capability_capsule_id"] == "cap.requirement-compiler-audit"

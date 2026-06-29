@@ -82,6 +82,19 @@ READ_ONLY_AUDIT_TASK_TYPES = {
     "packaging_inventory",
 }
 
+READ_ONLY_AUDIT_TASK_TYPE_ALIASES = {
+    "audit": "audit_inventory",
+    "audit_inventory": "audit_inventory",
+    "inventory": "audit_inventory",
+    "packaging_audit": "audit_inventory",
+    "packaging_inventory": "audit_inventory",
+    "documentation": "documentation",
+    "docs": "documentation",
+    "report": "reporting",
+    "reporting": "reporting",
+    "evidence": "evidence",
+}
+
 READ_ONLY_AUDIT_SIGNALS = {
     "audit",
     "inventory",
@@ -152,6 +165,16 @@ def _looks_like_read_only_audit_task(
     docs_skill = bool(skills.intersection({"documentation", "reporting", "harness.reporting"}))
     non_mutating_policy = core_patch_denied or writes_only_sprint_artifacts or explicit_audit_type
     return bool((audit_signal or docs_skill) and non_mutating_policy)
+
+
+def _canonical_read_only_audit_task_type(node: Optional[Dict[str, Any]] = None) -> str:
+    """Map planner freeform read-only audit labels onto the capsule's admitted task types."""
+    node_payload = node or {}
+    for key in ("dispatch_task_type", "type"):
+        raw = str(node_payload.get(key) or "").strip().lower()
+        if raw in READ_ONLY_AUDIT_TASK_TYPE_ALIASES:
+            return READ_ONLY_AUDIT_TASK_TYPE_ALIASES[raw]
+    return "audit_inventory"
 
 
 class CapsuleError(RuntimeError):
@@ -844,7 +867,7 @@ def default_capability_plan_for_logical_operator(
         goal_text=goal_text,
     ):
         capsule_id = "cap.requirement-compiler-audit"
-        dispatch_task_type = str((node or {}).get("dispatch_task_type") or (node or {}).get("type") or "audit_inventory")
+        dispatch_task_type = _canonical_read_only_audit_task_type(node)
         selection_mode = "read_only_audit_heuristic"
     else:
         effective_goal = goal_text or str((node or {}).get("goal", "")) or request_type
