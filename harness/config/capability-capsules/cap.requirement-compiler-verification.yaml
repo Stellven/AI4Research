@@ -6,6 +6,7 @@ metadata:
   description: Verify implementation, evidence, and acceptance coverage before closeout.
 applicability:
   task_types:
+    - graph_eval
     - tests
     - verification
     - review
@@ -40,6 +41,7 @@ contract:
   preconditions:
     - check: task_type_in
       values:
+        - graph_eval
         - tests
         - verification
         - review

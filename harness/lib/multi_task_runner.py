@@ -323,6 +323,10 @@ def model_provider(model: str, backend: str = "") -> str:
     value = str(model or "").strip().lower()
     if str(backend or "").strip().lower() in {"gemini-cli", "gemini-sdk"} or "gemini" in value:
         return "gemini"
+    if "codex" in value or value.startswith("gpt-") or value.startswith("gpt_") or value in {"gpt", "openai"}:
+        return "openai"
+    if re.match(r"^o[134](?:[-_.].*)?$", value):
+        return "openai"
     if "deepseek" in value or value.startswith("ds"):
         return "deepseek"
     if "glm" in value or "zhipu" in value:
@@ -429,7 +433,28 @@ def capability_for_profile(profile: dict[str, Any], include_probe: bool = True) 
             status = "error"
             evidence = f"gemini doctor failed:{type(exc).__name__}"
     elif backend == "command":
-        if profile.get("command") or os.environ.get("SOLAR_MULTI_TASK_AGENT_CMD") or env.get("solar_agent_cmd"):
+        command = str(profile.get("command") or "").strip()
+        if provider == "openai":
+            codex = shutil.which("codex")
+            driver = HARNESS_DIR / "tools" / "codex_operator.py"
+            if codex and driver.exists():
+                evidence = f"cli={codex} driver={driver}"
+            else:
+                status = "error"
+                missing = []
+                if not codex:
+                    missing.append("codex cli")
+                if not driver.exists():
+                    missing.append(str(driver))
+                evidence = "missing " + ", ".join(missing)
+        elif provider == "gemini":
+            gemini = shutil.which("gemini")
+            if gemini:
+                evidence = f"cli={gemini}"
+            else:
+                status = "error"
+                evidence = "gemini cli missing"
+        elif command or os.environ.get("SOLAR_MULTI_TASK_AGENT_CMD") or env.get("solar_agent_cmd"):
             evidence = "command configured"
         else:
             status = "error"
@@ -972,22 +997,66 @@ def _selection_node_role(node: dict[str, Any]) -> str:
 #                        --backend gemini-cli, --model gemini, node.preferred_profile=...) -> policy is off
 #   * requested       -> the node's operator_selector names that provider/vendor/model/operator id
 # Configurable; SOLAR_MULTI_TASK_DEFAULT_PROVIDERS="" disables the policy (all providers equal).
-DEFAULT_OPERATOR_PROVIDERS = frozenset(
+DEFAULT_OPERATOR_PROVIDER_ORDER = tuple(
     p.strip().lower()
     for p in os.environ.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS", "anthropic,openai").split(",")
     if p.strip()
 )
+DEFAULT_OPERATOR_PROVIDERS = frozenset(DEFAULT_OPERATOR_PROVIDER_ORDER)
 _NON_DEFAULT_PROVIDER_PROFILE_TOKENS = ("gemini", "glm", "zhipu", "deepseek", "thunder", "omlx", "antigravity")
 
 
 def _profile_targets_nondefault_provider(profile: dict[str, Any]) -> bool:
     """True when the base profile explicitly targets a non-default provider (explicit override -> don't
-    apply the default-provider policy). Uses backend/model/name tokens (model_provider() can't name openai)."""
+    apply the default-provider policy)."""
     backend = str(profile.get("backend") or "").strip().lower()
     if backend in {"gemini-cli", "gemini-sdk"}:
         return True
     blob = f"{backend} {str(profile.get('model') or '').lower()} {str(profile.get('name') or '').lower()}"
     return any(token in blob for token in _NON_DEFAULT_PROVIDER_PROFILE_TOKENS)
+
+
+def _profile_provider_name(profile: dict[str, Any]) -> str:
+    return model_provider(str(profile.get("model") or ""), str(profile.get("backend") or ""))
+
+
+def _profile_allowed_by_default_provider(profile: dict[str, Any]) -> bool:
+    # Default mixed policy ("anthropic,openai") is a preference, not a wall; keep non-default profiles
+    # available as fallbacks. A single-provider mode ("openai" or "anthropic") is a product contract and
+    # must fail closed rather than silently crossing providers.
+    if not DEFAULT_OPERATOR_PROVIDERS or len(DEFAULT_OPERATOR_PROVIDERS) != 1:
+        return True
+    provider = _profile_provider_name(profile)
+    return not provider or provider in DEFAULT_OPERATOR_PROVIDERS
+
+
+def _select_profile_for_role(role: str, profiles: dict[str, Any], provider_policy_required: bool = False) -> str:
+    """Select a role-compatible profile while honoring the default-provider policy.
+
+    This is separate from physical-operator selection. A normal DAG node without an operator_selector used to
+    pick the first matching profile (`builder` -> Claude) before provider policy had any chance to apply. In
+    Codex-only mode that silently consumed Claude. Here the provider policy is applied at profile selection too.
+    """
+    role_value = str(role or "").strip().lower()
+    if not role_value:
+        return ""
+
+    if DEFAULT_OPERATOR_PROVIDER_ORDER:
+        for provider in DEFAULT_OPERATOR_PROVIDER_ORDER:
+            for name, spec in profiles.items():
+                if str((spec or {}).get("role", "")).lower() != role_value:
+                    continue
+                profile = dict(spec or {})
+                profile["name"] = str(name)
+                if _profile_provider_name(profile) == provider:
+                    return str(name)
+        if provider_policy_required:
+            return ""
+
+    for name, spec in profiles.items():
+        if str((spec or {}).get("role", "")).lower() == role_value and not str(name).startswith(("gemini-", "deepseek-", "glm-", "thunder")):
+            return str(name)
+    return ""
 
 
 def _operator_provider_requested(operator: dict[str, Any], selector_values: set[str]) -> bool:
@@ -1090,6 +1159,8 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
     modality_required = bool(selector_values & modality_values)
     
     for operator in operators:
+        if bool(operator.get("deprecated")):
+            continue
         ok, _reason = operator_dispatchable(operator)
         if not ok:
             continue
@@ -1323,6 +1394,7 @@ def quota_fallback_candidates(node: dict[str, Any], failed_profile: str, profile
     candidates.extend(_as_string_list(base.get("fallback_profiles")))
     if role == "builder":
         candidates.extend([
+            "codex-builder",
             "antigravity-multimodal",
             "gemini-builder",
             "deepseek-builder",
@@ -1331,9 +1403,9 @@ def quota_fallback_candidates(node: dict[str, Any], failed_profile: str, profile
             "knowledge-extractor",
         ])
     elif role == "planner":
-        candidates.extend(["glm-planner", "planner", "gemini-builder", "thunderomlx-local"])
+        candidates.extend(["codex-planner", "glm-planner", "planner", "gemini-builder", "thunderomlx-local"])
     elif role == "evaluator":
-        candidates.extend(["gemini-evaluator", "antigravity-multimodal", "evaluator", "thunderomlx-local"])
+        candidates.extend(["codex-evaluator", "gemini-evaluator", "antigravity-multimodal", "evaluator", "thunderomlx-local"])
     else:
         candidates.extend([role, "builder", "thunderomlx-local"])
 
@@ -1382,6 +1454,8 @@ def select_quota_fallback_profile(node: dict[str, Any], failed_profile: str, pro
             continue
         profile = dict(profiles[name])
         profile["name"] = name
+        if not _profile_allowed_by_default_provider(profile):
+            continue
         allowed, _reason = profile_allowed_for_quota_fallback(profile)
         if not allowed:
             continue
@@ -1411,6 +1485,8 @@ def select_capability_fallback_profile(node: dict[str, Any], failed_profile: str
             continue
         profile = dict(profiles[name])
         profile["name"] = name
+        if not _profile_allowed_by_default_provider(profile):
+            continue
         suitable, _suitability_reason = profile_suitable_for_node(name, profile, node)
         if not suitable:
             continue
@@ -1468,7 +1544,29 @@ def run_capability_probe(profile_name: str, timeout_sec: int) -> dict[str, Any]:
         except subprocess.TimeoutExpired:
             result = {"status": "error", "evidence": f"probe_timeout>{timeout_sec}s", "checked_at": started, "exit_code": 124}
     elif backend == "command":
-        result = {"status": "warn", "evidence": "command backend probes are user-command specific", "checked_at": started}
+        command = str(profile.get("command") or "").strip()
+        if provider == "openai":
+            codex = shutil.which("codex")
+            driver = HARNESS_DIR / "tools" / "codex_operator.py"
+            if codex and driver.exists():
+                result = {"status": "ok", "evidence": f"cli={codex} driver={driver}", "checked_at": started}
+            else:
+                missing = []
+                if not codex:
+                    missing.append("codex cli")
+                if not driver.exists():
+                    missing.append(str(driver))
+                result = {"status": "error", "evidence": "missing " + ", ".join(missing), "checked_at": started}
+        elif provider == "gemini":
+            gemini = shutil.which("gemini")
+            if gemini:
+                result = {"status": "ok", "evidence": f"cli={gemini}", "checked_at": started}
+            else:
+                result = {"status": "error", "evidence": "gemini cli missing", "checked_at": started}
+        elif command:
+            result = {"status": "ok", "evidence": "command configured", "checked_at": started}
+        else:
+            result = {"status": "error", "evidence": "command missing", "checked_at": started}
     else:
         result = {"status": "error", "evidence": f"unsupported backend={backend}", "checked_at": started}
     cache = read_probe_cache()
@@ -1517,10 +1615,10 @@ def select_profile(node: dict[str, Any], profile_override: str = "", model_overr
     profile_name = normalize_profile_name(requested_profile, profiles)
     if not profile_name:
         role = role_from_node(node)
-        for name, spec in profiles.items():
-            if str(spec.get("role", "")).lower() == role and not str(name).startswith(("gemini-", "deepseek-", "glm-", "thunder")):
-                profile_name = str(name)
-                break
+        profile_name = _select_profile_for_role(role, profiles, provider_policy_required=role in {"builder", "planner", "evaluator"})
+        if not profile_name and DEFAULT_OPERATOR_PROVIDERS and role in {"builder", "planner", "evaluator"}:
+            providers = ",".join(DEFAULT_OPERATOR_PROVIDER_ORDER)
+            raise ValueError(f"no multi-task profile for role={role} within SOLAR_MULTI_TASK_DEFAULT_PROVIDERS={providers}")
     profile_name = normalize_profile_name(profile_name or str((config.get("defaults") or {}).get("profile") or "builder"), profiles)
     quota_fallback_from = ""
     quota_blocked = {normalize_profile_name(v, profiles) for v in _as_string_list(node.get("quota_blocked_profiles"))}

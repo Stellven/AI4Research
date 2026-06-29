@@ -3527,7 +3527,13 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
     capsule_plan_ir = payload.get("capsule_plan_ir") if isinstance(payload.get("capsule_plan_ir"), dict) else {}
     physical_plan_ir = payload.get("physical_plan_ir") if isinstance(payload.get("physical_plan_ir"), dict) else {}
     plan_artifacts = payload.get("plan_artifacts") if isinstance(payload.get("plan_artifacts"), dict) else {}
-    physical_selected = str(physical_plan_ir.get("selected_operator_id") or "N/A")
+    if str(pane or "").startswith("operator-pool:"):
+        physical_selected = str(
+            payload.get("actual_operator_id")
+            or "operator-pool selector (final operator recorded in dispatch event + node runstate)"
+        )
+    else:
+        physical_selected = str(physical_plan_ir.get("selected_operator_id") or "N/A")
     logical_operator = str(
         logical_plan_node.get("logical_operator")
         or capsule_plan_ir.get("logical_operator")
@@ -5509,6 +5515,59 @@ def _record_node_runstate(sid: str, node_id: str, fields: dict[str, Any]) -> Non
         pass
 
 
+def _record_node_attribution(sid: str, node_id: str, fields: dict[str, Any]) -> None:
+    """Persist graph-dispatch operator-pool attribution next to the sprint.
+
+    multi_task_runner writes attribution for multi-task workers; graph_node_dispatcher also dispatches
+    builders/evaluators through pm_dispatch/operator_runtime. Without this record, a live node can run
+    on Codex while the durable node-keyed runstate remains empty or stale.
+    """
+    try:
+        import node_runstate
+
+        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", fields)
+    except Exception:
+        pass
+
+
+def _physical_operator_spec(operator_id: str) -> dict[str, Any]:
+    try:
+        registry = json.loads((HARNESS_DIR / "config" / "physical-operators.json").read_text(encoding="utf-8"))
+        operators = registry.get("operators") if isinstance(registry.get("operators"), dict) else {}
+        spec = operators.get(str(operator_id or ""))
+        return dict(spec) if isinstance(spec, dict) else {}
+    except Exception:
+        return {}
+
+
+def _operator_runstate_fields(
+    *,
+    operator_id: str,
+    role: str,
+    dispatch_id: str,
+    parsed: dict[str, Any],
+    instruction_file: Path,
+    dispatch_mode: str,
+) -> dict[str, Any]:
+    spec = _physical_operator_spec(operator_id)
+    provider = spec.get("provider") or spec.get("vendor")
+    return {
+        "phase": "dispatched",
+        "role": role,
+        "dispatch_id": dispatch_id,
+        "dispatch_mode": dispatch_mode,
+        "pm_task_id": parsed.get("pm_task_id") or parsed.get("task_id"),
+        "operator_id": operator_id,
+        "profile": spec.get("profile"),
+        "backend": spec.get("backend"),
+        "provider": str(provider).strip().lower() if provider else None,
+        "vendor": spec.get("vendor"),
+        "model": spec.get("model"),
+        "instruction_file": str(instruction_file),
+        "exit_code": None,
+    }
+
+
 def _append_event(sid: str, event: dict[str, Any]) -> None:
     event_file = SPRINTS_DIR / f"{sid}.events.jsonl"
     event = dict(event)
@@ -6040,6 +6099,18 @@ def _submit_builder_to_operator_pool(
             "fallback_pane": pane,
         },
     )
+    _record_node_attribution(
+        sid,
+        node_id,
+        _operator_runstate_fields(
+            operator_id=operator_id,
+            role="builder",
+            dispatch_id=dispatch_id,
+            parsed=parsed,
+            instruction_file=instruction_file,
+            dispatch_mode="operator_pool",
+        ),
+    )
     _append_event(
         sid,
         {
@@ -6153,6 +6224,19 @@ def _submit_eval_to_operator_pool(
         }
     parsed = _parse_pm_submit_output(completed.stdout)
     operator_id = parsed.get("operator_id") or "unknown"
+    if not dry_run:
+        _record_node_attribution(
+            sid,
+            node_id,
+            _operator_runstate_fields(
+                operator_id=operator_id,
+                role="evaluator",
+                dispatch_id=dispatch_id,
+                parsed=parsed,
+                instruction_file=instruction_file,
+                dispatch_mode="operator_pool_eval",
+            ),
+        )
     return {
         "ok": True,
         "pane": f"operator:{operator_id}",

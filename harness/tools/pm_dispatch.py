@@ -674,6 +674,63 @@ def _capsule_submit_metadata(node: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
+EVALUATOR_VERIFICATION_TASK_TYPES = {
+    "graph_eval",
+    "verification",
+    "review",
+    "evidence",
+    "tests",
+    "quality-gate",
+    "acceptance",
+}
+VERIFICATION_CAPSULE_ID = "cap.requirement-compiler-verification"
+
+
+def _apply_role_capsule_override(
+    *,
+    role: str,
+    task_type: str,
+    capsule_submit: dict[str, Any],
+    logical_operator: str,
+) -> tuple[dict[str, Any], str]:
+    """Make evaluator dispatch evaluate with the verification capsule.
+
+    Graph eval submits against the builder node id (B1/S1/etc.) because the evaluator must review
+    that node's handoff. Without this override, pm_dispatch inherits the builder node's
+    implementation capsule/logical_operator and operator_runtime correctly rejects
+    task_type=graph_eval. Role is the dispatch contract here: evaluator + graph_eval is a
+    verification task even when the reviewed node is an implementation node.
+    """
+    norm_role = normalize_role(str(role or ""))
+    task = str(task_type or "").strip().lower()
+    if norm_role != "evaluator" or task not in EVALUATOR_VERIFICATION_TASK_TYPES:
+        return capsule_submit, logical_operator
+
+    out = dict(capsule_submit or {})
+    capsule_plan = dict(out.get("capsule_plan") or {})
+    capsule_plan["capability_capsule_id"] = VERIFICATION_CAPSULE_ID
+    capsule_plan["dispatch_task_type"] = task or "verification"
+    out.update(
+        {
+            "capability_native": True,
+            "capability_capsule_id": VERIFICATION_CAPSULE_ID,
+            "dispatch_task_type": task or "verification",
+            "logical_operator": "Verifier",
+            "capsule_plan": capsule_plan,
+            "capsule_override_reason": "evaluator_role_requires_verification_capsule",
+        }
+    )
+    return out, "Verifier"
+
+
+def _pm_result_path_for_role(sprint_id: str, node_id: str, role: str, task_type: str) -> Path:
+    norm_role = normalize_role(str(role or ""))
+    task = str(task_type or "").strip().lower()
+    if norm_role == "evaluator" and task == "graph_eval":
+        return SPRINTS_DIR / f"{sprint_id}.{node_id}-eval.pm-result.md"
+    return SPRINTS_DIR / f"{sprint_id}.{node_id}.pm-result.md"
+
+
 # ── 算子选择 ──────────────────────────────────────────────────────────────────
 
 def normalize_role(role: str) -> str:
@@ -867,6 +924,8 @@ def _role_spillover_candidates(
         op["operator_id"] = op_id
         if op_id in forbidden_ops:
             continue
+        if bool(op.get("deprecated")):
+            continue
         op_roles = _operator_roles(op)
         if norm_role in op_roles:
             continue
@@ -951,6 +1010,8 @@ def select_operator_by_role(
     for op_id, spec in operators.items():
         op = dict(spec)
         op["operator_id"] = op_id
+        if bool(op.get("deprecated")):
+            continue
         ok, _ = is_dispatchable(op)
         if not ok:
             continue
@@ -1653,6 +1714,12 @@ def cmd_submit(args: argparse.Namespace) -> int:
     logical_operator = str(capsule_submit.get("logical_operator") or (task_graph_node or {}).get("logical_operator") or "")
     if not task_type:
         task_type = str(capsule_submit.get("dispatch_task_type") or (task_graph_node or {}).get("type") or "")
+    capsule_submit, logical_operator = _apply_role_capsule_override(
+        role=role,
+        task_type=task_type,
+        capsule_submit=capsule_submit,
+        logical_operator=logical_operator,
+    )
 
     resolved_capsule: dict[str, Any] | None = None
     if capsule_submit.get("capability_capsule_id"):
@@ -1673,7 +1740,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
             resolved_capsule = None
 
     task_id = f"pm-{sprint_id}-{node_id}-{_short_id()}"
-    result_path = str(SPRINTS_DIR / f"{sprint_id}.{node_id}.pm-result.md")
+    result_path = str(_pm_result_path_for_role(sprint_id, node_id, role, task_type))
 
     # 1. 选算子
     operator_id, operator, fallback_reason = select_operator_by_role(
@@ -1783,6 +1850,8 @@ def cmd_submit(args: argparse.Namespace) -> int:
         envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
         envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
         envelope["capsule_plan"] = capsule_submit.get("capsule_plan", {})
+    if capsule_submit.get("capsule_override_reason"):
+        envelope["capsule_override_reason"] = str(capsule_submit["capsule_override_reason"])
 
     record: dict[str, Any] = {
         "task_id": task_id,
@@ -1805,6 +1874,8 @@ def cmd_submit(args: argparse.Namespace) -> int:
     if capsule_submit.get("capability_capsule_id"):
         record["capability_capsule_id"] = capsule_submit["capability_capsule_id"]
         record["logical_operator"] = logical_operator
+    if capsule_submit.get("capsule_override_reason"):
+        record["capsule_override_reason"] = str(capsule_submit["capsule_override_reason"])
 
     # 尝试通过 operator_runtime.submit 投递
     try:

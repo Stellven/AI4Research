@@ -4152,7 +4152,7 @@
           }
         }
       },
-      "deprecated": true
+      "deprecated": false
     },
     "mini-codex-gpt55-medium-evaluator-1": {
       "display_name": "Mac mini Codex GPT 5.5 medium evaluator slot 1",
@@ -4181,6 +4181,7 @@
         "evaluator"
       ],
       "task_classes": [
+        "graph_eval",
         "verification",
         "review",
         "evidence",
@@ -4274,6 +4275,7 @@
         "evaluator"
       ],
       "task_classes": [
+        "graph_eval",
         "verification",
         "review",
         "evidence"

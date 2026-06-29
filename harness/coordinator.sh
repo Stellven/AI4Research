@@ -3498,22 +3498,31 @@ EOF
   if [[ "$phase" == "graph_dispatch_active" || "$phase" == "planning_complete" ]]; then
     if [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
       log "${G}Sprint ${sid} ${phase} + task_graph → DAG graph_node 派发${N}"
-      # Option A self-complete: for an APPROVED sprint (graph_dispatch_active), hand the DAG to the PROVEN
-      # multi-task pool (build->eval->verdict->advance->clean exit) instead of the graph-dispatch panes.
-      # That path is codex-safe (honors the provider policy / role-compat / backend-health / sonnet eval)
-      # and is the one that produced the first fully-green DAG. Gated + default off so existing behavior is
-      # unchanged until the owner opts in (SOLAR_COORD_MULTITASK_SELFCOMPLETE=1). Respects the plan gate
-      # (only graph_dispatch_active, i.e. post-approval). pgrep guard prevents duplicate pools; the pool
-      # self-exits when the DAG is terminal.
+      # Option A self-complete: for an APPROVED sprint (graph_dispatch_active), advance the DAG via the
+      # proven multi-task path (build->eval->verdict->next-node) instead of graph-dispatch panes. Run a
+      # bounded --once tick from the coordinator loop rather than spawning an opaque background pool: that
+      # makes each attempt observable, avoids duplicate daemons, and lets the next coordinator tick retry.
       if [[ "${SOLAR_COORD_MULTITASK_SELFCOMPLETE:-0}" == "1" && "$phase" == "graph_dispatch_active" ]]; then
-        if ! pgrep -f "multi_task_runner.py start .*${sid}.task_graph.json" >/dev/null 2>&1; then
-          SOLAR_GRAPH_EVAL_OPERATOR_POOL="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-1}" \
-            nohup python3 "$HARNESS_DIR/lib/multi_task_runner.py" start \
-              --graph "$SPRINTS_DIR/${sid}.task_graph.json" \
-              --max-workers "${SOLAR_COORD_MULTITASK_WORKERS:-1}" --interval 20 --renderer plain \
-              >> "$HARNESS_DIR/run/coord-multitask-${sid}.log" 2>&1 &
-          log "${G}[graph-dispatch] launched multi-task self-complete pool for ${sid}${N}"
-          emit_event "$sid" "multi_task_selfcomplete_launched" "coordinator" "{\"workers\":\"${SOLAR_COORD_MULTITASK_WORKERS:-1}\"}"
+        local mt_rc=0 mt_out="" mt_log="$HARNESS_DIR/run/coord-multitask-${sid}.log"
+        local mt_timeout="${SOLAR_COORD_MULTITASK_TIMEOUT_SEC:-90}"
+        mkdir -p "$HARNESS_DIR/run"
+        mt_out="$(SOLAR_GRAPH_EVAL_OPERATOR_POOL="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-1}" \
+          SOLAR_MULTI_TASK_AUTO_ADVANCE="${SOLAR_MULTI_TASK_AUTO_ADVANCE:-1}" \
+          run_with_timeout "$mt_timeout" python3 "$HARNESS_DIR/lib/multi_task_runner.py" start \
+            --graph "$SPRINTS_DIR/${sid}.task_graph.json" \
+            --max-workers "${SOLAR_COORD_MULTITASK_WORKERS:-1}" \
+            --interval 20 --renderer plain --once 2>&1)" || mt_rc=$?
+        {
+          printf '\n[%s] rc=%s workers=%s timeout=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$mt_rc" "${SOLAR_COORD_MULTITASK_WORKERS:-1}" "$mt_timeout"
+          printf '%s\n' "$mt_out"
+        } >> "$mt_log"
+        if (( mt_rc != 0 )); then
+          log "${Y}[graph-dispatch] multi-task self-complete tick failed rc=${mt_rc}; see ${mt_log}${N}"
+          rollback_state_cache "$sid"
+          emit_event "$sid" "multi_task_selfcomplete_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$mt_rc" "$mt_out" 2>/dev/null || echo '{}')"
+        else
+          log "${G}[graph-dispatch] multi-task self-complete tick finished for ${sid}${N}"
+          emit_event "$sid" "multi_task_selfcomplete_tick" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"workers": sys.argv[1], "output": sys.argv[2][-2000:]}))' "${SOLAR_COORD_MULTITASK_WORKERS:-1}" "$mt_out" 2>/dev/null || echo '{}')"
         fi
         return 0
       fi
@@ -3728,7 +3737,7 @@ handle_approved() {
 
   if [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
     log "${G}计划已批准且 task_graph 存在 → 切回 graph scheduler 派发${N}"
-    runtime_status_transition "$sid" "active" "approved_graph_ready" "coordinator" '{"status_fields":{"phase":"planning_complete","handoff_to":"builder_main","target_role":"builder_main"},"note":"Approved legacy state normalized to DAG dispatch."}' || true
+    runtime_status_transition "$sid" "active" "approved_graph_ready" "coordinator" '{"status_fields":{"phase":"graph_dispatch_active","handoff_to":"builder_main","target_role":"builder_main"},"note":"Approved plan gate normalized to DAG dispatch/self-complete."}' || true
     rollback_state_cache "$sid"
     return 0
   fi
@@ -5155,8 +5164,8 @@ with open('$patches_file','w') as f:
   # ── Startup actionable-state recovery ─────────────────────────────────────
   # If coordinator restarts after planner/DAG artifacts are already present,
   # the persisted last_state can equal the current state and the normal
-  # "state changed" branch will not fire. Replay only DAG-ready builder
-  # handoff states.
+  # "state changed" branch will not fire. Replay only DAG-ready states that
+  # should be actionable without a new status write.
   local planning_recovery_count=0
   for rsf in "$SPRINTS_DIR"/sprint-*.status.json; do
     [[ -f "$rsf" ]] || continue
@@ -5165,7 +5174,11 @@ with open('$patches_file','w') as f:
     rst=$(get_field "$rsf" "status")
     rphase=$(get_field "$rsf" "phase")
     [[ -n "$rsid" ]] || continue
-    if [[ ( "$rst" == "planning_complete" || "$rst" == "active" ) && ( "$rphase" == "planning_complete" || "$rphase" == "graph_dispatch_active" ) && -f "$SPRINTS_DIR/${rsid}.plan.md" ]]; then
+    if [[ "$rst" == "approved" && "$rphase" == "plan_reviewed" && -f "$SPRINTS_DIR/${rsid}.task_graph.json" && -f "$SPRINTS_DIR/${rsid}.plan.md" ]]; then
+      ((planning_recovery_count+=1))
+      log "startup recovery: replaying approved DAG handoff for $rsid (status=${rst}, phase=${rphase})"
+      handle_approved "$rsid" "$rsf"
+    elif [[ ( "$rst" == "planning_complete" || "$rst" == "active" ) && ( "$rphase" == "planning_complete" || "$rphase" == "graph_dispatch_active" ) && -f "$SPRINTS_DIR/${rsid}.plan.md" ]]; then
       local recovery_guard_role
       recovery_guard_role="$(workflow_guard_route_role "$rsid")"
       if [[ "$recovery_guard_role" != "builder_main" && "$recovery_guard_role" != "builder" ]]; then
@@ -5179,7 +5192,7 @@ with open('$patches_file','w') as f:
     fi
   done
   if [[ "$planning_recovery_count" -gt 0 ]]; then
-    log "startup recovery: replayed ${planning_recovery_count} planning_complete builder handoff(s)"
+    log "startup recovery: replayed ${planning_recovery_count} actionable DAG handoff(s)"
   fi
 
   local last_file_mtime=0
@@ -5359,7 +5372,10 @@ with open('$patches_file','w') as f:
         else
           # Recovery path: drive handle_active for active sprints with task_graph
           # to ensure node evaluations/dispatches are processed without fingerprint changes
-          if [[ "$st" == "active" ]] && { eval_passed_needs_progress "$sf" || [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; }; then
+          if [[ "$st" == "approved" && -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
+            log "${Y}[state-recovery] ${sid} is approved with task_graph; driving handle_approved to ensure progress${N}"
+            handle_approved "$sid" "$sf"
+          elif [[ "$st" == "active" ]] && { eval_passed_needs_progress "$sf" || [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; }; then
             log "${Y}[state-recovery] ${sid} has task_graph or eval_passed; driving handle_active to ensure progress${N}"
             handle_active "$sid" "$sf"
           fi

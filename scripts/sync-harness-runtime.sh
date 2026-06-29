@@ -16,6 +16,7 @@ SOLAR_DIR="${SOLAR_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 SOLAR_HOME="${SOLAR_HOME:-$HOME/.solar}"
 SRC_HARNESS="${SRC_HARNESS:-$SOLAR_DIR/harness}"
 DEST_HARNESS="${DEST_HARNESS:-$SOLAR_HOME/harness}"
+RUNTIME_RELEASE_VERSION="${SOLAR_RUNTIME_VERSION:-}"
 
 if [ ! -d "$SRC_HARNESS" ]; then
     echo "missing harness source: $SRC_HARNESS" >&2
@@ -40,6 +41,13 @@ rsync -a \
     --exclude 'quarantine/***' \
     "$SRC_HARNESS/" "$DEST_HARNESS/"
 
+if [ -z "$RUNTIME_RELEASE_VERSION" ] && [ -f "$SOLAR_DIR/VERSION" ]; then
+    RUNTIME_RELEASE_VERSION="$(tr -d '[:space:]' < "$SOLAR_DIR/VERSION")"
+fi
+if [ -n "$RUNTIME_RELEASE_VERSION" ]; then
+    printf '%s\n' "$RUNTIME_RELEASE_VERSION" > "$DEST_HARNESS/.desktop-runtime-version"
+fi
+
 chmod +x "$DEST_HARNESS/"*.sh 2>/dev/null || true
 chmod +x "$DEST_HARNESS/lib/"*.sh 2>/dev/null || true
 chmod +x "$DEST_HARNESS/tests/"*.sh 2>/dev/null || true
@@ -55,6 +63,7 @@ source=$SRC_HARNESS
 destination=$DEST_HARNESS
 synced_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 repo=$SOLAR_DIR
+release_version=${RUNTIME_RELEASE_VERSION:-unknown}
 EOF
 
 echo "synced harness: $SRC_HARNESS -> $DEST_HARNESS"
