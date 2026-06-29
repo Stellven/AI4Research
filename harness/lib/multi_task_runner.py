@@ -3275,6 +3275,8 @@ def _build_operator_envelope(
         "write_scope": payload.get("write_scope") or [],
         "handoff_path": payload.get("handoff"),
         "dispatch_file": payload.get("dispatch_file"),
+        "graph_path": payload.get("graph"),
+        "work_dir": payload.get("work_dir"),
         "approval_mode": profile.get("approval_mode"),
     }
 

@@ -287,6 +287,10 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     graph_path = str(envelope.get("graph_path") or "").strip()
     if graph_path:
         env["GRAPH"] = graph_path
+    work_dir = str(envelope.get("work_dir") or "").strip()
+    if work_dir:
+        env["WORK_DIR"] = work_dir
+        env["CODEX_WORKDIR"] = work_dir
     if str(envelope.get("node_id") or "").strip():
         env["NODE_ID"] = str(envelope["node_id"])
     if str(envelope.get("task_id") or "").strip():
