@@ -36,6 +36,7 @@ app.commandLine.appendSwitch("disable-software-rasterizer");
 
 const HARNESS_DIR =
   process.env.HARNESS_DIR || path.join(os.homedir(), ".solar", "harness");
+const SOLAR_HOME = path.dirname(HARNESS_DIR);
 const STATUS_SERVER = path.join(
   HARNESS_DIR,
   "lib",
@@ -44,6 +45,21 @@ const STATUS_SERVER = path.join(
 );
 const PORT_FILE = path.join(HARNESS_DIR, "run", "status-server.port");
 const LOG_DIR = path.join(os.homedir(), ".solar", "logs");
+const PACKAGED_HARNESS_DIR = path.join(process.resourcesPath || "", "harness");
+const PACKAGED_VERSION_FILE = path.join(process.resourcesPath || "", "VERSION");
+const PACKAGED_SYNC_SCRIPT = path.join(
+  process.resourcesPath || "",
+  "sync-harness-runtime.sh",
+);
+const DEV_HARNESS_DIR = path.join(__dirname, "..", "..", "harness");
+const DEV_VERSION_FILE = path.join(__dirname, "..", "..", "VERSION");
+const DEV_SYNC_SCRIPT = path.join(
+  __dirname,
+  "..",
+  "..",
+  "scripts",
+  "sync-harness-runtime.sh",
+);
 
 const IS_WIN = process.platform === "win32";
 const WSL_HARNESS = process.env.SOLAR_WSL_HARNESS || "$HOME/.solar/harness";
@@ -144,6 +160,83 @@ function docsUrl() {
     (process.env.SOLAR_REPO || "suraj-subrahmanyan/OpenSolar") +
     "#install"
   );
+}
+
+function fileExists(p) {
+  try {
+    return fs.existsSync(p);
+  } catch {
+    return false;
+  }
+}
+
+function readText(p) {
+  try {
+    return fs.readFileSync(p, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+function shQuote(s) {
+  return "'" + String(s).replace(/'/g, "'\\''") + "'";
+}
+
+function packagedHarnessDir() {
+  if (fileExists(path.join(PACKAGED_HARNESS_DIR, "lib", "symphony", "status-server.py")))
+    return PACKAGED_HARNESS_DIR;
+  if (fileExists(path.join(DEV_HARNESS_DIR, "lib", "symphony", "status-server.py")))
+    return DEV_HARNESS_DIR;
+  return "";
+}
+
+function packagedSyncScript() {
+  if (fileExists(PACKAGED_SYNC_SCRIPT)) return PACKAGED_SYNC_SCRIPT;
+  if (fileExists(DEV_SYNC_SCRIPT)) return DEV_SYNC_SCRIPT;
+  return "";
+}
+
+function packagedRuntimeVersion() {
+  return (
+    readText(PACKAGED_VERSION_FILE) ||
+    readText(DEV_VERSION_FILE) ||
+    app.getVersion()
+  );
+}
+
+function receiptVersionPath() {
+  return path.join(SOLAR_HOME, "install-receipt.json");
+}
+
+function markerVersionPath() {
+  return path.join(HARNESS_DIR, ".desktop-runtime-version");
+}
+
+function installedRuntimeVersion() {
+  const marker = readText(markerVersionPath());
+  if (marker) return marker;
+  try {
+    const receipt = JSON.parse(fs.readFileSync(receiptVersionPath(), "utf8"));
+    return String(receipt.version || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function installedRuntimeVersionWindows() {
+  const cmd =
+    `cat ${WSL_HARNESS}/.desktop-runtime-version 2>/dev/null || ` +
+    `python3 -c "import json,os; p=os.path.expanduser('~/.solar/install-receipt.json'); ` +
+    `print((json.load(open(p)).get('version') or '') if os.path.exists(p) else '')" 2>/dev/null || true`;
+  return (wslExec(cmd, 7000).stdout || "").trim();
+}
+
+function runtimeNeedsBundledSync() {
+  const expected = packagedRuntimeVersion();
+  const bundled = packagedHarnessDir();
+  if (!expected || !bundled || !runtimeInstalled()) return false;
+  const current = IS_WIN ? installedRuntimeVersionWindows() : installedRuntimeVersion();
+  return current !== expected;
 }
 
 // macOS/Linux first-run bootstrap: install the runtime with the bundled standalone
@@ -282,6 +375,106 @@ function runtimeInstalled() {
   return fs.existsSync(STATUS_SERVER);
 }
 
+function stopRuntimeForBundledSync() {
+  if (IS_WIN) {
+    wslExec(
+      `systemctl --user stop solar-status-server.service 2>/dev/null || true; ` +
+        `if [ -f ${WSL_HARNESS}/run/status-server.pid ]; then kill "$(cat ${WSL_HARNESS}/run/status-server.pid)" 2>/dev/null || true; fi; ` +
+        `pkill -f ${shQuote(`${WSL_HARNESS}/lib/symphony/status-server.py`)} 2>/dev/null || true; ` +
+        `rm -f ${WSL_HARNESS}/run/status-server.port ${WSL_HARNESS}/run/status-server.token ${WSL_HARNESS}/run/status-server.pid`,
+      15000,
+    );
+  } else {
+    spawnSync(
+      "bash",
+      [
+        "-lc",
+        `systemctl --user stop solar-status-server.service 2>/dev/null || true; ` +
+          `if [ -f ${shQuote(path.join(HARNESS_DIR, "run", "status-server.pid"))} ]; then kill "$(cat ${shQuote(path.join(HARNESS_DIR, "run", "status-server.pid"))})" 2>/dev/null || true; fi; ` +
+          `pkill -f ${shQuote(STATUS_SERVER)} 2>/dev/null || true; ` +
+          `rm -f ${shQuote(PORT_FILE)} ${shQuote(path.join(HARNESS_DIR, "run", "status-server.token"))} ${shQuote(path.join(HARNESS_DIR, "run", "status-server.pid"))}`,
+      ],
+      { timeout: 15000, encoding: "utf8" },
+    );
+  }
+  clearPortCache();
+}
+
+function syncBundledHarnessLocal(expectedVersion) {
+  const bundled = packagedHarnessDir();
+  const syncScript = packagedSyncScript();
+  if (!bundled || !syncScript) return false;
+  const env = {
+    ...process.env,
+    SOLAR_DIR: path.dirname(bundled),
+    SRC_HARNESS: bundled,
+    SOLAR_HOME,
+  };
+  const r = spawnSync("bash", [syncScript], {
+    timeout: 120000,
+    encoding: "utf8",
+    env,
+  });
+  if (r.status !== 0) {
+    log("bundled harness sync failed:", (r.stderr || r.stdout || "").slice(0, 500));
+    const fallback = spawnSync(
+      "bash",
+      [
+        "-lc",
+        `set -e; src=${shQuote(bundled)}; dest=${shQuote(HARNESS_DIR)}; ` +
+          `mkdir -p "$dest" ${shQuote(path.join(SOLAR_HOME, "bin"))}; ` +
+          `cp -a "$src"/. "$dest"/; ` +
+          `chmod +x "$dest"/*.sh "$dest"/lib/*.sh "$dest"/tests/*.sh "$dest"/tools/*.sh "$dest"/tools/*.py 2>/dev/null || true; ` +
+          `if [ -f "$dest/solar-harness.sh" ]; then ln -sf "$dest/solar-harness.sh" ${shQuote(path.join(SOLAR_HOME, "bin", "solar-harness"))}; fi`,
+      ],
+      { timeout: 120000, encoding: "utf8" },
+    );
+    if (fallback.status !== 0) {
+      log("bundled harness fallback copy failed:", (fallback.stderr || fallback.stdout || "").slice(0, 500));
+      return false;
+    }
+  }
+  try {
+    fs.writeFileSync(markerVersionPath(), expectedVersion + "\n");
+  } catch (e) {
+    log("bundled harness marker write failed:", String(e).slice(0, 200));
+  }
+  log("bundled harness synced:", expectedVersion);
+  return true;
+}
+
+function syncBundledHarnessWindows(expectedVersion) {
+  const bundled = packagedHarnessDir();
+  if (!bundled) return false;
+  const mapped = wslExec(`wslpath -a ${shQuote(bundled)}`, 7000).stdout.trim();
+  if (!mapped) return false;
+  const cmd =
+    `set -e; src=${shQuote(mapped)}; dest=${WSL_HARNESS}; ` +
+    `mkdir -p "$dest" "$HOME/.solar/bin"; ` +
+    `cp -a "$src"/. "$dest"/; ` +
+    `chmod +x "$dest"/*.sh "$dest"/lib/*.sh "$dest"/tests/*.sh "$dest"/tools/*.sh "$dest"/tools/*.py 2>/dev/null || true; ` +
+    `if [ -f "$dest/solar-harness.sh" ]; then ln -sf "$dest/solar-harness.sh" "$HOME/.solar/bin/solar-harness"; fi; ` +
+    `printf '%s\\n' ${shQuote(expectedVersion)} > "$dest/.desktop-runtime-version"`;
+  const r = wslExec(cmd, 120000);
+  if (!r.ok) {
+    log("WSL bundled harness sync failed:", (r.stderr || r.stdout || "").slice(0, 500));
+    return false;
+  }
+  log("WSL bundled harness synced:", expectedVersion);
+  return true;
+}
+
+function syncBundledHarnessIfNeeded() {
+  if (!runtimeNeedsBundledSync()) return true;
+  const expected = packagedRuntimeVersion();
+  const current = IS_WIN ? installedRuntimeVersionWindows() : installedRuntimeVersion();
+  log("runtime version mismatch; syncing bundled harness", current || "unknown", "->", expected);
+  stopRuntimeForBundledSync();
+  return IS_WIN
+    ? syncBundledHarnessWindows(expected)
+    : syncBundledHarnessLocal(expected);
+}
+
 // --- backend lifecycle --------------------------------------------------------
 function startBackendWindows() {
   const r = wslExec(
@@ -362,6 +555,18 @@ async function classifyRuntimeState() {
   if (PRESET_URL) {
     log("attaching to backend", PRESET_URL);
     return { mode: "ok", baseUrl: PRESET_URL };
+  }
+
+  // If the app bundles a newer harness than ~/.solar/harness, update the installed
+  // runtime first. Otherwise a new desktop shell can keep serving an old dashboard
+  // and runtime forever because "any status-server exists" used to be treated as OK.
+  if (runtimeNeedsBundledSync()) {
+    if (!syncBundledHarnessIfNeeded()) {
+      return {
+        mode: "crashed",
+        detail: { reason: "bundled-harness-sync-failed" },
+      };
+    }
   }
 
   // 1. Already-running managed runtime? attach (don't double-spawn; quit won't kill it).
