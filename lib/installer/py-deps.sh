@@ -49,9 +49,21 @@ pip_install_reqs() {
     # invasive way to make that same interpreter import the required modules.
     if python_is_externally_managed "$py"; then
         if ! pip_supports_break_system_packages "$py"; then
-            die "pip for $py reports an externally managed Python but does not support --break-system-packages.
-Upgrade pip for this interpreter or install these requirements manually:
-  $py -m pip install --user --break-system-packages -r $reqs"
+            # A brand-new Debian/Ubuntu ships python3 with no usable pip (ensurepip
+            # is disabled and python3-pip is not installed), so the externally-managed
+            # path used to die immediately. Try to bootstrap a pip new enough to honor
+            # --break-system-packages before giving up, so a fresh machine can install.
+            info "pip for $py lacks --break-system-packages; attempting to bootstrap pip"
+            "$py" -m ensurepip --upgrade >/dev/null 2>&1 || true
+            "$py" -m pip install --user --upgrade pip >/dev/null 2>&1 || true
+        fi
+        if ! pip_supports_break_system_packages "$py"; then
+            die "$py has no pip that supports --break-system-packages (externally managed Python).
+Install pip for this interpreter, then re-run the installer:
+  Debian/Ubuntu:  sudo apt-get install -y python3-pip python3-venv
+  Fedora/RHEL:    sudo dnf install -y python3-pip
+  macOS:          brew install python
+(or install the requirements yourself: $py -m pip install --user --break-system-packages -r $reqs)"
         fi
         "$py" -m pip install --user --break-system-packages -r "$reqs" \
             || die "pip install failed for $reqs using $py"
