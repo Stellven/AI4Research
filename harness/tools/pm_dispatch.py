@@ -85,6 +85,15 @@ DEFAULT_OPERATOR_PROVIDERS = frozenset(
     ).split(",")
     if p.strip()
 )
+
+
+def _operator_matches_provider_policy(op: dict[str, Any]) -> bool:
+    if not DEFAULT_OPERATOR_PROVIDERS:
+        return True
+    provider = str(op.get("provider") or op.get("vendor") or "").strip().lower()
+    return bool(provider and provider in DEFAULT_OPERATOR_PROVIDERS)
+
+
 CODE_EXEC_TASK_TYPES = {
     "implementation",
     "code-edit",
@@ -950,6 +959,8 @@ def _role_spillover_candidates(
             continue
         if bool(op.get("deprecated")):
             continue
+        if not _operator_matches_provider_policy(op):
+            continue
         op_roles = _operator_roles(op)
         if norm_role in op_roles:
             continue
@@ -1019,6 +1030,9 @@ def select_operator_by_role(
         if prefer_operator in operators:
             op = dict(operators[prefer_operator])
             op["operator_id"] = prefer_operator
+            if not _operator_matches_provider_policy(op):
+                provider = str(op.get("provider") or op.get("vendor") or "unknown")
+                return "", {}, f"preferred_operator_provider_mismatch: {prefer_operator}: {provider}"
             task_reject_reason = _operator_reject_reason_for_task(op, norm_role, task_type)
             if task_reject_reason:
                 return "", {}, f"preferred_operator_rejected_for_task: {prefer_operator}: {task_reject_reason}"
@@ -1035,6 +1049,8 @@ def select_operator_by_role(
         op = dict(spec)
         op["operator_id"] = op_id
         if bool(op.get("deprecated")):
+            continue
+        if not _operator_matches_provider_policy(op):
             continue
         ok, _ = is_dispatchable(op)
         if not ok:
@@ -1070,6 +1086,19 @@ def select_operator_by_role(
         candidates.append((priority, op_id, op))
 
     if not candidates:
+        # In explicit single-provider modes (Codex-only / Claude-only), role spillover is unsafe:
+        # it can borrow a builder as an evaluator and make the selected runtime look successful
+        # while violating the user-visible role contract. Fail closed unless explicitly opted in.
+        provider_mode_spillover = str(os.environ.get("SOLAR_PM_ALLOW_ROLE_SPILLOVER_IN_PROVIDER_MODE", "")).strip().lower() in {
+            "1",
+            "true",
+            "on",
+            "yes",
+        }
+        if DEFAULT_OPERATOR_PROVIDERS and not provider_mode_spillover:
+            if pool_mode:
+                return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
+            return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; provider_mode_role_spillover_disabled"
         spillover_spec = _role_spillover_spec(policy_mod, policy, norm_role)
         if spillover_spec and not prefer_operator:
             spillover_candidates, spillover_reason = _role_spillover_candidates(

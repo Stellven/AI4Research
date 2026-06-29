@@ -14,7 +14,7 @@ This module writes both next to the sprint so they survive RUN_DIR reaping and a
 (sid, node_id). Layout (under SPRINTS_DIR):
 
   <sid>.runstate.jsonl              append-only event ledger (one JSON object per line)
-  <sid>.<safe_node>-runstate.json   latest snapshot per node (attribution + eval_state merged)
+  <sid>.<safe_node>-runstate.json   latest snapshot per node (build/eval attribution + eval_state merged)
 
 Pure/standalone: stdlib only; every write is best-effort and never raises into the caller's hot path.
 """
@@ -47,6 +47,16 @@ def snapshot_path(sprints_dir: Any, sid: str, node_id: str) -> Path:
 def _clean(fields: dict[str, Any] | None) -> dict[str, Any]:
     # Drop None values so an absent field never clobbers a previously-known one in the snapshot.
     return {k: v for k, v in (fields or {}).items() if v is not None}
+
+
+def _snapshot_section(kind: str, fields: dict[str, Any]) -> str:
+    if kind != "attribution":
+        return kind
+    role = str(fields.get("role") or "").strip().lower()
+    dispatch_mode = str(fields.get("dispatch_mode") or "").strip().lower()
+    if role == "evaluator" or "eval" in dispatch_mode:
+        return "eval_attribution"
+    return "build_attribution"
 
 
 def record(sprints_dir: Any, sid: str, node_id: str, kind: str, fields: dict[str, Any]) -> dict[str, Any] | None:
@@ -82,10 +92,17 @@ def record(sprints_dir: Any, sid: str, node_id: str, kind: str, fields: dict[str
         snap["sprint_id"] = sid
         snap["node_id"] = node_id
         snap["updated_at"] = ts
-        section = snap.get(kind) if isinstance(snap.get(kind), dict) else {}
+        section_key = _snapshot_section(str(kind), clean)
+        section = snap.get(section_key) if isinstance(snap.get(section_key), dict) else {}
         section.update(clean)
         section["updated_at"] = ts
-        snap[kind] = section
+        snap[section_key] = section
+        # Backward-compatible latest-attribution view for older dashboards/tests.
+        # Durable proof consumers should prefer build_attribution/eval_attribution.
+        if kind == "attribution":
+            snap[kind] = section
+        else:
+            snap[kind] = section
 
         tmp = snap_path.with_suffix(snap_path.suffix + ".tmp")
         tmp.write_text(json.dumps(snap, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

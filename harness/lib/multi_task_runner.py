@@ -2350,7 +2350,9 @@ def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
         import node_runstate
 
         snap = node_runstate.read_snapshot(SPRINTS_DIR, sid, node_id)
-        attr = snap.get("attribution") if isinstance(snap.get("attribution"), dict) else {}
+        attr = snap.get("build_attribution") if isinstance(snap.get("build_attribution"), dict) else {}
+        if not attr:
+            attr = snap.get("attribution") if isinstance(snap.get("attribution"), dict) else {}
         if attr.get("phase") == "completed" and attr.get("status") == status and attr.get("exit_code") == row.get("exit_code"):
             return
         node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {

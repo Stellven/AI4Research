@@ -4857,6 +4857,20 @@ def _broker_env(sprint_id: str | None = None) -> dict[str, str]:
     """
     env = os.environ.copy()
     env.setdefault("SOLAR_BROKER_ENABLED", "0")
+    if not env.get("SOLAR_PM_DEFAULT_PROVIDERS") and env.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS"):
+        env["SOLAR_PM_DEFAULT_PROVIDERS"] = env["SOLAR_MULTI_TASK_DEFAULT_PROVIDERS"]
+    if not env.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS") and env.get("SOLAR_PM_DEFAULT_PROVIDERS"):
+        env["SOLAR_MULTI_TASK_DEFAULT_PROVIDERS"] = env["SOLAR_PM_DEFAULT_PROVIDERS"]
+    if not env.get("SOLAR_PM_DEFAULT_PROVIDERS") and not env.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS"):
+        try:
+            cfg = json.loads((HARNESS_DIR / "config" / "solar-user-config.json").read_text(encoding="utf-8"))
+            runtime = str(cfg.get("runtime") or "").strip().lower()
+        except Exception:
+            runtime = ""
+        provider = "openai" if runtime == "codex" else "anthropic" if runtime == "claude" else ""
+        if provider:
+            env["SOLAR_PM_DEFAULT_PROVIDERS"] = provider
+            env["SOLAR_MULTI_TASK_DEFAULT_PROVIDERS"] = provider
     if sprint_id:
         env.setdefault("SOLAR_BROKER_SPRINT_ID", sprint_id)
     return env
@@ -5854,6 +5868,9 @@ def _evaluator_operator_pool_workers() -> list[dict[str, Any]]:
 
 
 def _graph_queue_dispatch_role(payload: dict[str, Any], node: dict[str, Any], assignment: dict[str, Any]) -> str:
+    pane = str(assignment.get("pane") or payload.get("pane") or "").strip()
+    if pane.startswith("operator-pool:builder"):
+        return "builder"
     raw = (
         assignment.get("dispatch_role")
         or payload.get("dispatch_role")
@@ -5875,7 +5892,7 @@ def _graph_node_task_type(node: dict[str, Any]) -> str:
 def _parse_pm_submit_output(stdout: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
     task_match = re.search(r"task_id\s*=\s*(\S+)", stdout)
-    operator_match = re.search(r"operator\s*=\s*([^\s(]+)", stdout)
+    operator_match = re.search(r"operator(?:_id)?\s*=\s*([^\s(]+)", stdout)
     dispatch_match = re.search(r"dispatch\s*=\s*(\S+)", stdout)
     result_match = re.search(r"result\s*=\s*(\S+)", stdout)
     if task_match:
@@ -6309,6 +6326,17 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
                     "operator_pool": pool_result,
                     "requeued": not dry_run,
                 }
+        if str(pane).startswith("operator-pool:"):
+            if not dry_run:
+                _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
+            return {
+                "ok": False,
+                "reason": str(pool_result.get("reason") or "operator_pool_unavailable"),
+                "node": node_id,
+                "pane": pane,
+                "operator_pool": pool_result,
+                "requeued": False,
+            }
     if not pane:
         return {"ok": False, "reason": "missing_assigned_pane", "node": node_id}
     if current_status in {"assigned", "dispatched", "in_progress", "running"} and current_dispatch_id == dispatch_id:
@@ -6697,8 +6725,7 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
             _actorhost_bridge(pane=pane, required_capabilities=worker_capabilities),
         )
         workers.append(worker)
-    if not dry_run:
-        workers.extend(_builder_operator_pool_workers(worker_skills, worker_capabilities))
+    workers.extend(_builder_operator_pool_workers(worker_skills, worker_capabilities))
     workers.sort(key=lambda item: _pane_execution_priority(str(item.get("pane") or "")))
     return workers
 

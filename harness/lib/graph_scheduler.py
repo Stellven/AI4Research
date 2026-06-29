@@ -1801,6 +1801,10 @@ def _worker_role(worker: dict[str, Any]) -> str:
 
 
 def _node_dispatch_role(node: dict[str, Any]) -> str:
+    logical_operator = str(node.get("logical_operator") or "").strip()
+    write_scope = [str(item) for item in (node.get("write_scope") or [])]
+    if logical_operator in _BUILDER_WORK_LOGICAL_OPERATORS and any(write_scope):
+        return "builder"
     physical_plan = node.get("physical_plan_ir") if isinstance(node.get("physical_plan_ir"), dict) else {}
     capsule_plan = node.get("capsule_plan_ir") if isinstance(node.get("capsule_plan_ir"), dict) else {}
     for raw in (
@@ -1812,7 +1816,6 @@ def _node_dispatch_role(node: dict[str, Any]) -> str:
         role = str(raw or "").strip().lower()
         if role:
             return role
-    logical_operator = str(node.get("logical_operator") or "").strip()
     if logical_operator in {"DeepArchitect", "ResearchScout", "ResearchSynthesizer", "ArtifactCurator"}:
         return "planner"
     return "builder"
@@ -1841,6 +1844,13 @@ def _role_penalty(node_role: str, worker_role: str) -> int | None:
 # registry only declares resource/guard caps under those prefixes).
 _DISPATCH_PROVISIONED_CAP_PREFIXES = ("resource.", "guard.")
 _DISPATCH_PROVISIONED_CAPS = frozenset({"scope_compliance"})
+_BUILDER_WORK_LOGICAL_OPERATORS = frozenset({
+    "ImplementationWorker",
+    "PatchWorker",
+    "TestDesigner",
+    "TestRunner",
+    "BenchmarkRunner",
+})
 
 
 def _is_dispatch_provisioned_capability(cap: Any) -> bool:
