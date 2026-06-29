@@ -13,6 +13,7 @@ import json
 import os
 import sys
 import tempfile
+import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
 
@@ -407,8 +408,10 @@ class TestSendToPaneLiteral:
         handoff = sprints / f"{sid}.N1-handoff.md"
         eval_md = sprints / f"{sid}.N1-eval.md"
         eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_dispatch = sprints / f"{sid}.N1-eval-dispatch-q1.md"
         handoff.write_text("# handoff\n", encoding="utf-8")
         eval_md.write_text("## Verdict\nFAIL\n\nEvidence\n", encoding="utf-8")
+        eval_dispatch.write_text("# eval dispatch\n", encoding="utf-8")
         eval_json.write_text(
             json.dumps(
                 {
@@ -445,10 +448,12 @@ class TestSendToPaneLiteral:
         assert not handoff.exists()
         assert not eval_json.exists()
         assert not eval_md.exists()
+        assert not eval_dispatch.exists()
         archived = node["repair_context"]["archived_sidecars"]
         assert Path(archived["handoff_md"]).exists()
         assert Path(archived["eval_json"]).exists()
         assert Path(archived["eval_md"]).exists()
+        assert any(key.startswith("eval_dispatch_") and Path(path).exists() for key, path in archived.items())
         assert len(release_calls) == 1
         assert repaired == [
             {
@@ -485,16 +490,23 @@ class TestSendToPaneLiteral:
         assert graph["node_results"]["N1"]["status"] == "failed"
         assert handoff.exists()
         assert eval_json.exists()
-        assert repaired == [
-            {
-                "node": "N1",
-                "status": "failed",
-                "reason": "eval_sidecar_exists",
-                "handoff": str(handoff),
-                "eval_json": str(eval_json),
-                "verdict": "FAIL",
-            }
-        ]
+        assert repaired[0] == {
+            "node": "N1",
+            "status": "failed",
+            "reason": "eval_sidecar_exists",
+            "handoff": str(handoff),
+            "eval_json": str(eval_json),
+            "verdict": "FAIL",
+        }
+        assert graph["nodes"][1]["status"] == "skipped"
+        assert graph["node_results"]["N2"]["status"] == "skipped"
+        assert {
+            "node": "N2",
+            "status": "skipped",
+            "reason": "blocked_by_failed_dependency",
+            "blocked_by": ["N1"],
+        } in repaired
+        assert any(item.get("reason") == "parent_projection_after_dependency_block" for item in repaired)
 
     def test_repair_handoff_newer_than_eval_sidecar_gets_fresh_review(self, tmp_harness, monkeypatch):
         """A repaired handoff must not terminal-fail from the previous round's eval sidecar."""
@@ -542,6 +554,49 @@ class TestSendToPaneLiteral:
             "reason": "handoff_file_exists",
             "handoff": str(handoff),
         }
+
+    def test_late_pre_repair_eval_output_is_archived_even_if_old_dispatch_sidecar_was_touched(self, tmp_harness, monkeypatch):
+        """A pre-repair evaluator finishing late must not fail the repaired node.
+
+        The freshness source of truth is the graph's eval dispatch state, not eval-dispatch
+        sidecar mtimes: copied/touched sidecars can look newer than the repair marker.
+        """
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        def epoch(raw: str) -> float:
+            return datetime.datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["repair_attempts"] = 1
+        node["repair_context"] = {"attempt": 1, "created_at": "2026-06-29T20:00:00Z"}
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_dispatch = sprints / f"{sid}.N1-eval-dispatch-q1.md"
+        eval_md = sprints / f"{sid}.N1-eval.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# repaired handoff\n", encoding="utf-8")
+        eval_dispatch.write_text("# copied old eval dispatch\n", encoding="utf-8")
+        eval_md.write_text("## Verdict\nFAIL\n\nold pre-repair report\n", encoding="utf-8")
+        eval_json.write_text(json.dumps({"verdict": "FAIL", "node_id": "N1"}) + "\n", encoding="utf-8")
+        os.utime(handoff, (epoch("2026-06-29T20:01:00Z"), epoch("2026-06-29T20:01:00Z")))
+        os.utime(eval_dispatch, (epoch("2026-06-29T20:02:00Z"), epoch("2026-06-29T20:02:00Z")))
+        os.utime(eval_md, (epoch("2026-06-29T20:05:00Z"), epoch("2026-06-29T20:05:00Z")))
+        os.utime(eval_json, (epoch("2026-06-29T20:05:00Z"), epoch("2026-06-29T20:05:00Z")))
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert node["status"] == "reviewing"
+        assert graph["node_results"]["N1"]["status"] == "reviewing"
+        assert handoff.exists()
+        assert not eval_json.exists()
+        assert not eval_md.exists()
+        assert repaired[0]["reason"] == "late_pre_repair_eval_output_archived"
+        assert Path(repaired[0]["archived_sidecars"]["eval_json"]).exists()
+        assert Path(repaired[0]["archived_sidecars"]["eval_md"]).exists()
+        assert not any(item.get("reason") == "eval_sidecar_exists" for item in repaired)
 
     def test_direct_node_verdict_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
         """Primary evaluator node-verdict FAIL uses the same repair path as sidecar reconcile."""

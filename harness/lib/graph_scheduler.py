@@ -40,6 +40,7 @@ ACTIVE_STATUSES = {"assigned", "dispatched", "in_progress", "running", "reviewin
 READY_STATUSES = {"pending", "queued", "blocked", "worker_blocked", "failed_review", ""}
 PASS_STATUSES = {"passed"}
 CLOSED_NON_PASS_STATUSES = {"skipped", "cancelled", "skipped_parent_passed"}
+DEPENDENCY_BLOCK_STATUSES = {"failed", "cancelled", "skipped", "skipped_parent_passed", "needs_human_review"}
 SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR", HARNESS_DIR / "sprints"))
 
 
@@ -627,6 +628,29 @@ def sync_status_cache_from_graph(
                 extra={"note": "task_graph no longer satisfies parent_ready_check; reopening legacy status cache"},
             )
             result.update({"updated": True, "status": current, "reason": "parent_reopened"})
+            return result
+        failed_set = {str(item) for item in failed_nodes}
+        open_set = {str(item) for item in open_nodes}
+        terminal_failed_graph = bool(failed_set) and bool(open_set) and open_set.issubset(failed_set)
+        if terminal_failed_graph:
+            current = _project_status_via_runtime(
+                status_path,
+                new_status="failed",
+                actor=actor,
+                event="graph_parent_failed",
+                graph_path=graph_path,
+                status_fields={
+                    "phase": "failed",
+                    "stage": "failed",
+                    "active_node": None,
+                    "open_nodes": open_nodes,
+                    "failed_nodes": failed_nodes,
+                    "graph_parent_ready": parent,
+                    "task_graph_status": "failed",
+                },
+                extra={"note": "task_graph has terminal failed nodes and no runnable downstream nodes"},
+            )
+            result.update({"updated": True, "status": current, "reason": "parent_failed"})
             return result
         projection_changed = any([
             current.get("active_node") != desired_active_node,
@@ -2281,6 +2305,42 @@ def set_node_status(graph: dict[str, Any], node_id: str, status: str,
         gate_results = graph.get("gate_results")
         if isinstance(gate_results, dict) and gate in gate_results:
             gate_results.pop(gate, None)
+
+
+def terminalize_dependency_blocked_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
+    """Close nodes that can never run because an internal dependency is terminal-nonpass.
+
+    This does not pass work. It makes DAG failure explicit so runners can stop cleanly instead of
+    spinning forever with downstream nodes left as `pending` after an upstream failure.
+    """
+    ids = _node_map(graph)
+    changed: list[dict[str, Any]] = []
+    for node_id, node in ids.items():
+        status = node_status(graph, node_id)
+        if status in TERMINAL_STATUSES or status in ACTIVE_STATUSES or status == "needs_human_review":
+            continue
+        blockers = [
+            dep_id
+            for dep_id in _internal_depends_on(node)
+            if dep_id in ids and node_status(graph, dep_id) in DEPENDENCY_BLOCK_STATUSES
+        ]
+        if not blockers:
+            continue
+        set_node_status(graph, node_id, "skipped")
+        node["blocked_by_failed_dependency"] = blockers
+        node["skip_reason"] = "blocked_by_failed_dependency"
+        graph.setdefault("node_results", {})
+        result = graph["node_results"].setdefault(node_id, {})
+        result.update(
+            {
+                "status": "skipped",
+                "updated_at": node.get("updated_at") or _now(),
+                "note": "blocked_by_failed_dependency",
+                "blocked_by": blockers,
+            }
+        )
+        changed.append({"node": node_id, "status": "skipped", "reason": "blocked_by_failed_dependency", "blocked_by": blockers})
+    return changed
 
 
 def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str, Any]],

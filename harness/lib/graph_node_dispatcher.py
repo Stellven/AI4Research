@@ -277,6 +277,8 @@ from graph_scheduler import (  # noqa: E402
     node_status,
     mark_node_result,
     parent_ready_check,
+    sync_status_cache_from_graph,
+    terminalize_dependency_blocked_nodes,
 )
 from pane_lease import acquire as acquire_lease, release as release_lease, read_lease, list_leases  # noqa: E402
 from task_queue import enqueue  # noqa: E402
@@ -711,6 +713,7 @@ def _plan_node_evaluation(graph: dict[str, Any], node: dict[str, Any]) -> dict[s
 
 def _evaluation_capacity_snapshot(plan: dict[str, Any], evaluators: list[dict[str, Any]]) -> dict[str, Any]:
     available = [item for item in evaluators if not item.get("busy")]
+    busy = [item for item in evaluators if item.get("busy")]
     available_panes = [str(item.get("pane") or "") for item in available if str(item.get("pane") or "")]
     required = max(1, int(plan.get("required_evaluators") or 1))
     mode = str(plan.get("review_mode") or "single")
@@ -720,7 +723,9 @@ def _evaluation_capacity_snapshot(plan: dict[str, Any], evaluators: list[dict[st
     quorum_dispatch_supported = True
     dispatchable_now = capacity_satisfied and quorum_dispatch_supported
     return {
+        "total_evaluators": len(evaluators),
         "available_evaluators": len(available),
+        "busy_evaluators": len(busy),
         "available_panes": available_panes,
         "required_evaluators": required,
         "selected_panes": selected_panes,
@@ -1597,6 +1602,8 @@ def _archive_node_review_sidecars(sid: str, node_id: str, handoff_file: Path | N
     ):
         if str(path) not in {"", "."}:
             candidates.append((key, path))
+    for sidecar in sorted(SPRINTS_DIR.glob(f"{sid}.{_safe_node_id(node_id)}-eval-dispatch*")):
+        candidates.append((f"eval_dispatch_{len(candidates)}", sidecar))
 
     seen: set[Path] = set()
     for key, path in candidates:
@@ -1655,6 +1662,88 @@ def _archive_stale_repair_eval_sidecars(
         except Exception:
             continue
         archived[key] = str(archive)
+    return archived
+
+
+def _repair_context_created_at(node: dict[str, Any]) -> datetime.datetime | None:
+    ctx = node.get("repair_context") if isinstance(node.get("repair_context"), dict) else {}
+    created = str(ctx.get("created_at") or "").strip()
+    if not created:
+        return None
+    return _parse_utc(created)
+
+
+def _node_eval_dispatched_after(node: dict[str, Any], marker: datetime.datetime) -> bool:
+    for raw in [node.get("eval_dispatched_at")]:
+        dispatched_at = _parse_utc(str(raw or ""))
+        if dispatched_at and dispatched_at > marker:
+            return True
+    for assignment in node.get("eval_assignments") or []:
+        if not isinstance(assignment, dict):
+            continue
+        dispatched_at = _parse_utc(str(assignment.get("dispatched_at") or assignment.get("acquired_at") or ""))
+        if dispatched_at and dispatched_at > marker:
+            return True
+    return False
+
+
+def _archive_late_pre_repair_eval_sidecars(
+    sid: str,
+    node: dict[str, Any],
+    node_id: str,
+    eval_json_path: str | Path,
+    status: str,
+) -> dict[str, str]:
+    """Archive canonical eval sidecars written by a pre-repair evaluator after repair started.
+
+    Evaluators write the canonical `{sid}.{node}-eval.*` files. If an evaluator was dispatched before
+    `_start_node_repair_from_eval_fail()` and finishes late, it can repopulate those canonical files
+    after the repair builder has produced a new handoff/proof. That stale verdict must not decide the
+    repaired node; require a fresh eval dispatch generated after the repair marker.
+    """
+    if status in {"passed", "failed"}:
+        return {}
+    if _node_repair_attempts(node) <= 0:
+        return {}
+    repair_created_at = _repair_context_created_at(node)
+    if repair_created_at is None:
+        return {}
+    if _node_eval_dispatched_after(node, repair_created_at):
+        return {}
+
+    candidates: list[tuple[str, Path]] = []
+    if str(eval_json_path or "").strip():
+        candidates.append(("eval_json", Path(str(eval_json_path))))
+    candidates.append(("eval_md", _eval_md_file(sid, node_id)))
+
+    archived: dict[str, str] = {}
+    seen: set[Path] = set()
+    for key, raw_path in candidates:
+        try:
+            path = raw_path.expanduser()
+            if path in seen or not path.exists():
+                continue
+            seen.add(path)
+            archive = _archive_path_for_repair(path, _node_repair_attempts(node))
+            path.replace(archive)
+        except Exception:
+            continue
+        archived[key] = str(archive)
+    if archived:
+        node["stale_eval_archived_at"] = _utc_now()
+        node["stale_eval_archive_reason"] = "late_pre_repair_eval_output"
+        _append_event(sid, {
+            "event": "graph_eval_sidecar_archived_after_repair",
+            "by": "graph-dispatch",
+            "severity": "warn",
+            "data": {"node": node_id, "reason": "late_pre_repair_eval_output", "archived": archived},
+        })
+        _record_node_runstate(sid, node_id, {
+            "last_eval_result": "STALE_ARCHIVED",
+            "last_eval_reason": "late_pre_repair_eval_output",
+            "next_action": "dispatch_fresh_eval",
+            "status": str(node.get("status") or ""),
+        })
     return archived
 
 
@@ -1992,6 +2081,22 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
         handoff_file = _existing_node_handoff(sid, node, graph)
         dependency_blockers = _sidecar_reconcile_dependency_blockers(graph, node) if handoff_file else []
         eval_json_path = str(node.get("eval_json") or _eval_json_file(sid, node_id))
+        late_pre_repair_eval_archived = _archive_late_pre_repair_eval_sidecars(
+            sid,
+            node,
+            node_id,
+            eval_json_path,
+            str(status or "").strip().lower(),
+        )
+        if late_pre_repair_eval_archived:
+            repaired.append(
+                {
+                    "node": node_id,
+                    "status": status,
+                    "reason": "late_pre_repair_eval_output_archived",
+                    "archived_sidecars": late_pre_repair_eval_archived,
+                }
+            )
         stale_eval_archived = _archive_stale_repair_eval_sidecars(
             sid,
             node,
@@ -1999,7 +2104,7 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             handoff_file,
             eval_json_path,
             str(status or "").strip().lower(),
-        )
+        ) if not late_pre_repair_eval_archived else {}
         if stale_eval_archived:
             repaired.append(
                 {
@@ -2010,11 +2115,11 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     "archived_sidecars": stale_eval_archived,
                 }
             )
-        if not stale_eval_archived and not Path(eval_json_path).exists():
+        if not late_pre_repair_eval_archived and not stale_eval_archived and not Path(eval_json_path).exists():
             backfilled_eval = _maybe_backfill_eval_json_from_md(sid, node_id)
             if backfilled_eval is not None:
                 eval_json_path = str(backfilled_eval)
-        eval_payload = {} if stale_eval_archived else (_read_json_file_safe(eval_json_path) if eval_json_path else {})
+        eval_payload = {} if (late_pre_repair_eval_archived or stale_eval_archived) else (_read_json_file_safe(eval_json_path) if eval_json_path else {})
         raw_eval_verdict = str(eval_payload.get("verdict") or eval_payload.get("status") or "").strip().lower()
         if raw_eval_verdict in {"pass", "passed", "ok", "success", "succeeded"}:
             eval_verdict = "PASS"
@@ -2539,6 +2644,31 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             continue
         set_node_status(graph, node_id, "dispatched", pane=pane or None, dispatch_id=dispatch_id or None)
         repaired.append({"node": node_id, "pane": pane, "dispatch_id": dispatch_id, "reason": "submit_ack_exists"})
+    dependency_blocked = terminalize_dependency_blocked_nodes(graph)
+    for item in dependency_blocked:
+        repaired.append(item)
+        node_id = str(item.get("node") or "")
+        _append_event(sid, {
+            "event": "graph_node_dependency_blocked_terminalized",
+            "by": "graph-dispatch",
+            "severity": "warn",
+            "data": item,
+        })
+        if node_id:
+            _record_node_runstate(sid, node_id, {
+                "last_eval_result": "BLOCKED",
+                "last_eval_reason": "blocked_by_failed_dependency",
+                "next_action": "upstream_failure_or_human_review",
+                "status": "skipped",
+            })
+    if dependency_blocked:
+        parent_projection = sync_status_cache_from_graph(
+            graph,
+            graph_path,
+            actor="graph-dispatch",
+            event="graph_dependency_blocked_projection",
+        )
+        repaired.append({"reason": "parent_projection_after_dependency_block", "projection": parent_projection})
     return repaired
 
 
@@ -5755,9 +5885,97 @@ def _eval_operator_pool_enabled() -> bool:
 
 
 def _operator_pool_role_available(role: str) -> bool:
+    return bool(_operator_pool_role_probe(role).get("dispatchable"))
+
+
+def _provider_policy_values_from_env(env: dict[str, str]) -> set[str]:
+    raw = env.get("SOLAR_PM_DEFAULT_PROVIDERS") or env.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS") or ""
+    return {item.strip().lower() for item in str(raw).split(",") if item.strip()}
+
+
+def _operator_matches_provider_policy_for_graph(op: dict[str, Any], providers: set[str]) -> bool:
+    if not providers:
+        return True
+    provider = str(op.get("provider") or "").strip().lower()
+    vendor = str(op.get("vendor") or "").strip().lower()
+    aliases = {provider, vendor}
+    if provider == "anthropic" or vendor == "anthropic":
+        aliases.update({"claude", "claude-code"})
+    if provider == "openai" or vendor == "openai":
+        aliases.update({"codex", "gpt"})
+    if provider == "google" or vendor == "google":
+        aliases.update({"gemini"})
+    return bool(aliases & providers)
+
+
+def _operator_roles_for_graph(op: dict[str, Any]) -> set[str]:
+    roles: set[str] = set()
+    raw = op.get("roles")
+    if isinstance(raw, list):
+        roles.update(str(item).strip().lower() for item in raw if str(item).strip())
+    for key in ("role", "profile", "persona"):
+        value = str(op.get(key) or "").strip().lower()
+        if value:
+            roles.add(value)
+            roles.update(part for part in re.split(r"[^a-z0-9]+", value) if part)
+    return roles
+
+
+def _physical_operator_candidates_for_role(role: str) -> list[dict[str, Any]]:
+    path = HARNESS_DIR / "config" / "physical-operators.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    raw_ops = payload.get("operators") if isinstance(payload, dict) else payload
+    if isinstance(raw_ops, dict):
+        ops = []
+        for op_id, spec in raw_ops.items():
+            if isinstance(spec, dict):
+                item = dict(spec)
+                item.setdefault("operator_id", op_id)
+                ops.append(item)
+    elif isinstance(raw_ops, list):
+        ops = [dict(item) for item in raw_ops if isinstance(item, dict)]
+    else:
+        ops = []
+    providers = _provider_policy_values_from_env(_broker_env())
+    wanted = str(role or "").strip().lower()
+    candidates = []
+    for op in ops:
+        if bool(op.get("deprecated")):
+            continue
+        if not bool(op.get("enabled", False)) or not bool(op.get("available", False)):
+            continue
+        if wanted not in _operator_roles_for_graph(op):
+            continue
+        if not _operator_matches_provider_policy_for_graph(op, providers):
+            continue
+        candidates.append(op)
+    return candidates
+
+
+def _operator_runtime_state_for_graph(operator_id: str) -> str:
+    try:
+        import operator_runtime  # type: ignore
+
+        state = operator_runtime.get_operator_runtime_state(operator_id)
+        if state:
+            return str(state)
+    except Exception:
+        pass
+    status_file = HARNESS_DIR / "run" / "operator-status" / f"{operator_id}.json"
+    try:
+        data = json.loads(status_file.read_text(encoding="utf-8"))
+        return str(data.get("runtime_state") or data.get("state") or "idle")
+    except Exception:
+        return "idle"
+
+
+def _operator_pool_role_probe(role: str) -> dict[str, Any]:
     enabled = _eval_operator_pool_enabled() if str(role).strip().lower() == "evaluator" else _builder_operator_pool_enabled()
     if not enabled:
-        return False
+        return {"dispatchable": False, "configured": False, "busy": False, "reason": "operator_pool_disabled"}
     cmd = [
         sys.executable,
         str(HARNESS_DIR / "tools" / "pm_dispatch.py"),
@@ -5777,8 +5995,41 @@ def _operator_pool_role_available(role: str) -> bool:
     try:
         completed = subprocess.run(cmd, capture_output=True, text=True, timeout=8, env=env)
     except Exception:
-        return False
-    return completed.returncode == 0 and "operator_id" in completed.stdout
+        completed = None
+    if completed is not None and completed.returncode == 0 and "operator_id" in completed.stdout:
+        return {
+            "dispatchable": True,
+            "configured": True,
+            "busy": False,
+            "reason": "",
+            "stdout": completed.stdout,
+        }
+
+    candidates = _physical_operator_candidates_for_role(role)
+    busy_candidates = []
+    for op in candidates:
+        op_id = str(op.get("operator_id") or "")
+        state = _operator_runtime_state_for_graph(op_id)
+        if state in {"leased", "running", "draining"}:
+            busy_candidates.append({"operator_id": op_id, "runtime_state": state})
+    if busy_candidates:
+        return {
+            "dispatchable": False,
+            "configured": True,
+            "busy": True,
+            "reason": "operator_pool_role_busy",
+            "busy_candidates": busy_candidates,
+            "stderr": completed.stderr if completed is not None else "",
+            "stdout": completed.stdout if completed is not None else "",
+        }
+    return {
+        "dispatchable": False,
+        "configured": bool(candidates),
+        "busy": False,
+        "reason": "operator_pool_role_unavailable",
+        "stderr": completed.stderr if completed is not None else "",
+        "stdout": completed.stdout if completed is not None else "",
+    }
 
 
 def _builder_operator_pool_workers(
@@ -5836,19 +6087,21 @@ def _builder_operator_pool_workers(
 
 
 def _evaluator_operator_pool_workers() -> list[dict[str, Any]]:
-    if not _operator_pool_role_available("evaluator"):
+    probe = _operator_pool_role_probe("evaluator")
+    if not probe.get("dispatchable") and not probe.get("busy"):
         return []
     worker = {
             "pane": "operator-pool:evaluator.0",
             "models": ["operator-pool", "deepseek-v4-pro", "opus", "gpt-5.5"],
             "skills": ["review", "testing", "bash"],
-            "busy": False,
+            "busy": bool(probe.get("busy")),
             "title": "operator pool evaluator",
             "evaluator_host_role": "operator_pool",
-            "unavailable_reason": "",
+            "unavailable_reason": "operator_pool_evaluator_busy" if probe.get("busy") else "",
             "quota_exhausted": [],
             "rate_limit_operator_blocks": [],
             "current_command": "",
+            "operator_pool_probe": probe,
         }
     _flatten_actorhost_bridge(
         worker,
@@ -6956,9 +7209,10 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
         node["evaluation_plan"] = runtime_plan
         node["evaluation_plan_updated_at"] = _utc_now()
         if not runtime_capacity.get("available_evaluators"):
+            reason = "evaluator_temporarily_busy" if runtime_capacity.get("busy_evaluators") else "no_available_evaluator"
             skipped.append({
                 "node": node_id,
-                "reason": "no_available_evaluator",
+                "reason": reason,
                 "evaluation_plan": runtime_plan,
             })
             break
