@@ -118,6 +118,42 @@ def test_lease_expiration():
     assert optime.get_operator_runtime_state(operator_id) == "leased"
 
 
+def test_running_lease_with_dead_recorded_process_is_recovered(monkeypatch):
+    """Selectors must not treat dead-PID leases as busy forever."""
+    operator_id = "mini-claude-sonnet-builder"
+    optime.acquire_operator_lease(
+        operator_id=operator_id,
+        task_id="T-stale-run",
+        sprint_id="sprint-test",
+        node_id="N2",
+        ttl_seconds=600,
+        initial_state="running",
+    )
+    lease_path = optime.OPERATOR_LEASE_DIR / f"{operator_id}.json"
+    lease = json.loads(lease_path.read_text(encoding="utf-8"))
+    lease["worker_pid"] = 999_991
+    lease["daemon_pid"] = 999_992
+    lease_path.write_text(json.dumps(lease), encoding="utf-8")
+    monkeypatch.setattr(optime, "_pid_exists", lambda pid: False)
+
+    assert optime.get_operator_runtime_state(operator_id) == "idle"
+    assert optime.get_operator_lease(operator_id) is None
+
+
+def test_running_status_with_dead_recorded_process_is_recovered(monkeypatch):
+    """A stale heartbeat/status file must not block a later dispatch."""
+    operator_id = "mini-claude-sonnet-builder"
+    optime.set_operator_status(operator_id, "running")
+    status_path = optime.OPERATOR_STATUS_DIR / f"{operator_id}.json"
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    status["worker_pid"] = 999_993
+    status_path.write_text(json.dumps(status), encoding="utf-8")
+    monkeypatch.setattr(optime, "_pid_exists", lambda pid: False)
+
+    assert optime.get_operator_runtime_state(operator_id) == "idle"
+    assert optime.get_operator_status(operator_id) is None
+
+
 def test_status_override_states():
     """Test dynamic status overrides (cooldown, quota_exhausted, auth_expired)."""
     operator_id = "mini-claude-sonnet-builder"

@@ -65,6 +65,51 @@ def _ensure_inbox_dir(operator_id: str) -> Path:
     return inbox
 
 
+def _coerce_pid(value: Any) -> Optional[int]:
+    try:
+        pid = int(value)
+        return pid if pid > 0 else None
+    except Exception:
+        return None
+
+
+def _pid_exists(pid: Optional[int]) -> bool:
+    if pid is None:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except Exception:
+        return False
+
+
+def _active_record_processes_dead(record: Dict[str, Any]) -> bool:
+    """True when a leased/running record has process evidence and all PIDs are gone."""
+    pids = [
+        pid
+        for pid in (
+            _coerce_pid(record.get("worker_pid")),
+            _coerce_pid(record.get("daemon_pid")),
+        )
+        if pid is not None
+    ]
+    return bool(pids) and all(not _pid_exists(pid) for pid in pids)
+
+
+def _clear_stale_active_status(operator_id: str) -> bool:
+    status = get_operator_status(operator_id)
+    if not status:
+        return False
+    if status.get("runtime_state") in {"leased", "running"} and _active_record_processes_dead(status):
+        clear_operator_status(operator_id)
+        return True
+    return False
+
+
 # ── Registry Access ───────────────────────────────────────────────────────────
 
 def load_registry() -> Dict[str, Any]:
@@ -340,14 +385,21 @@ def get_operator_runtime_state(operator_id: str) -> str:
     lease = get_operator_lease(operator_id)
     if lease:
         state = lease.get("state")
-        if state in VALID_STATES:
-            return state
-        return "leased"
+        if state in {"leased", "running"} and _active_record_processes_dead(lease):
+            release_operator_lease(operator_id, reason="stale_dead_pid")
+            _clear_stale_active_status(operator_id)
+        else:
+            if state in VALID_STATES:
+                return state
+            return "leased"
         
     # Check dynamic status override
     status = get_operator_status(operator_id)
     if status:
         r_state = status.get("runtime_state")
+        if r_state in {"leased", "running"} and _active_record_processes_dead(status):
+            clear_operator_status(operator_id)
+            r_state = ""
         if r_state in VALID_STATES:
             return r_state
             
