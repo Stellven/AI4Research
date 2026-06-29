@@ -94,6 +94,111 @@ def _operator_matches_provider_policy(op: dict[str, Any]) -> bool:
     return bool(provider and provider in DEFAULT_OPERATOR_PROVIDERS)
 
 
+def _provider_policy_label() -> str:
+    return ",".join(sorted(DEFAULT_OPERATOR_PROVIDERS))
+
+
+def _runtime_mode_from_env() -> str:
+    runtime = str(os.environ.get("SOLAR_PANE_RUNTIME") or os.environ.get("SOLAR_RUNTIME") or "").strip().lower()
+    if runtime in {"codex", "claude"}:
+        return runtime
+    if DEFAULT_OPERATOR_PROVIDERS == {"openai"}:
+        return "codex"
+    if DEFAULT_OPERATOR_PROVIDERS == {"anthropic"}:
+        return "claude"
+    return runtime or "mixed"
+
+
+def _pm_work_dir_for_sprint(sprint_id: str, explicit: str = "") -> str:
+    explicit = str(explicit or "").strip()
+    if explicit:
+        path = Path(explicit).expanduser()
+    else:
+        sid = str(sprint_id or "").strip() or f"pm-adhoc-{_short_id()}"
+        path = SPRINTS_DIR / sid / "workdir"
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path)
+
+
+def _graph_path_for_sprint(sprint_id: str) -> str:
+    sid = str(sprint_id or "").strip()
+    if not sid:
+        return ""
+    path = SPRINTS_DIR / f"{sid}.task_graph.json"
+    return str(path) if path.exists() else ""
+
+
+def _build_pm_operator_envelope(
+    *,
+    task_id: str,
+    sprint_id: str,
+    node_id: str,
+    operator_id: str,
+    operator: dict[str, Any],
+    task_type: str,
+    objective: str,
+    dispatch_file: Path,
+    result_path: str,
+    context: str = "",
+    role: str = "",
+    work_dir: str = "",
+    logical_operator: str = "",
+    task_graph_node: dict[str, Any] | None = None,
+    capsule_submit: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the canonical PM/operator envelope.
+
+    PM/planner dispatch and graph/multi-task dispatch used to carry different
+    execution context. Codex command operators need the same deterministic
+    workdir contract regardless of the path that submitted them.
+    """
+    capsule_submit = capsule_submit or {}
+    envelope: dict[str, Any] = {
+        "task_id": task_id,
+        "sprint_id": sprint_id,
+        "node_id": node_id,
+        "operator_id": operator_id,
+        "task_type": task_type or "pm_order",
+        "objective": objective[:300],
+        "dispatch_file": str(dispatch_file),
+        "result_path": result_path,
+        "issued_by": "pm_pane",
+        "issued_at": _now(),
+        "pm_context": context[:500] if context else "",
+        "requested_role": normalize_role(role),
+        "work_dir": _pm_work_dir_for_sprint(sprint_id, work_dir),
+        "graph_path": _graph_path_for_sprint(sprint_id),
+        "runtime_mode": _runtime_mode_from_env(),
+        "provider_policy": _provider_policy_label(),
+        "operator_provider": str(operator.get("provider") or operator.get("vendor") or ""),
+        "operator_backend": str(operator.get("backend") or ""),
+        "operator_model": str(operator.get("model") or ""),
+    }
+    if not envelope["graph_path"]:
+        envelope.pop("graph_path", None)
+    if operator.get("borrowed_for_role"):
+        envelope["borrowed_for_role"] = operator.get("borrowed_for_role")
+        envelope["borrowed_from_roles"] = operator.get("borrowed_from_roles", [])
+        envelope["borrowed_original_role"] = operator.get("borrowed_original_role", "")
+        envelope["borrowed_reason"] = operator.get("borrowed_reason", "")
+    if logical_operator:
+        envelope["logical_operator"] = logical_operator
+    if task_graph_node:
+        envelope["task_graph_node"] = {
+            "id": task_graph_node.get("id"),
+            "goal": task_graph_node.get("goal"),
+            "acceptance": task_graph_node.get("acceptance", []),
+            "requirement_ids": task_graph_node.get("requirement_ids", []),
+        }
+    if capsule_submit.get("capability_capsule_id"):
+        envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
+        envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
+        envelope["capsule_plan"] = capsule_submit.get("capsule_plan", {})
+    if capsule_submit.get("capsule_override_reason"):
+        envelope["capsule_override_reason"] = str(capsule_submit["capsule_override_reason"])
+    return envelope
+
+
 CODE_EXEC_TASK_TYPES = {
     "implementation",
     "code-edit",
@@ -246,6 +351,13 @@ def _load_operator_runtime_module() -> Any | None:
             sys.path.insert(0, str(lib_dir))
         import operator_runtime  # type: ignore
 
+        operator_runtime.HARNESS_DIR = HARNESS_DIR
+        operator_runtime.OPERATOR_LEASE_DIR = HARNESS_DIR / "run" / "operator-leases"
+        operator_runtime.OPERATOR_STATUS_DIR = HARNESS_DIR / "run" / "operator-status"
+        operator_runtime.OPERATOR_INBOX_DIR = HARNESS_DIR / "run" / "operator-inbox"
+        operator_runtime.OPERATOR_RESULTS_DIR = HARNESS_DIR / "run" / "operator-results"
+        operator_runtime.OPERATOR_PERSONAS_DIR = HARNESS_DIR / "personas"
+        operator_runtime.PHYSICAL_OPERATORS_PATH = PHYSICAL_OPERATORS_PATH
         return operator_runtime
     except Exception:
         return None
@@ -280,6 +392,18 @@ def get_operator_status_data(operator_id: str) -> dict[str, Any]:
         return json.loads(status_file.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def _runtime_state_for_operator_record(operator_id: str, op: dict[str, Any]) -> str:
+    state = get_operator_runtime_state(operator_id)
+    if state == "disabled" and operator_id:
+        status = get_operator_status_data(str(operator_id))
+        status_state = str(status.get("runtime_state") or "").strip()
+        if status_state:
+            return status_state
+        if op.get("enabled", False) and op.get("available", False):
+            return "idle"
+    return state
 
 
 def _pid_exists(pid: int | None) -> bool:
@@ -629,7 +753,12 @@ def is_dispatchable(op: dict[str, Any]) -> tuple[bool, str]:
             if expires_at:
                 reason += f" (until {expires_at})"
             return False, reason
-    state = get_operator_runtime_state(operator_id)
+    # The central classifier reads the on-disk registry. Unit tests and some
+    # dry-run probes pass an already-selected operator dict whose registry may
+    # be monkeypatched/in-memory. In that case, "disabled" only means "not
+    # visible to the central registry", so defer to the operator record/status
+    # provided by the selector.
+    state = _runtime_state_for_operator_record(str(operator_id), op)
     state = _maybe_clear_stale_runtime(str(operator_id), state)
     if state in NON_DISPATCHABLE_STATES:
         if state in ("cooldown", "quota_exhausted", "auth_expired"):
@@ -1799,6 +1928,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
 
     task_id = f"pm-{sprint_id}-{node_id}-{_short_id()}"
     result_path = str(_pm_result_path_for_role(sprint_id, node_id, role, task_type))
+    work_dir = _pm_work_dir_for_sprint(sprint_id, str(getattr(args, "work_dir", "") or ""))
 
     # 1. 选算子
     operator_id, operator, fallback_reason = select_operator_by_role(
@@ -1876,40 +2006,23 @@ def cmd_submit(args: argparse.Namespace) -> int:
     dispatch_file.write_text(dispatch_text, encoding="utf-8")
 
     # 5. 构建 task envelope → operator_runtime.submit
-    envelope = {
-        "task_id": task_id,
-        "sprint_id": sprint_id,
-        "node_id": node_id,
-        "operator_id": operator_id,
-        "task_type": task_type or "pm_order",
-        "objective": objective[:300],
-        "dispatch_file": str(dispatch_file),
-        "result_path": result_path,
-        "issued_by": "pm_pane",
-        "issued_at": _now(),
-        "pm_context": context[:500] if context else "",
-        "requested_role": normalize_role(role),
-    }
-    if operator.get("borrowed_for_role"):
-        envelope["borrowed_for_role"] = operator.get("borrowed_for_role")
-        envelope["borrowed_from_roles"] = operator.get("borrowed_from_roles", [])
-        envelope["borrowed_original_role"] = operator.get("borrowed_original_role", "")
-        envelope["borrowed_reason"] = operator.get("borrowed_reason", "")
-    if logical_operator:
-        envelope["logical_operator"] = logical_operator
-    if task_graph_node:
-        envelope["task_graph_node"] = {
-            "id": task_graph_node.get("id"),
-            "goal": task_graph_node.get("goal"),
-            "acceptance": task_graph_node.get("acceptance", []),
-            "requirement_ids": task_graph_node.get("requirement_ids", []),
-        }
-    if capsule_submit.get("capability_capsule_id"):
-        envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
-        envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
-        envelope["capsule_plan"] = capsule_submit.get("capsule_plan", {})
-    if capsule_submit.get("capsule_override_reason"):
-        envelope["capsule_override_reason"] = str(capsule_submit["capsule_override_reason"])
+    envelope = _build_pm_operator_envelope(
+        task_id=task_id,
+        sprint_id=sprint_id,
+        node_id=node_id,
+        operator_id=operator_id,
+        operator=operator,
+        task_type=task_type,
+        objective=objective,
+        dispatch_file=dispatch_file,
+        result_path=result_path,
+        context=context,
+        role=role,
+        work_dir=work_dir,
+        logical_operator=logical_operator,
+        task_graph_node=task_graph_node,
+        capsule_submit=capsule_submit,
+    )
 
     record: dict[str, Any] = {
         "task_id": task_id,
@@ -1920,9 +2033,12 @@ def cmd_submit(args: argparse.Namespace) -> int:
         "dispatch_file": str(dispatch_file),
         "dispatch_path": str(dispatch_file),
         "result_path": result_path,
+        "work_dir": work_dir,
         "status": "submitted",
         "submitted_at": _now(),
         "requested_role": normalize_role(role),
+        "runtime_mode": envelope.get("runtime_mode", ""),
+        "provider_policy": envelope.get("provider_policy", ""),
     }
     if operator.get("borrowed_for_role"):
         record["borrowed_for_role"] = operator.get("borrowed_for_role")
@@ -2020,7 +2136,8 @@ def cmd_fleet_status(args: argparse.Namespace) -> int:
             rt_state = "disabled"
             cooldown_col = ""
         else:
-            rt_state = get_operator_runtime_state(op_id)
+            op["operator_id"] = op_id
+            rt_state = _runtime_state_for_operator_record(op_id, op)
             cooldown_col = ""
             if rt_state in ("cooldown", "quota_exhausted", "auth_expired"):
                 status = get_operator_status_data(op_id)
@@ -2731,6 +2848,82 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     return 0
 
 
+def _preflight_task_type_for_role(role: str) -> str:
+    role = normalize_role(role)
+    if role == "planner":
+        return "planning"
+    if role == "evaluator":
+        return "graph_eval"
+    if role == "pm":
+        return "pm_order"
+    return "implementation"
+
+
+def _provider_aliases(provider: str) -> set[str]:
+    p = str(provider or "").strip().lower()
+    aliases = {p} if p else set()
+    if p == "openai":
+        aliases.update({"codex", "gpt"})
+    if p == "anthropic":
+        aliases.update({"claude", "claude-code"})
+    if p == "google":
+        aliases.update({"gemini"})
+    return aliases
+
+
+def cmd_route_preflight(args: argparse.Namespace) -> int:
+    """Verify that every requested runtime role resolves to the selected provider.
+
+    This is intentionally no-model and no-dispatch. It makes runtime selection a
+    hard contract before intake/approval spends user quota.
+    """
+    runtime = str(args.runtime or _runtime_mode_from_env() or "mixed").strip().lower()
+    expected_provider = str(args.expect_provider or "").strip().lower()
+    if not expected_provider:
+        if runtime == "codex":
+            expected_provider = "openai"
+        elif runtime == "claude":
+            expected_provider = "anthropic"
+    roles = [
+        normalize_role(item)
+        for item in re.split(r"[, ]+", str(args.roles or "planner,builder,evaluator"))
+        if str(item).strip()
+    ]
+    items: list[dict[str, Any]] = []
+    ok = True
+    for role in roles:
+        task_type = _preflight_task_type_for_role(role)
+        operator_id, operator, reason = select_operator_by_role(role, task_type=task_type)
+        provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower() if operator else ""
+        route_ok = bool(operator_id)
+        if expected_provider:
+            route_ok = route_ok and expected_provider in _provider_aliases(provider)
+        if not route_ok:
+            ok = False
+        items.append(
+            {
+                "role": role,
+                "task_type": task_type,
+                "ok": route_ok,
+                "operator_id": operator_id,
+                "provider": provider,
+                "backend": str(operator.get("backend") or "") if operator else "",
+                "model": str(operator.get("model") or "") if operator else "",
+                "runtime_state": get_operator_runtime_state(operator_id) if operator_id else "",
+                "reason": "" if route_ok else (reason or "provider_mismatch_or_no_operator"),
+            }
+        )
+    payload = {
+        "ok": ok,
+        "runtime": runtime,
+        "expected_provider": expected_provider,
+        "provider_policy": _provider_policy_label(),
+        "roles": items,
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2 if args.pretty else None))
+    return 0 if ok else 1
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -2749,6 +2942,7 @@ def main() -> int:
     s.add_argument("--node", default="N1", help="关联 DAG 节点 ID（默认 N1）")
     s.add_argument("--task-type", default="", help="任务类型提示（用于算子评分）")
     s.add_argument("--context", default="", help="额外上下文（注入 dispatch 文件）")
+    s.add_argument("--work-dir", default="", help="算子工作目录；默认 <sprint>/workdir")
     s.add_argument("--dry-run", action="store_true", help="预览，不实际提交")
 
     cr = sub.add_parser("compile-request", help="捕获编译请求为 RawIntent（默认不直接创建 sprint/package）")
@@ -2765,6 +2959,12 @@ def main() -> int:
 
     # fleet-status
     sub.add_parser("fleet-status", help="查看所有物理算子的状态")
+
+    rp = sub.add_parser("route-preflight", help="验证当前 runtime/provider 下的 PM/planner/builder/evaluator 路由")
+    rp.add_argument("--runtime", default="", help="codex|claude；默认从环境/ provider policy 推断")
+    rp.add_argument("--expect-provider", default="", help="openai|anthropic；默认由 runtime 推断")
+    rp.add_argument("--roles", default="planner,builder,evaluator", help="逗号分隔角色列表")
+    rp.add_argument("--pretty", action="store_true", help="pretty JSON")
 
     # builder-pool-status
     bps = sub.add_parser("builder-pool-status", help="查看 builder pool 与并发旋钮状态")
@@ -2818,6 +3018,7 @@ def main() -> int:
         "submit": cmd_submit,
         "compile-request": cmd_compile_request,
         "fleet-status": cmd_fleet_status,
+        "route-preflight": cmd_route_preflight,
         "builder-pool-status": cmd_builder_pool_status,
         "drain-builder-ready": cmd_drain_builder_ready,
         "concurrency-status": cmd_concurrency_status,

@@ -8848,6 +8848,33 @@ def _inferred_logical_operators(role: str, roles: list[str], scenario: str, exec
     return inferred
 
 
+def _central_operator_runtime_state(operator_id: str) -> str:
+    """Return the same runtime state the selector uses, when available.
+
+    The dashboard used to recompute state from raw lease/status files. That
+    drifted after operator_runtime learned to recover dead-PID stale leases:
+    selection could see an operator as idle while the UI still showed running.
+    """
+    try:
+        lib_dir = HARNESS_DIR / "lib"
+        if str(lib_dir) not in sys.path:
+            sys.path.insert(0, str(lib_dir))
+        import operator_runtime  # type: ignore
+
+        # status-server tests and desktop sync can change HARNESS_DIR at runtime;
+        # keep the imported classifier pointed at the same root as this server.
+        operator_runtime.HARNESS_DIR = HARNESS_DIR
+        operator_runtime.OPERATOR_LEASE_DIR = HARNESS_DIR / "run" / "operator-leases"
+        operator_runtime.OPERATOR_STATUS_DIR = HARNESS_DIR / "run" / "operator-status"
+        operator_runtime.OPERATOR_INBOX_DIR = HARNESS_DIR / "run" / "operator-inbox"
+        operator_runtime.OPERATOR_RESULTS_DIR = HARNESS_DIR / "run" / "operator-results"
+        operator_runtime.OPERATOR_PERSONAS_DIR = HARNESS_DIR / "personas"
+        operator_runtime.PHYSICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "physical-operators.json"
+        return str(operator_runtime.get_operator_runtime_state(operator_id) or "").strip()
+    except Exception:
+        return ""
+
+
 def _physical_operator_summary(limit: int = 8) -> dict:
     """Summarize physical operator fleet state for the main status dashboard."""
     registry_path = HARNESS_DIR / "config" / "physical-operators.json"
@@ -8976,6 +9003,19 @@ def _physical_operator_summary(limit: int = 8) -> dict:
                 runtime_state = str(reg_state.get("runtime_state"))
                 reset_at = str(reg_state.get("cooldown_until") or "")
                 runtime_state_source = "registry_state"
+
+            central_runtime_state = _central_operator_runtime_state(operator_id)
+            if central_runtime_state and central_runtime_state != runtime_state:
+                # Keep explicit quota/auth blocks that status-server derives from
+                # legacy top-level registry fields; operator_runtime does not yet
+                # ingest those fields, so an "idle" central answer would erase a
+                # real user-facing block. Stale active lease/status recovery still
+                # flows through operator_runtime.
+                if not (runtime_state_source == "registry_quota" and central_runtime_state == "idle"):
+                    runtime_state = central_runtime_state
+                    runtime_state_source = "operator_runtime"
+                    if runtime_state not in {"leased", "running", "draining", "cooldown", "quota_exhausted", "auth_expired"}:
+                        reset_at = ""
 
             is_busy = runtime_state in {"leased", "running", "draining", "cooldown", "quota_exhausted", "auth_expired"}
             if is_busy:

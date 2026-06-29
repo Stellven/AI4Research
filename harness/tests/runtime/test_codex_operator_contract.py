@@ -51,6 +51,83 @@ def test_multi_task_operator_envelope_carries_work_dir_and_graph_path():
     assert envelope["graph_path"] == "/tmp/sprint.task_graph.json"
 
 
+def test_pm_operator_envelope_carries_work_dir_and_provider_policy(tmp_path, monkeypatch):
+    monkeypatch.setenv("SOLAR_PM_DEFAULT_PROVIDERS", "openai")
+    pm_dispatch = _load_module("pm_dispatch_contract", ROOT / "tools" / "pm_dispatch.py")
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", tmp_path / "sprints")
+    dispatch_file = tmp_path / "dispatch.md"
+    dispatch_file.write_text("dispatch", encoding="utf-8")
+
+    envelope = pm_dispatch._build_pm_operator_envelope(
+        task_id="pm-sprint-1-N0-abc",
+        sprint_id="sprint-1",
+        node_id="N0",
+        operator_id="mini-codex-gpt55-medium-planner-1",
+        operator={"provider": "openai", "backend": "command", "model": "gpt-5.5"},
+        task_type="planning",
+        objective="Plan the work",
+        dispatch_file=dispatch_file,
+        result_path=str(tmp_path / "result.md"),
+        role="planner",
+    )
+
+    assert envelope["work_dir"] == str(tmp_path / "sprints" / "sprint-1" / "workdir")
+    assert Path(envelope["work_dir"]).is_dir()
+    assert envelope["runtime_mode"] == "codex"
+    assert envelope["provider_policy"] == "openai"
+    assert envelope["operator_provider"] == "openai"
+
+
+def test_pm_route_preflight_fails_closed_on_provider_mismatch(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("SOLAR_PM_DEFAULT_PROVIDERS", "openai")
+    pm_dispatch = _load_module("pm_dispatch_route_contract", ROOT / "tools" / "pm_dispatch.py")
+    registry = {
+        "operators": {
+            "codex-planner": {
+                "role": "planner",
+                "roles": ["planner"],
+                "provider": "openai",
+                "backend": "command",
+                "model": "gpt-5.5",
+                "enabled": True,
+                "available": True,
+            },
+            "claude-builder": {
+                "role": "builder",
+                "roles": ["builder"],
+                "provider": "anthropic",
+                "backend": "claude-cli",
+                "model": "sonnet",
+                "enabled": True,
+                "available": True,
+            },
+            "codex-evaluator": {
+                "role": "evaluator",
+                "roles": ["evaluator"],
+                "provider": "openai",
+                "backend": "command",
+                "model": "gpt-5.5",
+                "enabled": True,
+                "available": True,
+            },
+        }
+    }
+    monkeypatch.setattr(pm_dispatch, "load_registry", lambda: registry)
+    monkeypatch.setattr(pm_dispatch, "get_operator_runtime_state", lambda _op_id: "idle")
+    monkeypatch.setattr(pm_dispatch, "_operator_external_health", lambda _op: (True, ""))
+    args = type("Args", (), {
+        "runtime": "codex",
+        "expect_provider": "openai",
+        "roles": "planner,builder,evaluator",
+        "pretty": False,
+    })()
+
+    assert pm_dispatch.cmd_route_preflight(args) == 1
+    payload = capsys.readouterr().out
+    assert '"ok": false' in payload
+    assert "builder" in payload
+
+
 def test_operatord_materializes_work_dir_for_codex(tmp_path, monkeypatch):
     operatord = _load_module("operatord_contract", ROOT / "tools" / "operatord.py")
     monkeypatch.setattr(operatord, "HARNESS_DIR", tmp_path / "harness")
@@ -75,6 +152,31 @@ def test_operatord_materializes_work_dir_for_codex(tmp_path, monkeypatch):
     assert env["CODEX_WORKDIR"] == str(tmp_path / "sprint-workdir")
     assert env["GRAPH"] == str(tmp_path / "sprint.task_graph.json")
     assert Path(env["SOLAR_OPERATOR_ENVELOPE_JSON"]).exists()
+
+
+def test_operatord_derives_work_dir_for_legacy_pm_envelope(tmp_path, monkeypatch):
+    operatord = _load_module("operatord_contract_legacy_workdir", ROOT / "tools" / "operatord.py")
+    harness = tmp_path / "harness"
+    monkeypatch.setattr(operatord, "HARNESS_DIR", harness)
+    result_dir = tmp_path / "result"
+    result_dir.mkdir()
+    dispatch_file = tmp_path / "dispatch.md"
+    dispatch_file.write_text("dispatch", encoding="utf-8")
+
+    env = operatord._materialize_envelope_context(
+        result_dir,
+        {
+            "task_id": "pm-sprint-1-N0-abc",
+            "sprint_id": "sprint-1",
+            "node_id": "N0",
+            "dispatch_file": str(dispatch_file),
+        },
+    )
+
+    expected = harness / "sprints" / "sprint-1" / "workdir"
+    assert env["WORK_DIR"] == str(expected)
+    assert env["CODEX_WORKDIR"] == str(expected)
+    assert expected.is_dir()
 
 
 def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, monkeypatch):
@@ -102,4 +204,3 @@ def test_codex_operator_respects_explicit_non_ephemeral(tmp_path, monkeypatch):
     monkeypatch.setenv("SOLAR_CODEX_OPERATOR_EPHEMERAL", "0")
     cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), tmp_path / "last.md")
     assert "--ephemeral" not in cmd
-

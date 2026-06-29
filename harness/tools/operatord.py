@@ -288,7 +288,15 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     if graph_path:
         env["GRAPH"] = graph_path
     work_dir = str(envelope.get("work_dir") or "").strip()
+    if not work_dir:
+        sid = str(envelope.get("sprint_id") or "").strip()
+        if sid:
+            work_dir = str(HARNESS_DIR / "sprints" / sid / "workdir")
     if work_dir:
+        try:
+            Path(work_dir).expanduser().mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
         env["WORK_DIR"] = work_dir
         env["CODEX_WORKDIR"] = work_dir
     if str(envelope.get("node_id") or "").strip():
