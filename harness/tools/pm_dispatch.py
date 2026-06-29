@@ -77,6 +77,14 @@ ROLE_ALIASES: dict[str, str] = {
 
 NON_DISPATCHABLE_STATES = {"leased", "running", "draining", "cooldown", "quota_exhausted", "auth_expired", "disabled"}
 RATE_LIMIT_PRUNER_LABEL = os.environ.get("SOLAR_RATE_LIMIT_PRUNER_LABEL", "com.solar.harness-rate-limit-pruner")
+DEFAULT_OPERATOR_PROVIDERS = frozenset(
+    p.strip().lower()
+    for p in os.environ.get(
+        "SOLAR_PM_DEFAULT_PROVIDERS",
+        os.environ.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS", ""),
+    ).split(",")
+    if p.strip()
+)
 CODE_EXEC_TASK_TYPES = {
     "implementation",
     "code-edit",
@@ -805,6 +813,13 @@ def _operator_priority(
         priority += 20
     if default_profile and (op_id == default_profile or str(op.get("profile", "")) == default_profile):
         priority += 8
+
+    if DEFAULT_OPERATOR_PROVIDERS:
+        provider = str(op.get("provider") or op.get("vendor") or "").strip().lower()
+        if provider in DEFAULT_OPERATOR_PROVIDERS:
+            priority += 50
+        elif provider:
+            priority -= 20
 
     if spillover_spec and policy_mod:
         group = policy_mod.infer_builder_group(op)

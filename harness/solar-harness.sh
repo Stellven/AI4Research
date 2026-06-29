@@ -43,6 +43,23 @@ if [[ "$SOLAR_PANE_RUNTIME" == "codex" && -z "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] &
   [[ -n "$_codex_flags" ]] && export SOLAR_CODEX_EXTRA_FLAGS="$_codex_flags"
   unset _codex_search _codex_effort _codex_flags
 fi
+# Runtime selector contract: when the dashboard/runtime config says "codex", route the whole DAG
+# surface toward Codex/OpenAI by default (PM/planner dispatch, builder pool, eval pool, and the
+# self-completing multi-task loop). Env values still win for advanced/hybrid rigs.
+case "$SOLAR_PANE_RUNTIME" in
+  codex)
+    export SOLAR_PM_DEFAULT_PROVIDERS="${SOLAR_PM_DEFAULT_PROVIDERS:-openai}"
+    export SOLAR_MULTI_TASK_DEFAULT_PROVIDERS="${SOLAR_MULTI_TASK_DEFAULT_PROVIDERS:-openai}"
+    export SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH="${SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH:-1}"
+    export SOLAR_GRAPH_BUILDER_OPERATOR_POOL="${SOLAR_GRAPH_BUILDER_OPERATOR_POOL:-1}"
+    export SOLAR_GRAPH_EVAL_OPERATOR_POOL="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-1}"
+    export SOLAR_COORD_MULTITASK_SELFCOMPLETE="${SOLAR_COORD_MULTITASK_SELFCOMPLETE:-1}"
+    ;;
+  claude)
+    export SOLAR_PM_DEFAULT_PROVIDERS="${SOLAR_PM_DEFAULT_PROVIDERS:-anthropic}"
+    export SOLAR_MULTI_TASK_DEFAULT_PROVIDERS="${SOLAR_MULTI_TASK_DEFAULT_PROVIDERS:-anthropic}"
+    ;;
+esac
 case "$SOLAR_PANE_RUNTIME" in
   codex) PANE_RUNTIME_LABEL="Codex" ;;
   *) PANE_RUNTIME_LABEL="Claude" ;;

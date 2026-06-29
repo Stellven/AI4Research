@@ -996,7 +996,8 @@ _USER_SECRETS_PATH = Path(
 _VALID_MODEL_ALIASES = {
     "claude-opus", "claude-sonnet", "claude-haiku", "anthropic-opus",
     "anthropic-sonnet", "opus", "sonnet", "zhipu-glm-5.1", "zhipu-glm-4.7",
-    "deepseek-v4-pro",
+    "deepseek-v4-pro", "codex-gpt-5.5", "gpt-5.5", "codex-gpt-5.3-spark",
+    "gpt-5.3-codex-spark",
 }
 _VALID_PANE_RUNTIMES = {"claude", "codex"}
 # provider id (frontend) -> env var the runtime reads
@@ -1184,6 +1185,10 @@ def _model_id_to_alias(model_id: str) -> str:
     'sonnet' canonicalizes to GLM in the registry, so always emit explicit
     claude-* / zhipu-* aliases."""
     m = str(model_id or "").strip().lower()
+    if "gpt-5.5" in m or "codex-gpt-5.5" in m:
+        return "codex-gpt-5.5"
+    if "gpt-5.3" in m or "codex-gpt-5.3" in m or "spark" in m:
+        return "codex-gpt-5.3-spark"
     if "opus" in m:
         return "claude-opus"
     if "sonnet" in m:
@@ -1202,6 +1207,10 @@ def _model_id_to_alias(model_id: str) -> str:
 def _alias_to_model_id(alias: str) -> str:
     """Reverse of _model_id_to_alias: canonical alias -> dashboard display id."""
     a = str(alias or "").strip().lower()
+    if "gpt-5.5" in a:
+        return "codex-gpt-5.5"
+    if "gpt-5.3" in a or "spark" in a:
+        return "codex-gpt-5.3-spark"
     if "opus" in a:
         return "claude-opus-4.x"
     if "sonnet" in a:

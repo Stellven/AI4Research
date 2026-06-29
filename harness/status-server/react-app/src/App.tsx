@@ -3572,6 +3572,8 @@ function UsagePanel({ usage }: { usage?: UsagePayload }) {
 }
 
 const MODEL_OPTIONS = [
+  "codex-gpt-5.5",
+  "codex-gpt-5.3-spark",
   "claude-opus-4.x",
   "claude-sonnet-4.x",
   "claude-haiku-4.x",
@@ -3579,6 +3581,11 @@ const MODEL_OPTIONS = [
 ];
 
 const CREW_PRESETS = [
+  {
+    id: "all-codex",
+    label: "All-Codex",
+    hint: "Codex/OpenAI for PM, Planner, Builder, and Evaluator",
+  },
   {
     id: "all-claude",
     label: "All-Claude",
@@ -3603,6 +3610,7 @@ const RUNTIME_OPTIONS = [
 ];
 
 const API_PROVIDERS = [
+  { id: "openai", label: "OpenAI", hint: "Codex CLI / OpenAI models" },
   { id: "anthropic", label: "Anthropic", hint: "Claude models" },
   { id: "zai", label: "Z.ai", hint: "GLM models" },
 ];
@@ -3658,6 +3666,8 @@ function activityLevel(count: number): number {
 function normalizeCrewPreset(value: string): string {
   const clean = value.trim().toLowerCase().replace(/_/g, "-");
   if (CREW_PRESETS.some((preset) => preset.id === clean)) return clean;
+  if (clean.includes("codex") || clean.includes("openai") || clean.includes("gpt"))
+    return "all-codex";
   if (clean.includes("fast") || clean.includes("glm")) return "fast";
   if (clean.includes("quality") || clean.includes("opus"))
     return "high-quality";
@@ -3666,6 +3676,11 @@ function normalizeCrewPreset(value: string): string {
 }
 
 function presetRoleModels(mode: string): Record<string, string> | undefined {
+  if (mode === "all-codex") {
+    return Object.fromEntries(
+      ROLE_ORDER.map((role) => [role, "codex-gpt-5.5"]),
+    );
+  }
   if (mode === "all-claude") {
     return Object.fromEntries(
       ROLE_ORDER.map((role) => [role, "claude-sonnet-4.x"]),
@@ -3829,6 +3844,8 @@ function SettingsView() {
     setLabMode(mode);
     const presetModels = presetRoleModels(mode);
     if (presetModels) setRoleModels(presetModels);
+    if (mode === "all-codex") setPaneRuntime("codex");
+    if (mode === "all-claude") setPaneRuntime("claude");
   }
 
   const [saving, setSaving] = useState(false);
