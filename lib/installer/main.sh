@@ -33,7 +33,7 @@ Options:
   --solar-home PATH           Runtime root (default: ~/.solar)
   --claude-dir PATH           Claude user dir (default: ~/.claude)
   --dry-run                   Print actions without writing
-  --bootstrap-system-deps     Prompt/attempt OS package install for tmux, jq, bash>=4
+  --bootstrap-system-deps     Prompt/attempt OS package install for Python, tmux, jq, bash>=4
   --fake-keys                 Write test-only placeholder env files
   --skip-llm-cli              Skip LLM CLI checks for CI
   --skip-py-deps              Validate Python requirements only (deps-light CI)
@@ -143,6 +143,7 @@ main() {
     parse_args "$@"
     init_paths
     detect_os
+    bootstrap_python_if_needed
     detect_python
 
     if [ "$LIST_COMPONENTS" = "true" ]; then

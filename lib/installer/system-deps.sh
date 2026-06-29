@@ -169,6 +169,9 @@ bootstrap_system_deps() {
     still_missing="$(missing_system_deps)"
     if [ -n "$still_missing" ]; then
         yellow "system dependencies still missing: $still_missing"
+        if [ "$BOOTSTRAP_SYSTEM_DEPS" = "true" ]; then
+            die "required harness system dependencies still missing: $still_missing. Run: $(system_dep_install_command $still_missing)"
+        fi
         yellow "Solar install will continue, but harness launch will fail until you run: $(system_dep_install_command $still_missing)"
     else
         info "system dependencies installed: tmux, jq, bash>=4"

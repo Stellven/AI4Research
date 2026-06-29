@@ -31,6 +31,53 @@ python_is_311_plus() {
     "$1" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1
 }
 
+bootstrap_python_if_needed() {
+    [ "${BOOTSTRAP_SYSTEM_DEPS:-false}" = "true" ] || return 0
+
+    if [ "${OS_KIND:-}" = "darwin" ]; then
+        PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+        export PATH
+    fi
+
+    current="$(command_path python3)"
+    if [ -n "$current" ] && python_is_311_plus "$current"; then
+        return 0
+    fi
+
+    if [ "${DRY_RUN:-false}" = "true" ]; then
+        info "dry-run: would attempt Python 3.11+ bootstrap for OS=$OS_KIND"
+        return 0
+    fi
+
+    case "$OS_KIND" in
+        darwin)
+            if ! command -v brew >/dev/null 2>&1; then
+                die "Solar requires Python 3.11+ and --bootstrap-system-deps cannot install it because Homebrew is missing.
+Install Homebrew, then re-run:
+  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"
+  export PATH=\"/opt/homebrew/bin:/usr/local/bin:\$PATH\""
+            fi
+            info "installing Python 3.11+ with Homebrew"
+            brew install python
+            ;;
+        linux|wsl)
+            if command -v apt-get >/dev/null 2>&1; then
+                info "installing Python runtime dependencies: apt-get install python3 python3-venv python3-pip"
+                installer_run_pkg_command apt-get update \
+                    && installer_run_pkg_command apt-get install -y python3 python3-venv python3-pip
+            elif command -v dnf >/dev/null 2>&1; then
+                info "installing Python runtime dependencies: dnf install python3 python3-pip"
+                installer_run_pkg_command dnf install -y python3 python3-pip
+            elif command -v pacman >/dev/null 2>&1; then
+                info "installing Python runtime dependencies: pacman -S python python-pip"
+                installer_run_pkg_command pacman -S --needed python python-pip
+            else
+                die "Solar requires Python 3.11+, but no supported package manager was found. Install Python 3.11+ and re-run."
+            fi
+            ;;
+    esac
+}
+
 python_candidate_path() {
     if [ -n "$1" ]; then
         if [ -x "$1" ]; then

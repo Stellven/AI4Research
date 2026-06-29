@@ -10,9 +10,10 @@
     "selftest": "SOLAR_DESKTOP_SELFTEST=1 electron .",
     "gate": "node verify.js",
     "build:renderer": "bash build-renderer.sh",
-    "build:win": "bash build-renderer.sh && electron-builder --win portable",
-    "build:mac": "bash build-renderer.sh && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg",
-    "build:linux": "bash build-renderer.sh && electron-builder --linux AppImage"
+    "prepackage-check": "node prepackage-check.js",
+    "build:win": "bash build-renderer.sh && node prepackage-check.js && electron-builder --win portable",
+    "build:mac": "bash build-renderer.sh && node prepackage-check.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg",
+    "build:linux": "bash build-renderer.sh && node prepackage-check.js && electron-builder --linux AppImage"
   },
   "devDependencies": {
     "electron": "^33.2.1",
@@ -30,7 +31,20 @@
     "extraResources": [
       {
         "from": "../harness",
-        "to": "harness"
+        "to": "harness",
+        "filter": [
+          "**/*",
+          "!templates/persona",
+          "!run/**",
+          "!state/**",
+          "!logs/**",
+          "!cache/**",
+          "!venvs/**",
+          "!vendor/**",
+          "!quarantine/**",
+          "!**/__pycache__/**",
+          "!**/*.pyc"
+        ]
       },
       {
         "from": "../VERSION",

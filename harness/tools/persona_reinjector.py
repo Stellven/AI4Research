@@ -59,6 +59,19 @@ def _default_capture(pane_id: str) -> str:
     return result.stdout
 
 
+def _resolve_persona_template(template_base: Path, role: str) -> Path:
+    name = f"{role}.md"
+    candidates = [
+        template_base / "persona" / name,
+        template_base.parent / "personas" / name,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    searched = ", ".join(str(p) for p in candidates)
+    raise FileNotFoundError(f"Persona template not found for {role!r}; searched: {searched}")
+
+
 class PersonaReinjector:
     INJECT_SETTLE_S: float = 0.5
 
@@ -80,7 +93,7 @@ class PersonaReinjector:
         self._sleep = sleep_fn or time.sleep
 
     def inject_persona(self, pane_id: str, role: str) -> bool:
-        template_path = self._template_base / "persona" / f"{role}.md"
+        template_path = _resolve_persona_template(self._template_base, role)
         content = template_path.read_text()
         self._send(pane_id, content)
         self._sleep(self.INJECT_SETTLE_S)

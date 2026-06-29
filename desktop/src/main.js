@@ -259,6 +259,18 @@ function getSolarScriptPath() {
   );
 }
 
+function unixBootstrapEnv() {
+  const pathParts = [
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    ...(process.env.PATH || "").split(path.delimiter),
+  ].filter(Boolean);
+  return {
+    ...process.env,
+    PATH: Array.from(new Set(pathParts)).join(path.delimiter),
+  };
+}
+
 function runUnixBootstrap() {
   const sh = getSolarScriptPath();
   if (!sh) {
@@ -273,8 +285,8 @@ function runUnixBootstrap() {
       // Include status-daemon so the in-app install also sets up the persistent
       // launchd/systemd service (parity with Windows), not just a runtime the app
       // must respawn each launch. status-daemon load is best-effort, never fatal.
-      [sh, "--yes", "--components", "kernel,harness,status-daemon"],
-      { detached: true, stdio: ["ignore", out, out] },
+      [sh, "--yes", "--bootstrap-system-deps", "--components", "kernel,harness,status-daemon"],
+      { detached: true, stdio: ["ignore", out, out], env: unixBootstrapEnv() },
     );
     child.unref();
     return true;
