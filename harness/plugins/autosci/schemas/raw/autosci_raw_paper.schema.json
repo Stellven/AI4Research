@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AutoSci Raw Paper Fixture",
+  "type": "object",
+  "required": ["paper_id", "title", "source_type", "source_ref"],
+  "additionalProperties": true,
+  "properties": {
+    "paper_id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "source_type": {"type": "string"},
+    "source_ref": {"type": "string", "minLength": 1},
+    "abstract": {"type": "string"},
+    "sections": {"type": "array"}
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "task_id": "task-autosci-experiment-run-fixture",
+  "sprint_id": "sprint-autosci-phase12",
+  "node_id": "node-run-experiment",
+  "mode": "fixture",
+  "output_dir": "artifacts/scientific/smoke",
+  "inputs": {
+    "experiment_plan_evidence": "artifacts/scientific/smoke/experiment_plan.json",
+    "experiment_result": "plugins/autosci/tests/fixtures/sample_autosci_raw_experiment_result.json",
+    "execution_mode": "fixture"
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/smoke/run_experiment.result.json",
+    "evidence_payload_path": "artifacts/scientific/smoke/experiment_result.json",
+    "evidence_jsonl": "artifacts/scientific/smoke/evidence.jsonl"
+  }
+}

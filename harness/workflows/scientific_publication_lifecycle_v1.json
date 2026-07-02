@@ -1,0 +1,312 @@
+{
+  "$schema": "../schemas/task-graph.schema.json",
+  "schema_version": "solar.task_graph.v1",
+  "workflow_id": "scientific_publication_lifecycle_v1",
+  "sprint_id": "scientific_publication_lifecycle_v1",
+  "title": "Scientific Publication Lifecycle",
+  "description": "Template for planning, drafting, packaging, and memory update around report publication.",
+  "dag_variant": "research",
+  "research_mode": true,
+  "version": 1,
+  "architecture_guard": {
+    "mode": "strict",
+    "package_first": true,
+    "forbidden_patterns": [
+      "hidden-backend-full-workflow"
+    ]
+  },
+  "evidence_policy": {
+    "owner": "solar",
+    "schemas_root": "schemas/evidence",
+    "allow_failed": true,
+    "allow_inconclusive": true,
+    "require_task_sprint_node_provenance": true
+  },
+  "required_gates": [
+    "G_REPORT_PLAN",
+    "G_REPORT_DRAFT",
+    "G_REPORT_GATE",
+    "G_PUBLICATION_PRODUCE",
+    "G_PUBLICATION_MEMORY_UPDATE"
+  ],
+  "nodes": [
+    {
+      "id": "report_plan",
+      "goal": "Plan scientific report structure from verified evidence.",
+      "logical_operator": "ScientificReportPlanner",
+      "depends_on": [],
+      "required_capabilities": [
+        "cap.research-report-plan",
+        "research_synthesis",
+        "academic_critique"
+      ],
+      "read_scope": [
+        "dispatch/envelope.json"
+      ],
+      "write_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/report_plan/scientific_report.v1.json"
+      ],
+      "gate": "G_REPORT_PLAN",
+      "acceptance": [
+        "Emits or validates scientific_report.v1 evidence for ScientificReportPlanner.",
+        "Records failed or inconclusive status instead of inventing missing evidence.",
+        "Does not call a hidden backend full workflow runner."
+      ],
+      "pass_conditions": [
+        "scientific_report.v1 payload is present or the node records failed/inconclusive evidence with limitations.",
+        "Source evidence ids and provenance are preserved where applicable."
+      ],
+      "priority": 99,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": null,
+      "required_node_status": null,
+      "research_stage": "report_planning",
+      "evidence_policy": {
+        "expected_schema": "scientific_report.v1",
+        "allow_failed": true,
+        "allow_inconclusive": true,
+        "require_provenance": true,
+        "forbid_overclaiming": true
+      },
+      "architecture_policy": {
+        "package_boundary": "plugins/autosci",
+        "plugin_id": "autosci",
+        "backend_contract": "single_bounded_action_or_solar_gate",
+        "forbidden": [
+          "hidden-backend-full-workflow",
+          "backend-black-box-runner"
+        ]
+      },
+      "status": "pending"
+    },
+    {
+      "id": "report_draft",
+      "goal": "Draft evidence-linked scientific reports with limitations visible.",
+      "logical_operator": "ScientificReportDrafter",
+      "depends_on": [
+        "report_plan"
+      ],
+      "required_capabilities": [
+        "cap.research-report-draft",
+        "research_synthesis",
+        "academic_critique"
+      ],
+      "read_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/report_plan/"
+      ],
+      "write_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/report_draft/scientific_report.v1.json"
+      ],
+      "gate": "G_REPORT_DRAFT",
+      "acceptance": [
+        "Emits or validates scientific_report.v1 evidence for ScientificReportDrafter.",
+        "Records failed or inconclusive status instead of inventing missing evidence.",
+        "Does not call a hidden backend full workflow runner."
+      ],
+      "pass_conditions": [
+        "scientific_report.v1 payload is present or the node records failed/inconclusive evidence with limitations.",
+        "Source evidence ids and provenance are preserved where applicable."
+      ],
+      "priority": 98,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": "report_plan",
+      "required_node_status": "passed",
+      "research_stage": "report_drafting",
+      "evidence_policy": {
+        "expected_schema": "scientific_report.v1",
+        "allow_failed": true,
+        "allow_inconclusive": true,
+        "require_provenance": true,
+        "forbid_overclaiming": true
+      },
+      "architecture_policy": {
+        "package_boundary": "plugins/autosci",
+        "plugin_id": "autosci",
+        "backend_contract": "single_bounded_action_or_solar_gate",
+        "forbidden": [
+          "hidden-backend-full-workflow",
+          "backend-black-box-runner"
+        ]
+      },
+      "status": "pending"
+    },
+    {
+      "id": "report_gate",
+      "goal": "Run lightweight Solar verification on required evidence and guardrails.",
+      "logical_operator": "VerifierLite",
+      "depends_on": [
+        "report_draft"
+      ],
+      "required_capabilities": [
+        "test_execution",
+        "code_impl"
+      ],
+      "read_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/report_draft/"
+      ],
+      "write_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/report_gate/verification_gate.v1.json"
+      ],
+      "gate": "G_REPORT_GATE",
+      "acceptance": [
+        "Confirms scientific_report.v1 links substantive claims to evidence and limitations."
+      ],
+      "pass_conditions": [
+        "verification_gate.v1 payload is present or the node records failed/inconclusive evidence with limitations.",
+        "Source evidence ids and provenance are preserved where applicable."
+      ],
+      "priority": 97,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": "report_draft",
+      "required_node_status": "passed",
+      "research_stage": "verification",
+      "evidence_policy": {
+        "expected_schema": "verification_gate.v1",
+        "allow_failed": true,
+        "allow_inconclusive": true,
+        "require_provenance": true,
+        "forbid_overclaiming": true
+      },
+      "architecture_policy": {
+        "package_boundary": "evaluators/scientific",
+        "plugin_id": null,
+        "backend_contract": "single_bounded_action_or_solar_gate",
+        "forbidden": [
+          "hidden-backend-full-workflow",
+          "backend-black-box-runner"
+        ]
+      },
+      "status": "pending"
+    },
+    {
+      "id": "publication_produce",
+      "goal": "Prepare publication bundles only from approved report evidence.",
+      "logical_operator": "ScientificPublicationProducer",
+      "depends_on": [
+        "report_gate"
+      ],
+      "required_capabilities": [
+        "cap.research-publication-produce",
+        "research_synthesis",
+        "data_extraction"
+      ],
+      "read_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/report_gate/"
+      ],
+      "write_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/publication_produce/publication_bundle.v1.json"
+      ],
+      "gate": "G_PUBLICATION_PRODUCE",
+      "acceptance": [
+        "Emits or validates publication_bundle.v1 evidence for ScientificPublicationProducer.",
+        "Records failed or inconclusive status instead of inventing missing evidence.",
+        "Does not call a hidden backend full workflow runner."
+      ],
+      "pass_conditions": [
+        "publication_bundle.v1 payload is present or the node records failed/inconclusive evidence with limitations.",
+        "Source evidence ids and provenance are preserved where applicable."
+      ],
+      "priority": 96,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": "report_gate",
+      "required_node_status": "passed",
+      "research_stage": "publication_production",
+      "evidence_policy": {
+        "expected_schema": "publication_bundle.v1",
+        "allow_failed": true,
+        "allow_inconclusive": true,
+        "require_provenance": true,
+        "forbid_overclaiming": true
+      },
+      "architecture_policy": {
+        "package_boundary": "plugins/autosci",
+        "plugin_id": "autosci",
+        "backend_contract": "single_bounded_action_or_solar_gate",
+        "forbidden": [
+          "hidden-backend-full-workflow",
+          "backend-black-box-runner"
+        ]
+      },
+      "status": "pending",
+      "approval_gate": true,
+      "approval_policy": {
+        "required_for": [
+          "non_fixture_execution",
+          "network_access",
+          "destructive_write",
+          "paid_compute",
+          "long_running_job"
+        ],
+        "default": "require_human_approval"
+      }
+    },
+    {
+      "id": "publication_memory_update",
+      "goal": "Apply explicit evidence-backed research memory updates.",
+      "logical_operator": "ScientificMemoryUpdater",
+      "depends_on": [
+        "publication_produce"
+      ],
+      "required_capabilities": [
+        "cap.research-memory-update",
+        "research_synthesis",
+        "code_impl"
+      ],
+      "read_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/publication_produce/"
+      ],
+      "write_scope": [
+        "artifacts/scientific/scientific_publication_lifecycle_v1/publication_memory_update/research_memory_update.v1.json"
+      ],
+      "gate": "G_PUBLICATION_MEMORY_UPDATE",
+      "acceptance": [
+        "Emits or validates research_memory_update.v1 evidence for ScientificMemoryUpdater.",
+        "Records failed or inconclusive status instead of inventing missing evidence.",
+        "Does not call a hidden backend full workflow runner."
+      ],
+      "pass_conditions": [
+        "research_memory_update.v1 payload is present or the node records failed/inconclusive evidence with limitations.",
+        "Source evidence ids and provenance are preserved where applicable."
+      ],
+      "priority": 95,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": "publication_produce",
+      "required_node_status": "passed",
+      "research_stage": "memory_update",
+      "evidence_policy": {
+        "expected_schema": "research_memory_update.v1",
+        "allow_failed": true,
+        "allow_inconclusive": true,
+        "require_provenance": true,
+        "forbid_overclaiming": true
+      },
+      "architecture_policy": {
+        "package_boundary": "plugins/autosci",
+        "plugin_id": "autosci",
+        "backend_contract": "single_bounded_action_or_solar_gate",
+        "forbidden": [
+          "hidden-backend-full-workflow",
+          "backend-black-box-runner"
+        ]
+      },
+      "status": "pending",
+      "approval_gate": true,
+      "approval_policy": {
+        "required_for": [
+          "non_fixture_execution",
+          "network_access",
+          "destructive_write",
+          "paid_compute",
+          "long_running_job"
+        ],
+        "default": "require_human_approval"
+      }
+    }
+  ],
+  "manual_review_checklist": [
+    "Every node has logical_operator, required_capabilities, read_scope, write_scope, gate, and acceptance.",
+    "Dependencies are explicit and acyclic.",
+    "No node calls a full backend black-box workflow.",
+    "Experiment-running nodes require bounded mode or human approval."
+  ]
+}

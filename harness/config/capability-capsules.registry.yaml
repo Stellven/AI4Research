@@ -1,3 +1,4 @@
+---
 version: 1
 capsules:
   capability:
@@ -150,6 +151,253 @@ capsules:
     - repositorytourbuilder
     owner: opensolar
     default_operator_profile: mini-understand-anything-pane-bridge
+  - capability_capsule_id: cap.research-literature-discover
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-literature-discover.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - literature
+    owner: opensolar
+    default_operator_profile: codex-planner
+  - capability_capsule_id: cap.research-paper-ingest
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-paper-ingest.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - ingest
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-paper-analyze
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-paper-analyze.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - analysis
+    owner: opensolar
+    default_operator_profile: codex-evaluator
+  - capability_capsule_id: cap.research-memory-update
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-memory-update.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - memory
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-graph-update
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-graph-update.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - graph
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-claim-extract
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-claim-extract.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - claims
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-method-extract
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-method-extract.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - methods
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-code-evidence-map
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-code-evidence-map.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - code-evidence
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-idea-generate
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-idea-generate.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - ideation
+    owner: opensolar
+    default_operator_profile: codex-planner
+  - capability_capsule_id: cap.research-idea-evaluate
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-idea-evaluate.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - novelty
+    owner: opensolar
+    default_operator_profile: codex-evaluator
+  - capability_capsule_id: cap.research-experiment-design
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-experiment-design.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - experiment
+    owner: opensolar
+    default_operator_profile: codex-planner
+  - capability_capsule_id: cap.research-experiment-run
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-experiment-run.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - experiment
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-experiment-monitor
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-experiment-monitor.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - experiment
+    owner: opensolar
+    default_operator_profile: codex-evaluator
+  - capability_capsule_id: cap.research-claim-verify
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-claim-verify.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - claims
+    owner: opensolar
+    default_operator_profile: codex-evaluator
+  - capability_capsule_id: cap.research-report-plan
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-report-plan.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - report
+    owner: opensolar
+    default_operator_profile: codex-planner
+  - capability_capsule_id: cap.research-report-draft
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-report-draft.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - report
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-artifact-review
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-artifact-review.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - review
+    owner: opensolar
+    default_operator_profile: codex-evaluator
+  - capability_capsule_id: cap.research-publication-produce
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-publication-produce.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - publication
+    owner: opensolar
+    default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-workflow-evolve
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-workflow-evolve.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - workflow
+    owner: opensolar
+    default_operator_profile: codex-planner
   guard:
   - capability_capsule_id: guard.secret-leak-guard
     version: 0.1.0

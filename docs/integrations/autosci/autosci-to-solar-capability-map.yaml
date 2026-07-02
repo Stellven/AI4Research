@@ -1,0 +1,1255 @@
+version: 1
+status: phase0_inventory
+source:
+  solar_repo: /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar
+  autosci_repo: /Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci
+  autosci_branch: main
+  autosci_research_snapshot:
+    branch: upstream/paper
+    tag: arxiv-v1
+    local_diff: README.md status text only
+  inspected:
+    - README.md
+    - .agents/skills/*/SKILL.md
+    - upstream/paper:README.md
+    - upstream/paper:i18n/en/skills/*/SKILL.md
+    - upstream/paper:scidag/
+    - upstream/paper:docs/scievolve.md
+    - upstream/paper:runtime/schema/scievolve.yaml
+    - runtime/schema/entities.yaml
+    - runtime/schema/edges.yaml
+    - runtime/schema/conventions.yaml
+    - runtime/policy/writers.yaml
+    - tools/research_wiki.py
+    - tools/init_discovery.py
+    - tools/discover.py
+    - tools/daily_arxiv.py
+notes:
+  - Phase 0 mapping only; no runtime binding is implemented here.
+  - Solar-native capsule ids are generic research capabilities.
+  - AutoSci names are reserved for future backend files under harness/plugins/autosci.
+  - The inspected AutoSci main branch does not expose a standalone claim extraction command; claim extraction is derived from paper, idea, method, and experiment artifacts.
+  - /ask is mapped explicitly as a support query path; only its crystallize mode becomes memory update.
+  - /reset is explicitly excluded from research capability coverage and requires a maintenance/human gate.
+
+workflow_steps:
+  - autosci_step: /setup
+    purpose: Configure API keys and project settings required by AutoSci discovery, review, and automation.
+    inputs:
+      - user configuration preferences
+      - project .env and config files
+    outputs:
+      - configured API and review-LLM settings
+      - setup/status report
+    internal_mechanism: Interactive configuration checks and local config patching for Semantic Scholar, DeepXiv, Review LLM, SMTP, and GitHub Actions exposure.
+    state_or_memory_touched:
+      - config/
+      - .env
+      - .github/workflows/
+    failure_modes:
+      - missing secrets
+      - invalid provider configuration
+      - workflow YAML missing expected blocks
+    solar_logical_operator: ScientificMemoryUpdater
+    solar_capsule: cap.research-memory-update
+    solar_evidence_abi: research_memory_update.v1
+    human_test: Review the setup report and confirm no research memory was modified without an explicit setup/config task.
+
+  - autosci_step: /prefill
+    purpose: Seed foundational background pages so later paper ingestion does not duplicate textbook concepts.
+    inputs:
+      - foundation catalog
+      - domain selection
+    outputs:
+      - wiki/foundations/*.md
+      - optional wiki log entry
+    internal_mechanism: Writes curated foundation entities from a catalog and treats foundations as terminal incoming-link targets.
+    state_or_memory_touched:
+      - wiki/foundations/
+      - wiki/index.md
+      - wiki/log.md
+    failure_modes:
+      - duplicate foundation slugs
+      - catalog does not match domain
+      - foundation content becomes stale
+    solar_logical_operator: ScientificMemoryUpdater
+    solar_capsule: cap.research-memory-update
+    solar_evidence_abi: research_memory_update.v1
+    human_test: Confirm the memory update lists created foundation pages and does not invent paper-derived claims.
+
+  - autosci_step: /init
+    purpose: Bootstrap the research wiki from local sources and optional discovery, then fan out paper ingestion.
+    inputs:
+      - topic
+      - raw/papers/
+      - raw/notes/
+      - raw/web/
+      - --no-introduction flag
+    outputs:
+      - wiki scaffold
+      - raw/tmp/ prepared sources
+      - raw/discovered/ fetched sources
+      - .checkpoints/init-*.json
+      - ingested paper pages via /ingest
+      - graph and visualization refreshes
+    internal_mechanism: Runs wiki init, source preparation, discovery planning, final source selection, worktree-isolated parallel /ingest, fan-in rebuild, citation backfill, and visualization refresh.
+    state_or_memory_touched:
+      - wiki/
+      - raw/tmp/
+      - raw/discovered/
+      - .checkpoints/
+      - wiki/graph/
+      - wiki/log.md
+    failure_modes:
+      - PDF decode or title recovery fails
+      - discovery APIs degraded
+      - final paper set outside expected range
+      - detached HEAD prevents worktree fan-out
+      - one paper ingest fails
+      - merge conflict during fan-in
+    solar_logical_operator: ScientificMemoryUpdater
+    solar_capsule: cap.research-memory-update
+    solar_evidence_abi: research_memory_update.v1
+    human_test: Review checkpoint manifests and memory update evidence; every ingested paper must also have separate paper evidence.
+
+  - autosci_step: tools/init_discovery.py prepare|plan|fetch|download
+    purpose: Normalize local sources, plan discovery, fetch selected papers, and produce source manifests.
+    inputs:
+      - raw source tree
+      - optional topic
+      - recovered PDF titles
+      - candidate IDs
+    outputs:
+      - .checkpoints/init-prepare.json
+      - .checkpoints/init-plan.json
+      - .checkpoints/init-sources.json
+      - prepared or fetched source files
+    internal_mechanism: Deterministic source scanning, ranking with S2 and DeepXiv inputs when available, final source manifest emission, and arXiv source/PDF download.
+    state_or_memory_touched:
+      - raw/tmp/
+      - raw/discovered/
+      - .checkpoints/
+    failure_modes:
+      - requests dependency missing
+      - S2 or DeepXiv unavailable
+      - arXiv source fetch fails
+      - invalid source archive
+    solar_logical_operator: ScientificLiteratureDiscoverer
+    solar_capsule: cap.research-literature-discover
+    solar_evidence_abi: literature_discovery.v1
+    human_test: Inspect the discovery artifact for selected paper IDs, source paths, warnings, and no wiki mutation.
+
+  - autosci_step: /discover
+    purpose: Build a ranked shortlist of candidate papers without ingesting them.
+    inputs:
+      - --anchor IDs
+      - --negative IDs
+      - --topic query
+      - --from-wiki
+      - --venue and --year
+      - wiki content for dedup/relevance
+    outputs:
+      - .checkpoints/discover-*.json
+      - markdown shortlist
+      - optional wiki log entry except venue mode
+    internal_mechanism: Uses S2 recommendations, references, citations, search, DeepXiv fallback, venue Paper Copilot records, wiki dedup, and deterministic ranking.
+    state_or_memory_touched:
+      - .checkpoints/
+      - wiki/log.md
+    failure_modes:
+      - all seed channels fail
+      - sparse wiki for venue or wiki mode
+      - malformed anchor ID
+      - duplicate candidates dominate shortlist
+    solar_logical_operator: ScientificLiteratureDiscoverer
+    solar_capsule: cap.research-literature-discover
+    solar_evidence_abi: literature_discovery.v1
+    human_test: Verify the shortlist has candidate metadata, source channels, rationale, dedup status, and no auto-ingest side effect.
+
+  - autosci_step: /daily-arxiv
+    purpose: Recommend fresh arXiv papers and optionally auto-ingest high-confidence picks when explicitly requested.
+    inputs:
+      - daily arXiv config
+      - wiki interest profile
+      - arXiv feed horizon
+      - inform or auto-ingest mode
+    outputs:
+      - .daily-arxiv/run/recommendation-context.json
+      - .daily-arxiv/run/feed.json
+      - .daily-arxiv/run/llm-decisions.json
+      - .daily-arxiv/run/digest.md
+      - .daily-arxiv/run/digest.json
+    internal_mechanism: Prepares feed and wiki context, asks an LLM or review LLM for recommendation decisions, finalizes digest, and calls /ingest sequentially only in explicit auto-ingest mode.
+    state_or_memory_touched:
+      - .daily-arxiv/
+      - wiki/ via /ingest only in explicit auto-ingest mode
+    failure_modes:
+      - missing GitHub or API secrets
+      - Review LLM unavailable
+      - feed preparation rate-limited
+      - accidental auto-ingest without explicit mode
+    solar_logical_operator: ScientificLiteratureDiscoverer
+    solar_capsule: cap.research-literature-discover
+    solar_evidence_abi: literature_discovery.v1
+    human_test: Confirm inform mode produces only digest artifacts; auto-ingest mode must list exact /ingest calls and evidence.
+
+  - autosci_step: /ask
+    purpose: Ask the wiki a grounded question, synthesize a cited answer, and optionally crystallize useful synthesis back into memory.
+    inputs:
+      - question
+      - --format markdown|table|timeline|bullets
+      - --crystallize flag
+      - wiki/graph/context_brief.md
+      - wiki/graph/open_questions.md
+      - relevant wiki pages
+    outputs:
+      - cited answer report
+      - crystallize recommendation
+      - optional wiki/outputs/{query-slug}.md
+      - optional graph edges and context rebuild when crystallized
+    internal_mechanism: Retrieves at most a bounded set of relevant wiki pages, synthesizes an answer with existing wikilink citations, flags insufficient evidence, and writes back only when crystallize is explicit.
+    state_or_memory_touched:
+      - none in answer-only mode
+      - wiki/outputs/
+      - wiki/concepts/
+      - wiki/ideas/
+      - wiki/methods/
+      - wiki/graph/
+      - wiki/index.md
+      - wiki/log.md
+    failure_modes:
+      - empty wiki
+      - no relevant pages
+      - cited page does not exist
+      - answer uses pretraining instead of wiki evidence
+      - crystallize requested but target is ambiguous
+    solar_logical_operator: ScientificKnowledgeQuerier
+    solar_capsule: cap.research-knowledge-query
+    solar_evidence_abi: scientific_report.v1
+    writeback_operator: ScientificMemoryUpdater
+    writeback_capsule: cap.research-memory-update
+    writeback_evidence_abi: research_memory_update.v1
+    human_test: Answer-only mode is read-only and cited; crystallize mode lists exact pages and graph edges to be created or edited.
+
+  - autosci_step: /edit
+    purpose: Add or remove raw sources, or update wiki content, per explicit user request.
+    inputs:
+      - user edit request
+      - optional local source path
+      - optional arXiv URL
+      - optional web URL
+      - target wiki page or raw path
+    outputs:
+      - changed raw or wiki files
+      - updated index/log entries
+      - follow-up ingest suggestion when new raw sources are added
+    internal_mechanism: Parses manual edit intent, copies new raw sources or fetches external raw content, confirms destructive deletion, updates wiki pages while preserving bidirectional links, and reports file-level changes.
+    state_or_memory_touched:
+      - raw/ for explicit additions or confirmed deletions
+      - wiki/
+      - wiki/index.md
+      - wiki/log.md
+    failure_modes:
+      - destructive delete lacks confirmation
+      - raw overwrite would modify existing user-owned file
+      - target wiki page missing
+      - bidirectional link update incomplete
+    solar_logical_operator: ScientificMemoryUpdater
+    solar_capsule: cap.research-memory-update
+    solar_evidence_abi: research_memory_update.v1
+    human_test: Memory update evidence distinguishes raw-source additions, confirmed raw deletions, and wiki content edits with exact paths.
+
+  - autosci_step: /reset
+    purpose: Reset wiki, raw, log, checkpoint, or all project state by explicit destructive scope.
+    inputs:
+      - --scope wiki|raw|log|checkpoints|all
+      - dry-run deletion plan
+      - explicit human confirmation
+    outputs:
+      - JSON deletion/reset plan
+      - JSON execution status when confirmed
+      - optional reset log entry when log scope is preserved
+    internal_mechanism: Runs reset_wiki.py first without mutation to list planned deletes/resets, requires human approval, then runs with --yes for confirmed scopes only.
+    state_or_memory_touched:
+      - wiki/ only for wiki/log/all scopes
+      - raw/ only for raw/all scopes
+      - checkpoints only for checkpoints/all scopes
+    failure_modes:
+      - missing scope
+      - human confirmation absent
+      - raw delete is irreversible
+      - missing wiki directory
+      - checkpoint clear partially fails
+    solar_logical_operator: MaintenanceResetOperator
+    solar_capsule: excluded.admin-maintenance-reset
+    solar_evidence_abi: maintenance_reset_plan.v1
+    capability_coverage: excluded_from_research_capabilities
+    human_test: Reset cannot be represented as successful research work; dry-run plan and explicit confirmation must be visible before mutation.
+
+  - autosci_step: /ingest
+    purpose: Convert one paper source into a wired knowledge-base representation.
+    inputs:
+      - arXiv URL
+      - local .tex or .pdf path
+      - canonical_ingest_path from /init
+      - --discover and --visualize flags
+    outputs:
+      - wiki/papers/{slug}.md
+      - wiki/concepts/{slug}.md
+      - wiki/methods/{slug}.md
+      - wiki/people/{slug}.md
+      - wiki/graph/edges.jsonl
+      - wiki/graph/citations.jsonl
+      - wiki/index.md
+      - wiki/log.md
+    internal_mechanism: Resolves source, enriches metadata through S2 and DeepXiv, writes a paper page, lifts concepts/methods/people, creates semantic and citation edges, rebuilds context, and optionally runs discovery.
+    state_or_memory_touched:
+      - wiki/papers/
+      - wiki/concepts/
+      - wiki/methods/
+      - wiki/people/
+      - wiki/topics/
+      - wiki/graph/
+      - wiki/index.md
+      - wiki/log.md
+      - raw/tmp/
+      - raw/discovered/
+    failure_modes:
+      - source parse failure
+      - metadata API outage
+      - slug collision
+      - over-creation of duplicate concepts or methods
+      - graph edge missing evidence or confidence
+    solar_logical_operator: ScientificPaperIngestor
+    solar_capsule: cap.research-paper-ingest
+    solar_evidence_abi: research_paper.v1
+    human_test: Inspect research_paper.v1 for source path, title, identifiers, sections, limitations, artifacts, and warnings before accepting memory writes.
+
+  - autosci_step: /ingest method/entity lifting
+    purpose: Extract reusable methods and concepts from ingested papers.
+    inputs:
+      - paper page sections
+      - runtime schema
+      - existing concepts and methods
+    outputs:
+      - method entities
+      - concept entities
+      - reverse links
+      - paper-concept and method provenance edges
+    internal_mechanism: Dedupes candidate concepts/methods, creates only named reusable methods, records source papers and concept realization links.
+    state_or_memory_touched:
+      - wiki/concepts/
+      - wiki/methods/
+      - wiki/graph/edges.jsonl
+    failure_modes:
+      - method duplicated as paper-only narrative
+      - concept duplicates not merged
+      - missing reverse links
+      - missing evidence text on edges
+    solar_logical_operator: ScientificMethodExtractor
+    solar_capsule: cap.research-method-extract
+    solar_evidence_abi: research_method.v1
+    human_test: Verify each extracted method is named, reusable, citable, and linked to source paper evidence.
+
+  - autosci_step: implicit paper/idea/experiment claim extraction
+    purpose: Make testable scientific claims explicit from paper claims, idea hypotheses, method claims, and experiment hypotheses.
+    inputs:
+      - paper sections
+      - idea hypotheses
+      - experiment hypotheses
+      - method descriptions
+      - source anchors
+    outputs:
+      - extracted claim list
+      - testability labels
+      - source anchors
+      - candidate verification paths
+    internal_mechanism: AutoSci main branch does not expose this as a separate command; Solar should derive claims from structured wiki artifacts and future AutoSci adapters.
+    state_or_memory_touched:
+      - none during extraction
+    failure_modes:
+      - inferred claim lacks source anchor
+      - claim is marked verified at extraction stage
+      - non-testable claim is not explicitly labeled
+    solar_logical_operator: ScientificClaimExtractor
+    solar_capsule: cap.research-claim-extract
+    solar_evidence_abi: research_claims.v1
+    human_test: Claims are source-grounded, unverified by default, and split into testable/non-testable groups.
+
+  - autosci_step: /ideate
+    purpose: Generate and filter research ideas using wiki context, external search, dual-model brainstorm, validation, and optional pilot experiments.
+    inputs:
+      - research direction
+      - --max-ideas
+      - --skip-validation
+      - --skip-pilot
+      - wiki context and failed-idea banlist
+    outputs:
+      - wiki/ideas/{slug}.md
+      - graph edges addresses_gap and inspired_by
+      - IDEA_REPORT
+      - optional pilot specs
+    internal_mechanism: Runs landscape scan, Codex and Review LLM independent brainstorm, feasibility and novelty filter, optional /novelty and /review, wiki writes, and optional pilot flow.
+    state_or_memory_touched:
+      - wiki/ideas/
+      - wiki/graph/edges.jsonl
+      - wiki/graph/context_brief.md
+      - wiki/graph/open_questions.md
+      - wiki/log.md
+      - experiments/pilot/
+    failure_modes:
+      - wiki too cold
+      - external search unavailable
+      - Review LLM unavailable
+      - all ideas eliminated
+      - pilot failure
+      - duplicate idea slug
+    solar_logical_operator: ScientificIdeaGenerator
+    solar_capsule: cap.research-idea-generate
+    solar_evidence_abi: idea_candidate.v1
+    human_test: Inspect candidate ideas, sources, generation path, gap links, feasibility, and failure reasons for eliminated ideas.
+
+  - autosci_step: /ideate-dag
+    source_snapshot: upstream/paper or arxiv-v1
+    purpose: Use a SciDAG operator graph to augment ideation while returning the same idea artifact contract as /ideate.
+    inputs:
+      - research direction or topic
+      - --complexity 1-5
+      - --dag architecture name
+      - --max-ideas
+      - --mock
+      - wiki context and open questions
+    outputs:
+      - wiki/ideas/{slug}.md
+      - graph edges addresses_gap and inspired_by
+      - IDEA_REPORT with SciDAG architecture metadata
+      - optional scidag diagnostics
+    internal_mechanism: Builds a task brief, selects an ideation DAG from scidag/templates/ideation, runs generate/variation/debate/refine/test/ensemble operators, extracts the artifact, then reuses /ideate persistence rules.
+    state_or_memory_touched:
+      - wiki/ideas/
+      - wiki/graph/edges.jsonl
+      - wiki/graph/context_brief.md
+      - wiki/graph/open_questions.md
+      - wiki/log.md
+    failure_modes:
+      - SciDAG architecture not found
+      - LLM backend unavailable
+      - DAG emits malformed idea artifact
+      - mock output mistaken for real evidence
+      - downstream idea persistence fails
+    solar_logical_operator: ScientificIdeaGenerator
+    solar_capsule: cap.research-idea-generate
+    solar_evidence_abi: idea_candidate.v1
+    human_test: Solar graph shows native idea-generation semantics; SciDAG is only an implementation strategy and the emitted idea artifact remains inspectable.
+
+  - autosci_step: /novelty
+    purpose: Verify novelty of an idea or method through web, S2, DeepXiv, wiki search, and Review LLM.
+    inputs:
+      - idea slug, free text, paper title, or arXiv URL
+      - --quick
+      - --verbose
+      - --write
+    outputs:
+      - Novelty Report
+      - optional idea novelty_score update
+      - optional wiki log entry
+    internal_mechanism: Extracts method signature, runs multi-source search, cross-checks with Review LLM unless quick mode, produces conservative novelty score.
+    state_or_memory_touched:
+      - wiki/ideas/{slug}.md only when --write
+      - wiki/log.md only when --write
+    failure_modes:
+      - WebSearch unavailable
+      - S2 or DeepXiv unavailable
+      - Review LLM unavailable
+      - target idea slug not found
+      - fabricated or untraceable prior work
+    solar_logical_operator: ScientificIdeaEvaluator
+    solar_capsule: cap.research-idea-evaluate
+    solar_evidence_abi: idea_evaluation.v1
+    human_test: Novelty report lists closest prior work, differentiation, evidence sources, score rationale, and write side effects if any.
+
+  - autosci_step: /review
+    purpose: Cross-model review of research artifacts with score, weaknesses, questions, and wiki entity mapping.
+    inputs:
+      - artifact path, slug, or free text
+      - --difficulty
+      - --focus
+    outputs:
+      - Review Report
+      - actionable items
+      - wiki entity mapping
+    internal_mechanism: Loads relevant wiki context, prompts Review LLM independently, optionally conducts multi-round hard/adversarial dialogue, and synthesizes structured feedback.
+    state_or_memory_touched:
+      - none
+    failure_modes:
+      - artifact not found
+      - Review LLM unavailable
+      - artifact too long
+      - invalid Review LLM response
+    solar_logical_operator: ScientificIdeaEvaluator
+    solar_capsule: cap.research-idea-evaluate
+    solar_evidence_abi: idea_evaluation.v1
+    human_test: Review report is read-only, includes score rationale, mapped entities, and concrete fixes.
+
+  - autosci_step: /exp-pilot-run
+    purpose: Execute a bounded pilot experiment from a pilot spec without judging pass/fail.
+    inputs:
+      - idea slug
+      - experiments/pilot/{slug}.yaml
+      - --env local or remote
+    outputs:
+      - experiments/pilot/code/{slug}/
+      - result JSON files
+      - pilot log
+      - PILOT_REPORT
+    internal_mechanism: Reads pilot spec, writes code, performs sanity check, requires manual inspection before launch, deploys local or remote pilot, collects raw metrics.
+    state_or_memory_touched:
+      - experiments/pilot/code/
+      - local or remote runtime
+    failure_modes:
+      - missing pilot spec
+      - dataset unavailable
+      - sanity check fails
+      - GPU unavailable
+      - remote connection fails
+      - no result files produced
+    solar_logical_operator: ScientificExperimentRunner
+    solar_capsule: cap.research-experiment-run
+    solar_evidence_abi: experiment_result.v1
+    human_test: Verify manual approval record, command/log paths, result JSON, and no wiki status update in the runner node.
+
+  - autosci_step: /exp-pilot-eval
+    purpose: Apply lenient pilot verdict logic and update the linked idea page.
+    inputs:
+      - idea slug
+      - pilot results
+      - pilot log
+      - pilot spec success criteria
+    outputs:
+      - PILOT_VERDICT_REPORT
+      - idea pilot_result update
+      - failure_reason and failed transition if needed
+      - experiments/pilot/{slug}/report.md
+    internal_mechanism: Parses pilot result files and log, compares against success criteria, classifies pass/fail/inconclusive, updates idea metadata.
+    state_or_memory_touched:
+      - wiki/ideas/{slug}.md
+      - wiki/log.md
+      - experiments/pilot/{slug}/report.md
+    failure_modes:
+      - results missing
+      - idea already failed or validated
+      - pilot spec missing
+      - vague failure reason
+    solar_logical_operator: ScientificClaimVerifier
+    solar_capsule: cap.research-claim-verify
+    solar_evidence_abi: claim_verdict.v1
+    human_test: Confirm pilot verdict is pass/fail/inconclusive, cites metric/log evidence, and does not overstate support.
+
+  - autosci_step: /exp-design
+    purpose: Design a full experiment suite for an idea.
+    inputs:
+      - idea slug
+      - pilot report if available
+      - related papers, methods, concepts, topics, experiments
+    outputs:
+      - wiki/experiments/{slug}.md pages
+      - experiments/designs/{slug}-master.md
+      - tested_by edges
+      - updated idea linked_experiments
+      - DESIGN_REPORT
+    internal_mechanism: Loads idea context, generates method candidates, selects benchmarks/metrics/baselines, designs ablation/sensitivity/main/generalization/analysis blocks, requires user review before final write.
+    state_or_memory_touched:
+      - wiki/experiments/
+      - experiments/designs/
+      - wiki/ideas/
+      - wiki/graph/edges.jsonl
+      - wiki/log.md
+    failure_modes:
+      - idea not found
+      - no pilot results
+      - user does not select candidate
+      - duplicate experiment
+      - benchmark unavailable
+      - success criteria not quantified
+    solar_logical_operator: ScientificExperimentDesigner
+    solar_capsule: cap.research-experiment-design
+    solar_evidence_abi: experiment_plan.v1
+    human_test: Experiment plan lists hypothesis, metrics, baseline, run order, safety/approval needs, and pass/fail criteria.
+
+  - autosci_step: /exp-design-dag
+    source_snapshot: upstream/paper or arxiv-v1
+    purpose: Use a SciDAG experiment-stage template to augment method candidate generation and reliability checks while returning the same experiment-plan contract as /exp-design.
+    inputs:
+      - idea slug
+      - --complexity 1-5
+      - --dag architecture name
+      - --mock
+      - related wiki context
+    outputs:
+      - wiki/experiments/{slug}.md pages
+      - experiments/designs/{slug}-master.md
+      - DESIGN_REPORT with SciDAG architecture metadata
+      - optional scidag diagnostics
+    internal_mechanism: Runs a selected DAG from scidag/templates/experiment with generation/refinement/test operators, then reuses /exp-design persistence and review rules.
+    state_or_memory_touched:
+      - wiki/experiments/
+      - experiments/designs/
+      - wiki/ideas/
+      - wiki/graph/edges.jsonl
+      - wiki/log.md
+    failure_modes:
+      - SciDAG architecture not found
+      - DAG omits quantified success criteria
+      - mock output mistaken for real experiment evidence
+      - downstream experiment persistence fails
+    solar_logical_operator: ScientificExperimentDesigner
+    solar_capsule: cap.research-experiment-design
+    solar_evidence_abi: experiment_plan.v1
+    human_test: DAG augmentation still emits a normal experiment_plan.v1 with hypothesis, metrics, baseline, run order, and approval requirements.
+
+  - autosci_step: /exp-run
+    purpose: Prepare, deploy, monitor, and collect a planned experiment.
+    inputs:
+      - experiment slug
+      - --review
+      - --collect
+      - --full
+      - --env local or remote
+    outputs:
+      - experiments/code/{slug}/
+      - logs/exp-{slug}.log
+      - results/{slug}/seed_*.json
+      - DEPLOY_REPORT or RUN_REPORT
+      - updated experiment status/outcome/key_result
+    internal_mechanism: Generates experiment code, optionally requests Review LLM code review, performs sanity checks, requires manual inspection before deploy, launches screen/remote job, checks process status, parses results, updates experiment page.
+    state_or_memory_touched:
+      - experiments/code/
+      - logs/
+      - results/
+      - wiki/experiments/{slug}.md
+      - wiki/log.md
+      - remote server when selected
+    failure_modes:
+      - status not compatible with mode
+      - dataset or GPU unavailable
+      - sanity check fails
+      - remote sync or launch fails
+      - result files missing
+      - experiment crashed
+      - run exceeds expected time
+    solar_logical_operator: ScientificExperimentRunner
+    solar_capsule: cap.research-experiment-run
+    solar_evidence_abi: experiment_result.v1
+    human_test: Confirm execution mode, approval record, command, environment, logs, metrics, and outcome classification.
+
+  - autosci_step: /exp-status
+    purpose: Monitor running experiments and optionally collect completed runs.
+    inputs:
+      - --pipeline slug
+      - --collect-ready
+      - --auto-advance
+    outputs:
+      - status report
+      - optional collected experiment updates via /exp-run --collect
+      - optional pipeline stage advancement
+    internal_mechanism: Scans running experiment pages, checks screen or remote process state, reports running/anomaly/completed-pending-collect, and sequentially collects ready runs when requested.
+    state_or_memory_touched:
+      - wiki/experiments/ only when --collect-ready
+      - wiki/outputs/pipeline-progress.md only through /research advance
+      - wiki/log.md
+    failure_modes:
+      - pipeline progress missing
+      - SSH status check fails
+      - anomalies detected
+      - collect-ready fails for one experiment
+    solar_logical_operator: ScientificExperimentMonitor
+    solar_capsule: cap.research-experiment-monitor
+    solar_evidence_abi: experiment_status.v1
+    human_test: Status artifact distinguishes alive, anomaly, completed-pending-collect, collected, and check-failed states.
+
+  - autosci_step: /exp-eval
+    purpose: Convert completed experiment results into a supported, partially supported, not supported, or inconclusive verdict.
+    inputs:
+      - completed experiment slug
+      - linked idea
+      - sibling experiments
+      - Review LLM verdict
+    outputs:
+      - VERDICT_REPORT
+      - updated idea status or failure reason
+      - supports or invalidates graph edge
+      - updated experiment Idea updates section
+    internal_mechanism: Loads experiment and idea context, gets independent Review LLM verdict, synthesizes conservative final verdict, applies lifecycle transition and graph updates.
+    state_or_memory_touched:
+      - wiki/ideas/{linked_idea}.md
+      - wiki/experiments/{slug}.md
+      - wiki/graph/edges.jsonl
+      - wiki/graph/context_brief.md
+      - wiki/graph/open_questions.md
+      - wiki/log.md
+    failure_modes:
+      - experiment not completed
+      - linked idea missing
+      - Review LLM unavailable
+      - results section empty
+      - idea modified by another experiment
+      - vague failure reason
+    solar_logical_operator: ScientificClaimVerifier
+    solar_capsule: cap.research-claim-verify
+    solar_evidence_abi: claim_verdict.v1
+    human_test: Verdict cites result artifacts, linked claim/idea, limitations, judge disagreement, and final status change.
+
+  - autosci_step: /survey
+    purpose: Generate a related work section from existing wiki knowledge.
+    inputs:
+      - research question, idea slugs, or paper plan path
+      - --format latex or markdown
+      - --max-papers
+    outputs:
+      - wiki/outputs/related-work-{slug}-{date}.md
+      - derived_from edges
+      - related work body text
+      - citation coverage
+    internal_mechanism: Locates relevant papers/concepts/topics, groups by theme, drafts polished related work, prepares BibTeX in LaTeX mode, and archives output.
+    state_or_memory_touched:
+      - wiki/outputs/
+      - wiki/graph/edges.jsonl
+      - wiki/log.md
+    failure_modes:
+      - too few wiki papers
+      - no matching papers
+      - BibTeX fetch fails
+      - citation unconfirmed
+    solar_logical_operator: ScientificReportPlanner
+    solar_capsule: cap.research-report-plan
+    solar_evidence_abi: scientific_report.v1
+    human_test: Every citation maps to an existing paper page or is marked unconfirmed as a blocker.
+
+  - autosci_step: /paper-plan
+    purpose: Build a paper outline and evidence map from validated ideas and experiments.
+    inputs:
+      - idea slugs
+      - --venue
+      - optional working title
+    outputs:
+      - wiki/outputs/paper-plan-{slug}-{date}.md
+      - derived_from edges
+      - PAPER_PLAN_REPORT
+    internal_mechanism: Traverses idea graph to compile evidence, sections, figures, citations, page budget, and mandatory Review LLM outline review.
+    state_or_memory_touched:
+      - wiki/outputs/
+      - wiki/graph/edges.jsonl
+      - wiki/graph/context_brief.md
+      - wiki/log.md
+    failure_modes:
+      - no validated or evidenced idea
+      - no experiment evidence
+      - insufficient related work
+      - page budget exceeded
+      - Review LLM unavailable
+      - unconfirmed citations
+    solar_logical_operator: ScientificReportPlanner
+    solar_capsule: cap.research-report-plan
+    solar_evidence_abi: scientific_report.v1
+    human_test: Paper plan has idea-section mapping, evidence map, figure plan, citation coverage, and limitations.
+
+  - autosci_step: /paper-plan-dag
+    source_snapshot: upstream/paper or arxiv-v1
+    purpose: Use a SciDAG writing-stage template to augment paper planning and review/polish while returning the same paper-plan contract as /paper-plan.
+    inputs:
+      - idea slugs
+      - --complexity 1-5
+      - --dag architecture name
+      - --mock
+      - evidence map context
+    outputs:
+      - wiki/outputs/paper-plan-{slug}-{date}.md
+      - derived_from edges
+      - PAPER_PLAN_REPORT with SciDAG architecture metadata
+      - optional scidag diagnostics
+    internal_mechanism: Runs a selected DAG from scidag/templates/writing with review/polish operators, then reuses /paper-plan persistence and citation checks.
+    state_or_memory_touched:
+      - wiki/outputs/
+      - wiki/graph/edges.jsonl
+      - wiki/graph/context_brief.md
+      - wiki/log.md
+    failure_modes:
+      - SciDAG architecture not found
+      - DAG plan omits evidence map
+      - mock output mistaken for real planning evidence
+      - unconfirmed citations hidden by polish step
+    solar_logical_operator: ScientificReportPlanner
+    solar_capsule: cap.research-report-plan
+    solar_evidence_abi: scientific_report.v1
+    human_test: DAG augmentation still emits a normal scientific_report.v1 with section plan, evidence map, figure plan, citation coverage, and limitations.
+
+  - autosci_step: /paper-draft
+    purpose: Draft a LaTeX paper from a paper plan.
+    inputs:
+      - paper plan path
+      - --review
+      - --sections
+    outputs:
+      - paper/main.tex
+      - paper/sections/*.tex
+      - paper/figures/
+      - paper/references.bib
+      - paper/math_commands.tex
+      - draft completion report
+    internal_mechanism: Initializes paper directory, generates figures/tables, writes sections from wiki sources, applies de-AI polish, verifies citations, and optionally reviews sections with Review LLM.
+    state_or_memory_touched:
+      - paper/
+      - wiki/log.md
+    failure_modes:
+      - paper plan missing
+      - referenced wiki page missing
+      - figure generation fails
+      - BibTeX fetch fails
+      - Review LLM unavailable
+      - existing paper directory overwrite risk
+    solar_logical_operator: ScientificReportDrafter
+    solar_capsule: cap.research-report-draft
+    solar_evidence_abi: scientific_report.v1
+    human_test: Draft artifact links technical statements to wiki/evidence sources and flags unconfirmed citations.
+
+  - autosci_step: /paper-compile
+    purpose: Compile a LaTeX paper and verify submission checks.
+    inputs:
+      - paper directory
+      - --fix
+      - --checklist
+    outputs:
+      - paper/main.pdf
+      - COMPILE_REPORT
+      - optional auto-fixed tex files
+    internal_mechanism: Runs latexmk, parses errors, optionally fixes common issues, checks page count, anonymity, unconfirmed citations, fonts, TODOs, figures, and abstract.
+    state_or_memory_touched:
+      - paper/
+      - wiki/log.md
+    failure_modes:
+      - latexmk unavailable
+      - compilation fails
+      - page limit exceeded
+      - anonymous compliance warning
+      - unconfirmed citations remain
+      - pdfinfo or pdffonts unavailable
+    solar_logical_operator: ScientificReportDrafter
+    solar_capsule: cap.research-report-draft
+    solar_evidence_abi: scientific_report.v1
+    human_test: Compile report separates blockers from warnings and does not treat unconfirmed citations as pass.
+
+  - autosci_step: /poster
+    purpose: Generate an academic poster from a drafted paper.
+    inputs:
+      - paper directory
+      - optional authors, venue, logos, layout, figure/refine flags
+    outputs:
+      - poster/dag.json
+      - poster/outline.html
+      - poster/poster.html
+      - poster/poster.png
+      - poster/images/
+      - POSTER_REPORT
+    internal_mechanism: Converts paper to DAG, optionally loads wiki context, selects figures, distills sections, injects title/header/figures, validates, renders PNG, and optionally refines via screenshot and DOM overflow report.
+    state_or_memory_touched:
+      - poster/
+      - raw/tmp/poster.overflow.json
+      - wiki/log.md
+    failure_modes:
+      - paper missing
+      - figure source missing
+      - browser rendering unavailable
+      - DOM overflow cannot be cleared
+      - raw LaTeX leaks into poster
+    solar_logical_operator: ScientificPublicationProducer
+    solar_capsule: cap.research-publication-produce
+    solar_evidence_abi: publication_bundle.v1
+    human_test: Poster bundle validates all images, no TODO/unconfirmed markers, rendered PNG exists or render limitation is explicit.
+
+  - autosci_step: /rebuttal
+    purpose: Generate evidence-traceable rebuttal responses to reviewer comments.
+    inputs:
+      - review text or review files
+      - optional paper slug
+      - optional venue
+      - stress-test flag
+    outputs:
+      - wiki/outputs/rebuttal-{slug}.md
+      - wiki/outputs/rebuttal-{slug}.txt
+      - optional wiki risk/limitation notes
+      - rebuttal safety checklist
+    internal_mechanism: Parses reviews, atomizes concerns, maps concerns to wiki ideas/methods, checks experiment evidence, drafts responses, stress-tests with Review LLM, and writes formal/rich rebuttals.
+    state_or_memory_touched:
+      - wiki/outputs/
+      - wiki/ideas/
+      - wiki/methods/
+      - wiki/log.md
+    failure_modes:
+      - review file missing
+      - concern unmapped
+      - evidence insufficient
+      - stress-test unavailable
+      - fabricated data or overpromise
+      - incomplete concern coverage
+    solar_logical_operator: ScientificPublicationProducer
+    solar_capsule: cap.research-publication-produce
+    solar_evidence_abi: publication_bundle.v1
+    human_test: Every concern ID has a response, evidence references are traceable, and unsupported ideas are not presented as supported.
+
+  - autosci_step: /visualize
+    purpose: Generate Obsidian and Canvas visualization artifacts for the research graph.
+    inputs:
+      - --obsidian
+      - --canvas
+      - --focus
+      - --depth
+      - --types
+      - --edge-types
+    outputs:
+      - wiki/.obsidian/graph.json
+      - wiki/.obsidian/app.json
+      - wiki/canvases/*.canvas
+      - SPA graph URL
+    internal_mechanism: Reads graph JSONL and entity metadata, writes local-only visualization configs/canvases, optionally starts a graph SPA server.
+    state_or_memory_touched:
+      - wiki/.obsidian/
+      - wiki/canvases/
+      - wiki/log.md
+    failure_modes:
+      - no graph data
+      - focus node not found
+      - canvas too large
+      - malformed graph JSONL lines
+    solar_logical_operator: ScientificGraphUpdater
+    solar_capsule: cap.research-graph-update
+    solar_evidence_abi: research_graph_update.v1
+    human_test: Visualization artifact is derived from graph evidence and is never the source of truth.
+
+  - autosci_step: /check
+    purpose: Audit wiki structural, field, link, lifecycle, and graph health.
+    inputs:
+      - wiki directory
+      - --json
+      - --fix
+      - --dry-run
+      - --suggest
+    outputs:
+      - lint report
+      - optional lint-report markdown
+      - optional deterministic fixes
+    internal_mechanism: Runs tools/lint.py, classifies issues by severity, optionally applies deterministic fixes, and labels LLM-assisted quality judgments separately.
+    state_or_memory_touched:
+      - wiki/log.md
+      - wiki files only when --fix is explicit
+    failure_modes:
+      - wiki missing
+      - graph files missing
+      - invalid graph JSON
+      - required fields missing
+      - failed idea lacks failure_reason
+    solar_logical_operator: ScientificWorkflowEvolver
+    solar_capsule: cap.research-workflow-evolve
+    solar_evidence_abi: workflow_evolution.v1
+    human_test: Audit separates deterministic errors, recommendations, and optional improvements; fixes require explicit mode.
+
+  - autosci_step: /refine
+    purpose: Iteratively improve an artifact by running review, applying fixes, and stopping at a target score or max rounds.
+    inputs:
+      - artifact path or slug
+      - focus
+      - target score
+      - max rounds
+    outputs:
+      - refined artifact
+      - refinement report
+      - optional wiki updates depending on artifact owner
+    internal_mechanism: Calls review, parses weaknesses, edits the artifact, re-runs review, and records improvement state.
+    state_or_memory_touched:
+      - target artifact
+      - wiki/log.md
+    failure_modes:
+      - review unavailable
+      - target artifact not found
+      - score does not improve
+      - unsafe edit would alter unsupported claims
+    solar_logical_operator: ScientificWorkflowEvolver
+    solar_capsule: cap.research-workflow-evolve
+    solar_evidence_abi: workflow_evolution.v1
+    human_test: Refinement report shows review issues, edits made, score movement, and residual risks.
+
+  - autosci_step: /dream
+    source_snapshot: upstream/paper or arxiv-v1
+    purpose: Run SciEvolve memory evolution over SciMem and produce proposal-first memory organization changes.
+    inputs:
+      - wiki root
+      - --propose-only
+      - --yolo
+      - SciEvolve memory signals
+      - prepared dream context
+      - policy runtime response or OpenAI-compatible LLM output
+    outputs:
+      - wiki/outputs/evolution/dream/<run>/dream_context.json
+      - wiki/outputs/evolution/dream/<run>/dream_report.md
+      - optional proposal artifacts
+      - optional application ledger entries
+      - optional memory metadata and context_brief rebuild
+    internal_mechanism: Deterministic tooling prepares memory cues, policy runtime proposes forgetting/consolidation/association, finalizer validates cited evidence, and guarded apply mutates only bounded memory surfaces.
+    state_or_memory_touched:
+      - wiki/outputs/evolution/
+      - wiki entity frontmatter when safe apply is accepted
+      - wiki/graph/context_brief.md after accepted apply
+    failure_modes:
+      - policy runtime unavailable
+      - proposal lacks cited context evidence
+      - low confidence proposal attempted as apply
+      - yolo mutation requested without explicit flag
+    solar_logical_operator: ScientificWorkflowEvolver
+    solar_capsule: cap.research-workflow-evolve
+    solar_evidence_abi: workflow_evolution.v1
+    human_test: Dream evidence separates observed memory cues, proposed changes, accepted applications, and downstream context rebuilds.
+
+  - autosci_step: /forge
+    source_snapshot: upstream/paper or arxiv-v1
+    purpose: Run SciEvolve workflow evolution over SciFlow skill protocols and produce proposal-first skill patches.
+    inputs:
+      - wiki root
+      - optional --target-skill
+      - --dry-run
+      - --yolo
+      - workflow signals
+      - prepared forge context
+      - policy runtime response or OpenAI-compatible LLM output
+    outputs:
+      - wiki/outputs/evolution/forge/<run>/forge_context.json
+      - wiki/outputs/evolution/forge/<run>/forge_report.md
+      - optional proposal artifacts
+      - optional application ledger entries
+      - optional bounded skill-file patches
+    internal_mechanism: Deterministic tooling groups workflow signals and skill previews, policy runtime proposes prompt/step/recovery changes, finalizer validates line hints and evidence, and guarded apply mutates only skill protocol files.
+    state_or_memory_touched:
+      - wiki/outputs/evolution/
+      - i18n/en/skills/ only when accepted apply mutates AutoSci skill files
+      - .claude/skills/ only in snapshot-compatible writeback mode
+    failure_modes:
+      - policy runtime unavailable
+      - target skill missing
+      - ambiguous line hint
+      - patch changes skill core purpose
+      - archive or merge attempted without yolo
+    solar_logical_operator: ScientificWorkflowEvolver
+    solar_capsule: cap.research-workflow-evolve
+    solar_evidence_abi: workflow_evolution.v1
+    human_test: Forge evidence includes target skill, cited signals, proposed patch, validation result, and exact changed paths.
+
+  - autosci_step: /morph
+    source_snapshot: upstream/paper or arxiv-v1
+    purpose: Run SciEvolve orchestration evolution over SciDAG templates and operator prompts.
+    inputs:
+      - wiki root
+      - optional --target-template
+      - --dry-run
+      - --apply
+      - --yolo
+      - orchestration signals
+      - prepared morph context
+      - policy runtime response or OpenAI-compatible LLM output
+    outputs:
+      - wiki/outputs/evolution/morph/<run>/morph_context.json
+      - wiki/outputs/evolution/morph/<run>/morph_report.md
+      - optional proposal artifacts
+      - optional application ledger entries
+      - optional bounded template or operator-prompt patches
+    internal_mechanism: Deterministic tooling summarizes template and operator evidence, policy runtime proposes graph/prompt changes, finalizer validates template paths and operator references, and apply requires explicit --apply.
+    state_or_memory_touched:
+      - wiki/outputs/evolution/
+      - scidag/templates/ only when --apply accepts a template mutation
+      - scidag/operators/prompts.py only when --apply accepts a prompt mutation
+    failure_modes:
+      - policy runtime unavailable
+      - target template missing
+      - invalid YAML mutation
+      - operator reference missing
+      - destructive template operation attempted without yolo
+    solar_logical_operator: ScientificWorkflowEvolver
+    solar_capsule: cap.research-workflow-evolve
+    solar_evidence_abi: workflow_evolution.v1
+    human_test: Morph evidence shows proposed graph/prompt mutation separately from any applied change, and Solar does not treat SciDAG as a workflow owner.
+
+  - autosci_step: /research
+    purpose: Orchestrate the end-to-end research lifecycle with progress recovery and human gates.
+    inputs:
+      - research direction or brief
+      - --auto
+      - --start-from stage
+      - --skip-paper
+      - --venue
+    outputs:
+      - pipeline-progress.md
+      - PIPELINE_REPORT.md
+      - delegated idea, experiment, verdict, and paper artifacts
+    internal_mechanism: Coordinates bootstrap, ideation, gate selection, experiment design, async experiment execution, verdict, paper planning/drafting/refinement/compile, and final report.
+    state_or_memory_touched:
+      - wiki/outputs/pipeline-progress.md
+      - wiki/outputs/PIPELINE_REPORT.md
+      - wiki/log.md
+      - delegated sub-skill artifacts
+    failure_modes:
+      - pipeline progress missing or malformed
+      - sub-skill failure
+      - all idea generation fails
+      - all experiment deploys fail
+      - baseline collect failure
+      - evidence still insufficient after iteration
+    solar_logical_operator: TaskGraphTemplate
+    solar_capsule: scientific_research_lifecycle_full_v1
+    solar_evidence_abi: workflow_evolution.v1
+    human_test: Solar should represent this as a native TaskGraph template, not as a physical AutoSci backend command.
+
+target_capabilities:
+  - solar_capsule: cap.research-paper-ingest
+    main_operator: ScientificPaperIngestor
+    autosci_sources:
+      - /ingest
+      - /init
+      - tools/prepare_paper_source.py
+      - tools/init_discovery.py download
+    evidence_abi: research_paper.v1
+  - solar_capsule: cap.research-literature-discover
+    main_operator: ScientificLiteratureDiscoverer
+    autosci_sources:
+      - /discover
+      - /daily-arxiv
+      - tools/discover.py
+      - tools/daily_arxiv.py
+      - tools/init_discovery.py plan
+    evidence_abi: literature_discovery.v1
+  - solar_capsule: cap.research-memory-update
+    main_operator: ScientificMemoryUpdater
+    autosci_sources:
+      - /init
+      - /ingest
+      - /edit
+      - /ask --crystallize
+      - /prefill
+      - tools/research_wiki.py set-meta
+    evidence_abi: research_memory_update.v1
+  - solar_capsule: cap.research-graph-update
+    main_operator: ScientificGraphUpdater
+    autosci_sources:
+      - /ingest
+      - /ideate
+      - /exp-design
+      - /exp-eval
+      - /ask --crystallize
+      - /visualize
+      - tools/research_wiki.py add-edge
+    evidence_abi: research_graph_update.v1
+  - solar_capsule: cap.research-paper-analyze
+    main_operator: ScientificPaperAnalyzer
+    autosci_sources:
+      - /ingest
+      - tools/fetch_s2.py
+      - tools/fetch_deepxiv.py
+    evidence_abi: research_paper.v1
+  - solar_capsule: cap.research-claim-extract
+    main_operator: ScientificClaimExtractor
+    autosci_sources:
+      - implicit paper hypotheses/results
+      - implicit idea hypotheses
+      - implicit experiment hypotheses
+    evidence_abi: research_claims.v1
+  - solar_capsule: cap.research-method-extract
+    main_operator: ScientificMethodExtractor
+    autosci_sources:
+      - /ingest
+      - runtime/schema/entities.yaml methods
+    evidence_abi: research_method.v1
+  - solar_capsule: cap.research-code-evidence-map
+    main_operator: ScientificCodeEvidenceMapper
+    autosci_sources:
+      - /exp-run
+      - /exp-pilot-run
+      - methods.code_repo
+      - papers.code_url
+    evidence_abi: code_evidence_map.v1
+  - solar_capsule: cap.research-idea-generate
+    main_operator: ScientificIdeaGenerator
+    autosci_sources:
+      - /ideate
+      - /ideate-dag
+    evidence_abi: idea_candidate.v1
+  - solar_capsule: cap.research-idea-evaluate
+    main_operator: ScientificIdeaEvaluator
+    autosci_sources:
+      - /novelty
+      - /review
+      - /ideate Phase 3
+    evidence_abi: idea_evaluation.v1
+  - solar_capsule: cap.research-experiment-design
+    main_operator: ScientificExperimentDesigner
+    autosci_sources:
+      - /exp-design
+      - /exp-design-dag
+      - /ideate pilot spec
+    evidence_abi: experiment_plan.v1
+  - solar_capsule: cap.research-experiment-run
+    main_operator: ScientificExperimentRunner
+    autosci_sources:
+      - /exp-run
+      - /exp-pilot-run
+    evidence_abi: experiment_result.v1
+  - solar_capsule: cap.research-experiment-monitor
+    main_operator: ScientificExperimentMonitor
+    autosci_sources:
+      - /exp-status
+      - /exp-run --collect
+    evidence_abi: experiment_status.v1
+  - solar_capsule: cap.research-claim-verify
+    main_operator: ScientificClaimVerifier
+    autosci_sources:
+      - /exp-eval
+      - /exp-pilot-eval
+    evidence_abi: claim_verdict.v1
+  - solar_capsule: cap.research-report-plan
+    main_operator: ScientificReportPlanner
+    autosci_sources:
+      - /survey
+      - /paper-plan
+      - /paper-plan-dag
+      - /ask answer-only report
+    evidence_abi: scientific_report.v1
+  - solar_capsule: cap.research-report-draft
+    main_operator: ScientificReportDrafter
+    autosci_sources:
+      - /paper-draft
+      - /paper-compile
+    evidence_abi: scientific_report.v1
+  - solar_capsule: cap.research-publication-produce
+    main_operator: ScientificPublicationProducer
+    autosci_sources:
+      - /poster
+      - /rebuttal
+    evidence_abi: publication_bundle.v1
+  - solar_capsule: cap.research-workflow-evolve
+    main_operator: ScientificWorkflowEvolver
+    autosci_sources:
+      - /check
+      - /refine
+      - /research iteration
+      - /dream
+      - /forge
+      - /morph
+    evidence_abi: workflow_evolution.v1
+
+support_capabilities:
+  - solar_capsule: cap.research-knowledge-query
+    main_operator: ScientificKnowledgeQuerier
+    autosci_sources:
+      - /ask answer-only
+    evidence_abi: scientific_report.v1
+    coverage: support_only
+
+excluded_utilities:
+  - autosci_source: /reset
+    reason: Destructive project maintenance is not a research capability and must remain behind an explicit maintenance gate.
+    evidence_abi: maintenance_reset_plan.v1

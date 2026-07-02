@@ -1,0 +1,15 @@
+{
+  "task_id": "task-autosci-literature-discover-fixture",
+  "sprint_id": "sprint-autosci-phase9",
+  "node_id": "node-literature-discover",
+  "mode": "fixture",
+  "output_dir": "artifacts/scientific/smoke",
+  "inputs": {
+    "query": "solar-native scientific evidence adapters"
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/smoke/discover_literature.result.json",
+    "evidence_payload_path": "artifacts/scientific/smoke/literature_discovery.json",
+    "evidence_jsonl": "artifacts/scientific/smoke/evidence.jsonl"
+  }
+}

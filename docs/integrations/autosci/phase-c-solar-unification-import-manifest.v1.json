@@ -1,0 +1,295 @@
+{
+  "schema": "autosci_solar_unification_import_manifest.v1",
+  "status": "premerge_contract",
+  "phase": "Phase C - Solar unification preparation",
+  "logged_on": "2026-07-01",
+  "base": {
+    "repository": "Stellven/AI4Research",
+    "branch": "openJiuwen-Solar",
+    "role": "product_install_desktop_distribution_runtime"
+  },
+  "source": {
+    "repository": "Coconut-ch1ken/OpenSolar",
+    "branch": "feature/autosci-solar-native",
+    "role": "autosci_scientific_runtime"
+  },
+  "merge_policy": {
+    "strategy": "selective_import_then_manual_merge",
+    "wholesale_copy_allowed": false,
+    "rewrite_history_allowed": false,
+    "overwrite_product_runtime_files_allowed": false,
+    "git_auto_maintenance_required_disabled_before_merge": true
+  },
+  "import_groups": [
+    {
+      "id": "autosci_plugin_runtime",
+      "policy": "import_from_autosci_branch_with_excludes",
+      "paths": [
+        "harness/plugins/autosci/"
+      ],
+      "required_globs": [
+        "harness/plugins/autosci/bin/autosci_*.py",
+        "harness/plugins/autosci/config/*.json",
+        "harness/plugins/autosci/schemas/raw/*.schema.json"
+      ],
+      "notes": "AutoSci shim, bridge, backend, adapter, projection, and plugin metadata files."
+    },
+    {
+      "id": "scientific_tools",
+      "policy": "import_from_autosci_branch",
+      "paths": [
+        "harness/tools/run_scientific_workflow.py",
+        "harness/tools/run_scientific_node_smoke.py",
+        "harness/tools/run_scientific_lifecycle_smoke.py"
+      ],
+      "notes": "Scientific runner and smoke entrypoints required by the native AutoSci execution path."
+    },
+    {
+      "id": "scientific_workflows",
+      "policy": "import_from_autosci_branch",
+      "paths": [
+        "harness/workflows/"
+      ],
+      "required_globs": [
+        "harness/workflows/scientific_*.json"
+      ],
+      "notes": "Scientific workflow definitions only; do not import unrelated run products."
+    },
+    {
+      "id": "scientific_evaluators_and_evidence_schemas",
+      "policy": "import_from_autosci_branch",
+      "paths": [
+        "harness/evaluators/scientific/",
+        "harness/schemas/evidence/"
+      ],
+      "required_globs": [
+        "harness/evaluators/scientific/*_gate.py",
+        "harness/schemas/evidence/*.v1.schema.json"
+      ],
+      "notes": "Evidence ABI gates and schemas backing AutoSci artifact validation."
+    },
+    {
+      "id": "research_capability_capsules",
+      "policy": "import_from_autosci_branch_then_register_manually",
+      "paths": [
+        "harness/capability-capsules/"
+      ],
+      "required_globs": [
+        "harness/capability-capsules/cap.research-*.yaml"
+      ],
+      "notes": "Research capability capsule files; registry wiring remains a manual shared-runtime merge."
+    },
+    {
+      "id": "autosci_agent_skill_wrappers",
+      "policy": "import_after_cli_wording_review",
+      "paths": [
+        ".agents/skills/"
+      ],
+      "required_skill_names": [
+        "ask",
+        "check",
+        "daily-arxiv",
+        "discover",
+        "edit",
+        "exp-design",
+        "exp-eval",
+        "exp-pilot-eval",
+        "exp-pilot-run",
+        "exp-run",
+        "exp-status",
+        "ideate",
+        "ingest",
+        "init",
+        "novelty",
+        "paper-compile",
+        "paper-draft",
+        "paper-plan",
+        "poster",
+        "prefill",
+        "rebuttal",
+        "refine",
+        "research",
+        "reset",
+        "review",
+        "setup",
+        "survey",
+        "visualize"
+      ],
+      "notes": "AutoSci wrapper skills only; wording review is required before product merge."
+    },
+    {
+      "id": "curated_design_docs",
+      "policy": "import_from_autosci_branch",
+      "paths": [
+        "docs/integrations/autosci/"
+      ],
+      "notes": "Curated integration design docs, audit docs, progress logs, and this premerge manifest."
+    }
+  ],
+  "manual_merge_files": [
+    {
+      "path": "README.md",
+      "policy": "manual_merge_only",
+      "current_source_branch_path_exists": true,
+      "reason": "Shared product documentation must preserve Stellven install and distribution wording."
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "manual_merge_only",
+      "current_source_branch_path_exists": true,
+      "reason": "Workspace policy file can contain local instructions and should not be copied wholesale."
+    },
+    {
+      "path": "CLAUDE.md",
+      "policy": "manual_merge_only",
+      "current_source_branch_path_exists": true,
+      "reason": "Legacy compatibility instructions should not override current Solar Codex entry policy."
+    },
+    {
+      "path": "bin/solar",
+      "policy": "manual_merge_only_expected_in_product_base",
+      "current_source_branch_path_exists": false,
+      "reason": "Product CLI belongs to the Stellven product base."
+    },
+    {
+      "path": "harness/solar-harness.sh",
+      "policy": "manual_merge_only",
+      "current_source_branch_path_exists": true,
+      "reason": "Harness CLI must preserve product entry behavior while adding AutoSci routes."
+    },
+    {
+      "path": "core/daemon/skill-dispatcher.ts",
+      "policy": "manual_merge_only_expected_in_product_base",
+      "current_source_branch_path_exists": false,
+      "reason": "Stellven SkillDispatcher must not be treated as final AutoSci execution until it dispatches routes to the shim."
+    },
+    {
+      "path": "harness/config/logical-operators.json",
+      "policy": "manual_merge_only",
+      "current_source_branch_path_exists": true,
+      "reason": "Shared logical operator registry may contain product-base entries."
+    },
+    {
+      "path": "harness/config/physical-operators.json",
+      "policy": "manual_merge_only",
+      "current_source_branch_path_exists": true,
+      "reason": "Shared physical operator registry may contain product-base entries."
+    },
+    {
+      "path": "harness/config/capability-capsules.registry.yaml",
+      "policy": "manual_merge_only",
+      "current_source_branch_path_exists": true,
+      "reason": "Shared capability registry must be merged instead of overwritten."
+    },
+    {
+      "path": "scripts/solar-codex-intake.sh",
+      "policy": "manual_merge_only",
+      "current_source_branch_path_exists": true,
+      "reason": "Codex Core intake remains the active Solar Core direct-entry path."
+    }
+  ],
+  "skill_dispatcher_boundary": {
+    "path": "core/daemon/skill-dispatcher.ts",
+    "must_not_be_final_autosci_execution_path_until_extended": true,
+    "required_extension": "Dispatch AutoSci routes to the native shim or equivalent execution bridge; returning instruction text with executed=false is not sufficient."
+  },
+  "exclude_patterns": [
+    ".git/**",
+    ".solar-backups/**",
+    ".DS_Store",
+    "**/.DS_Store",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "harness/artifacts/autosci/runs/**",
+    "harness/artifacts/autosci/phase19/current-parity-inventory-*.json",
+    "harness/artifacts/autosci/operator-smoke/**",
+    "harness/.coordinator*",
+    "harness/.watchdog*",
+    "harness/.pane-*",
+    "harness/PLANNER-INBOX.md",
+    "harness/logs/**",
+    "harness/run/**"
+  ],
+  "integration_smoke_tests_to_create_in_unified_repo": [
+    {
+      "path": "tests/integration/test_autosci_routes_list.py",
+      "current_branch_test_path": "harness/tests/integration/test_autosci_routes_list.py",
+      "minimum_assertion": "solar harness autosci '$skills' works"
+    },
+    {
+      "path": "tests/integration/test_autosci_cli_dispatch.py",
+      "current_branch_test_path": "harness/tests/integration/test_autosci_cli_dispatch.py",
+      "minimum_assertion": "$review --help reaches the shim"
+    },
+    {
+      "path": "tests/integration/test_autosci_ingest_demo.py",
+      "current_branch_test_path": "harness/tests/integration/test_autosci_ingest_demo.py",
+      "minimum_assertion": "$ingest writes research_paper.v1"
+    },
+    {
+      "path": "tests/integration/test_autosci_review_demo.py",
+      "current_branch_test_path": "harness/tests/integration/test_autosci_review_demo.py",
+      "minimum_assertion": "$review writes artifact_review.v1"
+    },
+    {
+      "path": "tests/integration/test_autosci_research_scheduler_demo.py",
+      "current_branch_test_path": "harness/tests/integration/test_autosci_research_scheduler_demo.py",
+      "minimum_assertion": "$research --scheduler-run writes scientific_lifecycle.v1"
+    },
+    {
+      "path": "tests/integration/test_autosci_artifact_root.py",
+      "current_branch_test_path": "harness/tests/integration/test_autosci_artifact_root.py",
+      "minimum_assertion": "AutoSci outputs stay under the unified HARNESS_DIR"
+    }
+  ],
+  "current_branch_product_smoke_helper": {
+    "path": "harness/tests/integration/autosci_product_smoke_helpers.py",
+    "policy": "current_branch_only_test_helper",
+    "notes": "Uses an isolated temporary HARNESS_DIR so product-level smoke tests do not write under the repo harness artifact root."
+  },
+  "existing_branch_contract_tests": [
+    {
+      "path": "harness/tests/test_autosci_priority_a_contracts.py",
+      "purpose": "Current-branch product entry, route ABI, registry, and artifact-root contracts."
+    },
+    {
+      "path": "harness/tests/test_autosci_priority_b_demo_contracts.py",
+      "purpose": "Current-branch demo-visible AutoSci workspace projection contracts."
+    },
+    {
+      "path": "harness/tests/test-autosci-harness-entrypoint.sh",
+      "purpose": "Current-branch harness autosci entrypoint smoke contract."
+    }
+  ],
+  "premerge_readiness_audit": {
+    "path": "docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json",
+    "test_path": "harness/tests/test_autosci_phase_c_premerge_readiness.py",
+    "status": "ready_for_integration_branch_premerge",
+    "does_not_claim_stellven_merge_executed": true,
+    "does_not_start_merge_branch": true
+  },
+  "verification_policy": {
+    "premerge_manifest_only": true,
+    "does_not_claim_stellven_merge_executed": true,
+    "current_branch_product_smokes_present": true,
+    "unified_repo_smoke_required_after_import": true,
+    "outputs_must_stay_under_unified_harness_dir": true,
+    "publication_or_analysis_success_must_not_be_claimed_without_evidence": true
+  },
+  "tracked_generated_artifact_cleanup": {
+    "status": "cleaned_in_source_branch_index",
+    "tracked_before_cleanup": {
+      "harness/artifacts/autosci/runs/**": 2541,
+      "harness/artifacts/autosci/operator-smoke/**": 62,
+      "harness/artifacts/autosci/phase19/current-parity-inventory-*.json": 62,
+      "harness/artifacts/scientific/workflow-runs/**": 0
+    },
+    "cleanup_mode": "git rm --cached; local files preserved by .gitignore",
+    "must_remain_untracked_patterns": [
+      "harness/artifacts/autosci/runs/**",
+      "harness/artifacts/autosci/operator-smoke/**",
+      "harness/artifacts/autosci/phase19/current-parity-inventory-*.json",
+      "harness/artifacts/scientific/workflow-runs/**"
+    ]
+  }
+}

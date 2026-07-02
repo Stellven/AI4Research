@@ -1,0 +1,95 @@
+capability_capsule_id: cap.research-idea-generate
+capsule_kind: capability
+metadata:
+  name: Scientific Idea Generate
+  description: Generate grounded scientific idea candidates from prior evidence, gaps, claims, and methods.
+applicability:
+  task_types:
+    - scientific-research
+    - ideation
+  positive_signals:
+    - generate research ideas
+    - propose hypothesis
+    - brainstorm scientific ideas
+  negative_signals:
+    - verify claim
+    - execute experiment
+contract:
+  inputs:
+    required:
+      - name: seed_evidence
+        description: Paper, claim, method, or memory evidence used as ideation seed.
+    optional:
+      - name: idea_constraints
+        description: Feasibility, novelty, domain, or risk constraints.
+  outputs:
+    required:
+      - name: idea_candidate
+        schema_ref: schemas/evidence/idea_candidate.v1.schema.json
+    optional:
+      - name: rejected_candidates
+        description: Candidates rejected before evidence emission.
+  preconditions:
+    - check: seed_evidence_present
+      description: Ideation is grounded in explicit source evidence.
+  postconditions:
+    - check: ideas_grounded
+      description: Every idea cites origin evidence and states a hypothesis.
+  invariants:
+    - Does not evaluate, run, or verify ideas.
+    - Does not write durable memory directly.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_claims.v1.schema.json
+      purpose: Claim-derived ideas.
+    - schema_ref: schemas/evidence/research_method.v1.schema.json
+      purpose: Method-derived ideas.
+  produces:
+    - schema_ref: schemas/evidence/idea_candidate.v1.schema.json
+      purpose: Idea candidate evidence.
+  compatible_with:
+    - cap.research-idea-evaluate
+    - cap.research-experiment-design
+  incompatible_with:
+    - cap.research-claim-verify
+  requires_after: []
+effects:
+  read:
+    - scientific seed evidence
+    - schemas/evidence/idea_candidate.v1.schema.json
+  write:
+    - artifacts/scientific/idea_candidate/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - none by default
+  cost:
+    - bounded ideation cost
+  risk:
+    - generated ideas may be speculative or duplicative
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.idea_generate
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/idea_candidate.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against idea_candidate.v1.schema.json.
+    - Confirm every idea has a hypothesis, approach, and origin evidence ids.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Fixture ideation emits valid idea_candidate.v1 evidence.
+    - Unsupported seed material produces inconclusive status.
+operator_compatibility:
+  preferred:
+    - ScientificIdeaGenerator
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

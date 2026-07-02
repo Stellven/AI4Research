@@ -27,6 +27,8 @@ core/db/*.sqlite3
 __pycache__/
 **/__pycache__/
 *.pyc
+.venv/
+.pytest_cache/
 node_modules/
 bun.lockb
 *.cache
@@ -64,11 +66,15 @@ harness/.coverage
 harness/.workdir
 harness/.planner-inbox.md
 harness/.!*.planner-inbox.md
+harness/PLANNER-INBOX.md
 harness/.brain-router-probe-cache.json
 harness/.intent-hash
 harness/.drafting-notified
 harness/.next-last-sid
 harness/.last-seen-by-planner
+harness/.coordinator*
+harness/.watchdog*
+harness/.pane-*
 harness/cache/
 harness/run/
 harness/runs/
@@ -95,6 +101,11 @@ harness/sprints/*-eval.json
 harness/sprints/*-handoff.md
 harness/sprints/*.handoff.md
 harness/sprints/*.traceability.json
+harness/artifacts/autosci/runs/
+harness/artifacts/autosci/operator-smoke/
+harness/artifacts/autosci/phase19/current-parity-inventory-*.json
+harness/artifacts/scientific/workflow-runs/
+.solar-backups/
 
 # 其他
 paste-cache/

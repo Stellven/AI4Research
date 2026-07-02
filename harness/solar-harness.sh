@@ -3161,6 +3161,55 @@ do_models_command() {
   esac
 }
 
+do_autosci_command() {
+  local script_harness_dir shim py candidate command_text
+  script_harness_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  shim="$script_harness_dir/plugins/autosci/bin/autosci_skill_shim.py"
+  if [[ ! -f "$shim" ]]; then
+    shim="$HARNESS_DIR/plugins/autosci/bin/autosci_skill_shim.py"
+  fi
+  if [[ ! -f "$shim" ]]; then
+    err "AutoSci shim not found: $HARNESS_DIR/plugins/autosci/bin/autosci_skill_shim.py"
+    exit 1
+  fi
+  export HARNESS_DIR
+  export SOLAR_AUTOSCI_OUTPUT_HARNESS="${SOLAR_AUTOSCI_OUTPUT_HARNESS:-$HARNESS_DIR}"
+  export AUTOSCI_ARTIFACT_ROOT="${AUTOSCI_ARTIFACT_ROOT:-$HARNESS_DIR/artifacts/autosci}"
+  export SCIENTIFIC_ARTIFACT_ROOT="${SCIENTIFIC_ARTIFACT_ROOT:-$HARNESS_DIR/artifacts/scientific}"
+
+  py=""
+  for candidate in "$HARNESS_DIR/bin/python3" "$script_harness_dir/bin/python3" python3; do
+    if [[ "$candidate" == "python3" ]]; then
+      command -v python3 >/dev/null 2>&1 || continue
+    elif [[ ! -x "$candidate" ]]; then
+      continue
+    fi
+    if "$candidate" -c 'import sys' >/dev/null 2>&1; then
+      py="$candidate"
+      break
+    fi
+  done
+  if [[ -z "$py" ]]; then
+    err "No usable python3 found for AutoSci shim"
+    exit 1
+  fi
+
+  if [[ "$#" -eq 0 ]]; then
+    "$py" "$shim" skills list
+    return
+  fi
+
+  case "${1:-}" in
+    skills|skill)
+      "$py" "$shim" "$@"
+      ;;
+    *)
+      command_text="$*"
+      "$py" "$shim" text "$command_text"
+      ;;
+  esac
+}
+
 # ---- Main ----
 
 case "${1:-help}" in
@@ -3234,6 +3283,13 @@ print(json.dumps({
   kill|stop) kill_harness ;;
   扩展|extend) start_extension "${2:-$(pwd)}" ;;
   models) shift; do_models_command "$@" ;;
+  autosci)
+    shift || true
+    do_autosci_command "$@"
+    ;;
+  \$*)
+    do_autosci_command "$@"
+    ;;
   research)
     shift || true
     python3 "$HARNESS_DIR/lib/research/cli.py" "$@"

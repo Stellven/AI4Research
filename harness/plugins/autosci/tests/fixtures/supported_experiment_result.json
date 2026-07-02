@@ -1,0 +1,16 @@
+{
+  "experiment_id": "exp-supported-001",
+  "claim_id": "claim-001",
+  "outcome": "supports",
+  "metrics": [
+    {
+      "name": "fixture_passed",
+      "value": true
+    }
+  ],
+  "evidence_ids": [
+    "experiment.supported.001",
+    "metric.fixture_passed"
+  ],
+  "basis": "Fixture result supports the claim with positive metrics."
+}

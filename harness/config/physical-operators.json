@@ -4338,6 +4338,310 @@
         }
       },
       "deprecated": false
+    },
+    "autosci-literature-discover-worker": {
+      "display_name": "AutoSci literature discover worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-literature-discoverer",
+      "persona": "scientific-literature-discoverer",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action discover_literature --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-paper-ingest-worker": {
+      "display_name": "AutoSci paper ingest worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-paper-ingestor",
+      "persona": "scientific-paper-ingestor",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action ingest_paper --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-paper-analyze-worker": {
+      "display_name": "AutoSci paper analyze worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-paper-ingestor",
+      "persona": "scientific-paper-ingestor",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action analyze_paper --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-memory-update-worker": {
+      "display_name": "AutoSci memory update worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-memory-updater",
+      "persona": "scientific-memory-updater",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action update_memory --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-graph-update-worker": {
+      "display_name": "AutoSci graph update worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-memory-updater",
+      "persona": "scientific-memory-updater",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action update_graph --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-claim-extract-worker": {
+      "display_name": "AutoSci claim extract worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-claim-extractor",
+      "persona": "scientific-claim-extractor",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action extract_claims --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-method-extract-worker": {
+      "display_name": "AutoSci method extract worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-claim-extractor",
+      "persona": "scientific-claim-extractor",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action extract_methods --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-code-evidence-map-worker": {
+      "display_name": "AutoSci code evidence map worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-code-evidence-mapper",
+      "persona": "scientific-code-evidence-mapper",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action map_code_evidence --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-idea-worker": {
+      "display_name": "AutoSci idea generation worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-builder",
+      "persona": "lab-builder",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action generate_ideas --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-idea-evaluate-worker": {
+      "display_name": "AutoSci idea evaluation worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-evaluator",
+      "persona": "lab-evaluator",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action evaluate_ideas --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-experiment-design-worker": {
+      "display_name": "AutoSci experiment design worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-experiment-designer",
+      "persona": "scientific-experiment-designer",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action design_experiment --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-experiment-run-worker": {
+      "display_name": "AutoSci experiment run worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-experiment-runner",
+      "persona": "scientific-experiment-runner",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action run_experiment --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-experiment-monitor-worker": {
+      "display_name": "AutoSci experiment monitor worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-experiment-runner",
+      "persona": "scientific-experiment-runner",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action monitor_experiment --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-claim-verify-worker": {
+      "display_name": "AutoSci claim verify worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-claim-verifier",
+      "persona": "scientific-claim-verifier",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action verify_claim --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-artifact-review-worker": {
+      "display_name": "AutoSci artifact review worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-evaluator",
+      "persona": "lab-evaluator",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action review_artifact --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-report-plan-worker": {
+      "display_name": "AutoSci report plan worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-report-writer",
+      "persona": "scientific-report-writer",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action plan_report --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-report-worker": {
+      "display_name": "AutoSci report draft worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-report-writer",
+      "persona": "scientific-report-writer",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action write_report --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-publication-compile-worker": {
+      "display_name": "AutoSci publication compile worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-builder",
+      "persona": "lab-builder",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action compile_paper --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-workflow-evolve-worker": {
+      "display_name": "AutoSci workflow evolve worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "planner",
+      "persona": "planner",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action evolve_workflow --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
     }
   },
   "_meta": {
