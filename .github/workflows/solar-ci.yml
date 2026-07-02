@@ -37,7 +37,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4
+          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
 
       - name: Syntax check critical runtime files
         run: |
@@ -77,7 +77,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4
+          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
 
       - name: Run HF and report center smoke tests
         run: |
@@ -105,7 +105,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4
+          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
 
       - name: Run shell smoke tests
         env:
@@ -139,7 +139,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4
+          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
 
       - name: Run AutoSci premerge gate
         run: |
@@ -164,7 +164,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4
+          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
 
       - name: Run evaluator and closeout gate tests
         run: |

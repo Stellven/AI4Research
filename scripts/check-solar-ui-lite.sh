@@ -30,7 +30,27 @@ assert_not_contains() {
   fi
 }
 
-echo "Solar UI-lite smoke: deterministic harness plumbing, not live Claude behavior"
+assert_matches() {
+  local file="$1"
+  local pattern="$2"
+  if ! grep -Eq "$pattern" "$file"; then
+    echo "FAIL: expected pattern '$pattern' in $file" >&2
+    cat "$file" >&2
+    exit 1
+  fi
+}
+
+assert_not_matches() {
+  local file="$1"
+  local pattern="$2"
+  if grep -Eq "$pattern" "$file"; then
+    echo "FAIL: unexpected pattern '$pattern' in $file" >&2
+    cat "$file" >&2
+    exit 1
+  fi
+}
+
+echo "Solar UI-lite smoke: deterministic harness plumbing, not live runtime behavior"
 echo "sandbox=$sandbox"
 
 full_home="$sandbox/full-home"
@@ -43,10 +63,10 @@ assert_contains "$full_out" "[Install health]"
 assert_contains "$full_out" "[Harness readiness]"
 assert_contains "$full_out" "[Runtime status]"
 assert_contains "$full_out" "[Manual boundary]"
-assert_contains "$full_out" "live Claude status:"
-assert_contains "$full_out" "not verified here: live Claude panes"
+assert_matches "$full_out" "live .* status:"
+assert_matches "$full_out" "not verified here: live .* panes"
 assert_not_contains "$full_out" "verified-live"
-assert_not_contains "$full_out" "live Claude verified"
+assert_not_matches "$full_out" "live [[:alpha:]]+ status: (verified|verified-live)([^[:alpha:]-]|$)"
 echo "solar ui kernel+harness render: ok"
 
 doctor_json="$sandbox/full-doctor.json"

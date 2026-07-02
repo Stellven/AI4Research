@@ -94,15 +94,28 @@ def parse_bash_version(text: str) -> tuple[int, int] | None:
     return int(match.group(1)), int(match.group(2))
 
 
-def dep_statuses() -> list[tuple[str, str, str]]:
+def configured_pane_runtime(harness_dir: Path) -> str:
+    runtime = os.environ.get("SOLAR_PANE_RUNTIME", "").strip().lower()
+    if not runtime:
+        config = load_json(harness_dir / "config" / "solar-user-config.json")
+        runtime = str(config.get("runtime") or "claude").strip().lower()
+    return runtime if runtime in {"claude", "codex"} else "claude"
+
+
+def runtime_display_name(runtime: str) -> str:
+    return "Codex" if runtime == "codex" else "Claude"
+
+
+def dep_statuses(pane_runtime: str) -> list[tuple[str, str, str]]:
     rows: list[tuple[str, str, str]] = []
     hints = {
         "python3": "macOS: brew install python; Ubuntu/Debian: sudo apt-get install python3",
         "tmux": "macOS: brew install tmux; Ubuntu/Debian: sudo apt-get install tmux",
         "jq": "macOS: brew install jq; Ubuntu/Debian: sudo apt-get install jq",
         "claude": "Install the Claude Code CLI and confirm 'claude --version' works",
+        "codex": "Install the Codex CLI and confirm 'codex --version' works",
     }
-    for name in ("python3", "tmux", "jq", "claude"):
+    for name in ("python3", "tmux", "jq", pane_runtime):
         found = shutil.which(name)
         if found:
             rows.append((name, "ok", found))
@@ -166,15 +179,15 @@ def limited_recent_files(root: Path, patterns: tuple[str, ...], limit: int = 5) 
     return found[:limit]
 
 
-def classify_live_boundary(captured_text: str, tmux_present: bool) -> tuple[str, str]:
+def classify_live_boundary(captured_text: str, tmux_present: bool, runtime_name: str) -> tuple[str, str]:
     lowered = captured_text.lower()
     if any(pattern in lowered for pattern in QUOTA_PATTERNS):
-        return "quota-blocked", "Claude pane text reports quota/rate-limit state."
+        return "quota-blocked", f"{runtime_name} pane text reports quota/rate-limit state."
     if any(pattern in lowered for pattern in AUTH_PATTERNS):
-        return "auth-blocked", "Claude pane text reports auth/trust/login state."
+        return "auth-blocked", f"{runtime_name} pane text reports auth/trust/login state."
     if not tmux_present:
         return "manual-pending", "No Product Delivery tmux session is present."
-    return "unverified", "Plumbing is visible, but no real Claude response/delegation proof was found."
+    return "unverified", f"Plumbing is visible, but no real {runtime_name} response/delegation proof was found."
 
 
 def collect_runtime(harness_dir: Path) -> dict:
@@ -242,6 +255,7 @@ def collect_state() -> dict:
     solar_bin = solar_home / "bin" / "solar"
     harness_bin = solar_home / "bin" / "solar-harness"
     harness_dir = solar_home / "harness"
+    pane_runtime = configured_pane_runtime(harness_dir)
     installed_markers = [
         receipt_path,
         solar_bin,
@@ -278,10 +292,11 @@ def collect_state() -> dict:
         "solar_bin": solar_bin,
         "harness_bin": harness_bin,
         "harness_dir": harness_dir,
+        "pane_runtime": pane_runtime,
         "installed": installed,
         "doctor_payload": doctor_payload,
         "doctor_error": doctor_error,
-        "deps": dep_statuses(),
+        "deps": dep_statuses(pane_runtime),
         "preflight": preflight,
         "runtime": collect_runtime(harness_dir),
     }
@@ -297,8 +312,9 @@ def status_word(style: Style, value: str) -> str:
 
 def render(state: dict, style: Style) -> str:
     lines: list[str] = []
+    runtime_name = runtime_display_name(state["pane_runtime"])
     lines.append(style.title("Solar UI-lite"))
-    lines.append("deterministic local dashboard; not live Claude behavior")
+    lines.append(f"deterministic local dashboard; not live {runtime_name} behavior")
     lines.append("")
 
     solar_home: Path = state["solar_home"]
@@ -388,12 +404,19 @@ def render(state: dict, style: Style) -> str:
             lines.append("recent dispatch/operator artifacts: none found")
     lines.append("")
 
-    live_status, live_detail = classify_live_boundary(runtime["captured_text"], bool(runtime["session_present"]))
+    live_status, live_detail = classify_live_boundary(
+        runtime["captured_text"],
+        bool(runtime["session_present"]),
+        runtime_name,
+    )
     lines.append("[Manual boundary]")
-    lines.append(f"live Claude status: {status_word(style, live_status)}")
+    lines.append(f"live {runtime_name} status: {status_word(style, live_status)}")
     lines.append(f"detail: {live_detail}")
     lines.append("scope: deterministic install/layout/preflight/runtime plumbing only")
-    lines.append("not verified here: live Claude panes, real delegation, real Claude-generated results")
+    lines.append(
+        f"not verified here: live {runtime_name} panes, real delegation, "
+        f"real {runtime_name}-generated results"
+    )
     return "\n".join(lines) + "\n"
 
 
