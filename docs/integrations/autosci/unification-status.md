@@ -109,3 +109,66 @@ What is still not claimed:
 - Agent A did not import unreviewed Agent B changes beyond the stated OpenSolar source snapshot.
 - If Agent B later changes shared interface files, import those intentionally after reviewing `docs/integrations/autosci/parity-to-unification-handoff.md`.
 - Keep BetterSolar-only integration work on this branch until reviewed.
+
+## Hardening Verification - 2026-07-02
+
+Branch under test: `integration/autosci-unification-hardening`
+
+Verified base HEAD before hardening commit: `aebe4ffeb8aa39f724a92c08d264790636023836`
+
+AutoSci module presence:
+
+- `harness/plugins/autosci/manifest.yaml`: present
+- `harness/plugins/autosci/bin/autosci_skill_shim.py`: present
+- `harness/plugins/autosci/bin/autosci_bridge.py`: present
+- `harness/tools/run_scientific_workflow.py`: present
+- `harness/workflows/scientific_research_lifecycle_full_v1.json`: present
+- `harness/tests/integration/test_autosci_routes_list.py`: present
+
+Registry/config checks:
+
+- `harness/config/logical-operators.json`: valid JSON
+- `harness/config/physical-operators.json`: valid JSON
+- `harness/config/capability-capsules.registry.yaml`: valid YAML
+- Required logical keys found: `ScientificExperimentRunner`, `ScientificPublicationProducer`
+- Required physical keys found: `autosci-experiment-run-worker`, `autosci-publication-compile-worker`
+- Required capability keys found: `cap.research-experiment-run`, `cap.research-publication-produce`
+
+Commands tested:
+
+- `bash solar-harness.sh autosci '$skills'`
+- `bash solar-harness.sh autosci '$review --help'`
+- `bash solar-harness.sh autosci '$ingest --help'`
+- `bash solar-harness.sh autosci '$research --help'`
+- `bash solar-harness.sh '$review --help'`
+- `SOLAR_HOME="$PWD" HARNESS_DIR="$PWD/harness" bin/solar harness autosci '$skills'`
+- `SOLAR_HOME="$PWD" HARNESS_DIR="$PWD/harness" bin/solar harness autosci '$review --help'`
+
+Product test result:
+
+- `env PATH="$PWD/bin:$PATH" python3 -m pytest -q tests/integration/test_autosci_routes_list.py tests/integration/test_autosci_cli_dispatch.py tests/integration/test_autosci_ingest_demo.py tests/integration/test_autosci_review_demo.py tests/integration/test_autosci_research_scheduler_demo.py tests/integration/test_autosci_artifact_root.py`
+- Result: `6 passed in 5.27s`
+
+Manual isolated smoke result:
+
+- Script: `harness/scripts/autosci-demo-smoke.sh`
+- Result: passed
+- Smoke root: `/tmp/bettersolar_autosci_smoke_20260702T150947Z`
+- `$skills` returned 28 routes.
+- `$review --help` reached the AutoSci shim.
+- `$ingest` wrote `research_paper.v1` evidence.
+- `$research --scheduler-run` wrote `scientific_lifecycle.v1` evidence.
+- Outputs remained under the active smoke `HARNESS_DIR`.
+
+Artifact-root behavior:
+
+- Generated smoke artifacts were written under `/tmp/bettersolar_autosci_smoke_20260702T150947Z/artifacts`.
+- Tracked generated artifact checks returned empty output for AutoSci run artifacts, operator smoke artifacts, scientific workflow run artifacts, `.DS_Store`, and `.solar-backups`.
+
+Known limitations:
+
+- Integrated Solar now has product-level AutoSci capabilities enabled.
+- Full native AutoSci parity continues in parallel and is not complete.
+- No route was promoted to `full`.
+- Approval-gated side effects remain gated.
+- Real online evidence, Review LLM evidence, experiment runtime evidence, collection evidence, paper compile evidence, distributed runtime audit, and submission/anonymity checks remain outside this hardening pass.
