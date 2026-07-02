@@ -148,7 +148,7 @@
     {
       "path": "bin/solar",
       "policy": "manual_merge_only_expected_in_product_base",
-      "current_source_branch_path_exists": false,
+      "current_source_branch_path_exists": true,
       "reason": "Product CLI belongs to the Stellven product base."
     },
     {
@@ -160,7 +160,7 @@
     {
       "path": "core/daemon/skill-dispatcher.ts",
       "policy": "manual_merge_only_expected_in_product_base",
-      "current_source_branch_path_exists": false,
+      "current_source_branch_path_exists": true,
       "reason": "Stellven SkillDispatcher must not be treated as final AutoSci execution until it dispatches routes to the shim."
     },
     {
@@ -184,7 +184,7 @@
     {
       "path": "scripts/solar-codex-intake.sh",
       "policy": "manual_merge_only",
-      "current_source_branch_path_exists": true,
+      "current_source_branch_path_exists": false,
       "reason": "Codex Core intake remains the active Solar Core direct-entry path."
     }
   ],

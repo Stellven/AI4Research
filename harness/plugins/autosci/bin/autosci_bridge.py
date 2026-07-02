@@ -11510,6 +11510,115 @@ def _frontmatter_list(text: str, key: str) -> list[str]:
     return _unique_strings([item.strip().strip("'\"") for item in raw.split(",") if item.strip()])
 
 
+def _paper_plan_evidence_payloads(envelope: dict[str, Any], keys: tuple[str, ...]) -> list[dict[str, Any]]:
+    inputs = dict(envelope.get("inputs") or {})
+    payloads: list[dict[str, Any]] = []
+    for key in keys:
+        payloads.extend(_load_optional_evidence_many(inputs.get(key)))
+    return payloads
+
+
+def _paper_plan_status_from_recommendation(recommendation: str) -> str:
+    value = recommendation.lower().strip()
+    if value == "advance":
+        return "validated"
+    if value == "revise":
+        return "in_progress"
+    return "unknown"
+
+
+def _paper_plan_experiment_status(payload_status: str, outcome: str) -> str:
+    if payload_status != "completed":
+        return payload_status or "unknown"
+    if outcome in {"supports", "partially_supports"}:
+        return "succeeded"
+    if outcome == "inconclusive":
+        return "inconclusive"
+    return "failed"
+
+
+def _paper_plan_idea_graph_from_evidence(envelope: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    ideas_by_slug: dict[str, dict[str, Any]] = {}
+    references: list[dict[str, Any]] = []
+
+    for payload in _paper_plan_evidence_payloads(envelope, ("ideas_evidence",)):
+        outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+        for idea in outputs.get("ideas") or []:
+            if not isinstance(idea, dict):
+                continue
+            idea_id = str(idea.get("idea_id") or idea.get("title") or "").strip()
+            if not idea_id:
+                continue
+            slug = _slug(idea_id)
+            ideas_by_slug.setdefault(slug, {
+                "slug": slug,
+                "status": str(idea.get("status") or "candidate"),
+                "novelty_score": str(idea.get("novelty_score") or ""),
+                "path": str(payload.get("task_id") or payload.get("node_id") or payload.get("schema") or "supplied_idea_evidence"),
+                "linked_experiments": [],
+                "referenced_entities": _unique_strings([str(item) for item in idea.get("origin_evidence_ids") or []]),
+            })
+
+    for payload in _paper_plan_evidence_payloads(envelope, ("idea_evaluation_evidence",)):
+        outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+        evidence_ref = str(payload.get("task_id") or payload.get("node_id") or payload.get("schema") or "supplied_idea_evaluation")
+        for evaluation in outputs.get("evaluations") or []:
+            if not isinstance(evaluation, dict):
+                continue
+            idea_id = str(evaluation.get("idea_id") or "").strip()
+            if not idea_id:
+                continue
+            slug = _slug(idea_id)
+            recommendation = str(evaluation.get("recommendation") or "")
+            status = _paper_plan_status_from_recommendation(recommendation)
+            existing = ideas_by_slug.get(slug)
+            idea_entry = {
+                "slug": slug,
+                "status": status,
+                "novelty_score": str(evaluation.get("novelty") or ""),
+                "path": evidence_ref,
+                "linked_experiments": list(existing.get("linked_experiments") or []) if existing else [],
+                "referenced_entities": _unique_strings([
+                    *([str(item) for item in (existing or {}).get("referenced_entities") or []]),
+                    *[str(item) for item in evaluation.get("evidence_ids") or []],
+                ]),
+                "recommendation": recommendation,
+                "feasibility": evaluation.get("feasibility", "N/A"),
+            }
+            if existing and str(existing.get("status") or "") in {"validated", "in_progress"} and status == "unknown":
+                idea_entry["status"] = str(existing.get("status"))
+            ideas_by_slug[slug] = idea_entry
+            references.append({"type": "idea_evaluation", "slug": slug, "path": evidence_ref})
+
+    validated_slugs = [
+        slug
+        for slug, idea in ideas_by_slug.items()
+        if str(idea.get("status") or "").lower() in {"validated", "in_progress"}
+    ]
+    experiments: list[dict[str, Any]] = []
+    for payload in _paper_plan_evidence_payloads(envelope, ("experiment_result", "experiment_result_evidence")):
+        outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+        result = outputs.get("result") if isinstance(outputs.get("result"), dict) else {}
+        if not result:
+            continue
+        experiment_id = str(result.get("experiment_id") or payload.get("task_id") or "experiment").strip()
+        exp_slug = _slug(experiment_id)
+        outcome = str(result.get("outcome") or "").lower().strip()
+        status = _paper_plan_experiment_status(str(payload.get("status") or "").lower().strip(), outcome)
+        linked_idea = validated_slugs[0] if validated_slugs else ""
+        if linked_idea and exp_slug not in list(ideas_by_slug[linked_idea].get("linked_experiments") or []):
+            ideas_by_slug[linked_idea].setdefault("linked_experiments", []).append(exp_slug)
+        experiments.append({
+            "slug": exp_slug,
+            "status": status,
+            "path": str(payload.get("task_id") or payload.get("node_id") or payload.get("schema") or "supplied_experiment_result"),
+            "linked_idea": linked_idea,
+            "key_result": outcome or "N/A",
+        })
+
+    return list(ideas_by_slug.values()), experiments, references
+
+
 def _paper_plan_idea_graph_map(envelope: dict[str, Any], *, target: str) -> dict[str, Any]:
     slugs = _paper_plan_target_slugs(target)
     ideas: list[dict[str, Any]] = []
@@ -11562,6 +11671,18 @@ def _paper_plan_idea_graph_map(envelope: dict[str, Any], *, target: str) -> dict
                     "linked_idea": slug,
                     "key_result": _frontmatter_value(exp_text, "key_result"),
                 })
+    evidence_ideas, evidence_experiments, evidence_references = _paper_plan_idea_graph_from_evidence(envelope)
+    seen_ideas = {str(idea.get("slug") or "") for idea in ideas}
+    for idea in evidence_ideas:
+        if str(idea.get("slug") or "") not in seen_ideas:
+            ideas.append(idea)
+            seen_ideas.add(str(idea.get("slug") or ""))
+    seen_experiments = {str(experiment.get("slug") or "") for experiment in experiments}
+    for experiment in evidence_experiments:
+        if str(experiment.get("slug") or "") not in seen_experiments:
+            experiments.append(experiment)
+            seen_experiments.add(str(experiment.get("slug") or ""))
+    references.extend(evidence_references)
     validated = [idea for idea in ideas if str(idea.get("status") or "").lower() in {"validated", "in_progress"}]
     succeeded = [exp for exp in experiments if str(exp.get("status") or "").lower() in {"succeeded", "success", "completed"}]
     ready = bool(validated and succeeded)

@@ -1,0 +1,56 @@
+{
+  "schema": "experiment_plan.v1",
+  "task_id": "task.phase1.sample.experiment_plan",
+  "sprint_id": "sprint.autosci.phase1",
+  "node_id": "node.experiment_design",
+  "status": "completed",
+  "inputs": {
+    "idea_id": "idea.sample.001"
+  },
+  "outputs": {
+    "experiment_plan": {
+      "experiment_id": "experiment.sample.001",
+      "objective": "Compare evidence coverage with and without code mapping.",
+      "hypothesis": "Source-plus-code mapping increases covered claims.",
+      "variables": [
+        "evidence_mode"
+      ],
+      "metrics": [
+        "covered_claim_count",
+        "unsupported_claim_count"
+      ],
+      "procedure": [
+        "Prepare fixture claims",
+        "Run source-only mapping",
+        "Run source-plus-code mapping",
+        "Compare coverage"
+      ],
+      "approval_required": false,
+      "expected_artifacts": [
+        "coverage.json",
+        "comparison.md"
+      ],
+      "execution_mode": "fixture",
+      "baseline": "source-only fixture coverage",
+      "success_criteria": [
+        "covered_claim_count >= 1",
+        "unsupported_claim_count == 0"
+      ],
+      "command_allowlist": [
+        "python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment"
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "type": "experiment_plan",
+      "path": "artifacts/autosci/fixtures/experiment_plan.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificExperimentDesigner",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": []
+}

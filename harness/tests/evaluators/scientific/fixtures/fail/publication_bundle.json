@@ -1,0 +1,28 @@
+{
+  "schema": "publication_bundle.v1",
+  "task_id": "task.phase14.sample.publication",
+  "sprint_id": "sprint.autosci.phase14",
+  "node_id": "node.publication_produce",
+  "status": "completed",
+  "inputs": {
+    "report_id": "report.sample.001"
+  },
+  "outputs": {
+    "bundle": {
+      "bundle_id": "bundle.sample.001",
+      "publication_type": "mixed",
+      "files": [],
+      "source_report_id": "report.sample.001",
+      "evidence_ids": [
+        "claim.sample.001"
+      ]
+    }
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "ScientificPublicationProducer",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-18T20:30:00Z"
+  },
+  "limitations": []
+}

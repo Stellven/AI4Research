@@ -1,0 +1,34 @@
+{
+  "schema": "research_method.v1",
+  "task_id": "task.phase1.sample.method",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.method_extract",
+  "status": "completed",
+  "inputs": {
+    "paper_evidence": "sample_research_paper.v1.json"
+  },
+  "outputs": {
+    "methods": [
+      {
+        "method_id": "method.sample.evidence_matching",
+        "name": "Evidence Matching",
+        "summary": "Maps extracted claims to source and runtime evidence.",
+        "procedure": ["Extract claims", "Attach source anchors", "Map runtime artifacts"],
+        "source_papers": ["paper.sample.transformer"],
+        "evidence_ids": ["paper.sample.transformer"]
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "method_record",
+      "path": "artifacts/scientific/fixtures/research_method.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificMethodExtractor",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": []
+}

@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - pkg/migration
+      - openJiuwen-Solar
   workflow_dispatch:
   schedule:
     - cron: "23 9 * * *"
@@ -117,6 +118,32 @@ jobs:
           bash harness/tests/test-pm-planner-html-artifacts.sh
           bash scripts/check-harness-plumbing.sh
           bash scripts/check-solar-ui-lite.sh
+
+  autosci-premerge-gate:
+    name: AutoSci premerge gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: harness
+      SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
+      AUTOSCI_DISABLE_NETWORK_FETCH: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest requests pyyaml beautifulsoup4
+
+      - name: Run AutoSci premerge gate
+        run: |
+          bash harness/tests/test-autosci-premerge-gate.sh
 
   verification-release-gate:
     name: Verification release gate

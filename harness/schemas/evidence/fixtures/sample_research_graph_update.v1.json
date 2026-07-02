@@ -1,0 +1,33 @@
+{
+  "schema": "research_graph_update.v1",
+  "task_id": "task.phase1.sample.graph",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.graph_update",
+  "status": "completed",
+  "inputs": {
+    "source_evidence": "sample_research_paper.v1.json"
+  },
+  "outputs": {
+    "edges": [
+      {
+        "source": "paper.sample.transformer",
+        "target": "concept.claim_verification",
+        "relation": "studies",
+        "operation": "propose",
+        "evidence_ids": ["paper.sample.transformer"]
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "graph_delta",
+      "path": "artifacts/scientific/fixtures/research_graph_update.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificGraphUpdater",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": []
+}

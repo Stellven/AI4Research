@@ -5,11 +5,69 @@ Agent: Agent A
 
 ## Branch And Source Anchors
 
-- BetterSolar branch: `integration/autosci-on-openjiuwen-solar`
-- BetterSolar base HEAD: `cdc7e90334437796232e019a0dd689d33e53e7f2`
-- OpenSolar source snapshot: `feature/autosci-solar-native` at `9d68c5baa9b814c086ae87f9c26f6ad0ae62ecd7`
+- BetterSolar branch: `openJiuwen-Solar`
+- BetterSolar base HEAD before 2026-07-02 parity sync: `c5ac70d394260b7e2cad591e68bcb63136daf374`
+- OpenSolar source snapshot for 2026-07-02 parity sync: `feature/autosci-solar-native` at `0f4ee9fa4`
+- Earlier OpenSolar source snapshot for initial import: `feature/autosci-solar-native` at `9d68c5baa9b814c086ae87f9c26f6ad0ae62ecd7`
 - Native AutoSci reference: `main` at `71469e89eb1381e557661da0b90c0585c48288d7`
 - OpenSolar and AutoSci were treated as read-only sources.
+
+## OpenSolar Parity Sync - 2026-07-02
+
+Compared BetterSolar against OpenSolar `0f4ee9fa4`.
+
+Already content-identical before this sync:
+
+- Active AutoSci route config: 28 routes, 17 `partial`, 11 `gated`, 0 `full`.
+- AutoSci-specific logical operators and bindings in `harness/config/logical-operators.json`.
+- AutoSci-specific physical workers in `harness/config/physical-operators.json`.
+- `harness/plugins/autosci/` runtime/plugin code, except for local timestamp metadata.
+- Existing scientific workflow runner files and workflow JSON content.
+
+Imported missing OpenSolar parity assets:
+
+- `harness/tools/audit_scientific_runtime_bindings.py`
+- `harness/schemas/evidence/fixtures/`
+- `harness/tests/config/test_autosci_research_capsule_registry.py`
+- `harness/tests/evaluators/scientific/`, excluding bytecode caches
+- `harness/tests/test_autosci_phase_c_premerge_readiness.py`
+- `harness/tests/test_autosci_phase_c_unification_contracts.py`
+- `harness/tests/test_autosci_priority_a_contracts.py`
+- `harness/tests/test_autosci_priority_b_demo_contracts.py`
+- `harness/tests/test-autosci-harness-entrypoint.sh`
+- `harness/tests/test-autosci-premerge-gate.sh`
+
+Merged BetterSolar-specific CI wiring:
+
+- Added `.github/workflows/solar-ci.yml` job `autosci-premerge-gate`.
+- Kept BetterSolar's existing workflow structure and `actions/checkout@v5`.
+- Added `openJiuwen-Solar` to push triggers for this active branch.
+
+BetterSolar adaptation after import:
+
+- `docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json` now reflects BetterSolar path facts for `bin/solar`, `core/daemon/skill-dispatcher.ts`, and `scripts/solar-codex-intake.sh`.
+- `harness/plugins/autosci/bin/autosci_bridge.py` now lets `paper-plan` derive a ready idea graph from supplied `ideas_evidence`, `idea_evaluation_evidence`, and `experiment_result(_evidence)` inputs, not only prewritten wiki idea pages.
+- Imported lifecycle tests now use structurally valid minimal PDF fixtures where they expect publication compile evidence to pass the existing PDF integrity gate.
+
+Current active route status after sync:
+
+- `route_count=28`
+- `coverage={'partial': 17, 'gated': 11}`
+- `full=[]`
+- `gated=['/daily-arxiv', '/edit', '/exp-pilot-run', '/exp-run', '/paper-compile', '/poster', '/prefill', '/refine', '/reset', '/setup', '/visualize']`
+
+No route was promoted to `full`.
+
+Verification added in this sync:
+
+- `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py`
+- `harness/bin/python3 -m py_compile harness/tools/audit_scientific_runtime_bindings.py`
+- `pytest -q harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py harness/tests/test_autosci_priority_a_contracts.py harness/tests/test_autosci_priority_b_demo_contracts.py`: `24 passed`
+- `pytest -q harness/tests/evaluators/scientific harness/tests/config/test_autosci_research_capsule_registry.py`: `102 passed`
+- `bash harness/tests/test-autosci-premerge-gate.sh`: passed
+- `bash harness/tests/test-autosci-harness-entrypoint.sh`: passed
+
+Local hygiene note: the first premerge gate run was blocked only by local Finder metadata at `.git/refs/.DS_Store`; that invalid local ref file was removed and the gate then passed.
 
 ## Imported Surfaces
 
