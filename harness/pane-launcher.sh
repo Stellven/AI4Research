@@ -368,37 +368,37 @@ _whisper=$(inject_whisper "$PERSONA")
 _prefix_policy=$(inject_prefix_policy "$PERSONA")
 record_pane_model_session "session-started" ""
 if [[ "$PANE_RUNTIME" == "codex" ]]; then
-  CODEX_CMD="$CODEX_BIN"
+  CODEX_CMD=("$CODEX_BIN")
   SOLAR_CODEX_BYPASS="${SOLAR_CODEX_BYPASS:-1}"
   if [[ "$SOLAR_CODEX_BYPASS" == "1" ]]; then
-    CODEX_CMD="$CODEX_CMD --dangerously-bypass-approvals-and-sandbox"
+    CODEX_CMD+=(--dangerously-bypass-approvals-and-sandbox)
   fi
   # Solar dispatches into long-lived Codex panes. Interactive update prompts
   # steal the first Enter during clean/dispatch and can drop the pane back to
   # shell, so managed panes disable the startup check by default. Operators can
   # still run `codex update` manually outside the cockpit.
   if [[ "${SOLAR_CODEX_CHECK_FOR_UPDATE_ON_STARTUP:-0}" != "1" ]]; then
-    CODEX_CMD="$CODEX_CMD -c check_for_update_on_startup=false"
+    CODEX_CMD+=(-c check_for_update_on_startup=false)
   fi
-  [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && CODEX_CMD="$CODEX_CMD --model ${SOLAR_CODEX_MODEL}"
-  [[ -n "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] && CODEX_CMD="$CODEX_CMD ${SOLAR_CODEX_EXTRA_FLAGS}"
+  [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && CODEX_CMD+=(--model "$SOLAR_CODEX_MODEL")
+  [[ -n "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] && CODEX_CMD+=( ${SOLAR_CODEX_EXTRA_FLAGS} )
   CODEX_ROLE_FILE="$(prepare_codex_role_file "$PERSONA")"
   echo -e "${Y}[${PERSONA}] Codex runtime selected${N}"
   echo -e "  Role instructions: ${CODEX_ROLE_FILE}"
   echo -e "  Starting Codex idle; dispatcher prompts will include role + task files."
-  $CODEX_CMD
+  "${CODEX_CMD[@]}"
   RUNTIME_EXIT=$?
 else
-  CLAUDE_CMD="$CLAUDE_BIN"
+  CLAUDE_CMD=("$CLAUDE_BIN")
   SOLAR_CLAUDE_BYPASS="${SOLAR_CLAUDE_BYPASS:-1}"
   if [[ "$SOLAR_CLAUDE_BYPASS" == "1" ]]; then
-    CLAUDE_CMD="$CLAUDE_BIN --dangerously-skip-permissions --permission-mode ${SOLAR_CLAUDE_PERMISSION_MODE:-bypassPermissions}"
+    CLAUDE_CMD+=(--dangerously-skip-permissions --permission-mode "${SOLAR_CLAUDE_PERMISSION_MODE:-bypassPermissions}")
   fi
-  [[ -n "$MODEL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $MODEL_FLAG"
-  [[ -n "$TOOL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $TOOL_FLAG"
-  [[ -n "${EXTRA_FLAGS:-}" ]] && CLAUDE_CMD="$CLAUDE_CMD $EXTRA_FLAGS"
-  CLAUDE_CMD="$CLAUDE_CMD --setting-sources ${SOLAR_CLAUDE_SETTING_SOURCES} --settings ${CLAUDE_SETTINGS_FILE}"
-  $CLAUDE_CMD --append-system-prompt "$_runtime_policy
+  [[ -n "$MODEL_FLAG" ]] && CLAUDE_CMD+=( $MODEL_FLAG )
+  [[ -n "$TOOL_FLAG" ]] && CLAUDE_CMD+=( $TOOL_FLAG )
+  [[ -n "${EXTRA_FLAGS:-}" ]] && CLAUDE_CMD+=( $EXTRA_FLAGS )
+  CLAUDE_CMD+=(--setting-sources "$SOLAR_CLAUDE_SETTING_SOURCES" --settings "$CLAUDE_SETTINGS_FILE")
+  "${CLAUDE_CMD[@]}" --append-system-prompt "$_runtime_policy
 $_prefix_policy
 $(cat "$PERSONA_FILE")$_whisper"
   RUNTIME_EXIT=$?

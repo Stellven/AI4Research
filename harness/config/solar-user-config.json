@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-24T18:09:44Z",
+  "updated_at": "2026-07-02T20:21:53Z",
   "setup_complete": true,
   "user": {
     "display_name": "Solar-Harness",
@@ -40,5 +40,10 @@
   },
   "ui": {
     "open_on_first_run": true
+  },
+  "runtime": "codex",
+  "codex": {
+    "search": true,
+    "effort": "medium"
   }
 }

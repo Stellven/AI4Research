@@ -153,7 +153,7 @@ else
   [[ -n "$CLAUDE_BIN" ]] || CLAUDE_BIN="$HOME/.npm-global/bin/claude"
 fi
 
-CLAUDE_CMD="$CLAUDE_BIN"
+CLAUDE_CMD=("$CLAUDE_BIN")
 SOLAR_CLAUDE_BYPASS="${SOLAR_CLAUDE_BYPASS:-1}"
 if [[ "$SOLAR_CLAUDE_BYPASS" == "1" ]]; then
   SOLAR_CLAUDE_PERMISSION_MODE="${SOLAR_CLAUDE_PERMISSION_MODE:-bypassPermissions}"
@@ -170,14 +170,14 @@ if [[ "$SOLAR_CLAUDE_BYPASS" == "1" ]]; then
   esac
   SOLAR_CLAUDE_SKIP_PERMISSIONS="${SOLAR_CLAUDE_SKIP_PERMISSIONS:-1}"
   if [[ "$SOLAR_CLAUDE_SKIP_PERMISSIONS" == "1" ]]; then
-    CLAUDE_CMD="$CLAUDE_BIN --dangerously-skip-permissions --permission-mode ${SOLAR_CLAUDE_PERMISSION_MODE}"
+    CLAUDE_CMD+=(--dangerously-skip-permissions --permission-mode "$SOLAR_CLAUDE_PERMISSION_MODE")
   else
-    CLAUDE_CMD="$CLAUDE_BIN --permission-mode ${SOLAR_CLAUDE_PERMISSION_MODE}"
+    CLAUDE_CMD+=(--permission-mode "$SOLAR_CLAUDE_PERMISSION_MODE")
   fi
 fi
-[[ -n "$MODEL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $MODEL_FLAG"
-[[ -n "$TOOL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $TOOL_FLAG"
-[[ -n "${EXTRA_FLAGS:-}" ]] && CLAUDE_CMD="$CLAUDE_CMD $EXTRA_FLAGS"
+[[ -n "$MODEL_FLAG" ]] && CLAUDE_CMD+=( $MODEL_FLAG )
+[[ -n "$TOOL_FLAG" ]] && CLAUDE_CMD+=( $TOOL_FLAG )
+[[ -n "${EXTRA_FLAGS:-}" ]] && CLAUDE_CMD+=( $EXTRA_FLAGS )
 
 prepare_sanitized_claude_settings() {
   local persona="$1"
@@ -227,7 +227,7 @@ PY
 CLAUDE_SETTINGS_FILE="$(prepare_sanitized_claude_settings "$PERSONA")"
 export SOLAR_CLAUDE_SETTINGS_FILE="$CLAUDE_SETTINGS_FILE"
 export SOLAR_CLAUDE_SETTING_SOURCES="local"
-CLAUDE_CMD="$CLAUDE_CMD --setting-sources ${SOLAR_CLAUDE_SETTING_SOURCES} --settings ${CLAUDE_SETTINGS_FILE}"
+CLAUDE_CMD+=(--setting-sources "$SOLAR_CLAUDE_SETTING_SOURCES" --settings "$CLAUDE_SETTINGS_FILE")
 
 # 退出信号捕获 → pane-exit.jsonl
 EXIT_LOG="$HARNESS_DIR/logs/pane-exit.jsonl"
@@ -237,7 +237,7 @@ set +e
 _runtime_policy=$(inject_runtime_policy "$PERSONA")
 _prefix_policy=$(inject_prefix_policy "$PERSONA")
 _whisper=$(inject_whisper "$PERSONA")
-$CLAUDE_CMD --append-system-prompt "$_runtime_policy
+"${CLAUDE_CMD[@]}" --append-system-prompt "$_runtime_policy
 $_prefix_policy
 $(cat "$PERSONA_FILE")$_whisper"
 CLAUDE_EXIT=$?

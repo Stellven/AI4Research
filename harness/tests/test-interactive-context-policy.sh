@@ -27,10 +27,16 @@ check "policy requires evidence before success" "$POLICY" "没有证据，不许
 check "policy requires structured closeout" "$POLICY" "已完成 · 已验证 · 未验证 · 风险 · 后续待办"
 
 if grep -q '_runtime_policy=$(inject_runtime_policy "$PERSONA")' "$HARNESS_DIR/pane-launcher.sh" \
-  && grep -q '\$CLAUDE_CMD --append-system-prompt "\$_runtime_policy' "$HARNESS_DIR/pane-launcher.sh"; then
+  && grep -q '"${CLAUDE_CMD\[@\]}" --append-system-prompt "\$_runtime_policy' "$HARNESS_DIR/pane-launcher.sh"; then
   ok "pane-launcher prepends runtime policy in append-system-prompt"
 else
   fail "pane-launcher does not append runtime policy"
+fi
+
+if grep -q 'CLAUDE_CMD+=(--setting-sources "$SOLAR_CLAUDE_SETTING_SOURCES" --settings "$CLAUDE_SETTINGS_FILE")' "$HARNESS_DIR/pane-launcher.sh"; then
+  ok "pane-launcher passes Claude settings path as one argv"
+else
+  fail "pane-launcher may split Claude settings path"
 fi
 
 if grep -q 'check_for_update_on_startup=false' "$HARNESS_DIR/pane-launcher.sh" \
@@ -41,10 +47,16 @@ else
 fi
 
 if grep -q '_runtime_policy=$(inject_runtime_policy "$PERSONA")' "$HARNESS_DIR/start-incarnation.sh" \
-  && grep -q '\$CLAUDE_CMD --append-system-prompt "\$_runtime_policy' "$HARNESS_DIR/start-incarnation.sh"; then
+  && grep -q '"${CLAUDE_CMD\[@\]}" --append-system-prompt "\$_runtime_policy' "$HARNESS_DIR/start-incarnation.sh"; then
   ok "start-incarnation prepends runtime policy in append-system-prompt"
 else
   fail "start-incarnation does not append runtime policy"
+fi
+
+if grep -q 'CLAUDE_CMD+=(--setting-sources "$SOLAR_CLAUDE_SETTING_SOURCES" --settings "$CLAUDE_SETTINGS_FILE")' "$HARNESS_DIR/start-incarnation.sh"; then
+  ok "start-incarnation passes Claude settings path as one argv"
+else
+  fail "start-incarnation may split Claude settings path"
 fi
 
 check "PM persona has zero-law context rule" "$(sed -n '1,40p' "$HARNESS_DIR/personas/pm.md")" "第零铁律：先查 Solar Unified Context"

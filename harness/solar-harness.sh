@@ -3161,6 +3161,61 @@ do_models_command() {
   esac
 }
 
+do_runtime_selector_command() {
+  local subcmd="${1:-show}"
+  shift || true
+  case "$subcmd" in
+    show|selector|pane)
+      local cfg_runtime cfg_source cfg_search cfg_effort effective
+      cfg_runtime="$(solar_config_json_get "runtime" "" 2>/dev/null || true)"
+      cfg_source="$SOLAR_USER_CONFIG"
+      cfg_search="$(solar_config_json_get "codex.search" "true" 2>/dev/null || echo true)"
+      cfg_effort="$(solar_config_json_get "codex.effort" "medium" 2>/dev/null || echo medium)"
+      effective="${SOLAR_PANE_RUNTIME:-claude}"
+      [[ -n "$cfg_runtime" ]] || cfg_runtime="(unset -> claude)"
+      printf '┌────────────────────┬──────────────────────────────────────────────┐\n'
+      printf '│ %-18s │ %-44s │\n' "配置项" "当前值"
+      printf '├────────────────────┼──────────────────────────────────────────────┤\n'
+      printf '│ %-18s │ %-44s │\n' "effective runtime" "$(printf '%.44s' "$effective")"
+      printf '│ %-18s │ %-44s │\n' "config runtime" "$(printf '%.44s' "$cfg_runtime")"
+      printf '│ %-18s │ %-44s │\n' "codex.search" "$(printf '%.44s' "$cfg_search")"
+      printf '│ %-18s │ %-44s │\n' "codex.effort" "$(printf '%.44s' "$cfg_effort")"
+      printf '│ %-18s │ %-44s │\n' "来源" "$(printf '%.44s' "$cfg_source")"
+      printf '└────────────────────┴──────────────────────────────────────────────┘\n'
+      ;;
+    use|set|select)
+      local runtime="${1:-}"
+      shift || true
+      case "$runtime" in
+        claude|codex) ;;
+        *) err "用法: $0 runtime use <claude|codex>"; exit 2 ;;
+      esac
+      solar_config_json_set "runtime" "$runtime"
+      if [[ "$runtime" == "codex" ]]; then
+        [[ -n "$(solar_config_json_get "codex.search" "" 2>/dev/null || true)" ]] || solar_config_json_set "codex.search" "true"
+        [[ -n "$(solar_config_json_get "codex.effort" "" 2>/dev/null || true)" ]] || solar_config_json_set "codex.effort" "medium"
+      fi
+      ok "已写入 pane runtime: $runtime"
+      log "配置文件: $SOLAR_USER_CONFIG"
+      log "运行中的 panes 不会热切换；重启 cockpit 后生效。"
+      ;;
+    help|--help|-h)
+      echo "Solar Pane Runtime Selector"
+      echo ""
+      echo "Usage:"
+      echo "  $0 runtime show"
+      echo "  $0 runtime use codex"
+      echo "  $0 runtime use claude"
+      echo ""
+      echo "Session-only override:"
+      echo "  SOLAR_PANE_RUNTIME=codex $0 start [workdir]"
+      ;;
+    *)
+      return 64
+      ;;
+  esac
+}
+
 do_autosci_command() {
   local script_harness_dir shim py candidate command_text
   script_harness_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -4382,6 +4437,8 @@ PY
     echo "  $0 status                            show cockpit status"
     echo "  $0 main-status                       main screen: runtime + assignment + artifact status"
     echo "  $0 lab-status                        lab pane: runtime + handoff artifact status"
+    echo "  $0 runtime show                       show selected pane runtime"
+    echo "  $0 runtime use codex|claude           persist repo-local pane runtime default"
     echo "  $0 actorhost-status [--json] [--host-type TYPE]  actor/host/lease taxonomy"
     echo "  $0 preflight                         check launch dependencies (does not start tmux/runtime panes)"
     echo "  $0 doctor                            environment self-check"
@@ -5611,6 +5668,9 @@ PY
     _runtime_subcmd="${1:-doctor}"; shift || true
     _runtime_py_dir="$HARNESS_DIR/lib"
     case "$_runtime_subcmd" in
+      show|selector|pane|use|set|select)
+        do_runtime_selector_command "$_runtime_subcmd" "$@"
+        ;;
       doctor)
         python3 "$_runtime_py_dir/runtime_doctor.py" "$@"
         ;;
@@ -5643,6 +5703,8 @@ PY
         echo "Solar Managed Agent Runtime"
         echo ""
         echo "Usage:"
+        echo "  $0 runtime show"
+        echo "  $0 runtime use codex|claude"
         echo "  $0 runtime doctor [sprint_id] [--json] [--all]"
         echo "  $0 runtime project <sprint_id> [--write-cache] [--json]"
         echo "  $0 runtime adopt  <sprint_id>|--all [--write-cache] [--json]"
