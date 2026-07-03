@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -1432,6 +1433,131 @@ def output_rel(path: Path | str) -> str:
         return str(candidate.resolve())
 
 
+def _resolve_output_artifact(raw: Any) -> Path:
+    path = Path(str(raw))
+    if not path.is_absolute():
+        path = OUTPUT_HARNESS / path
+    return path
+
+
+def _autosci_slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or "item"
+
+
+def _contains_any(path: Path, values: list[str]) -> bool:
+    if not path.exists():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8").lower()
+    except OSError:
+        return False
+    return any(value and value.lower() in text for value in values)
+
+
+def _workspace_registration_state(wiki_root: Path, paper: dict[str, Any]) -> dict[str, Any]:
+    paper_id = str(paper.get("paper_id") or "paper-unresolved")
+    title = str(paper.get("title") or "")
+    paper_page = wiki_root / "papers" / f"{_autosci_slug(paper_id)}.md"
+    matched_page = paper_page if paper_page.exists() else None
+    if matched_page is None and (wiki_root / "papers").exists():
+        needles = [item.lower() for item in (paper_id, title) if item]
+        for candidate in sorted((wiki_root / "papers").glob("*.md")):
+            try:
+                text = candidate.read_text(encoding="utf-8").lower()
+            except OSError:
+                continue
+            if any(needle and needle in text for needle in needles):
+                matched_page = candidate
+                break
+
+    log_path = wiki_root / "log.md"
+    edge_path = wiki_root / "graph" / "edges.jsonl"
+    index_path = wiki_root / "index.md"
+    context_path = wiki_root / "graph" / "context_brief.md"
+    page_values = [paper_id, title, matched_page.name if matched_page else ""]
+    state = {
+        "wiki_root": str(wiki_root.resolve()),
+        "paper_page": str((matched_page or paper_page).resolve()),
+        "paper_registered": bool(matched_page and matched_page.exists()),
+        "log_path": str(log_path.resolve()),
+        "log_registered": _contains_any(log_path, page_values + ["ingest"]),
+        "graph_edges_path": str(edge_path.resolve()),
+        "graph_registered": _contains_any(
+            edge_path,
+            page_values + ["source_candidate_ingested", "paper_ingested", "has_source", "describes"],
+        ),
+        "index_path": str(index_path.resolve()),
+        "index_rebuilt": _contains_any(index_path, [matched_page.name if matched_page else paper_page.name, paper_id, title, "papers"]),
+        "context_brief_path": str(context_path.resolve()),
+        "context_rebuilt": context_path.exists(),
+    }
+    return state
+
+
+def _refresh_boundary_from_workspace(boundary: dict[str, Any], wiki_state: dict[str, Any]) -> None:
+    wiki_registration_ready = all(
+        bool(wiki_state.get(key))
+        for key in ("paper_registered", "graph_registered", "index_rebuilt", "context_rebuilt")
+    )
+    boundary["wiki_registration"] = wiki_state
+    boundary["wiki_registration_ready"] = wiki_registration_ready
+    checks = boundary.get("checks") if isinstance(boundary.get("checks"), list) else []
+    found = False
+    for check in checks:
+        if isinstance(check, dict) and check.get("name") == "wiki_registration_ready":
+            check["status"] = "ok" if wiki_registration_ready else "missing"
+            found = True
+    if not found:
+        checks.append({"name": "wiki_registration_ready", "status": "ok" if wiki_registration_ready else "missing"})
+    boundary["checks"] = checks
+    boundary["missing"] = [str(check.get("name")) for check in checks if isinstance(check, dict) and check.get("status") != "ok"]
+    final_ready = not boundary["missing"]
+    boundary["final_registration_ready"] = final_ready
+    boundary["status"] = "ingest_source_registration_ready" if final_ready else "ingest_source_registration_incomplete"
+
+
+def refresh_ingest_boundaries_after_workspace(payload: dict[str, Any], workspace_summary: dict[str, Any]) -> None:
+    wiki_root_raw = workspace_summary.get("wiki_root")
+    if not wiki_root_raw:
+        return
+    wiki_root = Path(str(wiki_root_raw))
+    if not wiki_root.is_absolute():
+        wiki_root = OUTPUT_HARNESS / wiki_root
+    actions = payload.get("outputs", {}).get("skill_run", {}).get("actions", [])
+    if not isinstance(actions, list):
+        return
+    for action in actions:
+        if not isinstance(action, dict) or action.get("action") not in {"ingest_paper", "prepare_paper_source"}:
+            continue
+        evidence_path_raw = action.get("evidence_path")
+        if not evidence_path_raw:
+            continue
+        evidence_path = _resolve_output_artifact(evidence_path_raw)
+        if not evidence_path.exists():
+            continue
+        evidence = load_json(evidence_path)
+        outputs = evidence.get("outputs") if isinstance(evidence.get("outputs"), dict) else {}
+        paper = outputs.get("paper") if isinstance(outputs.get("paper"), dict) else {}
+        if not paper:
+            continue
+        wiki_state = _workspace_registration_state(wiki_root, paper)
+        boundaries = []
+        if isinstance(outputs.get("final_source_registration_boundary"), dict):
+            boundaries.append(outputs["final_source_registration_boundary"])
+        if isinstance(paper.get("final_source_registration_boundary"), dict):
+            boundaries.append(paper["final_source_registration_boundary"])
+        if not boundaries:
+            continue
+        for boundary in boundaries:
+            _refresh_boundary_from_workspace(boundary, wiki_state)
+        write_json(evidence_path, evidence)
+        for artifact in evidence.get("artifacts") or []:
+            if isinstance(artifact, dict) and artifact.get("type") == "ingest_final_source_registration_boundary_json":
+                boundary_path = _resolve_output_artifact(artifact.get("path"))
+                write_json(boundary_path, boundaries[0])
+
+
 def write_paper_draft_workspace_projection_proof(
     payload: dict[str, Any],
     out_path: Path,
@@ -1514,6 +1640,7 @@ def cmd_run_skill(args: argparse.Namespace) -> int:
             output_harness=OUTPUT_HARNESS,
             workspace_rel=output_rel(AUTOSCI_ARTIFACT_ROOT / "workspace"),
         )
+        refresh_ingest_boundaries_after_workspace(payload, workspace_summary)
         skill_run["workspace"] = workspace_summary
         for path in workspace_summary.get("updated_paths", []):
             payload["artifacts"].append({"type": "human_workspace", "path": str(path)})

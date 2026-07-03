@@ -28,6 +28,7 @@ __pycache__/
 **/__pycache__/
 *.pyc
 .venv/
+.uv-cache/
 .pytest_cache/
 node_modules/
 bun.lockb
@@ -84,6 +85,7 @@ harness/config/*.lock
 harness/integrations/*-state.json
 harness/patch.diff
 harness/rss_public
+harness/logs/
 harness/test-dispatch-report.txt
 harness/release/artifacts/
 reports/
@@ -102,10 +104,13 @@ harness/sprints/*-handoff.md
 harness/sprints/*.handoff.md
 harness/sprints/*.traceability.json
 harness/artifacts/autosci/runs/
+harness/artifacts/autosci/workspace/
+harness/artifacts/autosci/webui/
 harness/artifacts/autosci/operator-smoke/
 harness/artifacts/autosci/phase19/current-parity-inventory-*.json
 harness/artifacts/scientific/workflow-runs/
 .solar-backups/
+.worktrees/
 
 # 其他
 paste-cache/

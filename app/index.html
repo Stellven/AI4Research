@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AutoSci Graph</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="toolbar">
+        <div>
+          <h1>AutoSci Graph</h1>
+          <p id="summary">Loading graph data...</p>
+        </div>
+        <label class="search">
+          <span>Search</span>
+          <input id="search" type="search" autocomplete="off">
+        </label>
+      </header>
+      <section class="layout">
+        <svg id="graph" role="img" aria-label="AutoSci research graph"></svg>
+        <aside>
+          <h2>Selected</h2>
+          <pre id="details">N/A</pre>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="./modules/graph.js"></script>
+  </body>
+</html>
