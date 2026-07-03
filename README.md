@@ -167,6 +167,44 @@ GitHub Release creation, release asset upload, tags, and public ref updates.
 Contributors should read [AGENTS.md](AGENTS.md) before editing. Release
 preparation remains owner-gated and uses the maintainer checklist in this repo.
 
+## Appendix: AutoSci Commands
+
+The commands below are implemented in the BetterSolar harness AutoSci
+compatibility layer. Commands marked by their runtime as approval-gated still
+require explicit approval evidence before they perform side effects such as
+remote execution, wiki mutation, serving, reset, compile, or send operations.
+
+| AutoSci command | Function |
+|---|---|
+| `/ask` | Query the projected AutoSci research wiki and return source-linked answers from local workspace evidence. |
+| `/check` | Inspect wiki/workspace health, structure, graph evidence, and optional model-backed quality review signals. |
+| `/daily-arxiv` | Prepare a gated daily arXiv discovery/update workflow with recommendation and optional delivery boundaries. |
+| `/discover` | Discover or shortlist related literature from anchors, topics, venues, live providers, or the local wiki graph. |
+| `/edit` | Plan approval-gated edits to AutoSci wiki/source artifacts, including delete/remove flows. |
+| `/exp-design` | Generate an evidence-linked experiment plan, assumptions, metrics, success criteria, and execution readiness boundary. |
+| `/exp-eval` | Verify claims against experiment results, code evidence, and Review LLM evidence when supplied. |
+| `/exp-pilot-eval` | Evaluate pilot experiment evidence through the pilot claim-verification route. |
+| `/exp-pilot-run` | Prepare an approval-gated pilot experiment run contract and result evidence boundary. |
+| `/exp-run` | Run or collect experiment evidence only when approval/runtime allowlist evidence is present; otherwise emits gated result evidence. |
+| `/exp-status` | Monitor local or approved remote experiment status and produce typed experiment status evidence. |
+| `/ideate` | Extract paper-grounded claims/methods and generate deterministic idea candidates with promotion boundaries. |
+| `/ingest` | Ingest paper/source material, extract text/metadata, project it into the AutoSci workspace, and register graph/memory evidence. |
+| `/init` | Initialize source discovery/setup state and optional introduction/source preparation under approval gates. |
+| `/novelty` | Evaluate idea novelty using local evidence and supplied novelty/review evidence. |
+| `/paper-compile` | Compile or audit paper artifacts through approval-gated publication/LaTeX/PDF evidence paths. |
+| `/paper-draft` | Draft a scientific report or paper from claims, methods, experiment results, and workspace evidence. |
+| `/paper-plan` | Plan a paper/report structure and publication handoff from validated idea, experiment, and review evidence. |
+| `/poster` | Build poster content and render/export artifacts from paper sources through approval-gated poster tooling. |
+| `/prefill` | Approval-gated foundation/concept prefill into the AutoSci wiki/workspace. |
+| `/rebuttal` | Draft rebuttal material from paper context and reviewer-thread evidence, with optional stress-test boundaries. |
+| `/refine` | Plan or execute approval-gated refinement of an artifact with review and iteration controls. |
+| `/research` | Dispatch the Solar scientific research lifecycle scheduler and record typed lifecycle/gate evidence. |
+| `/reset` | Plan or execute approval-gated cleanup/reset of wiki, raw, log, checkpoint, or all AutoSci scopes. |
+| `/review` | Review artifacts with deterministic checks and optional Review LLM evidence. |
+| `/setup` | Report setup/readiness status and gated setup actions for AutoSci runtime surfaces. |
+| `/survey` | Generate a survey-style writeup from discovered/cited paper evidence. |
+| `/visualize` | Generate AutoSci graph visualization artifacts, including Obsidian graph config, canvas, and web graph JSON; serving remains approval-gated. |
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
