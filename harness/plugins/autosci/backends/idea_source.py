@@ -113,9 +113,14 @@ def _wiki_roots(inputs: dict[str, Any], workspace_root: Path, repository_root: P
     return out
 
 
-def _load_wiki_sources(inputs: dict[str, Any], workspace_root: Path, repository_root: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _load_wiki_sources(
+    inputs: dict[str, Any],
+    workspace_root: Path,
+    repository_root: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     sources: list[dict[str, Any]] = []
     failed_ideas: list[dict[str, Any]] = []
+    active_ideas: list[dict[str, Any]] = []
     for root in _wiki_roots(inputs, workspace_root, repository_root):
         for group in ("papers", "methods", "concepts", "topics", "ideas"):
             for path in sorted((root / group).glob("*.md")):
@@ -135,8 +140,11 @@ def _load_wiki_sources(inputs: dict[str, Any], workspace_root: Path, repository_
                     "failure_reason": fm.get("failure_reason", ""),
                 }
                 sources.append(source)
-                if group == "ideas" and source["status"] == "failed":
-                    failed_ideas.append(source)
+                if group == "ideas":
+                    if source["status"] == "failed":
+                        failed_ideas.append(source)
+                    else:
+                        active_ideas.append(source)
         for rel in ("graph/open_questions.md", "graph/context_brief.md"):
             path = root / rel
             text = _read_text(path)
@@ -152,7 +160,7 @@ def _load_wiki_sources(inputs: dict[str, Any], workspace_root: Path, repository_
                         "failure_reason": "",
                     }
                 )
-    return sources, failed_ideas
+    return sources, failed_ideas, active_ideas
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:
@@ -220,24 +228,25 @@ def collect_idea_sources(
     workspace_root: Path,
     repository_root: Path,
 ) -> dict[str, Any]:
-    wiki_sources, failed_ideas = _load_wiki_sources(inputs, workspace_root, repository_root)
+    wiki_sources, failed_ideas, active_ideas = _load_wiki_sources(inputs, workspace_root, repository_root)
     discovery_sources = _load_discovery_sources(inputs, workspace_root)
     source_mode = "mixed" if wiki_sources and discovery_sources else "discovery" if discovery_sources else "wiki" if wiki_sources else "missing"
     return {
         "wiki_sources": wiki_sources,
         "discovery_sources": discovery_sources,
         "failed_ideas": failed_ideas,
+        "active_ideas": active_ideas,
         "sources": [*discovery_sources, *wiki_sources],
         "source_mode": source_mode,
     }
 
 
-def _overlaps_failed(candidate_title: str, failed_ideas: list[dict[str, Any]]) -> tuple[bool, str]:
+def _overlaps_known(candidate_title: str, ideas: list[dict[str, Any]]) -> tuple[bool, str]:
     title_tokens = _tokens(candidate_title)
-    for failed in failed_ideas:
-        failed_text = f"{failed.get('title', '')} {failed.get('failure_reason', '')}"
-        if title_tokens and len(title_tokens & _tokens(failed_text)) >= 2:
-            return True, str(failed.get("id") or failed.get("title") or "failed-idea")
+    for idea in ideas:
+        idea_text = f"{idea.get('title', '')} {idea.get('failure_reason', '')} {idea.get('summary', '')}"
+        if title_tokens and len(title_tokens & _tokens(idea_text)) >= 2:
+            return True, str(idea.get("id") or idea.get("title") or "known-idea")
     return False, ""
 
 
@@ -245,8 +254,15 @@ def _sources_of_kind(sources: list[dict[str, Any]], kind: str) -> list[dict[str,
     return [source for source in sources if str(source.get("kind") or "") == kind]
 
 
-def _candidate_status(title: str, failed_ideas: list[dict[str, Any]]) -> tuple[str, str, str]:
-    duplicate, duplicate_of = _overlaps_failed(title, failed_ideas)
+def _candidate_status(
+    title: str,
+    failed_ideas: list[dict[str, Any]],
+    active_ideas: list[dict[str, Any]],
+) -> tuple[str, str, str]:
+    duplicate, duplicate_of = _overlaps_known(title, failed_ideas)
+    if duplicate:
+        return "filtered", "duplicate", duplicate_of
+    duplicate, duplicate_of = _overlaps_known(title, active_ideas)
     return ("filtered" if duplicate else "candidate", "duplicate" if duplicate else "new", duplicate_of)
 
 
@@ -278,6 +294,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
     wiki_sources = list(source_bundle["wiki_sources"])
     discovery_sources = list(source_bundle["discovery_sources"])
     failed_ideas = list(source_bundle["failed_ideas"])
+    active_ideas = list(source_bundle["active_ideas"])
     sources = list(source_bundle["sources"])
     if not sources:
         return {
@@ -301,6 +318,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
                 "wiki_source_count": 0,
                 "discovery_source_count": 0,
                 "failed_idea_count": 0,
+                "active_idea_count": 0,
                 "source_ids": [],
                 "source_refs": [],
             },
@@ -312,7 +330,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
     source_mode = str(source_bundle["source_mode"])
     title_topic = topic if topic and topic != "research workflow" else str(primary["title"])
     title = f"Close the evidence gap around {title_topic[:80]}"
-    status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas)
+    status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas, active_ideas)
     ideas = [
         {
             "idea_id": "idea-wiki-discovery-001",
@@ -338,7 +356,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
     if methods:
         method = methods[0]
         title = f"Patch a limitation in {method['title'][:72]}"
-        status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas)
+        status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas, active_ideas)
         ideas.append(
             {
                 "idea_id": "idea-method-incremental-001",
@@ -363,7 +381,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
     if len(methods) >= 2:
         first, second = methods[0], methods[1]
         title = f"Combine {first['title'][:36]} with {second['title'][:36]}"
-        status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas)
+        status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas, active_ideas)
         ideas.append(
             {
                 "idea_id": "idea-method-combination-001",
@@ -386,7 +404,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
             }
         )
         title = f"Break a shared assumption behind {first['title'][:48]}"
-        status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas)
+        status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas, active_ideas)
         ideas.append(
             {
                 "idea_id": "idea-method-innovation-001",
@@ -411,7 +429,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
     if len(sources) >= 3:
         third = sources[2]
         title = f"Stress-test method transfer from {primary['title'][:48]}"
-        status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas)
+        status, duplicate_status, duplicate_of = _candidate_status(title, failed_ideas, active_ideas)
         ideas.append(
             {
                 "idea_id": "idea-wiki-discovery-002",
@@ -446,6 +464,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
             "wiki_source_count": len(wiki_sources),
             "discovery_source_count": len(discovery_sources),
             "failed_idea_count": len(failed_ideas),
+            "active_idea_count": len(active_ideas),
             "source_mode": source_mode,
             "source_ids": _unique_strings([str(source.get("id") or "") for source in sources]),
             "source_refs": _unique_strings([str(source.get("path") or "") for source in sources]),

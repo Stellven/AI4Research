@@ -14,6 +14,55 @@ from autosci_runtime_proof import utc_now, write_runtime_proof_manifest
 
 SCHEMA = "autosci_semantic_parity_runtime_proof_cli.v1"
 AUDIT_SCHEMA = "autosci_semantic_parity_audit.v1"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def configured_autosci_repo() -> Path:
+    for key in ("AUTOSCI_REPO", "AUTOSCI_NATIVE_REPO", "NATIVE_AUTOSCI_REPO"):
+        value = str(os.environ.get(key) or "").strip()
+        if value:
+            return Path(value).expanduser()
+    return REPO_ROOT.parent / "AutoSci"
+
+
+def configured_evidence_roots() -> list[Path]:
+    roots: list[Path] = []
+    if os.environ.get("HARNESS_DIR"):
+        roots.append(Path(os.environ["HARNESS_DIR"]).expanduser())
+    roots.extend([REPO_ROOT, Path.cwd()])
+    for raw in str(os.environ.get("SOLAR_AUTOSCI_EVIDENCE_ROOTS") or "").split(os.pathsep):
+        value = raw.strip()
+        if value:
+            roots.append(Path(value).expanduser())
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(root)
+    return deduped
+
+
+def native_repo_ref_candidate(path: Path) -> Path | None:
+    parts = list(path.parts)
+    if "AutoSci" not in parts:
+        return None
+    index = parts.index("AutoSci")
+    tail = parts[index + 1 :]
+    if not tail:
+        return configured_autosci_repo()
+    return configured_autosci_repo() / Path(*tail)
+
+
+def evidence_root_candidates(root: Path, path: Path) -> list[Path]:
+    candidates = [root / path]
+    if path.parts and path.parts[0] == "harness" and root.name == "harness":
+        candidates.append(root / Path(*path.parts[1:]))
+    if path.parts and path.parts[0] == "artifacts" and root.name != "harness":
+        candidates.append(root / "harness" / path)
+    return candidates
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -36,18 +85,16 @@ def resolve_ref(ref: str, *, audit_path: Path) -> Path | None:
     path = Path(text)
     if path.is_absolute():
         return path
-    roots = [
-        Path(os.environ["HARNESS_DIR"]) if os.environ.get("HARNESS_DIR") else None,
-        audit_path.parent,
-        Path.cwd(),
-    ]
-    for root in roots:
-        if root is None:
-            continue
-        candidate = root / path
+    candidates = [audit_path.parent / path]
+    native_candidate = native_repo_ref_candidate(path)
+    if native_candidate is not None:
+        candidates.append(native_candidate)
+    for root in configured_evidence_roots():
+        candidates.extend(evidence_root_candidates(root, path))
+    for candidate in candidates:
         if candidate.exists():
             return candidate
-    return (roots[0] or Path.cwd()) / path
+    return candidates[0]
 
 
 def audit_timestamp(payload: dict[str, Any]) -> str:

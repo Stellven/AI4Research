@@ -99,6 +99,14 @@ def test_side_effect_root_tools_emit_truthful_non_mutating_evidence(tmp_path: Pa
     assert serve["node_count"] >= 1
     assert serve["edge_count"] == 0
 
+    serve_probe = payload(run_tool("serve.py", "--wiki-root", str(wiki), "--probe-server", "--port", "0"))
+    assert serve_probe["schema"] == "autosci_serve_cli.v1"
+    assert serve_probe["status"] == "completed"
+    assert serve_probe["ok"] is True
+    assert serve_probe["server_started"] is True
+    assert serve_probe["server_stopped"] is True
+    assert serve_probe["health"]["ok"] is True
+
     dag_out = tmp_path / "dag.json"
     dag = payload(run_tool("wiki2dag.py", "build", "--wiki-root", str(wiki), "--out", str(dag_out)))
     assert dag["schema"] == "autosci_wiki_dag.v1"
@@ -106,7 +114,7 @@ def test_side_effect_root_tools_emit_truthful_non_mutating_evidence(tmp_path: Pa
     assert dag_out.exists()
 
     poster_out = tmp_path / "poster.html"
-    poster = payload(run_tool("poster.py", "build", "--out", str(poster_out), "--title", "SkillGen"))
+    poster = payload(run_tool("poster.py", "build", "--compat-scaffold", "--out", str(poster_out), "--title", "SkillGen"))
     assert poster["schema"] == "autosci_poster_cli.v1"
     assert poster["status"] == "completed"
     validate = payload(run_tool("poster.py", "validate", str(poster_out)))
@@ -119,7 +127,7 @@ def test_side_effect_root_tools_emit_truthful_non_mutating_evidence(tmp_path: Pa
 
 def test_poster_tool_executes_approved_render_export(tmp_path: Path) -> None:
     poster_html = tmp_path / "poster.html"
-    poster = payload(run_tool("poster.py", "build", "--out", str(poster_html), "--title", "SkillGen"))
+    poster = payload(run_tool("poster.py", "build", "--compat-scaffold", "--out", str(poster_html), "--title", "SkillGen"))
     assert poster["status"] == "completed"
 
     renderer = tmp_path / "poster_renderer.py"

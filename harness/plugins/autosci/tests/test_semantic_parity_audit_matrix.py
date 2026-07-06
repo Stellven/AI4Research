@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -52,8 +53,12 @@ def run_matrix(
     wrapper_root: Path,
     route_config: Path,
     *extra: str,
+    extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     out_dir = tmp_path / "semantic-audits"
+    env = dict(os.environ)
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         [
             sys.executable,
@@ -70,6 +75,7 @@ def run_matrix(
             *extra,
         ],
         cwd=REPO,
+        env=env,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -196,3 +202,55 @@ def test_full_assessment_with_nonpassing_check_is_blocked_and_downgraded(tmp_pat
     assert audit["semantic_parity"] == "partial"
     checks = {check["check"]: check["status"] for check in audit["acceptance_checks"]}
     assert checks["full_semantic_assessment_guard"] == "blocked"
+
+
+def test_full_assessment_resolves_configured_native_and_evidence_roots(tmp_path: Path) -> None:
+    autosci_repo, wrapper_root, route_config, _native_skill = write_fixture(tmp_path)
+    evidence_root = tmp_path / "external-evidence-root"
+    solar_runtime = evidence_root / "harness/artifacts/runtime/ask/solar-ask.json"
+    solar_runtime.parent.mkdir(parents=True)
+    solar_runtime.write_text('{"route": "ask", "status": "verified"}\n', encoding="utf-8")
+    assessment = tmp_path / "assessment.json"
+    assessment.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_semantic_parity_assessment.v1",
+                "assessments": {
+                    "ask": {
+                        "semantic_parity": "full",
+                        "auditor": "unit-semantic-auditor",
+                        "additional_native_evidence_refs": ["../AutoSci/i18n/en/skills/ask/SKILL.md"],
+                        "additional_solar_evidence_refs": ["harness/artifacts/runtime/ask/solar-ask.json"],
+                        "acceptance_checks": [
+                            {
+                                "check": "native_command_surface",
+                                "status": "ok",
+                                "evidence_refs": ["../AutoSci/i18n/en/skills/ask/SKILL.md"],
+                            },
+                            {
+                                "check": "solar_route_behavior",
+                                "status": "passed",
+                                "evidence_refs": ["harness/artifacts/runtime/ask/solar-ask.json"],
+                            },
+                        ],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    proc = run_matrix(
+        tmp_path,
+        autosci_repo,
+        wrapper_root,
+        route_config,
+        "--assessment-json",
+        str(assessment),
+        extra_env={"SOLAR_AUTOSCI_EVIDENCE_ROOTS": str(evidence_root)},
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["semantic_full_count"] == 1
+    audit = json.loads((tmp_path / "semantic-audits/ask.semantic-audit.json").read_text(encoding="utf-8"))
+    assert audit["semantic_parity"] == "full"
+    assert "full_semantic_assessment_guard" not in {check["check"] for check in audit["acceptance_checks"]}

@@ -139,7 +139,6 @@ def test_wiki_mutation_runtime_proof_tool_is_exposed_for_wiki_mutation_routes() 
         "edit",
         "exp-eval",
         "exp-pilot-eval",
-        "exp-pilot-run",
         "exp-run",
         "ingest",
         "init",
@@ -148,3 +147,7 @@ def test_wiki_mutation_runtime_proof_tool_is_exposed_for_wiki_mutation_routes() 
     }
     for skill in expected:
         assert "tools/wiki_mutation_runtime_proof.py from-writeback" in routes[skill]["primary_tools"]
+
+    exp_pilot_run = routes["exp-pilot-run"]
+    assert "does not mutate wiki pages" in " ".join(exp_pilot_run["limitations"])
+    assert "tools/wiki_mutation_runtime_proof.py from-writeback" not in exp_pilot_run["primary_tools"]

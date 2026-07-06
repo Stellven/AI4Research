@@ -29,7 +29,7 @@ Keep the AutoSci subcommand explicit and quote the dollar command in shell conte
 
 - Solar capability: `cap.research-literature-discover`
 - Backend action: `discover_literature`
-- Coverage status: `full`
+- Coverage status: `partial`
 - Side-effect policy: `none`
 
 ## Supported AutoSci-Compatible Arguments
@@ -62,3 +62,5 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 
 - Live API failures must be represented as incomplete source evidence rather than synthetic recommendations.
 - If Semantic Scholar or Paper Copilot access is unavailable, the run must emit inconclusive evidence rather than local fixture candidates.
+- Root-aware parity may recognize local wiki/source-backed discovery as full only when a completed semantic audit and runtime proof are loaded; the base route config remains partial.
+- Local wiki source proof must use `native_autosci_replay` runtime proof mode, not `live_provider`.

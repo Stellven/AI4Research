@@ -105,6 +105,34 @@ human_prefix() {
 
 ensure_dirs() { mkdir -p "$SPRINTS_DIR" "$HARNESS_DIR/personas" "$HARNESS_DIR/templates"; }
 
+load_workdir_dotenv() {
+  local work_dir="${1:-$(pwd)}"
+  local env_file="$work_dir/.env"
+  [[ -f "$env_file" ]] || return 0
+  local line key value
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if [[ "$line" == export[[:space:]]* ]]; then
+      line="${line#export}"
+      line="${line#"${line%%[![:space:]]*}"}"
+    fi
+    [[ "$line" == *=* ]] || continue
+    key="${line%%=*}"
+    value="${line#*=}"
+    key="${key//[[:space:]]/}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    value="${value#"${value%%[![:space:]]*}"}"
+    if [[ "$value" == \"*\" && "$value" == *\" && "${#value}" -ge 2 ]]; then
+      value="${value:1:${#value}-2}"
+    elif [[ "$value" == \'*\' && "$value" == *\' && "${#value}" -ge 2 ]]; then
+      value="${value:1:${#value}-2}"
+    fi
+    export "$key=$value"
+  done < "$env_file"
+}
+
 # Fix 4 (clean-cockpit-start): reset stale runtime coordination state that otherwise
 # carries across restarts and walls fresh runs — a needs_respawn hygiene latch, stale
 # pane leases, stale pane assignments, and the fire-once drafting/builder dispatch
@@ -963,6 +991,8 @@ start_harness() {
   local mode="${1:-3}"
   local work_dir="${2:-$(pwd)}"
   local skip_doctor="${3:-}"
+
+  load_workdir_dotenv "$work_dir"
 
   # Fix 4: clean-start opt-in for an ALREADY-RUNNING cockpit (a fresh session always
   # resets). Triggered by SOLAR_HARNESS_CLEAN_START=1 or a --clean argument.
@@ -3218,6 +3248,7 @@ do_runtime_selector_command() {
 
 do_autosci_command() {
   local script_harness_dir shim py candidate command_text
+  load_workdir_dotenv "$(pwd)"
   script_harness_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   shim="$script_harness_dir/plugins/autosci/bin/autosci_skill_shim.py"
   if [[ ! -f "$shim" ]]; then

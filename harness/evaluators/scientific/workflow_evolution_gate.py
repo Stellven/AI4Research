@@ -48,17 +48,19 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
         reasons.append("outputs.evolution must be an object")
         return finish(payload, reasons, warnings, path=path)
     applied_refine = _approved_refine_application(evolution, payload)
+    applied_control = _approved_control_application(evolution, payload)
+    applied_verified = applied_refine or applied_control
     if not has_any_evidence_ids(evolution.get("evidence_ids")):
         reasons.append("outputs.evolution.evidence_ids must contain at least one id")
     if evolution.get("approval_state") in {"approved", "applied"} and not (
         evolution.get("approval_ref") or (isinstance(evolution.get("review"), dict) and evolution["review"].get("approval_ref"))
     ):
         reasons.append("approved or applied workflow evolution requires approval_ref")
-    if evolution.get("approval_state") == "applied" and not applied_refine:
-        reasons.append("applied workflow evolution requires verified refine_apply evidence")
-    _check_collected_evidence(evolution, reasons, applied_refine=applied_refine)
-    _check_proposals(evolution, reasons, applied_refine=applied_refine)
-    _check_review_controls(evolution, reasons, applied_refine=applied_refine)
+    if evolution.get("approval_state") == "applied" and not applied_verified:
+        reasons.append("applied workflow evolution requires verified refine_apply or approved control runtime evidence")
+    _check_collected_evidence(evolution, reasons, applied_control=applied_verified)
+    _check_proposals(evolution, reasons, applied_control=applied_verified)
+    _check_review_controls(evolution, reasons, applied_control=applied_verified)
     _check_recommended_changes_artifact(payload, reasons)
     _check_patch_candidates_artifact(payload, reasons)
     check_artifact_paths(payload, path, reasons)
@@ -90,7 +92,40 @@ def _approved_refine_application(evolution: dict[str, Any], payload: dict[str, A
     )
 
 
-def _check_collected_evidence(evolution: dict[str, Any], reasons: list[str], *, applied_refine: bool = False) -> None:
+def _approved_control_application(evolution: dict[str, Any], payload: dict[str, Any]) -> bool:
+    review = evolution.get("review")
+    if not isinstance(review, dict):
+        return False
+    setup_execution = review.get("setup_config_execution")
+    if not isinstance(setup_execution, dict):
+        return False
+    artifacts = payload.get("artifacts")
+    artifact_types: set[str] = set()
+    if isinstance(artifacts, list):
+        for artifact in artifacts:
+            if isinstance(artifact, dict):
+                artifact_types.add(str(artifact.get("type") or ""))
+    required = {
+        "approval_contract_json",
+        "setup_after_snapshot_json",
+        "setup_config_runtime_evidence_json",
+        "approval_runtime_proof_manifest_json",
+        "side_effect_runtime_proof_manifest_json",
+    }
+    return (
+        evolution.get("approval_state") == "applied"
+        and review.get("approval_contract_verified") is True
+        and bool(str(review.get("approval_ref") or "").strip())
+        and review.get("protected_core_edits_applied") is True
+        and review.get("human_accept_reject_required") is False
+        and str(review.get("application_state") or "") == "applied"
+        and setup_execution.get("executed") is True
+        and setup_execution.get("secret_values_recorded") is False
+        and required.issubset(artifact_types)
+    )
+
+
+def _check_collected_evidence(evolution: dict[str, Any], reasons: list[str], *, applied_control: bool = False) -> None:
     collected = evolution.get("collected")
     if not isinstance(collected, dict):
         reasons.append("outputs.evolution.collected must be an object")
@@ -98,7 +133,7 @@ def _check_collected_evidence(evolution: dict[str, Any], reasons: list[str], *, 
     for key in COLLECTION_KEYS:
         if not isinstance(collected.get(key), list):
             reasons.append(f"outputs.evolution.collected.{key} must be a list")
-    failed_nodes = collected.get("failed_nodes") if applied_refine else require_non_empty_list(
+    failed_nodes = collected.get("failed_nodes") if applied_control else require_non_empty_list(
         collected.get("failed_nodes"),
         "outputs.evolution.collected.failed_nodes",
         reasons,
@@ -116,7 +151,7 @@ def _check_collected_evidence(evolution: dict[str, Any], reasons: list[str], *, 
         reasons.append("workflow evolution requires gate rejection reasons or runtime errors")
 
 
-def _check_proposals(evolution: dict[str, Any], reasons: list[str], *, applied_refine: bool = False) -> None:
+def _check_proposals(evolution: dict[str, Any], reasons: list[str], *, applied_control: bool = False) -> None:
     proposals = require_non_empty_list(
         evolution.get("proposed_changes"),
         "outputs.evolution.proposed_changes",
@@ -136,11 +171,11 @@ def _check_proposals(evolution: dict[str, Any], reasons: list[str], *, applied_r
                 reasons.append(f"proposed_changes[{index}].{field} must be present")
         if proposal.get("review_required") is not True:
             reasons.append(f"proposed_changes[{index}].review_required must be true")
-        allowed_states = {"proposed_only", "not_applied", "applied"} if applied_refine else {"proposed_only", "not_applied"}
+        allowed_states = {"proposed_only", "not_applied", "applied"} if applied_control else {"proposed_only", "not_applied"}
         if str(proposal.get("application_state") or "") not in allowed_states:
             reasons.append(
                 f"proposed_changes[{index}].application_state must be "
-                + ("proposed_only, not_applied, or applied" if applied_refine else "proposed_only or not_applied")
+                + ("proposed_only, not_applied, or applied" if applied_control else "proposed_only or not_applied")
             )
         if not has_any_evidence_ids(proposal.get("evidence_ids")):
             reasons.append(f"proposed_changes[{index}].evidence_ids must contain at least one id")
@@ -150,12 +185,12 @@ def _check_proposals(evolution: dict[str, Any], reasons: list[str], *, applied_r
         reasons.append("proposed_changes must separate at least one schema or gate change")
 
 
-def _check_review_controls(evolution: dict[str, Any], reasons: list[str], *, applied_refine: bool = False) -> None:
+def _check_review_controls(evolution: dict[str, Any], reasons: list[str], *, applied_control: bool = False) -> None:
     review = evolution.get("review")
     if not isinstance(review, dict):
         reasons.append("outputs.evolution.review must be an object")
         return
-    if applied_refine:
+    if applied_control:
         return
     if review.get("human_accept_reject_required") is not True:
         reasons.append("outputs.evolution.review.human_accept_reject_required must be true")

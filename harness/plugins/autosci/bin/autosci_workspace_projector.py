@@ -49,6 +49,39 @@ def write_text_if_changed(path: Path, content: str) -> bool:
     return True
 
 
+def wiki_open_question_lines(root: Path) -> list[str]:
+    gaps: list[str] = []
+    collect_wiki_section_items(root / "papers", "Open questions", gaps, "paper")
+    collect_wiki_section_items(root / "topics", "Open problems", gaps, "topic")
+    collect_wiki_section_items(root / "concepts", "Open problems", gaps, "concept")
+    return gaps
+
+
+def collect_wiki_section_items(directory: Path, section_name: str, out: list[str], source_type: str) -> None:
+    if not directory.exists():
+        return
+    for path in sorted(directory.glob("*.md")):
+        content = path.read_text(encoding="utf-8", errors="replace")
+        in_section = False
+        for line in content.splitlines():
+            if re.match(rf"^##\s+{re.escape(section_name)}\s*$", line, re.IGNORECASE):
+                in_section = True
+                continue
+            if in_section and line.startswith("## "):
+                break
+            if in_section and line.lstrip().startswith(("- ", "* ")):
+                bullet = line.lstrip()[2:].strip()
+                if bullet:
+                    out.append(f"- [{source_type}:{path.stem}] {bullet}")
+
+
+def render_open_questions(root: Path) -> str:
+    gap_lines = wiki_open_question_lines(root)
+    body = "# Gap Map\n\n_Auto-generated open questions. Do not edit._\n\n"
+    body += "\n".join(gap_lines) + "\n" if gap_lines else "_No gaps detected yet._\n"
+    return body
+
+
 def slugify(value: str, *, fallback: str = "item") -> str:
     raw = value.strip().lower()
     slug = re.sub(r"[^a-z0-9]+", "-", raw).strip("-")
@@ -261,6 +294,26 @@ def project_ideas(run_dir: Path, wiki: Path, output_harness: Path, run_id: str) 
         return []
 
     updated: list[Path] = []
+    graph_dir = wiki / "graph"
+    edges_path = graph_dir / "edges.jsonl"
+    existing_edges: set[str] = set()
+    if edges_path.exists():
+        existing_edges = {line.strip() for line in edges_path.read_text(encoding="utf-8").splitlines() if line.strip()}
+    pilot_boundary = {}
+    for artifact in payload.get("artifacts") or []:
+        if not isinstance(artifact, dict) or artifact.get("type") != "ideate_pilot_handoff_boundary_json":
+            continue
+        raw_path = str(artifact.get("path") or "").strip()
+        if not raw_path:
+            continue
+        candidate = Path(raw_path)
+        if not candidate.is_absolute():
+            candidate = output_harness / raw_path
+        pilot_boundary = load_json_if_exists(candidate) or {}
+        break
+    pilot_ready = bool(pilot_boundary.get("pilot_handoff_ready"))
+    pilot_evidence_ids = [str(item) for item in pilot_boundary.get("evidence_ids") or [] if str(item).strip()]
+    new_edges: list[str] = []
     for idea in ideas:
         if not isinstance(idea, dict):
             continue
@@ -285,6 +338,41 @@ def project_ideas(run_dir: Path, wiki: Path, output_harness: Path, run_id: str) 
         )
         if write_text_if_changed(page, content):
             updated.append(page)
+        source_ref = f"ideas/{page.name}"
+        for origin in idea.get("origin_evidence_ids") or []:
+            target = str(origin).strip()
+            if not target:
+                continue
+            edge = {
+                "source": source_ref,
+                "target": target,
+                "relation": "generated_from",
+                "run_id": run_id,
+                "source_evidence": evidence_link(evidence_path, output_harness),
+            }
+            line = json.dumps(edge, sort_keys=True)
+            if line not in existing_edges:
+                existing_edges.add(line)
+                new_edges.append(line)
+        if pilot_ready:
+            for evidence_id in pilot_evidence_ids or ["pilot_handoff"]:
+                edge = {
+                    "source": source_ref,
+                    "target": evidence_id,
+                    "relation": "has_pilot_handoff",
+                    "run_id": run_id,
+                    "source_evidence": evidence_link(evidence_path, output_harness),
+                }
+                line = json.dumps(edge, sort_keys=True)
+                if line not in existing_edges:
+                    existing_edges.add(line)
+                    new_edges.append(line)
+    if new_edges:
+        edges_path.parent.mkdir(parents=True, exist_ok=True)
+        with edges_path.open("a", encoding="utf-8") as handle:
+            for line in new_edges:
+                handle.write(line + "\n")
+        updated.append(edges_path)
     return updated
 
 
@@ -966,7 +1054,7 @@ def project_graph(run_dir: Path, wiki: Path, output_harness: Path, run_id: str) 
     if write_text_if_changed(graph_dir / "context_brief.md", context_brief):
         updated.append(graph_dir / "context_brief.md")
 
-    open_questions = "# Open Questions\n\n- Pending explicit research questions from future Solar AutoSci runs.\n"
+    open_questions = render_open_questions(wiki)
     if write_text_if_changed(graph_dir / "open_questions.md", open_questions):
         updated.append(graph_dir / "open_questions.md")
     return updated
@@ -1039,6 +1127,7 @@ def project_run_to_workspace(
     *,
     output_harness: Path,
     workspace_rel: str = WORKSPACE_REL,
+    include_idea_pages: bool = True,
 ) -> dict[str, Any]:
     payload = load_json(skill_run_path)
     inputs = payload.get("inputs", {})
@@ -1052,7 +1141,8 @@ def project_run_to_workspace(
     updated.extend(project_paper(run_dir, wiki, output_harness, run_id))
     updated.extend(project_methods(run_dir, wiki, output_harness, run_id))
     updated.extend(project_claims_output(run_dir, wiki, output_harness, run_id))
-    updated.extend(project_ideas(run_dir, wiki, output_harness, run_id))
+    if include_idea_pages:
+        updated.extend(project_ideas(run_dir, wiki, output_harness, run_id))
     updated.extend(project_discovery_summary(run_dir, wiki, output_harness, run_id))
     updated.extend(project_review_summary(run_dir, wiki, output_harness, run_id))
     updated.extend(project_ideas_summary(run_dir, wiki, output_harness, run_id))
@@ -1078,5 +1168,6 @@ def project_run_to_workspace(
         "updated_count": len(updated_unique),
         "updated_paths": [artifact_path(path) for path in updated_unique],
         "index_path": artifact_path(wiki / "index.md"),
+        "include_idea_pages": include_idea_pages,
         "policy": "human-facing workspace projection; execution logs remain Solar-managed",
     }

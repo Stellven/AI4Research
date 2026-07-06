@@ -29,7 +29,7 @@ Keep the AutoSci subcommand explicit and quote the dollar command in shell conte
 
 - Solar capability: `cap.research-idea-generate`
 - Backend action: `generate_ideas`
-- Coverage status: `full`
+- Coverage status: `partial`
 - Side-effect policy: `dry_run_only`
 
 ## Human-Facing Outputs
@@ -45,3 +45,5 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 ## Limitations
 
 - Pilot execution remains a separate approval-gated route.
+- Root-aware parity may recognize supplied-evidence ideation as full only when the Phase19 semantic audit/proof is loaded.
+- Static route config remains partial until source grounding, model brainstorm provenance, novelty/review gates, approved writeback, and pilot skip/handoff are all proven by typed evidence.

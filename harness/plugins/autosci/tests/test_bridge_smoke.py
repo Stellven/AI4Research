@@ -27,6 +27,7 @@ def run_bridge(args: list[str], tmp_path: Path) -> subprocess.CompletedProcess[s
 def test_help_lists_required_actions(tmp_path: Path) -> None:
     proc = run_bridge(["run", "--help"], tmp_path)
     assert proc.returncode == 0, proc.stderr
+    assert "--gate-mode" in proc.stdout
     for action in [
         "discover_literature",
         "ingest_paper",
@@ -98,6 +99,67 @@ def test_phase9_ingest_writes_foundation_sidecars(tmp_path: Path) -> None:
         payload = json.loads((tmp_path / rel_path).read_text(encoding="utf-8"))
         assert payload["schema"] == schema
         assert payload["status"] == "completed"
+
+
+def test_phase9_ingest_registration_boundary_does_not_require_log_entry(tmp_path: Path) -> None:
+    source = tmp_path / "raw" / "registered_skillgen.md"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "# Registered SkillGen Source\n\n"
+        "## Abstract\n\n"
+        "This source is already represented in the wiki paper page and graph.\n\n"
+        "## Method\n\n"
+        "It verifies that log.md is optional registration evidence.\n",
+        encoding="utf-8",
+    )
+    wiki_root = tmp_path / "wiki"
+    (wiki_root / "papers").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    (wiki_root / "papers" / "registered-skillgen-source.md").write_text(
+        "# Registered SkillGen Source\n\nPaper id: `paper-registered-skillgen-source`.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "graph" / "edges.jsonl").write_text(
+        json.dumps({"edge_type": "source_candidate_ingested", "target": "Registered SkillGen Source"}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "index.md").write_text("# Wiki\n\n## Papers\n\n- Registered SkillGen Source\n", encoding="utf-8")
+    (wiki_root / "graph" / "context_brief.md").write_text("# Context\n\nRegistered source context.\n", encoding="utf-8")
+    envelope = tmp_path / "envelope.ingest.no-log.json"
+    envelope.write_text(
+        json.dumps(
+            {
+                "task_id": "task-ingest-no-log",
+                "sprint_id": "sprint-phase20",
+                "node_id": "node-ingest-no-log",
+                "mode": "fixture",
+                "output_dir": "artifacts/scientific/no-log",
+                "inputs": {"paper_path": str(source), "wiki_root": str(wiki_root)},
+                "outputs": {
+                    "result_path": "artifacts/scientific/no-log/ingest_paper.result.json",
+                    "evidence_payload_path": "artifacts/scientific/no-log/research_paper.json",
+                    "evidence_jsonl": "artifacts/scientific/no-log/evidence.jsonl",
+                    "memory_update_path": "artifacts/scientific/no-log/research_memory_update.json",
+                    "graph_update_path": "artifacts/scientific/no-log/research_graph_update.json",
+                    "ingest_final_source_registration_boundary_path": "artifacts/scientific/no-log/ingest_final_source_registration_boundary.json",
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    proc = run_bridge(["run", "--action", "ingest_paper", "--envelope", str(envelope)], tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    payload = json.loads((tmp_path / out["evidence_path"]).read_text(encoding="utf-8"))
+    boundary = payload["outputs"]["final_source_registration_boundary"]
+    assert boundary["wiki_registration"]["log_registered"] is False
+    assert boundary["wiki_registration_ready"] is True
+    assert boundary["status"] == "ingest_source_registration_ready"
+    assert boundary["missing"] == []
 
 
 def test_phase9_analyze_paper_preserves_analysis(tmp_path: Path) -> None:

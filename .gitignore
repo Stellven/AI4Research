@@ -3,6 +3,7 @@ secrets/
 *.key
 *.pem
 *.env
+.env
 .env*
 *_secret*
 *_private*
@@ -108,6 +109,7 @@ harness/artifacts/autosci/workspace/
 harness/artifacts/autosci/webui/
 harness/artifacts/autosci/operator-smoke/
 harness/artifacts/autosci/phase19/current-parity-inventory-*.json
+harness/harness/
 harness/artifacts/scientific/workflow-runs/
 .solar-backups/
 .worktrees/

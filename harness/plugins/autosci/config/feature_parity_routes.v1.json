@@ -134,11 +134,11 @@
         "ranking signals",
         "source manifest"
       ],
-      "limitations": [
-        "Live API failures must be represented as incomplete source evidence rather than synthetic recommendations.",
-        "Root discover CLI now covers topic, anchor, wiki, and venue modes; source runtime completion requires a non-fixture provider channel boundary, and discover_final_shortlist_boundary requires non-empty candidates backed by provider source channels; keep partial until live/wiki source evidence produces completed shortlist evidence under real provider conditions."
-      ]
-    },
+            "limitations": [
+                "Live API failures must be represented as incomplete source evidence rather than synthetic recommendations.",
+                "Root discover CLI now covers topic, anchor, wiki, and venue modes; source runtime completion requires a non-placeholder source channel boundary, and discover_final_shortlist_boundary requires non-empty candidates backed by provider or local wiki source channels. Live provider proof remains optional/provider-mode; local wiki source proof must not be labeled as live_provider."
+            ]
+        },
     {
       "native_skill": "edit",
       "autosci_command": "/edit",
@@ -198,7 +198,7 @@
         "artifact plan"
       ],
       "limitations": [
-        "Current experiment design path emits evidence-linked local plans, can attach Review LLM design validation, and now records experiment_design_final_execution_boundary requiring resolved target evidence, completed Review LLM validation, approval preflight, command handoff, and expected artifact handoff before a plan is executable; full parity still requires native runtime artifact discovery and end-to-end approved execution audit."
+        "Current experiment design path emits evidence-linked local plans, can attach Review LLM design validation, and records experiment_design_final_execution_boundary requiring resolved target evidence, completed Review LLM validation, approval preflight, command handoff, and expected artifact handoff before a plan is execution-ready. Local design-readiness proof is wired, but native experiment wiki page writes, master design document creation, graph edge projection, context/open-question rebuilds, and end-to-end approved execution audit remain partial."
       ]
     },
     {
@@ -273,22 +273,21 @@
       "backend_mode": "side_effect_gated",
       "side_effect_policy": "approval_required",
       "evidence_schema": "experiment_result.v1",
-      "primary_tools": [
-        "plugins/autosci/bin/autosci_bridge.py run --action run_pilot_experiment",
-        "tools/remote.py",
-        "tools/approval_runtime_proof.py from-contract",
-        "tools/wiki_mutation_runtime_proof.py from-writeback"
-      ],
+    "primary_tools": [
+      "plugins/autosci/bin/autosci_bridge.py run --action run_pilot_experiment",
+      "tools/remote.py",
+      "tools/approval_runtime_proof.py from-contract"
+    ],
       "required_capabilities": [
         "pilot code preparation",
         "local execution",
         "remote execution",
         "result collection"
       ],
-      "limitations": [
-        "Code execution and remote execution require approval; approved runtime evidence can be supplied or produced through an allowlisted remote/local command before marking pilot results complete; pilot_run_final_acceptance_boundary separates runtime readiness from final pilot acceptance, which still requires pilot evaluation verdict linkage and approved wiki writeback."
-      ]
-    },
+    "limitations": [
+      "Code execution and remote execution require approval; approved runtime evidence can be supplied or produced by an allowlisted local/remote command before marking pilot runtime complete. $exp-pilot-run writes pilot runtime/result evidence only, does not judge pass/fail, and does not mutate wiki pages; $exp-pilot-eval owns verdict assessment and approved wiki updates."
+    ]
+  },
     {
       "native_skill": "exp-run",
       "autosci_command": "/exp-run",
@@ -315,11 +314,11 @@
         "deploy",
         "monitor",
         "collect",
-        "local mode",
-        "remote mode"
+        "local default mode",
+        "optional remote mode"
       ],
       "limitations": [
-        "SSH, rsync, screen sessions, and long-running code execution require approval; tools/remote.py launch/pull-results style commands can produce or feed autosci_runtime_evidence.v1 only when explicitly approved and allowlisted; approved live/provider pull-results commands now emit a remote collection boundary, while local result-dir reads remain local collection only; local collection identity/hash ledger is wired, and experiment_run_final_runtime_audit_boundary requires verified approval/runtime evidence, collection ledger, live remote/provider collection proof, and wiki mutation evidence before a run/collect lifecycle is treated as final; distributed remote/session exactly-once collection and real external connectivity smoke are still partial."
+        "Local default mode is approval-gated and can be proven without remote/provider configuration when approval_ref, allowlist evidence, before-state evidence, runtime evidence, deploy/run reports, collection ledger where applicable, and wiki mutation evidence are present. SSH, rsync, screen sessions, remote launch/pull-results, distributed session exactly-once collection, and live provider/remote connectivity remain optional remote-mode follow-up proof and must not block local default parity; local result-dir reads remain local collection only and must not be counted as live SSH/provider collection."
       ]
     },
     {
@@ -346,7 +345,7 @@
         "anomaly summary"
       ],
       "limitations": [
-        "Wiki/run-state lookup, local session registry status, approved tools/remote.py check execution, approved live/provider status command execution, approved runtime evidence, approved pull-results collection evidence, and local collection identity ledger are wired; `$exp-status` emits an explicit remote poll boundary so local run-dir status-file checks are not counted as live SSH/provider polling; live SSH/provider polling and distributed exactly-once remote collection remain partial until real external connectivity smoke is audited."
+        "Local status parity covers wiki/run-state lookup, local session registry status, supplied approved runtime evidence, collect-ready detection, and local collection identity evidence without requiring remote/provider configuration. `$exp-status` emits an explicit remote poll boundary so local run-dir status-file checks are not counted as live SSH/provider polling; live SSH/provider polling, approved provider status commands, and distributed exactly-once remote collection remain optional remote-mode follow-up proof."
       ]
     },
     {
@@ -376,7 +375,7 @@
         "pilot handoff"
       ],
       "limitations": [
-        "Explicit model-command/model-evidence brainstorming is wired for source-grounded candidates with persisted request/response provenance, and ideate_final_promotion_boundary now records wiki maturity scan, failed-idea banlist, source evidence, model provenance, and novelty/review gate requirements before ideas are promotable; full native ideation still requires audited provider-backed dual-model brainstorming, external discovery evidence, novelty/review gates, and explicit --smoke for fixture-only runs."
+        "Explicit model-command/model-evidence brainstorming is wired for source-grounded candidates with persisted request/response provenance, ideate_final_promotion_boundary records wiki maturity scan, failed-idea banlist, source evidence, model provenance, and novelty/review gate requirements before ideas are promotable, and completed pilot handoff/runtime evidence can close phase 5. Approved durable idea-page projection now requires the full ideate pipeline to be ready, projects generated_from/has_pilot_handoff graph edges, and records those graph edges in wiki mutation proof; full native ideation still requires audited provider-backed dual-model brainstorming, external discovery evidence, novelty/review gates, pilot handoff evidence or explicit --skip-pilot, and explicit bounded-test mode for sample-content runs."
       ]
     },
     {
@@ -408,7 +407,7 @@
       ],
       "limitations": [
         "PDF and arXiv source preparation writes explicit raw/tmp artifacts; set allow_network_fetch=false for offline synthetic-TeX fallback.",
-        "Source-grounded PDF extraction, fixture-leakage guards, and phase9 memory/graph sidecars are covered; ingest_final_source_registration_boundary requires verified source preparation, parse quality, raw provenance, memory/graph handoff, and wiki paper/log/graph/index/context registration before a source is treated as fully registered."
+        "Source-grounded PDF extraction, sample-content leakage guards, and phase9 memory/graph sidecars are covered; ingest_final_source_registration_boundary requires verified source preparation, parse quality, raw provenance, memory/graph handoff, and wiki paper/log/graph/index/context registration before a source is treated as fully registered."
       ]
     },
     {
@@ -440,7 +439,7 @@
         "best-effort visualization"
       ],
       "limitations": [
-        "Approved runtime source manifests can complete init evidence only with non-fixture provider channel boundary proof, and --write can fan candidates into wiki papers/log/graph; init_sources_final_fan_in_boundary requires provider candidates, approved wiki fan-in, graph/log/index rebuild evidence, and verified approval/runtime evidence before initialization is final; native network fetch and bulk ingest execution remain approval/provider-gated."
+        "Approved runtime source manifests can complete init evidence only with production-shaped provider or local source-channel boundary proof, and --write can fan candidates into wiki papers/log/graph; init_sources_final_fan_in_boundary requires provider/local source candidates, approved wiki fan-in, graph/log/index rebuild evidence, and verified approval/runtime evidence before initialization is final; native network fetch and bulk ingest execution remain approval/provider-gated."
       ]
     },
     {

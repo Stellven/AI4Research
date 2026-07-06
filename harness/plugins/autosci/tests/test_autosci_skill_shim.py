@@ -383,6 +383,12 @@ def test_autosci_skill_shim_maps_positional_ingest_source(tmp_path: Path) -> Non
     paper = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
     assert "Fixture abstract" not in json.dumps(paper)
     assert "SKILLGEN" in paper["outputs"]["paper"]["title"]
+    preparation = paper["outputs"]["paper"]["preparation"]
+    assert preparation["native_prepare_paper_source"]["schema"] == "autosci_prepare_paper_source_cli.v1"
+    assert preparation["native_prepare_paper_source"]["status"] == "completed"
+    artifact_types = {artifact["type"] for artifact in paper["artifacts"]}
+    assert "prepare_paper_source_native_payload_json" in artifact_types
+    assert "prepare_paper_source_native_stdout_json" in artifact_types
     artifact_paths = [artifact["path"] for artifact in paper["artifacts"]]
     assert not any("/OpenSolar/harness/artifacts/autosci/workspace/raw" in path for path in artifact_paths)
 
@@ -422,6 +428,8 @@ def test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leaka
     assert preparation["original_format"] == "pdf"
     assert preparation["extracted_text_path"]
     assert preparation["source_fetch_status"] == "skipped_network_disabled"
+    assert preparation["native_prepare_paper_source"]["schema"] == "autosci_prepare_paper_source_cli.v1"
+    assert preparation["native_prepare_paper_source"]["status"] == "completed"
     assert paper["parse_status"] == "parsed"
     assert "SKILLGEN" in paper["title"]
     assert "Fixture abstract" not in json.dumps(evidence)
@@ -432,6 +440,8 @@ def test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leaka
         "research_graph_update_json",
         "research_memory_update_json",
         "provider_source_runtime_proof_manifest_json",
+        "prepare_paper_source_native_payload_json",
+        "prepare_paper_source_native_stdout_json",
         "synthetic_latex",
     } <= artifact_types
     artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
@@ -617,7 +627,10 @@ def test_autosci_skill_shim_accepts_discover_from_wiki_limit(tmp_path: Path) -> 
     assert boundary["final_shortlist_ready"] is False
     assert boundary["status"] == "discover_shortlist_incomplete"
     assert "discovery shortlist is empty" in boundary["blocking_reasons"]
-    assert any(artifact["type"] == "discover_final_shortlist_boundary_json" for artifact in discovery["artifacts"])
+    artifact_types = {artifact["type"] for artifact in discovery["artifacts"]}
+    assert "discover_native_stdout_json" in artifact_types
+    assert "discover_native_payload_json" in artifact_types
+    assert "discover_final_shortlist_boundary_json" in artifact_types
     assert "local_fixture" not in json.dumps(discovery)
 
 
@@ -777,6 +790,100 @@ def test_autosci_skill_shim_discover_runtime_attaches_provider_runtime_proof(tmp
     assert any(ref == "https://arxiv.org/abs/2601.00005" for ref in proof_entry["evidence_refs"])
 
 
+def test_autosci_skill_shim_discover_wiki_runtime_proof_is_not_live_provider(tmp_path: Path) -> None:
+    external_dir = tmp_path / "external-discover-wiki-runtime"
+    external_dir.mkdir()
+    wiki_source = tmp_path / "workspace" / "wiki" / "papers" / "paper-runtime-wiki-source.md"
+    wiki_source.parent.mkdir(parents=True)
+    wiki_source.write_text(
+        "# Runtime Wiki Source\n\narXiv:2601.00006\n",
+        encoding="utf-8",
+    )
+    allowlist = external_dir / "allowlist.json"
+    before = external_dir / "before.json"
+    after = external_dir / "after.json"
+    runtime = external_dir / "source-runtime.json"
+    allowlist.write_text('{"allowed": ["workspace_wiki"]}\n', encoding="utf-8")
+    before.write_text('{"state": "before-wiki-discovery"}\n', encoding="utf-8")
+    after.write_text('{"state": "after-wiki-discovery"}\n', encoding="utf-8")
+    runtime.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_runtime_evidence.v1",
+                "task_id": "task-source-runtime-wiki",
+                "status": "completed",
+                "outputs": {
+                    "runtime": {
+                        "action": "discover_literature",
+                        "status": "completed",
+                        "exit_code": 0,
+                        "command_run": "approved-local-wiki-discovery",
+                        "candidates": [
+                            {
+                                "candidate_id": "runtime-wiki-source-001",
+                                "title": "Runtime Verified Local Wiki Source",
+                                "source_ref": str(wiki_source),
+                                "source_channels": ["wiki"],
+                                "ranking_score": 0.91,
+                                "ranking_rationale": "Approved local wiki runtime produced this source.",
+                                "dedup_status": "new",
+                                "fetch_status": "fetched",
+                            }
+                        ],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$discover",
+        "--from-wiki",
+        "--limit",
+        "3",
+        "--approval-ref",
+        "approval-source-runtime-wiki",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--runtime-evidence",
+        str(runtime),
+        "--before-artifact",
+        str(before),
+        "--after-artifact",
+        str(after),
+        "--run-id",
+        "shim-discover-wiki-runtime-proof",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    discovery = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert discovery["status"] == "completed"
+    boundary = discovery["outputs"]["source_provider_boundary"]
+    assert boundary["status"] == "completed"
+    assert boundary["provider_channels"] == ["wiki"]
+    final_boundary = boundary["final_shortlist_boundary"]
+    assert final_boundary["status"] == "final_shortlist_ready"
+    assert final_boundary["final_shortlist_ready"] is True
+
+    proof_artifact = next(
+        artifact
+        for artifact in discovery["artifacts"]
+        if artifact["type"] == "provider_source_runtime_proof_manifest_json"
+    )
+    proof = json.loads((tmp_path / proof_artifact["path"]).read_text(encoding="utf-8"))
+    proof_entry = proof["proofs"][0]
+    assert proof_entry["native_skill"] == "discover"
+    assert proof_entry["categories"] == ["provider_source_evidence", "external_runtime_evidence"]
+    assert proof_entry["collection_mode"] == "native_autosci_replay"
+    assert "local wiki/source evidence" in proof_entry["description"]
+    assert any(ref.endswith("source-runtime.json") for ref in proof_entry["evidence_refs"])
+    assert "workspace/wiki/papers/paper-runtime-wiki-source.md" in proof_entry["evidence_refs"]
+
+
 def test_autosci_skill_shim_runs_research_pipeline(tmp_path: Path) -> None:
     proc = run_shim(
         tmp_path,
@@ -821,9 +928,16 @@ def test_autosci_skill_shim_runs_research_pipeline(tmp_path: Path) -> None:
     ]
     assert (tmp_path / "artifacts/autosci/runs/shim-research/report.md").exists()
     assert (tmp_path / "artifacts/autosci/runs/shim-research/publication_bundle.json").exists()
+    progress_path = tmp_path / "artifacts/autosci/runs/shim-research/autosci_skill_run_progress.json"
+    assert progress_path.exists()
+    progress = json.loads(progress_path.read_text(encoding="utf-8"))
+    assert progress["schema"] == "autosci_skill_run_progress.v1"
+    assert progress["status"] == "inconclusive"
+    assert progress["completed_count"] == 16
     assert (tmp_path / "artifacts/autosci/workspace/wiki/ideas/idea-001.md").exists()
     assert (tmp_path / "artifacts/autosci/workspace/wiki/experiments/exp-001.md").exists()
     assert (tmp_path / "artifacts/autosci/workspace/wiki/outputs/report-skillgen-operator-smoke.md").exists()
+    assert any(artifact["type"] == "skill_run_progress_json" for artifact in payload["artifacts"])
 
     gate = run_gate(evidence_path)
     assert_gate_inconclusive_without_reasons(gate)
@@ -1512,7 +1626,7 @@ def test_autosci_skill_shim_research_scheduler_uses_experiment_runtime_evidence(
         "--experiment-after-artifact",
         str(after),
         "--scheduler-timeout",
-        "20",
+        "45",
         "--run-id",
         "shim-research-experiment-runtime",
     )
@@ -2030,6 +2144,9 @@ def test_autosci_skill_shim_exp_design_attaches_review_llm_validation(tmp_path: 
     assert "experiment_design_review_llm_evidence_json" in artifact_types
     assert "experiment_design_final_execution_boundary_json" in artifact_types
     assert "review_model_runtime_proof_manifest_json" in artifact_types
+    assert "wiki_mutation_runtime_proof_manifest_json" not in artifact_types
+    payload_artifact_types = {artifact["type"] for artifact in payload["artifacts"]}
+    assert "wiki_mutation_runtime_proof_manifest_json" not in payload_artifact_types
     proof_artifact = next(
         artifact
         for artifact in evidence["artifacts"]
@@ -2105,6 +2222,15 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
     assert "experiment_design_final_execution_boundary_json" in artifacts
     sidecar = json.loads((tmp_path / artifacts["experiment_design_final_execution_boundary_json"]).read_text(encoding="utf-8"))
     assert sidecar["status"] == "execution_ready"
+    payload_artifacts = {artifact["type"]: artifact["path"] for artifact in payload["artifacts"]}
+    assert "wiki_mutation_runtime_proof_manifest_json" in payload_artifacts
+    mutation_proof = json.loads((tmp_path / payload_artifacts["wiki_mutation_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
+    proof_entry = mutation_proof["proofs"][0]
+    assert proof_entry["native_skill"] == "exp-design"
+    assert proof_entry["categories"] == ["wiki_mutation_evidence"]
+    assert proof_entry["collection_mode"] == "manual_review"
+    assert any("workspace/wiki/experiments/exp-idea-skillgen-ready.md" in ref for ref in proof_entry["evidence_refs"])
+    assert any("workspace/wiki/outputs/experiment.md" in ref for ref in proof_entry["evidence_refs"])
 
 
 def test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki(tmp_path: Path) -> None:
@@ -2335,13 +2461,360 @@ def test_autosci_skill_shim_exp_run_executes_approved_native_command(tmp_path: P
         "run_experiment_result_json",
         "executor_stdout",
         "executor_stderr",
+        "experiment_deploy_report_json",
+        "experiment_run_report_json",
     }.issubset(artifact_types)
+    deploy_report_path = next(
+        artifact["path"]
+        for artifact in result["artifacts"]
+        if artifact["type"] == "experiment_deploy_report_json"
+    )
+    deploy_report = json.loads((tmp_path / deploy_report_path).read_text(encoding="utf-8"))
+    assert deploy_report["schema"] == "autosci_experiment_deploy_report.v1"
+    assert deploy_report["deploy_mode"] == "local_command"
+    assert deploy_report["ready_for_execution"] is True
+    run_report_path = next(
+        artifact["path"]
+        for artifact in result["artifacts"]
+        if artifact["type"] == "experiment_run_report_json"
+    )
+    run_report = json.loads((tmp_path / run_report_path).read_text(encoding="utf-8"))
+    assert run_report["schema"] == "autosci_experiment_run_report.v1"
+    assert run_report["stage"] == "run"
+    assert run_report["result_collected"] is True
 
     state_path = tmp_path / "artifacts/autosci/workspace/wiki/experiments/exp-native-001.md"
     state_text = state_path.read_text(encoding="utf-8")
     assert "status: completed" in state_text
     assert "outcome: supports" in state_text
     assert "runtime:exp-native" in state_text
+
+
+def test_autosci_skill_shim_exp_run_parity_demo_auto_executes_local_command(tmp_path: Path) -> None:
+    allowlist = tmp_path / "exp-parity-allowlist.json"
+    marker = tmp_path / "exp-parity-marker.txt"
+    marker_command_script = tmp_path / "exp_parity_command.py"
+    marker_command_script.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import argparse",
+                "from pathlib import Path",
+                "import json",
+                "",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--experiment-id', required=True)",
+                "parser.add_argument('--marker', required=True)",
+                "args = parser.parse_args()",
+                "Path(args.marker).write_text('parity executed', encoding='utf-8')",
+                "payload = {",
+                "    'schema': 'experiment_result.v1',",
+                "    'status': 'completed',",
+                "    'outputs': {",
+                "        'result': {",
+                "            'experiment_id': args.experiment_id,",
+                "            'outcome': 'supports',",
+                "            'metrics': [{'name': 'f1', 'value': 0.92}],",
+                "            'evidence_ids': ['runtime:exp-parity'],",
+                "            'logs': ['parity local command executed'],",
+                "        }",
+                "    },",
+                "}",
+                "print(json.dumps(payload))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    marker_command_script.chmod(0o755)
+    allowlist.write_text(
+        json.dumps(
+            {
+                "commands": [
+                    " ".join(
+                        [
+                            str(sys.executable),
+                            str(marker_command_script),
+                            "--experiment-id",
+                            "{experiment_id}",
+                            "--marker",
+                            str(marker),
+                        ]
+                    )
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-run",
+        "exp-parity-001",
+        "--review",
+        "--env",
+        "local",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-exp-run-parity-demo-command",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = next(action for action in payload["outputs"]["skill_run"]["actions"] if action["action"] == "run_experiment")
+    assert action["status"] == "passed"
+    result = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    experiment_result = result["outputs"]["result"]
+    assert result["status"] == "completed"
+    assert experiment_result["experiment_id"] == "exp-parity-001"
+    assert experiment_result["outcome"] == "supports"
+    assert marker.read_text(encoding="utf-8") == "parity executed"
+    assert "runtime:exp-parity" in experiment_result["evidence_ids"]
+    policy = result["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:run_experiment:")
+    artifacts = {artifact["type"]: artifact["path"] for artifact in result["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "experiment_runtime_evidence_json" in artifacts
+    assert "run_experiment_result_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:run_experiment:")
+
+
+def test_autosci_skill_shim_exp_pilot_run_executes_approved_native_command_without_wiki_writeback(tmp_path: Path) -> None:
+    allowlist = tmp_path / "pilot-native-allowlist.json"
+    before = tmp_path / "pilot-native-before.json"
+    marker = tmp_path / "pilot-native-marker.txt"
+    marker_command_script = tmp_path / "pilot_native_command.py"
+    before.write_text(json.dumps({"state": "approved_for_pilot"}), encoding="utf-8")
+    marker_command_script.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import argparse",
+                "from pathlib import Path",
+                "import json",
+                "",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--experiment-id', required=True)",
+                "parser.add_argument('--marker', required=True)",
+                "args = parser.parse_args()",
+                "Path(args.marker).write_text('pilot executed', encoding='utf-8')",
+                "payload = {",
+                "    'schema': 'experiment_result.v1',",
+                "    'task_id': 'task-pilot-native-run',",
+                "    'sprint_id': 'sprint-pilot-native-run',",
+                "    'node_id': 'node-pilot-native-run',",
+                "    'status': 'completed',",
+                "    'inputs': {'experiment_id': args.experiment_id},",
+                "    'outputs': {",
+                "        'result': {",
+                "            'experiment_id': args.experiment_id,",
+                "            'outcome': 'supports',",
+                "            'metrics': [{'name': 'accuracy', 'value': 0.93}],",
+                "            'evidence_ids': ['runtime:pilot-native'],",
+                "            'logs': ['pilot native command executed'],",
+                "        }",
+                "    },",
+                "    'provenance': {",
+                "        'operator_id': 'pilot-test-script',",
+                "        'implementation_package': 'test',",
+                "        'timestamp': '2026-06-24T00:00:00Z',",
+                "    },",
+                "    'limitations': [],",
+                "}",
+                "print(json.dumps(payload))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    marker_command_script.chmod(0o755)
+    allowlist.write_text(
+        json.dumps(
+            {
+                "commands": [
+                    " ".join(
+                        [
+                            str(sys.executable),
+                            str(marker_command_script),
+                            "--experiment-id",
+                            "{experiment_id}",
+                            "--marker",
+                            str(marker),
+                        ]
+                    )
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-pilot-run",
+        "pilot-native-001",
+        "--approval-ref",
+        "approval-pilot-native-001",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--before-artifact",
+        str(before),
+        "--execute-approved",
+        "--run-id",
+        "shim-exp-pilot-run-native-command",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["skill"] == "exp-pilot-run"
+    assert summary["execution_status"] == "gated"
+
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    assert action["action"] == "run_pilot_experiment"
+    assert action["status"] == "passed"
+    result = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    pilot_result = result["outputs"]["result"]
+    assert result["status"] == "completed"
+    assert pilot_result["experiment_id"] == "pilot-native-001"
+    assert pilot_result["outcome"] == "supports"
+    assert pilot_result["metrics"] == [{"name": "accuracy", "value": 0.93}]
+    assert "runtime:pilot-native" in pilot_result["evidence_ids"]
+    assert "pilot native command executed" in " ".join(pilot_result["logs"])
+    assert marker.exists()
+    assert marker.read_text(encoding="utf-8") == "pilot executed"
+
+    boundary = pilot_result["pilot_final_acceptance_boundary"]
+    assert boundary["stage"] == "pilot_run"
+    assert boundary["status"] == "pilot_runtime_ready"
+    assert boundary["pilot_runtime_ready"] is True
+    assert boundary["pilot_verdict_ready"] is False
+    assert boundary["writeback_completed"] is False
+    assert boundary["final_pilot_acceptance_ready"] is False
+    assert "exp-pilot-eval" in boundary["limitations"][0]
+
+    artifact_types = {artifact["type"] for artifact in result["artifacts"]}
+    assert {
+        "approval_contract_json",
+        "pilot_runtime_evidence_json",
+        "pilot_runtime_after_artifact",
+        "pilot_run_result_json",
+        "executor_stdout",
+        "executor_stderr",
+        "experiment_deploy_report_json",
+        "experiment_run_report_json",
+        "pilot_run_final_acceptance_boundary_json",
+        "approval_runtime_proof_manifest_json",
+        "side_effect_runtime_proof_manifest_json",
+    }.issubset(artifact_types)
+    assert "wiki_mutation_runtime_proof_manifest_json" not in artifact_types
+    assert "wiki_experiment_state" not in artifact_types
+    assert not (tmp_path / "artifacts/autosci/workspace/wiki/experiments/pilot-native-001.md").exists()
+
+    contract_path = next(artifact["path"] for artifact in result["artifacts"] if artifact["type"] == "approval_contract_json")
+    contract = json.loads((tmp_path / contract_path).read_text(encoding="utf-8"))
+    assert contract["action"] == "run_pilot_experiment"
+    assert contract["execution_verified"] is True
+    run_report_path = next(artifact["path"] for artifact in result["artifacts"] if artifact["type"] == "experiment_run_report_json")
+    run_report = json.loads((tmp_path / run_report_path).read_text(encoding="utf-8"))
+    assert run_report["stage"] == "pilot_run"
+    assert run_report["result_collected"] is True
+
+
+def test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command(tmp_path: Path) -> None:
+    allowlist = tmp_path / "pilot-parity-allowlist.json"
+    marker = tmp_path / "pilot-parity-marker.txt"
+    marker_command_script = tmp_path / "pilot_parity_command.py"
+    marker_command_script.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import argparse",
+                "from pathlib import Path",
+                "import json",
+                "",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--experiment-id', required=True)",
+                "parser.add_argument('--marker', required=True)",
+                "args = parser.parse_args()",
+                "Path(args.marker).write_text('pilot parity executed', encoding='utf-8')",
+                "payload = {",
+                "    'schema': 'experiment_result.v1',",
+                "    'status': 'completed',",
+                "    'outputs': {",
+                "        'result': {",
+                "            'experiment_id': args.experiment_id,",
+                "            'outcome': 'supports',",
+                "            'metrics': [{'name': 'accuracy', 'value': 0.91}],",
+                "            'evidence_ids': ['runtime:pilot-parity'],",
+                "            'logs': ['pilot parity command executed'],",
+                "        }",
+                "    },",
+                "}",
+                "print(json.dumps(payload))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    marker_command_script.chmod(0o755)
+    allowlist.write_text(
+        json.dumps(
+            {
+                "commands": [
+                    " ".join(
+                        [
+                            str(sys.executable),
+                            str(marker_command_script),
+                            "--experiment-id",
+                            "{experiment_id}",
+                            "--marker",
+                            str(marker),
+                        ]
+                    )
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-pilot-run",
+        "pilot-parity-001",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-exp-pilot-run-parity-command",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    result = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    pilot_result = result["outputs"]["result"]
+    assert result["status"] == "completed"
+    assert pilot_result["experiment_id"] == "pilot-parity-001"
+    assert pilot_result["outcome"] == "supports"
+    assert marker.read_text(encoding="utf-8") == "pilot parity executed"
+    policy = result["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:run_pilot_experiment:")
+    artifacts = {artifact["type"]: artifact["path"] for artifact in result["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:run_pilot_experiment:")
+    assert "wiki_experiment_state" not in {artifact["type"] for artifact in result["artifacts"]}
 
 
 def test_autosci_skill_shim_exp_run_assimilates_remote_helper_runtime_evidence(tmp_path: Path) -> None:
@@ -2661,6 +3134,70 @@ def test_autosci_skill_shim_exp_status_executes_approved_remote_check(tmp_path: 
     assert "status was derived from local run-dir artifacts" in boundary["invalid_reasons"]
 
 
+def test_autosci_skill_shim_exp_status_parity_demo_remote_opt_in_executes_check(tmp_path: Path) -> None:
+    run_dir = tmp_path / "remote-status-parity-run"
+    run_dir.mkdir()
+    (run_dir / "status.json").write_text(
+        json.dumps({"status": "running", "evidence_ids": ["remote-status:exp-remote-parity"]}),
+        encoding="utf-8",
+    )
+    command = " ".join(
+        [
+            shlex.quote(str(sys.executable)),
+            shlex.quote(str(REPO / "tools/remote.py")),
+            "check",
+            "--experiment",
+            "exp-remote-parity",
+            "--run-dir",
+            shlex.quote(str(run_dir)),
+        ]
+    )
+    allowlist = tmp_path / "remote-status-parity-allowlist.json"
+    allowlist.write_text(json.dumps({"commands": [command]}), encoding="utf-8")
+
+    status = run_shim(
+        tmp_path,
+        "$exp-status",
+        "exp-remote-parity",
+        "--env",
+        "remote",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--remote-check-command",
+        command,
+        "--remote-run-dir",
+        str(run_dir),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-exp-status-parity-remote-check",
+        extra_env={"SOLAR_AUTOSCI_ALLOW_REMOTE": "1"},
+    )
+
+    assert status.returncode == 0, status.stderr
+    summary = json.loads(status.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    report = evidence["outputs"]["status_report"]
+    assert evidence["status"] == "completed"
+    assert report["experiment_id"] == "exp-remote-parity"
+    assert report["state"] == "running"
+    assert any("Approved remote status check" in item for item in report["observations"])
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:monitor_experiment:")
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "remote_status_runtime_evidence_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:monitor_experiment:")
+
+
 def test_autosci_skill_shim_exp_status_executes_approved_live_remote_check(tmp_path: Path) -> None:
     run_dir = tmp_path / "live-remote-status-run"
     run_dir.mkdir()
@@ -2934,6 +3471,74 @@ def test_autosci_skill_shim_exp_collect_executes_approved_remote_pull_results(tm
     assert "- accuracy: 0.94" in state_text
 
 
+def test_autosci_skill_shim_exp_collect_parity_demo_remote_opt_in_executes_pull_results(tmp_path: Path) -> None:
+    allowlist = tmp_path / "remote-collect-parity-allowlist.json"
+    result_dir = tmp_path / "remote-parity-results"
+    result_dir.mkdir()
+    (result_dir / "results.json").write_text(
+        json.dumps(
+            {
+                "outcome": "supports",
+                "metrics": [{"name": "accuracy", "value": 0.96}],
+                "evidence_ids": ["result:exp-remote-parity-collect"],
+                "logs": ["parity remote pull-results collected metrics"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    command = " ".join(
+        [
+            shlex.quote(str(sys.executable)),
+            shlex.quote(str(REPO / "tools" / "remote.py")),
+            "pull-results",
+            "--result-dir",
+            shlex.quote(str(result_dir)),
+        ]
+    )
+    allowlist.write_text(json.dumps({"commands": [command]}), encoding="utf-8")
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-run",
+        "exp-remote-parity-collect",
+        "--collect",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-exp-remote-parity-collect",
+        extra_env={"SOLAR_AUTOSCI_ALLOW_REMOTE": "1"},
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    report = evidence["outputs"]["status_report"]
+    assert evidence["status"] == "completed"
+    assert report["experiment_id"] == "exp-remote-parity-collect"
+    assert report["state"] == "completed"
+    assert "result:exp-remote-parity-collect" in report["evidence_ids"]
+    assert any("collect_executor_result=True" in item for item in report["observations"])
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:monitor_experiment:")
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "experiment_runtime_evidence_json" in artifacts
+    assert "wiki_experiment_state" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    state_text = (tmp_path / "artifacts/autosci/workspace/wiki/experiments/exp-remote-parity-collect.md").read_text(encoding="utf-8")
+    assert "status: completed" in state_text
+    assert "outcome: supports" in state_text
+    assert "- accuracy: 0.96" in state_text
+
+
 def test_autosci_skill_shim_exp_collect_executes_approved_live_remote_pull_results(tmp_path: Path) -> None:
     allowlist = tmp_path / "live-remote-collect-allowlist.json"
     provider_allowlist = tmp_path / "live-remote-provider-allowlist.json"
@@ -3089,6 +3694,94 @@ def test_autosci_skill_shim_exp_collect_rejects_empty_remote_pull_results(tmp_pa
     assert runtime_payload["result_collected"] is False
     assert runtime_payload["metrics"] == []
     assert any(check["check"] == "collected_files_present" and check["status"] == "error" for check in runtime_payload["checks"])
+
+
+def test_autosci_skill_shim_exp_collect_writes_multiseed_metric_aggregate_report(tmp_path: Path) -> None:
+    allowlist = tmp_path / "remote-multiseed-allowlist.json"
+    before = tmp_path / "remote-multiseed-before.json"
+    result_dir = tmp_path / "remote-multiseed-results"
+    result_dir.mkdir()
+    (result_dir / "seed-1.json").write_text(
+        json.dumps(
+            {
+                "outcome": "supports",
+                "metrics": [{"name": "accuracy", "value": 0.8, "seed": 1}],
+                "evidence_ids": ["result:exp-multiseed:seed-1"],
+                "logs": ["seed 1 complete"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (result_dir / "seed-2.json").write_text(
+        json.dumps(
+            {
+                "outcome": "supports",
+                "metrics": [{"name": "accuracy", "value": 0.9, "seed": 2}],
+                "evidence_ids": ["result:exp-multiseed:seed-2"],
+                "logs": ["seed 2 complete"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    before.write_text(json.dumps({"state": "running", "approved": True}), encoding="utf-8")
+    command = " ".join(
+        [
+            shlex.quote(str(sys.executable)),
+            shlex.quote(str(REPO / "tools" / "remote.py")),
+            "pull-results",
+            "--result-dir",
+            shlex.quote(str(result_dir)),
+        ]
+    )
+    allowlist.write_text(json.dumps({"commands": [command]}), encoding="utf-8")
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-run",
+        "exp-multiseed",
+        "--collect",
+        "--approval-ref",
+        "approval-exp-multiseed",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--before-artifact",
+        str(before),
+        "--execute-approved",
+        "--run-id",
+        "shim-exp-multiseed-collect",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    assert action["status"] == "passed"
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    artifact_types = {artifact["type"] for artifact in evidence["artifacts"]}
+    assert {"experiment_metric_aggregate_report_json", "experiment_run_report_json"}.issubset(artifact_types)
+    aggregate_path = next(
+        artifact["path"]
+        for artifact in evidence["artifacts"]
+        if artifact["type"] == "experiment_metric_aggregate_report_json"
+    )
+    aggregate_report = json.loads((tmp_path / aggregate_path).read_text(encoding="utf-8"))
+    assert aggregate_report["schema"] == "autosci_experiment_metric_aggregate_report.v1"
+    assert aggregate_report["status"] == "completed"
+    accuracy = aggregate_report["aggregates"][0]
+    assert accuracy["name"] == "accuracy"
+    assert accuracy["sample_count"] == 2
+    assert accuracy["seed_count"] == 2
+    assert accuracy["mean"] == pytest.approx(0.85)
+    assert accuracy["std"] == pytest.approx(0.070710678, rel=1e-6)
+
+    runtime_path = next(
+        artifact["path"]
+        for artifact in evidence["artifacts"]
+        if artifact["type"] == "experiment_runtime_evidence_json"
+    )
+    runtime = json.loads((tmp_path / runtime_path).read_text(encoding="utf-8"))
+    runtime_payload = runtime["outputs"]["runtime"]
+    assert runtime_payload["metric_aggregates"][0]["mean"] == pytest.approx(0.85)
+    assert len(runtime_payload["result_paths"]) == 2
 
 
 def test_autosci_skill_shim_exp_collect_reuses_exactly_once_collection_ledger(tmp_path: Path) -> None:
@@ -3549,10 +4242,14 @@ def test_autosci_skill_shim_paper_draft_writes_latex_source(tmp_path: Path) -> N
     artifacts = {artifact["type"]: artifact["path"] for artifact in report_evidence["artifacts"]}
     assert {
         "latex_source",
+        "paper_math_commands_tex",
         "paper_sections_directory",
+        "paper_figures_directory",
+        "paper_tables_directory",
         "markdown_report",
         "report_plan_json",
         "citation_map_json",
+        "paper_draft_section_evidence_map_json",
         "paper_draft_final_manuscript_boundary_json",
     }.issubset(artifacts)
     boundary = json.loads((tmp_path / artifacts["paper_draft_final_manuscript_boundary_json"]).read_text(encoding="utf-8"))
@@ -3565,11 +4262,35 @@ def test_autosci_skill_shim_paper_draft_writes_latex_source(tmp_path: Path) -> N
     paper_dir = tmp_path / "artifacts/autosci/runs/shim-paper-draft-native/paper"
     main_tex = paper_dir / "main.tex"
     assert main_tex.exists()
-    assert "\\documentclass{article}" in main_tex.read_text(encoding="utf-8")
+    main_text = main_tex.read_text(encoding="utf-8")
+    assert "\\documentclass{article}" in main_text
+    assert "\\input{math_commands}" in main_text
+    assert (paper_dir / "math_commands.tex").exists()
     assert (paper_dir / "sections").is_dir()
+    assert (paper_dir / "sections/introduction.tex").exists()
+    assert (paper_dir / "sections/related-work.tex").exists()
+    assert (paper_dir / "sections/method.tex").exists()
+    assert (paper_dir / "sections/experiments.tex").exists()
+    assert (paper_dir / "sections/conclusion.tex").exists()
+    assert (paper_dir / "figures").is_dir()
+    assert (paper_dir / "tables").is_dir()
+    section_map = json.loads((tmp_path / artifacts["paper_draft_section_evidence_map_json"]).read_text(encoding="utf-8"))
+    assert section_map["schema"] == "autosci_paper_draft_section_evidence_map.v1"
+    assert section_map["standard_section_count"] == 5
+    assert {row["section_id"] for row in section_map["standard_sections"]} == {
+        "introduction",
+        "related_work",
+        "method",
+        "experiments",
+        "conclusion",
+    }
     bundle = json.loads((tmp_path / "artifacts/autosci/runs/shim-paper-draft-native/publication_bundle.json").read_text(encoding="utf-8"))
     bundle_file_types = {item["type"] for item in bundle["outputs"]["bundle"]["files"]}
     assert "latex_source" in bundle_file_types
+    assert "paper_math_commands_tex" in bundle_file_types
+    assert "paper_figures_directory" in bundle_file_types
+    assert "paper_tables_directory" in bundle_file_types
+    assert "paper_draft_section_evidence_map_json" in bundle_file_types
     assert "paper_draft_final_manuscript_boundary_json" in bundle_file_types
 
 
@@ -3710,12 +4431,17 @@ def test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff(tm
         "provider_source_runtime_proof_manifest_json",
         "paper_references_bib",
         "paper_draft_bibtex_coverage_json",
+        "paper_draft_section_evidence_map_json",
     } <= set(artifacts)
     references_bib = (tmp_path / artifacts["paper_references_bib"]).read_text(encoding="utf-8")
     assert "[UNCONFIRMED]" in references_bib
     bibtex_coverage = json.loads((tmp_path / artifacts["paper_draft_bibtex_coverage_json"]).read_text(encoding="utf-8"))
     assert bibtex_coverage["entry_count"] == 1
     assert bibtex_coverage["references_bib_path"] == artifacts["paper_references_bib"]
+    section_map = json.loads((tmp_path / artifacts["paper_draft_section_evidence_map_json"]).read_text(encoding="utf-8"))
+    assert section_map["citation_count"] == 1
+    assert section_map["standard_section_count"] == 5
+    assert "arxiv:2601.00003" in section_map["citation_ids"]
     boundary = json.loads((tmp_path / artifacts["paper_draft_final_manuscript_boundary_json"]).read_text(encoding="utf-8"))
     assert boundary["status"] == "final_manuscript_ready"
     assert boundary["final_manuscript_ready"] is True
@@ -3742,7 +4468,12 @@ def test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff(tm
     )
     bundle_file_types = {item["type"] for item in bundle["outputs"]["bundle"]["files"]}
     assert {"compiled_pdf", "paper_draft_compile_handoff_json", "paper_compile_runtime_evidence_json"} <= bundle_file_types
-    assert {"citation_map_json", "paper_draft_final_manuscript_boundary_json", "paper_references_bib"} <= bundle_file_types
+    assert {
+        "citation_map_json",
+        "paper_draft_final_manuscript_boundary_json",
+        "paper_references_bib",
+        "paper_draft_section_evidence_map_json",
+    } <= bundle_file_types
 
 
 def test_autosci_skill_shim_runs_paper_compile_fix_diagnostics(tmp_path: Path) -> None:
@@ -3869,6 +4600,15 @@ def test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars(tmp_
             files = evidence["outputs"]["bundle"]["files"]
             assert files
             assert all((tmp_path / item["path"]).exists() for item in files)
+            if expected_action == "build_poster":
+                assert not any(item["type"] == "poster_html" for item in files)
+                validation = json.loads(
+                    (
+                        tmp_path
+                        / next(item for item in files if item["type"] == "poster_validation_json")["path"]
+                    ).read_text(encoding="utf-8")
+                )
+                assert validation["content_pipeline_status"] == "paper_source_missing"
 
 
 def test_autosci_skill_shim_survey_completes_with_citation_evidence(tmp_path: Path) -> None:
@@ -4195,6 +4935,72 @@ def test_autosci_skill_shim_rebuttal_ingests_reviewer_thread_and_submission_audi
     assert submission["portal_submission_completed"] is False
 
 
+def test_autosci_skill_shim_rebuttal_atomizes_comma_separated_review_files(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    for name in ("ideas", "methods", "experiments", "graph", "outputs"):
+        (wiki_root / name).mkdir(parents=True, exist_ok=True)
+    (wiki_root / "ideas/skillgen.md").write_text(
+        "---\nstatus: validated\nlinked_experiments: [exp-skillgen]\n---\n"
+        "# SkillGen Idea\n\nGenerated skill claims have baseline ablation evidence.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "experiments/exp-skillgen.md").write_text(
+        "# SkillGen Experiment\n\nstatus: succeeded\nThe baseline ablation completed successfully.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "methods/verifier-gated-skill-selection.md").write_text(
+        "# Verifier-Gated Skill Selection\n\n## Procedure\n\nThe method procedure is explicit and source-backed.\n",
+        encoding="utf-8",
+    )
+    review_1 = tmp_path / "reviewer-1.txt"
+    review_2 = tmp_path / "reviewer-2.txt"
+    review_1.write_text(
+        "Reviewer 1:\n- The generated skill claim needs baseline ablation evidence.\n",
+        encoding="utf-8",
+    )
+    review_2.write_text(
+        "Reviewer 2:\n- The verifier-gated method procedure is unclear.\n",
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$rebuttal",
+        f"{review_1},{review_2}",
+        "--title",
+        "SkillGen Raw Rebuttal",
+        "--wiki-root",
+        str(wiki_root),
+        "--no-stress-test",
+        "--run-id",
+        "shim-rebuttal-comma-review-files",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["skill"] == "rebuttal"
+
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    assert payload["inputs"]["target"] == f"{review_1},{review_2}"
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    files = evidence["outputs"]["bundle"]["files"]
+    file_map = {item["type"]: item["path"] for item in files}
+    response_map = json.loads((tmp_path / file_map["rebuttal_response_map_json"]).read_text(encoding="utf-8"))
+    assert response_map["reviewer_thread"]["status"] == "completed"
+    assert response_map["reviewer_thread"]["atomization_completed"] is True
+    assert response_map["reviewer_thread"]["concern_count"] == 2
+    assert response_map["reviewer_thread"]["raw_parser_used"] is True
+    assert set(response_map["reviewer_thread"]["source_paths"]) == {
+        str(review_1.relative_to(tmp_path)),
+        str(review_2.relative_to(tmp_path)),
+    }
+    assert [item["concern_id"] for item in response_map["mapped_concerns"]] == ["Rv1-C1", "Rv2-C1"]
+    assert response_map["coverage"]["wiki_mapped_count"] == 2
+    formal_text = (tmp_path / file_map["rebuttal_formal_text"]).read_text(encoding="utf-8")
+    assert "[Rv1-C1]" in formal_text
+    assert "[Rv2-C1]" in formal_text
+
+
 def test_autosci_skill_shim_accepts_survey_format_latex(tmp_path: Path) -> None:
     proc = run_shim(
         tmp_path,
@@ -4336,6 +5142,48 @@ def test_autosci_skill_shim_prefill_applies_approved_wiki_mutation(tmp_path: Pat
     assert approval_proof["proofs"][0]["categories"] == ["external_runtime_evidence", "approval_boundary_evidence"]
     assert side_effect_proof["proofs"][0]["categories"] == ["side_effect_execution_evidence"]
     assert wiki_proof["proofs"][0]["categories"] == ["wiki_mutation_evidence"]
+
+
+def test_autosci_skill_shim_prefill_parity_demo_auto_applies_local_writeback(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "foundations").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    page = wiki_root / "foundations/foundation-lora.md"
+
+    proc = run_shim(
+        tmp_path,
+        "$prefill",
+        "--add",
+        "LoRA",
+        "--wiki-root",
+        str(wiki_root),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-prefill-policy-auto",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert page.exists()
+    assert evidence["outputs"]["changes"][0]["operation"] == "create"
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:prefill_foundations:")
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "prefill_foundations_local_mutation_runtime_evidence_json" in artifacts
+    assert "approval_runtime_proof_manifest_json" in artifacts
+    assert "side_effect_runtime_proof_manifest_json" in artifacts
+    assert "wiki_mutation_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:prefill_foundations:")
 
 
 def test_autosci_skill_shim_prefill_add_mode_records_catalog_plan_without_mutation(tmp_path: Path) -> None:
@@ -4674,6 +5522,74 @@ def test_autosci_skill_shim_reset_executes_approved_local_scope_with_runtime_pro
     assert wiki_proof["proofs"][0]["categories"] == ["wiki_mutation_evidence"]
 
 
+def test_autosci_skill_shim_reset_autosci_native_auto_executes_scoped_reset(tmp_path: Path) -> None:
+    project_root = tmp_path / "reset-native-project"
+    wiki_root = project_root / "wiki"
+    raw_root = project_root / "raw/papers"
+    (wiki_root / "papers").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    raw_root.mkdir(parents=True)
+    (wiki_root / "papers/old.md").write_text("# Old Paper\n", encoding="utf-8")
+    (wiki_root / "graph/context_brief.md").write_text("# Old Context\n", encoding="utf-8")
+    (wiki_root / "log.md").write_text("# Old Log\n", encoding="utf-8")
+    (raw_root / "source.txt").write_text("raw source remains for wiki-only reset\n", encoding="utf-8")
+
+    proc = run_shim(
+        tmp_path,
+        "$reset",
+        "autosci",
+        "--scope",
+        "wiki",
+        "--wiki-root",
+        str(wiki_root),
+        "--gate-mode",
+        "autosci_native",
+        "--run-id",
+        "shim-reset-autosci-native-policy",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["passed_count"] == 1
+    assert not (wiki_root / "papers/old.md").exists()
+    assert not (wiki_root / "graph/context_brief.md").exists()
+    assert (wiki_root / "papers/.gitkeep").exists()
+    assert (raw_root / "source.txt").exists()
+    assert "Applied approved reset scope" in (wiki_root / "log.md").read_text(encoding="utf-8")
+
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    evolution = evidence["outputs"]["evolution"]
+    assert evolution["review"]["local_reset_execution"]["executed"] is True
+    assert evolution["review"]["approval_contract_verified"] is True
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "autosci_native"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:autosci_native:reset_plan:")
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "reset_before_snapshot_json" in artifacts
+    assert "reset_runtime_evidence_json" in artifacts
+    assert "reset_after_snapshot_json" in artifacts
+    assert "side_effect_runtime_proof_manifest_json" in artifacts
+    assert "wiki_mutation_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:autosci_native:reset_plan:")
+    before_refs = [
+        str(item.get("artifact_path") or item.get("path") or "")
+        for item in contract["before_artifacts"]
+        if isinstance(item, dict)
+    ]
+    assert any(ref.endswith("reset_before_snapshot.json") for ref in before_refs)
+    before_snapshot = json.loads((tmp_path / artifacts["reset_before_snapshot_json"]).read_text(encoding="utf-8"))
+    assert before_snapshot["schema"] == "autosci_reset_before_snapshot.v1"
+    assert before_snapshot["wiki_directories"]["papers"]["markdown_count"] == 1
+
+
 def test_autosci_skill_shim_edit_applies_approved_after_artifact(tmp_path: Path) -> None:
     wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
     (wiki_root / "ideas").mkdir(parents=True)
@@ -4737,6 +5653,51 @@ def test_autosci_skill_shim_edit_applies_approved_after_artifact(tmp_path: Path)
     assert approval_proof["proofs"][0]["categories"] == ["external_runtime_evidence", "approval_boundary_evidence"]
     assert side_effect_proof["proofs"][0]["categories"] == ["side_effect_execution_evidence"]
     assert wiki_proof["proofs"][0]["categories"] == ["wiki_mutation_evidence"]
+
+
+def test_autosci_skill_shim_edit_parity_demo_auto_applies_after_artifact(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "ideas").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    target = wiki_root / "ideas/skillgen.md"
+    target.write_text("# SkillGen\n\nOld content.\n", encoding="utf-8")
+    after = tmp_path / "skillgen-after.md"
+    after.write_text("# SkillGen\n\nPolicy-approved edited content.\n", encoding="utf-8")
+
+    proc = run_shim(
+        tmp_path,
+        "$edit",
+        "wiki/ideas/skillgen.md",
+        "--wiki-root",
+        str(wiki_root),
+        "--after-artifact",
+        str(after),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-edit-policy-auto",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert target.read_text(encoding="utf-8") == after.read_text(encoding="utf-8")
+    assert evidence["outputs"]["changes"][0]["operation"] == "update"
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:edit_wiki_plan:")
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "edit_wiki_plan_local_mutation_runtime_evidence_json" in artifacts
+    assert "approval_runtime_proof_manifest_json" in artifacts
+    assert "side_effect_runtime_proof_manifest_json" in artifacts
+    assert "wiki_mutation_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
 
 
 def test_autosci_skill_shim_edit_applies_approved_raw_add(tmp_path: Path) -> None:
@@ -4923,8 +5884,11 @@ def test_autosci_skill_shim_runs_ask_check_and_init_diagnostics(tmp_path: Path) 
             assert (tmp_path / evidence["outputs"]["evolution"]["recommended_changes_path"]).exists()
         elif expected_action == "init_sources":
             assert evidence["status"] == "inconclusive"
-            assert evidence["outputs"]["mode"] == "init_plan"
+            assert evidence["outputs"]["mode"] == "init_native_local_plan"
             assert evidence["outputs"]["candidates"] == []
+            artifact_types = {artifact["type"] for artifact in evidence["artifacts"]}
+            assert "init_discovery_prepare_manifest_json" in artifact_types
+            assert "init_discovery_plan_json" in artifact_types
 
 
 def test_autosci_skill_shim_init_uses_verified_runtime_source_manifest(tmp_path: Path) -> None:
@@ -5112,6 +6076,99 @@ def test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki(tmp_path: 
     assert (wiki_root / "graph/context_brief.md").exists()
 
 
+def test_autosci_skill_shim_init_parity_demo_auto_fans_runtime_sources_into_wiki(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "papers").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    runtime = tmp_path / "init-parity-runtime.json"
+    runtime.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_runtime_evidence.v1",
+                "task_id": "init-parity-runtime-skillgen",
+                "status": "completed",
+                "exit_code": 0,
+                "candidates": [
+                    {
+                        "candidate_id": "skillgen-parity-source",
+                        "title": "SkillGen Parity Source Candidate",
+                        "url": "https://arxiv.org/abs/2601.00004",
+                        "abstract": "Runtime-discovered source candidate for parity fan-in.",
+                    }
+                ],
+                "evidence_ids": ["runtime:init-parity-skillgen"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    proc = run_shim(
+        tmp_path,
+        "$init",
+        "skill generation",
+        "--runtime-evidence",
+        str(runtime),
+        "--wiki-root",
+        str(wiki_root),
+        "--write",
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-init-parity-demo-source-fan-in",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    assert action["status"] == "passed"
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+
+    assert evidence["status"] == "completed"
+    fan_in = evidence["outputs"]["source_fan_in"]
+    assert fan_in["status"] == "completed"
+    assert fan_in["applied"] is True
+    assert fan_in["policy_auto_fan_in"] is True
+    assert fan_in["source_runtime_verified_for_policy"] is True
+    assert fan_in["written_count"] == 1
+    boundary = evidence["outputs"]["final_fan_in_boundary"]
+    assert boundary["status"] == "init_sources_final_fan_in_ready"
+    assert boundary["final_fan_in_ready"] is True
+    assert boundary["approval_contract_verified"] is True
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:init_sources:")
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "source_fan_in_writeback_json" in artifacts
+    assert "wiki_mutation_runtime_proof_manifest_json" in artifacts
+    assert "provider_source_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["semantic_runtime"]["verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:init_sources:")
+    after_refs = [
+        str(item.get("artifact_path") or item.get("path") or "")
+        for item in contract["after_artifacts"]
+        if isinstance(item, dict)
+    ]
+    assert any(ref.endswith("source_fan_in_writeback.json") for ref in after_refs)
+    assert any(ref.endswith("wiki/graph/edges.jsonl") for ref in after_refs)
+
+    fan_in_evidence = json.loads((tmp_path / artifacts["source_fan_in_writeback_json"]).read_text(encoding="utf-8"))
+    assert fan_in_evidence["status"] == "completed"
+    assert fan_in_evidence["outputs"]["write"]["policy_auto_fan_in"] is True
+    page = wiki_root / "papers/skillgen-parity-source.md"
+    assert page.exists()
+    assert "SkillGen Parity Source Candidate" in page.read_text(encoding="utf-8")
+    assert "Source Candidate Fan-In" in (wiki_root / "log.md").read_text(encoding="utf-8")
+    assert "source_candidate_ingested" in (wiki_root / "graph/edges.jsonl").read_text(encoding="utf-8")
+    assert (wiki_root / "index.md").exists()
+    assert (wiki_root / "graph/context_brief.md").exists()
+
+
 def test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest(tmp_path: Path) -> None:
     allowlist = tmp_path / "daily-allowlist.json"
     before = tmp_path / "daily-before.json"
@@ -5244,6 +6301,81 @@ def test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest(tmp_path: P
     contract_artifact = next(artifact for artifact in evidence["artifacts"] if artifact["type"] == "approval_contract_json")
     contract = json.loads((tmp_path / contract_artifact["path"]).read_text(encoding="utf-8"))
     assert contract["semantic_runtime"]["verified"] is True
+
+
+def test_autosci_skill_shim_daily_arxiv_runs_native_local_feed_pipeline(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "wiki"
+    (wiki_root / "papers").mkdir(parents=True)
+    feed = tmp_path / "daily-feed.json"
+    decisions = tmp_path / "daily-decisions.json"
+    feed.write_text(
+        json.dumps(
+            [
+                {
+                    "arxiv_id": "2607.00001",
+                    "title": "Native Local Daily AutoSci",
+                    "abstract": "A local-feed paper for daily arXiv parity.",
+                    "category": "cs.AI",
+                    "published": "2026-07-03T00:00:00Z",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    decisions.write_text(
+        json.dumps(
+            {
+                "decisions": [
+                    {
+                        "arxiv_id": "2607.00001",
+                        "decision": "strong_recommend",
+                        "confidence": "high",
+                        "score": 0.94,
+                        "rationale": "Matches the local AutoSci parity test topic.",
+                        "wiki_connections": ["autosci parity"],
+                        "signals_used": ["arxiv", "local_decision"],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$daily-arxiv",
+        "autosci parity",
+        "--feed",
+        str(feed),
+        "--decisions",
+        str(decisions),
+        "--wiki-root",
+        str(wiki_root),
+        "--no-external",
+        "--run-id",
+        "shim-daily-native-local",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    native_options = payload["inputs"]["native_options"]
+    assert native_options["daily_feed"] == str(feed)
+    assert native_options["daily_decisions"] == str(decisions)
+    assert native_options["daily_no_external"] is True
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert evidence["status"] == "completed"
+    assert evidence["outputs"]["mode"] == "daily_arxiv_native_local_finalized"
+    assert evidence["outputs"]["candidates"][0]["title"] == "Native Local Daily AutoSci"
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "daily_arxiv_recommendation_context_json" in artifacts
+    assert "daily_arxiv_digest_json" in artifacts
+    assert "daily_arxiv_digest_markdown" in artifacts
+    context = json.loads((tmp_path / artifacts["daily_arxiv_recommendation_context_json"]).read_text(encoding="utf-8"))
+    digest = json.loads((tmp_path / artifacts["daily_arxiv_digest_json"]).read_text(encoding="utf-8"))
+    assert context["counts"]["feed_total"] == 1
+    assert context["notes"][-1] == "External enrichment skipped by command-line option."
+    assert digest["llm_decision_available"] is True
 
 
 def test_autosci_skill_shim_daily_arxiv_write_creates_ingest_handoff(tmp_path: Path) -> None:
@@ -5807,6 +6939,79 @@ def test_autosci_skill_shim_ask_crystallize_writes_approved_output(tmp_path: Pat
     assert any(ref.endswith("outputs/what-supports-skillgen.md") for ref in wiki_entry["evidence_refs"])
 
 
+def test_autosci_skill_shim_ask_crystallize_parity_demo_auto_writes_output(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    for name in ("papers", "outputs", "graph"):
+        (wiki_root / name).mkdir(parents=True, exist_ok=True)
+    (wiki_root / "papers/skillgen.md").write_text(
+        "---\ntitle: SkillGen\nslug: skillgen\n---\n"
+        "# SkillGen\n\n"
+        "SkillGen is supported by verifier-gated generated skills and runtime evidence.\n",
+        encoding="utf-8",
+    )
+    model_command = tmp_path / "ask_model_command.py"
+    model_command.write_text(
+        "\n".join(
+            [
+                "import json",
+                "import sys",
+                "request = json.loads(sys.stdin.read())",
+                "assert request['context']['retrieval_hits']",
+                "print(json.dumps({",
+                "    'schema': 'autosci_model_response.v1',",
+                "    'status': 'completed',",
+                "    'outputs': {",
+                "        'answer': 'SkillGen is supported by verifier-gated generated skills in the retrieved wiki source.',",
+                "        'confidence': 0.88,",
+                "        'evidence_ids': ['model:skillgen-policy-crystallize'],",
+                "        'model': 'test-model',",
+                "        'provider': 'command',",
+                "    },",
+                "}))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$ask",
+        "What supports SkillGen?",
+        "--wiki-root",
+        str(wiki_root),
+        "--model-command",
+        f"{shlex.quote(sys.executable)} {shlex.quote(str(model_command))}",
+        "--crystallize",
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-ask-crystallize-policy-auto",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    change = evidence["outputs"]["changes"][0]
+    assert change["operation"] == "create"
+    assert change["path"].endswith("wiki/outputs/what-supports-skillgen.md")
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:ask_wiki:")
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "ask_wiki_local_mutation_runtime_evidence_json" in artifacts
+    assert "approval_runtime_proof_manifest_json" in artifacts
+    assert "side_effect_runtime_proof_manifest_json" in artifacts
+    assert "wiki_mutation_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert (wiki_root / "outputs/what-supports-skillgen.md").exists()
+
+
 def test_autosci_skill_shim_ask_crystallize_writes_typed_target(tmp_path: Path) -> None:
     wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
     for name in ("papers", "concepts", "outputs", "graph"):
@@ -6138,6 +7343,63 @@ def test_autosci_skill_shim_accepts_visualize_serve_flag_without_server_executio
     assert "approval_ref" in contract["missing"]
 
 
+def test_autosci_skill_shim_visualize_parity_demo_auto_runs_server_probe(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "ideas").mkdir(parents=True)
+    (wiki_root / "graph").mkdir()
+    (wiki_root / "ideas" / "skillgen.md").write_text(
+        "---\n"
+        "title: SkillGen\n"
+        "slug: skillgen\n"
+        "status: proposed\n"
+        "tags: []\n"
+        "---\n"
+        "# SkillGen\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "graph" / "edges.jsonl").write_text("", encoding="utf-8")
+
+    proc = run_shim(
+        tmp_path,
+        "$visualize",
+        "autosci graph",
+        "--serve",
+        "--wiki-root",
+        str(wiki_root),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-visualize-parity-demo-serve",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["skill"] == "visualize"
+    assert summary["passed_count"] == 1
+
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["allowed"] is True
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:visualize_graph:")
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "visualize_web_health_json" in artifacts
+    assert "approval_contract_json" in artifacts
+    serve_probe = json.loads((tmp_path / artifacts["visualize_web_health_json"]).read_text(encoding="utf-8"))
+    assert serve_probe["server_started"] is True
+    assert serve_probe["server_stopped"] is True
+    assert serve_probe["health"]["ok"] is True
+
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:visualize_graph:")
+    assert contract["execution_verified"] is True
+
+
 def test_autosci_skill_shim_visualize_serve_emits_approved_runtime_proofs(tmp_path: Path) -> None:
     wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
     (wiki_root / "topics").mkdir(parents=True)
@@ -6365,6 +7627,76 @@ def test_autosci_skill_shim_refine_applies_approved_after_artifact(tmp_path: Pat
     assert any(str(ref).endswith("refine-review.json") for ref in review_proof["proofs"][0]["evidence_refs"])
 
 
+def test_autosci_skill_shim_refine_parity_demo_auto_applies_after_artifact(tmp_path: Path) -> None:
+    target = tmp_path / "artifacts/autosci/workspace/wiki/outputs/report-policy.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("# Report\n\nOld draft.\n", encoding="utf-8")
+    after = tmp_path / "report-policy-after.md"
+    after.write_text("# Report\n\nPolicy-approved refined draft.\n", encoding="utf-8")
+    review_evidence = tmp_path / "refine-review.json"
+    review_evidence.write_text(
+        json.dumps(
+            {
+                "schema": "artifact_review.v1",
+                "status": "completed",
+                "outputs": {
+                    "review": {
+                        "review_mode": "review_llm",
+                        "review_available": True,
+                        "score": 6.0,
+                        "verdict": "needs-work",
+                        "actionable_items": [{"issue": "Clarify contribution statement.", "severity": "major"}],
+                        "review_llm": {
+                            "status": "completed",
+                            "provider": "openai",
+                            "model": "gpt-5.5",
+                            "evidence_ids": ["review:refine-policy"],
+                        },
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$refine",
+        str(target),
+        "--review-llm-evidence",
+        str(review_evidence),
+        "--after-artifact",
+        str(after),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-refine-policy-auto",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    evolution = evidence["outputs"]["evolution"]
+    assert evolution["approval_state"] == "applied"
+    assert evolution["review"]["protected_core_edits_applied"] is True
+    assert evolution["review"]["refine_apply"]["applied"] is True
+    assert target.read_text(encoding="utf-8") == after.read_text(encoding="utf-8")
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:refine_artifact:")
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "refine_artifact_local_mutation_runtime_evidence_json" in artifacts
+    assert "approval_runtime_proof_manifest_json" in artifacts
+    assert "side_effect_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+
+
 def test_autosci_skill_shim_refine_runs_review_command_quality_gate(tmp_path: Path) -> None:
     target = tmp_path / "artifacts/autosci/workspace/wiki/outputs/report-review-loop.md"
     target.parent.mkdir(parents=True)
@@ -6588,6 +7920,72 @@ def test_autosci_skill_shim_pilot_eval_write_updates_wiki_with_approval(tmp_path
     assert verdict["final_pilot_acceptance_ready"] is True
 
 
+def test_autosci_skill_shim_pilot_eval_parity_demo_auto_writes_wiki(tmp_path: Path) -> None:
+    claim_id = "pilot-claim-parity-write"
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "ideas").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    idea_path = wiki_root / "ideas" / f"{claim_id}.md"
+    idea_path.write_text(
+        "---\ntitle: Pilot Claim Parity Write\nstatus: pilot\n---\n# Pilot Claim Parity Write\n",
+        encoding="utf-8",
+    )
+    runtime = tmp_path / "pilot-runtime-parity-write.json"
+    runtime.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_runtime_evidence.v1",
+                "task_id": "pilot-runtime-parity-write",
+                "status": "completed",
+                "exit_code": 0,
+                "outcome": "supports",
+                "metrics": [{"name": "pilot_accuracy", "value": 0.81}],
+                "evidence_ids": ["runtime:pilot-parity-write"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-pilot-eval",
+        claim_id,
+        "--runtime-evidence",
+        str(runtime),
+        "--wiki-root",
+        str(wiki_root),
+        "--write",
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-pilot-eval-parity-writeback",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    writeback_artifact = next(artifact for artifact in evidence["artifacts"] if artifact["type"] == "pilot_verdict_writeback_json")
+    writeback = json.loads((tmp_path / writeback_artifact["path"]).read_text(encoding="utf-8"))
+    assert writeback["status"] == "completed"
+    assert writeback["outputs"]["write"]["applied"] is True
+    policy = writeback["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:evaluate_pilot_result:")
+    assert "claim_verdict: supported" in idea_path.read_text(encoding="utf-8")
+    assert "claim_verdict_written" in (wiki_root / "graph/edges.jsonl").read_text(encoding="utf-8")
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "approval_runtime_proof_manifest_json" in artifacts
+    assert "wiki_mutation_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:evaluate_pilot_result:")
+
+
 def test_autosci_skill_shim_exp_eval_merges_experiment_code_and_review_llm_evidence(tmp_path: Path) -> None:
     claim_id = "claim-skillgen-001"
     claims = tmp_path / "claims.json"
@@ -6747,9 +8145,14 @@ def test_autosci_skill_shim_exp_eval_write_updates_wiki_with_approval(tmp_path: 
     wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
     (wiki_root / "ideas").mkdir(parents=True)
     (wiki_root / "graph").mkdir(parents=True)
+    (wiki_root / "topics").mkdir(parents=True)
     idea_path = wiki_root / "ideas" / f"{claim_id}.md"
     idea_path.write_text(
         "---\ntitle: SkillGen Writeback Idea\nstatus: candidate\n---\n# SkillGen Writeback Idea\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "topics/skillgen.md").write_text(
+        "# SkillGen\n\n## Open problems\n- Need cross-domain validation before publication.\n",
         encoding="utf-8",
     )
     before = tmp_path / "before-claim-writeback.md"
@@ -6879,6 +8282,9 @@ def test_autosci_skill_shim_exp_eval_write_updates_wiki_with_approval(tmp_path: 
     assert (wiki_root / "log.md").exists()
     assert "Claim Verdict Writeback" in (wiki_root / "log.md").read_text(encoding="utf-8")
     assert "claim_verdict_written" in (wiki_root / "graph/edges.jsonl").read_text(encoding="utf-8")
+    open_questions = wiki_root / "graph/open_questions.md"
+    assert open_questions.exists()
+    assert "[topic:skillgen] Need cross-domain validation before publication." in open_questions.read_text(encoding="utf-8")
     artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
     assert "approval_runtime_proof_manifest_json" in artifacts
     assert "wiki_mutation_runtime_proof_manifest_json" in artifacts
@@ -6901,6 +8307,145 @@ def test_autosci_skill_shim_exp_eval_write_updates_wiki_with_approval(tmp_path: 
     assert boundary["code_evidence_linked"] is True
     assert boundary["review_llm_completed"] is True
     assert boundary["writeback_completed"] is True
+    verdict = evidence["outputs"]["verdicts"][0]
+    assert verdict["final_verdict_ready"] is True
+
+
+def test_autosci_skill_shim_exp_eval_parity_demo_auto_writes_wiki(tmp_path: Path) -> None:
+    claim_id = "claim-skillgen-parity-write"
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "ideas").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    idea_path = wiki_root / "ideas" / f"{claim_id}.md"
+    idea_path.write_text(
+        "---\ntitle: SkillGen Parity Writeback Idea\nstatus: candidate\n---\n# SkillGen Parity Writeback Idea\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims-parity-write.json"
+    claims.write_text(
+        json.dumps(
+            {
+                "schema": "research_claims.v1",
+                "task_id": "claims-parity-write",
+                "status": "completed",
+                "outputs": {
+                    "claims": [
+                        {
+                            "claim_id": claim_id,
+                            "text": "Parity policy can write verified local claim verdicts.",
+                            "evidence_ids": ["claim:parity-write"],
+                        }
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = tmp_path / "result-parity-write.json"
+    result.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_result.v1",
+                "task_id": "result-parity-write",
+                "status": "completed",
+                "outputs": {
+                    "result": {
+                        "experiment_id": "exp-parity-write",
+                        "outcome": "supports",
+                        "evidence_ids": ["experiment:parity-write"],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    code = tmp_path / "code-parity-write.json"
+    code.write_text(
+        json.dumps(
+            {
+                "schema": "code_evidence_map.v1",
+                "task_id": "code-parity-write",
+                "status": "completed",
+                "outputs": {
+                    "mappings": [
+                        {
+                            "mapping_id": "code-map-parity-write",
+                            "claim_id": claim_id,
+                            "evidence_ids": ["code:parity-write"],
+                            "files": ["experiments/parity_write_eval.py"],
+                        }
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    review = tmp_path / "review-parity-write.json"
+    review.write_text(
+        json.dumps(
+            {
+                "schema": "artifact_review.v1",
+                "task_id": "review-parity-write",
+                "status": "completed",
+                "outputs": {
+                    "review": {
+                        "review_mode": "review_llm",
+                        "review_available": True,
+                        "recommendation": "pass_with_caveats",
+                        "evidence_ids": ["review:parity-write"],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-eval",
+        claim_id,
+        "--wiki-root",
+        str(wiki_root),
+        "--claims-evidence",
+        str(claims),
+        "--experiment-result-evidence",
+        str(result),
+        "--code-evidence",
+        str(code),
+        "--review-llm-evidence",
+        str(review),
+        "--write",
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-exp-eval-parity-writeback",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    writeback_artifact = next(artifact for artifact in evidence["artifacts"] if artifact["type"] == "claim_verdict_writeback_json")
+    writeback = json.loads((tmp_path / writeback_artifact["path"]).read_text(encoding="utf-8"))
+    assert writeback["status"] == "completed"
+    assert writeback["outputs"]["write"]["applied"] is True
+    policy = writeback["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:verify_claim:")
+    updated = idea_path.read_text(encoding="utf-8")
+    assert "claim_verdict: supported" in updated
+    assert "claim_verdict_evidence:" in updated
+    assert "claim_verdict_written" in (wiki_root / "graph/edges.jsonl").read_text(encoding="utf-8")
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "approval_runtime_proof_manifest_json" in artifacts
+    assert "wiki_mutation_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:verify_claim:")
     verdict = evidence["outputs"]["verdicts"][0]
     assert verdict["final_verdict_ready"] is True
 
@@ -6930,6 +8475,17 @@ def test_autosci_web_visualization_compatibility_tools_generate_graph_artifacts(
     assert (REPO / "tools/serve.py").exists()
     assert (REPO / "app/index.html").exists()
     assert (REPO / "app/modules/graph.js").exists()
+    assert (REPO / "app/modules/main.js").exists()
+    assert (REPO / "app/modules/reader.js").exists()
+    assert (REPO / "app/app.css").exists()
+    index_html = (REPO / "app/index.html").read_text(encoding="utf-8")
+    reader_js = (REPO / "app/modules/reader.js").read_text(encoding="utf-8")
+    app_css = (REPO / "app/app.css").read_text(encoding="utf-8")
+    assert "OmegaWiki" in index_html
+    assert "/modules/main.js" in index_html
+    assert "renderTagWordCloud" in reader_js
+    assert "Top tags" in reader_js
+    assert ".word-cloud-section" in app_css
 
     obsidian = subprocess.run(
         [
@@ -7372,18 +8928,20 @@ def test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results(tmp
     assert pilot_boundary["status"] == "pilot_runtime_ready"
     assert pilot_boundary["pilot_runtime_ready"] is True
     assert pilot_boundary["final_pilot_acceptance_ready"] is False
+    assert pilot_boundary["pilot_verdict_ready"] is False
+    assert pilot_boundary["writeback_completed"] is False
+    assert "exp-pilot-eval" in pilot_boundary["limitations"][0]
     assert any(artifact["type"] == "pilot_run_final_acceptance_boundary_json" for artifact in pilot_evidence["artifacts"])
     pilot_artifacts = {artifact["type"]: artifact["path"] for artifact in pilot_evidence["artifacts"]}
     assert "approval_runtime_proof_manifest_json" in pilot_artifacts
     assert "side_effect_runtime_proof_manifest_json" in pilot_artifacts
-    assert "wiki_mutation_runtime_proof_manifest_json" in pilot_artifacts
+    assert "wiki_mutation_runtime_proof_manifest_json" not in pilot_artifacts
+    assert "wiki_experiment_state" not in pilot_artifacts
     pilot_approval_proof = json.loads((tmp_path / pilot_artifacts["approval_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
     pilot_side_effect_proof = json.loads((tmp_path / pilot_artifacts["side_effect_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
-    pilot_wiki_proof = json.loads((tmp_path / pilot_artifacts["wiki_mutation_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
     assert pilot_approval_proof["proofs"][0]["native_skill"] == "exp-pilot-run"
     assert pilot_approval_proof["proofs"][0]["categories"] == ["external_runtime_evidence", "approval_boundary_evidence"]
     assert pilot_side_effect_proof["proofs"][0]["categories"] == ["side_effect_execution_evidence"]
-    assert pilot_wiki_proof["proofs"][0]["categories"] == ["wiki_mutation_evidence"]
 
     paper_dir = tmp_path / "runtime-paper"
     paper_dir.mkdir()
@@ -7495,6 +9053,70 @@ def test_autosci_skill_shim_executes_approved_paper_compile_executor(tmp_path: P
     assert checklist["runtime_semantic"]["verified"] is True
     assert checklist["approval_contract"]["semantic_runtime"]["verified"] is True
     assert "approved side-effect executor" in " ".join(evidence["limitations"])
+    report_artifact = next(item for item in bundle_files if item["type"] == "paper_compile_report_json")
+    report = json.loads((tmp_path / report_artifact["path"]).read_text(encoding="utf-8"))
+    assert report["status"] == "completed"
+    assert report["toolchain"]["selected_executor"] == "latexmk"
+    assert report["execution"]["runtime_semantic_verified"] is True
+    assert report["pdf"]["compiled_pdf_verified"] is True
+
+
+def test_autosci_skill_shim_paper_compile_parity_demo_auto_executes_executor(tmp_path: Path) -> None:
+    paper_dir = tmp_path / "parity-paper"
+    paper_dir.mkdir()
+    (paper_dir / "main.tex").write_text(
+        "\\documentclass{article}\n\\begin{document}\nParity demo compile.\n\\end{document}\n",
+        encoding="utf-8",
+    )
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_latexmk = fake_bin / "latexmk"
+    fake_latexmk.write_text(
+        "#!/usr/bin/env python3\n"
+        "from pathlib import Path\n"
+        f"Path('main.pdf').write_bytes({MINIMAL_STRUCTURAL_PDF!r})\n"
+        "print('fake parity latexmk completed')\n",
+        encoding="utf-8",
+    )
+    fake_latexmk.chmod(0o755)
+
+    proc = run_shim(
+        tmp_path,
+        "$paper-compile",
+        str(paper_dir),
+        "--checklist",
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-paper-compile-parity-demo-executor",
+        extra_env={"PATH": f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}"},
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    assert action["status"] == "passed"
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert evidence["status"] == "completed"
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:compile_paper:")
+    bundle_files = evidence["outputs"]["bundle"]["files"]
+    file_map = {item["type"]: item["path"] for item in bundle_files}
+    assert "gate_policy_decision_json" in file_map
+    assert "gate_policy_allowlist_json" in file_map
+    assert "compile_runtime_evidence_json" in file_map
+    assert any(item["type"] == "compiled_pdf" and item["path"].endswith("main.pdf") for item in bundle_files)
+    checklist = json.loads((tmp_path / file_map["paper_compile_checklist_json"]).read_text(encoding="utf-8"))
+    assert checklist["toolchain"]["selected_executor"] == "latexmk"
+    assert checklist["runtime_semantic"]["verified"] is True
+    contract = checklist["approval_contract"]
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:compile_paper:")
+    allowlist_sidecar = json.loads((tmp_path / file_map["gate_policy_allowlist_json"]).read_text(encoding="utf-8"))
+    assert "latexmk" in allowlist_sidecar["executables"]
 
 
 def test_autosci_skill_shim_rejects_invalid_paper_compile_pdf(tmp_path: Path) -> None:
@@ -7612,7 +9234,87 @@ def test_autosci_skill_shim_executes_approved_paper_compile_with_pdflatex_fallba
     assert "paper-compile-runtime:pdflatex" in runtime["outputs"]["runtime"]["evidence_ids"]
 
 
+def test_autosci_skill_shim_paper_compile_missing_tool_inconclusive(tmp_path: Path) -> None:
+    paper_dir = tmp_path / "missing-tool-paper"
+    paper_dir.mkdir()
+    (paper_dir / "main.tex").write_text(
+        "\\documentclass{article}\n\\begin{document}\nMissing tool compile.\n\\end{document}\n",
+        encoding="utf-8",
+    )
+    empty_path = tmp_path / "empty-path"
+    empty_path.mkdir()
+    allowlist = tmp_path / "compile-missing-tool-allowlist.json"
+    before = tmp_path / "compile-missing-tool-before.json"
+    allowlist.write_text(
+        json.dumps({"executables": ["latexmk", "pdflatex", "xelatex", "lualatex"]}),
+        encoding="utf-8",
+    )
+    before.write_text(json.dumps({"paper_dir": str(paper_dir), "pdf_exists": False}), encoding="utf-8")
+
+    proc = run_shim(
+        tmp_path,
+        "$paper-compile",
+        str(paper_dir),
+        "--checklist",
+        "--approval-ref",
+        "approval-missing-tex-tool",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--before-artifact",
+        str(before),
+        "--execute-approved",
+        "--run-id",
+        "shim-paper-compile-missing-tool",
+        extra_env={"PATH": str(empty_path)},
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert evidence["status"] == "inconclusive"
+    assert action["status"] == "schema_only"
+    bundle_files = evidence["outputs"]["bundle"]["files"]
+    assert not any(item["type"] == "compiled_pdf" for item in bundle_files)
+    checklist_artifact = next(item for item in bundle_files if item["type"] == "paper_compile_checklist_json")
+    checklist = json.loads((tmp_path / checklist_artifact["path"]).read_text(encoding="utf-8"))
+    assert checklist["toolchain"]["tex_executors"] == {}
+    assert checklist["toolchain"]["selected_executor"] == ""
+    assert any(row["check"] == "tex_executor_available" and row["status"] == "warn" for row in checklist["checks"])
+    runtime_artifact = next(item for item in bundle_files if item["type"] == "compile_runtime_evidence_json")
+    runtime = json.loads((tmp_path / runtime_artifact["path"]).read_text(encoding="utf-8"))
+    assert runtime["outputs"]["runtime"]["status"] == "inconclusive"
+    assert runtime["outputs"]["runtime"]["available_tex_executors"] == []
+    assert any(
+        row["check"] == "tex_executor_available" and row["status"] == "error"
+        for row in runtime["outputs"]["runtime"]["checks"]
+    )
+    report_artifact = next(item for item in bundle_files if item["type"] == "paper_compile_report_json")
+    report = json.loads((tmp_path / report_artifact["path"]).read_text(encoding="utf-8"))
+    assert report["status"] == "inconclusive"
+    assert report["toolchain"]["available_tex_executors"] == []
+    assert report["toolchain"]["selected_executor"] == ""
+    assert report["execution"]["runtime_semantic_verified"] is False
+
+
 def test_autosci_skill_shim_executes_approved_poster_executor(tmp_path: Path) -> None:
+    paper_dir = tmp_path / "poster-paper"
+    sections = paper_dir / "sections"
+    sections.mkdir(parents=True)
+    (paper_dir / "main.tex").write_text(
+        "\\title{Approved Poster Executor}\n"
+        "\\author{Research Team}\n"
+        "\\begin{document}\n"
+        "\\maketitle\n"
+        "\\input{sections/intro}\n"
+        "\\input{sections/method}\n"
+        "\\input{sections/results}\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    (sections / "intro.tex").write_text("\\section{Introduction}\nApproved poster rendering needs native HTML.\n", encoding="utf-8")
+    (sections / "method.tex").write_text("\\section{Method}\nThe bridge builds poster content from paper source.\n", encoding="utf-8")
+    (sections / "results.tex").write_text("\\section{Results}\nThe renderer exports a verified PNG.\n", encoding="utf-8")
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     fake_renderer = fake_bin / "poster-renderer"
@@ -7644,7 +9346,7 @@ def test_autosci_skill_shim_executes_approved_poster_executor(tmp_path: Path) ->
     proc = run_shim(
         tmp_path,
         "$poster",
-        "report-001",
+        str(paper_dir),
         "--approval-ref",
         "approval-execute-poster",
         "--allowlist-evidence",
@@ -7661,7 +9363,7 @@ def test_autosci_skill_shim_executes_approved_poster_executor(tmp_path: Path) ->
     action = payload["outputs"]["skill_run"]["actions"][0]
     assert action["action"] == "build_poster"
     evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
-    assert evidence["status"] == "inconclusive"
+    assert evidence["status"] == "completed"
     bundle_files = evidence["outputs"]["bundle"]["files"]
     assert any(item["type"] == "poster_runtime_evidence_json" for item in bundle_files)
     assert any(item["type"] == "poster_runtime_after_artifact" and item["path"].endswith("poster.png") for item in bundle_files)
@@ -7684,6 +9386,86 @@ def test_autosci_skill_shim_executes_approved_poster_executor(tmp_path: Path) ->
     assert approval_proof["proofs"][0]["categories"] == ["external_runtime_evidence", "approval_boundary_evidence"]
     assert side_effect_proof["proofs"][0]["categories"] == ["side_effect_execution_evidence"]
     assert "approved side-effect executor" in " ".join(evidence["limitations"])
+
+
+def test_autosci_skill_shim_poster_parity_demo_auto_executes_renderer(tmp_path: Path) -> None:
+    paper_dir = tmp_path / "poster-parity-paper"
+    sections = paper_dir / "sections"
+    sections.mkdir(parents=True)
+    (paper_dir / "main.tex").write_text(
+        "\\title{Parity Poster Executor}\n"
+        "\\author{Research Team}\n"
+        "\\begin{document}\n"
+        "\\maketitle\n"
+        "\\input{sections/intro}\n"
+        "\\input{sections/method}\n"
+        "\\input{sections/results}\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    (sections / "intro.tex").write_text("\\section{Introduction}\nParity poster rendering needs native HTML.\n", encoding="utf-8")
+    (sections / "method.tex").write_text("\\section{Method}\nThe bridge builds poster content from paper source.\n", encoding="utf-8")
+    (sections / "results.tex").write_text("\\section{Results}\nThe renderer exports a verified PNG.\n", encoding="utf-8")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_renderer = fake_bin / "poster-renderer"
+    fake_renderer.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json\n"
+        "import sys\n"
+        "from pathlib import Path\n"
+        "html, png, validation = sys.argv[1:4]\n"
+        "assert Path(html).exists()\n"
+        "Path(png).write_bytes(b'\\x89PNG\\r\\n\\x1a\\n')\n"
+        "Path(validation).write_text(json.dumps({\n"
+        "  'browser_rendered': True,\n"
+        "  'png_exported': True,\n"
+        "  'overflow_probe': 'passed'\n"
+        "}), encoding='utf-8')\n"
+        "print('fake parity poster renderer completed')\n",
+        encoding="utf-8",
+    )
+    fake_renderer.chmod(0o755)
+    allowlist = tmp_path / "poster-parity-allowlist.json"
+    allowlist.write_text(
+        json.dumps({"poster_render_command": [str(fake_renderer), "{html}", "{png}", "{validation}"]}),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$poster",
+        str(paper_dir),
+        "--allowlist-evidence",
+        str(allowlist),
+        "--gate-mode",
+        "parity_demo",
+        "--run-id",
+        "shim-poster-parity-demo-renderer",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    assert action["action"] == "build_poster"
+    assert action["status"] == "passed"
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert evidence["status"] == "completed"
+    policy = evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "parity_demo"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:parity_demo:build_poster:")
+    bundle_files = evidence["outputs"]["bundle"]["files"]
+    file_map = {item["type"]: item["path"] for item in bundle_files}
+    assert "gate_policy_decision_json" in file_map
+    assert "poster_runtime_evidence_json" in file_map
+    assert "poster_runtime_after_artifact" in file_map
+    validation = json.loads((tmp_path / file_map["poster_validation_json"]).read_text(encoding="utf-8"))
+    assert validation["runtime_semantic"]["verified"] is True
+    contract = json.loads((tmp_path / file_map["approval_contract_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["approval_ref"].startswith("policy:auto:parity_demo:build_poster:")
 
 
 def test_autosci_skill_shim_accepts_paper_compile_checklist_without_bundle_fallback(tmp_path: Path) -> None:
@@ -8132,6 +9914,163 @@ def test_autosci_skill_shim_paper_compile_submission_audit_marks_audit_ready(tmp
     assert "portal_submission_completed: False" in diagnostics
 
 
+def test_autosci_skill_shim_paper_compile_approved_runtime_submission_audit_closes_boundaries(tmp_path: Path) -> None:
+    paper_dir = tmp_path / "paper-runtime-submission-audit"
+    paper_dir.mkdir()
+    (paper_dir / "main.tex").write_text(
+        "\\documentclass{article}\n"
+        "\\author{Anonymous Authors}\n"
+        "\\begin{document}\n"
+        "SkillGen paper draft with approved compile and submission audit.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_latexmk = fake_bin / "latexmk"
+    fake_latexmk.write_text(
+        "#!/usr/bin/env python3\n"
+        "from pathlib import Path\n"
+        f"Path('main.pdf').write_bytes({MINIMAL_STRUCTURAL_PDF!r})\n"
+        "print('fake audited latexmk completed')\n",
+        encoding="utf-8",
+    )
+    fake_latexmk.chmod(0o755)
+    allowlist = tmp_path / "runtime-audit-compile-allowlist.json"
+    before = tmp_path / "runtime-audit-compile-before.json"
+    allowlist.write_text(json.dumps({"executables": ["latexmk"]}), encoding="utf-8")
+    before.write_text(json.dumps({"paper_dir": str(paper_dir), "pdf_exists": False}), encoding="utf-8")
+    profile = tmp_path / "runtime-audit-profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_submission_profile.v1",
+                "venue": "ICLR",
+                "evidence_ids": ["venue-profile:runtime-audit"],
+                "requirements": {
+                    "submission_mode": "double_blind",
+                    "anonymous": True,
+                    "page_limit": 8,
+                    "min_font_size": 10,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    pdf_path = paper_dir / "main.pdf"
+    inspection = tmp_path / "runtime-audit-pdf-inspection.json"
+    inspection.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_pdf_inspection.v1",
+                "status": "completed",
+                "evidence_ids": ["pdf-inspection:runtime-audit-main"],
+                "outputs": {
+                    "inspection": {
+                        "pdf_path": str(pdf_path),
+                        "page_count": 6,
+                        "min_font_size": 11,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    audit = tmp_path / "runtime-audit-submission-audit.json"
+    audit.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_publication_submission_audit.v1",
+                "status": "completed",
+                "evidence_ids": ["submission-audit:runtime-audit"],
+                "outputs": {
+                    "audit": {
+                        "venue": "ICLR",
+                        "submission_ready": True,
+                        "portal_submission_completed": False,
+                        "checks": [
+                            {"check": "anonymity", "status": "ok"},
+                            {"check": "page_limit", "status": "ok"},
+                            {"check": "font_size", "status": "ok"},
+                            {"check": "unconfirmed_markers", "status": "ok"},
+                        ],
+                        "blocking_checks": [],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$paper-compile",
+        str(paper_dir),
+        "--checklist",
+        "--approval-ref",
+        "approval-runtime-submission-audit-compile",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--before-artifact",
+        str(before),
+        "--submission-profile",
+        str(profile),
+        "--pdf-inspection",
+        str(inspection),
+        "--submission-audit",
+        str(audit),
+        "--execute-approved",
+        "--run-id",
+        "shim-paper-compile-runtime-submission-audit",
+        extra_env={"PATH": f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}"},
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    assert action["status"] == "passed"
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert evidence["status"] == "completed"
+    bundle_files = evidence["outputs"]["bundle"]["files"]
+    assert any(item["type"] == "compiled_pdf" and item["path"].endswith("main.pdf") for item in bundle_files)
+    assert any(item["type"] == "compile_runtime_evidence_json" for item in bundle_files)
+    assert any(item["type"] == "publication_submission_audit_json" for item in bundle_files)
+
+    checklist_artifact = next(item for item in bundle_files if item["type"] == "paper_compile_checklist_json")
+    checklist = json.loads((tmp_path / checklist_artifact["path"]).read_text(encoding="utf-8"))
+    boundary = checklist["submission_boundary"]
+    assert checklist["runtime_semantic"]["verified"] is True
+    assert checklist["approval_contract"]["execution_verified"] is True
+    assert boundary["venue_submission_ready"] is True
+    assert boundary["submission_audit_ready"] is True
+    assert boundary["venue_status"] == "venue_submission_ready"
+    assert boundary["submission_audit_status"] == "submission_audit_ready"
+    assert boundary["submission_audit_blocking_checks"] == []
+    assert boundary["portal_submission_completed"] is False
+    assert boundary["check_statuses"]["page_limit_check"] == "ok"
+    assert boundary["check_statuses"]["font_size_check"] == "ok"
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
+    assert "provider_source_runtime_proof_manifest_json" in artifacts
+    proof = json.loads((tmp_path / artifacts["provider_source_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
+    proof_entry = proof["proofs"][0]
+    assert proof_entry["native_skill"] == "paper-compile"
+    assert proof_entry["collection_mode"] == "approved_side_effect"
+    assert proof_entry["categories"] == [
+        "external_runtime_evidence",
+        "approval_boundary_evidence",
+        "side_effect_execution_evidence",
+        "provider_source_evidence",
+    ]
+    diagnostics_path = next(
+        item["path"] for item in bundle_files if item["type"] == "paper_compile_diagnostics_markdown"
+    )
+    diagnostics = (tmp_path / diagnostics_path).read_text(encoding="utf-8")
+    assert "| runtime_semantic_verified | ok |" in diagnostics
+    assert "venue_submission_ready: True" in diagnostics
+    assert "submission_audit_ready: True" in diagnostics
+
+
 def test_autosci_skill_shim_runs_ideate_from_wiki_and_discovery_sources(tmp_path: Path) -> None:
     wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
     (wiki_root / "papers").mkdir(parents=True)
@@ -8219,6 +10158,7 @@ def test_autosci_skill_shim_runs_ideate_from_wiki_and_discovery_sources(tmp_path
     assert all("fixture" not in json.dumps(idea).lower() for idea in ideas)
     artifacts = {artifact["type"]: artifact["path"] for artifact in idea_evidence["artifacts"]}
     assert "ideate_final_promotion_boundary_json" in artifacts
+    assert "ideate_growth_report_json" in artifacts
     assert "provider_source_runtime_proof_manifest_json" in artifacts
     boundary = json.loads((tmp_path / artifacts["ideate_final_promotion_boundary_json"]).read_text(encoding="utf-8"))
     assert boundary["schema"] == "autosci_ideate_final_promotion_boundary.v1"
@@ -8234,6 +10174,13 @@ def test_autosci_skill_shim_runs_ideate_from_wiki_and_discovery_sources(tmp_path
     assert pipeline_report["selected_for_write_count"] == 2
     assert pipeline_report["generation_path_coverage"]["status"] == "complete"
     assert pipeline_report["generation_path_coverage"]["missing_paths"] == []
+    growth_report = json.loads((tmp_path / artifacts["ideate_growth_report_json"]).read_text(encoding="utf-8"))
+    assert growth_report["schema"] == "autosci_ideate_growth_report.v1"
+    assert growth_report["candidate_count"] == len(ideas)
+    assert growth_report["selected_for_write_count"] == 2
+    assert growth_report["writeback"]["requested"] is False
+    assert growth_report["writeback"]["actual_wiki_idea_write_count"] == 0
+    assert growth_report["wiki_scan"]["source_mode"] == "mixed"
     source_proof = json.loads((tmp_path / artifacts["provider_source_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
     source_proof_entry = source_proof["proofs"][0]
     assert source_proof_entry["native_skill"] == "ideate"
@@ -8242,12 +10189,83 @@ def test_autosci_skill_shim_runs_ideate_from_wiki_and_discovery_sources(tmp_path
     assert not any(category == "external_runtime_evidence" for category in source_proof_entry["categories"])
     assert any(ref.endswith("methods/adaptation.md") for ref in source_proof_entry["evidence_refs"])
     assert any(ref.endswith("literature_discovery.json") for ref in source_proof_entry["evidence_refs"])
+    assert any(ref.endswith("ideate_growth_report.json") for ref in source_proof_entry["evidence_refs"])
     evaluation = evaluation_evidence["outputs"]["evaluations"][0]
     assert evaluation["recommendation"] in {"advance", "revise"}
     assert evaluation["review_mode"] == "local_surrogate"
     assert evaluation["review_available"] is False
     assert evaluation["closest_prior_work"]
     assert evaluation["review_score"] != "N/A"
+
+
+def test_autosci_skill_shim_ideate_active_idea_dedup_filters_duplicate(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "papers").mkdir(parents=True)
+    (wiki_root / "methods").mkdir(parents=True)
+    (wiki_root / "ideas").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    (wiki_root / "papers/skillgen.md").write_text(
+        "---\ntitle: SkillGen Paper\n---\n# SkillGen Paper\n\nSkill generation exposes an inference-time adaptation gap.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "methods/adaptation.md").write_text(
+        "---\ntitle: Inference-Time Adaptation\n---\n# Inference-Time Adaptation\n\nA reusable method with open evaluation questions.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "ideas/existing-agent-skill-gap.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "idea_id: idea-existing-agent-skill-gap",
+                "slug: existing-agent-skill-gap",
+                "title: Close the evidence gap around agent skill learning",
+                "status: proposed",
+                "---",
+                "# Close the evidence gap around agent skill learning",
+                "",
+                "An active idea already covers this agent skill learning evidence gap.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (wiki_root / "graph/open_questions.md").write_text(
+        "# Open Questions\n\n- How should generated skills be validated against baseline tools?\n",
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$ideate",
+        "agent skill learning",
+        "--from-wiki",
+        "--wiki-root",
+        str(wiki_root),
+        "--skip-validation",
+        "--skip-pilot",
+        "--run-id",
+        "shim-ideate-active-dedup",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    idea_evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    ideas = idea_evidence["outputs"]["ideas"]
+    duplicate = next(idea for idea in ideas if idea["idea_id"] == "idea-wiki-discovery-001")
+    assert duplicate["status"] == "filtered"
+    assert duplicate["duplicate_status"] == "duplicate"
+    assert duplicate["selected_for_write"] is False
+    assert "existing-agent-skill-gap" in duplicate["duplicate_of"]
+    assert duplicate["promotion_ready"] is False
+    assert "idea overlaps failed or duplicate idea banlist" in duplicate["final_promotion_boundary"]["blocking_reasons"]
+    artifacts = {artifact["type"]: artifact["path"] for artifact in idea_evidence["artifacts"]}
+    boundary = json.loads((tmp_path / artifacts["ideate_final_promotion_boundary_json"]).read_text(encoding="utf-8"))
+    assert boundary["active_idea_dedup_checked"] is True
+    assert boundary["active_idea_count"] == 1
+    growth_report = json.loads((tmp_path / artifacts["ideate_growth_report_json"]).read_text(encoding="utf-8"))
+    assert growth_report["wiki_scan"]["active_idea_count"] == 1
+    assert growth_report["filtered_or_blocked_count"] >= 1
 
 
 def test_autosci_skill_shim_ideate_uses_model_command_for_brainstorm(tmp_path: Path) -> None:
@@ -8359,6 +10377,416 @@ def test_autosci_skill_shim_ideate_uses_model_command_for_brainstorm(tmp_path: P
     evaluation = evaluation_evidence["outputs"]["evaluations"][0]
     assert evaluation["idea_id"] == "idea-model-skillgen-001"
     assert evaluation["review_mode"] == "local_surrogate"
+
+
+def test_autosci_skill_shim_ideate_promotes_with_model_novelty_and_review_evidence(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "papers").mkdir(parents=True)
+    (wiki_root / "methods").mkdir(parents=True)
+    (wiki_root / "ideas").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    (wiki_root / "papers/skillgen.md").write_text(
+        "---\ntitle: SkillGen Paper\n---\n# SkillGen Paper\n\nSkill generation exposes an inference-time adaptation gap.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "methods/adaptation.md").write_text(
+        "---\ntitle: Inference-Time Adaptation\n---\n# Inference-Time Adaptation\n\nA reusable method with open evaluation questions.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "ideas/existing-control.md").write_text(
+        "---\nidea_id: idea-existing-control\nslug: existing-control\nstatus: proposed\n---\n# Existing Control\n\nA control idea keeps wiki maturity non-empty.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "graph/open_questions.md").write_text(
+        "# Open Questions\n\n- How should generated skills be validated against baseline tools?\n",
+        encoding="utf-8",
+    )
+    external_path = tmp_path / "ideate-external-novelty.json"
+    external_path.write_text(
+        json.dumps(
+            {
+                "schema": "external_novelty_sources.v1",
+                "status": "completed",
+                "inputs": {"query": "agent skill learning"},
+                "outputs": {
+                    "sources": [
+                        {
+                            "id": "web:ideate-001",
+                            "provider": "web",
+                            "title": "Agent Skill Learning Prior Work",
+                            "summary": "External novelty source for agent skill learning.",
+                        }
+                    ]
+                },
+                "provenance": {
+                    "operator_id": "test",
+                    "implementation_package": "test",
+                    "timestamp": "2026-06-24T00:00:00Z",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    review_path = tmp_path / "ideate-review-llm.json"
+    review_path.write_text(
+        json.dumps(
+            {
+                "schema": "artifact_review.v1",
+                "task_id": "ideate-review-llm",
+                "sprint_id": "ideate-review-llm",
+                "node_id": "ideate-review-llm",
+                "status": "completed",
+                "inputs": {"target": "agent skill learning"},
+                "outputs": {
+                    "review": {
+                        "artifact_id": "artifact:ideate",
+                        "target": "agent skill learning",
+                        "review_mode": "review_llm",
+                        "review_available": True,
+                        "difficulty": "standard",
+                        "focus": "novelty",
+                        "score": 0.81,
+                        "recommendation": "pass_with_review_required",
+                        "evidence_ids": ["review-llm:ideate"],
+                    },
+                    "findings": [],
+                    "artifact": {"artifact_id": "artifact:ideate"},
+                },
+                "artifacts": [],
+                "provenance": {
+                    "operator_id": "review-llm-test",
+                    "implementation_package": "test",
+                    "timestamp": "2026-06-24T00:00:00Z",
+                },
+                "limitations": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    model_command = tmp_path / "ideate_model_command_full.py"
+    model_command.write_text(
+        "\n".join(
+            [
+                "import json",
+                "import sys",
+                "request = json.loads(sys.stdin.read())",
+                "paths = [",
+                "    ('A:landscape-driven', 'Landscape gap benchmark'),",
+                "    ('B:incremental', 'Incremental verifier ablation'),",
+                "    ('C:combination', 'Skill memory and verifier fusion'),",
+                "    ('D:innovation', 'Novel adaptive skill audit'),",
+                "    ('E:cross-domain-transfer', 'Cross-domain skill transfer probe'),",
+                "]",
+                "ideas = []",
+                "for index, (path, title) in enumerate(paths, start=1):",
+                "    ideas.append({",
+                "        'idea_id': f'idea-model-path-{index:03d}',",
+                "        'title': title,",
+                "        'hypothesis': f'{title} improves source-grounded agent skill learning evaluation.',",
+                "        'approach': f'Run a bounded pilot for {title} against cited SkillGen baselines.',",
+                "        'novelty_hypothesis': f'{title} is novel relative to supplied external novelty evidence.',",
+                "        'origin_evidence_ids': ['wiki:papers/skillgen', 'external:web:ideate-001'],",
+                "        'duplicate_status': 'new',",
+                "        'generation_path': path,",
+                "    })",
+                "payload = {",
+                "    'schema': 'autosci_model_response.v1',",
+                "    'status': 'completed',",
+                "    'outputs': {",
+                "        'answer': 'Five-path model brainstorm grounded in SkillGen paper evidence.',",
+                "        'confidence': 0.82,",
+                "        'provider': 'test-model-provider',",
+                "        'model': 'gpt-5.5-test-double',",
+                "        'evidence_ids': ['wiki:papers/skillgen', 'external:web:ideate-001'],",
+                "        'ideas': ideas,",
+                "    },",
+                "}",
+                "print(json.dumps(payload))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$ideate",
+        "agent skill learning",
+        "--from-wiki",
+        "--wiki-root",
+        str(wiki_root),
+        "--model-command",
+        f"{shlex.quote(sys.executable)} {shlex.quote(str(model_command))}",
+        "--novelty-evidence",
+        str(external_path),
+        "--review-llm-evidence",
+        str(review_path),
+        "--write",
+        "--approval-ref",
+        "approval-ideate-full",
+        "--execute-approved",
+        "--skip-pilot",
+        "--run-id",
+        "shim-ideate-full-evidence-boundary",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    actions = payload["outputs"]["skill_run"]["actions"]
+    idea_evidence = json.loads(Path(actions[0]["evidence_path"]).read_text(encoding="utf-8"))
+    artifacts = {artifact["type"]: artifact["path"] for artifact in idea_evidence["artifacts"]}
+    ideas = idea_evidence["outputs"]["ideas"]
+    assert len(ideas) == 5
+    assert {idea["generation_path"][0] for idea in ideas} == {"A", "B", "C", "D", "E"}
+    assert all(idea["promotion_ready"] is True for idea in ideas)
+    boundary = json.loads((tmp_path / artifacts["ideate_final_promotion_boundary_json"]).read_text(encoding="utf-8"))
+    assert boundary["status"] == "final_promotion_ready"
+    assert boundary["final_promotion_ready"] is True
+    assert boundary["generation_path_coverage"]["status"] == "complete"
+    assert boundary["external_novelty_evidence_completed"] is True
+    assert boundary["review_llm_evidence_completed"] is True
+    assert boundary["novelty_review_gate_ready"] is True
+    assert boundary["blocking_reasons"] == []
+    pipeline_report = json.loads((tmp_path / artifacts["ideate_pipeline_report_json"]).read_text(encoding="utf-8"))
+    phases = {phase["name"]: phase for phase in pipeline_report["phases"]}
+    assert phases["phase1_landscape_scan"]["status"] == "completed"
+    assert phases["phase2_dual_model_brainstorm"]["status"] == "completed"
+    assert phases["phase3_filter_and_validation"]["status"] == "completed"
+    assert phases["phase4_wiki_write"]["status"] == "completed"
+    assert phases["phase5_pilot_handoff"]["status"] == "skipped"
+    assert pipeline_report["pipeline_ready"] is True
+    assert pipeline_report["status"] == "completed"
+    growth_report = json.loads((tmp_path / artifacts["ideate_growth_report_json"]).read_text(encoding="utf-8"))
+    assert growth_report["promotion_ready_count"] == 5
+    assert growth_report["final_promotion_ready"] is True
+    assert growth_report["pipeline_ready"] is True
+    assert growth_report["writeback"]["requested"] is True
+    assert growth_report["writeback"]["approved"] is True
+    assert growth_report["writeback"]["phase_status"] == "completed"
+    assert growth_report["writeback"]["actual_wiki_idea_write_count"] == 5
+    assert growth_report["pilot_handoff"]["phase_status"] == "skipped"
+    workspace = payload["outputs"]["skill_run"]["workspace"]
+    assert workspace["include_idea_pages"] is True
+    for index in range(1, 6):
+        assert (wiki_root / f"ideas/idea-model-path-{index:03d}.md").exists()
+    proof_artifact = next(
+        artifact
+        for artifact in payload["artifacts"]
+        if artifact["type"] == "wiki_mutation_runtime_proof_manifest_json"
+    )
+    proof = json.loads((tmp_path / proof_artifact["path"]).read_text(encoding="utf-8"))
+    proof_entry = proof["proofs"][0]
+    assert proof_entry["native_skill"] == "ideate"
+    assert proof_entry["collection_mode"] == "approved_side_effect"
+    assert any(ref.endswith("wiki/ideas/idea-model-path-001.md") for ref in proof_entry["evidence_refs"])
+
+
+def _write_ideate_full_evidence_inputs(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "papers").mkdir(parents=True)
+    (wiki_root / "methods").mkdir(parents=True)
+    (wiki_root / "ideas").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    (wiki_root / "papers/skillgen.md").write_text(
+        "---\ntitle: SkillGen Paper\n---\n# SkillGen Paper\n\nSkill generation exposes an inference-time adaptation gap.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "methods/adaptation.md").write_text(
+        "---\ntitle: Inference-Time Adaptation\n---\n# Inference-Time Adaptation\n\nA reusable method with open evaluation questions.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "ideas/existing-control.md").write_text(
+        "---\nidea_id: idea-existing-control\nslug: existing-control\nstatus: proposed\n---\n# Existing Control\n\nA control idea keeps wiki maturity non-empty.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "graph/open_questions.md").write_text(
+        "# Open Questions\n\n- How should generated skills be validated against baseline tools?\n",
+        encoding="utf-8",
+    )
+    external_path = tmp_path / "ideate-external-novelty.json"
+    external_path.write_text(
+        json.dumps(
+            {
+                "schema": "external_novelty_sources.v1",
+                "status": "completed",
+                "outputs": {"sources": [{"id": "web:ideate-001", "provider": "web"}]},
+            }
+        ),
+        encoding="utf-8",
+    )
+    review_path = tmp_path / "ideate-review-llm.json"
+    review_path.write_text(
+        json.dumps(
+            {
+                "schema": "artifact_review.v1",
+                "status": "completed",
+                "outputs": {
+                    "review": {
+                        "review_mode": "review_llm",
+                        "review_available": True,
+                        "recommendation": "pass_with_review_required",
+                        "evidence_ids": ["review-llm:ideate"],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    model_path = tmp_path / "ideate-model-evidence.json"
+    ideas = []
+    for index, path_code in enumerate(["A:landscape-driven", "B:incremental", "C:combination", "D:innovation", "E:cross-domain-transfer"], start=1):
+        ideas.append(
+            {
+                "idea_id": f"idea-pilot-path-{index:03d}",
+                "title": f"Pilot path {index}",
+                "hypothesis": "Pilot-ready source-grounded idea.",
+                "approach": "Run a bounded pilot against SkillGen baselines.",
+                "origin_evidence_ids": ["wiki:papers/skillgen", "external:web:ideate-001"],
+                "duplicate_status": "new",
+                "generation_path": path_code,
+            }
+        )
+    model_path.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_model_response.v1",
+                "status": "completed",
+                "outputs": {
+                    "answer": "Five pilot-ready ideas.",
+                    "provider": "test-model-provider",
+                    "model": "gpt-5.5-test-double",
+                    "evidence_ids": ["wiki:papers/skillgen", "external:web:ideate-001"],
+                    "ideas": ideas,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return wiki_root, external_path, review_path, model_path
+
+
+def test_autosci_skill_shim_ideate_approved_write_requires_pilot_handoff_or_skip(tmp_path: Path) -> None:
+    wiki_root, external_path, review_path, model_path = _write_ideate_full_evidence_inputs(tmp_path)
+
+    proc = run_shim(
+        tmp_path,
+        "$ideate",
+        "agent skill learning",
+        "--from-wiki",
+        "--wiki-root",
+        str(wiki_root),
+        "--model-evidence",
+        str(model_path),
+        "--novelty-evidence",
+        str(external_path),
+        "--review-llm-evidence",
+        str(review_path),
+        "--write",
+        "--approval-ref",
+        "approval-ideate-no-pilot",
+        "--execute-approved",
+        "--run-id",
+        "shim-ideate-pilot-required",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    actions = payload["outputs"]["skill_run"]["actions"]
+    idea_evidence = json.loads(Path(actions[0]["evidence_path"]).read_text(encoding="utf-8"))
+    artifacts = {artifact["type"]: artifact["path"] for artifact in idea_evidence["artifacts"]}
+    boundary = json.loads((tmp_path / artifacts["ideate_final_promotion_boundary_json"]).read_text(encoding="utf-8"))
+    assert boundary["final_promotion_ready"] is True
+    pipeline_report = json.loads((tmp_path / artifacts["ideate_pipeline_report_json"]).read_text(encoding="utf-8"))
+    phases = {phase["name"]: phase for phase in pipeline_report["phases"]}
+    assert phases["phase5_pilot_handoff"]["status"] == "pending"
+    assert "pilot handoff or pilot runtime evidence is missing" in phases["phase5_pilot_handoff"]["blocking_reasons"]
+    assert pipeline_report["pipeline_ready"] is False
+    pilot_boundary = json.loads((tmp_path / artifacts["ideate_pilot_handoff_boundary_json"]).read_text(encoding="utf-8"))
+    assert pilot_boundary["pilot_handoff_ready"] is False
+    assert payload["outputs"]["skill_run"]["workspace"]["include_idea_pages"] is False
+    assert not (wiki_root / "ideas/idea-pilot-path-001.md").exists()
+    assert not (wiki_root / "graph/edges.jsonl").exists()
+
+
+def test_autosci_skill_shim_ideate_pilot_handoff_closes_phase5_and_allows_projection(tmp_path: Path) -> None:
+    wiki_root, external_path, review_path, model_path = _write_ideate_full_evidence_inputs(tmp_path)
+    pilot_handoff_path = tmp_path / "ideate-pilot-handoff.json"
+    pilot_handoff_path.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_ideate_pilot_handoff.v1",
+                "status": "completed",
+                "evidence_ids": ["pilot-handoff:ideate"],
+                "outputs": {
+                    "handoff": {
+                        "pilot_handoff_ready": True,
+                        "target_idea_ids": ["idea-pilot-path-001"],
+                        "evidence_ids": ["pilot-handoff:ideate"],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$ideate",
+        "agent skill learning",
+        "--from-wiki",
+        "--wiki-root",
+        str(wiki_root),
+        "--model-evidence",
+        str(model_path),
+        "--novelty-evidence",
+        str(external_path),
+        "--review-llm-evidence",
+        str(review_path),
+        "--pilot-handoff-evidence",
+        str(pilot_handoff_path),
+        "--write",
+        "--approval-ref",
+        "approval-ideate-pilot-handoff",
+        "--execute-approved",
+        "--run-id",
+        "shim-ideate-pilot-handoff",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    actions = payload["outputs"]["skill_run"]["actions"]
+    idea_evidence = json.loads(Path(actions[0]["evidence_path"]).read_text(encoding="utf-8"))
+    artifacts = {artifact["type"]: artifact["path"] for artifact in idea_evidence["artifacts"]}
+    pipeline_report = json.loads((tmp_path / artifacts["ideate_pipeline_report_json"]).read_text(encoding="utf-8"))
+    phases = {phase["name"]: phase for phase in pipeline_report["phases"]}
+    assert phases["phase5_pilot_handoff"]["status"] == "completed"
+    assert phases["phase5_pilot_handoff"]["completed"] is True
+    assert pipeline_report["pipeline_ready"] is True
+    growth_report = json.loads((tmp_path / artifacts["ideate_growth_report_json"]).read_text(encoding="utf-8"))
+    assert growth_report["pilot_handoff"]["phase_status"] == "completed"
+    assert growth_report["pilot_handoff"]["completed"] is True
+    pilot_boundary = json.loads((tmp_path / artifacts["ideate_pilot_handoff_boundary_json"]).read_text(encoding="utf-8"))
+    assert pilot_boundary["status"] == "pilot_handoff_ready"
+    assert pilot_boundary["evidence_ids"] == ["pilot-handoff:ideate"]
+    pilot_proof = json.loads((tmp_path / artifacts["pilot_handoff_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
+    proof_entry = pilot_proof["proofs"][0]
+    assert proof_entry["native_skill"] == "ideate"
+    assert "pilot_handoff_evidence" in proof_entry["categories"]
+    assert any(ref.endswith("ideate-pilot-handoff.json") for ref in proof_entry["evidence_refs"])
+    assert payload["outputs"]["skill_run"]["workspace"]["include_idea_pages"] is True
+    assert (wiki_root / "ideas/idea-pilot-path-001.md").exists()
+    edges_text = (wiki_root / "graph/edges.jsonl").read_text(encoding="utf-8")
+    assert "generated_from" in edges_text
+    assert "has_pilot_handoff" in edges_text
+    assert "ideas/idea-pilot-path-001.md" in edges_text
+    assert "pilot-handoff:ideate" in edges_text
+    workspace_proof_artifact = next(
+        artifact
+        for artifact in payload["artifacts"]
+        if artifact["type"] == "wiki_mutation_runtime_proof_manifest_json"
+    )
+    workspace_proof = json.loads((tmp_path / workspace_proof_artifact["path"]).read_text(encoding="utf-8"))
+    workspace_proof_entry = workspace_proof["proofs"][0]
+    assert any(ref.endswith("wiki/graph/edges.jsonl") for ref in workspace_proof_entry["evidence_refs"])
 
 
 def test_autosci_skill_shim_wiki_state_resolver_parses_entities_and_edges(tmp_path: Path) -> None:
@@ -8561,6 +10989,63 @@ def test_autosci_skill_shim_ideate_skip_validation_skips_evaluation_action(tmp_p
     assert phases["phase3_filter_and_validation"]["status"] == "skipped"
     assert phases["phase5_pilot_handoff"]["status"] == "skipped"
     assert pipeline_report["pipeline_ready"] is False
+
+
+def test_autosci_skill_shim_ideate_write_request_stays_approval_gated(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "papers").mkdir(parents=True)
+    (wiki_root / "methods").mkdir(parents=True)
+    (wiki_root / "ideas").mkdir(parents=True)
+    (wiki_root / "graph").mkdir(parents=True)
+    (wiki_root / "papers/skillgen.md").write_text(
+        "---\ntitle: SkillGen Paper\n---\n# SkillGen Paper\n\nSkill generation exposes an inference-time adaptation gap.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "methods/adaptation.md").write_text(
+        "---\ntitle: Inference-Time Adaptation\n---\n# Inference-Time Adaptation\n\nA reusable method with open evaluation questions.\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "graph/open_questions.md").write_text(
+        "# Open Questions\n\n- How should generated skills be validated against baseline tools?\n",
+        encoding="utf-8",
+    )
+    before_ideas = sorted(path.name for path in (wiki_root / "ideas").glob("*.md"))
+
+    proc = run_shim(
+        tmp_path,
+        "$ideate",
+        "agent skill learning",
+        "--from-wiki",
+        "--wiki-root",
+        str(wiki_root),
+        "--write",
+        "--skip-validation",
+        "--skip-pilot",
+        "--run-id",
+        "shim-ideate-write-approval-gated",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["skill"] == "ideate"
+    assert summary["execution_status"] == "partial"
+    assert summary["action_count"] == 1
+
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    assert payload["inputs"]["native_options"]["write"] is True
+    assert payload["outputs"]["skill_run"]["workspace"]["include_idea_pages"] is False
+    actions = payload["outputs"]["skill_run"]["actions"]
+    idea_evidence = json.loads(Path(actions[0]["evidence_path"]).read_text(encoding="utf-8"))
+    assert idea_evidence["inputs"]["write"] is True
+    assert idea_evidence["inputs"]["native_options"]["write"] is True
+    artifacts = {artifact["type"]: artifact["path"] for artifact in idea_evidence["artifacts"]}
+    pipeline_report = json.loads((tmp_path / artifacts["ideate_pipeline_report_json"]).read_text(encoding="utf-8"))
+    phases = {phase["name"]: phase for phase in pipeline_report["phases"]}
+    assert phases["phase4_wiki_write"]["status"] == "pending_approval"
+    assert phases["phase4_wiki_write"]["completed"] is False
+    assert "approved writeback evidence is missing" in phases["phase4_wiki_write"]["blocking_reasons"]
+    assert pipeline_report["pipeline_ready"] is False
+    after_ideas = sorted(path.name for path in (wiki_root / "ideas").glob("*.md"))
+    assert after_ideas == before_ideas
 
 
 def test_autosci_skill_shim_runs_novelty_target_with_local_sources(tmp_path: Path) -> None:
@@ -9901,3 +12386,78 @@ def test_autosci_skill_shim_keeps_setup_gated(tmp_path: Path) -> None:
     gate = run_gate(evidence_path)
     result = assert_gate_inconclusive_without_reasons(gate)
     assert result["warnings"]
+
+
+def test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_secret_leakage(tmp_path: Path) -> None:
+    secret_value = "sk-test-autosci-native-setup-secret"
+    approved_env = tmp_path / "approved-setup.env"
+    dotenv_path = tmp_path / "runtime/.env"
+    approved_env.write_text(
+        "\n".join(
+            [
+                "OPENAI_API_KEY=" + secret_value,
+                "AUTOSCI_REVIEW_LLM_MODEL=gpt-5.5",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "skill",
+        "setup",
+        "--after-artifact",
+        str(approved_env),
+        "--setup-dotenv-path",
+        str(dotenv_path),
+        "--gate-mode",
+        "autosci_native",
+        "--run-id",
+        "shim-setup-autosci-native-write",
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert dotenv_path.exists()
+    dotenv_text = dotenv_path.read_text(encoding="utf-8")
+    assert "OPENAI_API_KEY=" + secret_value in dotenv_text
+    assert "AUTOSCI_REVIEW_LLM_MODEL=gpt-5.5" in dotenv_text
+
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    setup_evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    review = setup_evidence["outputs"]["evolution"]["review"]
+    assert review["protected_core_edits_applied"] is True
+    assert review["application_state"] == "applied"
+    assert review["setup_config_execution"]["executed"] is True
+    assert review["setup_config_execution"]["keys_written"] == [
+        "AUTOSCI_REVIEW_LLM_MODEL",
+        "OPENAI_API_KEY",
+    ]
+    assert review["setup_status"]["secrets_redacted"] is True
+    policy = setup_evidence["outputs"]["policy_decision"]
+    assert policy["mode"] == "autosci_native"
+    assert policy["execute_side_effects"] is True
+    assert policy["synthetic_approval_ref"].startswith("policy:auto:autosci_native:setup_status:")
+
+    artifacts = {artifact["type"]: artifact["path"] for artifact in setup_evidence["artifacts"]}
+    assert "gate_policy_decision_json" in artifacts
+    assert "gate_policy_allowlist_json" in artifacts
+    assert "setup_before_snapshot_json" in artifacts
+    assert "setup_after_snapshot_json" in artifacts
+    assert "setup_config_runtime_evidence_json" in artifacts
+    assert "approval_runtime_proof_manifest_json" in artifacts
+    assert "side_effect_runtime_proof_manifest_json" in artifacts
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+    runtime = json.loads((tmp_path / artifacts["setup_config_runtime_evidence_json"]).read_text(encoding="utf-8"))
+    status = json.loads((tmp_path / artifacts["setup_status_json"]).read_text(encoding="utf-8"))
+    assert contract["policy_auto_approved"] is True
+    assert contract["execution_verified"] is True
+    assert contract["setup_config_applied"] is True
+    assert runtime["secret_values_recorded"] is False
+    assert runtime["keys_written"] == ["AUTOSCI_REVIEW_LLM_MODEL", "OPENAI_API_KEY"]
+    assert status["summary"]["review_llm_ready"] is True
+    assert secret_value not in json.dumps(setup_evidence)
+    assert secret_value not in json.dumps(contract)
+    assert secret_value not in json.dumps(runtime)
+    assert secret_value not in json.dumps(status)

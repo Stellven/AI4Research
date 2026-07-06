@@ -30,7 +30,7 @@ Keep the AutoSci subcommand explicit and quote the dollar command in shell conte
 - Solar capability: `cap.research-literature-discover`
 - Backend action: `init_sources`
 - Coverage status: `partial`
-- Side-effect policy: `dry_run_only`
+- Side-effect policy: `approval_required`
 
 ## Human-Facing Outputs
 
@@ -45,3 +45,5 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 ## Limitations
 
 - Bulk fetch and ingest are decomposed into source manifest evidence plus separate ingest routes.
+- Root-aware parity may recognize local source fan-in as full only when the Phase19 semantic audit/proof is loaded.
+- Static route config remains partial until source preparation, final source manifest, approved wiki fan-in, graph/log/index rebuild evidence, and ingest fan-out/fan-in boundaries are proven by typed evidence.

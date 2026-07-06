@@ -29,7 +29,7 @@ Keep the AutoSci subcommand explicit and quote the dollar command in shell conte
 
 - Solar capability: `cap.research-experiment-monitor`
 - Backend action: `monitor_experiment`
-- Coverage status: `full`
+- Coverage status: `partial`
 - Side-effect policy: `none`
 
 ## Human-Facing Outputs
@@ -44,4 +44,5 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 
 ## Limitations
 
-- Remote status requires live remote connectivity; unavailable connectivity must be reported as warning evidence.
+- Local status parity covers wiki/run-state lookup, local session registry state, supplied approved runtime evidence, and collect-ready detection without remote/provider configuration.
+- Local run-dir status files and supplied runtime evidence are not sufficient to claim live SSH/provider polling; live remote/provider polling remains optional remote-mode proof.

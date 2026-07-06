@@ -12,7 +12,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shlex
 import subprocess
 import sys
@@ -299,6 +298,8 @@ def native_options(args: argparse.Namespace) -> dict[str, Any]:
         "code_evidence": list(args.code_evidence or []),
         "source_evidence": list(args.source_evidence or []),
         "novelty_evidence": list(args.novelty_evidence or []),
+        "pilot_handoff_evidence": list(args.pilot_handoff_evidence or []),
+        "pilot_runtime_evidence": list(args.pilot_runtime_evidence or []),
         "difficulty": str(args.difficulty or ""),
         "focus": str(args.focus or ""),
         "depth": int(args.depth or 0),
@@ -314,6 +315,9 @@ def native_options(args: argparse.Namespace) -> dict[str, Any]:
         "daily_max_recommendations": int(args.daily_max_recommendations or 0),
         "daily_max_auto_ingest": int(args.daily_max_auto_ingest or 0),
         "daily_send_email": str(args.daily_send_email or ""),
+        "daily_feed": str(args.feed or ""),
+        "daily_decisions": str(args.decisions or ""),
+        "daily_no_external": bool(args.no_external),
     }
 
 
@@ -584,6 +588,8 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
     inputs["smoke_mode"] = bool(args.smoke)
     native = native_options(args)
     inputs["native_options"] = native
+    if args.gate_mode:
+        inputs["gate_mode"] = str(args.gate_mode)
     if args.approval_ref:
         inputs["approval_ref"] = str(args.approval_ref)
     if args.allowlist_evidence:
@@ -596,6 +602,10 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
         inputs["discovery_evidence"] = list(args.discovery_evidence)
     if args.novelty_evidence:
         inputs["novelty_evidence"] = list(args.novelty_evidence)
+    if args.pilot_handoff_evidence:
+        inputs["pilot_handoff_evidence"] = list(args.pilot_handoff_evidence)
+    if args.pilot_runtime_evidence:
+        inputs["pilot_runtime_evidence"] = list(args.pilot_runtime_evidence)
     if args.review_llm_evidence:
         inputs["review_llm_evidence"] = list(args.review_llm_evidence)
     if args.review_llm_command:
@@ -671,6 +681,8 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
             inputs["online_novelty"] = True
         elif not args.quick and not args.skip_validation:
             inputs["online_novelty"] = True
+        if args.write:
+            inputs["write"] = True
         if (
             args.review
             or args.review_llm_evidence
@@ -697,6 +709,10 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
             inputs["skip_validation"] = True
         if args.skip_pilot:
             inputs["skip_pilot"] = True
+        if args.pilot_handoff_evidence:
+            inputs["pilot_handoff_evidence"] = list(args.pilot_handoff_evidence)
+        if args.pilot_runtime_evidence:
+            inputs["pilot_runtime_evidence"] = list(args.pilot_runtime_evidence)
     if target and action in {
         "design_experiment",
         "run_experiment",
@@ -983,6 +999,8 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
                 inputs["max_rounds"] = int(args.max_rounds)
             if args.target_score:
                 inputs["target_score"] = float(args.target_score)
+            if action == "setup_status" and args.setup_dotenv_path:
+                inputs["setup_dotenv_path"] = str(args.setup_dotenv_path)
             if action == "refine_artifact":
                 if args.difficulty:
                     inputs["difficulty"] = str(args.difficulty)
@@ -1045,6 +1063,12 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
                 inputs["max_auto_ingest"] = int(args.daily_max_auto_ingest)
             if args.daily_send_email:
                 inputs["send_email"] = str(args.daily_send_email)
+            if args.feed:
+                inputs["feed"] = str(args.feed)
+            if args.decisions:
+                inputs["decisions"] = str(args.decisions)
+            if args.no_external:
+                inputs["no_external"] = True
             if args.review or args.require_review_llm:
                 inputs["review_llm_requested"] = True
             if args.require_review_llm:
@@ -1097,6 +1121,39 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
 
 def count_results(results: list[dict[str, Any]], status: str) -> int:
     return sum(1 for item in results if item.get("status") == status)
+
+
+def write_skill_run_progress(
+    progress_path: Path,
+    *,
+    skill: str,
+    run_id: str,
+    work_dir: str,
+    actions: list[str],
+    action_results: list[dict[str, Any]],
+    current_action: str = "",
+    status: str = "running",
+) -> None:
+    completed_actions = [str(item.get("action") or "") for item in action_results if isinstance(item, dict)]
+    remaining_actions = [
+        action
+        for action in actions
+        if action not in completed_actions and action != current_action
+    ]
+    payload = {
+        "schema": "autosci_skill_run_progress.v1",
+        "status": status,
+        "updated_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "skill": skill,
+        "run_id": run_id,
+        "work_dir": work_dir,
+        "action_count": len(actions),
+        "completed_count": len(action_results),
+        "current_action": current_action,
+        "remaining_actions": remaining_actions,
+        "actions": action_results,
+    }
+    write_json(progress_path, payload)
 
 
 def normalize_dollar_argv(argv: list[str]) -> list[str]:
@@ -1280,11 +1337,40 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
             ]
     can_run_actions, skip_reason = should_run_actions(actions, args)
     action_results: list[dict[str, Any]] = []
+    progress_path = OUTPUT_HARNESS / work_dir / "autosci_skill_run_progress.json"
+    write_skill_run_progress(
+        progress_path,
+        skill=skill,
+        run_id=run_id,
+        work_dir=work_dir,
+        actions=actions if can_run_actions else [],
+        action_results=action_results,
+        status="running" if can_run_actions else "skipped",
+    )
     for action in (actions if can_run_actions else []):
         envelope = build_envelope(action, paper_path=paper_path, base_rel=work_dir, sample_repo=sample_repo)
         envelope = maybe_customize_envelope(envelope, action, args)
         envelope_path = envelope_dir / f"{action}.json"
+        write_skill_run_progress(
+            progress_path,
+            skill=skill,
+            run_id=run_id,
+            work_dir=work_dir,
+            actions=actions,
+            action_results=action_results,
+            current_action=action,
+            status="running",
+        )
         action_results.append(run_bridge_action(action, envelope, envelope_path))
+        write_skill_run_progress(
+            progress_path,
+            skill=skill,
+            run_id=run_id,
+            work_dir=work_dir,
+            actions=actions,
+            action_results=action_results,
+            status="running",
+        )
 
     failed_count = count_results(action_results, "failed")
     scheduler_failed = bool(scheduler_lifecycle and scheduler_lifecycle.get("status") == "failed")
@@ -1376,6 +1462,7 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
                 for result in action_results
                 if result.get("evidence_path") and result.get("status") != "failed"
             ],
+            {"type": "skill_run_progress_json", "path": as_artifact_path(progress_path)},
             *(
                 [
                     {"type": "scientific_lifecycle_summary", "path": str(scheduler_lifecycle.get("summary_path"))},
@@ -1400,6 +1487,15 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
         payload["limitations"].append("Explicit scheduler lifecycle run failed; research bridge output is not treated as a successful lifecycle.")
     if scheduler_lifecycle and scheduler_lifecycle.get("workflow_config_alignment_status") == "drift":
         payload["limitations"].append("Scheduler workflow-config drift was detected; smoke lifecycle evidence must not be treated as full scheduler parity.")
+    write_skill_run_progress(
+        progress_path,
+        skill=skill,
+        run_id=run_id,
+        work_dir=work_dir,
+        actions=actions if can_run_actions else [],
+        action_results=action_results,
+        status=payload_status,
+    )
     return payload, out_path
 
 
@@ -1431,131 +1527,6 @@ def output_rel(path: Path | str) -> str:
         return candidate.resolve().relative_to(OUTPUT_HARNESS.resolve()).as_posix()
     except ValueError:
         return str(candidate.resolve())
-
-
-def _resolve_output_artifact(raw: Any) -> Path:
-    path = Path(str(raw))
-    if not path.is_absolute():
-        path = OUTPUT_HARNESS / path
-    return path
-
-
-def _autosci_slug(value: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
-    return slug or "item"
-
-
-def _contains_any(path: Path, values: list[str]) -> bool:
-    if not path.exists():
-        return False
-    try:
-        text = path.read_text(encoding="utf-8").lower()
-    except OSError:
-        return False
-    return any(value and value.lower() in text for value in values)
-
-
-def _workspace_registration_state(wiki_root: Path, paper: dict[str, Any]) -> dict[str, Any]:
-    paper_id = str(paper.get("paper_id") or "paper-unresolved")
-    title = str(paper.get("title") or "")
-    paper_page = wiki_root / "papers" / f"{_autosci_slug(paper_id)}.md"
-    matched_page = paper_page if paper_page.exists() else None
-    if matched_page is None and (wiki_root / "papers").exists():
-        needles = [item.lower() for item in (paper_id, title) if item]
-        for candidate in sorted((wiki_root / "papers").glob("*.md")):
-            try:
-                text = candidate.read_text(encoding="utf-8").lower()
-            except OSError:
-                continue
-            if any(needle and needle in text for needle in needles):
-                matched_page = candidate
-                break
-
-    log_path = wiki_root / "log.md"
-    edge_path = wiki_root / "graph" / "edges.jsonl"
-    index_path = wiki_root / "index.md"
-    context_path = wiki_root / "graph" / "context_brief.md"
-    page_values = [paper_id, title, matched_page.name if matched_page else ""]
-    state = {
-        "wiki_root": str(wiki_root.resolve()),
-        "paper_page": str((matched_page or paper_page).resolve()),
-        "paper_registered": bool(matched_page and matched_page.exists()),
-        "log_path": str(log_path.resolve()),
-        "log_registered": _contains_any(log_path, page_values + ["ingest"]),
-        "graph_edges_path": str(edge_path.resolve()),
-        "graph_registered": _contains_any(
-            edge_path,
-            page_values + ["source_candidate_ingested", "paper_ingested", "has_source", "describes"],
-        ),
-        "index_path": str(index_path.resolve()),
-        "index_rebuilt": _contains_any(index_path, [matched_page.name if matched_page else paper_page.name, paper_id, title, "papers"]),
-        "context_brief_path": str(context_path.resolve()),
-        "context_rebuilt": context_path.exists(),
-    }
-    return state
-
-
-def _refresh_boundary_from_workspace(boundary: dict[str, Any], wiki_state: dict[str, Any]) -> None:
-    wiki_registration_ready = all(
-        bool(wiki_state.get(key))
-        for key in ("paper_registered", "graph_registered", "index_rebuilt", "context_rebuilt")
-    )
-    boundary["wiki_registration"] = wiki_state
-    boundary["wiki_registration_ready"] = wiki_registration_ready
-    checks = boundary.get("checks") if isinstance(boundary.get("checks"), list) else []
-    found = False
-    for check in checks:
-        if isinstance(check, dict) and check.get("name") == "wiki_registration_ready":
-            check["status"] = "ok" if wiki_registration_ready else "missing"
-            found = True
-    if not found:
-        checks.append({"name": "wiki_registration_ready", "status": "ok" if wiki_registration_ready else "missing"})
-    boundary["checks"] = checks
-    boundary["missing"] = [str(check.get("name")) for check in checks if isinstance(check, dict) and check.get("status") != "ok"]
-    final_ready = not boundary["missing"]
-    boundary["final_registration_ready"] = final_ready
-    boundary["status"] = "ingest_source_registration_ready" if final_ready else "ingest_source_registration_incomplete"
-
-
-def refresh_ingest_boundaries_after_workspace(payload: dict[str, Any], workspace_summary: dict[str, Any]) -> None:
-    wiki_root_raw = workspace_summary.get("wiki_root")
-    if not wiki_root_raw:
-        return
-    wiki_root = Path(str(wiki_root_raw))
-    if not wiki_root.is_absolute():
-        wiki_root = OUTPUT_HARNESS / wiki_root
-    actions = payload.get("outputs", {}).get("skill_run", {}).get("actions", [])
-    if not isinstance(actions, list):
-        return
-    for action in actions:
-        if not isinstance(action, dict) or action.get("action") not in {"ingest_paper", "prepare_paper_source"}:
-            continue
-        evidence_path_raw = action.get("evidence_path")
-        if not evidence_path_raw:
-            continue
-        evidence_path = _resolve_output_artifact(evidence_path_raw)
-        if not evidence_path.exists():
-            continue
-        evidence = load_json(evidence_path)
-        outputs = evidence.get("outputs") if isinstance(evidence.get("outputs"), dict) else {}
-        paper = outputs.get("paper") if isinstance(outputs.get("paper"), dict) else {}
-        if not paper:
-            continue
-        wiki_state = _workspace_registration_state(wiki_root, paper)
-        boundaries = []
-        if isinstance(outputs.get("final_source_registration_boundary"), dict):
-            boundaries.append(outputs["final_source_registration_boundary"])
-        if isinstance(paper.get("final_source_registration_boundary"), dict):
-            boundaries.append(paper["final_source_registration_boundary"])
-        if not boundaries:
-            continue
-        for boundary in boundaries:
-            _refresh_boundary_from_workspace(boundary, wiki_state)
-        write_json(evidence_path, evidence)
-        for artifact in evidence.get("artifacts") or []:
-            if isinstance(artifact, dict) and artifact.get("type") == "ingest_final_source_registration_boundary_json":
-                boundary_path = _resolve_output_artifact(artifact.get("path"))
-                write_json(boundary_path, boundaries[0])
 
 
 def write_paper_draft_workspace_projection_proof(
@@ -1629,26 +1600,273 @@ def write_paper_draft_workspace_projection_proof(
     return {"type": "wiki_mutation_runtime_proof_manifest_json", "path": output_rel(proof_path)}
 
 
+def _output_path(path: str | Path) -> Path:
+    candidate = Path(str(path))
+    return candidate if candidate.is_absolute() else OUTPUT_HARNESS / candidate
+
+
+def _exp_design_execution_ready(skill_run: dict[str, Any]) -> bool:
+    for action in skill_run.get("actions", []):
+        if not isinstance(action, dict) or action.get("action") != "design_experiment":
+            continue
+        evidence_path = str(action.get("evidence_path") or "").strip()
+        if not evidence_path:
+            continue
+        try:
+            evidence = load_json(_output_path(evidence_path))
+        except (OSError, json.JSONDecodeError):
+            continue
+        plan = evidence.get("outputs", {}).get("experiment_plan")
+        if isinstance(plan, dict):
+            boundary = plan.get("source_context", {}).get("final_execution_boundary")
+            if isinstance(boundary, dict) and (
+                boundary.get("execution_ready") is True or boundary.get("status") == "execution_ready"
+            ):
+                return True
+        for artifact in evidence.get("artifacts") or []:
+            if not isinstance(artifact, dict) or artifact.get("type") != "experiment_design_final_execution_boundary_json":
+                continue
+            artifact_path = str(artifact.get("path") or "").strip()
+            if not artifact_path:
+                continue
+            try:
+                boundary = load_json(_output_path(artifact_path))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if boundary.get("execution_ready") is True or boundary.get("status") == "execution_ready":
+                return True
+    return False
+
+
+def write_exp_design_workspace_projection_proof(
+    payload: dict[str, Any],
+    out_path: Path,
+    workspace_summary: dict[str, Any],
+) -> dict[str, str] | None:
+    skill_run = payload.get("outputs", {}).get("skill_run", {})
+    if not isinstance(skill_run, dict) or skill_run.get("selected_skill") != "exp-design":
+        return None
+    if not _exp_design_execution_ready(skill_run):
+        return None
+    updated_paths = [
+        str(path)
+        for path in workspace_summary.get("updated_paths", [])
+        if str(path).strip()
+    ]
+    wiki_refs = [
+        output_rel(path)
+        for path in updated_paths
+        if "/wiki/experiments/" in str(path)
+        or "/wiki/outputs/" in str(path)
+        or str(path).endswith("/wiki/graph/context_brief.md")
+        or str(path).endswith("/wiki/index.md")
+    ]
+    if not wiki_refs:
+        return None
+    work_dir = str(payload.get("inputs", {}).get("work_dir") or "").strip()
+    run_dir = OUTPUT_HARNESS / work_dir
+    action_refs = [
+        output_rel(action.get("evidence_path"))
+        for action in skill_run.get("actions", [])
+        if isinstance(action, dict) and str(action.get("evidence_path") or "").strip()
+    ]
+    refs = [
+        output_rel(out_path),
+        *action_refs,
+        output_rel(run_dir / "experiment_plan.json"),
+        output_rel(run_dir / "experiment_design_final_execution_boundary.json"),
+        output_rel(run_dir / "wiki_state_resolver.json"),
+        *wiki_refs,
+    ]
+    deduped_refs = []
+    for ref in refs:
+        if not ref:
+            continue
+        candidate = _output_path(ref)
+        if candidate.exists():
+            deduped_refs.append(ref)
+    deduped_refs = list(dict.fromkeys(deduped_refs))
+    if not deduped_refs:
+        return None
+    timestamp = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    stamp = timestamp.replace(":", "").replace("-", "")
+    manifest = {
+        "schema": "autosci_runtime_proof_manifest.v1",
+        "generated_at": timestamp,
+        "proofs": [
+            {
+                "native_skill": "exp-design",
+                "proof_id": f"runtime:exp-design:workspace-projection:{stamp}",
+                "categories": ["wiki_mutation_evidence"],
+                "collection_mode": "manual_review",
+                "production_ready": True,
+                "provenance": {
+                    "source": "solar_autosci_workspace_projector",
+                    "captured_at": timestamp,
+                    "artifact_kind": "exp_design_workspace_projection",
+                    "command": "autosci_skill_shim:project_run_to_workspace",
+                },
+                "evidence_refs": deduped_refs,
+                "description": "Completed execution-ready exp-design workspace wiki projection evidence for AutoSci parity.",
+            }
+        ],
+    }
+    proof_path = run_dir / "exp_design_workspace_wiki_mutation_runtime_proof.json"
+    write_json(proof_path, manifest)
+    return {"type": "wiki_mutation_runtime_proof_manifest_json", "path": output_rel(proof_path)}
+
+
+def _ideate_final_promotion_ready(skill_run: dict[str, Any]) -> bool:
+    final_ready = False
+    pipeline_ready = False
+    for action in skill_run.get("actions", []):
+        if not isinstance(action, dict) or action.get("action") != "generate_ideas":
+            continue
+        evidence_path = str(action.get("evidence_path") or "").strip()
+        if not evidence_path:
+            continue
+        try:
+            evidence = load_json(_output_path(evidence_path))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for artifact in evidence.get("artifacts") or []:
+            if not isinstance(artifact, dict) or artifact.get("type") != "ideate_final_promotion_boundary_json":
+                continue
+            artifact_path = str(artifact.get("path") or "").strip()
+            if not artifact_path:
+                continue
+            try:
+                boundary = load_json(_output_path(artifact_path))
+            except (OSError, json.JSONDecodeError):
+                continue
+            final_ready = final_ready or bool(boundary.get("final_promotion_ready"))
+        for artifact in evidence.get("artifacts") or []:
+            if not isinstance(artifact, dict) or artifact.get("type") != "ideate_pipeline_report_json":
+                continue
+            artifact_path = str(artifact.get("path") or "").strip()
+            if not artifact_path:
+                continue
+            try:
+                pipeline = load_json(_output_path(artifact_path))
+            except (OSError, json.JSONDecodeError):
+                continue
+            pipeline_ready = pipeline_ready or bool(pipeline.get("pipeline_ready"))
+    return final_ready and pipeline_ready
+
+
+def ideate_idea_page_projection_allowed(payload: dict[str, Any], skill_run: dict[str, Any]) -> bool:
+    if str(skill_run.get("selected_skill") or "") != "ideate":
+        return True
+    native = payload["inputs"].get("native_options") if isinstance(payload["inputs"].get("native_options"), dict) else {}
+    approved = bool(
+        native.get("write")
+        and native.get("execute_approved")
+        and str(native.get("approval_ref") or "").strip()
+    )
+    return approved and _ideate_final_promotion_ready(skill_run)
+
+
+def write_ideate_workspace_projection_proof(
+    payload: dict[str, Any],
+    out_path: Path,
+    workspace_summary: dict[str, Any],
+) -> dict[str, str] | None:
+    skill_run = payload.get("outputs", {}).get("skill_run", {})
+    if not isinstance(skill_run, dict) or skill_run.get("selected_skill") != "ideate":
+        return None
+    if workspace_summary.get("include_idea_pages") is not True:
+        return None
+    updated_paths = [
+        str(path)
+        for path in workspace_summary.get("updated_paths", [])
+        if str(path).strip()
+    ]
+    wiki_refs = [
+        output_rel(path)
+        for path in updated_paths
+        if "/wiki/ideas/" in str(path)
+        or str(path).endswith("/wiki/graph/edges.jsonl")
+        or str(path).endswith("/wiki/index.md")
+    ]
+    if not wiki_refs:
+        return None
+    work_dir = str(payload.get("inputs", {}).get("work_dir") or "").strip()
+    run_dir = OUTPUT_HARNESS / work_dir
+    action_refs = [
+        output_rel(action.get("evidence_path"))
+        for action in skill_run.get("actions", [])
+        if isinstance(action, dict) and str(action.get("evidence_path") or "").strip()
+    ]
+    refs = [output_rel(out_path), *action_refs, output_rel(run_dir / "idea_candidate.json"), *wiki_refs]
+    deduped_refs = []
+    for ref in refs:
+        if not ref:
+            continue
+        candidate = _output_path(ref)
+        if candidate.exists():
+            deduped_refs.append(ref)
+    deduped_refs = list(dict.fromkeys(deduped_refs))
+    if not deduped_refs:
+        return None
+    timestamp = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    stamp = timestamp.replace(":", "").replace("-", "")
+    manifest = {
+        "schema": "autosci_runtime_proof_manifest.v1",
+        "generated_at": timestamp,
+        "proofs": [
+            {
+                "native_skill": "ideate",
+                "proof_id": f"runtime:ideate:workspace-projection:{stamp}",
+                "categories": ["wiki_mutation_evidence"],
+                "collection_mode": "approved_side_effect",
+                "production_ready": True,
+                "provenance": {
+                    "source": "solar_autosci_workspace_projector",
+                    "captured_at": timestamp,
+                    "artifact_kind": "ideate_workspace_projection",
+                    "command": "autosci_skill_shim:project_run_to_workspace",
+                },
+                "evidence_refs": deduped_refs,
+                "description": "Completed approved ideate workspace wiki projection evidence for AutoSci parity.",
+            }
+        ],
+    }
+    proof_path = run_dir / "ideate_workspace_wiki_mutation_runtime_proof.json"
+    write_json(proof_path, manifest)
+    return {"type": "wiki_mutation_runtime_proof_manifest_json", "path": output_rel(proof_path)}
+
+
 def cmd_run_skill(args: argparse.Namespace) -> int:
     payload, out_path = build_payload(args)
     write_json(out_path, payload)
     skill_run = payload["outputs"]["skill_run"]
     workspace_summary: dict[str, Any] | None = None
     if payload["status"] != "failed" and skill_run["action_count"] > 0:
+        include_idea_pages = ideate_idea_page_projection_allowed(payload, skill_run)
         workspace_summary = project_run_to_workspace(
             out_path,
             output_harness=OUTPUT_HARNESS,
             workspace_rel=output_rel(AUTOSCI_ARTIFACT_ROOT / "workspace"),
+            include_idea_pages=include_idea_pages,
         )
-        refresh_ingest_boundaries_after_workspace(payload, workspace_summary)
         skill_run["workspace"] = workspace_summary
         for path in workspace_summary.get("updated_paths", []):
             payload["artifacts"].append({"type": "human_workspace", "path": str(path)})
         payload["artifacts"].append({"type": "human_workspace_index", "path": str(workspace_summary["index_path"])})
-        projection_proof = write_paper_draft_workspace_projection_proof(payload, out_path, workspace_summary)
-        if projection_proof is not None:
+        projection_proofs = [
+            proof
+            for proof in (
+                write_paper_draft_workspace_projection_proof(payload, out_path, workspace_summary),
+                write_exp_design_workspace_projection_proof(payload, out_path, workspace_summary),
+                write_ideate_workspace_projection_proof(payload, out_path, workspace_summary),
+            )
+            if proof is not None
+        ]
+        for projection_proof in projection_proofs:
             payload["artifacts"].append(projection_proof)
-            skill_run["workspace"]["runtime_proof_artifact"] = projection_proof
+        if projection_proofs:
+            skill_run["workspace"]["runtime_proof_artifacts"] = projection_proofs
+            skill_run["workspace"]["runtime_proof_artifact"] = projection_proofs[0]
         write_json(out_path, payload)
 
     summary = {
@@ -1707,7 +1925,12 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--discover", action="store_true", help="Native ingest/init discovery follow-up hint")
     skill.add_argument("--visualize", action="store_true", help="Native ingest/init visualization follow-up hint")
     skill.add_argument("--render", action="store_true", help="Native poster render/export request; execution remains approval-gated")
-    skill.add_argument("--serve", action="store_true", help="Native visualize web serving request; execution remains approval-gated")
+    skill.add_argument("--serve", action="store_true", help="Native visualize web serving request; execution follows the configured AutoSci gate mode")
+    skill.add_argument(
+        "--gate-mode",
+        choices=["strict_hitl", "safe", "parity_demo", "unsafe_native", "autosci_native"],
+        help="AutoSci side-effect gate mode for this skill run",
+    )
     skill.add_argument("--obsidian", action="store_true", help="Native visualize Obsidian graph config mode")
     skill.add_argument("--canvas", action="store_true", help="Native visualize Canvas generation mode")
     skill.add_argument("--from-wiki", action="store_true", help="Derive discovery anchors from current wiki papers")
@@ -1792,6 +2015,7 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--before-artifact", action="append", help="Before-state artifact for approved mutation/execution")
     skill.add_argument("--after-artifact", action="append", help="After-state artifact for approved mutation/execution")
     skill.add_argument("--execute-approved", action="store_true", help="Execute an implemented side-effect path only when approval and allowlist evidence are present")
+    skill.add_argument("--setup-dotenv-path", help="Approved setup target .env path; required for setup config write execution")
     skill.add_argument("--verbose", action="store_true", help="Native verbose output mode")
     skill.add_argument("--write", action="store_true", help="Native write-back mode for supported skills")
     skill.add_argument("--crystallize", action="store_true", help="Native ask mode: approved crystallized wiki output write-back")
@@ -1806,6 +2030,8 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--max-papers", type=int, help="Native survey maximum cited paper count")
     skill.add_argument("--skip-validation", action="store_true", help="Native ideate fast path without deep validation")
     skill.add_argument("--skip-pilot", action="store_true", help="Native ideate fast path without pilot execution")
+    skill.add_argument("--pilot-handoff-evidence", action="append", help="Completed pilot handoff evidence for native ideate phase 5")
+    skill.add_argument("--pilot-runtime-evidence", action="append", help="Completed pilot runtime evidence for native ideate phase 5")
     skill.add_argument("--auto", action="store_true", help="Native automatic mode for research pipelines")
     skill.add_argument("--start-from", help="Native research pipeline resume stage")
     skill.add_argument("--skip-paper", action="store_true", help="Native research pipeline mode that skips paper generation")
@@ -1833,6 +2059,9 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--max-recommendations", dest="daily_max_recommendations", type=int, help="Native daily-arxiv recommendation cap")
     skill.add_argument("--max-auto-ingest", dest="daily_max_auto_ingest", type=int, help="Native daily-arxiv auto-ingest cap")
     skill.add_argument("--send-email", dest="daily_send_email", choices=["true", "false"], help="Native daily-arxiv SMTP delivery preference")
+    skill.add_argument("--feed", help="Native daily-arxiv local feed JSON for no-network prepare runs")
+    skill.add_argument("--decisions", help="Native daily-arxiv local LLM decisions JSON for finalize")
+    skill.add_argument("--no-external", action="store_true", help="Skip daily-arxiv S2/DeepXiv enrichment when local feed is supplied")
     skill.add_argument("--run-id", help="Stable run/artifact namespace")
     skill.add_argument("--work-dir", help="Output work dir relative to HARNESS_DIR")
     skill.add_argument("--route-config", default=str(ROUTE_CONFIG))

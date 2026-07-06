@@ -6,9 +6,12 @@ import json
 import math
 import os
 import re
+import sys
 import time
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +40,11 @@ ARXIV_ID_RE = re.compile(
     re.IGNORECASE,
 )
 CURRENT_YEAR = 2026
+S2_DEFAULT_MAX_RETRIES = 3
+S2_DEFAULT_RETRY_DELAY_SECONDS = 60.0
+S2_MAX_CONFIGURED_RETRIES = 10
+_S2_RETRY_EVENTS: list[dict[str, Any]] = []
+_S2_PROGRESS_PATH: Path | None = None
 
 
 def normalize_arxiv_id(value: str) -> str:
@@ -134,19 +142,183 @@ def _s2_headers() -> dict[str, str]:
     return {"x-api-key": api_key} if api_key else {}
 
 
+def _env_float(name: str, default: float, *, minimum: float = 0.0, maximum: float = 3600.0) -> float:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return max(minimum, min(value, maximum))
+
+
+def _env_int(name: str, default: int, *, minimum: int = 0, maximum: int = S2_MAX_CONFIGURED_RETRIES) -> int:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return max(minimum, min(value, maximum))
+
+
+def _s2_rate_limit_delay_seconds() -> float:
+    default = 1.0 if os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "").strip() else 3.0
+    return _env_float("AUTOSCI_S2_RATE_LIMIT_DELAY_SECONDS", default, minimum=0.0, maximum=60.0)
+
+
+def _s2_max_retries() -> int:
+    return _env_int("AUTOSCI_S2_MAX_RETRIES", S2_DEFAULT_MAX_RETRIES)
+
+
+def _s2_retry_delay_seconds() -> float:
+    return _env_float("AUTOSCI_S2_RETRY_DELAY_SECONDS", S2_DEFAULT_RETRY_DELAY_SECONDS)
+
+
+def _retry_after_seconds(value: str | None) -> float | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        pass
+    try:
+        parsed = parsedate_to_datetime(raw)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return max(0.0, (parsed - datetime.now(timezone.utc)).total_seconds())
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _s2_endpoint_label(url: str) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.netloc:
+        return f"{parsed.netloc}{parsed.path}"
+    return parsed.path or url
+
+
+def _record_s2_retry_event(
+    *,
+    method: str,
+    url: str,
+    status_code: int,
+    retry_number: int,
+    max_retries: int,
+    delay_seconds: float,
+) -> None:
+    _S2_RETRY_EVENTS.append(
+        {
+            "method": method,
+            "endpoint": _s2_endpoint_label(url),
+            "status_code": status_code,
+            "retry_number": retry_number,
+            "max_retries": max_retries,
+            "delay_seconds": round(delay_seconds, 3),
+        }
+    )
+    _emit_s2_retry_progress(_S2_RETRY_EVENTS[-1])
+
+
+def _s2_retry_warnings() -> list[str]:
+    return [
+        (
+            "Semantic Scholar rate-limit retry "
+            f"{event['retry_number']}/{event['max_retries']} after HTTP {event['status_code']} "
+            f"on {event['method']} {event['endpoint']}; waited {event['delay_seconds']:g}s."
+        )
+        for event in _S2_RETRY_EVENTS
+    ]
+
+
+def _s2_retry_message(event: dict[str, Any]) -> str:
+    return (
+        "Semantic Scholar rate-limited "
+        f"{event['method']} {event['endpoint']} with HTTP {event['status_code']}; "
+        f"waiting {event['delay_seconds']:g}s before retry "
+        f"{event['retry_number']}/{event['max_retries']}."
+    )
+
+
+def _emit_s2_retry_progress(event: dict[str, Any]) -> None:
+    print(_s2_retry_message(event), file=sys.stderr, flush=True)
+    if _S2_PROGRESS_PATH is None:
+        return
+    payload = {
+        "schema": "autosci_s2_retry_progress.v1",
+        "status": "waiting_for_rate_limit",
+        "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "current_event": event,
+        "events": list(_S2_RETRY_EVENTS),
+    }
+    try:
+        _S2_PROGRESS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = _S2_PROGRESS_PATH.with_name(f"{_S2_PROGRESS_PATH.name}.tmp")
+        tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        tmp_path.replace(_S2_PROGRESS_PATH)
+    except OSError as exc:
+        print(f"Semantic Scholar retry progress write failed: {exc}", file=sys.stderr, flush=True)
+
+
+def _attach_s2_progress_artifact(
+    artifacts: list[dict[str, str]],
+    *,
+    workspace_root: Path,
+    repository_root: Path | None,
+) -> None:
+    if _S2_PROGRESS_PATH is None or not _S2_PROGRESS_PATH.exists():
+        return
+    path = _display_path(_S2_PROGRESS_PATH, workspace_root, repository_root)
+    if not any(item.get("type") == "semantic_scholar_retry_progress_json" and item.get("path") == path for item in artifacts):
+        artifacts.append({"type": "semantic_scholar_retry_progress_json", "path": path})
+
+
 def _s2_request(method: str, url: str, *, params: dict[str, Any] | None = None, json_body: dict[str, Any] | None = None) -> Any:
     if not HAS_REQUESTS:
         raise RuntimeError("requests unavailable")
-    response = requests.request(
-        method,
-        url,
-        params=params or {},
-        json=json_body,
-        headers=_s2_headers(),
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json()
+    throttle_seconds = _s2_rate_limit_delay_seconds()
+    if throttle_seconds > 0:
+        time.sleep(throttle_seconds)
+    max_retries = _s2_max_retries()
+    retry_delay = _s2_retry_delay_seconds()
+    attempt = 0
+    while True:
+        response = requests.request(
+            method,
+            url,
+            params=params or {},
+            json=json_body,
+            headers=_s2_headers(),
+            timeout=30,
+        )
+        status_code = int(getattr(response, "status_code", 0) or 0)
+        if status_code == 429 and attempt < max_retries:
+            headers = getattr(response, "headers", {}) or {}
+            retry_after = _retry_after_seconds(headers.get("Retry-After"))
+            delay = retry_after if retry_after is not None else retry_delay * (attempt + 1)
+            _record_s2_retry_event(
+                method=method,
+                url=url,
+                status_code=status_code,
+                retry_number=attempt + 1,
+                max_retries=max_retries,
+                delay_seconds=delay,
+            )
+            if delay > 0:
+                time.sleep(delay)
+            attempt += 1
+            continue
+        if status_code == 429:
+            try:
+                response.raise_for_status()
+            except Exception as exc:
+                raise RuntimeError(f"Semantic Scholar API rate limited after {attempt + 1} attempt(s)") from exc
+            raise RuntimeError(f"Semantic Scholar API rate limited after {attempt + 1} attempt(s)")
+        response.raise_for_status()
+        return response.json()
 
 
 def _bare_arxiv_id(value: str) -> str:
@@ -409,14 +581,18 @@ def discover_literature(
     allow_network_fetch: bool = True,
     no_citation_expand: bool = False,
     fixture_fallback: bool = False,
+    progress_path: Path | None = None,
 ) -> dict[str, Any]:
+    global _S2_PROGRESS_PATH
     limit = max(1, min(int(limit or 10), 50))
     anchors = [normalize_arxiv_id(item) or str(item) for item in anchors or [] if str(item).strip()]
     negative_ids = [normalize_arxiv_id(item) or str(item) for item in negative_ids or [] if str(item).strip()]
     wiki_root = wiki_root.resolve()
+    _S2_PROGRESS_PATH = Path(progress_path).resolve() if progress_path is not None else None
     warnings: list[str] = []
     artifacts: list[dict[str, str]] = []
     candidate_raw: list[dict[str, Any]] = []
+    _S2_RETRY_EVENTS.clear()
 
     if fixture_fallback and not mode:
         return {
@@ -538,6 +714,8 @@ def discover_literature(
                 "artifacts": artifacts,
             }
     except Exception as exc:
+        warnings.extend(_s2_retry_warnings())
+        _attach_s2_progress_artifact(artifacts, workspace_root=workspace_root, repository_root=repository_root)
         return {
             "query": query or ", ".join(anchors) or "from-wiki",
             "mode": mode,
@@ -549,6 +727,8 @@ def discover_literature(
             "artifacts": artifacts,
         }
 
+    warnings.extend(_s2_retry_warnings())
+    _attach_s2_progress_artifact(artifacts, workspace_root=workspace_root, repository_root=repository_root)
     candidates = _finalize_candidates(candidate_raw, wiki_root=wiki_root, query=query or " ".join(anchors), limit=limit)
     status = "completed" if candidates else "inconclusive"
     limitations = warnings[:]

@@ -88,6 +88,7 @@ import time
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_ROOT = ROOT / "app"
@@ -1079,7 +1080,7 @@ class WikiHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_raw(
+def _send_raw(
         self, body_str: str, content_type: str, status: int = 200
     ) -> None:
         body = body_str.encode("utf-8")
@@ -1091,6 +1092,75 @@ class WikiHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
 
+def _probe_server(host: str, port: int) -> dict:
+    if not APP_ROOT.exists():
+        return {
+            "schema": "autosci_serve_cli.v1",
+            "status": "failed",
+            "ok": False,
+            "server_started": False,
+            "error": f"app/ directory missing at {APP_ROOT}",
+        }
+    try:
+        server = ThreadingHTTPServer((host, port), WikiHandler)
+    except Exception as exc:  # noqa: BLE001 - policy probes need structured failure.
+        return {
+            "schema": "autosci_serve_cli.v1",
+            "status": "failed",
+            "ok": False,
+            "server_started": False,
+            "server_stopped": False,
+            "host": host,
+            "port": port,
+            "error": str(exc),
+        }
+    server.daemon_threads = True
+    _ensure_watcher()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    actual_port = int(server.server_address[1])
+    base = f"http://{host}:{actual_port}"
+    try:
+        with urlopen(f"{base}/api/health", timeout=5) as response:  # noqa: S310 - loopback probe only.
+            health = json.loads(response.read().decode("utf-8"))
+        health_status = str(health.get("status") or "").lower()
+        ok = response.status == 200 and (health_status in {"ok", "completed"} or bool(health.get("ok")))
+        health.setdefault("ok", ok)
+        payload = {
+            "schema": "autosci_serve_cli.v1",
+            "status": "completed" if ok else "failed",
+            "ok": ok,
+            "server_started": True,
+            "server_stopped": False,
+            "host": host,
+            "port": actual_port,
+            "base_url": base,
+            "probe_url": f"{base}/api/health",
+            "health": health,
+            "node_count": int(health.get("node_count") or 0),
+            "edge_count": int(health.get("edge_count") or 0),
+        }
+    except Exception as exc:  # noqa: BLE001 - probe must return structured failure.
+        payload = {
+            "schema": "autosci_serve_cli.v1",
+            "status": "failed",
+            "ok": False,
+            "server_started": True,
+            "server_stopped": False,
+            "host": host,
+            "port": actual_port,
+            "base_url": base,
+            "probe_url": f"{base}/api/health",
+            "error": str(exc),
+        }
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+    payload["server_stopped"] = True
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="OmegaWiki local frontend server (Phase 1)"
@@ -1099,8 +1169,14 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--wiki-root", default="", help="Compatibility override for the wiki root")
     parser.add_argument("--health-check", action="store_true", help="Emit bounded JSON health without starting the server")
+    parser.add_argument("--probe-server", action="store_true", help="Start the HTTP server, probe /api/health, then shut it down")
     args = parser.parse_args()
     _configure_roots(args.wiki_root)
+
+    if args.probe_server:
+        payload = _probe_server(args.host, args.port)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0 if payload.get("ok") else 2
 
     if args.health_check:
         payload = _health_check_payload()

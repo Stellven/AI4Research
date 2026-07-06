@@ -30,7 +30,7 @@ Keep the AutoSci subcommand explicit and quote the dollar command in shell conte
 - Solar capability: `cap.research-claim-verify`
 - Backend action: `verify_claim`
 - Coverage status: `partial`
-- Side-effect policy: `dry_run_only`
+- Side-effect policy: `approval_required`
 
 ## Human-Facing Outputs
 
@@ -44,4 +44,4 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 
 ## Limitations
 
-- Review LLM verdicts require model output evidence; idea page updates remain proposals until approved.
+- Review LLM verdicts require model output evidence; idea page updates remain proposed until `--write`, `--approval-ref`, and `--execute-approved` are supplied with approval/runtime evidence.

@@ -20,6 +20,16 @@ def test_resolve_output_keeps_repo_relative_harness_paths() -> None:
     assert parity_bridge.resolve_output("artifacts/autosci/phase19/out.json") == parity_bridge.OUTPUT_HARNESS / "artifacts/autosci/phase19/out.json"
 
 
+def test_wiki_mutation_requirement_honors_explicit_no_wiki_mutation_text() -> None:
+    assert not parity_bridge.wiki_mutation_required_from_text(
+        "$exp-pilot-run writes pilot runtime evidence only and does not mutate wiki pages; "
+        "$exp-pilot-eval owns approved wiki writeback."
+    )
+    assert parity_bridge.wiki_mutation_required_from_text(
+        "$exp-pilot-eval writes approved wiki verdict pages and graph edges."
+    )
+
+
 def route_skills() -> list[str]:
     config = json.loads(ROUTE_CONFIG.read_text(encoding="utf-8"))
     return sorted(route["native_skill"] for route in config["routes"])
@@ -38,10 +48,18 @@ def make_autosci_fixture(tmp_path: Path, *, extra_skill: str | None = None) -> P
     return repo
 
 
-def run_bridge(args: list[str], tmp_path: Path, autosci_repo: Path) -> subprocess.CompletedProcess[str]:
+def run_bridge(
+    args: list[str],
+    tmp_path: Path,
+    autosci_repo: Path,
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["HARNESS_DIR"] = str(tmp_path)
     env["AUTOSCI_REPO"] = str(autosci_repo)
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         [sys.executable, str(BRIDGE), *args],
         cwd=HARNESS,
@@ -288,6 +306,89 @@ def test_inventory_attaches_runtime_proof_manifest_from_directory(tmp_path: Path
     assert payload["outputs"]["parity"]["semantic_full_count"] == 0
 
 
+def test_runtime_proof_dir_resolves_configured_evidence_roots(tmp_path: Path) -> None:
+    autosci_repo = make_autosci_fixture(tmp_path)
+    evidence_root = tmp_path / "external-evidence-root"
+    runtime_artifact = evidence_root / "harness/artifacts/runtime/daily-arxiv/result.json"
+    runtime_artifact.parent.mkdir(parents=True)
+    runtime_artifact.write_text('{"status": "completed"}\n', encoding="utf-8")
+    proof_dir = tmp_path / "runtime-proofs"
+    proof_dir.mkdir()
+    manifest = proof_dir / "daily-arxiv.proof.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_runtime_proof_manifest.v1",
+                "proofs": [
+                    {
+                        "native_skill": "daily-arxiv",
+                        "proof_id": "runtime:daily-arxiv:external-root",
+                        "categories": ["external_runtime_evidence"],
+                        "collection_mode": "live_provider",
+                        "production_ready": True,
+                        "provenance": {
+                            "source": "daily-arxiv external-root provider test",
+                            "captured_at": "2026-07-02T00:00:00Z",
+                            "artifact_kind": "provider_response",
+                        },
+                        "evidence_refs": ["harness/artifacts/runtime/daily-arxiv/result.json"],
+                        "description": "Directory-collected runtime proof with artifact root outside the worktree.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = "artifacts/autosci/phase19/parity_with_external_root_runtime_dir.json"
+    proc = run_bridge(
+        ["inventory", "--runtime-proof-dir", str(proof_dir), "--out", out],
+        tmp_path,
+        autosci_repo,
+        extra_env={"SOLAR_AUTOSCI_EVIDENCE_ROOTS": str(evidence_root)},
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads((tmp_path / out).read_text(encoding="utf-8"))
+    daily = next(item for item in payload["outputs"]["parity"]["items"] if item["native_skill"] == "daily-arxiv")
+    source = daily["runtime_proof_sources"][0]
+    assert source["status"] == "supplied"
+    assert source["evidence_ref_statuses"][0]["status"] == "ok"
+    assert source["evidence_ref_statuses"][0]["path"] == str(runtime_artifact)
+
+
+def test_runtime_proof_dir_ignores_non_route_workflow_node_proofs(tmp_path: Path) -> None:
+    autosci_repo = make_autosci_fixture(tmp_path)
+    proof_dir = tmp_path / "runtime-proofs"
+    proof_dir.mkdir()
+    manifest = proof_dir / "scientific_workflow_runtime_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "scientific_workflow_runtime_manifest.v1",
+                "proofs": [
+                    {
+                        "native_skill": "ingest",
+                        "proof_id": "workflow-runtime:paper_ingest",
+                        "categories": ["workflow_node_runtime_evidence"],
+                        "evidence_refs": ["run/operator-results/autosci-paper-ingest-worker/task/result.json"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = "artifacts/autosci/phase19/parity_without_workflow_node_proof.json"
+    proc = run_bridge(["route", "--skill", "ingest", "--runtime-proof-dir", str(proof_dir), "--out", out], tmp_path, autosci_repo)
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads((tmp_path / out).read_text(encoding="utf-8"))
+    item = payload["outputs"]["parity"]["items"][0]
+    assert item["native_skill"] == "ingest"
+    assert item["runtime_proof_sources"] == []
+    assert all(
+        "workflow_node_runtime_evidence" not in requirement["category"]
+        for requirement in item["proof_requirements"]
+    )
+
+
 def test_route_marks_runtime_proof_verified_without_semantic_auto_promotion(tmp_path: Path) -> None:
     autosci_repo = make_autosci_fixture(tmp_path)
     runtime_artifact = tmp_path / "artifacts/runtime/daily-arxiv/final-digest.json"
@@ -487,6 +588,109 @@ def test_inventory_promotes_verified_full_semantic_audit(tmp_path: Path) -> None
     assert gate.returncode == 0, gate.stdout + gate.stderr
 
 
+def test_daily_arxiv_delivery_finality_does_not_require_optional_wiki_mutation(tmp_path: Path) -> None:
+    autosci_repo = make_autosci_fixture(tmp_path)
+    runtime_dir = tmp_path / "artifacts/runtime/daily-arxiv-delivery"
+    runtime_dir.mkdir(parents=True)
+    native_ref = runtime_dir / "native-daily-arxiv.md"
+    solar_ref = runtime_dir / "solar-daily-arxiv.json"
+    runtime_ref = runtime_dir / "daily-runtime.json"
+    native_ref.write_text("# Native /daily-arxiv semantics\n", encoding="utf-8")
+    solar_ref.write_text('{"route": "daily-arxiv", "status": "verified"}\n', encoding="utf-8")
+    runtime_ref.write_text('{"status": "completed", "delivery_status": "delivered"}\n', encoding="utf-8")
+    audit = runtime_dir / "semantic-audit-full.json"
+    audit.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_semantic_parity_audit.v1",
+                "status": "completed",
+                "native_skill": "daily-arxiv",
+                "semantic_parity": "full",
+                "auditor": "phase19-daily-arxiv-audit",
+                "native_evidence_refs": ["artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md"],
+                "solar_evidence_refs": ["artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json"],
+                "acceptance_checks": [
+                    {"check": "provider_candidates", "status": "ok"},
+                    {"check": "review_llm_ranking", "status": "ok"},
+                    {"check": "delivery_boundary", "status": "passed"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "daily-arxiv-delivery-proof.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_runtime_proof_manifest.v1",
+                "proofs": [
+                    {
+                        "native_skill": "daily-arxiv",
+                        "proof_id": "runtime:daily-arxiv:semantic-audit-full",
+                        "categories": ["semantic_equivalence_evidence"],
+                        "collection_mode": "semantic_audit",
+                        "production_ready": True,
+                        "provenance": {
+                            "source": "phase19 semantic audit",
+                            "captured_at": "2026-07-02T00:00:00Z",
+                            "artifact_kind": "autosci_semantic_parity_audit.v1",
+                        },
+                        "evidence_refs": [
+                            "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                            "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                            "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                        ],
+                        "description": "Daily arXiv semantic parity audit proof.",
+                    },
+                    {
+                        "native_skill": "daily-arxiv",
+                        "proof_id": "runtime:daily-arxiv:delivery-finality",
+                        "categories": [
+                            "approval_boundary_evidence",
+                            "external_runtime_evidence",
+                            "provider_source_evidence",
+                            "review_llm_or_model_evidence",
+                            "side_effect_execution_evidence",
+                        ],
+                        "collection_mode": "approved_side_effect",
+                        "production_ready": True,
+                        "provenance": {
+                            "source": "daily arXiv final provider delivery boundary",
+                            "captured_at": "2026-07-02T00:00:00Z",
+                            "artifact_kind": "autosci_daily_arxiv_final_provider_delivery_boundary.v1",
+                        },
+                        "evidence_refs": ["artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"],
+                        "description": "Daily arXiv provider, Review LLM, approval, and delivery proof.",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = "artifacts/autosci/phase19/daily_arxiv_delivery_finality.json"
+    proc = run_bridge(["route", "--skill", "daily-arxiv", "--runtime-proof-manifest", str(manifest), "--out", out], tmp_path, autosci_repo)
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads((tmp_path / out).read_text(encoding="utf-8"))
+    item = payload["outputs"]["parity"]["items"][0]
+    requirements = {req["category"]: req for req in item["proof_requirements"]}
+    assert item["semantic_parity"] == "full"
+    assert item["semantic_audit_status"] == "verified"
+    assert item["runtime_proof_status"] == "verified"
+    assert item["coverage_status"] == "gated"
+    assert item["remaining_requirements"] == []
+    assert "wiki_mutation_evidence" not in requirements
+
+    gate = subprocess.run(
+        [sys.executable, str(GATE), "--require-full-parity", str(tmp_path / out)],
+        cwd=HARNESS,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    assert gate.returncode == 0, gate.stdout + gate.stderr
+
+
 def test_route_accepts_direct_semantic_audit_path(tmp_path: Path) -> None:
     autosci_repo = make_autosci_fixture(tmp_path)
     runtime_dir = tmp_path / "artifacts/runtime/novelty-direct"
@@ -674,6 +878,49 @@ def test_route_promotes_coverage_when_all_full_parity_proofs_are_verified(tmp_pa
     assert gate.returncode == 0, gate.stdout + gate.stderr
     gate_payload = json.loads(gate.stdout)
     assert gate_payload["status"] == "passed"
+
+
+def test_direct_semantic_audit_resolves_configured_native_and_evidence_roots(tmp_path: Path) -> None:
+    autosci_repo = make_autosci_fixture(tmp_path)
+    evidence_root = tmp_path / "external-evidence-root"
+    solar_ref = evidence_root / "harness/artifacts/runtime/novelty/solar-novelty.json"
+    solar_ref.parent.mkdir(parents=True)
+    solar_ref.write_text('{"route": "novelty", "status": "verified"}\n', encoding="utf-8")
+    audit_dir = tmp_path / "semantic-audits"
+    audit_dir.mkdir()
+    audit = audit_dir / "novelty.semantic-audit.json"
+    audit.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_semantic_parity_audit.v1",
+                "status": "completed",
+                "native_skill": "novelty",
+                "semantic_parity": "full",
+                "auditor": "worktree-portability-audit",
+                "native_evidence_refs": ["../AutoSci/i18n/en/skills/novelty/SKILL.md"],
+                "solar_evidence_refs": ["harness/artifacts/runtime/novelty/solar-novelty.json"],
+                "acceptance_checks": [
+                    {"check": "native_command_abi", "status": "ok"},
+                    {"check": "solar_route_behavior", "status": "passed"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = "artifacts/autosci/phase19/novelty_semantic_external_roots.json"
+    proc = run_bridge(
+        ["route", "--skill", "novelty", "--semantic-audit", str(audit), "--out", out],
+        tmp_path,
+        autosci_repo,
+        extra_env={"SOLAR_AUTOSCI_EVIDENCE_ROOTS": str(evidence_root)},
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads((tmp_path / out).read_text(encoding="utf-8"))
+    item = payload["outputs"]["parity"]["items"][0]
+    assert item["native_skill"] == "novelty"
+    assert item["semantic_parity"] == "full"
+    assert item["semantic_audit_status"] == "verified"
+    assert item.get("semantic_audit_reasons", []) == []
 
 
 def test_research_route_promotes_to_e4_when_lifecycle_proofs_are_verified(tmp_path: Path) -> None:

@@ -29,7 +29,7 @@ Keep the AutoSci subcommand explicit and quote the dollar command in shell conte
 
 - Solar capability: `cap.research-paper-ingest`
 - Backend actions: `prepare_paper_source` -> `ingest_paper`
-- Coverage status: `full`
+- Coverage status: `partial` in the base route config; root-aware parity inventory reports `full` when the Phase 19 `ingest` semantic audit/proof is loaded.
 - Side-effect policy: `dry_run_only`
 
 ## Human-Facing Outputs
@@ -46,3 +46,4 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 
 - PDF and arXiv source preparation writes explicit generated artifacts under the Solar AutoSci workspace raw area.
 - Set `allow_network_fetch=false` or `AUTOSCI_DISABLE_NETWORK_FETCH=1` when a run must avoid network source retrieval and use synthetic `.tex` fallback.
+- Treat an ingested source as fully registered only when `ingest_final_source_registration_boundary.final_registration_ready=true` and the source-provider/wiki-mutation proof manifests resolve to concrete evidence refs.

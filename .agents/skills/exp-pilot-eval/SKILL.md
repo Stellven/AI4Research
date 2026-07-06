@@ -30,7 +30,7 @@ Keep the AutoSci subcommand explicit and quote the dollar command in shell conte
 - Solar capability: `cap.research-claim-verify`
 - Backend action: `evaluate_pilot_result`
 - Coverage status: `partial`
-- Side-effect policy: `dry_run_only`
+- Side-effect policy: `approval_required`
 
 ## Human-Facing Outputs
 
@@ -44,4 +44,4 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 
 ## Limitations
 
-- Pilot wiki writes are represented as proposed memory updates until explicitly approved.
+- Pilot wiki writes are represented as proposed memory updates until `--write`, `--approval-ref`, and `--execute-approved` are supplied with approval/runtime evidence.

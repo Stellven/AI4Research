@@ -1,31 +1,36 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AutoSci Graph</title>
-    <link rel="stylesheet" href="./styles.css">
-  </head>
-  <body>
-    <main class="shell">
-      <header class="toolbar">
-        <div>
-          <h1>AutoSci Graph</h1>
-          <p id="summary">Loading graph data...</p>
-        </div>
-        <label class="search">
-          <span>Search</span>
-          <input id="search" type="search" autocomplete="off">
-        </label>
-      </header>
-      <section class="layout">
-        <svg id="graph" role="img" aria-label="AutoSci research graph"></svg>
-        <aside>
-          <h2>Selected</h2>
-          <pre id="details">N/A</pre>
-        </aside>
-      </section>
-    </main>
-    <script type="module" src="./modules/graph.js"></script>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmegaWiki</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="topnav">
+    <a class="brand" href="#/">
+      OmegaWiki <span class="badge">Phase 1</span>
+    </a>
+    <nav>
+      <a href="#/" class="nav-link">Reader</a>
+      <a href="#/graph" class="nav-link">Graph</a>
+      <a href="#/idea-graph" class="nav-link">Idea Graph</a>
+      <a href="#/dashboard" class="nav-link">Dashboard</a>
+    </nav>
+    <input id="jump-input" class="jump" type="search" list="slug-list"
+           placeholder="jump to slug&hellip; (Enter)" autocomplete="off"
+           aria-label="jump to slug" disabled>
+    <datalist id="slug-list"></datalist>
+    <span id="live-indicator" class="live-indicator" title="live-reload via SSE"></span>
+    <div id="boot-status" class="boot-status">loading&hellip;</div>
+  </header>
+
+  <main id="view">
+    <p class="muted">loading wiki data&hellip;</p>
+  </main>
+
+  <script type="module" src="/modules/main.js"></script>
+</body>
 </html>

@@ -1231,13 +1231,13 @@ def cmd_build(args) -> int:
             {"path": str(out), "mode": "native_template_outline"},
             ok=True,
         )
-    if not args.out:
+    if not args.out or not args.compat_scaffold:
         return emit(
             "build",
             "failed",
             {
                 "limitations": [
-                    "Use original --template/--outline/--output or Solar compatibility --out."
+                    "Use original --template/--outline/--output or explicit Solar compatibility --compat-scaffold --out."
                 ]
             },
         )
@@ -1500,6 +1500,7 @@ def main(argv: list[str] | None = None) -> int:
     p_build.add_argument("--outline")
     p_build.add_argument("--output")
     p_build.add_argument("--out", default="", help="Solar compatibility scaffold output")
+    p_build.add_argument("--compat-scaffold", action="store_true", help="Explicitly allow Solar scaffold output when no native template/outline is supplied")
     p_build.add_argument("--title", default="", help="Solar compatibility poster title")
     p_build.add_argument("--summary", default="", help="Solar compatibility poster summary")
     p_build.set_defaults(func=cmd_build)

@@ -44,4 +44,5 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 
 ## Limitations
 
-- SSH, rsync, screen sessions, and long-running code execution require approval and runtime status evidence.
+- Local default execution is supported only behind approval, allowlist, before-state, runtime evidence, deploy/run report, and collect/wiki evidence boundaries.
+- SSH, rsync, screen sessions, remote launch/pull-results, and live provider connectivity are optional remote-mode proof and must not block local default parity.

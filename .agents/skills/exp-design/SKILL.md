@@ -29,8 +29,8 @@ Keep the AutoSci subcommand explicit and quote the dollar command in shell conte
 
 - Solar capability: `cap.research-experiment-design`
 - Backend action: `design_experiment`
-- Coverage status: `full`
-- Side-effect policy: `none`
+- Coverage status: `partial`
+- Side-effect policy: `dry_run_only`
 
 ## Human-Facing Outputs
 
@@ -44,4 +44,5 @@ Logs, envelopes, retries, and operator state remain Solar-managed and should not
 
 ## Limitations
 
-- The plan gate requires explicit evidence ids and cannot pass unsupported experiment rationale.
+- The local route emits evidence-linked plans and final execution readiness boundaries, but it does not yet write the native experiment wiki pages, master design document, graph edges, or rebuilt context/open-question views.
+- Execution readiness requires resolved target evidence, completed Review LLM evidence, approval preflight, command handoff, and expected artifact handoff; missing pieces must remain visible as incomplete evidence.

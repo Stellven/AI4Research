@@ -41,6 +41,7 @@ commands:
   - "python3 plugins/autosci/bin/autosci_bridge.py smoke"
   - "python3 plugins/autosci/bin/autosci_bridge.py validate --result <path>"
   - "python3 plugins/autosci/bin/autosci_bridge.py run --action <action> --envelope <path>"
+  - "SOLAR_AUTOSCI_GATE_MODE=parity_demo python3 plugins/autosci/bin/autosci_bridge.py run --action <action> --envelope <path>"
 
 background_safety:
   mode: bounded
@@ -74,3 +75,6 @@ tags:
   - "scientific-runtime"
   - "backend-adapter"
   - "autosci"
+  - "autosci-policy-gate"
+  - "parity-demo"
+  - "native-mode"

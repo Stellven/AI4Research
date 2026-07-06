@@ -125,7 +125,44 @@ def ref_for_path(path: Path) -> str:
         return str(resolved)
 
 
-def resolve_ref(ref: str, *, audit_dir: Path) -> Path | None:
+def configured_evidence_roots() -> list[Path]:
+    roots = [REPO_ROOT, HARNESS_DIR, Path.cwd()]
+    for raw in str(os.environ.get("SOLAR_AUTOSCI_EVIDENCE_ROOTS") or "").split(os.pathsep):
+        value = raw.strip()
+        if value:
+            roots.append(Path(value).expanduser())
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(root)
+    return deduped
+
+
+def native_repo_ref_candidate(path: Path, *, autosci_repo: Path) -> Path | None:
+    parts = list(path.parts)
+    if "AutoSci" not in parts:
+        return None
+    index = parts.index("AutoSci")
+    tail = parts[index + 1 :]
+    if not tail:
+        return autosci_repo
+    return autosci_repo / Path(*tail)
+
+
+def evidence_root_candidates(root: Path, path: Path) -> list[Path]:
+    candidates = [root / path]
+    if path.parts and path.parts[0] == HARNESS_DIR.name and root.name == HARNESS_DIR.name:
+        candidates.append(root / Path(*path.parts[1:]))
+    if path.parts and path.parts[0] == "artifacts" and root.name != HARNESS_DIR.name:
+        candidates.append(root / HARNESS_DIR.name / path)
+    return candidates
+
+
+def resolve_ref(ref: str, *, audit_dir: Path, autosci_repo: Path) -> Path | None:
     text = str(ref or "").strip()
     if not text or text.startswith(("route:", "native:", "runtime:", "http://", "https://", "doi:", "s2:", "arxiv:")):
         return None
@@ -133,21 +170,23 @@ def resolve_ref(ref: str, *, audit_dir: Path) -> Path | None:
     if path.is_absolute():
         return path
     candidates = [
-        REPO_ROOT / path,
-        HARNESS_DIR / path,
         audit_dir / path,
-        Path.cwd() / path,
     ]
+    native_candidate = native_repo_ref_candidate(path, autosci_repo=autosci_repo)
+    if native_candidate is not None:
+        candidates.append(native_candidate)
+    for root in configured_evidence_roots():
+        candidates.extend(evidence_root_candidates(root, path))
     for candidate in candidates:
         if candidate.exists():
             return candidate
     return candidates[0]
 
 
-def evidence_refs_exist(refs: list[str], *, audit_dir: Path) -> list[str]:
+def evidence_refs_exist(refs: list[str], *, audit_dir: Path, autosci_repo: Path) -> list[str]:
     missing: list[str] = []
     for ref in refs:
-        resolved = resolve_ref(ref, audit_dir=audit_dir)
+        resolved = resolve_ref(ref, audit_dir=audit_dir, autosci_repo=autosci_repo)
         if resolved is not None and not resolved.exists():
             missing.append(ref)
     return missing
@@ -238,7 +277,7 @@ def build_audit(
                 "No completed route-level full semantic equivalence assessment was supplied.",
             )
         )
-    missing_refs = evidence_refs_exist([*native_refs, *solar_refs], audit_dir=audit_dir)
+    missing_refs = evidence_refs_exist([*native_refs, *solar_refs], audit_dir=audit_dir, autosci_repo=autosci_repo)
     full_errors: list[str] = []
     if requested_parity == "full":
         if not assessment_checks:

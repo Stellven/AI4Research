@@ -33,6 +33,7 @@ RUNTIME_VERIFICATION_REQUIREMENT_CATEGORIES = {
     "side_effect_execution_evidence",
     "wiki_mutation_evidence",
 }
+ROUTE_RUNTIME_PROOF_CATEGORIES = RUNTIME_VERIFICATION_REQUIREMENT_CATEGORIES | {"semantic_equivalence_evidence"}
 RUNTIME_PROOF_COLLECTION_MODES = {
     "approved_side_effect",
     "live_provider",
@@ -43,6 +44,80 @@ RUNTIME_PROOF_COLLECTION_MODES = {
 }
 PATH_LIKE_SUFFIXES = (".json", ".jsonl", ".md", ".txt", ".pdf", ".tex", ".log", ".csv", ".tsv", ".yaml", ".yml")
 EXTERNAL_REF_PREFIXES = ("runtime:", "route:", "native:", "doi:", "s2:", "arxiv:", "http://", "https://")
+
+
+def daily_arxiv_delivery_finality_supplied(skill: str, supplied_categories: set[str]) -> bool:
+    if skill != "daily-arxiv":
+        return False
+    return {
+        "approval_boundary_evidence",
+        "external_runtime_evidence",
+        "provider_source_evidence",
+        "review_llm_or_model_evidence",
+        "side_effect_execution_evidence",
+    }.issubset(supplied_categories)
+
+
+def configured_autosci_repo() -> Path:
+    for key in ("AUTOSCI_REPO", "AUTOSCI_NATIVE_REPO", "NATIVE_AUTOSCI_REPO"):
+        value = str(os.environ.get(key) or "").strip()
+        if value:
+            return Path(value).expanduser()
+    return DEFAULT_AUTOSCI_REPO
+
+
+def configured_evidence_roots() -> list[Path]:
+    roots: list[Path] = [OUTPUT_HARNESS, REPO_ROOT, Path.cwd()]
+    for raw in str(os.environ.get("SOLAR_AUTOSCI_EVIDENCE_ROOTS") or "").split(os.pathsep):
+        value = raw.strip()
+        if value:
+            roots.append(Path(value).expanduser())
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(root)
+    return deduped
+
+
+def evidence_root_candidates(root: Path, path: Path) -> list[Path]:
+    candidates = [root / path]
+    if path.parts and path.parts[0] == REPO_HARNESS.name and root.name == REPO_HARNESS.name:
+        candidates.append(root / Path(*path.parts[1:]))
+    if path.parts and path.parts[0] == "artifacts" and root.name != REPO_HARNESS.name:
+        candidates.append(root / REPO_HARNESS.name / path)
+    return candidates
+
+
+def native_repo_ref_candidate(path: Path) -> Path | None:
+    parts = list(path.parts)
+    if "AutoSci" not in parts:
+        return None
+    index = parts.index("AutoSci")
+    tail = parts[index + 1 :]
+    if not tail:
+        return configured_autosci_repo()
+    return configured_autosci_repo() / Path(*tail)
+
+
+def resolve_evidence_ref(ref: str) -> Path:
+    text = str(ref or "").strip()
+    path = Path(text).expanduser()
+    if path.is_absolute():
+        return path
+    native_candidate = native_repo_ref_candidate(path)
+    candidates = [resolve_output(text)]
+    if native_candidate is not None:
+        candidates.append(native_candidate)
+    for root in configured_evidence_roots():
+        candidates.extend(evidence_root_candidates(root, path))
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -242,6 +317,23 @@ def runtime_proof_required(item: dict[str, Any]) -> bool:
     )
 
 
+def wiki_mutation_required_from_text(text: str) -> bool:
+    if "wiki" not in text:
+        return False
+    no_mutation_markers = (
+        "does not mutate wiki",
+        "does not mutate any wiki",
+        "doesn't mutate wiki",
+        "not mutate wiki",
+        "no wiki mutation",
+        "without wiki mutation",
+        "without mutating wiki",
+    )
+    if any(marker in text for marker in no_mutation_markers):
+        return False
+    return "write" in text or "mutation" in text or "set-meta" in text or "add-edge" in text
+
+
 def runtime_proof_status(item: dict[str, Any], *, runtime_refs: list[str]) -> str:
     if not runtime_proof_required(item):
         return "not_required"
@@ -344,7 +436,7 @@ def evidence_ref_status(ref: str) -> dict[str, str]:
         return {"ref": text, "status": "missing", "kind": "empty"}
     if not is_path_like_ref(text):
         return {"ref": text, "status": "external_ref", "kind": "external"}
-    path = resolve_output(text).expanduser()
+    path = resolve_evidence_ref(text).expanduser()
     return {
         "ref": text,
         "status": "ok" if path.exists() else "missing",
@@ -379,12 +471,15 @@ def resolve_audit_ref(ref: str, *, audit_path: Path) -> Path | None:
     path = Path(text).expanduser()
     if path.is_absolute():
         return path
+    native_candidate = native_repo_ref_candidate(path)
     candidates = [
         resolve_output(text),
         audit_path.parent / path,
-        REPO_ROOT / path,
-        Path.cwd() / path,
     ]
+    if native_candidate is not None:
+        candidates.append(native_candidate)
+    for root in configured_evidence_roots():
+        candidates.extend(evidence_root_candidates(root, path))
     for candidate in candidates:
         if candidate.exists():
             return candidate
@@ -446,7 +541,7 @@ def semantic_audit_full_verified(skill: str, proofs: list[dict[str, Any]]) -> tu
         for ref in non_empty_string_list(proof.get("evidence_refs")):
             if not is_path_like_ref(ref):
                 continue
-            path = resolve_output(ref).expanduser()
+            path = resolve_evidence_ref(ref).expanduser()
             if not path.exists() or not path.is_file() or path.suffix.lower() != ".json":
                 continue
             try:
@@ -616,11 +711,15 @@ def proof_requirements(
                 evidence_refs=runtime_refs,
             )
         )
-    if "wiki" in text and ("write" in text or "mutation" in text or "set-meta" in text or "add-edge" in text):
+    wiki_mutation_supplied = "wiki_mutation_evidence" in supplied_categories
+    wiki_mutation_required = wiki_mutation_required_from_text(text)
+    if wiki_mutation_supplied or (
+        wiki_mutation_required and not daily_arxiv_delivery_finality_supplied(skill, supplied_categories)
+    ):
         requirements.append(
             proof_requirement(
                 category="wiki_mutation_evidence",
-                status="supplied" if "wiki_mutation_evidence" in supplied_categories else "pending",
+                status="supplied" if wiki_mutation_supplied else "pending",
                 description="Wiki-mutating route needs approved before/after mutation and rebuild evidence.",
                 evidence_refs=runtime_refs,
             )
@@ -660,6 +759,9 @@ def load_runtime_proof_manifests(paths: list[str]) -> tuple[dict[str, list[dict[
                 warnings.append(f"Runtime proof manifest entry {path}#{index} has no native_skill")
                 continue
             proof_id = str(proof_raw.get("proof_id") or proof_raw.get("id") or f"{path.name}#{index}").strip()
+            categories = non_empty_string_list(proof_raw.get("categories")) or ["external_runtime_evidence"]
+            if not set(categories).intersection(ROUTE_RUNTIME_PROOF_CATEGORIES):
+                continue
             evidence_refs = non_empty_string_list(proof_raw.get("evidence_refs"))
             evidence_statuses = [evidence_ref_status(ref) for ref in evidence_refs]
             missing_refs = [
@@ -690,7 +792,7 @@ def load_runtime_proof_manifests(paths: list[str]) -> tuple[dict[str, list[dict[
                 "native_skill": skill,
                 "status": "blocked" if block_reasons else "supplied",
                 "manifest_path": str(path),
-                "categories": non_empty_string_list(proof_raw.get("categories")) or ["external_runtime_evidence"],
+                "categories": categories,
                 "collection_mode": collection_mode,
                 "production_ready": production_ready,
                 "provenance": provenance,
