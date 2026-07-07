@@ -42,6 +42,55 @@ SIDE_EFFECT_OR_PROVIDER_NODES = {
     "report_plan",
     "publication_produce",
 }
+AUTHORIZATION_ACCESS_BY_NODE = {
+    "literature_discover": {
+        "requested_side_effects": ["network_fetch", "source_provider_runtime"],
+        "required_inputs": ["source_runtime_evidence", "source_approval_ref"],
+        "resume_args_patch": [
+            "--source-runtime-evidence",
+            "<source-runtime-evidence.json>",
+            "--source-approval-ref",
+            "<approval-ref>",
+        ],
+    },
+    "experiment_run": {
+        "requested_side_effects": ["local_command", "remote_execution", "experiment_runtime"],
+        "required_inputs": ["experiment_runtime_evidence", "experiment_approval_ref"],
+        "resume_args_patch": [
+            "--experiment-runtime-evidence",
+            "<experiment-runtime-evidence.json>",
+            "--experiment-approval-ref",
+            "<approval-ref>",
+        ],
+    },
+    "experiment_monitor": {
+        "requested_side_effects": ["remote_status", "experiment_runtime"],
+        "required_inputs": ["experiment_runtime_evidence", "experiment_approval_ref"],
+        "resume_args_patch": [
+            "--experiment-runtime-evidence",
+            "<experiment-runtime-evidence.json>",
+            "--experiment-approval-ref",
+            "<approval-ref>",
+        ],
+    },
+    "report_plan": {
+        "requested_side_effects": ["review_llm"],
+        "required_inputs": ["review_llm_evidence"],
+        "resume_args_patch": ["--review-llm-evidence", "<review-llm-evidence.json>"],
+    },
+    "publication_produce": {
+        "requested_side_effects": ["tex_compile", "publication_runtime"],
+        "required_inputs": ["compile_target", "compile_runtime_evidence", "compile_approval_ref"],
+        "resume_args_patch": [
+            "--compile-target",
+            "<paper-or-tex-target>",
+            "--compile-runtime-evidence",
+            "<compile-runtime-evidence.json>",
+            "--compile-approval-ref",
+            "<approval-ref>",
+        ],
+    },
+}
 CAPABILITY_NATIVE_SKILL_BY_NODE = {
     "literature_discover": "daily-arxiv",
     "paper_ingest": "ingest",
@@ -154,7 +203,77 @@ def _should_block_before_dispatch(args: argparse.Namespace, spec: dict[str, Any]
     return ""
 
 
+def _blocked_authorization_request(
+    job_id: str,
+    spec: dict[str, Any],
+    reason: str,
+    *,
+    missing_dependencies: list[str] | None = None,
+) -> dict[str, Any]:
+    node_id = str(spec["node_id"])
+    access = dict(AUTHORIZATION_ACCESS_BY_NODE.get(node_id) or {})
+    requested_side_effects = list(access.get("requested_side_effects") or [])
+    required_inputs = list(access.get("required_inputs") or [])
+    resume_args_patch = list(access.get("resume_args_patch") or [])
+    if missing_dependencies:
+        requested_side_effects.append("upstream_node_artifact")
+        required_inputs.extend([f"node_result:{node_id}" for node_id in missing_dependencies])
+        resume_args_patch.extend(["--allow-existing-result"])
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "job_id": job_id,
+                "node_id": node_id,
+                "reason": reason,
+                "requested_side_effects": requested_side_effects,
+                "required_inputs": required_inputs,
+            },
+            sort_keys=True,
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+    return {
+        "schema": "scientific_workflow_gate_authorization_request.v1",
+        "status": "awaiting_authorization",
+        "job_id": job_id,
+        "node_id": node_id,
+        "native_skill": CAPABILITY_NATIVE_SKILL_BY_NODE.get(node_id, "N/A"),
+        "reason": reason,
+        "requested_side_effects": requested_side_effects,
+        "required_inputs": required_inputs,
+        "prompt": (
+            "This workflow node is waiting for authorization or runtime evidence. "
+            "Supply the requested inputs, then resume the workflow with the same job."
+        ),
+        "continuation": {
+            "schema": "scientific_workflow_gate_continuation.v1",
+            "status": "awaiting_authorization",
+            "retriable": True,
+            "same_workflow_supported": True,
+            "request_fingerprint": fingerprint,
+            "resume_strategy": "rerun_workflow_with_authorization_patch",
+            "resume_args_patch": resume_args_patch,
+            "resume_node_id": node_id,
+        },
+        "non_error_contract": {
+            "blocked_runs_exit_successfully": True,
+            "lifecycle_status": "blocked",
+        },
+    }
+
+
 def _blocked_node(job_id: str, spec: dict[str, Any], reason: str) -> dict[str, Any]:
+    missing_dependencies = [
+        part.strip()
+        for part in reason.removeprefix("Waiting for dependency node results:").split(",")
+        if reason.startswith("Waiting for dependency node results:") and part.strip()
+    ]
+    authorization_request = _blocked_authorization_request(
+        job_id,
+        spec,
+        reason,
+        missing_dependencies=missing_dependencies,
+    )
     return {
         "job_id": job_id,
         "node_id": spec["node_id"],
@@ -166,6 +285,8 @@ def _blocked_node(job_id: str, spec: dict[str, Any], reason: str) -> dict[str, A
         "reason": reason,
         "required_evidence": ["provider/runtime evidence or upstream node artifact"],
         "unblock_condition": "Resume the workflow after supplying the missing evidence.",
+        "authorization_request": authorization_request,
+        "continuation": authorization_request["continuation"],
     }
 
 
@@ -563,6 +684,11 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
         lifecycle_status = "failed"
     elif blocked_nodes:
         lifecycle_status = "blocked"
+    authorization_requests = [
+        node["authorization_request"]
+        for node in blocked_nodes.values()
+        if isinstance(node, dict) and isinstance(node.get("authorization_request"), dict)
+    ]
 
     lifecycle = {
         "schema": "scientific_lifecycle.v1",
@@ -576,6 +702,14 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
         "node_results": node_results,
         "gate_results": gate_results,
         "blocked_nodes": blocked_nodes,
+        "authorization_required": bool(authorization_requests),
+        "authorization_requests": authorization_requests,
+        "authorization_prompt": (
+            "One or more workflow gates are waiting for authorization or runtime evidence; "
+            "supply the requested access patch and rerun the workflow."
+            if authorization_requests
+            else ""
+        ),
         "node_summaries": node_summaries,
         "dispatch_input_profiles": dispatch_input_profiles,
         "runtime_manifest_path": runtime_manifest["path"],
@@ -596,9 +730,10 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
 
     lifecycle_gate = _gate_lifecycle(summary_path, harness_dir)
     lifecycle["lifecycle_gate_result"] = lifecycle_gate
+    authorization_blocked = bool(blocked_nodes) and bool(authorization_requests)
     lifecycle_gate_ok = lifecycle_gate.get("ok") is True or (
         bool(blocked_nodes) and str(lifecycle_gate.get("status") or "") == "inconclusive"
-    )
+    ) or authorization_blocked
     checks.append({
         "check": "lifecycle_runtime_gate_passed",
         "status": "ok" if lifecycle_gate_ok else "error",
@@ -614,7 +749,7 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
     if lifecycle["lifecycle_status"] == "passed":
         return 0, lifecycle
     if lifecycle["lifecycle_status"] == "blocked":
-        return 3, lifecycle
+        return (3 if args.legacy_blocked_exit_code else 0), lifecycle
     return 1, lifecycle
 
 
@@ -633,6 +768,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-existing-result", action="store_true")
     parser.add_argument("--stop-on-blocked", action="store_true", default=True)
     parser.add_argument("--stop-on-failure", action="store_true", default=True)
+    parser.add_argument(
+        "--legacy-blocked-exit-code",
+        action="store_true",
+        help="Return exit code 3 for blocked lifecycle runs instead of the authorization-request success code.",
+    )
     parser.add_argument("--require-external-evidence", action="store_true")
     parser.add_argument("--allow-network-fetch", action="store_true")
     parser.add_argument("--require-online-source-evidence", action="store_true")

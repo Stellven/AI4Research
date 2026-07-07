@@ -327,3 +327,120 @@ keeping provider, remote, and workflow mutation boundaries truthful.
 | `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'not visualize_parity_demo_auto_runs_server_probe and not novelty_http_provider_marks_external_runtime and not review_invokes_openai_compatible_provider'` | ok: 167 passed, 3 deselected |
 | elevated rerun of socket-bound shim tests: visualize server probe, novelty HTTP provider, Review LLM OpenAI-compatible provider | ok: 3 passed |
 | `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+
+## Agent B Problem 3 Side-Effect Access Requests
+
+Logged: 2026-07-06 EDT
+
+Intent: stop four native-parity commands from silently returning plan/dry-run
+evidence when their native side effects are blocked by the active AutoSci gate
+mode. The command should either use already-verified runtime evidence or emit a
+typed access request that tells the caller what approval/opt-in is required.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Shared access request sidecar | ok | Added `autosci_side_effect_access_request.v1` generation with requested side effects, gate mode, blocking reasons, approval/runtime requirements, env opt-in hints, and `side_effect_access_request_json` artifacts. |
+| `$daily-arxiv` | ok | Missing live feed access now emits `outputs.side_effect_access_required=true`; supplied verified runtime digest evidence can still complete without being downgraded. |
+| `$research` | ok | Strict/safe blocked lifecycle side effects now appear in lifecycle runtime errors, human intervention points, pipeline status, and evidence outputs. |
+| `$ideate` | ok | `generate_ideas` now uses approval-gated side-effect policy and emits access requests for model/source/wiki/pilot side-effect paths instead of a dry-run-only route. |
+| `$exp-run` | ok | Approval-gated local/remote experiment execution now emits side-effect access requests when strict policy blocks command/wiki mutation execution. |
+
+### Issues Encountered And Guardrails
+
+| Issue | Status | Guardrail |
+|---|---|---|
+| Solar Evidence ABI schemas do not allow a new top-level status value. | fixed | Evidence top-level status remains `inconclusive`; the blocking state is stored in `outputs.side_effect_access_status=blocked_side_effect_access_required` and in the sidecar. |
+| Verified daily-arxiv runtime evidence was temporarily downgraded by strict policy. | fixed | Access requests are attached only when daily runtime evidence is not already semantically verified. |
+| `ideate` route metadata still said `dry_run_only`. | fixed | Route config and skill metadata now say `approval_required`. |
+| Local harness state files were dirty before this edit. | guarded | The change set avoids committing local process/watchdog state files and only targets AutoSci bridge/config/docs/tests. |
+
+### Verification Commands
+
+| Command | Result |
+|---|---|
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py` | ok |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_strict_gate_emits_side_effect_access_requests_for_native_parity_commands` | ok: 1 passed |
+| `pytest -q harness/plugins/autosci/tests/test_gate_policy_modes.py` | ok: 9 passed |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions` | ok: 1 passed |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest` | ok after verified-runtime guard fix |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_exp_run_native_options_without_fixture_fallback` | ok: 1 passed |
+
+## Agent B Final Deliverable Projection And Continuation Contract
+
+Logged: 2026-07-06 EDT
+
+Intent: resolve two remaining parity concerns without requiring identical
+intermediate artifact names or roots: final OmegaWiki-facing deliverables must
+materialize into the wiki files that the SPA/serve path reads, and gate-blocked
+native side effects must be resumable after explicit permission rather than
+looking like terminal failures.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Graph deliverable projection | ok | `autosci_workspace_projector.py` now discovers `research_graph_update*.json` run artifacts and graph update artifacts referenced from action evidence, then appends enriched edges into `workspace/wiki/graph/edges.jsonl`. |
+| Projection manifest | ok | When graph evidence exists, projector writes `wiki/graph/projection_manifest.json` with source evidence paths, projected/written edge counts, status, and limitations. |
+| `$visualize` final graph parity | ok | Regression proves `$visualize` graph update evidence is projected into the final OmegaWiki graph file even when the intermediate file is `research_graph_update.visualize.json`. |
+| Side-effect continuation | ok | `autosci_side_effect_access_request.v1` now embeds `autosci_side_effect_continuation.v1` with retry patch options for bounded policy mode, native mode, or strict HITL approval artifacts. |
+| Gate behavior | ok | Blocked strict/safe runs still return `status=inconclusive`, but the evidence now marks the block as retriable and gives callers enough structure to ask for permission and retry the same envelope. |
+
+### Issues Encountered And Guardrails
+
+| Issue | Status | Guardrail |
+|---|---|---|
+| Initial projector test assumed the source evidence would be the action evidence file. | fixed | The actual stronger path is direct discovery of `research_graph_update.visualize.json`; the test now asserts the final graph and projection manifest reference that source. |
+| Final UI parity can be confused with intermediate schema parity. | guarded | The regression checks the final `workspace/wiki/graph/edges.jsonl` read surface, not merely the presence of a normalized graph evidence artifact. |
+| Projection manifest could become unrelated command noise if written without graph evidence. | fixed | Manifest writing is conditional on discovered graph evidence; non-graph commands do not receive a fresh no-op graph projection manifest. |
+| Permission continuation should not weaken default policy. | guarded | Default `strict_hitl` remains blocked for side effects; continuation only exposes explicit retry/access patch options. |
+
+### Verification Commands
+
+| Command | Result |
+|---|---|
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_workspace_projector.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_visualize_projects_action_graph_update_into_workspace_graph` | ok: 1 passed |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_strict_gate_emits_side_effect_access_requests_for_native_parity_commands ...::test_autosci_skill_shim_visualize_projects_action_graph_update_into_workspace_graph ...::test_autosci_skill_shim_runs_remaining_gated_backend_actions` | ok: 3 passed |
+| `pytest -q harness/plugins/autosci/tests/test_gate_policy_modes.py` | ok: 9 passed |
+
+## Agent B All-Gate Authorization Continuation
+
+Logged: 2026-07-06 EDT
+
+Intent: bring every AutoSci-facing gated condition up to the "ask for
+authorization, then continue/resume" standard without weakening real failure
+gates. This covers bridge approval contracts, side-effect access requests,
+route-level shim gates, the generic scientific workflow runner, and the legacy
+research lifecycle smoke runner used by `$research --scheduler-run`.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Approval contracts | ok | `_approval_contract()` and `_refresh_approval_contract()` now embed `autosci_gate_authorization_request.v1` with a retriable `autosci_gate_continuation.v1` when approval/runtime artifacts are missing. |
+| Route-level shim gates | ok | Approval-gated routes add `autosci_route_gate_authorization_request.v1` to skill-run outputs when the current run is schema-only/blocked or scheduler authorization is required; stdout summaries expose `authorization_required` / request counts only for those blocked handoffs. |
+| Generic workflow blocked nodes | ok | `run_scientific_workflow.py` blocked nodes now include `scientific_workflow_gate_authorization_request.v1` plus continuation/resume args. |
+| Blocked workflow process behavior | ok | Generic workflow authorization blocks now return process exit `0` by default while preserving `lifecycle_status=blocked`; `--legacy-blocked-exit-code` retains exit `3` for legacy callers. |
+| Legacy scheduler blocked nodes | ok | `run_scientific_lifecycle_smoke.py` blocked external and human-gate nodes now include `scientific_workflow_gate_authorization_request.v1`; the shim invokes `--authorization-blocked-exit-zero` so `$research --scheduler-run` can surface blocked/resume state without returning a process failure. |
+| Ideate smoke guard | ok | Fixture/smoke `generate_ideas` no longer emits side-effect access requests for hypothetical network/wiki/model side effects; explicit `--gate-mode strict_hitl` or real native/non-fixture ideate side-effect paths still emit access requests. |
+| Failure boundary | guarded | Workflow-config drift, production dispatch boundary failure, and other real failed gates are not reclassified as authorization prompts. |
+
+### Issues Encountered And Guardrails
+
+| Issue | Status | Guardrail |
+|---|---|---|
+| Lifecycle gate treated authorization-blocked runs with no node results as failed. | fixed | Authorization-blocked workflows are accepted as blocked/non-error when structured authorization requests exist. |
+| "All gated conditions" could be interpreted as every historical `blocked` string in the repo. | scoped | This slice covers AutoSci public gate surfaces: bridge approval contracts, side-effect access, route-level shim gates, and generic scientific workflow gates. |
+| Existing legacy smoke runner tests depend on blocked exit code `3`. | guarded | Direct legacy smoke runner behavior keeps exit `3`; shim-mediated runs opt into `--authorization-blocked-exit-zero` so the user-facing command can ask for authorization and continue later instead of surfacing a terminal process error. |
+| `generate_ideas` strict policy initially blocked bounded fixture smoke. | fixed | Access requests are now attached only for explicit gate-mode runs or actual native/non-fixture ideate side-effect paths, preserving fixture scheduler smoke while keeping strict native ideate authorization prompts. |
+| Route-level request was initially emitted for already-authorized passed actions. | fixed | Route-level authorization requests are now limited to schema-only/blocked action runs, no-action route evidence, or scheduler authorization requests; a passed parity-demo single-action run such as `$visualize --serve` does not ask again. |
+
+### Verification Commands
+
+| Command | Result |
+|---|---|
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/tools/run_scientific_workflow.py harness/tests/evaluators/scientific/test_scientific_workflow_runner.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `pytest -q harness/tests/evaluators/scientific/test_scientific_workflow_runner.py` | ok: 2 passed |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_visualize_serve_flag_without_server_execution ...::test_autosci_skill_shim_research_scheduler_blocked_gate_surfaces_authorization` | ok: 2 passed |
+| `pytest -q harness/plugins/autosci/tests/test_gate_policy_modes.py harness/plugins/autosci/tests/test_approval_runtime_proof.py harness/tests/evaluators/scientific/test_scientific_workflow_runner.py` | ok: 14 passed |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k "scheduler_blocked_gate_surfaces_authorization or accepts_visualize_serve_flag_without_server_execution or strict_gate_emits_side_effect_access_requests or research_scheduler_run_attaches_blocked_summary or research_scheduler_demo_uses_multi_node_preset"` | ok: 5 passed, 168 deselected |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_legacy_scheduler_run_attaches_blocked_summary ...::test_autosci_skill_shim_research_scheduler_run_records_human_gate ...::test_autosci_skill_shim_research_scheduler_blocked_gate_surfaces_authorization ...::test_autosci_strict_gate_emits_side_effect_access_requests_for_native_parity_commands` | ok: 4 passed |
+| `pytest -q harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_blocks_configured_publication_tail_without_external_evidence ...::test_scientific_lifecycle_smoke_can_resume_external_blocked_nodes` | ok: 2 passed |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k "scheduler_blocked_gate_surfaces_authorization or accepts_visualize_serve_flag_without_server_execution or strict_gate_emits_side_effect_access_requests or research_legacy_scheduler_run_attaches_blocked_summary or research_scheduler_run_records_human_gate or research_scheduler_demo_uses_multi_node_preset"` | ok: 6 passed, 167 deselected |
+| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_parity_demo_auto_executes_local_command ...::test_autosci_skill_shim_visualize_parity_demo_auto_runs_server_probe ...::<scheduler authorization tests> ...::test_autosci_strict_gate_emits_side_effect_access_requests_for_native_parity_commands` | ok: 6 passed |

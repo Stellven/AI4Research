@@ -321,6 +321,91 @@ def native_options(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def route_authorization_request(
+    skill: str,
+    route: dict[str, Any],
+    binding: dict[str, Any] | None,
+    work_dir: str,
+) -> dict[str, Any]:
+    backend_action = str(route.get("solar_backend_action") or "")
+    side_effect_policy = str(route.get("side_effect_policy") or "unavailable")
+    coverage_status = str(route.get("coverage_status") or "")
+    physical_operator = str((binding or {}).get("physical_operator") or "N/A")
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "skill": skill,
+                "backend_action": backend_action,
+                "side_effect_policy": side_effect_policy,
+                "coverage_status": coverage_status,
+                "physical_operator": physical_operator,
+                "work_dir": work_dir,
+            },
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+    return {
+        "schema": "autosci_route_gate_authorization_request.v1",
+        "status": "awaiting_authorization",
+        "skill": skill,
+        "autosci_command": str(route.get("autosci_command") or f"/{skill}"),
+        "backend_action": backend_action,
+        "side_effect_policy": side_effect_policy,
+        "coverage_status": coverage_status,
+        "physical_operator": physical_operator,
+        "requested_access": {
+            "approval_ref": True,
+            "runtime_evidence": True,
+            "before_after_artifacts": True,
+            "gate_mode": ["parity_demo", "autosci_native"],
+        },
+        "prompt": (
+            "This AutoSci route is approval-gated. Grant access or provide typed runtime evidence, "
+            "then rerun the same command with the authorization patch."
+        ),
+        "continuation": {
+            "schema": "autosci_route_gate_continuation.v1",
+            "status": "awaiting_authorization",
+            "retriable": True,
+            "same_command_supported": True,
+            "request_fingerprint": fingerprint,
+            "resume_strategy": "rerun_same_skill_with_authorization_patch",
+            "access_patch_options": [
+                {
+                    "name": "hitl_approval",
+                    "args": [
+                        "--approval-ref",
+                        "<approval-ref>",
+                        "--allowlist-evidence",
+                        "<allowlist-evidence.json>",
+                        "--before-artifact",
+                        "<before-artifact>",
+                        "--runtime-evidence",
+                        "<runtime-evidence.json>",
+                        "--after-artifact",
+                        "<after-artifact>",
+                        "--execute-approved",
+                    ],
+                },
+                {
+                    "name": "bounded_policy_mode",
+                    "args": ["--gate-mode", "parity_demo"],
+                    "limitations": ["Only bounded local side effects may execute in parity_demo."],
+                },
+                {
+                    "name": "native_policy_mode",
+                    "args": ["--gate-mode", "autosci_native"],
+                    "limitations": ["Runtime proof is still required before claiming full parity."],
+                },
+            ],
+        },
+        "non_error_contract": {
+            "blocked_runs_exit_successfully": True,
+            "evidence_status": "inconclusive",
+        },
+    }
+
+
 def prepare_scheduler_harness(harness_dir: Path) -> None:
     """Expose read-only harness resources when HARNESS_DIR is an isolated run root."""
     for name in ("config", "personas", "tools", "plugins", "evaluators", "schemas", "lib", "templates"):
@@ -358,6 +443,7 @@ def run_research_scheduler_lifecycle(args: argparse.Namespace, *, run_id: str, w
             str(scheduler_rel),
             "--out",
             str(summary_rel),
+            "--authorization-blocked-exit-zero",
         ]
         if args.scheduler_include_blocked_external:
             command.append("--include-blocked-external")
@@ -498,6 +584,11 @@ def run_research_scheduler_lifecycle(args: argparse.Namespace, *, run_id: str, w
         if isinstance(summary_payload.get("dispatch_boundary"), dict)
         else {}
     )
+    authorization_requests = (
+        summary_payload.get("authorization_requests")
+        if isinstance(summary_payload.get("authorization_requests"), list)
+        else []
+    )
     if args.scheduler_require_production_dispatch and dispatch_boundary.get("production_ready") is not True:
         result_status = "failed"
     return {
@@ -521,6 +612,10 @@ def run_research_scheduler_lifecycle(args: argparse.Namespace, *, run_id: str, w
         "dispatch_boundary_status": dispatch_boundary.get("status", "N/A"),
         "dispatch_boundary_production_ready": dispatch_boundary.get("production_ready"),
         "dispatch_boundary_blocking_reasons": list(dispatch_boundary.get("blocking_reasons") or []),
+        "authorization_required": bool(authorization_requests),
+        "authorization_request_count": len(authorization_requests),
+        "authorization_requests": authorization_requests,
+        "authorization_prompt": str(summary_payload.get("authorization_prompt") or ""),
     }
 
 
@@ -1377,9 +1472,16 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
     failed_total = failed_count + (1 if scheduler_failed else 0)
     operator_status = str((binding or {}).get("operator_status") or route.get("coverage_status") or "partial")
     side_effect_policy = str(route.get("side_effect_policy") or "unavailable")
+    schema_only_count = count_results(action_results, "schema_only")
+    bounded_research_smoke = skill == "research" and bool(args.smoke) and side_effect_policy == "approval_required"
+    approval_schema_only_gated = side_effect_policy == "approval_required" and (
+        not action_results or schema_only_count > 0
+    )
+    if skill == "ideate" and not args.gate_mode:
+        approval_schema_only_gated = False
     if failed_total:
         execution_status = "failed"
-    elif operator_status == "gated" or side_effect_policy == "approval_required":
+    elif bounded_research_smoke or operator_status == "gated" or approval_schema_only_gated:
         execution_status = "gated"
     elif operator_status == "partial" or route.get("coverage_status") == "partial":
         execution_status = "partial"
@@ -1438,7 +1540,7 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
                 "side_effect_policy": side_effect_policy,
                 "action_count": len(action_results),
                 "passed_count": count_results(action_results, "passed"),
-                "schema_only_count": count_results(action_results, "schema_only"),
+                "schema_only_count": schema_only_count,
             "failed_count": failed_count,
             "scheduler_failed": scheduler_failed,
             "actions": action_results,
@@ -1496,6 +1598,28 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
         action_results=action_results,
         status=payload_status,
     )
+    scheduler_authorization_requests = [
+        item
+        for item in scheduler_lifecycle.get("authorization_requests", [])
+        if isinstance(item, dict)
+    ]
+    route_authorization_required = (
+        side_effect_policy == "approval_required"
+        and (
+            not action_results
+            or any(str(result.get("status") or "") == "schema_only" for result in action_results)
+            or bool(scheduler_authorization_requests)
+        )
+    )
+    route_authorization_requests: list[dict[str, Any]] = []
+    if route_authorization_required:
+        route_authorization_requests.append(route_authorization_request(skill, route, binding, work_dir))
+    if scheduler_authorization_requests:
+        route_authorization_requests.extend(scheduler_authorization_requests)
+    if route_authorization_requests:
+        payload["outputs"]["authorization_required"] = True
+        payload["outputs"]["authorization_requests"] = route_authorization_requests
+        payload["outputs"]["skill_run"]["authorization_requests"] = route_authorization_requests
     return payload, out_path
 
 
@@ -1890,12 +2014,17 @@ def cmd_run_skill(args: argparse.Namespace) -> int:
         summary["scheduler_lifecycle_summary_path"] = scheduler_lifecycle.get("summary_path")
         summary["scheduler_lifecycle_node_count"] = scheduler_lifecycle.get("node_count")
         summary["scheduler_lifecycle_blocked_node_count"] = scheduler_lifecycle.get("blocked_node_count")
+        summary["scheduler_authorization_required"] = scheduler_lifecycle.get("authorization_required")
+        summary["scheduler_authorization_request_count"] = scheduler_lifecycle.get("authorization_request_count")
         summary["scheduler_workflow_config_alignment_status"] = scheduler_lifecycle.get("workflow_config_alignment_status")
         summary["scheduler_workflow_config_alignment_ok"] = scheduler_lifecycle.get("workflow_config_alignment_ok")
         summary["scheduler_workflow_config_alignment_issues"] = scheduler_lifecycle.get("workflow_config_alignment_issues")
         summary["scheduler_dispatch_boundary_status"] = scheduler_lifecycle.get("dispatch_boundary_status")
         summary["scheduler_dispatch_boundary_production_ready"] = scheduler_lifecycle.get("dispatch_boundary_production_ready")
         summary["scheduler_dispatch_boundary_blocking_reasons"] = scheduler_lifecycle.get("dispatch_boundary_blocking_reasons")
+    if payload["outputs"].get("authorization_required"):
+        summary["authorization_required"] = True
+        summary["authorization_request_count"] = len(payload["outputs"].get("authorization_requests") or [])
     if workspace_summary:
         summary["workspace_path"] = workspace_summary["workspace_root"]
         summary["wiki_path"] = workspace_summary["wiki_root"]

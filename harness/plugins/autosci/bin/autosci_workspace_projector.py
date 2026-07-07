@@ -99,6 +99,13 @@ def rel_to_output(path: Path, output_harness: Path) -> str:
         return str(path.resolve())
 
 
+def resolve_output_ref(raw_path: Any, output_harness: Path) -> Path:
+    path = Path(str(raw_path or ""))
+    if path.is_absolute():
+        return path
+    return output_harness / path
+
+
 def artifact_path(path: Path) -> str:
     return str(path.resolve())
 
@@ -989,7 +996,54 @@ def project_lifecycle_summary(
     return []
 
 
-def project_graph(run_dir: Path, wiki: Path, output_harness: Path, run_id: str) -> list[Path]:
+def graph_evidence_paths(
+    run_dir: Path,
+    output_harness: Path,
+    action_evidence_paths: list[str] | None = None,
+) -> list[Path]:
+    candidates: list[Path] = [
+        *sorted(run_dir.glob("research_graph_update*.json")),
+    ]
+    for raw_path in action_evidence_paths or []:
+        path = resolve_output_ref(raw_path, output_harness)
+        candidates.append(path)
+        payload = load_json_if_exists(path)
+        if not payload:
+            continue
+        for artifact in payload.get("artifacts") or []:
+            if not isinstance(artifact, dict):
+                continue
+            artifact_type = str(artifact.get("type") or "")
+            if "research_graph_update" not in artifact_type:
+                continue
+            artifact_path = str(artifact.get("path") or "").strip()
+            if artifact_path:
+                candidates.append(resolve_output_ref(artifact_path, output_harness))
+
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in candidates:
+        resolved = path.resolve()
+        if resolved in seen or not path.exists():
+            continue
+        payload = load_json_if_exists(path)
+        if not payload:
+            continue
+        edges = payload.get("outputs", {}).get("edges")
+        if payload.get("schema") == "research_graph_update.v1" or isinstance(edges, list):
+            seen.add(resolved)
+            unique.append(path)
+    return unique
+
+
+def project_graph(
+    run_dir: Path,
+    wiki: Path,
+    output_harness: Path,
+    run_id: str,
+    *,
+    action_evidence_paths: list[str] | None = None,
+) -> list[Path]:
     updated: list[Path] = []
     graph_dir = wiki / "graph"
     edges_path = graph_dir / "edges.jsonl"
@@ -998,15 +1052,18 @@ def project_graph(run_dir: Path, wiki: Path, output_harness: Path, run_id: str) 
         existing = {line.strip() for line in edges_path.read_text(encoding="utf-8").splitlines() if line.strip()}
 
     new_lines: list[str] = []
-    for name in ("research_graph_update.json", "research_graph_update.direct.json"):
-        payload = load_json_if_exists(run_dir / name)
+    source_paths = graph_evidence_paths(run_dir, output_harness, action_evidence_paths)
+    projected_edge_count = 0
+    for source_path in source_paths:
+        payload = load_json_if_exists(source_path)
         edges = payload.get("outputs", {}).get("edges") if payload else None
         if not isinstance(edges, list):
             continue
         for edge in edges:
             if not isinstance(edge, dict):
                 continue
-            enriched = {**edge, "run_id": run_id, "source_evidence": rel_to_output(run_dir / name, output_harness)}
+            projected_edge_count += 1
+            enriched = {**edge, "run_id": run_id, "source_evidence": rel_to_output(source_path, output_harness)}
             line = json.dumps(enriched, sort_keys=True)
             if line not in existing:
                 existing.add(line)
@@ -1021,6 +1078,22 @@ def project_graph(run_dir: Path, wiki: Path, output_harness: Path, run_id: str) 
     citations_path = graph_dir / "citations.jsonl"
     if write_text_if_changed(citations_path, citations_path.read_text(encoding="utf-8") if citations_path.exists() else ""):
         updated.append(citations_path)
+
+    if source_paths:
+        manifest = {
+            "schema": "autosci_workspace_graph_projection.v1",
+            "run_id": run_id,
+            "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "source_evidence": [rel_to_output(path, output_harness) for path in source_paths],
+            "projected_edge_count": projected_edge_count,
+            "written_edge_count": len(new_lines),
+            "edges_path": rel_to_output(edges_path, output_harness),
+            "status": "projected",
+            "limitations": [],
+        }
+        manifest_path = graph_dir / "projection_manifest.json"
+        if write_text_if_changed(manifest_path, json.dumps(manifest, indent=2, sort_keys=True) + "\n"):
+            updated.append(manifest_path)
 
     mutation_payload = load_json_if_exists(run_dir / "novelty_writeback.json")
     mutation_write = {}
@@ -1150,7 +1223,18 @@ def project_run_to_workspace(
     updated.extend(project_experiment_summary(run_dir, wiki, output_harness, run_id))
     updated.extend(project_report(run_dir, wiki, output_harness, run_id))
     updated.extend(project_lifecycle_summary(skill_run_path, payload, wiki, output_harness, run_id))
-    updated.extend(project_graph(run_dir, wiki, output_harness, run_id))
+    action_evidence_paths = [
+        str(action.get("evidence_path") or "")
+        for action in (payload.get("outputs", {}).get("skill_run", {}).get("actions") or [])
+        if isinstance(action, dict) and str(action.get("evidence_path") or "").strip()
+    ]
+    updated.extend(project_graph(
+        run_dir,
+        wiki,
+        output_harness,
+        run_id,
+        action_evidence_paths=action_evidence_paths,
+    ))
     updated.extend(rebuild_index(workspace, run_id))
 
     updated_unique = []

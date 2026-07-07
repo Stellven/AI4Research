@@ -116,3 +116,71 @@ def test_config_driven_scientific_workflow_runner_dispatches_node_runtime(tmp_pa
     assert (harness_dir / node_result["operator_result_path"]).exists()
     assert (harness_dir / node_result["bridge_result_path"]).exists()
     assert summary["lifecycle_gate_result"]["ok"] is True
+
+
+def test_scientific_workflow_runner_blocked_gate_emits_authorization_continuation(tmp_path: Path) -> None:
+    harness_dir = _prepare_isolated_harness(tmp_path)
+    workflow_config = harness_dir / "workflow.blocked-literature.json"
+    workflow_config.write_text(
+        json.dumps(
+            {
+                "schema_version": "solar.task_graph.v1",
+                "workflow_id": "scientific_workflow_runner_blocked_gate_test",
+                "nodes": [
+                    {
+                        "id": "literature_discover",
+                        "logical_operator": "ScientificLiteratureDiscoverer",
+                        "depends_on": [],
+                        "gate": "G_LITERATURE_DISCOVERY",
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["HARNESS_DIR"] = str(harness_dir)
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER),
+            "--harness-dir",
+            str(harness_dir),
+            "--workflow-config",
+            str(workflow_config),
+            "--job-id",
+            "job-scientific-workflow-blocked-gate-test",
+            "--node-id",
+            "literature_discover",
+            "--require-external-evidence",
+        ],
+        cwd=HARNESS,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["lifecycle_status"] == "blocked"
+    assert summary["authorization_required"] is True
+    assert len(summary["authorization_requests"]) == 1
+    request = summary["authorization_requests"][0]
+    assert request["schema"] == "scientific_workflow_gate_authorization_request.v1"
+    assert request["status"] == "awaiting_authorization"
+    assert request["node_id"] == "literature_discover"
+    assert request["native_skill"] == "daily-arxiv"
+    assert "network_fetch" in request["requested_side_effects"]
+    continuation = request["continuation"]
+    assert continuation["schema"] == "scientific_workflow_gate_continuation.v1"
+    assert continuation["retriable"] is True
+    assert continuation["resume_strategy"] == "rerun_workflow_with_authorization_patch"
+    assert "--source-runtime-evidence" in continuation["resume_args_patch"]
+    blocked = summary["blocked_nodes"]["literature_discover"]
+    assert blocked["authorization_request"]["continuation"]["request_fingerprint"] == continuation["request_fingerprint"]

@@ -67,6 +67,17 @@ REQUIRED_EVIDENCE_FIELDS = {
     "limitations",
 }
 
+SIDE_EFFECT_ACCESS_REQUIRED_STATUS = "blocked_side_effect_access_required"
+
+_SIDE_EFFECT_ACCESS_ENV_HINTS = {
+    "network_fetch": "SOLAR_AUTOSCI_ALLOW_NETWORK=1",
+    "email_send": "SOLAR_AUTOSCI_ALLOW_EMAIL=1",
+    "remote_execution": "SOLAR_AUTOSCI_ALLOW_REMOTE=1",
+    "destructive_mutation": "SOLAR_AUTOSCI_ALLOW_DESTRUCTIVE=1",
+    "protected_config_mutation": "SOLAR_AUTOSCI_ALLOW_PROTECTED_CONFIG=1",
+    "credential_mutation": "SOLAR_AUTOSCI_ALLOW_CREDENTIAL_MUTATION=1",
+}
+
 
 def _fixture_path(name: str) -> Path:
     return PLUGIN_DIR / "tests" / "fixtures" / name
@@ -480,6 +491,85 @@ def _missing_contract_items(label: str, entries: list[dict[str, Any]]) -> list[s
     ]
 
 
+def _approval_authorization_request(
+    *,
+    action: str,
+    side_effects: list[str],
+    missing: list[str],
+    inputs: dict[str, Any],
+    approval_state: str,
+) -> dict[str, Any]:
+    stable_inputs = {
+        key: value
+        for key, value in sorted(inputs.items())
+        if key
+        not in {
+            "approval_ref",
+            "allowlist_evidence",
+            "before_artifacts",
+            "runtime_evidence",
+            "after_artifacts",
+            "execute_approved_side_effect",
+            "policy_auto_execute_side_effect",
+            "gate_mode",
+            "autosci_mode",
+        }
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "action": action,
+                "side_effects": side_effects,
+                "missing": missing,
+                "inputs": stable_inputs,
+            },
+            sort_keys=True,
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+    requested = {
+        "approval_ref": "approval_ref" in missing,
+        "allowlist_evidence": any(str(item).startswith("allowlist_evidence") for item in missing),
+        "before_artifacts": any(str(item).startswith("before_artifacts") for item in missing),
+        "runtime_evidence": any(str(item).startswith("runtime_evidence") for item in missing),
+        "after_artifacts": any(str(item).startswith("after_artifacts") for item in missing),
+    }
+    return {
+        "schema": "autosci_gate_authorization_request.v1",
+        "status": "authorized" if not missing else "awaiting_authorization",
+        "action": action,
+        "approval_state": approval_state,
+        "requested_side_effects": side_effects,
+        "missing": missing,
+        "requested_access": requested,
+        "prompt": (
+            "Grant approval and provide the missing approval/runtime artifacts, "
+            "then rerun the same action with the supplied access patch."
+        ),
+        "continuation": {
+            "schema": "autosci_gate_continuation.v1",
+            "status": "ready" if not missing else "awaiting_authorization",
+            "retriable": bool(missing),
+            "same_envelope_supported": True,
+            "request_fingerprint": fingerprint,
+            "resume_strategy": "rerun_same_action_with_approval_patch",
+            "access_patch": {
+                "approval_ref": "<approval-ref>" if requested["approval_ref"] else "",
+                "allowlist_evidence": ["<allowlist-evidence.json>"] if requested["allowlist_evidence"] else [],
+                "before_artifacts": ["<before-artifact>"] if requested["before_artifacts"] else [],
+                "runtime_evidence": ["<runtime-evidence.json>"] if requested["runtime_evidence"] else [],
+                "after_artifacts": ["<after-artifact>"] if requested["after_artifacts"] else [],
+                "execute_approved_side_effect": True,
+            },
+        },
+        "non_error_contract": {
+            "blocked_runs_exit_successfully": True,
+            "evidence_status": "inconclusive",
+            "approval_state": approval_state,
+        },
+    }
+
+
 def _approval_contract(envelope: dict[str, Any], action: str, side_effects: list[str]) -> dict[str, Any]:
     inputs = envelope.get("inputs") if isinstance(envelope.get("inputs"), dict) else {}
     approval_ref = str(inputs.get("approval_ref") or "").strip()
@@ -509,7 +599,7 @@ def _approval_contract(envelope: dict[str, Any], action: str, side_effects: list
         approval_state = "approved_missing_preflight"
     else:
         approval_state = "approval_required"
-    return {
+    contract = {
         "schema": "autosci_approval_contract.v1",
         "action": action,
         "side_effects": side_effects,
@@ -528,6 +618,14 @@ def _approval_contract(envelope: dict[str, Any], action: str, side_effects: list
         "after_artifacts": after_entries,
         "missing": missing,
     }
+    contract["authorization_request"] = _approval_authorization_request(
+        action=action,
+        side_effects=side_effects,
+        missing=missing,
+        inputs=dict(inputs),
+        approval_state=approval_state,
+    )
+    return contract
 
 
 def _approval_contract_limitations(contract: dict[str, Any]) -> list[str]:
@@ -568,8 +666,15 @@ def _refresh_approval_contract(contract: dict[str, Any]) -> dict[str, Any]:
         "missing": missing,
         "approval_state": "verified"
         if execution_verified
-        else ("approved_pending_runtime" if ready_for_execution else ("approved_missing_preflight" if approved else "approval_required")),
+            else ("approved_pending_runtime" if ready_for_execution else ("approved_missing_preflight" if approved else "approval_required")),
     })
+    contract["authorization_request"] = _approval_authorization_request(
+        action=str(contract.get("action") or "unknown"),
+        side_effects=[str(item) for item in contract.get("side_effects") or []],
+        missing=missing,
+        inputs={},
+        approval_state=str(contract.get("approval_state") or "approval_required"),
+    )
     return contract
 
 
@@ -619,6 +724,204 @@ def _write_policy_decision_sidecar(
     output_dir = _output_dir(envelope, action)
     path = output_dir / f"{action}_gate_policy_decision.json"
     return {"type": "gate_policy_decision_json", "path": _write_json_sidecar(path, _decision_payload(decision))}
+
+
+def _side_effect_access_required(decision: dict[str, Any]) -> bool:
+    if not decision:
+        return False
+    side_effects = [str(item) for item in decision.get("side_effects") or [] if str(item).strip()]
+    material = [item for item in side_effects if item not in {"read_local", "write_artifact"}]
+    return bool(material and not decision.get("execute_side_effects"))
+
+
+def _side_effect_access_continuation(
+    envelope: dict[str, Any],
+    action: str,
+    decision: dict[str, Any],
+    side_effects: list[str],
+) -> dict[str, Any]:
+    inputs = dict(envelope.get("inputs") or {})
+    stable_inputs = {
+        key: value
+        for key, value in sorted(inputs.items())
+        if key not in {"approval_ref", "gate_mode", "autosci_mode", "execute_approved_side_effect", "policy_auto_execute_side_effect"}
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "action": action,
+                "side_effects": side_effects,
+                "inputs": stable_inputs,
+            },
+            sort_keys=True,
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+    env_opt_ins = [
+        hint
+        for effect, hint in _SIDE_EFFECT_ACCESS_ENV_HINTS.items()
+        if effect in side_effects
+    ]
+    return {
+        "schema": "autosci_side_effect_continuation.v1",
+        "status": "awaiting_side_effect_access",
+        "retriable": True,
+        "action": action,
+        "request_fingerprint": fingerprint,
+        "same_envelope_supported": True,
+        "resume_strategy": "rerun_same_action_with_access_patch",
+        "access_patch_options": [
+            {
+                "name": "bounded_policy_mode",
+                "inputs": {"gate_mode": "parity_demo"},
+                "env": env_opt_ins,
+                "limitations": [
+                    "Use only for bounded local parity side effects. Network still requires SOLAR_AUTOSCI_ALLOW_NETWORK=1."
+                ],
+            },
+            {
+                "name": "native_policy_mode",
+                "inputs": {"gate_mode": "autosci_native"},
+                "env": [],
+                "limitations": [
+                    "Bypasses Solar gate blocking; runtime evidence remains required before claiming full parity."
+                ],
+            },
+            {
+                "name": "hitl_approval",
+                "inputs": {
+                    "approval_ref": "<approval-ref>",
+                    "execute_approved_side_effect": True,
+                },
+                "env": env_opt_ins,
+                "required_artifacts": [
+                    "allowlist_evidence",
+                    "before_artifact",
+                    "runtime_evidence",
+                    "after_artifact",
+                ],
+                "limitations": [
+                    "Strict HITL resume must provide enough typed artifacts for the action approval contract to verify."
+                ],
+            },
+        ],
+        "non_error_contract": {
+            "blocked_runs_exit_successfully": True,
+            "evidence_status": "inconclusive",
+            "side_effect_access_status": SIDE_EFFECT_ACCESS_REQUIRED_STATUS,
+        },
+    }
+
+
+def _side_effect_access_request(
+    envelope: dict[str, Any],
+    action: str,
+    native_skill: str,
+    decision: dict[str, Any],
+    *,
+    requested_side_effects: list[str] | None = None,
+    blockers: list[str] | None = None,
+    required_inputs: list[str] | None = None,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    decision_payload = _decision_payload(decision)
+    side_effects = [
+        str(item)
+        for item in (requested_side_effects or decision_payload.get("side_effects") or [])
+        if str(item).strip()
+    ]
+    risky_hints = [
+        hint
+        for effect, hint in _SIDE_EFFECT_ACCESS_ENV_HINTS.items()
+        if effect in side_effects
+    ]
+    payload = {
+        "schema": "autosci_side_effect_access_request.v1",
+        "generated_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "action": action,
+        "native_skill": native_skill,
+        "status": SIDE_EFFECT_ACCESS_REQUIRED_STATUS,
+        "requested_side_effects": side_effects,
+        "gate_policy": {
+            "mode": decision_payload.get("mode"),
+            "allowed": bool(decision_payload.get("allowed")),
+            "blocked": bool(decision_payload.get("blocked")),
+            "execute_side_effects": bool(decision_payload.get("execute_side_effects")),
+            "require_hitl": bool(decision_payload.get("require_hitl")),
+            "require_approval_ref": bool(decision_payload.get("require_approval_ref")),
+            "synthetic_approval_ref": str(decision_payload.get("synthetic_approval_ref") or ""),
+        },
+        "blocking_reasons": [
+            *[str(item) for item in decision_payload.get("reasons") or [] if str(item).strip()],
+            *[str(item) for item in decision_payload.get("warnings") or [] if str(item).strip()],
+            *[str(item) for item in blockers or [] if str(item).strip()],
+        ],
+        "requested_access": {
+            "approval_ref": bool(decision_payload.get("require_approval_ref")),
+            "runtime_evidence": bool(decision_payload.get("require_runtime_evidence")),
+            "before_after_artifacts": bool(decision_payload.get("require_before_after_artifacts")),
+            "environment_opt_ins": risky_hints,
+            "allowed_write_roots": list(decision_payload.get("allowed_write_roots") or []),
+        },
+        "required_inputs": [str(item) for item in required_inputs or [] if str(item).strip()],
+        "continuation": _side_effect_access_continuation(
+            envelope,
+            action,
+            decision_payload,
+            side_effects,
+        ),
+        "how_to_allow": [
+            "Re-run with an AutoSci gate mode that may execute the requested side effects, such as `--gate-mode parity_demo`, `--gate-mode unsafe_native`, or `--gate-mode autosci_native`, depending on risk.",
+            "For risky native side effects, set the explicit SOLAR_AUTOSCI_ALLOW_* opt-in variables listed in requested_access.environment_opt_ins.",
+            "When strict HITL is required, provide approval_ref plus before/allowlist/runtime/after evidence artifacts instead of relying on a silent dry run.",
+        ],
+        "limitations": [
+            "Protected native side effects were not executed for this action.",
+            "This request is an access boundary, not proof that the side effects completed.",
+        ],
+    }
+    path = _output_dir(envelope, action) / f"{action}_side_effect_access_request.json"
+    artifact = {"type": "side_effect_access_request_json", "path": _write_json_sidecar(path, payload)}
+    return payload, artifact
+
+
+def _append_unique_artifact(artifacts: list[dict[str, Any]], artifact: dict[str, Any]) -> None:
+    artifact_path = str(artifact.get("path") or "").strip()
+    artifact_type = str(artifact.get("type") or "").strip()
+    if not artifact_path or not artifact_type:
+        return
+    if any(
+        isinstance(item, dict)
+        and str(item.get("path") or "") == artifact_path
+        and str(item.get("type") or "") == artifact_type
+        for item in artifacts
+    ):
+        return
+    artifacts.append(artifact)
+
+
+def _attach_side_effect_access_request(
+    evidence: dict[str, Any],
+    payload: dict[str, Any],
+    artifact: dict[str, str],
+    *,
+    mark_inconclusive: bool = True,
+) -> dict[str, Any]:
+    if mark_inconclusive:
+        evidence["status"] = "inconclusive"
+    outputs = evidence.setdefault("outputs", {})
+    outputs["side_effect_access_required"] = True
+    outputs["side_effect_access_status"] = SIDE_EFFECT_ACCESS_REQUIRED_STATUS
+    outputs["side_effect_access_request"] = payload
+    outputs.setdefault("blocking_reasons", [])
+    if isinstance(outputs["blocking_reasons"], list):
+        outputs["blocking_reasons"].extend(str(item) for item in payload.get("blocking_reasons") or [])
+    artifacts = evidence.setdefault("artifacts", [])
+    if isinstance(artifacts, list):
+        _append_unique_artifact(artifacts, artifact)
+    limitations = evidence.setdefault("limitations", [])
+    if isinstance(limitations, list):
+        limitations.append("Side-effect access is required; no protected native side effects were executed.")
+    return evidence
 
 
 def _write_policy_allowlist_sidecar(
@@ -6202,17 +6505,17 @@ def _run_daily_arxiv_tool(
     ]
 
 
-def _daily_arxiv_native_local_pipeline(envelope: dict[str, Any]) -> dict[str, Any]:
+def _daily_arxiv_native_local_pipeline(envelope: dict[str, Any], *, allow_network_fetch: bool = False) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     feed_raw = str(inputs.get("feed") or inputs.get("daily_feed") or "").strip()
-    if not feed_raw:
+    if not feed_raw and not allow_network_fetch:
         return {}
     output_dir = _output_dir(envelope, "daily_arxiv_prepare_finalize")
     output_dir.mkdir(parents=True, exist_ok=True)
-    feed_path = _resolve_harness_path(feed_raw)
+    feed_path = _resolve_harness_path(feed_raw) if feed_raw else None
     artifacts: list[dict[str, str]] = []
     limitations: list[str] = []
-    if not feed_path.exists():
+    if feed_path is not None and not feed_path.exists():
         return {
             "status": "failed",
             "candidates": [],
@@ -6225,13 +6528,16 @@ def _daily_arxiv_native_local_pipeline(envelope: dict[str, Any]) -> dict[str, An
     digest_json_path = output_dir / "daily_arxiv_digest.json"
     prepare_args = [
         "prepare",
-        "--feed",
-        str(feed_path),
         "--wiki-root",
         str(wiki_root),
         "--out",
         str(context_path),
     ]
+    feed_out_path = output_dir / "daily_arxiv_live_feed.json"
+    if feed_path is not None:
+        prepare_args.extend(["--feed", str(feed_path)])
+    else:
+        prepare_args.extend(["--out-feed", str(feed_out_path)])
     if inputs.get("mode"):
         prepare_args.extend(["--mode", str(inputs["mode"])])
     if inputs.get("hours"):
@@ -6246,7 +6552,7 @@ def _daily_arxiv_native_local_pipeline(envelope: dict[str, Any]) -> dict[str, An
         prepare_args.extend(str(item) for item in categories)
     if inputs.get("send_email"):
         prepare_args.extend(["--send-email", str(inputs["send_email"])])
-    if inputs.get("no_external", True):
+    if inputs.get("no_external") is True or not allow_network_fetch:
         prepare_args.append("--no-external")
     code, _stdout, stderr, run_artifacts = _run_daily_arxiv_tool(
         prepare_args,
@@ -6257,13 +6563,17 @@ def _daily_arxiv_native_local_pipeline(envelope: dict[str, Any]) -> dict[str, An
     if code != 0 or not context_path.exists():
         limitations.append(f"Native daily_arxiv.py prepare failed: {stderr.strip() or 'no stderr'}")
         return {"status": "failed", "candidates": [], "artifacts": artifacts, "limitations": limitations}
+    if feed_path is None and feed_out_path.exists():
+        artifacts.append(_artifact("daily_arxiv_live_feed_json", feed_out_path))
     artifacts.append(_artifact("daily_arxiv_recommendation_context_json", context_path))
     context_payload = _load_json(context_path)
     candidates = context_payload.get("candidates") if isinstance(context_payload.get("candidates"), list) else []
     normalized_candidates = _daily_arxiv_normalize_local_candidates(candidates)
     decisions_raw = str(inputs.get("decisions") or inputs.get("daily_decisions") or "").strip()
     if not decisions_raw:
-        limitations.append("Native daily_arxiv.py prepare completed from a supplied local feed; finalize is pending LLM decisions.")
+        limitations.append(
+            "Native daily_arxiv.py prepare completed; finalize is pending LLM decisions."
+        )
         return {
             "status": "prepared",
             "candidates": normalized_candidates,
@@ -6313,7 +6623,7 @@ def _daily_arxiv_native_local_pipeline(envelope: dict[str, Any]) -> dict[str, An
     listed = digest_payload.get("listed_candidates") if isinstance(digest_payload.get("listed_candidates"), list) else []
     normalized_listed = _daily_arxiv_normalize_local_candidates(listed or candidates)
     limitations.append(
-        "Native daily_arxiv.py prepare/finalize completed from supplied local feed and decisions; network, email, scheduler, and auto-ingest side effects were not executed by the bridge."
+        "Native daily_arxiv.py prepare/finalize completed; email, scheduler, and auto-ingest side effects remain gated unless explicit delivery/ingest evidence is supplied."
     )
     return {
         "status": "completed",
@@ -6494,12 +6804,39 @@ def _action_daily_arxiv_prepare_finalize(envelope: dict[str, Any]) -> dict[str, 
         "daily_arxiv_prepare_finalize",
         ["network_feed_fetch", "digest_email_send", "auto_ingest"],
     )
+    feed_raw = str(inputs.get("feed") or inputs.get("daily_feed") or "").strip()
+    daily_side_effects = ["read_local", "write_artifact"]
+    if not feed_raw or inputs.get("no_external") is False:
+        daily_side_effects.append("network_fetch")
+    if inputs.get("send_email"):
+        daily_side_effects.append("email_send")
+    if inputs.get("max_auto_ingest") or str(inputs.get("mode") or "").strip().lower() in {"auto-ingest", "auto_ingest"}:
+        daily_side_effects.append("wiki_mutation")
+    contract, policy_decision, policy_artifacts = _policy_prepare_auto_contract(
+        envelope,
+        "daily_arxiv_prepare_finalize",
+        daily_side_effects,
+        contract,
+        allowlist_payload={
+            "daily_command": daily_command,
+            "feed": feed_raw or "live_fetch",
+            "limitations": [
+                "This policy sidecar authorizes the bridge to attempt native daily_arxiv.py prepare/finalize only within configured gate bounds.",
+                "SMTP delivery, scheduler mutation, and wiki auto-ingest still require concrete runtime proof before final delivery is considered complete.",
+            ],
+        },
+    )
     semantic = _approval_semantic_runtime(
         contract,
         "daily_arxiv_prepare_finalize",
         limit=int(inputs.get("limit") or 10),
     )
-    local_pipeline = _daily_arxiv_native_local_pipeline(envelope)
+    allow_network_fetch = bool(policy_decision.get("execute_side_effects") and policy_decision.get("allow_network"))
+    local_pipeline = (
+        {}
+        if _side_effect_access_required(policy_decision)
+        else _daily_arxiv_native_local_pipeline(envelope, allow_network_fetch=allow_network_fetch)
+    )
     contract["semantic_runtime"] = semantic
     candidates = semantic.get("detail", {}).get("candidates") if isinstance(semantic.get("detail"), dict) else []
     candidates = candidates if isinstance(candidates, list) else []
@@ -6519,7 +6856,7 @@ def _action_daily_arxiv_prepare_finalize(envelope: dict[str, Any]) -> dict[str, 
         "daily_arxiv_digest_selection",
         artifact_type="daily_arxiv_review_llm_evidence_json",
     )
-    artifacts = [contract_artifact, *list(local_pipeline.get("artifacts") or [])]
+    artifacts = [contract_artifact, *policy_artifacts, *list(local_pipeline.get("artifacts") or [])]
     if fan_in.get("artifact"):
         artifacts.append(fan_in["artifact"])
     if fan_in.get("runtime_proof_artifact"):
@@ -6625,6 +6962,21 @@ def _action_daily_arxiv_prepare_finalize(envelope: dict[str, Any]) -> dict[str, 
     )
     if side_effect_proof_artifact is not None:
         evidence.setdefault("artifacts", []).append(side_effect_proof_artifact)
+    evidence = _attach_policy_decision(evidence, policy_decision)
+    if _side_effect_access_required(policy_decision) and not semantic.get("verified"):
+        request_payload, request_artifact = _side_effect_access_request(
+            envelope,
+            "daily_arxiv_prepare_finalize",
+            "daily-arxiv",
+            policy_decision,
+            requested_side_effects=daily_side_effects,
+            required_inputs=[
+                "approval_ref or permissive gate mode for live feed fetch",
+                "daily-arxiv decisions JSON for finalize",
+                "delivery or wiki-ingest runtime proof when email/auto-ingest is requested",
+            ],
+        )
+        evidence = _attach_side_effect_access_request(evidence, request_payload, request_artifact)
     return evidence
 
 
@@ -6708,7 +7060,7 @@ def _action_discover_literature(envelope: dict[str, Any]) -> dict[str, Any]:
     allow_network_fetch = str(inputs.get("allow_network_fetch", "true")).lower() not in {"0", "false", "no"}
     if os.environ.get("AUTOSCI_DISABLE_NETWORK_FETCH", "").lower() in {"1", "true", "yes"}:
         allow_network_fetch = False
-    fixture_fallback = bool(inputs.get("fixture_fallback")) or (
+    fixture_fallback = bool(inputs.get("fixture_fallback")) or bool(inputs.get("smoke_mode")) or (
         str(envelope.get("mode") or "") == "fixture"
         and not any(
             key in inputs
@@ -7217,8 +7569,65 @@ def _action_map_code_evidence(envelope: dict[str, Any]) -> dict[str, Any]:
 def _action_generate_ideas(envelope: dict[str, Any]) -> dict[str, Any]:
     mode = str(envelope.get("mode") or "")
     inputs = dict(envelope.get("inputs") or {})
+    contract = _approval_contract(
+        envelope,
+        "generate_ideas",
+        ["source_discovery", "model_brainstorm", "novelty_review", "wiki_writeback", "pilot_handoff"],
+    )
+    contract, policy_decision, policy_artifacts = _policy_prepare_auto_contract(
+        envelope,
+        "generate_ideas",
+        ["read_local", "write_artifact", "network_fetch", "local_command", "wiki_mutation"],
+        contract,
+        allowlist_payload={
+            "native_pipeline": "ideate",
+            "limitations": [
+                "Policy approval only permits the bridge to attempt native side effects; novelty/review and pilot promotion gates still need typed evidence.",
+            ],
+        },
+    )
+    contract_artifact = _write_approval_contract_sidecar(envelope, "generate_ideas", contract)
+    policy_artifacts = [contract_artifact, *policy_artifacts]
+    inputs = dict(envelope.get("inputs") or {})
     wiki_state, wiki_state_artifact = _wiki_state_resolver_artifact(envelope, "generate_ideas")
     wiki_artifacts = [wiki_state_artifact] if wiki_state_artifact else []
+
+    def _ideate_policy_access_applies() -> bool:
+        if not _side_effect_access_required(policy_decision):
+            return False
+        if _policy_gate_requested(envelope):
+            return True
+        if _model_output_requested(envelope):
+            return True
+        if bool(_ideate_write_approval_state(inputs).get("requested")):
+            return True
+        return mode != "fixture" and not inputs.get("smoke_mode")
+
+    def _finalize_ideate(raw: dict[str, Any], *, status: str | None = None) -> dict[str, Any]:
+        evidence = convert_idea_candidate(raw, envelope, status=status)
+        evidence = _attach_policy_decision(evidence, policy_decision)
+        if _ideate_policy_access_applies():
+            request_payload, request_artifact = _side_effect_access_request(
+                envelope,
+                "generate_ideas",
+                "ideate",
+                policy_decision,
+                requested_side_effects=["read_local", "write_artifact", "network_fetch", "local_command", "wiki_mutation"],
+                required_inputs=[
+                    "model brainstorm evidence or approved model command",
+                    "novelty/review evidence for promotion",
+                    "write approval/runtime proof for wiki idea projection",
+                    "pilot handoff evidence or explicit --skip-pilot",
+                ],
+            )
+            evidence = _attach_side_effect_access_request(
+                evidence,
+                request_payload,
+                request_artifact,
+                mark_inconclusive=_policy_gate_requested(envelope),
+            )
+        return evidence
+
     if mode != "fixture" and not inputs.get("smoke_mode"):
         sourced = build_idea_candidates(envelope, workspace_root=HARNESS_DIR, repository_root=REPO_HARNESS_DIR)
         source_summary = sourced.get("source_summary") if isinstance(sourced.get("source_summary"), dict) else {}
@@ -7264,7 +7673,7 @@ def _action_generate_ideas(envelope: dict[str, Any]) -> dict[str, Any]:
                 boundary_ideas, boundary_artifacts, boundary_limitations = _attach_ideate_final_promotion_boundary(
                     envelope,
                     ideas=model_ideas,
-                    artifacts=[*wiki_artifacts, *model_artifacts],
+                    artifacts=[*policy_artifacts, *wiki_artifacts, *model_artifacts],
                     limitations=[
                         "Ideas came from explicit model evidence or a model-command bridge; novelty/review validation remains required.",
                         *(
@@ -7278,20 +7687,19 @@ def _action_generate_ideas(envelope: dict[str, Any]) -> dict[str, Any]:
                     wiki_state=wiki_state,
                     model_output=model,
                 )
-                return convert_idea_candidate(
+                return _finalize_ideate(
                     {
                         "ideas": boundary_ideas,
                         "artifacts": boundary_artifacts,
                         "limitations": boundary_limitations,
                     },
-                    envelope,
                     status="completed",
                 )
             if model.get("status") in {"failed", "invalid", "inconclusive"}:
                 boundary_ideas, boundary_artifacts, boundary_limitations = _attach_ideate_final_promotion_boundary(
                     envelope,
                     ideas=sourced["ideas"],
-                    artifacts=[*wiki_artifacts, *model_artifacts],
+                    artifacts=[*policy_artifacts, *wiki_artifacts, *model_artifacts],
                     limitations=[
                         f"Explicit model brainstorm did not complete: {model.get('reason') or model.get('status')}.",
                         "Returned source-grounded local candidates as inconclusive fallback evidence, not as model brainstorm parity.",
@@ -7302,30 +7710,28 @@ def _action_generate_ideas(envelope: dict[str, Any]) -> dict[str, Any]:
                     wiki_state=wiki_state,
                     model_output=model,
                 )
-                return convert_idea_candidate(
+                return _finalize_ideate(
                     {
                         "ideas": boundary_ideas,
                         "artifacts": boundary_artifacts,
                         "limitations": boundary_limitations,
                     },
-                    envelope,
                     status="inconclusive",
                 )
         boundary_ideas, boundary_artifacts, boundary_limitations = _attach_ideate_final_promotion_boundary(
             envelope,
             ideas=sourced["ideas"],
-            artifacts=wiki_artifacts,
+            artifacts=[*policy_artifacts, *wiki_artifacts],
             limitations=[*list(sourced["limitations"]), *_wiki_state_limitations(wiki_state)],
             source_summary=source_summary,
             wiki_state=wiki_state,
         )
-        return convert_idea_candidate(
+        return _finalize_ideate(
             {
                 "ideas": boundary_ideas,
                 "artifacts": boundary_artifacts,
                 "limitations": boundary_limitations,
             },
-            envelope,
             status=str(sourced.get("status") or "completed"),
         )
     claims = _claims_from_evidence(envelope)
@@ -7379,7 +7785,7 @@ def _action_generate_ideas(envelope: dict[str, Any]) -> dict[str, Any]:
     boundary_ideas, boundary_artifacts, boundary_limitations = _attach_ideate_final_promotion_boundary(
         envelope,
         ideas=ideas,
-        artifacts=wiki_artifacts,
+        artifacts=[*policy_artifacts, *wiki_artifacts],
         limitations=["Fixture ideas are generated from supplied local evidence only; external novelty is not proven."],
         source_summary={
             "wiki_source_count": 0,
@@ -7389,11 +7795,11 @@ def _action_generate_ideas(envelope: dict[str, Any]) -> dict[str, Any]:
         },
         wiki_state=wiki_state,
     )
-    return convert_idea_candidate({
+    return _finalize_ideate({
         "ideas": boundary_ideas,
         "artifacts": boundary_artifacts,
         "limitations": boundary_limitations,
-    }, envelope)
+    })
 
 
 def _novelty_payload_archive_artifacts(evaluations: list[dict[str, Any]]) -> list[dict[str, str]]:
@@ -9045,10 +9451,13 @@ def _action_run_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
             for raw in command_allowlist
             if _format_command(raw, {"experiment_id": experiment_id})
         ]
+        experiment_side_effects = ["read_local", "write_artifact", "local_command", "wiki_mutation"]
+        if execution_mode == "approved-external":
+            experiment_side_effects.append("remote_execution")
         contract, policy_decision, policy_artifacts = _policy_prepare_auto_contract(
             envelope,
             "run_experiment",
-            ["read_local", "write_artifact", "local_command", "wiki_mutation"],
+            experiment_side_effects,
             contract,
             allowlist_payload={
                 "declared_plan_commands": rendered_policy_commands,
@@ -9090,7 +9499,22 @@ def _action_run_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
                 semantic=semantic,
                 result_collected=False,
             )
-            return _attach_policy_decision(evidence, policy_decision)
+            evidence = _attach_policy_decision(evidence, policy_decision)
+            if _side_effect_access_required(policy_decision):
+                request_payload, request_artifact = _side_effect_access_request(
+                    envelope,
+                    "run_experiment",
+                    "exp-run",
+                    policy_decision,
+                    requested_side_effects=experiment_side_effects,
+                    required_inputs=[
+                        "approval_ref for non-fixture experiment execution",
+                        "command allowlist evidence",
+                        "before/runtime/after artifacts proving the experiment command ran",
+                    ],
+                )
+                evidence = _attach_side_effect_access_request(evidence, request_payload, request_artifact)
+            return evidence
         contract, executor_result = _execute_experiment_if_approved(envelope, contract, plan)
         semantic = _approval_semantic_runtime(contract, "run_experiment")
         contract["semantic_runtime"] = semantic
@@ -9137,7 +9561,22 @@ def _action_run_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
                 semantic=semantic,
                 result_collected=False,
             )
-            return _attach_policy_decision(evidence, policy_decision)
+            evidence = _attach_policy_decision(evidence, policy_decision)
+            if _side_effect_access_required(policy_decision):
+                request_payload, request_artifact = _side_effect_access_request(
+                    envelope,
+                    "run_experiment",
+                    "exp-run",
+                    policy_decision,
+                    requested_side_effects=experiment_side_effects,
+                    required_inputs=[
+                        "verified runtime evidence for approved experiment execution",
+                        "result collection artifact",
+                        "wiki mutation proof for completed experiment state",
+                    ],
+                )
+                evidence = _attach_side_effect_access_request(evidence, request_payload, request_artifact)
+            return evidence
         if executor_result.get("executed"):
             log_lines.append(f"experiment_executor_result={executor_result.get('result_collected')}")
             log_lines.append(f"executor_exit_code={executor_result.get('exit_code')}")
@@ -20966,7 +21405,33 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
             "paper_compile",
         ],
     )
+    research_side_effects = [
+        "read_local",
+        "write_artifact",
+        "network_fetch",
+        "local_command",
+        "wiki_mutation",
+        "remote_execution",
+        "tex_compile",
+    ]
+    contract, policy_decision, policy_artifacts = _policy_prepare_auto_contract(
+        envelope,
+        "run_research_lifecycle",
+        research_side_effects,
+        contract,
+        allowlist_payload={
+            "native_pipeline": "research_lifecycle",
+            "resume_from": start_stage,
+            "limitations": [
+                "Policy approval allows stage runner side effects only within the configured gate mode.",
+                "Each lifecycle stage still requires typed runtime evidence before completion is claimed.",
+            ],
+        },
+    )
     contract_artifact = _write_approval_contract_sidecar(envelope, "run_research_lifecycle", contract)
+    side_effect_access_payload: dict[str, Any] | None = None
+    side_effect_access_artifact: dict[str, str] | None = None
+    side_effect_access_required_by_policy = _side_effect_access_required(policy_decision)
     contract_missing = contract.get("missing") if isinstance(contract.get("missing"), list) else []
     evidence_report = _research_lifecycle_evidence_report(envelope, contract)
     evidence_mode = bool(evidence_report.get("has_stage_evidence") or contract.get("approved"))
@@ -20984,7 +21449,32 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
             }
         ]
         current = next((stage for stage in stage_plan if stage["state"] == "blocked_approval"), stage_plan[0])
-    pipeline_completed = evidence_mode and not missing_stages and not evidence_report.get("errors")
+    supplied_evidence_completed = evidence_mode and not missing_stages and not evidence_report.get("errors")
+    side_effect_access_blocked = (
+        side_effect_access_required_by_policy
+        and contract.get("execution_verified") is not True
+        and not supplied_evidence_completed
+    )
+    if side_effect_access_blocked:
+        side_effect_access_payload, side_effect_access_artifact = _side_effect_access_request(
+            envelope,
+            "run_research_lifecycle",
+            "research",
+            policy_decision,
+            requested_side_effects=research_side_effects,
+            required_inputs=[
+                "approved source discovery/network fetch evidence",
+                "approved experiment deployment/runtime evidence",
+                "approved paper compile evidence",
+                "wiki mutation proof for lifecycle state updates",
+            ],
+        )
+    pipeline_completed = (
+        not side_effect_access_blocked
+        and evidence_mode
+        and not missing_stages
+        and not evidence_report.get("errors")
+    )
     experiment_runtime = evidence_report.get("experiment_runtime") if isinstance(evidence_report.get("experiment_runtime"), dict) else {}
     compile_runtime = evidence_report.get("compile_runtime") if isinstance(evidence_report.get("compile_runtime"), dict) else {}
     runtime_evidence_ids = _unique_strings(
@@ -21001,7 +21491,9 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
         "venue": venue,
         "skip_paper": skip_paper,
         "auto": bool(inputs.get("auto")),
-        "status": "completed" if pipeline_completed else ("pending_evidence" if evidence_mode else "gated"),
+        "status": SIDE_EFFECT_ACCESS_REQUIRED_STATUS
+        if side_effect_access_blocked
+        else ("completed" if pipeline_completed else ("pending_evidence" if evidence_mode else "gated")),
     }
     evidence_ids = [
         f"research-lifecycle:{_slug(pipeline_id)}",
@@ -21016,6 +21508,11 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
             "reasons": ["All required research lifecycle stage evidence was verified."]
             if pipeline_completed
             else [
+                *(
+                    ["Side-effect access is required before native lifecycle stage runners can execute."]
+                    if side_effect_access_blocked
+                    else []
+                ),
                 "Native research lifecycle execution is incomplete until every required stage has verified evidence.",
                 *[f"{item['stage']}: {item['reason']}" for item in missing_stages],
                 *[f"evidence_error: {item}" for item in evidence_report.get("errors", [])],
@@ -21065,9 +21562,29 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
             {
                 "id": "research.lifecycle.approval",
                 "description": "Human approval is required before network fetch, experiment deployment, workspace mutation, or paper compilation.",
-            }
+            },
+            *(
+                [
+                    {
+                        "id": "research.lifecycle.side_effect_access",
+                        "description": "The current AutoSci gate mode blocked required native lifecycle side effects; grant access or provide typed runtime evidence.",
+                    }
+                ]
+                if side_effect_access_blocked
+                else []
+            ),
         ],
         "runtime_errors": [
+            *(
+                [
+                    {
+                        "id": "side-effect-access-required",
+                        "description": "Native research lifecycle side effects were not executed because the gate policy requires access approval.",
+                    }
+                ]
+                if side_effect_access_blocked
+                else []
+            ),
             *[
                 {"id": f"research.lifecycle.evidence-error-{index + 1}", "description": str(error)}
                 for index, error in enumerate(evidence_report.get("errors", []))
@@ -21143,6 +21660,8 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
             _artifact("recommended_changes_markdown", paths["recommended_changes"]),
             _artifact("patch_candidates_directory", paths["patch_candidates"]),
             contract_artifact,
+            *policy_artifacts,
+            *([side_effect_access_artifact] if side_effect_access_artifact is not None else []),
             _artifact("pipeline_progress_markdown", paths["pipeline_progress"]),
             _artifact("pipeline_report_markdown", paths["pipeline_report"]),
             _artifact("pipeline_state_json", paths["pipeline_state"]),
@@ -21155,6 +21674,11 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
                 "This action records integrated lifecycle state; protected side effects must still be executed only through approved stage runners.",
             ]
             if pipeline_completed
+            else [
+                "Research lifecycle native side effects require explicit access before stage runners can execute.",
+                *_approval_contract_limitations(contract),
+            ]
+            if side_effect_access_blocked
             else [
                 "Pipeline progress/report artifacts were generated, but one or more native research lifecycle stages still lack verified evidence.",
                 "Full parity remains blocked until real online evidence, Review LLM evidence, experiment runtime, collection, and paper compile artifacts are attached.",
@@ -21170,6 +21694,8 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
         "current_stage": current["stage_id"],
         "approval_contract": contract,
         "evidence_report": evidence_report,
+        "policy_decision": policy_decision,
+        "side_effect_access_request": side_effect_access_payload,
     }
     _write_text_sidecar(paths["recommended_changes"], _research_lifecycle_markdown(raw, report=True))
     _write_text_sidecar(paths["pipeline_progress"], _research_lifecycle_markdown(raw))
@@ -21191,6 +21717,10 @@ def _research_lifecycle_raw(envelope: dict[str, Any]) -> dict[str, Any]:
             contract_artifact=contract_artifact,
         )
     )
+    raw["policy_decision"] = policy_decision
+    if side_effect_access_payload is not None and side_effect_access_artifact is not None:
+        raw["side_effect_access_request"] = side_effect_access_payload
+        raw["side_effect_access_artifact"] = side_effect_access_artifact
     return raw
 
 
@@ -21564,7 +22094,17 @@ def _action_refine_artifact(envelope: dict[str, Any]) -> dict[str, Any]:
 
 
 def _action_run_research_lifecycle(envelope: dict[str, Any]) -> dict[str, Any]:
-    return convert_workflow_evolution(_research_lifecycle_raw(envelope), envelope)
+    raw = _research_lifecycle_raw(envelope)
+    evidence = convert_workflow_evolution(raw, envelope)
+    if isinstance(raw.get("policy_decision"), dict):
+        evidence = _attach_policy_decision(evidence, raw["policy_decision"])
+    if isinstance(raw.get("side_effect_access_request"), dict) and isinstance(raw.get("side_effect_access_artifact"), dict):
+        evidence = _attach_side_effect_access_request(
+            evidence,
+            raw["side_effect_access_request"],
+            raw["side_effect_access_artifact"],
+        )
+    return evidence
 
 
 

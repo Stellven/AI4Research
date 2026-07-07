@@ -93,18 +93,22 @@ def validate_schema(payload: dict[str, Any], expected_schema: str) -> tuple[list
             location = ".".join(str(part) for part in error.path) or "<root>"
             reasons.append(f"schema:{location}: {error.message}")
     except ModuleNotFoundError as exc:
-        reasons.append(
-            "schema validator dependency missing: "
-            f"{exc.name or 'jsonschema'}; run with the repo .venv Python or rebuild .venv"
+        fallback_reasons, fallback_warnings = _fallback_schema_check(payload, schema)
+        reasons.extend(fallback_reasons)
+        warnings.append(
+            "jsonschema unavailable; used limited built-in schema fallback "
+            f"for {expected_schema}"
         )
+        warnings.extend(fallback_warnings)
     return reasons, warnings
 
 
-def _fallback_schema_check(payload: dict[str, Any], schema: dict[str, Any]) -> list[str]:
+def _fallback_schema_check(payload: dict[str, Any], schema: dict[str, Any]) -> tuple[list[str], list[str]]:
+    reasons: list[str] = []
     warnings: list[str] = []
     missing = [key for key in schema.get("required", []) if key not in payload]
     if missing:
-        warnings.append(f"fallback schema check missing top-level keys: {', '.join(missing)}")
+        reasons.append(f"fallback schema check missing top-level keys: {', '.join(missing)}")
     outputs = payload.get("outputs")
     output_required = (
         schema.get("properties", {})
@@ -114,12 +118,12 @@ def _fallback_schema_check(payload: dict[str, Any], schema: dict[str, Any]) -> l
     if isinstance(outputs, dict):
         missing_outputs = [key for key in output_required if key not in outputs]
         if missing_outputs:
-            warnings.append(f"fallback schema check missing outputs: {', '.join(missing_outputs)}")
+            reasons.append(f"fallback schema check missing outputs: {', '.join(missing_outputs)}")
     else:
-        warnings.append("fallback schema check found non-object outputs")
+        reasons.append("fallback schema check found non-object outputs")
     provenance = payload.get("provenance")
     if not isinstance(provenance, dict):
-        warnings.append("fallback schema check found non-object provenance")
+        reasons.append("fallback schema check found non-object provenance")
     else:
         missing_provenance = [
             key
@@ -127,8 +131,8 @@ def _fallback_schema_check(payload: dict[str, Any], schema: dict[str, Any]) -> l
             if not provenance.get(key)
         ]
         if missing_provenance:
-            warnings.append(f"fallback schema check missing provenance: {', '.join(missing_provenance)}")
-    return warnings
+            reasons.append(f"fallback schema check missing provenance: {', '.join(missing_provenance)}")
+    return reasons, warnings
 
 
 def finish(

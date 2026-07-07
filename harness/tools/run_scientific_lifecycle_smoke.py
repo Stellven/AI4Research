@@ -500,13 +500,17 @@ def _gate_lifecycle(summary_path: Path, harness_dir: Path) -> dict[str, Any]:
 
 
 def _blocked_external_node(job_id: str, node_id: str) -> dict[str, Any]:
-    return {"job_id": job_id, **BLOCKED_EXTERNAL_NODE_DETAILS[node_id]}
+    node = {"job_id": job_id, **BLOCKED_EXTERNAL_NODE_DETAILS[node_id]}
+    request = _legacy_authorization_request(job_id, node)
+    node["authorization_request"] = request
+    node["continuation"] = request["continuation"]
+    return node
 
 
 def _blocked_human_gate(job_id: str, node_id: str) -> dict[str, Any]:
     spec = HUMAN_GATE_BY_ID[node_id]
     detail = HUMAN_GATE_BLOCKED_DETAILS[node_id]
-    return {
+    node = {
         "job_id": job_id,
         "node_id": node_id,
         "logical_operator": spec["logical_operator"],
@@ -516,6 +520,89 @@ def _blocked_human_gate(job_id: str, node_id: str) -> dict[str, Any]:
         "status": "blocked",
         **detail,
     }
+    request = _legacy_authorization_request(job_id, node)
+    node["authorization_request"] = request
+    node["continuation"] = request["continuation"]
+    return node
+
+
+def _legacy_authorization_request(job_id: str, node: dict[str, Any]) -> dict[str, Any]:
+    node_id = str(node.get("node_id") or "")
+    if node_id == "report_plan":
+        requested_side_effects = ["review_llm"]
+        required_inputs = ["review_llm_evidence"]
+        resume_args_patch = ["--review-llm-evidence", "<review-llm-evidence.json>"]
+    elif node_id == "publication_produce":
+        requested_side_effects = ["tex_compile", "publication_runtime"]
+        required_inputs = ["compile_target", "compile_runtime_evidence", "compile_approval_ref"]
+        resume_args_patch = [
+            "--compile-target",
+            "<paper-or-tex-target>",
+            "--compile-runtime-evidence",
+            "<compile-runtime-evidence.json>",
+            "--compile-approval-ref",
+            "<approval-ref>",
+        ]
+    elif node_id == "idea_acceptance_gate":
+        requested_side_effects = ["human_approval"]
+        required_inputs = ["idea_approval_ref"]
+        resume_args_patch = ["--idea-approval-ref", "<approval-ref>"]
+    elif node_id == "results_acceptance_gate":
+        requested_side_effects = ["human_approval"]
+        required_inputs = ["results_approval_ref"]
+        resume_args_patch = ["--results-approval-ref", "<approval-ref>"]
+    else:
+        requested_side_effects = ["approval_or_runtime_evidence"]
+        required_inputs = list(node.get("required_evidence") or [])
+        resume_args_patch = ["--allow-existing-result"]
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "job_id": job_id,
+                "node_id": node_id,
+                "reason": node.get("reason"),
+                "required_inputs": required_inputs,
+            },
+            sort_keys=True,
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+    return {
+        "schema": "scientific_workflow_gate_authorization_request.v1",
+        "status": "awaiting_authorization",
+        "job_id": job_id,
+        "node_id": node_id,
+        "native_skill": node.get("action", "N/A"),
+        "reason": str(node.get("reason") or ""),
+        "requested_side_effects": requested_side_effects,
+        "required_inputs": required_inputs,
+        "prompt": (
+            "This legacy lifecycle gate is waiting for approval or runtime evidence. "
+            "Supply the requested inputs, then resume the lifecycle."
+        ),
+        "continuation": {
+            "schema": "scientific_workflow_gate_continuation.v1",
+            "status": "awaiting_authorization",
+            "retriable": True,
+            "same_workflow_supported": True,
+            "request_fingerprint": fingerprint,
+            "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+            "resume_args_patch": resume_args_patch,
+            "resume_node_id": node_id,
+        },
+        "non_error_contract": {
+            "blocked_runs_exit_successfully": True,
+            "lifecycle_status": "blocked",
+        },
+    }
+
+
+def _authorization_requests_from_blocked(blocked_nodes: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        node["authorization_request"]
+        for node in blocked_nodes.values()
+        if isinstance(node, dict) and isinstance(node.get("authorization_request"), dict)
+    ]
 
 
 def _human_gate_approval_result(
@@ -1210,7 +1297,17 @@ def _write_and_gate_lifecycle(
     blocked_nodes: dict[str, Any],
     checks: list[dict[str, str]],
     gate_check_name: str = "lifecycle_runtime_gate_passed",
+    authorization_blocked_exit_zero: bool = False,
 ) -> tuple[int, dict[str, Any]]:
+    authorization_requests = _authorization_requests_from_blocked(blocked_nodes)
+    lifecycle["authorization_required"] = bool(authorization_requests)
+    lifecycle["authorization_requests"] = authorization_requests
+    lifecycle["authorization_prompt"] = (
+        "One or more legacy lifecycle gates are waiting for authorization or runtime evidence; "
+        "supply the requested access patch and resume the lifecycle."
+        if authorization_requests
+        else ""
+    )
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     lifecycle["summary_path"] = _rel(summary_path, harness_dir)
     summary_path.write_text(json.dumps(lifecycle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -1234,7 +1331,7 @@ def _write_and_gate_lifecycle(
     if lifecycle["lifecycle_status"] == "passed":
         return 0, lifecycle
     if lifecycle["lifecycle_status"] == "blocked":
-        return 3, lifecycle
+        return (0 if authorization_blocked_exit_zero else 3), lifecycle
     return 1, lifecycle
 
 
@@ -1498,6 +1595,7 @@ def run_resume(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
         blocked_nodes=blocked_nodes,
         checks=checks,
         gate_check_name="resume_lifecycle_runtime_gate_passed",
+        authorization_blocked_exit_zero=bool(getattr(args, "authorization_blocked_exit_zero", False)),
     )
 
 
@@ -1654,6 +1752,15 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
         "dispatch_input_profiles": dispatch_input_profiles,
         "checks": checks,
     }
+    authorization_requests = _authorization_requests_from_blocked(blocked_nodes)
+    lifecycle["authorization_required"] = bool(authorization_requests)
+    lifecycle["authorization_requests"] = authorization_requests
+    lifecycle["authorization_prompt"] = (
+        "One or more legacy lifecycle gates are waiting for authorization or runtime evidence; "
+        "supply the requested access patch and resume the lifecycle."
+        if authorization_requests
+        else ""
+    )
     _record_workflow_config_alignment(
         lifecycle,
         args,
@@ -1705,7 +1812,7 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
     if lifecycle["lifecycle_status"] == "passed":
         return 0, lifecycle
     if lifecycle["lifecycle_status"] == "blocked":
-        return 3, lifecycle
+        return (0 if bool(getattr(args, "authorization_blocked_exit_zero", False)) else 3), lifecycle
     return 1, lifecycle
 
 
@@ -1732,6 +1839,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-existing-result", action="store_true")
     parser.add_argument("--include-blocked-external", action="store_true")
     parser.add_argument("--include-human-gates", action="store_true", help="Record native AutoSci human approval gates as scheduler-visible blocked/passed nodes.")
+    parser.add_argument(
+        "--authorization-blocked-exit-zero",
+        action="store_true",
+        help="Return exit code 0 for authorization-blocked lifecycle runs while preserving lifecycle_status=blocked.",
+    )
     parser.add_argument("--idea-approval-ref", help="Durable approval reference for the idea acceptance human gate.")
     parser.add_argument("--results-approval-ref", help="Durable approval reference for the results acceptance human gate.")
     parser.add_argument("--resume-summary", help="Blocked lifecycle summary JSON to resume, relative to --harness-dir.")

@@ -360,7 +360,7 @@
       "solar_backend_action": "generate_ideas",
       "coverage_status": "partial",
       "backend_mode": "route_plan",
-      "side_effect_policy": "dry_run_only",
+      "side_effect_policy": "approval_required",
       "evidence_schema": "idea_candidate.v1",
       "primary_tools": [
         "plugins/autosci/bin/autosci_bridge.py run --action generate_ideas",
@@ -375,7 +375,7 @@
         "pilot handoff"
       ],
       "limitations": [
-        "Explicit model-command/model-evidence brainstorming is wired for source-grounded candidates with persisted request/response provenance, ideate_final_promotion_boundary records wiki maturity scan, failed-idea banlist, source evidence, model provenance, and novelty/review gate requirements before ideas are promotable, and completed pilot handoff/runtime evidence can close phase 5. Approved durable idea-page projection now requires the full ideate pipeline to be ready, projects generated_from/has_pilot_handoff graph edges, and records those graph edges in wiki mutation proof; full native ideation still requires audited provider-backed dual-model brainstorming, external discovery evidence, novelty/review gates, pilot handoff evidence or explicit --skip-pilot, and explicit bounded-test mode for sample-content runs."
+        "Explicit model-command/model-evidence brainstorming is wired for source-grounded candidates with persisted request/response provenance, ideate_final_promotion_boundary records wiki maturity scan, failed-idea banlist, source evidence, model provenance, and novelty/review gate requirements before ideas are promotable, and completed pilot handoff/runtime evidence can close phase 5. Approved durable idea-page projection now requires the full ideate pipeline to be ready, projects generated_from/has_pilot_handoff graph edges, and records those graph edges in wiki mutation proof; side-effect execution is approval-gated and strict/safe modes emit side_effect_access_request evidence instead of silently passing as dry-run. Full native ideation still requires audited provider-backed dual-model brainstorming, external discovery evidence, novelty/review gates, pilot handoff evidence or explicit --skip-pilot, and explicit bounded-test mode for sample-content runs."
       ]
     },
     {

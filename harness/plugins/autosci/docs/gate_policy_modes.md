@@ -42,6 +42,28 @@ Actions that consult the policy should attach the serialized decision to:
 - `provenance.gate_policy`
 - an optional `gate_policy_decision_json` sidecar
 
+When a policy-connected action needs native side effects but the selected mode
+does not allow them, the action should emit `autosci_side_effect_access_request.v1`
+instead of treating the block as a terminal runtime failure. The request includes
+an `autosci_side_effect_continuation.v1` object with retry patch options for a
+bounded policy mode, native mode, or HITL approval evidence. Consumers should
+surface that request and re-run the same envelope with an explicit access patch
+when the user grants permission.
+
+All AutoSci approval contracts should also carry
+`autosci_gate_authorization_request.v1` when approval/runtime artifacts are
+missing. Route-level shim gates carry `autosci_route_gate_authorization_request.v1`
+only for blocked/schema-only route handoffs, route-only evidence with no
+runnable action, or scheduler authorization waits.
+Generic workflow-runner blocked nodes carry
+`scientific_workflow_gate_authorization_request.v1` and return a successful
+process exit for authorization-blocked lifecycles while preserving
+`lifecycle_status=blocked`. Legacy research lifecycle smoke blocked nodes use
+the same request schema; direct legacy smoke preserves its historical blocked
+exit `3`, while shim-mediated `$research --scheduler-run` can opt into a
+zero-exit authorization-blocked handoff. True failed gates, such as
+configuration drift or production dispatch boundary failures, remain errors.
+
 Auto-approved modes use a synthetic reference of the form:
 
 ```text
@@ -61,14 +83,17 @@ the bounded local side effects below:
 | `visualize_graph` | `$visualize --serve` | Runs `tools/serve.py --probe-server --port 0`, probes `/api/health`, then shuts down. | Loopback/server proof must still be attached as runtime evidence. |
 | `compile_paper` | `$paper-compile --checklist` | Executes a discovered supported TeX executor (`latexmk`, `pdflatex`, `xelatex`, or `lualatex`) when available. | Synthetic allowlist is limited to TeX executors discovered on `PATH`; missing or invalid PDF output remains inconclusive. |
 | `build_poster` | `$poster` | Executes a render/export command only when concrete `poster_render_command` or `poster_renderer` allowlist evidence is supplied. | The policy gate does not invent a browser renderer; absent render allowlist remains inconclusive. |
-| `run_experiment` | `$exp-run --env local` | Executes a concrete allowlisted local experiment command and then applies the existing runtime/wiki mutation checks. | Policy sidecar records plan handoff commands for audit but does not auto-allowlist them as executable commands. |
+| `run_experiment` | `$exp-run --env local` | Executes a concrete allowlisted local experiment command and then applies the existing runtime/wiki mutation checks when approved. | Policy sidecar records plan handoff commands for audit but does not auto-allowlist them as executable commands; strict/safe blocks emit `autosci_side_effect_access_request.v1`. |
 | `init_sources` | `$init --write` | Writes supplied provider/runtime source candidates into the local wiki papers, graph edges, log, index, and context brief. | Policy approval covers wiki fan-in only; it does not execute network/provider fetch, email, remote execution, or bulk ingest. |
 | `reset_plan` | `$reset --scope ...` | Executes native `tools/reset_wiki.py` scoped reset when high-risk policy mode allows destructive mutation. | Default `strict_hitl`/`safe` remain blocked; completed execution must include before snapshot, reset runtime evidence, after snapshot, and mutation proof. |
 | `setup_status` | `$setup --setup-dotenv-path ...` | Writes a supplied `.env` after-artifact to an explicit dotenv path when high-risk policy mode allows credential/config mutation. | Default `strict_hitl`/`safe` remain blocked; evidence records key names, snapshots, and hashes only, never secret values. |
+| `daily_arxiv_prepare_finalize` | `$daily-arxiv` | Attempts live native `tools/daily_arxiv.py prepare` only when network side effects are policy-allowed; supplied verified runtime digest evidence can still complete without live execution. | Strict/safe missing-live paths emit `autosci_side_effect_access_request.v1`; email, scheduler, and auto-ingest still require typed delivery/ingest proof. |
+| `generate_ideas` | `$ideate` | Applies approval-gated access semantics to explicit policy or real source/model/wiki/pilot side-effect paths; permissive modes may synthesize approval for implemented writeback paths. | Route policy is `approval_required`, not `dry_run_only`; bounded fixture smoke does not request access for side effects it did not attempt, and promotion still requires source, model, novelty/review, writeback, and pilot evidence. |
+| `run_research_lifecycle` | `$research` | Records access-required lifecycle state when network, local command, wiki mutation, remote, or compile side effects are blocked. | The bridge does not fake stage execution; lifecycle completion still requires typed stage evidence or approved stage runners. |
 
-Future slices should connect the same policy helper to daily/discover,
-and other side-effect actions only when their concrete executor
-boundaries are similarly scoped and verified.
+Actions not listed here should not be assumed policy-connected until their
+action-level evidence includes `outputs.policy_decision` or a gate policy
+sidecar.
 
 ## Examples
 
