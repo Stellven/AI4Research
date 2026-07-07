@@ -5,8 +5,8 @@
 # Solar Components
 
 Solar installs as selectable components. The default selection is `kernel` +
-`harness`, plus `core-runtime` when `bun` is available; everything else is
-opt-in. Select components with `./install.sh --components <list>` (see
+`harness` + `autosci`, plus `core-runtime` when `bun` is available; everything
+else is opt-in. Select components with `./install.sh --components <list>` (see
 [`INSTALL.md`](../INSTALL.md)).
 
 `Default` is `on` (always selected), `auto` (selected when its required
@@ -18,6 +18,7 @@ Linux, and WSL2.
 | `kernel` | on | all | `python3` | — | no | Claude Code kernel overlay with namespaced rules, hooks, and agents |
 | `core-runtime` | auto | all | `bun` | `kernel` | no | TypeScript core runtime, daemon, and web dashboard |
 | `harness` | on | all | `python3` | `kernel` | no | Python harness runtime payload |
+| `autosci` | on | all | `python3` | `harness` | no | AutoSci research workflow assets for the Solar harness |
 | `skills-md` | off | all | — | — | no | Generic markdown skills for Claude Code discovery |
 | `skills-office` | off | all | — | — | no | Office productivity skills (email, notes, tasks, notion, trello) |
 | `skills-obsidian` | off | all | — | — | no | Obsidian vault skills |

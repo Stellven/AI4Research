@@ -54,8 +54,8 @@ generate() {
 # Solar Components
 
 Solar installs as selectable components. The default selection is `kernel` +
-`harness`, plus `core-runtime` when `bun` is available; everything else is
-opt-in. Select components with `./install.sh --components <list>` (see
+`harness` + `autosci`, plus `core-runtime` when `bun` is available; everything
+else is opt-in. Select components with `./install.sh --components <list>` (see
 [`INSTALL.md`](../INSTALL.md)).
 
 `Default` is `on` (always selected), `auto` (selected when its required

@@ -156,7 +156,7 @@ def test_proceed_path(root: Path) -> None:
         [("Choice [1-3]:", "1\n"), ("Confirm install? [y/N]", "y\n")],
         0,
     )
-    assert_components(home, ["kernel", "harness"])
+    assert_components(home, ["kernel", "harness", "autosci"])
     print("wizard proceed path: ok")
 
 

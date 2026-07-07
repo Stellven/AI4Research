@@ -79,14 +79,16 @@ and prints the reason.
 
 ## Components
 
-The default selection is `kernel` + `harness`, plus `core-runtime` when `bun`
-is available. Everything else is off by default and opt-in.
+The default selection is `kernel` + `harness` + `autosci`, plus
+`core-runtime` when `bun` is available. Everything else is off by default and
+opt-in.
 
 | Component | Default | Summary |
 |---|---|---|
 | `kernel` | on | Claude Code kernel overlay: namespaced rules, hooks, agents |
 | `core-runtime` | auto (needs `bun`) | TypeScript core runtime, daemon, web dashboard |
 | `harness` | on | Python harness runtime payload |
+| `autosci` | on | AutoSci research workflow assets for the Solar harness |
 | `skills-md` | off | Generic markdown skills for Claude Code discovery |
 | `skills-office` | off | Office productivity skills (email, notes, tasks) |
 | `skills-obsidian` | off | Obsidian vault skills |

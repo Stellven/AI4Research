@@ -76,6 +76,10 @@ all_roots = {
     "kernel": [os.path.join(os.environ["CLAUDE_DIR"], "solar")],
     "core-runtime": [os.path.join(os.environ["SOLAR_HOME"], "core")],
     "harness": [os.path.join(os.environ["SOLAR_HOME"], "harness")],
+    "autosci": [
+        os.path.join(os.environ["SOLAR_HOME"], "tools"),
+        os.path.join(os.environ["SOLAR_HOME"], ".agents", "skills"),
+    ],
     "skills-md": [os.path.join(os.environ["CLAUDE_DIR"], "skills")],
     "codex-bridge": [os.path.join(os.environ["SOLAR_HOME"], "codex-bridge")],
     "mempalace": [

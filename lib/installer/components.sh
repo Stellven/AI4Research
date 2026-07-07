@@ -5,7 +5,7 @@
 # SC2034 ("appears unused") is a false positive for this manifest loader.
 # shellcheck disable=SC2034
 
-COMPONENT_ORDER="kernel core-runtime harness skills-md skills-office skills-obsidian skills-calendar skills-browser codex-bridge solar-max mempalace daemons status-daemon"
+COMPONENT_ORDER="kernel core-runtime harness autosci skills-md skills-office skills-obsidian skills-calendar skills-browser codex-bridge solar-max mempalace daemons status-daemon"
 
 component_manifest() {
     printf '%s/components.d/%s/component.sh\n' "$SOURCE_DIR" "$1"
@@ -66,7 +66,7 @@ resolve_components() {
     elif [ -n "${SOLAR_COMPONENTS:-}" ]; then
         requested="$(printf '%s' "$SOLAR_COMPONENTS" | tr ',' ' ')"
     else
-        requested="kernel harness"
+        requested="kernel harness autosci"
         if command -v bun >/dev/null 2>&1; then
             requested="$requested core-runtime"
         fi

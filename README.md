@@ -146,12 +146,13 @@ See:
 Default install:
 
 ```bash
-./install.sh --yes --components kernel,harness
+./install.sh --yes
 ```
 
-Optional components include `core-runtime`, `skills-md`, `skills-office`,
-`skills-obsidian`, `skills-calendar`, `skills-browser`, `codex-bridge`,
-`mempalace`, `daemons`, and `solar-max`. Use:
+The default install includes `kernel`, `harness`, and `autosci`; it also adds
+`core-runtime` when `bun` is available. Optional components include
+`skills-md`, `skills-office`, `skills-obsidian`, `skills-calendar`,
+`skills-browser`, `codex-bridge`, `mempalace`, `daemons`, and `solar-max`. Use:
 
 ```bash
 ./install.sh --list-components
