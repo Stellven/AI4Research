@@ -1,0 +1,24 @@
+{
+  "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-03.md --experiment-id exp-idea-cu-03-landscape-driven --claim-id idea-cu-03-landscape-driven",
+  "copied_artifacts": [
+    "experiment_plan.json",
+    "experiment_result.json",
+    "claim_verdict.json",
+    "code_evidence_map.json",
+    "run_experiment_runtime_evidence.json",
+    "run_experiment_result.json",
+    "run_experiment_executor_stdout.txt",
+    "run_experiment_executor_stderr.txt",
+    "run_experiment_gate_policy_allowlist.json",
+    "run_experiment_gate_policy_decision.json",
+    "idea-cu-03-landscape-driven.allowlist.json",
+    "exp-idea-cu-03-landscape-driven.log"
+  ],
+  "exit_code": 0,
+  "experiment_id": "exp-idea-cu-03-landscape-driven",
+  "idea_id": "idea-cu-03-landscape-driven",
+  "item_id": "cu-03",
+  "outcome": "inconclusive",
+  "runner_script": "validation_code_bundle/items/cu-03/run_validation.sh",
+  "verdict": "inconclusive"
+}

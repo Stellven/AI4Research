@@ -1,0 +1,23 @@
+{
+  "action": "read first",
+  "category": "resource_radar_item",
+  "confidence": "medium",
+  "credibility": 82,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R06",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r06.json",
+  "note": "Anthropic engineering guide 'Building Effective Agents' (best-effort: anthropic.com engineering) — verify URL · needs URL verification",
+  "publisher_or_authors": "Anthropic engineering · Anthropic · 2024",
+  "relevance": 92,
+  "role": "technical framework",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r06.md",
+  "source_type": "technical report",
+  "summary": "A practitioner guide distinguishing simple workflows from autonomous agents and recommending the simplest composition that works. Emphasizes evaluator/optimizer loops, routing, and orchestration over monolithic agents. Advocates measurable, composable building blocks.",
+  "title": "Building Effective Agents (engineering guide)",
+  "url_status": "needs URL verification",
+  "why": "A widely-referenced, practical statement of the workflow-over-agent philosophy.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r06",
+  "year": "2024"
+}

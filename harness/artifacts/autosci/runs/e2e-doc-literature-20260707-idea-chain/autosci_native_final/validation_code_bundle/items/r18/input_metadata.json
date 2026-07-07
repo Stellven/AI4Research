@@ -1,0 +1,23 @@
+{
+  "action": "track",
+  "category": "resource_radar_item",
+  "confidence": "medium",
+  "credibility": 56,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R18",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r18.json",
+  "note": "Cognition Devin materials (best-effort: cognition.ai) — verify URL · needs URL verification",
+  "publisher_or_authors": "Cognition (product) · Cognition · 2024",
+  "relevance": 70,
+  "role": "trend signal",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r18.md",
+  "source_type": "company trend",
+  "summary": "A coding-agent product whose value is largely in its runtime harness (tools, environment, recovery) around a model. Illustrates that shipping reliable agents is a substrate problem. Company trend signal, not technical primary evidence.",
+  "title": "Cognition (Devin) — coding-agent harness / runtime",
+  "url_status": "needs URL verification",
+  "why": "Market evidence that harness quality is the product.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r18",
+  "year": "2024"
+}

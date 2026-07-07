@@ -1,0 +1,23 @@
+{
+  "action": "skim",
+  "category": "resource_radar_item",
+  "confidence": "medium",
+  "credibility": 72,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R15",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r15.json",
+  "note": "CSET agent/autonomy reports (best-effort: cset.georgetown.edu) — verify specific report URL · needs URL verification",
+  "publisher_or_authors": "CSET analysts · Center for Security and Emerging Technology (Georgetown) · 2024",
+  "relevance": 60,
+  "role": "background",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r15.md",
+  "source_type": "think tank",
+  "summary": "A policy research center producing analysis on AI autonomy, evaluation, and oversight. Relevant to governance of feedback-driven and autonomous agent loops. Provides institutional framing rather than technical primary evidence.",
+  "title": "CSET — autonomy, evaluation, and governance of AI agents",
+  "url_status": "needs URL verification",
+  "why": "Governance framing for autonomous agent loops and oversight.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r15",
+  "year": "2024"
+}

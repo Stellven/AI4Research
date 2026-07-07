@@ -1,0 +1,23 @@
+{
+  "action": "read first",
+  "category": "resource_radar_item",
+  "confidence": "high",
+  "credibility": 88,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R07",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r07.json",
+  "note": "arXiv:2303.17651 (best-effort — verify) · needs URL verification",
+  "publisher_or_authors": "Madaan, Tandon, Gupta, et al. · academic · 2023",
+  "relevance": 85,
+  "role": "primary evidence",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r07.md",
+  "source_type": "paper",
+  "summary": "Shows a frozen model can improve its own output by generating critiques and revising the same draft. Demonstrates test-time self-improvement without weight updates. Establishes the critique-and-revise loop as a reusable pattern.",
+  "title": "Self-Refine: Iterative Refinement with Self-Feedback",
+  "url_status": "needs URL verification",
+  "why": "Canonical loop-engineering primitive: generate -> self-critique -> revise.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r07",
+  "year": "2023"
+}

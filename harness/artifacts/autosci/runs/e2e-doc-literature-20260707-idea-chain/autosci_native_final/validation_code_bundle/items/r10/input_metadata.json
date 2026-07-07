@@ -1,0 +1,23 @@
+{
+  "action": "read first",
+  "category": "resource_radar_item",
+  "confidence": "high",
+  "credibility": 86,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R10",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r10.json",
+  "note": "arXiv:2210.03629 (best-effort — verify) · needs URL verification",
+  "publisher_or_authors": "Yao, Zhao, Yu, et al. · academic · 2022",
+  "relevance": 80,
+  "role": "primary evidence",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r10.md",
+  "source_type": "paper",
+  "summary": "Interleaves reasoning traces with tool actions so agents can plan and act in a loop. Establishes the reason-act-observe cycle that most tool-using agents still use. Grounds reasoning in external observations.",
+  "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+  "url_status": "needs URL verification",
+  "why": "Foundational reason-act-observe loop underlying agent harnesses.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r10",
+  "year": "2022"
+}

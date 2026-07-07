@@ -1,0 +1,23 @@
+{
+  "action": "validate cited source record",
+  "category": "cited_source",
+  "confidence": "medium",
+  "credibility": 70,
+  "doc": "Claude Code vs Cursor vs GitHub Copilot in 2026.html",
+  "doc_slug": "claude-cursor-copilot-2026",
+  "expected_outcome": "supports",
+  "id": "cc-01",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-01.json",
+  "note": "Anthropic, \"Overview - Claude Code Docs\", official documentation, accessed 2026-06-26.",
+  "publisher_or_authors": "Anthropic",
+  "relevance": 80,
+  "role": "comparison evidence source",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-01.md",
+  "source_type": "official documentation",
+  "summary": "Anthropic, \"Overview - Claude Code Docs\", official documentation, accessed 2026-06-26.",
+  "title": "Overview - Claude Code Docs",
+  "url_status": "source-id only; URL absent from attached HTML",
+  "why": "Cited by the comparison report as evidence for AI coding assistant capabilities, pricing, context, agentic features, or ecosystem fit.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/cc-01",
+  "year": "2026"
+}

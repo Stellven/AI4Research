@@ -1,0 +1,24 @@
+{
+  "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-07.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-07.md --experiment-id exp-idea-cc-07-landscape-driven --claim-id idea-cc-07-landscape-driven",
+  "copied_artifacts": [
+    "experiment_plan.json",
+    "experiment_result.json",
+    "claim_verdict.json",
+    "code_evidence_map.json",
+    "run_experiment_runtime_evidence.json",
+    "run_experiment_result.json",
+    "run_experiment_executor_stdout.txt",
+    "run_experiment_executor_stderr.txt",
+    "run_experiment_gate_policy_allowlist.json",
+    "run_experiment_gate_policy_decision.json",
+    "idea-cc-07-landscape-driven.allowlist.json",
+    "exp-idea-cc-07-landscape-driven.log"
+  ],
+  "exit_code": 0,
+  "experiment_id": "exp-idea-cc-07-landscape-driven",
+  "idea_id": "idea-cc-07-landscape-driven",
+  "item_id": "cc-07",
+  "outcome": "supports",
+  "runner_script": "validation_code_bundle/items/cc-07/run_validation.sh",
+  "verdict": "supported"
+}

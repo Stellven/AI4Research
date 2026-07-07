@@ -1,0 +1,47 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/code_evidence_map.json",
+      "type": "code_evidence_map"
+    }
+  ],
+  "inputs": {
+    "claim_id": "idea-cu-05-landscape-driven-1",
+    "experiment_id": "exp-idea-cu-05-landscape-driven-1"
+  },
+  "limitations": [
+    "Code evidence is limited to the approved local validator and runtime evidence for the attached-source experiment."
+  ],
+  "node_id": "node-code-evidence-map",
+  "outputs": {
+    "mappings": [
+      {
+        "claim_id": "idea-cu-05-landscape-driven-1",
+        "evidence_ids": [
+          "idea-cu-05-landscape-driven-1",
+          "exp-idea-cu-05-landscape-driven-1",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json"
+        ],
+        "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md --experiment-id exp-idea-cu-05-landscape-driven-1 --claim-id idea-cu-05-landscape-driven-1",
+        "files": [
+          "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json"
+        ],
+        "mapping_id": "map-idea-cu-05-landscape-driven-1",
+        "mapping_status": "mapped",
+        "relevance_label": "direct",
+        "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+        "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "run-artifact",
+    "operator_id": "codex-corrected-batch-code-linker",
+    "timestamp": "2026-07-07T16:26:40Z"
+  },
+  "schema": "code_evidence_map.v1",
+  "sprint_id": "e2e-doc-literature-20260707-idea-chain-corrected",
+  "status": "completed",
+  "task_id": "task-cu-05-idea-cu-05-landscape-driven-1-code-evidence-map"
+}

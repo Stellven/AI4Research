@@ -1,0 +1,23 @@
+{
+  "action": "read first",
+  "category": "resource_radar_item",
+  "confidence": "medium",
+  "credibility": 70,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R05",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r05.json",
+  "note": "widely-documented pattern family; specific canonical URL not verified · needs URL verification",
+  "publisher_or_authors": "(pattern catalog) · (vendor-neutral pattern set) · 2024",
+  "relevance": 88,
+  "role": "technical framework",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r05.md",
+  "source_type": "technical report",
+  "summary": "Catalogs the core control-flow patterns for multi-agent systems: prompt chaining, routing, parallelization, sequential processing, and planner-critic loops. Provides a shared vocabulary for how agents are wired together. Distinguishes deterministic orchestration from open-ended planning.",
+  "title": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic",
+  "url_status": "needs URL verification",
+  "why": "Gives a vocabulary for choosing deterministic orchestration over free-form planning.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r05",
+  "year": "2024"
+}

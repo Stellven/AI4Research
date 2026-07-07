@@ -1,0 +1,23 @@
+{
+  "action": "skim",
+  "category": "resource_radar_item",
+  "confidence": "medium",
+  "credibility": 74,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R12",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r12.json",
+  "note": "Microsoft AutoGen (best-effort: microsoft/autogen) — verify URL · needs URL verification",
+  "publisher_or_authors": "Microsoft Research · Microsoft · 2023",
+  "relevance": 82,
+  "role": "technical framework",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r12.md",
+  "source_type": "technical report",
+  "summary": "A framework for composing multiple conversational agents (planner, critic, executor) into workflows. Popularized planner-critic and group-chat orchestration. Provides reusable multi-agent building blocks.",
+  "title": "AutoGen — multi-agent conversation framework",
+  "url_status": "needs URL verification",
+  "why": "Reference implementation of planner-critic loops at the framework level.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r12",
+  "year": "2023"
+}

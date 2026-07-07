@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-01.md --experiment-id exp-idea-cc-01-landscape-driven-1 --claim-id idea-cc-01-landscape-driven-1"
+  ],
+  "idea_id": "idea-cc-01-landscape-driven-1",
+  "limitations": [
+    "No network, email, remote execution, destructive mutation, or credential access is allowed by this allowlist."
+  ],
+  "purpose": "Bounded local validation command for promoted AutoSci idea idea-cc-01-landscape-driven-1.",
+  "schema": "autosci_command_allowlist.v1",
+  "source_id": "cc-01"
+}

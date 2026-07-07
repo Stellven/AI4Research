@@ -1,0 +1,23 @@
+{
+  "action": "verify before citing",
+  "category": "resource_radar_item",
+  "confidence": "low",
+  "credibility": 48,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "inconclusive",
+  "id": "R02",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r02.json",
+  "note": "anchor candidate provided by owner; existence/URL not verified · needs URL verification",
+  "publisher_or_authors": "(anchor candidate — authors unverified) · (unverified) · 2026",
+  "relevance": 96,
+  "role": "unverified",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r02.md",
+  "source_type": "paper",
+  "summary": "Argues the agent runtime substrate (context assembly, tools, permissions, memory, task state, observability, validation, tracing, recovery) is an engineering discipline distinct from the model. Positions the harness as the layer that turns a capable model into a reliable agent. Sketches a reference substrate for software agents.",
+  "title": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents",
+  "url_status": "needs URL verification",
+  "why": "Names and structures the exact substrate Solar's runtime implements.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r02",
+  "year": "2026"
+}

@@ -1,0 +1,23 @@
+{
+  "action": "context only",
+  "category": "resource_radar_item",
+  "confidence": "low",
+  "credibility": 35,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "inconclusive",
+  "id": "R19",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r19.json",
+  "note": "aggregated public practitioner commentary; no single verifiable source — do not cite as evidence · needs URL verification",
+  "publisher_or_authors": "(aggregated practitioner commentary) · (social platforms) · 2024",
+  "relevance": 55,
+  "role": "expert opinion",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r19.md",
+  "source_type": "social opinion",
+  "summary": "A recurring public opinion among agent builders that context assembly, tools, and harness design drive reliability more than model choice. Widely expressed but not a single citable source. Included as a trend signal only and explicitly not as evidence.",
+  "title": "Practitioner signal: 'context/harness beats model' for agent reliability",
+  "url_status": "needs URL verification",
+  "why": "Sentiment signal corroborating the harness-first thesis.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r19",
+  "year": "2024"
+}

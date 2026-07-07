@@ -1,0 +1,23 @@
+{
+  "action": "skim",
+  "category": "resource_radar_item",
+  "confidence": "medium",
+  "credibility": 70,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R16",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r16.json",
+  "note": "Stanford HAI briefs on agents/evaluation (best-effort: hai.stanford.edu) — verify URL · needs URL verification",
+  "publisher_or_authors": "Stanford HAI researchers · Stanford Institute for Human-Centered AI · 2024",
+  "relevance": 58,
+  "role": "background",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r16.md",
+  "source_type": "think tank",
+  "summary": "Publishes human-centered analysis of AI capabilities, evaluation, and oversight. Useful for the oversight and scalable-evaluation angle of agent loops. Background/context rather than a technical primary source.",
+  "title": "Stanford HAI — AI agents, oversight, and scalable evaluation",
+  "url_status": "needs URL verification",
+  "why": "Human-centered oversight framing for agent evaluation.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r16",
+  "year": "2024"
+}

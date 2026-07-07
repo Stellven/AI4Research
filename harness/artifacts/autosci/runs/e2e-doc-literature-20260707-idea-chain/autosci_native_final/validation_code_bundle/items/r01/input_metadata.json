@@ -1,0 +1,23 @@
+{
+  "action": "verify before citing",
+  "category": "resource_radar_item",
+  "confidence": "low",
+  "credibility": 48,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "inconclusive",
+  "id": "R01",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r01.json",
+  "note": "anchor candidate provided by owner; existence/URL not verified (best-effort: search title on arXiv) · needs URL verification",
+  "publisher_or_authors": "(anchor candidate — authors unverified) · (unverified) · 2026",
+  "relevance": 95,
+  "role": "unverified",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r01.md",
+  "source_type": "benchmark",
+  "summary": "Proposes a benchmark that isolates the effect of the agent harness (context, tools, memory, validation) from the underlying model on realistic multi-step workflows. Claims that harness quality can dominate raw model capability on task success. Frames harness engineering as a measurable, first-class variable.",
+  "title": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows",
+  "url_status": "needs URL verification",
+  "why": "If harness effects are measurable and large, runtime substrate design is a primary lever, not an afterthought.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r01",
+  "year": "2026"
+}

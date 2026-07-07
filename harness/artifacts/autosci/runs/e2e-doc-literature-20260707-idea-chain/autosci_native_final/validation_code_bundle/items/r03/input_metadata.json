@@ -1,0 +1,23 @@
+{
+  "action": "verify before citing",
+  "category": "resource_radar_item",
+  "confidence": "low",
+  "credibility": 46,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "inconclusive",
+  "id": "R03",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r03.json",
+  "note": "anchor candidate provided by owner; existence/URL not verified · needs URL verification",
+  "publisher_or_authors": "(anchor candidate — authors unverified) · (unverified) · 2026",
+  "relevance": 90,
+  "role": "unverified",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r03.md",
+  "source_type": "paper",
+  "summary": "Describes using runtime observability to automatically evolve a coding agent's harness over time. Treats the harness as something that can be optimized from traces, not just hand-designed. Connects observability data to self-improvement of the substrate.",
+  "title": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses",
+  "url_status": "needs URL verification",
+  "why": "Suggests harnesses can be improved by a generate-evaluate-retain loop over their own traces.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r03",
+  "year": "2026"
+}

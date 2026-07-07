@@ -1,0 +1,23 @@
+{
+  "action": "read first",
+  "category": "resource_radar_item",
+  "confidence": "high",
+  "credibility": 88,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R09",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r09.json",
+  "note": "arXiv:2305.20050 (best-effort — verify) · needs URL verification",
+  "publisher_or_authors": "Lightman, Kosaraju, Burda, et al. · OpenAI · 2023",
+  "relevance": 84,
+  "role": "primary evidence",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r09.md",
+  "source_type": "paper",
+  "summary": "Finds process-level (step-by-step) supervision yields stronger verifier signals than outcome-only supervision in math reasoning. Strong verifiers can rank sampled trajectories and raise solved rates. Also flags that step-level checks can be gamed.",
+  "title": "Let's Verify Step by Step",
+  "url_status": "needs URL verification",
+  "why": "Core evidence that verifier design determines loop reliability.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r09",
+  "year": "2023"
+}

@@ -1,0 +1,23 @@
+{
+  "action": "watch",
+  "category": "resource_radar_item",
+  "confidence": "medium",
+  "credibility": 62,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R13",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r13.json",
+  "note": "recurring MLST episodes on agents/evaluation (best-effort) — verify specific episode URL · needs URL verification",
+  "publisher_or_authors": "MLST hosts + guests · Machine Learning Street Talk · 2024",
+  "relevance": 70,
+  "role": "expert opinion",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r13.md",
+  "source_type": "podcast",
+  "summary": "A long-form technical podcast that regularly interrogates agent evaluation, reliability, and the gap between benchmarks and real workflows. Guests include researchers working on verification and agent design. Useful expert commentary, not primary evidence.",
+  "title": "Machine Learning Street Talk — agent evaluation & harness reliability episodes",
+  "url_status": "needs URL verification",
+  "why": "Expert framing of why agent reliability is a harness/eval problem.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r13",
+  "year": "2024"
+}

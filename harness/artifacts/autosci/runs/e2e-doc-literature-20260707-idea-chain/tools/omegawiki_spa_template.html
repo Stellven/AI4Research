@@ -1,0 +1,1881 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmegaWiki</title>
+  <link rel="icon" href="data:,">
+  <style>
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  --accent: #4A90D9;
+  --accent-soft: rgba(74, 144, 217, 0.15);
+  --muted-fg: rgba(90, 90, 95, 1);
+  --muted-bg: rgba(127, 127, 127, 0.10);
+  --muted-bg-strong: rgba(127, 127, 127, 0.18);
+  --broken: #d9534f;
+  --paper: #4A90D9;
+  --concept: #EC4899;
+  --idea: #F39C12;
+  --experiment: #E74C3C;
+  --method: #84CC16;
+  --code: #95A5A6;
+  --verdict: #7B8AB8;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: Canvas;
+  color: CanvasText;
+}
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--muted-bg-strong);
+  position: sticky;
+  top: 0;
+  background: Canvas;
+  z-index: 10;
+}
+.brand {
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-decoration: none;
+  color: inherit;
+  white-space: nowrap;
+}
+.badge {
+  background: var(--accent);
+  color: white;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  vertical-align: middle;
+  margin-left: 0.4rem;
+}
+.topnav nav {
+  display: flex;
+  gap: 0.5rem;
+}
+.nav-link {
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.85;
+}
+.nav-link:hover,
+.nav-link.active {
+  background: var(--muted-bg);
+  opacity: 1;
+}
+.jump {
+  margin-left: auto;
+  width: 235px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid var(--muted-bg-strong);
+  border-radius: 6px;
+  background: var(--muted-bg);
+  color: inherit;
+  outline: none;
+}
+.jump:focus { border-color: var(--accent); background: Canvas; }
+.jump-error { animation: shake 0.4s; border-color: var(--broken); }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.live-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  opacity: 0.5;
+  margin-left: 0.4rem;
+}
+.boot-status {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0.65;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: nowrap;
+}
+main {
+  padding: 1.5rem;
+  flex: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+.muted { opacity: 0.6; }
+.small { font-size: 0.78rem; line-height: 1.4; }
+.breadcrumb {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  opacity: 0.85;
+}
+.breadcrumb a { color: inherit; }
+h1 { margin: 0 0 0.75rem 0; font-size: 1.6rem; }
+h2 { margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; }
+h3 { margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600; opacity: 0.85; }
+p { margin: 0.5rem 0; }
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--muted-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+button {
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--muted-bg-strong);
+  border-radius: 4px;
+  background: Canvas;
+  cursor: pointer;
+}
+button:hover { background: var(--muted-bg-strong); }
+.entity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--muted-bg-strong);
+  background: var(--muted-bg);
+}
+.card:hover { background: var(--muted-bg-strong); }
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+}
+.card-type { font-weight: 600; }
+.card-count {
+  font-family: ui-monospace, monospace;
+  font-size: 0.95rem;
+  opacity: 0.7;
+}
+.card-sample {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.examples {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0.5rem 0 1.5rem 0;
+  font-size: 0.85rem;
+}
+.example {
+  text-decoration: none;
+  color: inherit;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px dashed var(--muted-bg-strong);
+}
+.example:hover { background: var(--muted-bg); border-style: solid; }
+.list { display: flex; flex-direction: column; gap: 4px; }
+.list .row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.list .row:hover { background: var(--muted-bg); }
+.row-title { font-weight: 500; min-width: 0; }
+.row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--muted-bg-strong);
+  font-size: 0.75rem;
+}
+.chip.tag { background: rgba(74, 144, 217, 0.15); }
+.chip.status { background: rgba(155, 89, 182, 0.18); }
+.chip.importance { background: rgba(243, 156, 18, 0.20); font-weight: 600; }
+.reader-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr 300px;
+  gap: 1.5rem;
+  align-items: start;
+}
+.pane {
+  background: var(--muted-bg);
+  border-radius: 8px;
+  padding: 1rem;
+}
+.pane.left {
+  font-size: 0.85rem;
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+  position: sticky;
+  top: 4rem;
+}
+.pane.right { font-size: 0.85rem; }
+.pane.center { background: transparent; padding: 0; }
+.sib-list { display: flex; flex-direction: column; gap: 2px; }
+.sib {
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.85;
+  word-break: break-word;
+}
+.sib:hover { background: var(--muted-bg-strong); opacity: 1; }
+.sib.current { background: var(--accent-soft); opacity: 1; font-weight: 500; }
+.metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 1.25rem 0;
+}
+.body.markdown {
+  line-height: 1.65;
+}
+.body.markdown h2 {
+  margin-top: 1.5rem;
+  font-size: 1.15rem;
+  border-bottom: 1px solid var(--muted-bg-strong);
+  padding-bottom: 0.25rem;
+}
+.body.markdown ul { padding-left: 1.5rem; }
+.link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  word-break: break-word;
+}
+.link-list a { color: var(--accent); text-decoration: none; }
+.graph-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1rem;
+  height: calc(100vh - 5.5rem);
+  max-width: none;
+  padding: 1.5rem;
+}
+.graph-sidebar {
+  background: var(--muted-bg);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+.graph-sidebar h3 { margin: 0 0 0.5rem 0; font-size: 1rem; }
+.graph-sidebar h4 {
+  margin: 1rem 0 0.4rem 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.65;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+#graph-search {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid var(--muted-bg-strong);
+  border-radius: 4px;
+  background: Canvas;
+  color: inherit;
+}
+#graph-search:focus { outline: none; border-color: var(--accent); }
+#graph-search-results {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 0.4rem;
+}
+.search-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.search-item:hover { background: var(--muted-bg-strong); }
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.filter-row {
+  display: grid;
+  grid-template-columns: 18px 12px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.filter-row:hover { background: var(--muted-bg-strong); }
+.filter-row input { accent-color: var(--accent); }
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.count { opacity: 0.65; font-size: 0.75rem; }
+.edge-group { margin: 2px 0; }
+.edge-group summary {
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 3px;
+  list-style: none;
+  font-size: 0.8rem;
+}
+.edge-group summary::-webkit-details-marker { display: none; }
+.edge-group summary::before {
+  content: "▸ ";
+  display: inline-block;
+  width: 1ch;
+}
+.edge-group[open] > summary::before { content: "▾ "; }
+.edge-group summary:hover { background: var(--muted-bg-strong); }
+.edge-child { padding-left: 18px; }
+.graph-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 0.6rem;
+}
+.preset-btn {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 3px;
+  background: var(--muted-bg);
+}
+.preset-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.bfs-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bfs-controls input {
+  width: 60px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
+  border: 1px solid var(--muted-bg-strong);
+  border-radius: 3px;
+}
+.bfs-controls button {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+.graph-stats { font-size: 0.8rem; }
+.cy-canvas {
+  background: var(--muted-bg);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+#graph-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.graph-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  opacity: 0.7;
+}
+.graph-info {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: Canvas;
+  border: 1px solid var(--muted-bg-strong);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  max-width: 340px;
+  max-height: 55vh;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  z-index: 20;
+}
+.graph-info h4 { margin: 0 0 0.4rem 0; font-size: 0.95rem; }
+.graph-info a { color: var(--accent); }
+.idea-graph-page {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 300px;
+  gap: 1rem;
+  height: calc(100vh - 5.5rem);
+  max-width: none;
+  padding: 1.5rem;
+}
+.idea-graph-sidebar,
+.idea-node-detail {
+  background: var(--muted-bg);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+.idea-graph-sidebar h1 { margin: 0 0 0.35rem 0; font-size: 1.35rem; }
+.idea-graph-sidebar h3,
+.idea-node-detail h3 {
+  margin: 1rem 0 0.45rem 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.68;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.idea-control { display: block; margin: 1rem 0; }
+.idea-control span {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.68;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.idea-control input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--muted-bg-strong);
+  border-radius: 4px;
+  background: Canvas;
+  color: inherit;
+  font: inherit;
+}
+.idea-filter-stack { display: flex; flex-direction: column; gap: 2px; }
+.idea-filter-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.idea-filter-row:hover { background: var(--muted-bg-strong); }
+.idea-filter-row input { accent-color: var(--accent); }
+.idea-graph-actions {
+  display: grid;
+  grid-template-columns: 1fr 42px 42px;
+  gap: 6px;
+  margin-top: 1rem;
+}
+.idea-graph-actions button { padding: 5px 10px; font-size: 0.82rem; }
+.idea-graph-canvas-wrap {
+  min-width: 0;
+  min-height: 420px;
+  background:
+    radial-gradient(circle at center, rgba(127, 127, 127, 0.10) 0, transparent 34%),
+    var(--muted-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.idea-graph-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  touch-action: none;
+  cursor: grab;
+}
+.idea-edge {
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  opacity: 0.62;
+}
+.idea-edge.context {
+  stroke-dasharray: 5 6;
+  opacity: 0.34;
+}
+.idea-edge.direct { stroke-width: 1.8; }
+.idea-node { cursor: pointer; }
+.idea-node circle {
+  stroke: rgba(255,255,255,0.72);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.18));
+}
+.idea-node text {
+  fill: CanvasText;
+  font-size: 12px;
+  paint-order: stroke;
+  stroke: Canvas;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.idea-node.is-selected circle { stroke: #fff; stroke-width: 4; }
+.idea-node.is-neighbor circle { stroke: var(--accent); stroke-width: 3; }
+.idea-node.is-dim,
+.idea-edge.is-dim { opacity: 0.12; }
+.idea-node-detail h2 { margin: 0 0 0.35rem 0; font-size: 1.05rem; line-height: 1.3; }
+.idea-node-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 0.3rem 0 0.75rem 0;
+  font-size: 0.82rem;
+  word-break: break-word;
+}
+.idea-connection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.idea-connection {
+  border: 1px solid var(--muted-bg-strong);
+  border-radius: 6px;
+  padding: 0.6rem;
+  background: Canvas;
+}
+.idea-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 1rem;
+}
+.idea-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--muted-bg-strong);
+  font-size: 0.75rem;
+}
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.dash-card {
+  background: var(--muted-bg);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+.dash-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.headline { padding: 1.25rem 1.5rem; }
+.headline-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1rem;
+}
+.headline-cell { text-align: center; }
+.hl-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.2rem;
+}
+.hl-num {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  line-height: 1.1;
+}
+.dash-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.data-table th,
+.data-table td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--muted-bg-strong);
+  text-align: left;
+  vertical-align: top;
+}
+.data-table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  opacity: 0.7;
+}
+@media (max-width: 1100px) {
+  .reader-grid { grid-template-columns: 1fr; }
+  .pane.left { position: static; max-height: none; }
+  .idea-graph-page { grid-template-columns: 230px minmax(0, 1fr); height: auto; }
+  .idea-node-detail { grid-column: 1 / -1; max-height: none; }
+  .idea-graph-canvas-wrap,
+  .idea-graph-canvas { min-height: 620px; }
+  .headline-row { grid-template-columns: repeat(3, 1fr); }
+  .dash-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .topnav {
+    position: static;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    padding: 0.65rem 0.85rem;
+  }
+  .topnav nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .jump {
+    margin-left: 0;
+    flex: 1 1 170px;
+    min-width: 0;
+    width: auto;
+  }
+  .boot-status { margin-left: 0; font-size: 0.72rem; }
+  main { padding: 1rem; }
+  .graph-shell { grid-template-columns: 1fr; height: auto; padding: 1rem; }
+  .cy-canvas { height: 70vh; min-height: 520px; }
+  .idea-graph-page { display: flex; flex-direction: column; height: auto; padding: 1rem; }
+  .idea-graph-canvas-wrap,
+  .idea-graph-canvas { min-height: 62vh; }
+}
+  </style>
+</head>
+<body>
+  <header class="topnav">
+    <a class="brand" href="#/">
+      OmegaWiki <span class="badge">Phase 1</span>
+    </a>
+    <nav>
+      <a href="#/" class="nav-link" data-route="reader">Reader</a>
+      <a href="#/graph" class="nav-link" data-route="graph">Graph</a>
+      <a href="#/idea-graph" class="nav-link" data-route="idea-graph">Idea Graph</a>
+      <a href="#/dashboard" class="nav-link" data-route="dashboard">Dashboard</a>
+    </nav>
+    <input id="jump-input" class="jump" type="search" list="slug-list"
+           placeholder="jump to slug... (Enter)" autocomplete="off"
+           aria-label="jump to slug" disabled>
+    <datalist id="slug-list"></datalist>
+    <span id="live-indicator" class="live-indicator" title="static artifact"></span>
+    <div id="boot-status" class="boot-status">loading...</div>
+  </header>
+
+  <main id="view">
+    <p class="muted">loading wiki data...</p>
+  </main>
+
+  <script>
+const COLORS = Object.freeze({
+  document: "#95A5A6",
+  paper: "#4A90D9",
+  claim: "#EC4899",
+  idea: "#F39C12",
+  experiment: "#E74C3C",
+  method: "#84CC16",
+  code: "#95A5A6",
+  verdict: "#7B8AB8",
+  generation_path: "#F39C12",
+});
+const ENTITY_INFO = Object.freeze({
+  documents: { kind: "document", label: "Documents", color: COLORS.document },
+  papers: { kind: "paper", label: "Papers", color: COLORS.paper },
+  concepts: { kind: "claim", label: "Concepts", color: COLORS.claim },
+  ideas: { kind: "idea", label: "Ideas", color: COLORS.idea },
+  experiments: { kind: "experiment", label: "Experiments", color: COLORS.experiment },
+  methods: { kind: "method", label: "Methods", color: COLORS.method },
+  outputs: { kind: "code", label: "Code", color: COLORS.code },
+  verdicts: { kind: "verdict", label: "Verdicts", color: COLORS.verdict },
+  idea_paths: { kind: "generation_path", label: "Idea paths", color: COLORS.idea },
+});
+const KIND_TO_TYPE = Object.fromEntries(Object.entries(ENTITY_INFO).map(([type, info]) => [info.kind, type]));
+const EDGE_GROUPS = Object.freeze({
+  "Document sources": ["contains_source"],
+  "Paper to concept": ["extracts_claim"],
+  "Method genealogy": ["extracts_method"],
+  "Workflow (ideas / experiments)": ["grounds_idea", "validated_by", "runs_code", "evaluates_to", "path_member"],
+});
+const PRESETS = Object.freeze({
+  Citations: { kinds: ["paper"], edges: [], selectedOnly: false },
+  Methods: { kinds: ["paper", "method"], edges: ["extracts_method"], selectedOnly: false },
+  Ideas: { kinds: ["paper", "idea", "generation_path"], edges: ["grounds_idea", "path_member"], selectedOnly: false },
+  Experiments: { kinds: ["paper", "idea", "experiment", "code", "verdict"], edges: ["grounds_idea", "validated_by", "runs_code", "evaluates_to"], selectedOnly: true },
+  All: { kinds: Object.values(ENTITY_INFO).map((x) => x.kind), edges: Object.values(EDGE_GROUPS).flat(), selectedOnly: false },
+});
+
+const state = {
+  graph: { nodes: [], edges: [] },
+  status: {},
+  nodes: [],
+  edges: [],
+  nodeById: new Map(),
+  entitiesByType: {},
+  slugMap: new Map(),
+  forwardIndex: new Map(),
+  backlinkIndex: new Map(),
+  ready: false,
+};
+
+let graphRuntime = null;
+let ideaRuntime = null;
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+function attr(value) { return esc(value); }
+function slugForNode(node) {
+  return String(node.id || "").replace(/^[^:]+:/, "").replace(/:/g, "-").replace(/[^a-zA-Z0-9_.-]+/g, "-");
+}
+function typeForNode(node) { return KIND_TO_TYPE[node.kind] || `${node.kind || "entity"}s`; }
+function titleFor(node) { return node.label || node.title || node.source_title || node.id; }
+function truncate(text, max = 34) {
+  const value = String(text || "");
+  return value.length > max ? `${value.slice(0, max - 1)}...` : value;
+}
+function countBy(items, fn) {
+  const out = new Map();
+  for (const item of items) {
+    const key = fn(item);
+    out.set(key, (out.get(key) || 0) + 1);
+  }
+  return out;
+}
+function pushMapList(map, key, value) {
+  const list = map.get(key) || [];
+  list.push(value);
+  map.set(key, list);
+}
+function stableHash(text) {
+  let h = 2166136261;
+  for (const ch of String(text || "")) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+function itemRank(itemId) {
+  const value = String(itemId || "");
+  const match = value.match(/^(cc|cu|ghc)-?(\d+)|^(r)(\d+)$/);
+  if (!match) return 9999;
+  const prefix = match[1] || match[3];
+  const number = Number(match[2] || match[4] || 0);
+  const order = {cc: 0, cu: 1, ghc: 2, r: 3}[prefix] ?? 9;
+  return order * 1000 + number;
+}
+function entityColor(kind) { return COLORS[kind] || "#94A3B8"; }
+function edgeColor(type) {
+  if (type === "grounds_idea" || type === "path_member") return "#F5A623";
+  if (type === "validated_by" || type === "runs_code" || type === "evaluates_to") return "#5B8BD9";
+  if (type === "extracts_claim") return "#B8B8C8";
+  if (type === "extracts_method") return "#84CC16";
+  return "#9AA4B2";
+}
+
+async function boot() {
+  try {
+    const [graph, status] = await Promise.all([
+      fetch("graph-data.json", { cache: "no-store" }).then((r) => {
+        if (!r.ok) throw new Error(`${r.status} from graph-data.json`);
+        return r.json();
+      }),
+      fetch("run-status.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : {}),
+    ]);
+    state.graph = graph || { nodes: [], edges: [] };
+    state.status = status || {};
+    state.nodes = (state.graph.nodes || []).map((n, i) => ({
+      ...n,
+      index: i,
+      slug: slugForNode(n),
+      type: typeForNode(n),
+      degree: 0,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+    }));
+    state.nodeById = new Map(state.nodes.map((n) => [n.id, n]));
+    state.edges = (state.graph.edges || [])
+      .map((e, i) => ({ ...e, index: i, type: e.type || e.label || "edge" }))
+      .filter((e) => state.nodeById.has(e.source) && state.nodeById.has(e.target));
+    for (const edge of state.edges) {
+      state.nodeById.get(edge.source).degree++;
+      state.nodeById.get(edge.target).degree++;
+      pushMapList(state.forwardIndex, edge.source, edge);
+      pushMapList(state.backlinkIndex, edge.target, edge);
+    }
+    state.entitiesByType = {};
+    for (const type of Object.keys(ENTITY_INFO)) state.entitiesByType[type] = [];
+    for (const node of state.nodes) {
+      const type = node.type;
+      if (!state.entitiesByType[type]) state.entitiesByType[type] = [];
+      state.entitiesByType[type].push(node);
+      pushMapList(state.slugMap, node.slug, { type, title: titleFor(node) });
+    }
+    for (const items of Object.values(state.entitiesByType)) {
+      items.sort((a, b) => titleFor(a).localeCompare(titleFor(b)));
+    }
+    setupJumpInput();
+    state.ready = true;
+    document.getElementById("boot-status").textContent =
+      `${state.status.item_count || state.entitiesByType.papers.length} pages · ${state.status.graph_edge_count || state.edges.length} edges`;
+    route();
+  } catch (err) {
+    document.getElementById("view").innerHTML = `
+      <h2>Failed to load wiki data</h2>
+      <pre class="error">${esc(err.message || err)}</pre>
+    `;
+  }
+}
+
+function setupJumpInput() {
+  const input = document.getElementById("jump-input");
+  const list = document.getElementById("slug-list");
+  if (!input || !list) return;
+  const opts = [];
+  for (const [slug, matches] of state.slugMap) {
+    const first = matches[0] || {};
+    const label = matches.length > 1
+      ? `${first.title} · (${matches.map((x) => x.type).join("/")})`
+      : `${first.title} · ${first.type}`;
+    opts.push(`<option value="${attr(slug)}">${esc(label)}</option>`);
+  }
+  list.innerHTML = opts.join("");
+  input.disabled = false;
+  const go = () => {
+    const slug = input.value.trim();
+    if (!slug) return;
+    const matches = state.slugMap.get(slug);
+    if (!matches || !matches.length) {
+      input.classList.add("jump-error");
+      setTimeout(() => input.classList.remove("jump-error"), 700);
+      return;
+    }
+    location.hash = `#/reader/${matches[0].type}/${slug}`;
+    input.value = "";
+    input.blur();
+  };
+  input.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      go();
+    } else if (ev.key === "Escape") {
+      input.value = "";
+      input.blur();
+    }
+  });
+  input.addEventListener("change", go);
+}
+
+function route() {
+  destroyGraph();
+  destroyIdeaGraph();
+  const hash = location.hash || "#/";
+  const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  document.querySelectorAll(".nav-link").forEach((a) => {
+    const routeName = parts[0] || "reader";
+    a.classList.toggle("active", a.dataset.route === routeName || (a.dataset.route === "reader" && routeName === "reader"));
+  });
+  const mount = document.getElementById("view");
+  try {
+    if (parts.length === 0 || parts[0] === "reader" && parts.length === 1) return viewIndex(mount);
+    if (parts[0] === "graph") return viewGraph(mount);
+    if (parts[0] === "idea-graph") return viewIdeaGraph(mount);
+    if (parts[0] === "dashboard") return viewDashboard(mount);
+    if (parts[0] !== "reader") return view404(mount, `route not found: ${hash}`);
+    if (!parts[1]) return viewIndex(mount);
+    if (!parts[2]) return viewList(mount, parts[1]);
+    return viewEntity(mount, parts[1], parts[2]);
+  } catch (err) {
+    console.error(err);
+    mount.innerHTML = `<h2>View error</h2><pre class="error">${esc(err.message || err)}</pre>`;
+  }
+}
+
+function view404(mount, message) {
+  resetMount(mount);
+  mount.innerHTML = `
+    <div class="breadcrumb"><a href="#/">Reader</a></div>
+    <h1>Not found</h1>
+    <p class="muted">${esc(message)}</p>
+  `;
+}
+
+function resetMount(mount) {
+  mount.className = "";
+}
+
+function viewIndex(mount) {
+  resetMount(mount);
+  const cards = Object.entries(ENTITY_INFO)
+    .filter(([type]) => (state.entitiesByType[type] || []).length)
+    .map(([type, info]) => {
+      const entries = state.entitiesByType[type] || [];
+      const sample = entries.slice(0, 3).map(titleFor).join(" · ");
+      return `
+        <a class="card" href="#/reader/${attr(type)}">
+          <div class="card-head">
+            <span class="card-type"><span class="dot" style="background:${info.color}"></span> ${esc(info.label)}</span>
+            <span class="card-count">${entries.length}</span>
+          </div>
+          <div class="card-sample">${esc(sample || "No entries")}</div>
+        </a>
+      `;
+    }).join("");
+  const examples = ["papers", "ideas", "experiments"]
+    .map((type) => (state.entitiesByType[type] || [])[0])
+    .filter(Boolean)
+    .map((node) => `<a class="example" href="#/reader/${node.type}/${node.slug}"><code>#/reader/${node.type}/${esc(node.slug)}</code> - ${esc(titleFor(node))}</a>`)
+    .join("");
+  mount.innerHTML = `
+    <div class="breadcrumb"><strong>Reader</strong></div>
+    <h2>Entity types</h2>
+    <div class="examples">${examples}</div>
+    <div class="entity-grid">${cards}</div>
+  `;
+}
+
+function viewList(mount, type) {
+  resetMount(mount);
+  const info = ENTITY_INFO[type] || { label: type };
+  const entries = (state.entitiesByType[type] || []).slice();
+  entries.sort((a, b) => {
+    const ra = itemRank(a.item_id);
+    const rb = itemRank(b.item_id);
+    if (ra !== rb) return ra - rb;
+    return titleFor(a).localeCompare(titleFor(b));
+  });
+  const rows = entries.map((node) => `
+    <a class="row" href="#/reader/${attr(type)}/${attr(node.slug)}">
+      <div class="row-title">${esc(titleFor(node))}</div>
+      <div class="row-meta">
+        ${node.item_id ? `<span class="chip">${esc(node.item_id)}</span>` : ""}
+        ${node.selected ? `<span class="chip importance">selected</span>` : ""}
+        ${node.outcome ? `<span class="chip status">${esc(node.outcome)}</span>` : ""}
+        ${node.potential_label ? `<span class="chip status">${esc(node.potential_label)}</span>` : ""}
+      </div>
+    </a>
+  `).join("");
+  mount.innerHTML = `
+    <div class="breadcrumb">
+      <a href="#/">Reader</a> &rsaquo; <strong>${esc(info.label || type)}</strong>
+      <span class="muted">(${entries.length})</span>
+    </div>
+    <div class="list">${rows || '<p class="muted">No entries.</p>'}</div>
+  `;
+}
+
+function viewEntity(mount, type, slug) {
+  resetMount(mount);
+  const entries = state.entitiesByType[type] || [];
+  const node = entries.find((x) => x.slug === slug);
+  if (!node) return view404(mount, `unknown ${type}/${slug}`);
+  const siblings = entries.slice(0, 80).map((item) => `
+    <a class="sib ${item.id === node.id ? "current" : ""}" href="#/reader/${attr(type)}/${attr(item.slug)}">${esc(titleFor(item))}</a>
+  `).join("");
+  const metadata = [
+    node.kind,
+    node.item_id,
+    node.doc_slug,
+    node.generation_path,
+    node.potential_label,
+    node.outcome,
+    node.final_ready === true ? "final-ready" : "",
+  ].filter(Boolean).map((x) => `<span class="chip">${esc(x)}</span>`).join("");
+  const body = entityBody(node);
+  const outgoing = (state.forwardIndex.get(node.id) || []).map((edge) => edgeLink(edge, "target")).join("");
+  const incoming = (state.backlinkIndex.get(node.id) || []).map((edge) => edgeLink(edge, "source")).join("");
+  mount.innerHTML = `
+    <div class="breadcrumb">
+      <a href="#/">Reader</a> &rsaquo; <a href="#/reader/${attr(type)}">${esc((ENTITY_INFO[type] || {}).label || type)}</a> &rsaquo;
+      <strong>${esc(titleFor(node))}</strong>
+    </div>
+    <div class="reader-grid">
+      <aside class="pane left">
+        <h3>${esc((ENTITY_INFO[type] || {}).label || type)}</h3>
+        <div class="sib-list">${siblings}</div>
+      </aside>
+      <article class="pane center">
+        <h1>${esc(titleFor(node))}</h1>
+        <div class="metadata">${metadata}</div>
+        <div class="body markdown">${body}</div>
+      </article>
+      <aside class="pane right">
+        <h3>Outgoing</h3>
+        <div class="link-list">${outgoing || '<p class="muted small">No outgoing links.</p>'}</div>
+        <h3>Incoming</h3>
+        <div class="link-list">${incoming || '<p class="muted small">No incoming links.</p>'}</div>
+      </aside>
+    </div>
+  `;
+}
+
+function entityBody(node) {
+  const rows = [];
+  if (node.source_title) rows.push(["Source", node.source_title]);
+  if (node.raw_title) rows.push(["Raw title", node.raw_title]);
+  if (node.text) rows.push(["Claim", node.text]);
+  if (node.summary) rows.push(["Summary", node.summary]);
+  if (node.recommendation) rows.push(["Recommendation", node.recommendation]);
+  if (node.potential_score !== undefined) rows.push(["Potential score", node.potential_score]);
+  if (node.id) rows.push(["ID", node.id]);
+  return `
+    <h2>Record</h2>
+    <table class="data-table">
+      <tbody>
+        ${rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function edgeLink(edge, end) {
+  const other = state.nodeById.get(edge[end]);
+  if (!other) return "";
+  return `<a href="#/reader/${other.type}/${other.slug}"><code>${esc(edge.type)}</code> ${esc(titleFor(other))}</a>`;
+}
+
+function viewGraph(mount) {
+  mount.outerHTML = `
+    <main id="view" class="graph-shell">
+      <aside class="graph-sidebar">
+        <h3>Graph</h3>
+        <input type="search" id="graph-search" placeholder="Search nodes..." autocomplete="off">
+        <div id="graph-search-results"></div>
+        <h4>Preset views</h4>
+        <div id="graph-presets" class="graph-presets"></div>
+        <h4>Entity types</h4>
+        <div id="graph-entity-filters" class="filter-group"></div>
+        <h4>Edge types</h4>
+        <div id="graph-edge-filters" class="filter-group"></div>
+        <h4>BFS depth</h4>
+        <div class="bfs-controls">
+          <input type="number" id="graph-bfs-depth" value="2" min="1" max="5">
+          <button type="button" id="graph-bfs-clear">Clear</button>
+        </div>
+        <p class="muted graph-stats" id="graph-stats">loading...</p>
+        <p class="muted small">Left-click highlights neighborhood. Double-click opens the Reader page.</p>
+      </aside>
+      <section class="cy-canvas">
+        <canvas id="graph-canvas"></canvas>
+      </section>
+      <aside class="graph-info" id="graph-info" hidden></aside>
+    </main>
+  `;
+  initGraphRuntime();
+}
+
+function destroyGraph() {
+  if (graphRuntime) {
+    cancelAnimationFrame(graphRuntime.raf);
+    window.removeEventListener("resize", graphRuntime.resize);
+    graphRuntime = null;
+  }
+}
+
+function initGraphRuntime() {
+  const canvas = document.getElementById("graph-canvas");
+  const ctx = canvas.getContext("2d");
+  const runtime = graphRuntime = {
+    canvas,
+    ctx,
+    activePreset: "All",
+    activeKinds: new Set(PRESETS.All.kinds),
+    activeEdges: new Set(PRESETS.All.edges),
+    selectedOnly: false,
+    query: "",
+    selected: null,
+    highlighted: null,
+    hover: null,
+    dragging: null,
+    raf: 0,
+    ticks: 0,
+  };
+  buildGraphControls(runtime);
+  runtime.resize = () => resizeGraph(runtime);
+  window.addEventListener("resize", runtime.resize);
+  runtime.resize();
+  wireGraphPointer(runtime);
+  runtime.raf = requestAnimationFrame(() => graphFrame(runtime));
+}
+
+function buildGraphControls(runtime) {
+  const presets = document.getElementById("graph-presets");
+  presets.innerHTML = Object.entries(PRESETS).map(([name]) =>
+    `<button type="button" class="preset-btn ${name === runtime.activePreset ? "active" : ""}" data-preset="${attr(name)}">${esc(name)}</button>`
+  ).join("");
+  presets.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const name = button.dataset.preset;
+      const preset = PRESETS[name];
+      runtime.activePreset = name;
+      runtime.activeKinds = new Set(preset.kinds);
+      runtime.activeEdges = new Set(preset.edges);
+      runtime.selectedOnly = !!preset.selectedOnly;
+      runtime.highlighted = null;
+      syncGraphControls(runtime);
+      seedGraphPositions(runtime, true);
+    });
+  });
+  const kindCounts = countBy(state.nodes, (n) => n.kind);
+  document.getElementById("graph-entity-filters").innerHTML = Object.entries(ENTITY_INFO)
+    .filter(([, info]) => kindCounts.has(info.kind))
+    .map(([type, info]) => `
+      <label class="filter-row">
+        <input type="checkbox" data-kind="${attr(info.kind)}" ${runtime.activeKinds.has(info.kind) ? "checked" : ""}>
+        <span class="dot" style="background:${info.color}"></span>
+        <span>${esc(info.label)}</span>
+        <span class="count">(${kindCounts.get(info.kind) || 0})</span>
+      </label>
+    `).join("");
+  document.querySelectorAll("[data-kind]").forEach((input) => {
+    input.addEventListener("change", () => {
+      input.checked ? runtime.activeKinds.add(input.dataset.kind) : runtime.activeKinds.delete(input.dataset.kind);
+      runtime.activePreset = "Custom";
+      syncGraphControls(runtime);
+      seedGraphPositions(runtime, true);
+    });
+  });
+  const edgeCounts = countBy(state.edges, (e) => e.type);
+  const edgeHtml = Object.entries(EDGE_GROUPS).map(([group, types]) => {
+    const total = types.reduce((sum, type) => sum + (edgeCounts.get(type) || 0), 0);
+    const rows = types.map((type) => `
+      <label class="filter-row edge-child">
+        <input type="checkbox" data-edge="${attr(type)}" ${runtime.activeEdges.has(type) ? "checked" : ""}>
+        <span class="dot" style="background:${edgeColor(type)}"></span>
+        <span>${esc(type)}</span>
+        <span class="count">${edgeCounts.get(type) || 0}</span>
+      </label>
+    `).join("");
+    return `<details class="edge-group" open><summary>${esc(group)} <span class="count">(${total})</span></summary>${rows}</details>`;
+  }).join("");
+  document.getElementById("graph-edge-filters").innerHTML = edgeHtml;
+  document.querySelectorAll("[data-edge]").forEach((input) => {
+    input.addEventListener("change", () => {
+      input.checked ? runtime.activeEdges.add(input.dataset.edge) : runtime.activeEdges.delete(input.dataset.edge);
+      runtime.activePreset = "Custom";
+      syncGraphControls(runtime);
+      seedGraphPositions(runtime, true);
+    });
+  });
+  const search = document.getElementById("graph-search");
+  search.addEventListener("input", () => {
+    runtime.query = search.value.trim().toLowerCase();
+    renderSearchResults(runtime);
+  });
+  document.getElementById("graph-bfs-clear").addEventListener("click", () => {
+    runtime.highlighted = null;
+    runtime.selected = null;
+    document.getElementById("graph-info").hidden = true;
+  });
+  syncGraphControls(runtime);
+}
+
+function syncGraphControls(runtime) {
+  document.querySelectorAll(".preset-btn").forEach((button) => {
+    button.classList.toggle("active", button.dataset.preset === runtime.activePreset);
+  });
+  document.querySelectorAll("[data-kind]").forEach((input) => {
+    input.checked = runtime.activeKinds.has(input.dataset.kind);
+  });
+  document.querySelectorAll("[data-edge]").forEach((input) => {
+    input.checked = runtime.activeEdges.has(input.dataset.edge);
+  });
+}
+
+function visibleGraph(runtime) {
+  const query = runtime.query;
+  const candidateEdges = state.edges.filter((edge) => runtime.activeEdges.has(edge.type));
+  const visibleIds = new Set();
+  for (const edge of candidateEdges) {
+    const source = state.nodeById.get(edge.source);
+    const target = state.nodeById.get(edge.target);
+    if (!source || !target) continue;
+    if (!runtime.activeKinds.has(source.kind) || !runtime.activeKinds.has(target.kind)) continue;
+    if (runtime.selectedOnly && source.kind === "idea" && !source.selected) continue;
+    if (runtime.selectedOnly && target.kind === "idea" && !target.selected) continue;
+    visibleIds.add(source.id);
+    visibleIds.add(target.id);
+  }
+  for (const node of state.nodes) {
+    if (!runtime.activeKinds.has(node.kind)) continue;
+    if (runtime.selectedOnly && node.kind === "idea" && !node.selected) continue;
+    if (query && !`${titleFor(node)} ${node.id} ${node.item_id || ""}`.toLowerCase().includes(query)) continue;
+    if (runtime.activePreset === "All" || visibleIds.has(node.id) || query) visibleIds.add(node.id);
+  }
+  const nodes = state.nodes.filter((node) => visibleIds.has(node.id));
+  const edges = candidateEdges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+  return { nodes, edges, nodeIds: visibleIds };
+}
+
+function resizeGraph(runtime) {
+  const ratio = window.devicePixelRatio || 1;
+  runtime.canvas.width = Math.max(1, runtime.canvas.clientWidth * ratio);
+  runtime.canvas.height = Math.max(1, runtime.canvas.clientHeight * ratio);
+  runtime.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  seedGraphPositions(runtime, true);
+}
+
+function seedGraphPositions(runtime, hard = false) {
+  const w = runtime.canvas.clientWidth || 1000;
+  const h = runtime.canvas.clientHeight || 700;
+  const cx = w / 2;
+  const cy = h / 2;
+  const { nodes } = visibleGraph(runtime);
+  const groups = new Map();
+  for (const node of nodes) {
+    if (!groups.has(node.kind)) groups.set(node.kind, []);
+    groups.get(node.kind).push(node);
+  }
+  const order = ["document", "generation_path", "paper", "method", "claim", "idea", "experiment", "code", "verdict"];
+  for (const [kind, group] of groups) {
+    const ring = Math.max(70, Math.min(w, h) * (0.11 + 0.035 * Math.max(0, order.indexOf(kind))));
+    group.forEach((node, i) => {
+      if (!hard && Number.isFinite(node.x) && Number.isFinite(node.y) && node.x !== 0) return;
+      const hash = stableHash(node.id);
+      const angle = (i / Math.max(1, group.length)) * Math.PI * 2 + (hash % 628) / 100;
+      node.x = cx + Math.cos(angle) * ring + Math.sin(hash) * 20;
+      node.y = cy + Math.sin(angle) * ring * 0.72 + Math.cos(hash) * 20;
+      node.vx = 0;
+      node.vy = 0;
+    });
+  }
+  runtime.ticks = 0;
+}
+
+function graphFrame(runtime) {
+  const graph = visibleGraph(runtime);
+  if (runtime.ticks < 260) {
+    stepForce(runtime, graph);
+    runtime.ticks++;
+  }
+  drawGraph(runtime, graph);
+  runtime.raf = requestAnimationFrame(() => graphFrame(runtime));
+}
+
+function stepForce(runtime, graph) {
+  const w = runtime.canvas.clientWidth || 1000;
+  const h = runtime.canvas.clientHeight || 700;
+  const cx = w / 2;
+  const cy = h / 2;
+  const nodes = graph.nodes;
+  const kRepel = Math.max(1200, Math.min(5200, 240000 / Math.max(25, nodes.length)));
+  for (let i = 0; i < nodes.length; i++) {
+    const a = nodes[i];
+    for (let j = i + 1; j < nodes.length; j++) {
+      const b = nodes[j];
+      let dx = a.x - b.x;
+      let dy = a.y - b.y;
+      let d2 = dx * dx + dy * dy + 0.01;
+      if (d2 > 90000) continue;
+      const force = kRepel / d2;
+      const d = Math.sqrt(d2);
+      dx /= d;
+      dy /= d;
+      a.vx += dx * force;
+      a.vy += dy * force;
+      b.vx -= dx * force;
+      b.vy -= dy * force;
+    }
+  }
+  for (const edge of graph.edges) {
+    const a = state.nodeById.get(edge.source);
+    const b = state.nodeById.get(edge.target);
+    if (!a || !b) continue;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    const desired = edge.type === "path_member" ? 95 : edge.type === "extracts_claim" ? 120 : 150;
+    const force = (d - desired) * 0.006;
+    const fx = dx / d * force;
+    const fy = dy / d * force;
+    a.vx += fx;
+    a.vy += fy;
+    b.vx -= fx;
+    b.vy -= fy;
+  }
+  const kindCenters = {
+    document: [cx - w * 0.18, cy - h * 0.18],
+    generation_path: [cx - w * 0.18, cy],
+    paper: [cx - w * 0.12, cy],
+    claim: [cx, cy + h * 0.12],
+    method: [cx - w * 0.02, cy - h * 0.14],
+    idea: [cx + w * 0.08, cy],
+    experiment: [cx + w * 0.22, cy + h * 0.02],
+    code: [cx + w * 0.28, cy - h * 0.12],
+    verdict: [cx + w * 0.30, cy + h * 0.16],
+  };
+  for (const node of nodes) {
+    const [tx, ty] = kindCenters[node.kind] || [cx, cy];
+    node.vx += (tx - node.x) * 0.0016;
+    node.vy += (ty - node.y) * 0.0016;
+    node.vx *= 0.82;
+    node.vy *= 0.82;
+    node.x = Math.max(18, Math.min(w - 18, node.x + node.vx));
+    node.y = Math.max(18, Math.min(h - 18, node.y + node.vy));
+  }
+}
+
+function drawGraph(runtime, graph) {
+  const ctx = runtime.ctx;
+  const w = runtime.canvas.clientWidth || 1000;
+  const h = runtime.canvas.clientHeight || 700;
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineCap = "round";
+  const highlight = runtime.highlighted;
+  for (const edge of graph.edges) {
+    const a = state.nodeById.get(edge.source);
+    const b = state.nodeById.get(edge.target);
+    if (!a || !b) continue;
+    const dim = highlight && !highlight.has(edge.source) && !highlight.has(edge.target);
+    ctx.globalAlpha = dim ? 0.08 : edge.type === "path_member" ? 0.22 : 0.42;
+    ctx.strokeStyle = edgeColor(edge.type);
+    ctx.lineWidth = edge.type === "grounds_idea" || edge.type === "validated_by" ? 1.8 : 1;
+    if (edge.type === "path_member" || edge.type === "extracts_claim") ctx.setLineDash([5, 6]);
+    else ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  const labeled = new Set();
+  for (const node of graph.nodes) {
+    const dim = highlight && !highlight.has(node.id);
+    const selected = runtime.selected && runtime.selected.id === node.id;
+    const radius = nodeRadius(node);
+    ctx.globalAlpha = dim ? 0.18 : 1;
+    ctx.fillStyle = entityColor(node.kind);
+    ctx.strokeStyle = selected ? "#fff" : "rgba(255,255,255,0.75)";
+    ctx.lineWidth = selected ? 4 : 1.5;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    const showLabel = selected || runtime.hover === node || graph.nodes.length < 120 ||
+      (node.kind === "paper" && node.degree >= 2) ||
+      (node.kind === "idea" && node.selected && labeled.size < 40);
+    if (showLabel) {
+      labeled.add(node.id);
+      drawLabel(ctx, truncate(titleFor(node), 38), node.x + radius + 5, node.y + 4, dim ? 0.25 : 0.88);
+    }
+  }
+  ctx.globalAlpha = 1;
+  document.getElementById("graph-stats").textContent = `${graph.nodes.length} nodes · ${graph.edges.length} edges`;
+}
+
+function nodeRadius(node) {
+  const base = { document: 9, paper: 9, claim: 6, idea: node.selected ? 10 : 7, experiment: 8, method: 7, code: 6, verdict: 6, generation_path: 8 }[node.kind] || 6;
+  return base + Math.min(8, Math.sqrt(node.degree || 0));
+}
+
+function drawLabel(ctx, text, x, y, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = "11px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(255,255,255,0.88)";
+  ctx.fillStyle = "#2f3742";
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function nodeAt(runtime, x, y) {
+  const graph = visibleGraph(runtime);
+  for (let i = graph.nodes.length - 1; i >= 0; i--) {
+    const node = graph.nodes[i];
+    const dx = x - node.x;
+    const dy = y - node.y;
+    if (Math.sqrt(dx * dx + dy * dy) <= nodeRadius(node) + 5) return node;
+  }
+  return null;
+}
+
+function wireGraphPointer(runtime) {
+  function local(ev) {
+    const rect = runtime.canvas.getBoundingClientRect();
+    return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+  }
+  runtime.canvas.addEventListener("mousemove", (ev) => {
+    const pos = local(ev);
+    const node = nodeAt(runtime, pos.x, pos.y);
+    runtime.hover = node;
+    runtime.canvas.style.cursor = node ? "pointer" : "default";
+    if (runtime.dragging) {
+      runtime.dragging.x = pos.x;
+      runtime.dragging.y = pos.y;
+      runtime.dragging.vx = 0;
+      runtime.dragging.vy = 0;
+    }
+  });
+  runtime.canvas.addEventListener("mouseleave", () => {
+    runtime.hover = null;
+    runtime.dragging = null;
+  });
+  runtime.canvas.addEventListener("mousedown", (ev) => {
+    const pos = local(ev);
+    runtime.dragging = nodeAt(runtime, pos.x, pos.y);
+  });
+  window.addEventListener("mouseup", () => {
+    if (runtime) runtime.dragging = null;
+  });
+  runtime.canvas.addEventListener("click", (ev) => {
+    const pos = local(ev);
+    const node = nodeAt(runtime, pos.x, pos.y);
+    if (!node) return;
+    runtime.selected = node;
+    runtime.highlighted = bfs(node.id, Number(document.getElementById("graph-bfs-depth").value || 2));
+    renderGraphInfo(node);
+  });
+  runtime.canvas.addEventListener("dblclick", (ev) => {
+    const pos = local(ev);
+    const node = nodeAt(runtime, pos.x, pos.y);
+    if (node) location.hash = `#/reader/${node.type}/${node.slug}`;
+  });
+}
+
+function bfs(startId, depth) {
+  const seen = new Set([startId]);
+  let frontier = new Set([startId]);
+  for (let d = 0; d < depth; d++) {
+    const next = new Set();
+    for (const edge of state.edges) {
+      if (frontier.has(edge.source) && !seen.has(edge.target)) next.add(edge.target);
+      if (frontier.has(edge.target) && !seen.has(edge.source)) next.add(edge.source);
+    }
+    for (const id of next) seen.add(id);
+    frontier = next;
+  }
+  return seen;
+}
+
+function renderGraphInfo(node) {
+  const info = document.getElementById("graph-info");
+  const edges = [...(state.forwardIndex.get(node.id) || []), ...(state.backlinkIndex.get(node.id) || [])].slice(0, 12);
+  info.hidden = false;
+  info.innerHTML = `
+    <h4>${esc(titleFor(node))}</h4>
+    <p class="muted small">${esc(node.type)} · ${esc(node.id)}</p>
+    ${node.item_id ? `<p><strong>item_id:</strong> ${esc(node.item_id)}</p>` : ""}
+    ${node.potential_score !== undefined ? `<p><strong>potential_score:</strong> ${esc(node.potential_score)}</p>` : ""}
+    <p><a href="#/reader/${node.type}/${node.slug}">Open Reader page</a></p>
+    <h4>Connections</h4>
+    <div class="link-list">${edges.map((edge) => {
+      const otherId = edge.source === node.id ? edge.target : edge.source;
+      const other = state.nodeById.get(otherId);
+      return other ? `<a href="#/reader/${other.type}/${other.slug}"><code>${esc(edge.type)}</code> ${esc(titleFor(other))}</a>` : "";
+    }).join("") || '<p class="muted small">No connections.</p>'}</div>
+  `;
+}
+
+function renderSearchResults(runtime) {
+  const box = document.getElementById("graph-search-results");
+  if (!runtime.query) {
+    box.innerHTML = "";
+    return;
+  }
+  const hits = state.nodes
+    .filter((node) => `${titleFor(node)} ${node.id} ${node.item_id || ""}`.toLowerCase().includes(runtime.query))
+    .slice(0, 12);
+  box.innerHTML = hits.map((node) => `
+    <div class="search-item" data-id="${attr(node.id)}">
+      <span class="dot" style="background:${entityColor(node.kind)}"></span>
+      <span>${esc(titleFor(node))}</span>
+    </div>
+  `).join("");
+  box.querySelectorAll("[data-id]").forEach((item) => {
+    item.addEventListener("click", () => {
+      const node = state.nodeById.get(item.dataset.id);
+      if (!node) return;
+      runtime.selected = node;
+      runtime.highlighted = bfs(node.id, 2);
+      renderGraphInfo(node);
+    });
+  });
+}
+
+function viewIdeaGraph(mount) {
+  mount.outerHTML = `
+    <main id="view" class="idea-graph-page">
+      <aside class="idea-graph-sidebar">
+        <div class="breadcrumb"><a href="#/">Reader</a> / Idea Graph</div>
+        <h1>Idea Graph</h1>
+        <p class="muted small">Idea-centered graph from the E2E workflow evidence.</p>
+        <label class="idea-control">
+          <span>Search</span>
+          <input id="idea-graph-search" type="search" placeholder="title, slug, or edge type" autocomplete="off">
+        </label>
+        <h3>Status</h3>
+        <div id="idea-status-filters" class="idea-filter-stack"></div>
+        <h3>Display</h3>
+        <label class="idea-filter-row"><input id="idea-show-context" type="checkbox" checked><span>Include context edges</span><span></span></label>
+        <label class="idea-filter-row"><input id="idea-show-labels" type="checkbox" checked><span>Show node labels</span><span></span></label>
+        <div class="idea-graph-actions">
+          <button type="button" id="idea-fit">Fit</button>
+          <button type="button" id="idea-zoom-in">+</button>
+          <button type="button" id="idea-zoom-out">-</button>
+        </div>
+        <p id="idea-graph-stats" class="muted graph-stats">loading...</p>
+      </aside>
+      <section class="idea-graph-canvas-wrap">
+        <svg id="idea-graph-canvas" class="idea-graph-canvas" role="img" aria-label="Idea connection graph"></svg>
+      </section>
+      <aside id="idea-node-detail" class="idea-node-detail">
+        <h2>Selection</h2>
+        <p class="muted">Select a node to inspect links and open its wiki page.</p>
+      </aside>
+    </main>
+  `;
+  initIdeaGraph();
+}
+
+function destroyIdeaGraph() {
+  if (ideaRuntime) {
+    window.removeEventListener("resize", ideaRuntime.resize);
+    ideaRuntime = null;
+  }
+}
+
+function initIdeaGraph() {
+  const nodes = state.nodes.filter((node) => ["paper", "idea", "experiment", "generation_path"].includes(node.kind) && (node.kind !== "idea" || node.selected));
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const edges = state.edges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target) && ["grounds_idea", "validated_by", "path_member"].includes(edge.type));
+  computeIdeaLayout(nodes, edges);
+  const statuses = Array.from(new Set(nodes.filter((n) => n.kind === "idea").map((n) => n.potential_label || "unknown"))).sort();
+  ideaRuntime = {
+    svg: document.getElementById("idea-graph-canvas"),
+    nodes,
+    edges,
+    nodeIds,
+    statuses: new Set(statuses),
+    search: "",
+    selected: null,
+    showContext: true,
+    showLabels: true,
+    scale: 1,
+    tx: 0,
+    ty: 0,
+  };
+  document.getElementById("idea-status-filters").innerHTML = statuses.map((status) => `
+    <label class="idea-filter-row">
+      <input type="checkbox" data-status="${attr(status)}" checked>
+      <span>${esc(status)}</span>
+      <span class="count">${nodes.filter((n) => n.kind === "idea" && (n.potential_label || "unknown") === status).length}</span>
+    </label>
+  `).join("");
+  document.querySelectorAll("[data-status]").forEach((input) => {
+    input.addEventListener("change", () => {
+      input.checked ? ideaRuntime.statuses.add(input.dataset.status) : ideaRuntime.statuses.delete(input.dataset.status);
+      renderIdeaGraph();
+    });
+  });
+  document.getElementById("idea-graph-search").addEventListener("input", (ev) => {
+    ideaRuntime.search = ev.target.value.trim().toLowerCase();
+    renderIdeaGraph();
+  });
+  document.getElementById("idea-show-context").addEventListener("change", (ev) => {
+    ideaRuntime.showContext = ev.target.checked;
+    renderIdeaGraph();
+  });
+  document.getElementById("idea-show-labels").addEventListener("change", (ev) => {
+    ideaRuntime.showLabels = ev.target.checked;
+    renderIdeaGraph();
+  });
+  document.getElementById("idea-fit").addEventListener("click", () => {
+    ideaRuntime.scale = 1;
+    ideaRuntime.tx = 0;
+    ideaRuntime.ty = 0;
+    renderIdeaGraph();
+  });
+  document.getElementById("idea-zoom-in").addEventListener("click", () => {
+    ideaRuntime.scale *= 1.18;
+    renderIdeaGraph();
+  });
+  document.getElementById("idea-zoom-out").addEventListener("click", () => {
+    ideaRuntime.scale /= 1.18;
+    renderIdeaGraph();
+  });
+  ideaRuntime.resize = renderIdeaGraph;
+  window.addEventListener("resize", ideaRuntime.resize);
+  renderIdeaGraph();
+}
+
+function computeIdeaLayout(nodes, edges) {
+  const groups = {
+    generation_path: { x: 210, y: 350 },
+    paper: { x: 370, y: 350 },
+    idea: { x: 650, y: 350 },
+    experiment: { x: 930, y: 350 },
+  };
+  const byKind = new Map();
+  for (const node of nodes) {
+    if (!byKind.has(node.kind)) byKind.set(node.kind, []);
+    byKind.get(node.kind).push(node);
+  }
+  for (const [kind, groupNodes] of byKind) {
+    const center = groups[kind] || { x: 600, y: 350 };
+    groupNodes.sort((a, b) => itemRank(a.item_id) - itemRank(b.item_id) || titleFor(a).localeCompare(titleFor(b)));
+    groupNodes.forEach((node, i) => {
+      const rows = Math.ceil(Math.sqrt(groupNodes.length));
+      const col = i % rows;
+      const row = Math.floor(i / rows);
+      node.ix = center.x + (col - rows / 2) * 32 + ((stableHash(node.id) % 11) - 5);
+      node.iy = center.y + (row - groupNodes.length / rows / 2) * 34 + ((stableHash(node.id) % 13) - 6);
+    });
+  }
+  for (let tick = 0; tick < 120; tick++) {
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j];
+        let dx = a.ix - b.ix;
+        let dy = a.iy - b.iy;
+        let d2 = dx * dx + dy * dy + 0.01;
+        if (d2 > 2200) continue;
+        const d = Math.sqrt(d2);
+        const f = 18 / d2;
+        dx /= d; dy /= d;
+        a.ix += dx * f; a.iy += dy * f;
+        b.ix -= dx * f; b.iy -= dy * f;
+      }
+    }
+    for (const edge of edges) {
+      const a = nodes.find((n) => n.id === edge.source);
+      const b = nodes.find((n) => n.id === edge.target);
+      if (!a || !b) continue;
+      const dx = b.ix - a.ix;
+      const dy = b.iy - a.iy;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const f = (d - 170) * 0.003;
+      a.ix += dx / d * f; a.iy += dy / d * f;
+      b.ix -= dx / d * f; b.iy -= dy / d * f;
+    }
+  }
+}
+
+function visibleIdeaGraph() {
+  const rt = ideaRuntime;
+  const query = rt.search;
+  const nodes = rt.nodes.filter((node) => {
+    if (node.kind === "idea" && !rt.statuses.has(node.potential_label || "unknown")) return false;
+    if (query && !`${titleFor(node)} ${node.id} ${node.item_id || ""}`.toLowerCase().includes(query)) {
+      const connectedEdgeHit = rt.edges.some((edge) => (edge.source === node.id || edge.target === node.id) && edge.type.includes(query));
+      if (!connectedEdgeHit) return false;
+    }
+    return true;
+  });
+  const ids = new Set(nodes.map((n) => n.id));
+  const edges = rt.edges.filter((edge) => ids.has(edge.source) && ids.has(edge.target) && (rt.showContext || edge.type !== "path_member"));
+  return { nodes, edges, ids };
+}
+
+function renderIdeaGraph() {
+  const rt = ideaRuntime;
+  if (!rt) return;
+  const svg = rt.svg;
+  const width = svg.clientWidth || 900;
+  const height = svg.clientHeight || 650;
+  const graph = visibleIdeaGraph();
+  const selectedNeighbors = new Set();
+  if (rt.selected) {
+    selectedNeighbors.add(rt.selected.id);
+    graph.edges.forEach((edge) => {
+      if (edge.source === rt.selected.id) selectedNeighbors.add(edge.target);
+      if (edge.target === rt.selected.id) selectedNeighbors.add(edge.source);
+    });
+  }
+  const minX = 80, minY = 80, maxX = 1040, maxY = 660;
+  const viewBox = `${minX - rt.tx} ${minY - rt.ty} ${(maxX - minX) / rt.scale} ${(maxY - minY) / rt.scale}`;
+  const edgesHtml = graph.edges.map((edge) => {
+    const a = state.nodeById.get(edge.source);
+    const b = state.nodeById.get(edge.target);
+    if (!a || !b) return "";
+    const dim = rt.selected && !selectedNeighbors.has(a.id) && !selectedNeighbors.has(b.id);
+    const direct = edge.type !== "path_member";
+    return `<path class="idea-edge ${direct ? "direct" : "context"} ${dim ? "is-dim" : ""}" d="M ${a.ix} ${a.iy} C ${(a.ix + b.ix) / 2} ${a.iy}, ${(a.ix + b.ix) / 2} ${b.iy}, ${b.ix} ${b.iy}" stroke="${edgeColor(edge.type)}"></path>`;
+  }).join("");
+  const nodesHtml = graph.nodes.map((node) => {
+    const dim = rt.selected && !selectedNeighbors.has(node.id);
+    const selected = rt.selected && rt.selected.id === node.id;
+    const r = node.kind === "idea" ? 12 : node.kind === "paper" ? 10 : 8;
+    return `
+      <g class="idea-node entity-${attr(node.type)} ${selected ? "is-selected" : ""} ${!selected && selectedNeighbors.has(node.id) ? "is-neighbor" : ""} ${dim ? "is-dim" : ""}" data-id="${attr(node.id)}" transform="translate(${node.ix}, ${node.iy})">
+        <circle r="${r}" fill="${entityColor(node.kind)}"></circle>
+        ${rt.showLabels ? `<text x="${r + 5}" y="4">${esc(truncate(titleFor(node), 31))}</text>` : ""}
+      </g>
+    `;
+  }).join("");
+  svg.setAttribute("viewBox", viewBox);
+  svg.innerHTML = `<rect class="idea-svg-bg" x="-200" y="-200" width="1600" height="1200"></rect>${edgesHtml}${nodesHtml}`;
+  svg.querySelectorAll("[data-id]").forEach((el) => {
+    el.addEventListener("click", () => {
+      rt.selected = state.nodeById.get(el.dataset.id);
+      renderIdeaGraph();
+      renderIdeaDetail(rt.selected, graph.edges);
+    });
+    el.addEventListener("dblclick", () => {
+      const node = state.nodeById.get(el.dataset.id);
+      if (node) location.hash = `#/reader/${node.type}/${node.slug}`;
+    });
+  });
+  document.getElementById("idea-graph-stats").textContent = `${graph.nodes.length} nodes · ${graph.edges.length} edges`;
+  if (rt.selected) renderIdeaDetail(rt.selected, graph.edges);
+}
+
+function renderIdeaDetail(node, graphEdges) {
+  const detail = document.getElementById("idea-node-detail");
+  if (!node) return;
+  const links = graphEdges
+    .filter((edge) => edge.source === node.id || edge.target === node.id)
+    .slice(0, 20)
+    .map((edge) => {
+      const other = state.nodeById.get(edge.source === node.id ? edge.target : edge.source);
+      return other ? `<div class="idea-connection"><code>${esc(edge.type)}</code><strong>${esc(titleFor(other))}</strong><a href="#/reader/${other.type}/${other.slug}">Open page</a></div>` : "";
+    }).join("");
+  detail.innerHTML = `
+    <h2>${esc(titleFor(node))}</h2>
+    <div class="idea-node-meta">
+      <span class="dot" style="background:${entityColor(node.kind)}"></span>
+      <code>${esc(node.id)}</code>
+    </div>
+    <div class="metadata">
+      ${node.item_id ? `<span class="chip">${esc(node.item_id)}</span>` : ""}
+      ${node.generation_path ? `<span class="chip">${esc(node.generation_path)}</span>` : ""}
+      ${node.potential_label ? `<span class="chip">${esc(node.potential_label)}</span>` : ""}
+      ${node.outcome ? `<span class="chip">${esc(node.outcome)}</span>` : ""}
+    </div>
+    <p><a href="#/reader/${node.type}/${node.slug}">Open Reader page</a></p>
+    <h3>Connections</h3>
+    <div class="idea-connection-list">${links || '<p class="muted small">No visible connections.</p>'}</div>
+    <div class="idea-legend">
+      ${Object.entries(ENTITY_INFO).filter(([, info]) => ["paper", "idea", "experiment", "generation_path"].includes(info.kind)).map(([, info]) => `<span class="idea-legend-item"><span class="dot" style="background:${info.color}"></span>${esc(info.label)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function viewDashboard(mount) {
+  resetMount(mount);
+  const counts = Object.fromEntries(Object.entries(ENTITY_INFO).map(([type, info]) => [type, (state.entitiesByType[type] || []).length]));
+  const verdictCounts = state.status.verdict_counts || {};
+  const outcomeCounts = state.status.experiment_outcome_counts || {};
+  const selectedIdeas = (state.entitiesByType.ideas || []).filter((node) => node.selected);
+  const rows = selectedIdeas
+    .sort((a, b) => itemRank(a.item_id) - itemRank(b.item_id))
+    .slice(0, 39)
+    .map((idea) => {
+      const exp = state.nodes.find((node) => node.kind === "experiment" && node.item_id === idea.item_id);
+      const verdict = state.nodes.find((node) => node.kind === "verdict" && node.item_id === idea.item_id);
+      return `
+        <tr>
+          <td><a href="#/reader/ideas/${attr(idea.slug)}">${esc(titleFor(idea))}</a></td>
+          <td>${esc(idea.item_id || "")}</td>
+          <td>${esc(idea.potential_label || "")} ${idea.potential_score !== undefined ? esc(idea.potential_score) : ""}</td>
+          <td>${esc(exp ? exp.outcome : "")}</td>
+          <td>${esc(verdict ? verdict.label : "")}</td>
+        </tr>
+      `;
+    }).join("");
+  mount.innerHTML = `
+    <div class="dashboard">
+      <div class="breadcrumb"><strong>Dashboard</strong></div>
+      <section class="dash-card headline">
+        <div class="headline-row">
+          ${[
+            ["Papers", counts.papers || 0, COLORS.paper],
+            ["Concepts", counts.concepts || 0, COLORS.claim],
+            ["Methods", counts.methods || 0, COLORS.method],
+            ["Experiments", counts.experiments || 0, COLORS.experiment],
+            ["Ideas", counts.ideas || 0, COLORS.idea],
+            ["Selected", state.status.selected_idea_count || selectedIdeas.length, COLORS.idea],
+            ["Edges", state.status.graph_edge_count || state.edges.length, "#1ABC9C"],
+          ].map(([label, value, color]) => `
+            <div class="headline-cell">
+              <div class="hl-label" style="color:${color}">${esc(label)}</div>
+              <div class="hl-num">${esc(value)}</div>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+      <div class="dash-row">
+        <section class="dash-card">
+          <h3>Verdicts</h3>
+          <table class="data-table"><tbody>
+            ${Object.entries(verdictCounts).map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}
+          </tbody></table>
+        </section>
+        <section class="dash-card">
+          <h3>Experiment outcomes</h3>
+          <table class="data-table"><tbody>
+            ${Object.entries(outcomeCounts).map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}
+          </tbody></table>
+        </section>
+      </div>
+      <section class="dash-card">
+        <h3>Selected idea validations <span class="muted small">(${selectedIdeas.length})</span></h3>
+        <table class="data-table">
+          <thead><tr><th>Idea</th><th>Item</th><th>Potential</th><th>Experiment</th><th>Verdict</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </section>
+    </div>
+  `;
+}
+
+window.addEventListener("hashchange", route);
+boot();
+  </script>
+</body>
+</html>

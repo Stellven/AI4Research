@@ -1,0 +1,39 @@
+{
+  "action": "run_experiment",
+  "allow_destructive": true,
+  "allow_email": true,
+  "allow_network": true,
+  "allow_remote": true,
+  "allowed": true,
+  "allowed_write_roots": [
+    "artifacts/autosci",
+    "artifacts/scientific"
+  ],
+  "blocked": false,
+  "execute_side_effects": true,
+  "mode": "autosci_native",
+  "proof_best_effort": true,
+  "proof_required": false,
+  "reasons": [
+    "autosci_native allows side effects without Solar gate blocking.",
+    "autosci_native allows side effects without Solar gate blocking.",
+    "autosci_native allows side effects without Solar gate blocking.",
+    "autosci_native allows side effects without Solar gate blocking."
+  ],
+  "require_approval_ref": false,
+  "require_before_after_artifacts": false,
+  "require_hitl": false,
+  "require_runtime_evidence": false,
+  "sandbox_required": false,
+  "side_effects": [
+    "read_local",
+    "write_artifact",
+    "local_command",
+    "wiki_mutation"
+  ],
+  "synthetic_approval_ref": "policy:auto:autosci_native:run_experiment:2026-07-07T15:56:06Z",
+  "warnings": [
+    "Auto-approved by gate policy mode `autosci_native`; no human approval was requested.",
+    "Solar gates are bypassed in autosci_native mode; evidence is best-effort only."
+  ]
+}

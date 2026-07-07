@@ -1,0 +1,35 @@
+{
+  "claim_count": 117,
+  "experiment_outcome_counts": {
+    "inconclusive": 8,
+    "partially_supports": 14,
+    "supports": 17
+  },
+  "final_verdict_ready_count": 31,
+  "generated_at": "2026-07-07T17:39:23Z",
+  "graph_edge_count": 702,
+  "graph_node_count": 521,
+  "idea_count": 195,
+  "ideate_final_promotion_ready_count": 39,
+  "item_count": 39,
+  "method_count": 39,
+  "schema": "autosci_native_final_outputs.v1",
+  "selected_idea_count": 39,
+  "source_batches": {
+    "main": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch",
+    "patch": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch",
+    "patch_item_ids": [
+      "cc-01",
+      "cu-05",
+      "ghc-01",
+      "r17"
+    ]
+  },
+  "validation_code_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle",
+  "validation_count": 39,
+  "verdict_counts": {
+    "inconclusive": 8,
+    "partially_supported": 14,
+    "supported": 17
+  }
+}

@@ -1,0 +1,1642 @@
+{
+  "validations": [
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cc-01/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cc-01/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cc-01/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cc-01/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cc-01/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-01/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cc-01/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-01",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cc-01-landscape-driven-1",
+          "evidence_ids": [
+            "idea-cc-01-landscape-driven-1",
+            "exp-idea-cc-01-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cc-01/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-01.md --experiment-id exp-idea-cc-01-landscape-driven-1 --claim-id idea-cc-01-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cc-01/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cc-01-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-01.md --experiment-id exp-idea-cc-01-landscape-driven-1 --claim-id idea-cc-01-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cc-01-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cc-01-landscape-driven-1",
+      "item_id": "cc-01",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-02/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-02/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-02/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-02/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-02/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-02/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-02/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-02",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cc-02-landscape-driven",
+          "evidence_ids": [
+            "idea-cc-02-landscape-driven",
+            "exp-idea-cc-02-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-02/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-02.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-02.md --experiment-id exp-idea-cc-02-landscape-driven --claim-id idea-cc-02-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-02/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cc-02-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-02.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-02.md --experiment-id exp-idea-cc-02-landscape-driven --claim-id idea-cc-02-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cc-02-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cc-02-landscape-driven",
+      "item_id": "cc-02",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-03/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-03/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-03/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-03/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-03/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-03/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-03/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-03",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cc-03-landscape-driven-1",
+          "evidence_ids": [
+            "idea-cc-03-landscape-driven-1",
+            "exp-idea-cc-03-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-03/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-03.md --experiment-id exp-idea-cc-03-landscape-driven-1 --claim-id idea-cc-03-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-03/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cc-03-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-03.md --experiment-id exp-idea-cc-03-landscape-driven-1 --claim-id idea-cc-03-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cc-03-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cc-03-landscape-driven-1",
+      "item_id": "cc-03",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-04/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-04/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-04/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-04/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-04/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-04/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-04/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-04",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cc-04-landscape-driven-1",
+          "evidence_ids": [
+            "idea-cc-04-landscape-driven-1",
+            "exp-idea-cc-04-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-04/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-04.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-04.md --experiment-id exp-idea-cc-04-landscape-driven-1 --claim-id idea-cc-04-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-04/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cc-04-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-04.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-04.md --experiment-id exp-idea-cc-04-landscape-driven-1 --claim-id idea-cc-04-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cc-04-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cc-04-landscape-driven-1",
+      "item_id": "cc-04",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-05/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-05/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-05/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-05/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-05/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-05/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-05/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-05",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cc-05-combination-3",
+          "evidence_ids": [
+            "idea-cc-05-combination-3",
+            "exp-idea-cc-05-combination-3",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-05.md --experiment-id exp-idea-cc-05-combination-3 --claim-id idea-cc-05-combination-3",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cc-05-combination-3",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-05.md --experiment-id exp-idea-cc-05-combination-3 --claim-id idea-cc-05-combination-3",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cc-05-combination-3",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cc-05-combination-3",
+      "item_id": "cc-05",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-06/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-06/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-06/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-06/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-06/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-06/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-06/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-06",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cc-06-landscape-driven",
+          "evidence_ids": [
+            "idea-cc-06-landscape-driven",
+            "exp-idea-cc-06-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-06/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-06.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-06.md --experiment-id exp-idea-cc-06-landscape-driven --claim-id idea-cc-06-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-06/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cc-06-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-06.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-06.md --experiment-id exp-idea-cc-06-landscape-driven --claim-id idea-cc-06-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cc-06-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cc-06-landscape-driven",
+      "item_id": "cc-06",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-07/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-07/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-07/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-07/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-07/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-07/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-07/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cc-07",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cc-07-landscape-driven",
+          "evidence_ids": [
+            "idea-cc-07-landscape-driven",
+            "exp-idea-cc-07-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-07/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-07.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-07.md --experiment-id exp-idea-cc-07-landscape-driven --claim-id idea-cc-07-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cc-07/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cc-07-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cc-07.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cc-07.md --experiment-id exp-idea-cc-07-landscape-driven --claim-id idea-cc-07-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cc-07-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cc-07-landscape-driven",
+      "item_id": "cc-07",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-01/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-01/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-01/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-01/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-01/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-01/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-01/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-01",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cu-01-landscape-driven-1",
+          "evidence_ids": [
+            "idea-cu-01-landscape-driven-1",
+            "exp-idea-cu-01-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-01/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-01.md --experiment-id exp-idea-cu-01-landscape-driven-1 --claim-id idea-cu-01-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-01/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cu-01-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-01.md --experiment-id exp-idea-cu-01-landscape-driven-1 --claim-id idea-cu-01-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cu-01-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cu-01-landscape-driven-1",
+      "item_id": "cu-01",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-02/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-02/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-02/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-02/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-02/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-02/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-02/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-02",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cu-02-landscape-driven",
+          "evidence_ids": [
+            "idea-cu-02-landscape-driven",
+            "exp-idea-cu-02-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-02/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-02.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-02.md --experiment-id exp-idea-cu-02-landscape-driven --claim-id idea-cu-02-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-02/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cu-02-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-02.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-02.md --experiment-id exp-idea-cu-02-landscape-driven --claim-id idea-cu-02-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cu-02-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cu-02-landscape-driven",
+      "item_id": "cu-02",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-03/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-03/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-03/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-03/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-03/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-03/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-03/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-03",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cu-03-landscape-driven",
+          "evidence_ids": [
+            "idea-cu-03-landscape-driven",
+            "exp-idea-cu-03-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-03/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-03.md --experiment-id exp-idea-cu-03-landscape-driven --claim-id idea-cu-03-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-03/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cu-03-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-03.md --experiment-id exp-idea-cu-03-landscape-driven --claim-id idea-cu-03-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cu-03-landscape-driven",
+      "final_verdict_ready": false,
+      "idea_id": "idea-cu-03-landscape-driven",
+      "item_id": "cu-03",
+      "outcome": "inconclusive",
+      "status_state": "completed",
+      "verdict": "inconclusive"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-04/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-04/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-04/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-04/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-04/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-04/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-04/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-04",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cu-04-landscape-driven",
+          "evidence_ids": [
+            "idea-cu-04-landscape-driven",
+            "exp-idea-cu-04-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-04/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-04.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-04.md --experiment-id exp-idea-cu-04-landscape-driven --claim-id idea-cu-04-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-04/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cu-04-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-04.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-04.md --experiment-id exp-idea-cu-04-landscape-driven --claim-id idea-cu-04-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cu-04-landscape-driven",
+      "final_verdict_ready": false,
+      "idea_id": "idea-cu-04-landscape-driven",
+      "item_id": "cu-04",
+      "outcome": "inconclusive",
+      "status_state": "completed",
+      "verdict": "inconclusive"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-05/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-05",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cu-05-landscape-driven-1",
+          "evidence_ids": [
+            "idea-cu-05-landscape-driven-1",
+            "exp-idea-cu-05-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md --experiment-id exp-idea-cu-05-landscape-driven-1 --claim-id idea-cu-05-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cu-05-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md --experiment-id exp-idea-cu-05-landscape-driven-1 --claim-id idea-cu-05-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cu-05-landscape-driven-1",
+      "final_verdict_ready": false,
+      "idea_id": "idea-cu-05-landscape-driven-1",
+      "item_id": "cu-05",
+      "outcome": "inconclusive",
+      "status_state": "completed",
+      "verdict": "inconclusive"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-06/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-06/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-06/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-06/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-06/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-06/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-06/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/cu-06",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-cu-06-landscape-driven-1",
+          "evidence_ids": [
+            "idea-cu-06-landscape-driven-1",
+            "exp-idea-cu-06-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-06/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-06.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-06.md --experiment-id exp-idea-cu-06-landscape-driven-1 --claim-id idea-cu-06-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/cu-06/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-cu-06-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/cu-06.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-06.md --experiment-id exp-idea-cu-06-landscape-driven-1 --claim-id idea-cu-06-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-cu-06-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-cu-06-landscape-driven-1",
+      "item_id": "cu-06",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/ghc-01/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/ghc-01/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/ghc-01/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/ghc-01/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/ghc-01/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-01/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/ghc-01/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-01",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-ghc-01-landscape-driven",
+          "evidence_ids": [
+            "idea-ghc-01-landscape-driven",
+            "exp-idea-ghc-01-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/ghc-01/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-01.md --experiment-id exp-idea-ghc-01-landscape-driven --claim-id idea-ghc-01-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/ghc-01/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-ghc-01-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-01.md --experiment-id exp-idea-ghc-01-landscape-driven --claim-id idea-ghc-01-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-ghc-01-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-ghc-01-landscape-driven",
+      "item_id": "ghc-01",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-02/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-02/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-02/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-02/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-02/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-02/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-02/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-02",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-ghc-02-landscape-driven",
+          "evidence_ids": [
+            "idea-ghc-02-landscape-driven",
+            "exp-idea-ghc-02-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-02/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-02.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-02.md --experiment-id exp-idea-ghc-02-landscape-driven --claim-id idea-ghc-02-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-02/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-ghc-02-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-02.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-02.md --experiment-id exp-idea-ghc-02-landscape-driven --claim-id idea-ghc-02-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-ghc-02-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-ghc-02-landscape-driven",
+      "item_id": "ghc-02",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-03/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-03/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-03/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-03/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-03/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-03/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-03/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-03",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-ghc-03-landscape-driven",
+          "evidence_ids": [
+            "idea-ghc-03-landscape-driven",
+            "exp-idea-ghc-03-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-03/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-03.md --experiment-id exp-idea-ghc-03-landscape-driven --claim-id idea-ghc-03-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-03/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-ghc-03-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-03.md --experiment-id exp-idea-ghc-03-landscape-driven --claim-id idea-ghc-03-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-ghc-03-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-ghc-03-landscape-driven",
+      "item_id": "ghc-03",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-04/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-04/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-04/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-04/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-04/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-04/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-04/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-04",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-ghc-04-landscape-driven-1",
+          "evidence_ids": [
+            "idea-ghc-04-landscape-driven-1",
+            "exp-idea-ghc-04-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-04/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-04.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-04.md --experiment-id exp-idea-ghc-04-landscape-driven-1 --claim-id idea-ghc-04-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-04/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-ghc-04-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-04.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-04.md --experiment-id exp-idea-ghc-04-landscape-driven-1 --claim-id idea-ghc-04-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-ghc-04-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-ghc-04-landscape-driven-1",
+      "item_id": "ghc-04",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-05/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-05/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-05/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-05/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-05/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-05/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-05/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-05",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-ghc-05-landscape-driven",
+          "evidence_ids": [
+            "idea-ghc-05-landscape-driven",
+            "exp-idea-ghc-05-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-05.md --experiment-id exp-idea-ghc-05-landscape-driven --claim-id idea-ghc-05-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-ghc-05-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-05.md --experiment-id exp-idea-ghc-05-landscape-driven --claim-id idea-ghc-05-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-ghc-05-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-ghc-05-landscape-driven",
+      "item_id": "ghc-05",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-06/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-06/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-06/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-06/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-06/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-06/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-06/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-06",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-ghc-06-landscape-driven",
+          "evidence_ids": [
+            "idea-ghc-06-landscape-driven",
+            "exp-idea-ghc-06-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-06/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-06.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-06.md --experiment-id exp-idea-ghc-06-landscape-driven --claim-id idea-ghc-06-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-06/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-ghc-06-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-06.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-06.md --experiment-id exp-idea-ghc-06-landscape-driven --claim-id idea-ghc-06-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-ghc-06-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-ghc-06-landscape-driven",
+      "item_id": "ghc-06",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-07/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-07/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-07/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-07/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-07/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-07/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-07/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/ghc-07",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-ghc-07-landscape-driven",
+          "evidence_ids": [
+            "idea-ghc-07-landscape-driven",
+            "exp-idea-ghc-07-landscape-driven",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-07/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-07.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-07.md --experiment-id exp-idea-ghc-07-landscape-driven --claim-id idea-ghc-07-landscape-driven",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/ghc-07/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-ghc-07-landscape-driven",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/ghc-07.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/ghc-07.md --experiment-id exp-idea-ghc-07-landscape-driven --claim-id idea-ghc-07-landscape-driven",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-ghc-07-landscape-driven",
+      "final_verdict_ready": true,
+      "idea_id": "idea-ghc-07-landscape-driven",
+      "item_id": "ghc-07",
+      "outcome": "supports",
+      "status_state": "completed",
+      "verdict": "supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r01/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r01/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r01/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r01/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r01/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r01/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r01/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r01",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r01-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r01-landscape-driven-1",
+            "exp-idea-r01-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r01/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r01.md --experiment-id exp-idea-r01-landscape-driven-1 --claim-id idea-r01-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r01/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r01-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r01.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r01.md --experiment-id exp-idea-r01-landscape-driven-1 --claim-id idea-r01-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r01-landscape-driven-1",
+      "final_verdict_ready": false,
+      "idea_id": "idea-r01-landscape-driven-1",
+      "item_id": "r01",
+      "outcome": "inconclusive",
+      "status_state": "completed",
+      "verdict": "inconclusive"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r02/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r02/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r02/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r02/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r02/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r02/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r02/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r02",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r02-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r02-landscape-driven-1",
+            "exp-idea-r02-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r02/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r02.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r02.md --experiment-id exp-idea-r02-landscape-driven-1 --claim-id idea-r02-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r02/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r02-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r02.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r02.md --experiment-id exp-idea-r02-landscape-driven-1 --claim-id idea-r02-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r02-landscape-driven-1",
+      "final_verdict_ready": false,
+      "idea_id": "idea-r02-landscape-driven-1",
+      "item_id": "r02",
+      "outcome": "inconclusive",
+      "status_state": "completed",
+      "verdict": "inconclusive"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r03/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r03/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r03/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r03/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r03/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r03/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r03/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r03",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r03-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r03-landscape-driven-1",
+            "exp-idea-r03-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r03/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r03.md --experiment-id exp-idea-r03-landscape-driven-1 --claim-id idea-r03-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r03/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r03-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r03.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r03.md --experiment-id exp-idea-r03-landscape-driven-1 --claim-id idea-r03-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r03-landscape-driven-1",
+      "final_verdict_ready": false,
+      "idea_id": "idea-r03-landscape-driven-1",
+      "item_id": "r03",
+      "outcome": "inconclusive",
+      "status_state": "completed",
+      "verdict": "inconclusive"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r04/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r04/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r04/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r04/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r04/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r04/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r04/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r04",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r04-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r04-landscape-driven-1",
+            "exp-idea-r04-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r04/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r04.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r04.md --experiment-id exp-idea-r04-landscape-driven-1 --claim-id idea-r04-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r04/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r04-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r04.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r04.md --experiment-id exp-idea-r04-landscape-driven-1 --claim-id idea-r04-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r04-landscape-driven-1",
+      "final_verdict_ready": false,
+      "idea_id": "idea-r04-landscape-driven-1",
+      "item_id": "r04",
+      "outcome": "inconclusive",
+      "status_state": "completed",
+      "verdict": "inconclusive"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r05/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r05/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r05/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r05/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r05/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r05/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r05/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r05",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r05-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r05-landscape-driven-1",
+            "exp-idea-r05-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r05.md --experiment-id exp-idea-r05-landscape-driven-1 --claim-id idea-r05-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r05-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r05.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r05.md --experiment-id exp-idea-r05-landscape-driven-1 --claim-id idea-r05-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r05-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r05-landscape-driven-1",
+      "item_id": "r05",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r06/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r06/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r06/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r06/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r06/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r06/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r06/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r06",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r06-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r06-landscape-driven-1",
+            "exp-idea-r06-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r06/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r06.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r06.md --experiment-id exp-idea-r06-landscape-driven-1 --claim-id idea-r06-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r06/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r06-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r06.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r06.md --experiment-id exp-idea-r06-landscape-driven-1 --claim-id idea-r06-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r06-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r06-landscape-driven-1",
+      "item_id": "r06",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r07/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r07",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r07-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r07-landscape-driven-1",
+            "exp-idea-r07-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r07.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r07.md --experiment-id exp-idea-r07-landscape-driven-1 --claim-id idea-r07-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r07-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r07.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r07.md --experiment-id exp-idea-r07-landscape-driven-1 --claim-id idea-r07-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r07-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r07-landscape-driven-1",
+      "item_id": "r07",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r08/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r08/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r08/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r08/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r08/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r08/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r08/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r08",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r08-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r08-landscape-driven-1",
+            "exp-idea-r08-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r08/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r08.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r08.md --experiment-id exp-idea-r08-landscape-driven-1 --claim-id idea-r08-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r08/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r08-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r08.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r08.md --experiment-id exp-idea-r08-landscape-driven-1 --claim-id idea-r08-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r08-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r08-landscape-driven-1",
+      "item_id": "r08",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r09/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r09/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r09/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r09/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r09/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r09/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r09/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r09",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r09-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r09-landscape-driven-1",
+            "exp-idea-r09-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r09/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r09.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r09.md --experiment-id exp-idea-r09-landscape-driven-1 --claim-id idea-r09-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r09/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r09-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r09.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r09.md --experiment-id exp-idea-r09-landscape-driven-1 --claim-id idea-r09-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r09-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r09-landscape-driven-1",
+      "item_id": "r09",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r10/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r10/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r10/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r10/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r10/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r10/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r10/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r10",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r10-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r10-landscape-driven-1",
+            "exp-idea-r10-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r10/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r10.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r10.md --experiment-id exp-idea-r10-landscape-driven-1 --claim-id idea-r10-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r10/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r10-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r10.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r10.md --experiment-id exp-idea-r10-landscape-driven-1 --claim-id idea-r10-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r10-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r10-landscape-driven-1",
+      "item_id": "r10",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r11/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r11/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r11/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r11/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r11/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r11/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r11/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r11",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r11-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r11-landscape-driven-1",
+            "exp-idea-r11-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r11/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r11.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r11.md --experiment-id exp-idea-r11-landscape-driven-1 --claim-id idea-r11-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r11/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r11-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r11.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r11.md --experiment-id exp-idea-r11-landscape-driven-1 --claim-id idea-r11-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r11-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r11-landscape-driven-1",
+      "item_id": "r11",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r12/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r12/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r12/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r12/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r12/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r12/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r12/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r12",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r12-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r12-landscape-driven-1",
+            "exp-idea-r12-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r12/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r12.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r12.md --experiment-id exp-idea-r12-landscape-driven-1 --claim-id idea-r12-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r12/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r12-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r12.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r12.md --experiment-id exp-idea-r12-landscape-driven-1 --claim-id idea-r12-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r12-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r12-landscape-driven-1",
+      "item_id": "r12",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r13/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r13/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r13/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r13/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r13/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r13/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r13/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r13",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r13-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r13-landscape-driven-1",
+            "exp-idea-r13-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r13/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r13.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r13.md --experiment-id exp-idea-r13-landscape-driven-1 --claim-id idea-r13-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r13/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r13-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r13.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r13.md --experiment-id exp-idea-r13-landscape-driven-1 --claim-id idea-r13-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r13-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r13-landscape-driven-1",
+      "item_id": "r13",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r14/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r14",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r14-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r14-landscape-driven-1",
+            "exp-idea-r14-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r14.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r14.md --experiment-id exp-idea-r14-landscape-driven-1 --claim-id idea-r14-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r14-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r14.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r14.md --experiment-id exp-idea-r14-landscape-driven-1 --claim-id idea-r14-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r14-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r14-landscape-driven-1",
+      "item_id": "r14",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r15/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r15/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r15/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r15/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r15/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r15/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r15/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r15",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r15-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r15-landscape-driven-1",
+            "exp-idea-r15-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r15/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r15.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r15.md --experiment-id exp-idea-r15-landscape-driven-1 --claim-id idea-r15-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r15/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r15-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r15.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r15.md --experiment-id exp-idea-r15-landscape-driven-1 --claim-id idea-r15-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r15-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r15-landscape-driven-1",
+      "item_id": "r15",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r16/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r16/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r16/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r16/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r16/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r16/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r16/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r16",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r16-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r16-landscape-driven-1",
+            "exp-idea-r16-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r16/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r16.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r16.md --experiment-id exp-idea-r16-landscape-driven-1 --claim-id idea-r16-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r16/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r16-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r16.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r16.md --experiment-id exp-idea-r16-landscape-driven-1 --claim-id idea-r16-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r16-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r16-landscape-driven-1",
+      "item_id": "r16",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/r17/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/r17/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/r17/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/r17/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/r17/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r17/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/r17/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r17",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r17-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r17-landscape-driven-1",
+            "exp-idea-r17-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/r17/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r17.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r17.md --experiment-id exp-idea-r17-landscape-driven-1 --claim-id idea-r17-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/r17/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r17-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r17.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r17.md --experiment-id exp-idea-r17-landscape-driven-1 --claim-id idea-r17-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r17-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r17-landscape-driven-1",
+      "item_id": "r17",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r18/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r18/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r18/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r18/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r18/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r18/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r18/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r18",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r18-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r18-landscape-driven-1",
+            "exp-idea-r18-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r18/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r18.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r18.md --experiment-id exp-idea-r18-landscape-driven-1 --claim-id idea-r18-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r18/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r18-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r18.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r18.md --experiment-id exp-idea-r18-landscape-driven-1 --claim-id idea-r18-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r18-landscape-driven-1",
+      "final_verdict_ready": true,
+      "idea_id": "idea-r18-landscape-driven-1",
+      "item_id": "r18",
+      "outcome": "partially_supports",
+      "status_state": "completed",
+      "verdict": "partially_supported"
+    },
+    {
+      "artifact_paths": {
+        "claim_verdict": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r19/experiment/claim_verdict.json",
+        "code_evidence_map": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r19/experiment/code_evidence_map.json",
+        "experiment_plan": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r19/experiment/experiment_plan.json",
+        "experiment_result": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r19/experiment/experiment_result.json",
+        "experiment_status": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r19/status/experiment_status.json",
+        "runner_script": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r19/run_validation.sh",
+        "runtime_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r19/experiment/run_experiment_runtime_evidence.json",
+        "validation_bundle": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/items/r19",
+        "validator_source": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/validation_code_bundle/validator/validate_literature_item.py"
+      },
+      "code_mappings": [
+        {
+          "claim_id": "idea-r19-landscape-driven-1",
+          "evidence_ids": [
+            "idea-r19-landscape-driven-1",
+            "exp-idea-r19-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r19/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "execution_entrypoint": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r19.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r19.md --experiment-id exp-idea-r19-landscape-driven-1 --claim-id idea-r19-landscape-driven-1",
+          "files": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r19/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "mapping_id": "map-idea-r19-landscape-driven-1",
+          "mapping_status": "mapped",
+          "relevance_label": "direct",
+          "relevance_reason": "The allowlisted validator command produced the experiment runtime evidence used for this idea verdict.",
+          "repo_or_path": "artifacts/autosci/runs/e2e-doc-literature-20260707"
+        }
+      ],
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r19.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r19.md --experiment-id exp-idea-r19-landscape-driven-1 --claim-id idea-r19-landscape-driven-1",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r19-landscape-driven-1",
+      "final_verdict_ready": false,
+      "idea_id": "idea-r19-landscape-driven-1",
+      "item_id": "r19",
+      "outcome": "inconclusive",
+      "status_state": "completed",
+      "verdict": "inconclusive"
+    }
+  ]
+}

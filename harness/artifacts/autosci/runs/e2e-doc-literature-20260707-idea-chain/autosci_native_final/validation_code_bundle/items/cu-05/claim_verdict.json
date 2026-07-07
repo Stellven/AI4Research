@@ -1,0 +1,471 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/review/artifact_review.json",
+      "type": "claim_review_llm_evidence_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/verify_claim_review_llm_runtime_proof.json",
+      "type": "review_model_runtime_proof_manifest_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/claim_verdict_writeback.json",
+      "type": "claim_verdict_writeback_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/claim_verdict_writeback.json",
+      "type": "solar_evidence_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/experiment_evaluation_final_verdict_boundary.json",
+      "type": "experiment_evaluation_final_verdict_boundary_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/claim_verdict.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "user-request-autosci-e2e-20260707-idea-chain",
+    "claim_id": "idea-cu-05-landscape-driven-1",
+    "claims_evidence": [
+      "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/idea_claims.json"
+    ],
+    "code_evidence": [
+      "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/code_evidence_map.json"
+    ],
+    "execute_approved_side_effect": true,
+    "experiment_result_evidence": [
+      "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/experiment_result.json"
+    ],
+    "gate_mode": "autosci_native",
+    "native_options": {
+      "add": "",
+      "affiliation_logo": "",
+      "after_artifacts": [],
+      "all": false,
+      "allowlist_evidence": [],
+      "anonymous": false,
+      "approval_ref": "user-request-autosci-e2e-20260707-idea-chain",
+      "authors": "",
+      "auto": false,
+      "auto_figures": false,
+      "before_artifacts": [],
+      "canvas": false,
+      "checklist": false,
+      "claims_evidence": [
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/idea_claims.json"
+      ],
+      "code_evidence": [
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/code_evidence_map.json"
+      ],
+      "collect": false,
+      "collect_ready": false,
+      "compile_after_artifacts": [],
+      "compile_allowlist_evidence": [],
+      "compile_approval_ref": "",
+      "compile_before_artifacts": [],
+      "compile_execute_approved": false,
+      "compile_executor_timeout_seconds": 120,
+      "compile_runtime_evidence": [],
+      "compile_target": "",
+      "conference_logo": "",
+      "crystallize": false,
+      "daily_categories": [],
+      "daily_decisions": "",
+      "daily_feed": "",
+      "daily_hours": 0,
+      "daily_max_auto_ingest": 0,
+      "daily_max_recommendations": 0,
+      "daily_mode": "",
+      "daily_no_external": false,
+      "daily_send_email": "",
+      "depth": 0,
+      "difficulty": "",
+      "discover": false,
+      "double_blind": false,
+      "edge_types": "",
+      "env": "",
+      "execute_approved": true,
+      "experiment_after_artifacts": [],
+      "experiment_allowlist_evidence": [],
+      "experiment_approval_ref": "",
+      "experiment_before_artifacts": [],
+      "experiment_execute_approved": false,
+      "experiment_executor_timeout_seconds": 120,
+      "experiment_result_evidence": [
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/experiment_result.json"
+      ],
+      "experiment_runtime_evidence": [],
+      "fix": false,
+      "focus": "",
+      "format": "",
+      "full": false,
+      "idea_approval_ref": "",
+      "layout": "",
+      "lifecycle_summary": [],
+      "max_ideas": 0,
+      "max_rounds": 0,
+      "min_font_size": null,
+      "model_command": "",
+      "model_evidence": [],
+      "no_figures": false,
+      "no_introduction": false,
+      "no_logos": false,
+      "no_refine": false,
+      "novelty_evidence": [],
+      "obsidian": false,
+      "online": false,
+      "page_count": null,
+      "page_limit": null,
+      "paper_slug": "",
+      "pdf_inspection": "",
+      "pilot_handoff_evidence": [],
+      "pilot_runtime_evidence": [],
+      "pipeline": "",
+      "quick": false,
+      "refine_iterations": 0,
+      "remote_check_command": "",
+      "remote_run_dir": "",
+      "render": false,
+      "require_review_llm": false,
+      "results_approval_ref": "",
+      "review": false,
+      "review_llm_command": "",
+      "review_llm_endpoint": "",
+      "review_llm_evidence": [
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/review/artifact_review.json"
+      ],
+      "review_llm_model": "",
+      "review_llm_provider": "",
+      "reviewer_thread_evidence": [],
+      "runtime_evidence": [],
+      "scheduler_demo": false,
+      "scheduler_dispatch_external_evidence": false,
+      "scheduler_include_blocked_external": false,
+      "scheduler_include_human_gates": false,
+      "scheduler_legacy_smoke_runner": false,
+      "scheduler_node_id": [],
+      "scheduler_require_workflow_config_alignment": false,
+      "scheduler_run": false,
+      "scheduler_timeout": 30.0,
+      "scope": "",
+      "serve": false,
+      "skip_paper": false,
+      "skip_pilot": false,
+      "skip_validation": false,
+      "source_evidence": [],
+      "start_from": "",
+      "stress_test": null,
+      "submission_audit": "",
+      "submission_mode": "",
+      "submission_profile": "",
+      "target_score": 0.0,
+      "title": "",
+      "types": "",
+      "verbose": false,
+      "verified_min_font_size": null,
+      "verified_page_count": null,
+      "visualize": false,
+      "write": true
+    },
+    "review_llm_evidence": [
+      "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/review/artifact_review.json"
+    ],
+    "smoke_mode": false,
+    "target": "idea-cu-05-landscape-driven-1"
+  },
+  "limitations": [
+    "Fixture verdict is derived only from supplied local evidence; it is not external scientific validation.",
+    "Supplied experiment evidence is missing, failed, or inconclusive; the claim was not upgraded.",
+    "Review LLM evidence is attached as an independent second opinion; verdict outcome still follows experiment evidence.",
+    "Final experiment evaluation requires a non-inconclusive claim verdict.",
+    "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+  ],
+  "node_id": "node-verify-claim",
+  "outputs": {
+    "final_verdict_boundary": {
+      "claim_evidence_ids": [
+        "idea-cu-05-landscape-driven-1",
+        "paper-cu-05",
+        "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md",
+        "literature-source:cu-05",
+        "attached-doc:claude-cursor-copilot-2026"
+      ],
+      "claim_evidence_linked": true,
+      "claim_id": "idea-cu-05-landscape-driven-1",
+      "code_evidence_ids": [
+        "task-cu-05-idea-cu-05-landscape-driven-1-code-evidence-map",
+        "map-idea-cu-05-landscape-driven-1",
+        "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json",
+        "idea-cu-05-landscape-driven-1",
+        "exp-idea-cu-05-landscape-driven-1"
+      ],
+      "code_evidence_linked": true,
+      "evidence_ids": [
+        "idea-cu-05-landscape-driven-1",
+        "paper-cu-05",
+        "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md",
+        "literature-source:cu-05",
+        "attached-doc:claude-cursor-copilot-2026",
+        "task-autosci-skillgen-run_experiment",
+        "exp-idea-cu-05-landscape-driven-1",
+        "Validate evidence coverage for `idea-cu-05-landscape-driven-1` using an approval-gated native experiment.",
+        "node-run-experiment",
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json",
+        "task-cu-05-idea-cu-05-landscape-driven-1-code-evidence-map",
+        "map-idea-cu-05-landscape-driven-1",
+        "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+        "task-autosci-skillgen-review_artifact",
+        "artifact:cu-05",
+        "review-llm:ollama:literature-validation-cu-05",
+        "review-llm.ollama-finding"
+      ],
+      "experiment_evidence_ids": [
+        "task-autosci-skillgen-run_experiment",
+        "exp-idea-cu-05-landscape-driven-1",
+        "exp-idea-cu-05-landscape-driven-1",
+        "Validate evidence coverage for `idea-cu-05-landscape-driven-1` using an approval-gated native experiment.",
+        "literature-source:cu-05",
+        "attached-doc:claude-cursor-copilot-2026",
+        "idea-cu-05-landscape-driven-1",
+        "task-autosci-skillgen-run_experiment",
+        "node-run-experiment",
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json"
+      ],
+      "experiment_result_ready": true,
+      "experiment_schema": "experiment_result.v1",
+      "experiment_status": "completed",
+      "final_verdict_ready": false,
+      "limitations": [
+        "Final experiment evaluation requires a non-inconclusive claim verdict.",
+        "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+      ],
+      "review_llm_completed": true,
+      "review_llm_status": "completed",
+      "schema": "autosci_experiment_evaluation_final_verdict_boundary.v1",
+      "status": "final_verdict_incomplete",
+      "verdict": "inconclusive",
+      "writeback_completed": false,
+      "writeback_status": {
+        "applied": false,
+        "approval_ref": "user-request-autosci-e2e-20260707-idea-chain",
+        "edge_path": "",
+        "limitations": [
+          "Claim verdict write-back requires a non-inconclusive verdict."
+        ],
+        "log_path": "",
+        "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/claim_verdict_writeback.json",
+        "requested": true,
+        "review_llm_status": "completed",
+        "status": "inconclusive",
+        "target_path": ""
+      }
+    },
+    "verdicts": [
+      {
+        "basis": "Verdict derived from experiment_result.v1 outcome `inconclusive` for `exp-idea-cu-05-landscape-driven-1`. Review LLM evidence `artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/review/artifact_review.json` was attached with recommendation `revise`. Claim text: Promoted AutoSci idea `idea-cu-05-landscape-driven-1` for literature item `cu-05` can be evaluated by the approved local attached-source validation experiment.",
+        "claim_evidence_ids": [
+          "idea-cu-05-landscape-driven-1",
+          "paper-cu-05",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md",
+          "literature-source:cu-05",
+          "attached-doc:claude-cursor-copilot-2026"
+        ],
+        "claim_id": "idea-cu-05-landscape-driven-1",
+        "code_evidence_ids": [
+          "task-cu-05-idea-cu-05-landscape-driven-1-code-evidence-map",
+          "map-idea-cu-05-landscape-driven-1",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json",
+          "idea-cu-05-landscape-driven-1",
+          "exp-idea-cu-05-landscape-driven-1"
+        ],
+        "confidence": 0.32,
+        "evidence_ids": [
+          "idea-cu-05-landscape-driven-1",
+          "paper-cu-05",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md",
+          "literature-source:cu-05",
+          "attached-doc:claude-cursor-copilot-2026",
+          "task-autosci-skillgen-run_experiment",
+          "exp-idea-cu-05-landscape-driven-1",
+          "Validate evidence coverage for `idea-cu-05-landscape-driven-1` using an approval-gated native experiment.",
+          "node-run-experiment",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json",
+          "task-cu-05-idea-cu-05-landscape-driven-1-code-evidence-map",
+          "map-idea-cu-05-landscape-driven-1",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+          "task-autosci-skillgen-review_artifact",
+          "artifact:cu-05",
+          "review-llm:ollama:literature-validation-cu-05",
+          "review-llm.ollama-finding"
+        ],
+        "evidence_outcome": "inconclusive",
+        "experiment_evidence_ids": [
+          "task-autosci-skillgen-run_experiment",
+          "exp-idea-cu-05-landscape-driven-1",
+          "exp-idea-cu-05-landscape-driven-1",
+          "Validate evidence coverage for `idea-cu-05-landscape-driven-1` using an approval-gated native experiment.",
+          "literature-source:cu-05",
+          "attached-doc:claude-cursor-copilot-2026",
+          "idea-cu-05-landscape-driven-1",
+          "task-autosci-skillgen-run_experiment",
+          "node-run-experiment",
+          "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json"
+        ],
+        "experiment_id": "exp-idea-cu-05-landscape-driven-1",
+        "final_verdict_boundary": {
+          "claim_evidence_ids": [
+            "idea-cu-05-landscape-driven-1",
+            "paper-cu-05",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md",
+            "literature-source:cu-05",
+            "attached-doc:claude-cursor-copilot-2026"
+          ],
+          "claim_evidence_linked": true,
+          "claim_id": "idea-cu-05-landscape-driven-1",
+          "code_evidence_ids": [
+            "task-cu-05-idea-cu-05-landscape-driven-1-code-evidence-map",
+            "map-idea-cu-05-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json",
+            "idea-cu-05-landscape-driven-1",
+            "exp-idea-cu-05-landscape-driven-1"
+          ],
+          "code_evidence_linked": true,
+          "evidence_ids": [
+            "idea-cu-05-landscape-driven-1",
+            "paper-cu-05",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/cu-05.md",
+            "literature-source:cu-05",
+            "attached-doc:claude-cursor-copilot-2026",
+            "task-autosci-skillgen-run_experiment",
+            "exp-idea-cu-05-landscape-driven-1",
+            "Validate evidence coverage for `idea-cu-05-landscape-driven-1` using an approval-gated native experiment.",
+            "node-run-experiment",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json",
+            "task-cu-05-idea-cu-05-landscape-driven-1-code-evidence-map",
+            "map-idea-cu-05-landscape-driven-1",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py",
+            "task-autosci-skillgen-review_artifact",
+            "artifact:cu-05",
+            "review-llm:ollama:literature-validation-cu-05",
+            "review-llm.ollama-finding"
+          ],
+          "experiment_evidence_ids": [
+            "task-autosci-skillgen-run_experiment",
+            "exp-idea-cu-05-landscape-driven-1",
+            "exp-idea-cu-05-landscape-driven-1",
+            "Validate evidence coverage for `idea-cu-05-landscape-driven-1` using an approval-gated native experiment.",
+            "literature-source:cu-05",
+            "attached-doc:claude-cursor-copilot-2026",
+            "idea-cu-05-landscape-driven-1",
+            "task-autosci-skillgen-run_experiment",
+            "node-run-experiment",
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/run_experiment_runtime_evidence.json"
+          ],
+          "experiment_result_ready": true,
+          "experiment_schema": "experiment_result.v1",
+          "experiment_status": "completed",
+          "final_verdict_ready": false,
+          "limitations": [
+            "Final experiment evaluation requires a non-inconclusive claim verdict.",
+            "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+          ],
+          "review_llm_completed": true,
+          "review_llm_status": "completed",
+          "schema": "autosci_experiment_evaluation_final_verdict_boundary.v1",
+          "status": "final_verdict_incomplete",
+          "verdict": "inconclusive",
+          "writeback_completed": false,
+          "writeback_status": {
+            "applied": false,
+            "approval_ref": "user-request-autosci-e2e-20260707-idea-chain",
+            "edge_path": "",
+            "limitations": [
+              "Claim verdict write-back requires a non-inconclusive verdict."
+            ],
+            "log_path": "",
+            "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/experiment/claim_verdict_writeback.json",
+            "requested": true,
+            "review_llm_status": "completed",
+            "status": "inconclusive",
+            "target_path": ""
+          }
+        },
+        "final_verdict_ready": false,
+        "limitations": [
+          "Fixture verdict is derived only from supplied local evidence; it is not external scientific validation.",
+          "Supplied experiment evidence is missing, failed, or inconclusive; the claim was not upgraded.",
+          "Review LLM evidence is attached as an independent second opinion; verdict outcome still follows experiment evidence.",
+          "Final experiment evaluation requires a non-inconclusive claim verdict.",
+          "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+        ],
+        "review_llm": {
+          "checked_paths": [
+            "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/review/artifact_review.json"
+          ],
+          "claim_id": "idea-cu-05-landscape-driven-1",
+          "difficulty": "standard",
+          "evidence_ids": [
+            "task-autosci-skillgen-review_artifact",
+            "artifact:cu-05",
+            "review-llm:ollama:literature-validation-cu-05",
+            "review-llm.ollama-finding"
+          ],
+          "finding_count": 1,
+          "focus": "evidence",
+          "recommendation": "revise",
+          "review_available": true,
+          "review_llm": {
+            "command": [
+              "env",
+              "AUTOSCI_OLLAMA_MODEL=gemma3:4b",
+              "AUTOSCI_OLLAMA_TIMEOUT=180",
+              "python3",
+              "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/tools/ollama_artifact_review_command.py"
+            ],
+            "difficulty": "standard",
+            "evidence_ids": [
+              "review-llm:ollama:literature-validation-cu-05"
+            ],
+            "findings": [
+              {
+                "category": "evidence",
+                "evidence": "The artifact provides a clear record of the source document's metadata (source id, publisher, year, credibility score, relevance score, confidence) and highlights key issues like URL absence and source drift. The attached summary reinforces this information. However, the 'low' confidence rating is concerning and warrants further investigation.",
+                "finding_id": "review-llm.ollama-finding",
+                "line_refs": [],
+                "severity": "medium",
+                "source": "review_llm",
+                "suggestion": "Prioritize validating the cited source record (`cu-05`) by attempting to retrieve the original document from Cursor\u2019s website or a reliable archive. Investigate the cause of the URL absence and source drift. Consider adjusting the confidence score based on successful retrieval and verification of the information within the document."
+              }
+            ],
+            "focus": "evidence",
+            "invocation_mode": "command",
+            "recommendation": "revise",
+            "score": 0.65,
+            "source_path": "review-llm-command",
+            "status": "completed",
+            "tool": "mcp__llm-review__chat"
+          },
+          "review_mode": "review_llm",
+          "score": 0.65,
+          "source_path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_patch/items/cu-05/review/artifact_review.json",
+          "status": "completed"
+        },
+        "verdict": "inconclusive"
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-07T16:26:40Z"
+  },
+  "schema": "claim_verdict.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-verify_claim"
+}

@@ -1,0 +1,12 @@
+execution_mode=human_approved
+experiment_id=exp-idea-r14-landscape-driven-1
+command_run=python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment
+experiment_executor_result=True
+executor_exit_code=0
+executor_result_path=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r14/experiment/run_experiment_result.json
+approval_state=verified
+approved runtime evidence verified
+validated attached-document source record R14
+url_status=needs URL verification
+confidence=medium
+network_fetch=not_requested

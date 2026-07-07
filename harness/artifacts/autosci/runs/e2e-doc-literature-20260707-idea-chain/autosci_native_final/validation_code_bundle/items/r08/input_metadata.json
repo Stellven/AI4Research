@@ -1,0 +1,23 @@
+{
+  "action": "read first",
+  "category": "resource_radar_item",
+  "confidence": "high",
+  "credibility": 87,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R08",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r08.json",
+  "note": "arXiv:2303.11366 (best-effort — verify) · needs URL verification",
+  "publisher_or_authors": "Shinn, Cassano, Gopinath, Narasimhan, Yao · academic · 2023",
+  "relevance": 86,
+  "role": "primary evidence",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r08.md",
+  "source_type": "paper",
+  "summary": "Uses verbal self-reflection stored in memory to improve agent performance across attempts without updating parameters. Requires explicit evaluator or task feedback to be productive. A memory-driven feedback loop for agents.",
+  "title": "Reflexion: Language Agents with Verbal Reinforcement Learning",
+  "url_status": "needs URL verification",
+  "why": "Shows feedback-driven improvement depends on an external evaluator signal.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r08",
+  "year": "2023"
+}

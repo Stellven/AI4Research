@@ -1,0 +1,23 @@
+{
+  "action": "read first",
+  "category": "resource_radar_item",
+  "confidence": "medium",
+  "credibility": 76,
+  "doc": "Loop & Harness Engineering Resource Radar.html",
+  "doc_slug": "loop-harness-resource-radar",
+  "expected_outcome": "partially_supports",
+  "id": "R11",
+  "metadata_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r11.json",
+  "note": "LangGraph documentation (best-effort: langchain-ai LangGraph docs) — verify URL · needs URL verification",
+  "publisher_or_authors": "LangChain team · LangChain · 2024",
+  "relevance": 88,
+  "role": "technical framework",
+  "source_rel": "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r11.md",
+  "source_type": "technical report",
+  "summary": "A framework for expressing agent control flow as explicit stateful graphs with loops, branches, and checkpoints. Makes task state, retries, and human-in-the-loop first-class. Turns orchestration into an inspectable graph.",
+  "title": "LangGraph — stateful graphs for agent loops",
+  "url_status": "needs URL verification",
+  "why": "Concrete harness substrate: deterministic graph state + recovery.",
+  "work_dir": "artifacts/autosci/runs/e2e-doc-literature-20260707/items/r11",
+  "year": "2024"
+}

@@ -1,0 +1,423 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/exp-idea-r07-landscape-driven-1.log",
+      "type": "experiment_run_log"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_approval_contract.json",
+      "type": "approval_contract_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_gate_policy_decision.json",
+      "type": "gate_policy_decision_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_gate_policy_allowlist.json",
+      "type": "gate_policy_allowlist_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_runtime_evidence.json",
+      "type": "experiment_runtime_evidence_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_result.json",
+      "type": "run_experiment_result_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_executor_stdout.txt",
+      "type": "executor_stdout"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_executor_stderr.txt",
+      "type": "executor_stderr"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/experiment_metric_aggregate_report.json",
+      "type": "experiment_metric_aggregate_report_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/experiment_deploy_report.json",
+      "type": "experiment_deploy_report_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/experiment_run_report.json",
+      "type": "experiment_run_report_json"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-idea-r07-landscape-driven-1.md",
+      "type": "wiki_experiment_state"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/log.md",
+      "type": "wiki_log"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "type": "wiki_graph_edges"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/experiment_run_final_runtime_audit_boundary.json",
+      "type": "experiment_run_final_runtime_audit_boundary_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/experiment_result.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allowlist_evidence": [
+      "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/idea-r07-landscape-driven-1.allowlist.json"
+    ],
+    "approval_ref": "user-request-autosci-e2e-20260707-idea-chain",
+    "before_artifacts": [
+      "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r07.md"
+    ],
+    "env": "local",
+    "execute_approved_side_effect": true,
+    "execution_mode": "human_approved",
+    "experiment_plan_evidence": "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/experiment_plan.json",
+    "experiment_result": "plugins/autosci/tests/fixtures/sample_autosci_raw_experiment_result.json",
+    "gate_mode": "autosci_native",
+    "native_options": {
+      "add": "",
+      "affiliation_logo": "",
+      "after_artifacts": [],
+      "all": false,
+      "allowlist_evidence": [
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/idea-r07-landscape-driven-1.allowlist.json"
+      ],
+      "anonymous": false,
+      "approval_ref": "user-request-autosci-e2e-20260707-idea-chain",
+      "authors": "",
+      "auto": false,
+      "auto_figures": false,
+      "before_artifacts": [
+        "artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r07.md"
+      ],
+      "canvas": false,
+      "checklist": false,
+      "claims_evidence": [],
+      "code_evidence": [],
+      "collect": false,
+      "collect_ready": false,
+      "compile_after_artifacts": [],
+      "compile_allowlist_evidence": [],
+      "compile_approval_ref": "",
+      "compile_before_artifacts": [],
+      "compile_execute_approved": false,
+      "compile_executor_timeout_seconds": 120,
+      "compile_runtime_evidence": [],
+      "compile_target": "",
+      "conference_logo": "",
+      "crystallize": false,
+      "daily_categories": [],
+      "daily_decisions": "",
+      "daily_feed": "",
+      "daily_hours": 0,
+      "daily_max_auto_ingest": 0,
+      "daily_max_recommendations": 0,
+      "daily_mode": "",
+      "daily_no_external": false,
+      "daily_send_email": "",
+      "depth": 0,
+      "difficulty": "",
+      "discover": false,
+      "double_blind": false,
+      "edge_types": "",
+      "env": "local",
+      "execute_approved": true,
+      "experiment_after_artifacts": [],
+      "experiment_allowlist_evidence": [],
+      "experiment_approval_ref": "",
+      "experiment_before_artifacts": [],
+      "experiment_execute_approved": false,
+      "experiment_executor_timeout_seconds": 120,
+      "experiment_result_evidence": [],
+      "experiment_runtime_evidence": [],
+      "fix": false,
+      "focus": "",
+      "format": "",
+      "full": false,
+      "idea_approval_ref": "",
+      "layout": "",
+      "lifecycle_summary": [],
+      "max_ideas": 0,
+      "max_rounds": 0,
+      "min_font_size": null,
+      "model_command": "",
+      "model_evidence": [],
+      "no_figures": false,
+      "no_introduction": false,
+      "no_logos": false,
+      "no_refine": false,
+      "novelty_evidence": [],
+      "obsidian": false,
+      "online": false,
+      "page_count": null,
+      "page_limit": null,
+      "paper_slug": "",
+      "pdf_inspection": "",
+      "pilot_handoff_evidence": [],
+      "pilot_runtime_evidence": [],
+      "pipeline": "",
+      "quick": false,
+      "refine_iterations": 0,
+      "remote_check_command": "",
+      "remote_run_dir": "",
+      "render": false,
+      "require_review_llm": false,
+      "results_approval_ref": "",
+      "review": false,
+      "review_llm_command": "",
+      "review_llm_endpoint": "",
+      "review_llm_evidence": [],
+      "review_llm_model": "",
+      "review_llm_provider": "",
+      "reviewer_thread_evidence": [],
+      "runtime_evidence": [],
+      "scheduler_demo": false,
+      "scheduler_dispatch_external_evidence": false,
+      "scheduler_include_blocked_external": false,
+      "scheduler_include_human_gates": false,
+      "scheduler_legacy_smoke_runner": false,
+      "scheduler_node_id": [],
+      "scheduler_require_workflow_config_alignment": false,
+      "scheduler_run": false,
+      "scheduler_timeout": 30.0,
+      "scope": "",
+      "serve": false,
+      "skip_paper": false,
+      "skip_pilot": false,
+      "skip_validation": false,
+      "source_evidence": [],
+      "start_from": "",
+      "stress_test": null,
+      "submission_audit": "",
+      "submission_mode": "",
+      "submission_profile": "",
+      "target_score": 0.0,
+      "title": "",
+      "types": "",
+      "verbose": false,
+      "verified_min_font_size": null,
+      "verified_page_count": null,
+      "visualize": false,
+      "write": false
+    },
+    "policy_auto_execute_side_effect": true,
+    "smoke_mode": false,
+    "target": "idea-r07-landscape-driven-1"
+  },
+  "limitations": [
+    "Experiment result was completed from approved runtime evidence and mutated wiki state.",
+    "Auto-approved by gate policy mode `autosci_native`; no human approval was requested.",
+    "Final lifecycle audit also requires an approved monitor/collect stage with collection ledger evidence."
+  ],
+  "node_id": "node-run-experiment",
+  "outputs": {
+    "final_runtime_audit_boundary": {
+      "approval_contract_verified": true,
+      "approval_state": "verified",
+      "artifact_types": [
+        "approval_contract_json",
+        "executor_stderr",
+        "executor_stdout",
+        "experiment_deploy_report_json",
+        "experiment_metric_aggregate_report_json",
+        "experiment_run_log",
+        "experiment_run_report_json",
+        "experiment_runtime_evidence_json",
+        "gate_policy_allowlist_json",
+        "gate_policy_decision_json",
+        "run_experiment_result_json",
+        "wiki_experiment_state",
+        "wiki_graph_edges",
+        "wiki_log"
+      ],
+      "collection_ledger_recorded": false,
+      "experiment_id": "exp-idea-r07-landscape-driven-1",
+      "final_runtime_audit_ready": false,
+      "limitations": [
+        "Final lifecycle audit also requires an approved monitor/collect stage with collection ledger evidence."
+      ],
+      "live_remote_collection_verified": false,
+      "remote_collection_boundary_status": "N/A",
+      "result_collected": true,
+      "runtime_semantic_status": "verified",
+      "runtime_semantic_verified": true,
+      "schema": "autosci_experiment_run_final_runtime_audit_boundary.v1",
+      "stage": "run",
+      "stage_audit_ready": true,
+      "status": "stage_runtime_audit_ready",
+      "wiki_state_mutated": true
+    },
+    "policy_decision": {
+      "action": "run_experiment",
+      "allow_destructive": true,
+      "allow_email": true,
+      "allow_network": true,
+      "allow_remote": true,
+      "allowed": true,
+      "allowed_write_roots": [
+        "artifacts/autosci",
+        "artifacts/scientific"
+      ],
+      "blocked": false,
+      "execute_side_effects": true,
+      "mode": "autosci_native",
+      "proof_best_effort": true,
+      "proof_required": false,
+      "reasons": [
+        "autosci_native allows side effects without Solar gate blocking.",
+        "autosci_native allows side effects without Solar gate blocking.",
+        "autosci_native allows side effects without Solar gate blocking.",
+        "autosci_native allows side effects without Solar gate blocking."
+      ],
+      "require_approval_ref": false,
+      "require_before_after_artifacts": false,
+      "require_hitl": false,
+      "require_runtime_evidence": false,
+      "sandbox_required": false,
+      "side_effects": [
+        "read_local",
+        "write_artifact",
+        "local_command",
+        "wiki_mutation"
+      ],
+      "synthetic_approval_ref": "policy:auto:autosci_native:run_experiment:2026-07-07T15:59:08Z",
+      "warnings": [
+        "Auto-approved by gate policy mode `autosci_native`; no human approval was requested.",
+        "Solar gates are bypassed in autosci_native mode; evidence is best-effort only."
+      ]
+    },
+    "result": {
+      "command_run": "python3 artifacts/autosci/runs/e2e-doc-literature-20260707/tools/validate_literature_item.py --metadata artifacts/autosci/runs/e2e-doc-literature-20260707/metadata/r07.json --source artifacts/autosci/runs/e2e-doc-literature-20260707/sources/r07.md --experiment-id exp-idea-r07-landscape-driven-1 --claim-id idea-r07-landscape-driven-1",
+      "evidence_ids": [
+        "exp-idea-r07-landscape-driven-1",
+        "Validate evidence coverage for `idea-r07-landscape-driven-1` using an approval-gated native experiment.",
+        "literature-source:R07",
+        "attached-doc:loop-harness-resource-radar",
+        "idea-r07-landscape-driven-1",
+        "task-autosci-skillgen-run_experiment",
+        "node-run-experiment",
+        "artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_runtime_evidence.json"
+      ],
+      "execution_mode": "human_approved",
+      "exit_code": 0,
+      "experiment_id": "exp-idea-r07-landscape-driven-1",
+      "final_runtime_audit_boundary": {
+        "approval_contract_verified": true,
+        "approval_state": "verified",
+        "artifact_types": [
+          "approval_contract_json",
+          "executor_stderr",
+          "executor_stdout",
+          "experiment_deploy_report_json",
+          "experiment_metric_aggregate_report_json",
+          "experiment_run_log",
+          "experiment_run_report_json",
+          "experiment_runtime_evidence_json",
+          "gate_policy_allowlist_json",
+          "gate_policy_decision_json",
+          "run_experiment_result_json",
+          "wiki_experiment_state",
+          "wiki_graph_edges",
+          "wiki_log"
+        ],
+        "collection_ledger_recorded": false,
+        "experiment_id": "exp-idea-r07-landscape-driven-1",
+        "final_runtime_audit_ready": false,
+        "limitations": [
+          "Final lifecycle audit also requires an approved monitor/collect stage with collection ledger evidence."
+        ],
+        "live_remote_collection_verified": false,
+        "remote_collection_boundary_status": "N/A",
+        "result_collected": true,
+        "runtime_semantic_status": "verified",
+        "runtime_semantic_verified": true,
+        "schema": "autosci_experiment_run_final_runtime_audit_boundary.v1",
+        "stage": "run",
+        "stage_audit_ready": true,
+        "status": "stage_runtime_audit_ready",
+        "wiki_state_mutated": true
+      },
+      "final_runtime_audit_ready": false,
+      "logs": [
+        "execution_mode=human_approved",
+        "experiment_id=exp-idea-r07-landscape-driven-1",
+        "command_run=python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment",
+        "experiment_executor_result=True",
+        "executor_exit_code=0",
+        "executor_result_path=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_batch/items/r07/experiment/run_experiment_result.json",
+        "approval_state=verified",
+        "approved runtime evidence verified",
+        "validated attached-document source record R07",
+        "url_status=needs URL verification",
+        "confidence=high",
+        "network_fetch=not_requested"
+      ],
+      "metrics": [
+        {
+          "name": "source_markdown_exists",
+          "seed_id": "R07",
+          "value": 1
+        },
+        {
+          "name": "source_chars",
+          "seed_id": "R07",
+          "value": 1582
+        },
+        {
+          "name": "source_id_present",
+          "seed_id": "R07",
+          "value": 1
+        },
+        {
+          "name": "title_present",
+          "seed_id": "R07",
+          "value": 1
+        },
+        {
+          "name": "section_count",
+          "seed_id": "R07",
+          "value": 6
+        },
+        {
+          "name": "needs_url_verification",
+          "seed_id": "R07",
+          "value": 1
+        },
+        {
+          "name": "credibility_score",
+          "seed_id": "R07",
+          "value": 88.0
+        },
+        {
+          "name": "relevance_score",
+          "seed_id": "R07",
+          "value": 85.0
+        }
+      ],
+      "outcome": "partially_supports"
+    }
+  },
+  "provenance": {
+    "gate_policy": {
+      "action": "run_experiment",
+      "allowed": true,
+      "execute_side_effects": true,
+      "mode": "autosci_native",
+      "proof_best_effort": true,
+      "proof_required": false,
+      "synthetic_approval_ref": "policy:auto:autosci_native:run_experiment:2026-07-07T15:59:08Z"
+    },
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-07T15:59:08Z"
+  },
+  "schema": "experiment_result.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-run_experiment"
+}
