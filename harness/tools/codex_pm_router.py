@@ -31,6 +31,13 @@ from requirement_coverage import (
 )
 from apo_plan_compiler import build_capsule_plan_ir
 from capability_capsules import default_capability_plan_for_logical_operator
+from autosci_intake_contract import (
+    WORKFLOW_CONTRACT_ID as AUTOSCI_WORKFLOW_CONTRACT_ID,
+    build_autosci_design_markdown,
+    build_autosci_plan_markdown,
+    build_autosci_task_graph,
+    is_autosci_research_intake_text,
+)
 
 try:
     import yaml  # type: ignore
@@ -845,6 +852,10 @@ def emit_requirement_package(
     _write_yaml(contracts_dir / "research.yaml", artifacts["contract_files"]["research"])
     _write_json(pm_dir / "task_dag.json", artifacts["task_dag"])
     _write_json(pm_dir / "capsule_plan.json", artifacts["capsule_plan"])
+    if artifacts.get("plan_markdown"):
+        _write_text(pm_dir / "plan.md", artifacts["plan_markdown"])
+    if artifacts.get("design_markdown"):
+        _write_text(pm_dir / "design.md", artifacts["design_markdown"])
     _write_text(handoff_dir / "codex_handoff.md", artifacts["handoff_markdown"]["codex"])
     _write_text(handoff_dir / "solar_harness_handoff.md", artifacts["handoff_markdown"]["solar_harness"])
     _write_text(evals_dir / "golden_cases.jsonl", "\n".join(json.dumps(case, ensure_ascii=False) for case in artifacts["eval_seed_cases"]) + "\n")
@@ -868,6 +879,10 @@ def emit_requirement_package(
         _write_text(sprint_root / f"{sprint_id}.contract.md", artifacts["contract_markdown"])
         _write_json(sprint_root / f"{sprint_id}.task_graph.json", artifacts["task_dag"])
         _write_json(sprint_root / f"{sprint_id}.capsule_plan.json", artifacts["capsule_plan"])
+        if artifacts.get("plan_markdown"):
+            _write_text(sprint_root / f"{sprint_id}.plan.md", artifacts["plan_markdown"])
+        if artifacts.get("design_markdown"):
+            _write_text(sprint_root / f"{sprint_id}.design.md", artifacts["design_markdown"])
         _write_text(sprint_root / f"{sprint_id}.product-brief.md", artifacts["product_brief_markdown"])
         _write_text(sprint_root / f"{sprint_id}.handoff.md", artifacts["handoff_markdown"]["solar_harness"])
         _write_json(sprint_root / f"{sprint_id}.requirement_ir.json", requirement_ir)
@@ -881,6 +896,8 @@ def emit_requirement_package(
                 "sprint_contract": str(sprint_root / f"{sprint_id}.contract.md"),
                 "sprint_task_graph": str(sprint_root / f"{sprint_id}.task_graph.json"),
                 "sprint_capsule_plan": str(sprint_root / f"{sprint_id}.capsule_plan.json"),
+                "sprint_plan": str(sprint_root / f"{sprint_id}.plan.md") if artifacts.get("plan_markdown") else "",
+                "sprint_design": str(sprint_root / f"{sprint_id}.design.md") if artifacts.get("design_markdown") else "",
                 "sprint_requirement_trace": str(sprint_root / f"{sprint_id}.requirement_trace.json"),
                 "sprint_coverage_report": str(sprint_root / f"{sprint_id}.coverage_report.json"),
                 "sprint_acceptance_verdict": str(sprint_root / f"{sprint_id}.acceptance_verdict.json"),
@@ -1171,6 +1188,11 @@ def _research_task_graph() -> dict[str, Any]:
     return {
         "dag_variant": "research",
         "research_mode": True,
+        "quality_gates": {
+            "parallelism": {
+                "min_ready_width": 1,
+            }
+        },
         "evidence_policy": {
             "ledger_required": True,
             "unsupported_claim_guard": True,
@@ -1331,20 +1353,35 @@ def build_pm_intake(
     goal_text = effective_text["goal_text"] or compile_text
     problem_text = effective_text["problem_text"] or compile_text
     raw_user_text = effective_text["raw_user_text"] or compile_text
-    request_type = classify_request_type(compile_text, papers)
+    autosci_contract = is_autosci_research_intake_text(compile_text)
+    request_type = RESEARCH if autosci_contract else classify_request_type(compile_text, papers)
     canonical_request_type = CLASS_TO_CANONICAL[request_type]
     lane_hint = choose_lane_hint(request_type, compile_text)
     output_mode = choose_output_mode(request_type)
     priority = choose_priority(compile_text, request_type)
-    task_graph = build_task_graph_skeleton(request_type, lane_hint, compile_text)
+    title = _safe_title(goal_text or compile_text)
+    if autosci_contract:
+        task_graph = build_autosci_task_graph(
+            sprint_id=sprint_id or "N/A",
+            title=title,
+            request_text=compile_text,
+            harness_dir=HARNESS_ROOT,
+        )
+    else:
+        task_graph = build_task_graph_skeleton(request_type, lane_hint, compile_text)
     if _is_code_understanding_request(compile_text, repo_context):
         task_graph = _adapt_graph_for_code_understanding(task_graph, request_type)
     task_graph["nodes"] = [_node_enrichment(request_type, lane_hint, node) for node in task_graph["nodes"]]
     normalized_goal = _normalized_text(goal_text)[:400]
     normalized_problem = _normalized_text(problem_text)[:400]
     normalized_user_intent = _normalized_text(raw_user_text)[:400]
-    title = _safe_title(goal_text or compile_text)
     acceptance = _default_acceptance(request_type)
+    if autosci_contract:
+        acceptance = [
+            "Normal Solar intake emits a research.autosci.v1 task graph.",
+            "Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.",
+            "Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.",
+        ]
     non_goals = _default_non_goals(request_type)
     stop_rules = _default_stop_rules(request_type)
     open_questions = _derive_open_questions(request_type, compile_text, papers)
@@ -1415,6 +1452,9 @@ def build_pm_intake(
         },
         "evidence_policy": task_graph.get("evidence_policy", {}),
     }
+    if autosci_contract:
+        requirement_ir["workflow_contract"] = AUTOSCI_WORKFLOW_CONTRACT_ID
+        requirement_ir["autosci_contract_bound"] = True
     task_graph = _apply_requirement_mapping(task_graph, requirements, request_type)
     task_graph = enrich_task_graph_defaults(task_graph, requirement_ir, sprint_id=sprint_id or "N/A")
     requirement_ir["dag_view"] = task_graph
@@ -1446,6 +1486,15 @@ def build_pm_intake(
         ),
         "notes": "Requirement Compiler produced canonical IR, compiled contracts, and a task DAG proposal.",
     }
+    if autosci_contract:
+        product_brief.update(
+            {
+                "source": "autosci-intake-contract",
+                "handoff_to": "builder_main",
+                "template_variant": "autosci",
+                "notes": "Normal intake selected the contract-bound AutoSci research lifecycle.",
+            }
+        )
     prd_markdown = _render_prd_markdown(title, prd_view)
     contract_markdown = _render_contract_markdown(title, contracts)
     codex_handoff_md = _render_handoff_markdown(
@@ -1463,11 +1512,23 @@ def build_pm_intake(
     solar_handoff_md = _render_handoff_markdown(
         title,
         "solar-harness",
-        "Read compiled PRD / contract / task graph proposal, then produce planner artifacts without skipping governance.",
+        (
+            "Dispatch the contract-bound AutoSci scientific task graph; planner artifacts are already generated by the workflow contract."
+            if autosci_contract
+            else "Read compiled PRD / contract / task graph proposal, then produce planner artifacts without skipping governance."
+        ),
         _sprint_handoff_artifacts(sprint_id or "", "solar_harness"),
         [
-            "Planner produces design.md and plan.md.",
-            "Planner may refine task_graph.json but must preserve compiled governance constraints and explicit requirement_ids mapping.",
+            (
+                "Use graph_scheduler/autopilot to dispatch ready Scientific* nodes."
+                if autosci_contract
+                else "Planner produces design.md and plan.md."
+            ),
+            (
+                "Do not route this sprint back through a generic planner unless the task_graph is invalid."
+                if autosci_contract
+                else "Planner may refine task_graph.json but must preserve compiled governance constraints and explicit requirement_ids mapping."
+            ),
             "No direct builder dispatch from raw request.",
         ],
         [
@@ -1476,6 +1537,8 @@ def build_pm_intake(
         ],
     )
     product_brief_markdown = _render_product_brief_markdown(product_brief)
+    plan_markdown = build_autosci_plan_markdown(sprint_id or "N/A", title, task_graph) if autosci_contract else ""
+    design_markdown = build_autosci_design_markdown(sprint_id or "N/A", title, task_graph) if autosci_contract else ""
     requirement_trace = build_requirement_trace(requirement_ir, task_graph)
     coverage_report = build_coverage_report(requirement_trace, task_graph)
     acceptance_verdict = build_acceptance_verdict(
@@ -1510,6 +1573,8 @@ def build_pm_intake(
         "priority": priority,
         "acceptance_profile": choose_acceptance_profile(request_type),
         "target_system": target_system,
+        "workflow_contract": AUTOSCI_WORKFLOW_CONTRACT_ID if autosci_contract else "",
+        "autosci_contract_bound": autosci_contract,
         "handoff_package": {
             "sprint_id": sprint_id or "N/A",
             "artifacts": [
@@ -1540,6 +1605,8 @@ def build_pm_intake(
             "acceptance_verdict": acceptance_verdict,
             "product_brief": product_brief,
             "product_brief_markdown": product_brief_markdown,
+            "plan_markdown": plan_markdown,
+            "design_markdown": design_markdown,
             "handoff_markdown": {
                 "codex": codex_handoff_md,
                 "solar_harness": solar_handoff_md,

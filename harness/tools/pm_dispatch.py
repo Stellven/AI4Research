@@ -1691,7 +1691,16 @@ def _new_sprint_id() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("sprint-%Y%m%d-%H%M%S")
 
 
-def ensure_compiled_sprint_status(sprint_id: str, title: str, summary: str) -> Path:
+def ensure_compiled_sprint_status(
+    sprint_id: str,
+    title: str,
+    summary: str,
+    *,
+    status_value: str = "drafting",
+    phase: str = "prd_ready",
+    handoff_to: str = "planner",
+    target_role: str = "planner",
+) -> Path:
     status_path = SPRINTS_DIR / f"{sprint_id}.status.json"
     now = _now()
     if status_path.exists():
@@ -1714,10 +1723,10 @@ def ensure_compiled_sprint_status(sprint_id: str, title: str, summary: str) -> P
             "id": sprint_id,
             "title": title,
             "summary": summary,
-            "status": "drafting",
-            "phase": "prd_ready",
-            "handoff_to": "planner",
-            "target_role": "planner",
+            "status": status_value,
+            "phase": phase,
+            "handoff_to": handoff_to,
+            "target_role": target_role,
             "updated_at": now,
         }
     )
@@ -1734,9 +1743,9 @@ def ensure_compiled_sprint_status(sprint_id: str, title: str, summary: str) -> P
             "sid": sprint_id,
             "status": "info",
             "detail": {
-                "phase": "prd_ready",
-                "handoff_to": "planner",
-                "target_role": "planner",
+                "phase": phase,
+                "handoff_to": handoff_to,
+                "target_role": target_role,
             },
         },
     )
@@ -1823,10 +1832,16 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
         sprint_root=SPRINTS_DIR,
         sprint_id=sprint_id,
     )
+    task_graph_payload = payload.get("compiled_artifacts", {}).get("task_dag", {})
+    autosci_contract_bound = str(task_graph_payload.get("workflow_contract") or "") == "research.autosci.v1"
     status_path = ensure_compiled_sprint_status(
         sprint_id,
         title=payload["compiled_artifacts"]["product_brief"]["title"],
         summary=payload["compiled_artifacts"]["product_brief"]["problem"][:180],
+        status_value="active" if autosci_contract_bound else "drafting",
+        phase="planning_complete" if autosci_contract_bound else "prd_ready",
+        handoff_to="builder_main" if autosci_contract_bound else "planner",
+        target_role="builder_main" if autosci_contract_bound else "planner",
     )
     emitted["status"] = str(status_path)
 

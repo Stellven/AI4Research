@@ -30,6 +30,27 @@ LOGICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "logical-operators.json"
 PHYSICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "physical-operators.json"
 ARTIFACT_ADAPTER_REGISTRY_PATH = HARNESS_DIR / "config" / "artifact-adapter-capsules.registry.yaml"
 EFFECT_KEYS = ("read", "write", "execute", "network", "cost", "risk")
+SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR = {
+    "ScientificLiteratureDiscoverer": "autosci-literature-discover-worker",
+    "ScientificPaperIngestor": "autosci-paper-ingest-worker",
+    "ScientificPaperAnalyzer": "autosci-paper-analyze-worker",
+    "ScientificMemoryUpdater": "autosci-memory-update-worker",
+    "ScientificGraphUpdater": "autosci-graph-update-worker",
+    "ScientificClaimExtractor": "autosci-claim-extract-worker",
+    "ScientificMethodExtractor": "autosci-method-extract-worker",
+    "ScientificCodeEvidenceMapper": "autosci-code-evidence-map-worker",
+    "ScientificIdeaGenerator": "autosci-idea-worker",
+    "ScientificIdeaEvaluator": "autosci-idea-evaluate-worker",
+    "ScientificExperimentDesigner": "autosci-experiment-design-worker",
+    "ScientificExperimentRunner": "autosci-experiment-run-worker",
+    "ScientificExperimentMonitor": "autosci-experiment-monitor-worker",
+    "ScientificClaimVerifier": "autosci-claim-verify-worker",
+    "ScientificReportPlanner": "autosci-report-plan-worker",
+    "ScientificReportDrafter": "autosci-report-worker",
+    "ScientificArtifactReviewer": "autosci-artifact-review-worker",
+    "ScientificPublicationProducer": "autosci-publication-compile-worker",
+    "ScientificWorkflowEvolver": "autosci-workflow-evolve-worker",
+}
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
@@ -86,6 +107,20 @@ def _dedupe(values: List[str]) -> List[str]:
         seen.add(item)
         out.append(item)
     return out
+
+
+def _operator_constraints_for_logical_operator(
+    logical_operator: str,
+    constraints: Dict[str, Any],
+) -> Dict[str, Any]:
+    normalized = dict(constraints or {})
+    exact_operator = SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR.get(str(logical_operator or ""))
+    if not exact_operator:
+        return normalized
+    preferred = [exact_operator]
+    preferred.extend(str(item) for item in list(normalized.get("preferred") or []))
+    normalized["preferred"] = _dedupe(preferred)
+    return normalized
 
 
 def _resolve_manifest_path(base: Path, manifest_path: str) -> Path:
@@ -470,7 +505,10 @@ def build_capsule_plan_node(
     manifest = _capsule_manifest(capsule_id, registry_path=registry_path)
     bindings = manifest.get("bindings", {})
     verification = manifest.get("verification", {})
-    op_constraints = dict(base_plan.get("operator_constraints") or manifest.get("operator_compatibility") or {})
+    op_constraints = _operator_constraints_for_logical_operator(
+        logical_operator,
+        dict(base_plan.get("operator_constraints") or manifest.get("operator_compatibility") or {}),
+    )
     task_type = str(base_plan.get("dispatch_task_type") or node.get("dispatch_task_type") or node.get("type") or "")
     role = logical_role_for_operator(logical_operator)
 

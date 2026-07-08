@@ -19,6 +19,13 @@ from typing import Any
 import sys as _sys, os as _os
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 from prerequisite_resolver import iter_blocked
+from autosci_intake_contract import (
+    WORKFLOW_CONTRACT_ID as AUTOSCI_WORKFLOW_CONTRACT_ID,
+    build_autosci_design_markdown,
+    build_autosci_plan_markdown,
+    build_autosci_task_graph,
+    is_autosci_research_intake_text,
+)
 del _sys, _os
 
 HOME = Path.home()
@@ -93,6 +100,25 @@ DEFAULT_SLICES: list[dict[str, Any]] = [
     },
 ]
 
+AUTOSCI_WORKFLOW_SLICE: dict[str, Any] = {
+    "suffix": "autosci-workflow",
+    "title": "AutoSci 合同化研究工作流",
+    "goal": "通过 normal intake 生成 research.autosci.v1 合同绑定的 Scientific* task graph，并交给 graph scheduler 自动派发 AutoSci workers。",
+    "depends_on": [],
+    "write_scope": [
+        "sprints/*task_graph.json",
+        "sprints/*plan.md",
+        "sprints/*design.md",
+        "artifacts/scientific/**",
+    ],
+    "acceptance": [
+        "child sprint 的 task_graph 声明 workflow_contract=research.autosci.v1",
+        "所有 Scientific* 节点绑定 research capability capsule",
+        "status 进入 planning_complete/builder_main，autopilot 可直接派发 ready graph nodes",
+    ],
+    "required_capabilities": ["research.autosci.v1", "scientific-research", "graph-dispatch"],
+}
+
 
 def utc_now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -150,6 +176,80 @@ def write_atomic(path: Path, text: str) -> None:
 
 def write_json(path: Path, data: dict[str, Any]) -> None:
     write_atomic(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+
+def autosci_product_brief_markdown(title: str, request: str) -> str:
+    return f"""# Product Brief — {title}
+
+**Source**: autosci-intake-contract
+**Priority**: P1
+**Lane**: research
+**Handoff To**: builder_main
+
+## Intent
+
+{request[:800]}
+
+## Acceptance Criteria
+
+- Normal intake emits a `research.autosci.v1` task graph.
+- Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.
+- Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.
+
+## Stop Rules
+
+- Missing scientific task graph blocks dispatch.
+- Missing schema-gated evidence blocks closeout.
+"""
+
+
+def autosci_requirement_ir(epic_id: str, sid: str, title: str, request: str, graph: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": "solar.requirement_ir.v1",
+        "id": f"req-{sid}",
+        "epic_id": epic_id,
+        "sprint_id": sid,
+        "request_type": "research",
+        "priority": "P1",
+        "lane_hint": "research",
+        "workflow_contract": AUTOSCI_WORKFLOW_CONTRACT_ID,
+        "autosci_contract_bound": True,
+        "source_inputs": {
+            "raw_request": request,
+        },
+        "user_intent": request[:800],
+        "normalized_goal": title,
+        "requirements": [
+            {
+                "id": "REQ-000",
+                "source_text": "Normal intake must route this request into AutoSci by contract.",
+                "success_criteria": ["research.autosci.v1 task graph is graph-ready"],
+                "verification_method": "task_graph_closeout",
+                "priority": "P1",
+            }
+        ],
+        "dag_view": graph,
+        "evidence_policy": graph.get("evidence_policy", {}),
+    }
+
+
+def autosci_status_payload(epic_id: str, sid: str, title: str, priority: str, active: bool) -> dict[str, Any]:
+    return {
+        "id": sid,
+        "sprint_id": sid,
+        "epic_id": epic_id,
+        "title": title,
+        "status": "active" if active else "queued",
+        "phase": "planning_complete" if active else "epic_waiting_dependency",
+        "handoff_to": "builder_main" if active else "",
+        "target_role": "builder_main" if active else "",
+        "priority": priority,
+        "created_at": utc_now(),
+        "updated_at": utc_now(),
+        "dependency_policy": "activated_by_epic_dag",
+        "workflow_contract": AUTOSCI_WORKFLOW_CONTRACT_ID,
+        "contract_bound": True,
+    }
 
 
 def prd_markdown(epic_id: str, sid: str, title: str, raw_request: str, item: dict[str, Any]) -> str:
@@ -280,6 +380,8 @@ def create_epic(args: argparse.Namespace) -> dict[str, Any]:
         raise SystemExit("--title is required")
     if not request:
         raise SystemExit("--request or --request-file is required")
+    if is_autosci_research_intake_text(request):
+        return create_autosci_epic(args, title=title, request=request)
     priority = args.priority
     epic_id = derive_epic_id(title, args.slug)
     slices = DEFAULT_SLICES[: max(3, min(args.slices, len(DEFAULT_SLICES)))]
@@ -371,6 +473,129 @@ status: `{epic_meta['status']}`
             "traceability": str(SPRINTS_DIR / f"{epic_id}.traceability.json"),
         },
         "children": [{"sid": c["sid"], "node_id": c["node_id"], "active": c["active"]} for c in children],
+    }
+
+
+def create_autosci_epic(args: argparse.Namespace, *, title: str, request: str) -> dict[str, Any]:
+    priority = args.priority
+    epic_id = derive_epic_id(title, args.slug)
+    item = dict(AUTOSCI_WORKFLOW_SLICE)
+    sid = child_sid(epic_id, item["suffix"], 1)
+    node_id = node_id_for(item["suffix"], 1)
+    active = bool(args.activate_ready)
+    child = {"sid": sid, "node_id": node_id, "slice": item, "active": active}
+    graph = build_autosci_task_graph(
+        sprint_id=sid,
+        title=title,
+        request_text=request,
+        harness_dir=HARNESS_DIR,
+    )
+    plan_md = build_autosci_plan_markdown(sid, title, graph)
+    design_md = build_autosci_design_markdown(sid, title, graph)
+    handoff_md = f"""# AutoSci Graph Dispatch Handoff — {title}
+
+epic_id: `{epic_id}`
+sprint_id: `{sid}`
+workflow_contract: `{AUTOSCI_WORKFLOW_CONTRACT_ID}`
+
+## Dispatch
+
+This child sprint is already graph-ready. Autopilot should dispatch ready DAG
+nodes through graph_scheduler and the autosci-* physical operator pool.
+"""
+    if not args.dry_run:
+        write_atomic(SPRINTS_DIR / f"{sid}.prd.md", prd_markdown(epic_id, sid, title, request, item))
+        write_atomic(SPRINTS_DIR / f"{sid}.contract.md", contract_markdown(epic_id, sid, item, priority))
+        write_atomic(SPRINTS_DIR / f"{sid}.product-brief.md", autosci_product_brief_markdown(title, request))
+        write_atomic(SPRINTS_DIR / f"{sid}.plan.md", plan_md)
+        write_atomic(SPRINTS_DIR / f"{sid}.design.md", design_md)
+        write_atomic(SPRINTS_DIR / f"{sid}.handoff.md", handoff_md)
+        write_json(SPRINTS_DIR / f"{sid}.task_graph.json", graph)
+        write_json(SPRINTS_DIR / f"{sid}.requirement_ir.json", autosci_requirement_ir(epic_id, sid, title, request, graph))
+        write_json(SPRINTS_DIR / f"{sid}.status.json", autosci_status_payload(epic_id, sid, item["title"], priority, active))
+
+    children = [child]
+    parent_graph = build_graph(epic_id, title, children)
+    parent_graph.update(
+        {
+            "workflow_contract": AUTOSCI_WORKFLOW_CONTRACT_ID,
+            "contract_bound": True,
+            "research_mode": True,
+        }
+    )
+    traceability = {
+        "schema_version": "solar.epic.traceability.v1",
+        "epic_id": epic_id,
+        "title": title,
+        "created_at": utc_now(),
+        "workflow_contract": AUTOSCI_WORKFLOW_CONTRACT_ID,
+        "raw_request_chars": len(request),
+        "children": [
+            {
+                "node_id": node_id,
+                "sprint_id": sid,
+                "slice": item["suffix"],
+                "title": item["title"],
+                "depends_on": [],
+                "status": "active" if active else "queued",
+            }
+        ],
+    }
+    epic_meta = {
+        "schema_version": "solar.epic.v1",
+        "epic_id": epic_id,
+        "title": title,
+        "priority": priority,
+        "created_at": utc_now(),
+        "request": request,
+        "workflow_contract": AUTOSCI_WORKFLOW_CONTRACT_ID,
+        "contract_bound": True,
+        "child_sprints": [sid],
+        "task_graph": f"{epic_id}.task_graph.json",
+        "traceability": f"{epic_id}.traceability.json",
+        "status": "active" if active else "drafted",
+    }
+    epic_md = f"""# Epic: {title}
+
+epic_id: `{epic_id}`
+priority: `{priority}`
+status: `{epic_meta['status']}`
+workflow_contract: `{AUTOSCI_WORKFLOW_CONTRACT_ID}`
+
+## 目标
+
+Normal intake 命中 AutoSci 研究工作流合同，生成 graph-ready child sprint，
+由 graph scheduler 派发 Scientific* DAG nodes。
+
+## 用户原始需求
+
+{request}
+
+## 子任务图
+
+| Node | Sprint | Slice | Depends |
+| --- | --- | --- | --- |
+| {node_id} | `{sid}` | {item['title']} | - |
+"""
+    if not args.dry_run:
+        write_atomic(SPRINTS_DIR / f"{epic_id}.epic.md", epic_md)
+        write_json(SPRINTS_DIR / f"{epic_id}.epic.json", epic_meta)
+        write_json(SPRINTS_DIR / f"{epic_id}.task_graph.json", parent_graph)
+        write_json(SPRINTS_DIR / f"{epic_id}.traceability.json", traceability)
+    return {
+        "ok": True,
+        "epic_id": epic_id,
+        "title": title,
+        "workflow_contract": AUTOSCI_WORKFLOW_CONTRACT_ID,
+        "dry_run": args.dry_run,
+        "paths": {
+            "epic_md": str(SPRINTS_DIR / f"{epic_id}.epic.md"),
+            "epic_json": str(SPRINTS_DIR / f"{epic_id}.epic.json"),
+            "task_graph": str(SPRINTS_DIR / f"{epic_id}.task_graph.json"),
+            "traceability": str(SPRINTS_DIR / f"{epic_id}.traceability.json"),
+            "child_task_graph": str(SPRINTS_DIR / f"{sid}.task_graph.json"),
+        },
+        "children": [{"sid": sid, "node_id": node_id, "active": active}],
     }
 
 
