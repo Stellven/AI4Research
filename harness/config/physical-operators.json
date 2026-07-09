@@ -4579,6 +4579,37 @@
       },
       "deprecated": false
     },
+    "autosci-evaluator-worker": {
+      "display_name": "AutoSci runtime evaluator worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_eval_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "task_classes": [
+        "graph_eval",
+        "scientific-evidence-gate",
+        "verification"
+      ],
+      "strengths": [
+        "autosci-evidence",
+        "schema-gated-verdict",
+        "runtime-evaluation"
+      ],
+      "preferred_for": [
+        "research.autosci.v1",
+        "scientific-evidence",
+        "evaluator"
+      ],
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
     "autosci-report-plan-worker": {
       "display_name": "AutoSci report plan worker",
       "owner_host": "stub_docker_sandbox",

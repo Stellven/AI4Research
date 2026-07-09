@@ -272,11 +272,13 @@ sys.path.insert(0, str(HARNESS_DIR / "lib"))
 from graph_scheduler import (  # noqa: E402
     load_graph,
     save_graph,
+    auto_enrich_graph,
     enqueue_ready,
     set_node_status,
     node_status,
     mark_node_result,
     parent_ready_check,
+    ready_nodes,
     sync_status_cache_from_graph,
     terminalize_dependency_blocked_nodes,
 )
@@ -6518,6 +6520,309 @@ def _submit_eval_to_operator_pool(
     }
 
 
+def _operator_id_from_pane(pane: str) -> str:
+    raw = str(pane or "").strip()
+    if not raw.startswith("operator:"):
+        return ""
+    return raw.split(":", 1)[1].strip()
+
+
+def _autosci_action_for_operator(operator_id: str) -> str:
+    spec = _physical_operator_spec(operator_id)
+    command = str(spec.get("command") or "")
+    match = re.search(r"--action\s+([A-Za-z0-9_.-]+)", command)
+    return match.group(1) if match else ""
+
+
+def _node_expected_schema(node: dict[str, Any]) -> str:
+    policy = node.get("evidence_policy") if isinstance(node.get("evidence_policy"), dict) else {}
+    return str(policy.get("expected_schema") or node.get("expected_schema") or "").strip()
+
+
+def _resolve_harness_artifact_path(raw: Any) -> Path:
+    path = Path(str(raw or "").strip())
+    if path.is_absolute():
+        return path
+    return HARNESS_DIR / path
+
+
+def _autosci_primary_output_path(sid: str, node: dict[str, Any]) -> Path:
+    write_scope = node.get("write_scope") if isinstance(node.get("write_scope"), list) else []
+    for raw in write_scope:
+        text = str(raw or "").strip()
+        if text:
+            return _resolve_harness_artifact_path(text)
+    node_id = str(node.get("id") or "node").strip() or "node"
+    schema = _node_expected_schema(node) or "autosci_evidence"
+    safe_schema = re.sub(r"[^A-Za-z0-9_.-]+", "-", schema).strip("-") or "autosci_evidence"
+    return HARNESS_DIR / "artifacts" / "scientific" / sid / node_id / f"{safe_schema}.json"
+
+
+def _autosci_dependency_inputs(graph: dict[str, Any], sid: str, node: dict[str, Any]) -> dict[str, Any]:
+    nodes_by_id = {
+        str(candidate.get("id") or ""): candidate
+        for candidate in list(graph.get("nodes") or [])
+        if isinstance(candidate, dict)
+    }
+    dependency_evidence: list[str] = []
+    named: dict[str, str] = {}
+    schema_key_map = {
+        "literature_discovery.v1": "literature_evidence",
+        "research_paper.v1": "source_evidence",
+        "research_claims.v1": "claims_evidence",
+        "research_method.v1": "method_evidence",
+        "code_evidence_map.v1": "code_evidence",
+        "idea_candidate.v1": "ideas_evidence",
+        "idea_evaluation.v1": "idea_evaluation_evidence",
+        "experiment_plan.v1": "experiment_plan_evidence",
+        "experiment_result.v1": "experiment_result_evidence",
+        "experiment_status.v1": "experiment_status_evidence",
+        "claim_verdict.v1": "claim_verdict_evidence",
+        "scientific_report.v1": "report_evidence",
+        "artifact_review.v1": "artifact_review_evidence",
+        "publication_bundle.v1": "publication_bundle_evidence",
+        "research_memory_update.v1": "memory_update_evidence",
+        "research_graph_update.v1": "graph_update_evidence",
+    }
+    for dep_id in [str(item) for item in list(node.get("depends_on") or [])]:
+        dep = nodes_by_id.get(dep_id)
+        if not isinstance(dep, dict):
+            continue
+        dep_path = str(_autosci_primary_output_path(sid, dep))
+        dependency_evidence.append(dep_path)
+        schema = _node_expected_schema(dep)
+        key = schema_key_map.get(schema)
+        if key and key not in named:
+            named[key] = dep_path
+    if "source_evidence" in named:
+        named.setdefault("paper_evidence", named["source_evidence"])
+    return {"dependency_evidence": dependency_evidence, **named}
+
+
+def _build_autosci_operator_envelope(
+    *,
+    sid: str,
+    node_id: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    graph_path: str,
+    operator_id: str,
+    dispatch_id: str,
+    instruction_file: Path,
+    payload: dict[str, Any],
+    ttl: int,
+) -> dict[str, Any]:
+    output_dir = HARNESS_DIR / "artifacts" / "autosci" / "runs" / sid / node_id
+    evidence_path = _autosci_primary_output_path(sid, node)
+    expected_schema = _node_expected_schema(node)
+    inputs = {
+        "graph_path": graph_path,
+        "node_id": node_id,
+        "workflow_contract": str(graph.get("workflow_contract") or node.get("workflow_contract") or ""),
+        "logical_operator": str(node.get("logical_operator") or ""),
+        "capability_capsule_id": str(node.get("capability_capsule_id") or ""),
+        "expected_schema": expected_schema,
+        "write_scope": list(node.get("write_scope") or []),
+    }
+    inputs.update(_autosci_dependency_inputs(graph, sid, node))
+    return {
+        "task_id": dispatch_id,
+        "sprint_id": sid,
+        "node_id": node_id,
+        "operator_id": operator_id,
+        "task_type": str(node.get("dispatch_task_type") or node.get("task_type") or node.get("type") or "scientific-node"),
+        "objective": str(node.get("goal") or node.get("title") or node_id),
+        "mode": "runtime",
+        "runner_contract": "research.autosci.v1",
+        "graph_path": graph_path,
+        "dispatch_file": str(instruction_file),
+        "handoff_path": str(_handoff_file(sid, node_id)),
+        "work_dir": str(SPRINTS_DIR / sid / "workdir"),
+        "output_dir": str(output_dir),
+        "inputs": inputs,
+        "outputs": {
+            "result_path": str(output_dir / "result.json"),
+            "evidence_payload_path": str(evidence_path),
+            "evidence_jsonl": str(output_dir / "evidence.jsonl"),
+            "handoff_path": str(_handoff_file(sid, node_id)),
+        },
+        "expected_schema": expected_schema,
+        "expected_action": _autosci_action_for_operator(operator_id),
+        "logical_operator": str(node.get("logical_operator") or ""),
+        "capability_capsule_id": str(node.get("capability_capsule_id") or ""),
+        "capability_native": bool(node.get("capability_native") or node.get("capability_capsule_id")),
+        "write_scope": list(node.get("write_scope") or []),
+        "capsule_plan_ir": payload.get("capsule_plan_ir") if isinstance(payload.get("capsule_plan_ir"), dict) else {},
+        "physical_plan_ir": payload.get("physical_plan_ir") if isinstance(payload.get("physical_plan_ir"), dict) else {},
+        "plan_artifacts": payload.get("plan_artifacts") if isinstance(payload.get("plan_artifacts"), dict) else {},
+        "lease_ttl_seconds": int(ttl),
+    }
+
+
+def _submit_autosci_node_to_operator(
+    *,
+    item: dict[str, Any],
+    payload: dict[str, Any],
+    sid: str,
+    node: dict[str, Any],
+    node_id: str,
+    graph_path: str,
+    pane: str,
+    dispatch_id: str,
+    dry_run: bool,
+    ttl: int,
+) -> dict[str, Any]:
+    operator_id = _operator_id_from_pane(pane)
+    if not operator_id:
+        return {"ok": False, "reason": "missing_operator_id", "node": node_id, "pane": pane}
+    if operator_id == AUTOSCI_EVALUATOR_OPERATOR_ID:
+        return {"ok": False, "reason": "autosci_evaluator_is_not_producer", "node": node_id, "pane": pane}
+    spec = _physical_operator_spec(operator_id)
+    if not spec:
+        return {"ok": False, "reason": "unknown_operator", "node": node_id, "pane": pane, "operator_id": operator_id}
+
+    try:
+        graph = load_graph(graph_path)
+    except Exception:
+        graph = {"sprint_id": sid, "workflow_contract": node.get("workflow_contract"), "nodes": [node]}
+    instruction_file = _dispatch_file(sid, node_id)
+    text_payload = dict(payload, dispatch_id=dispatch_id, sprint_id=sid)
+    text_payload = _ensure_execution_plan_payload(text_payload, graph_path=graph_path, sid=sid, node=node)
+    text_payload["actual_operator_id"] = operator_id
+    text_payload["dispatch_mode"] = "autosci_operator_direct"
+    instruction_file.parent.mkdir(parents=True, exist_ok=True)
+    instruction_file.write_text(build_dispatch_text(text_payload, pane), encoding="utf-8")
+    if not dry_run:
+        _inject_dispatch_context(instruction_file, sid=sid, pane=pane, dispatch_id=dispatch_id)
+
+    envelope = _build_autosci_operator_envelope(
+        sid=sid,
+        node_id=node_id,
+        node=node,
+        graph=graph,
+        graph_path=graph_path,
+        operator_id=operator_id,
+        dispatch_id=dispatch_id,
+        instruction_file=instruction_file,
+        payload=text_payload,
+        ttl=ttl,
+    )
+    actorhost = _actorhost_bridge(
+        actor_id=operator_id,
+        operator_id=operator_id,
+        pane=pane,
+        required_capabilities=list(node.get("required_capabilities") or []),
+    )
+    if dry_run:
+        return _flatten_actorhost_bridge({
+            "ok": True,
+            "node": node_id,
+            "pane": pane,
+            "operator_id": operator_id,
+            "dispatch_id": dispatch_id,
+            "instruction_file": str(instruction_file),
+            "dispatch_mode": "autosci_operator_direct",
+            "operator_envelope": envelope,
+            "dry_run": True,
+            "graph_updated": False,
+        }, actorhost)
+
+    try:
+        import operator_runtime  # type: ignore
+
+        submit_result = operator_runtime.submit(envelope)
+    except Exception as exc:
+        _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
+        _append_dispatch_ledger(
+            "autosci_operator_submit_failed",
+            sid,
+            pane,
+            dispatch_id,
+            {"node": node_id, "operator_id": operator_id, "error": str(exc), "queue_item_id": item.get("id", "")},
+        )
+        return {
+            "ok": False,
+            "reason": "autosci_operator_submit_failed",
+            "node": node_id,
+            "pane": pane,
+            "operator_id": operator_id,
+            "error": str(exc),
+            "requeued": False,
+        }
+
+    _write_submit_ack(sid, node_id, pane, dispatch_id)
+    graph_updated = _mark_graph_node_compat(
+        graph_path,
+        node_id,
+        "dispatched",
+        pane=pane,
+        dispatch_id=dispatch_id,
+    )
+    try:
+        saved = load_graph(graph_path)
+        graph_node = _node_by_id(saved, node_id)
+        if graph_node is not None:
+            graph_node["operator_id"] = operator_id
+            graph_node["dispatched_via"] = "operator_runtime"
+            graph_node["dispatch_mode"] = "autosci_operator_direct"
+            graph_node["updated_at"] = _utc_now()
+            save_graph(graph_path, saved)
+            graph_updated = True
+    except Exception:
+        pass
+    parsed = {
+        "task_id": str(submit_result.get("task_id") or dispatch_id),
+        "operator_id": str(submit_result.get("operator_id") or operator_id),
+        "lease_id": str(submit_result.get("lease_id") or ""),
+        "inbox_path": str(submit_result.get("inbox_path") or ""),
+        "submitted_at": str(submit_result.get("submitted_at") or ""),
+    }
+    _record_node_attribution(
+        sid,
+        node_id,
+        _operator_runstate_fields(
+            operator_id=operator_id,
+            role=str(spec.get("role") or "builder"),
+            dispatch_id=dispatch_id,
+            parsed=parsed,
+            instruction_file=instruction_file,
+            dispatch_mode="autosci_operator_direct",
+        ),
+    )
+    _append_dispatch_ledger(
+        "autosci_operator_dispatched",
+        sid,
+        pane,
+        dispatch_id,
+        {"node": node_id, "operator_id": operator_id, "submit": parsed, "instruction_file": str(instruction_file)},
+    )
+    _append_event(
+        sid,
+        {
+            "event": "graph_autosci_operator_dispatched",
+            "by": "graph-dispatch",
+            "data": {
+                "node": node_id,
+                "operator_id": operator_id,
+                "dispatch_id": dispatch_id,
+                "inbox_path": parsed.get("inbox_path", ""),
+            },
+        },
+    )
+    return _flatten_actorhost_bridge({
+        "ok": True,
+        "node": node_id,
+        "pane": pane,
+        "operator_id": operator_id,
+        "dispatch_id": dispatch_id,
+        "instruction_file": str(instruction_file),
+        "dispatch_mode": "autosci_operator_direct",
+        "operator_submit": parsed,
+        "dry_run": False,
+        "graph_updated": graph_updated,
+    }, actorhost)
+
+
 def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 900) -> dict[str, Any]:
     payload = item.get("payload") or {}
     sid = payload.get("sprint_id") or item.get("sprint_id") or item.get("sid") or ""
@@ -6653,6 +6958,22 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
             "current_dispatch_id": current_dispatch_id,
             "stale_dispatch_id": dispatch_id,
         }
+
+    direct_operator_id = _operator_id_from_pane(str(pane))
+    if direct_operator_id.startswith("autosci-") and direct_operator_id != AUTOSCI_EVALUATOR_OPERATOR_ID:
+        return _submit_autosci_node_to_operator(
+            item=item,
+            payload=payload,
+            sid=sid,
+            node=node,
+            node_id=node_id,
+            graph_path=graph_path,
+            pane=str(pane),
+            dispatch_id=dispatch_id,
+            dry_run=dry_run,
+            ttl=ttl,
+        )
+
     if not dry_run and not _pane_exists(pane):
         enqueue(sid, item.get("intent", f"graph_node|node_id={node_id}"), item.get("priority", 80), payload)
         _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
@@ -7179,6 +7500,245 @@ def _first_available_evaluator(dry_run: bool = False) -> dict[str, Any] | None:
     return None
 
 
+AUTOSCI_WORKFLOW_CONTRACT_ID = "research.autosci.v1"
+AUTOSCI_EVALUATOR_OPERATOR_ID = "autosci-evaluator-worker"
+AUTOSCI_EVALUATOR_PANE = f"operator:{AUTOSCI_EVALUATOR_OPERATOR_ID}"
+
+
+def _node_in_autosci_workflow(graph: dict[str, Any], node: dict[str, Any]) -> bool:
+    contract = str(node.get("workflow_contract") or graph.get("workflow_contract") or "").strip()
+    if contract != AUTOSCI_WORKFLOW_CONTRACT_ID:
+        return False
+    logical_operator = str(node.get("logical_operator") or "").strip()
+    capsule_id = str(node.get("capability_capsule_id") or "").strip()
+    return logical_operator.startswith("Scientific") or capsule_id.startswith("cap.research-")
+
+
+def _node_uses_autosci_evaluator(graph: dict[str, Any], node: dict[str, Any]) -> bool:
+    if str(os.environ.get("SOLAR_AUTOSCI_EVAL_ENABLED", "1")).strip().lower() in {"0", "false", "no", "off"}:
+        return False
+    return _node_in_autosci_workflow(graph, node)
+
+
+def _autosci_operator_dispatch_enabled() -> bool:
+    return str(os.environ.get("SOLAR_AUTOSCI_OPERATOR_DISPATCH_ENABLED", "1")).strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+
+
+def _autosci_physical_operator_for_node(node: dict[str, Any]) -> str:
+    logical_operator = str(node.get("logical_operator") or "").strip()
+    try:
+        from apo_plan_compiler import SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR  # type: ignore
+
+        return str(SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR.get(logical_operator) or "")
+    except Exception:
+        return ""
+
+
+def _autosci_contract_operator_workers(graph: dict[str, Any]) -> list[dict[str, Any]]:
+    if not _autosci_operator_dispatch_enabled():
+        return []
+    workers: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    try:
+        candidate_nodes = ready_nodes(graph)
+    except Exception:
+        candidate_nodes = [
+            node
+            for node in list(graph.get("nodes") or [])
+            if isinstance(node, dict) and str(node.get("status") or "pending") in {"pending", "queued"}
+        ]
+    candidate_node_ids = {str(node.get("id") or "") for node in candidate_nodes if isinstance(node, dict)}
+    for node in list(graph.get("nodes") or []):
+        if (
+            not isinstance(node, dict)
+            or str(node.get("id") or "") not in candidate_node_ids
+            or not _node_in_autosci_workflow(graph, node)
+        ):
+            continue
+        operator_id = _autosci_physical_operator_for_node(node)
+        if not operator_id or operator_id == AUTOSCI_EVALUATOR_OPERATOR_ID:
+            continue
+        spec = _physical_operator_spec(operator_id)
+        if not spec or bool(spec.get("deprecated")):
+            continue
+        if not bool(spec.get("enabled", False)) or not bool(spec.get("available", False)):
+            continue
+        pane = f"operator:{operator_id}"
+        if pane in seen:
+            continue
+        seen.add(pane)
+        runtime_state = _operator_runtime_state_for_graph(operator_id)
+        required_capabilities = [str(item) for item in list(node.get("required_capabilities") or []) if str(item)]
+        capsule_id = str(node.get("capability_capsule_id") or "").strip()
+        if capsule_id and capsule_id not in required_capabilities:
+            required_capabilities.append(capsule_id)
+        capabilities = list(required_capabilities)
+        for value in (
+            operator_id,
+            str(node.get("logical_operator") or ""),
+            capsule_id,
+            "autosci",
+            "research.autosci.v1",
+            "scientific-runtime",
+        ):
+            if value and value not in capabilities:
+                capabilities.append(value)
+        worker = {
+            "pane": pane,
+            "models": ["autosci", "operator-runtime"],
+            "skills": ["autosci", "scientific-runtime", str(node.get("logical_operator") or ""), capsule_id],
+            "capabilities": capabilities,
+            "role": "builder",
+            "dispatch_role": "builder",
+            "host_role": "builder",
+            "operator_role": str(spec.get("role") or ""),
+            "operator_id": operator_id,
+            "busy": runtime_state not in {"", "idle"},
+            "title": str(spec.get("display_name") or operator_id),
+            "unavailable_reason": "" if runtime_state in {"", "idle"} else f"operator_runtime_{runtime_state}",
+            "current_command": str(spec.get("command") or ""),
+            "load": 0,
+            "dispatch_mode": "autosci_operator_direct",
+        }
+        _flatten_actorhost_bridge(
+            worker,
+            _actorhost_bridge(
+                actor_id=operator_id,
+                operator_id=operator_id,
+                pane=pane,
+                required_capabilities=required_capabilities,
+            ),
+        )
+        workers.append(worker)
+    return workers
+
+
+def _submit_eval_to_autosci_adapter(
+    *,
+    graph_path: str,
+    node_id: str,
+    dispatch_id: str,
+    instruction_file: Path,
+    eval_md_path: Path,
+    eval_json_path: Path,
+    dry_run: bool,
+    ttl: int,
+) -> dict[str, Any]:
+    if dry_run:
+        return {
+            "ok": True,
+            "node": node_id,
+            "pane": AUTOSCI_EVALUATOR_PANE,
+            "dispatch_id": dispatch_id,
+            "instruction_file": str(instruction_file),
+            "eval_md_path": str(eval_md_path),
+            "eval_json_path": str(eval_json_path),
+            "dispatch_mode": "autosci_eval_adapter",
+            "dry_run": True,
+        }
+
+    adapter = HARNESS_DIR / "plugins" / "autosci" / "bin" / "autosci_eval_adapter.py"
+    cmd = [
+        sys.executable,
+        str(adapter),
+        "--graph",
+        str(graph_path),
+        "--node",
+        node_id,
+        "--eval-json",
+        str(eval_json_path),
+        "--eval-md",
+        str(eval_md_path),
+        "--instruction-file",
+        str(instruction_file),
+    ]
+    env = _broker_env(str(Path(graph_path).stem.replace(".task_graph", "")))
+    env["HARNESS_DIR"] = str(HARNESS_DIR)
+    env.setdefault("SOLAR_PM_DISPATCH_SOURCE", "graph_node_dispatcher.autosci_eval")
+    try:
+        completed = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": "autosci_eval_adapter_exception",
+            "error": str(exc),
+            "node": node_id,
+            "pane": AUTOSCI_EVALUATOR_PANE,
+            "dispatch_id": dispatch_id,
+            "instruction_file": str(instruction_file),
+        }
+    try:
+        adapter_result = json.loads(completed.stdout)
+        if not isinstance(adapter_result, dict):
+            raise ValueError("adapter output was not a JSON object")
+    except Exception as exc:
+        adapter_result = {
+            "ok": False,
+            "reason": f"invalid_adapter_stdout:{type(exc).__name__}",
+            "stdout": completed.stdout[-2000:],
+        }
+    if completed.returncode != 0 or not adapter_result.get("ok"):
+        return {
+            "ok": False,
+            "reason": str(adapter_result.get("reason") or "autosci_eval_adapter_failed"),
+            "returncode": completed.returncode,
+            "stdout": completed.stdout[-2000:],
+            "stderr": completed.stderr[-2000:],
+            "adapter_result": adapter_result,
+            "node": node_id,
+            "pane": AUTOSCI_EVALUATOR_PANE,
+            "dispatch_id": dispatch_id,
+            "instruction_file": str(instruction_file),
+        }
+
+    verdict = str(adapter_result.get("verdict") or "").strip().lower()
+    if verdict not in {"pass", "fail"}:
+        return {
+            "ok": False,
+            "reason": "autosci_eval_adapter_invalid_verdict",
+            "adapter_result": adapter_result,
+            "node": node_id,
+            "pane": AUTOSCI_EVALUATOR_PANE,
+            "dispatch_id": dispatch_id,
+            "instruction_file": str(instruction_file),
+        }
+    summary = ""
+    eval_payload = _read_json_file_safe(eval_json_path)
+    if isinstance(eval_payload, dict):
+        summary = str(eval_payload.get("summary") or "")
+    verdict_result = node_verdict(
+        graph_path,
+        node_id,
+        verdict,
+        reason=summary or f"AutoSci evaluator verdict: {verdict.upper()}",
+        eval_json=str(eval_json_path),
+        dry_run=False,
+        ttl=ttl,
+        dispatch_downstream=True,
+    )
+    verdict_status = str(verdict_result.get("status") or "").strip().lower()
+    verdict_consumed = bool(verdict_result.get("ok")) or verdict_status in {"passed", "failed", "failed_review"}
+    return {
+        "ok": verdict_consumed,
+        "reason": "" if verdict_consumed else str(verdict_result.get("reason") or "node_verdict_failed"),
+        "node": node_id,
+        "pane": AUTOSCI_EVALUATOR_PANE,
+        "dispatch_id": dispatch_id,
+        "instruction_file": str(instruction_file),
+        "eval_md_path": str(eval_md_path),
+        "eval_json_path": str(eval_json_path),
+        "dispatch_mode": "autosci_eval_adapter",
+        "adapter_result": adapter_result,
+        "node_verdict": verdict_result,
+        "dry_run": False,
+    }
+
+
 def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                         force: bool = False, max_items: int = 0) -> dict[str, Any]:
     graph = load_graph(graph_path)
@@ -7194,6 +7754,162 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
         node_id = str(node.get("id") or "")
         if not _node_eval_needed(graph, sid, node, force=force):
             continue
+        if _node_uses_autosci_evaluator(graph, node):
+            requested_plan = _plan_node_evaluation(graph, node)
+            requested_capacity = {
+                "total_evaluators": 1,
+                "available_evaluators": 1,
+                "busy_evaluators": 0,
+                "available_panes": [AUTOSCI_EVALUATOR_PANE],
+                "required_evaluators": 1,
+                "selected_panes": [AUTOSCI_EVALUATOR_PANE],
+                "capacity_satisfied": True,
+                "quorum_dispatch_supported": True,
+                "review_mode": "single",
+                "dispatchable_now": True,
+                "autosci_evaluator": True,
+            }
+            requested_plan["capacity"] = requested_capacity
+            runtime_plan = dict(requested_plan)
+            runtime_plan.update(
+                {
+                    "planning_source": "workflow_contract_research_autosci_v1",
+                    "review_mode": "single",
+                    "required_evaluators": 1,
+                    "evaluator_classes": ["autosci-evidence-gate"],
+                    "independence_policy": {
+                        "writer_same_operator": "denied",
+                        "writer_same_provider": "allowed",
+                        "mechanism": "runtime_autosci_evaluator_adapter",
+                    },
+                    "capacity": requested_capacity,
+                }
+            )
+            node["evaluation_plan_requested"] = requested_plan
+            node["evaluation_plan_runtime"] = runtime_plan
+            node["evaluation_plan"] = runtime_plan
+            node["evaluation_plan_updated_at"] = _utc_now()
+
+            dispatch_group_id = f"graph-eval-{sid}-{node_id}-{_utc_now().replace(':', '').replace('-', '')}"
+            dispatch_id = f"{dispatch_group_id}-q1"
+            eval_md_path = _eval_md_file(sid, node_id)
+            eval_json_path = _eval_json_file(sid, node_id)
+            instruction_file = _eval_dispatch_member_file(sid, node_id, 1)
+            instruction_file.parent.mkdir(parents=True, exist_ok=True)
+            instruction_file.write_text(
+                build_eval_dispatch_text(
+                    graph,
+                    graph_path,
+                    node,
+                    AUTOSCI_EVALUATOR_PANE,
+                    dispatch_id,
+                    evaluator_role="primary",
+                    evaluator_index=1,
+                    evaluator_total=1,
+                    eval_md_override=eval_md_path,
+                    eval_json_override=eval_json_path,
+                    peer_eval_json_paths=[],
+                    canonical_eval_json_path=str(eval_json_path),
+                    canonical_eval_md_path=str(eval_md_path),
+                ),
+                encoding="utf-8",
+            )
+            _inject_dispatch_context(instruction_file, sid=sid, pane=AUTOSCI_EVALUATOR_PANE, dispatch_id=dispatch_id)
+            assignment = {
+                "pane": AUTOSCI_EVALUATOR_PANE,
+                "dispatch_id": dispatch_id,
+                "role": "primary",
+                "index": 1,
+                "eval_md_path": str(eval_md_path),
+                "eval_json_path": str(eval_json_path),
+            }
+            if dry_run:
+                used_evaluator_panes.add(AUTOSCI_EVALUATOR_PANE)
+                dispatched.append({
+                    "node": node_id,
+                    "pane": AUTOSCI_EVALUATOR_PANE,
+                    "dispatch_id": dispatch_id,
+                    "instruction_file": str(instruction_file),
+                    "evaluation_plan": runtime_plan,
+                    "role": "primary",
+                    "dispatch_mode": "autosci_eval_adapter",
+                    "dry_run": True,
+                })
+                continue
+
+            _emit_node_proof_sidecars(sid, node)
+            node["status"] = "reviewing"
+            node["eval_dispatch_group_id"] = dispatch_group_id
+            node.pop("eval_dispatch_failures", None)
+            node.pop("last_eval_dispatch_failure_reason", None)
+            _store_eval_assignments(node, [assignment], _utc_now())
+            _record_node_runstate(sid, node_id, {
+                "eval_dispatch_failures": 0,
+                "max_eval_dispatch_failures": GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES,
+                "last_eval_result": "DISPATCHED",
+                "last_eval_reason": "autosci_evaluator_dispatched",
+                "next_action": "await_autosci_eval_verdict",
+                "status": "reviewing",
+            })
+            save_graph(graph_path, graph)
+            _write_submit_ack(sid, node_id, AUTOSCI_EVALUATOR_PANE, dispatch_id)
+            _append_dispatch_ledger(
+                "autosci_evaluator_dispatched",
+                sid,
+                AUTOSCI_EVALUATOR_PANE,
+                dispatch_id,
+                {
+                    "node": node_id,
+                    "graph": graph_path,
+                    "instruction_file": str(instruction_file),
+                    "operator_id": AUTOSCI_EVALUATOR_OPERATOR_ID,
+                },
+            )
+            _append_event(
+                sid,
+                {
+                    "event": "graph_autosci_evaluator_dispatched",
+                    "by": "graph-dispatch",
+                    "data": {
+                        "node": node_id,
+                        "operator_id": AUTOSCI_EVALUATOR_OPERATOR_ID,
+                        "dispatch_id": dispatch_id,
+                    },
+                },
+            )
+            submit_result = _submit_eval_to_autosci_adapter(
+                graph_path=graph_path,
+                node_id=node_id,
+                dispatch_id=dispatch_id,
+                instruction_file=instruction_file,
+                eval_md_path=eval_md_path,
+                eval_json_path=eval_json_path,
+                dry_run=False,
+                ttl=ttl,
+            )
+            if submit_result.get("ok"):
+                used_evaluator_panes.add(AUTOSCI_EVALUATOR_PANE)
+                dispatched.append({
+                    "node": node_id,
+                    "pane": AUTOSCI_EVALUATOR_PANE,
+                    "dispatch_id": dispatch_id,
+                    "instruction_file": str(instruction_file),
+                    "evaluation_plan": runtime_plan,
+                    "role": "primary",
+                    "dispatch_mode": "autosci_eval_adapter",
+                    "adapter_result": submit_result.get("adapter_result", {}),
+                    "node_verdict": submit_result.get("node_verdict", {}),
+                })
+            else:
+                skipped.append({
+                    "node": node_id,
+                    "pane": AUTOSCI_EVALUATOR_PANE,
+                    "reason": str(submit_result.get("reason") or "autosci_eval_adapter_failed"),
+                    "evaluation_plan": runtime_plan,
+                    "adapter_result": submit_result,
+                })
+            graph = load_graph(graph_path)
+            break
         requested_plan = _plan_node_evaluation(graph, node)
         loop_evaluators = [
             {**item, "busy": bool(item.get("busy")) or str(item.get("pane") or "") in used_evaluator_panes}
@@ -7530,10 +8246,16 @@ def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
         reconciled = _reconcile_existing_dispatches(graph, graph_path)
         if reconciled:
             save_graph(graph_path, graph)
+    try:
+        graph = auto_enrich_graph(graph, graph_path=graph_path)
+    except Exception:
+        pass
+    workers = _discover_workers(dry_run)
+    workers.extend(_autosci_contract_operator_workers(graph))
     enqueue_result = enqueue_ready(
         graph,
         graph_path,
-        _discover_workers(dry_run),
+        workers,
         max_parallel=effective_max_parallel,
         lease=not dry_run,
         ttl=ttl,
