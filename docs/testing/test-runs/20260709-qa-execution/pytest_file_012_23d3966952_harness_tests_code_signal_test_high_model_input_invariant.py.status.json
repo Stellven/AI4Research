@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_012_23d3966952_harness_tests_code_signal_test_high_model_input_invariant.py",
+  "source": "harness/tests/code_signal/test_high_model_input_invariant.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/code_signal/test_high_model_input_invariant.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.193,
+  "timeout": false
+}

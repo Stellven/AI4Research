@@ -1,12 +1,12 @@
 {
   "by_coverage_status": {
-    "covered": 1549,
-    "missing-or-indirect": 132,
+    "covered": 1550,
+    "missing-or-indirect": 133,
     "partial-or-unmapped": 20,
     "static-validation-required": 21
   },
   "by_l1": {
-    "AutoSci": 36,
+    "AutoSci": 37,
     "Benchmarks": 8,
     "Browser": 2,
     "CI": 22,
@@ -22,7 +22,7 @@
     "Packaging": 14,
     "QA Gates": 28,
     "Reports": 13,
-    "Repository": 90,
+    "Repository": 91,
     "Research": 44,
     "Runtime": 3,
     "Skills": 88,
@@ -35,21 +35,22 @@
     "module": 14,
     "package-bin": 2,
     "package-script": 25,
-    "python-cli": 1109,
+    "python-cli": 1111,
     "route": 121,
     "shell-cli": 11,
     "shell-script": 334,
     "skill": 73,
     "workflow": 22
   },
-  "feature_rows": 1722,
+  "feature_rows": 1724,
   "outputs": [
     "docs/testing/qa_feature_inventory.csv",
     "docs/testing/qa_feature_inventory.md",
+    "docs/testing/qa_feature_list.csv",
     "docs/testing/qa_inventory_summary.md",
     "docs/testing/qa_master_pass_fail_table.csv",
     "docs/testing/qa_master_pass_fail_table.md"
   ],
-  "test_files": 929,
-  "tracked_files": 4371
+  "test_files": 931,
+  "tracked_files": 4383
 }

@@ -1,21 +1,24 @@
 schema_version: solar.contract_bundle.v1
-request_type: implementation
+request_type: research
 source_of_truth: requirement_ir.json
 contracts:
   product:
     enabled: true
-    goal: Write a research report on WWDC Apple 2026
+    goal: Official full-runtime AutoSci integration test through normal solar intake.
+      Do not call a
     success_metrics: &id001
-    - 目标变更在声明范围内完成。
-    - 至少一条测试/执行证据被记录。
-    - 存在独立 verifier 决策。
+    - Normal Solar intake emits a research.autosci.v1 task graph.
+    - Scientific* nodes resolve to AutoSci research capsules and autosci-* physical
+      operators.
+    - Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.
     non_goals:
-    - 不做无关架构重写。
-    - 不默认引入新的生产依赖。
+    - 不把论文总结直接当作实现结论。
+    - 不在缺证据时进入生产实现。
     acceptance: *id001
     stop_rules: &id002
     - 缺少可验证 acceptance 不得标记为完成。
     - 缺少 verifier 决策不得进入 DONE。
+    - 缺少 evidence ledger 或 critique gate 时不得推进到 adoption。
   interface:
     enabled: true
     name: RequirementCompilerAdapters
@@ -38,7 +41,7 @@ contracts:
       action: add validation before dispatch
   agent_execution:
     enabled: true
-    task_scope: implementation
+    task_scope: research
     allowed_paths:
     - apps/pm-pane/**
     - packages/requirement-ir/**
@@ -62,13 +65,25 @@ contracts:
     - touching auth or billing
     stop_conditions: *id002
   research:
-    enabled: false
-    hypothesis: Write a research report on WWDC Apple 2026
+    enabled: true
+    hypothesis: Official full-runtime AutoSci integration test through normal solar
+      intake. Do not call a
     source_papers: []
-    experiments: []
-    adoption_threshold: {}
-    rejection_criteria: []
-request_excerpt: "# RawIntent Consumer Request - Write a research report on WWDC Apple\
-  \ 2026\n\n## Source\n\n- intent_id: intent-20260617-170416-ee1ade6706\n- channel:\
-  \ cli_intake\n- actor: user\n- device: \n- thread_ref: \n\n## Rewritten Objective\n\
-  \nWrite a research rep"
+    experiments:
+    - name: dag_quality_eval
+      dataset: golden_cases.jsonl
+      metric:
+      - cycle_rate
+      - acceptance_coverage
+      - human_edit_distance
+    adoption_threshold:
+      cycle_rate: < 2%
+      acceptance_coverage: '> 95%'
+      human_edit_reduction: '> 25%'
+    rejection_criteria:
+    - No evidence ledger available
+    - No verifier/critique gate
+request_excerpt: "# RawIntent Consumer Request - Official full-runtime AutoSci integration\
+  \ test through normal solar intake. Do not call a \n\n## Source\n\n- intent_id:\
+  \ intent-20260708-202105-5626d8e82e\n- channel: cli_intake\n- actor: user\n- device:\
+  \ \n- thread_ref"

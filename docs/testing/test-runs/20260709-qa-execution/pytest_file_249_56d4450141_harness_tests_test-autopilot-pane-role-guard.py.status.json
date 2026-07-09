@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_249_56d4450141_harness_tests_test-autopilot-pane-role-guard.py",
+  "source": "harness/tests/test-autopilot-pane-role-guard.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-autopilot-pane-role-guard.py"
+  ],
+  "exit_code": 5,
+  "runtime_seconds": 0.199,
+  "timeout": false
+}

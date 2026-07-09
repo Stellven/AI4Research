@@ -1,0 +1,10 @@
+{
+  "name": "workflow_yaml_static",
+  "command": [
+    "harness/bin/python3",
+    "-c",
+    "import pathlib, yaml; files=sorted(pathlib.Path(\".github/workflows\").glob(\"*.yml\")); [yaml.safe_load(p.read_text()) for p in files]; print(\"workflow yaml ok\", len(files))"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0
+}

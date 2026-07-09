@@ -1,0 +1,10 @@
+{
+  "name": "script_smoke_status_server_e2e",
+  "command": [
+    "bash",
+    "scripts/smoke-status-server-e2e.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 2,
+  "isolated_home": "docs/testing/test-runs/20260709-qa-execution/tmp-home-script_smoke_status_server_e2e"
+}

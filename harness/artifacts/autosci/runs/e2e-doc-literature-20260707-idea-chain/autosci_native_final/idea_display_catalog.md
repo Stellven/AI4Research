@@ -4,11 +4,11 @@ Raw `idea_id` values are preserved for provenance. `display_title` is the reader
 
 | Item | Raw idea id | Display title | Raw AutoSci title | Path | Selected |
 | --- | --- | --- | --- | --- | --- |
-| cc-01 | idea-cc-01-combination-3 | Claude Code overview documentation cross-source synthesis | Combine Claude Code Docs with Comparison Reports | C:C:combination | False |
-| cc-01 | idea-cc-01-cross-domain-transfer-5 | Claude Code overview documentation transfer pattern | Cross-Domain Validation of AI Assistant Features | E:E:cross-domain-transfer | False |
-| cc-01 | idea-cc-01-incremental | Claude Code overview documentation related-source enrichment | Expand Evidence Record with Related Papers | B:B:incremental | False |
-| cc-01 | idea-cc-01-innovation | Claude Code overview documentation validation use cases | Explore Novel Applications of Claude Code Docs | D:D:innovation | False |
-| cc-01 | idea-cc-01-landscape-driven-1 | Claude Code overview documentation evidence check | Validate Claude Code Docs Landscape | A:A:landscape-driven | True |
+| cc-01 | idea-cc-01-combination-3 | Claude Code overview documentation cross-source synthesis | Combine Claude Code Docs with Comparison Reports | C:combination | False |
+| cc-01 | idea-cc-01-cross-domain-transfer-5 | Claude Code overview documentation transfer pattern | Cross-Domain Validation of AI Assistant Features | E:cross-domain-transfer | False |
+| cc-01 | idea-cc-01-incremental | Claude Code overview documentation related-source enrichment | Expand Evidence Record with Related Papers | B:incremental | False |
+| cc-01 | idea-cc-01-innovation | Claude Code overview documentation validation use cases | Explore Novel Applications of Claude Code Docs | D:innovation | False |
+| cc-01 | idea-cc-01-landscape-driven-1 | Claude Code overview documentation evidence check | Validate Claude Code Docs Landscape | A:landscape-driven | True |
 | cc-02 | idea-cc-02-combination | Manage costs effectively cross-source synthesis | Combination of Techniques | C:combination | False |
 | cc-02 | idea-cc-02-cross-domain-transfer | Manage costs effectively transfer pattern | Cross-Domain Cost Transfer | E:cross-domain-transfer | False |
 | cc-02 | idea-cc-02-incremental | Manage costs effectively related-source enrichment | Incremental Cost Optimization | B:incremental | False |
@@ -95,7 +95,7 @@ Raw `idea_id` values are preserved for provenance. `display_title` is the reader
 | ghc-05 | idea-ghc-05-innovation | About Model Context Protocol (MCP) - GitHub Docs validation use cases | Innovative Validation of GitHub's Comparison Report | D:innovation | False |
 | ghc-05 | idea-ghc-05-landscape-driven | About Model Context Protocol (MCP) - GitHub Docs evidence check | Validate MCP Documentation Landscape | A:landscape-driven | True |
 | ghc-06 | idea-ghc-06-combination | Pricing - Plans for every developer - GitHub cross-source synthesis | Pricing Feature Combination Analysis | C:combination | False |
-| ghc-06 | idea-ghc-06-cross-domain-transfer | Pricing - Plans for every developer - GitHub transfer pattern | Pricing Model Cross-Domain Transfer | E:cross-domain-transfer-transfer | False |
+| ghc-06 | idea-ghc-06-cross-domain-transfer | Pricing - Plans for every developer - GitHub transfer pattern | Pricing Model Cross-Domain Transfer | E:cross-domain-transfer | False |
 | ghc-06 | idea-ghc-06-incremental | Pricing - Plans for every developer - GitHub related-source enrichment | Incremental Pricing Adjustments | B:incremental | False |
 | ghc-06 | idea-ghc-06-innovation | Pricing - Plans for every developer - GitHub validation use cases | Pricing Innovation Exploration | D:innovation | False |
 | ghc-06 | idea-ghc-06-landscape-driven | Pricing - Plans for every developer - GitHub evidence check | Pricing Landscape Analysis | A:landscape-driven | True |
@@ -110,7 +110,7 @@ Raw `idea_id` values are preserved for provenance. `display_title` is the reader
 | r01 | idea-r01-innovation-4 | Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows validation use cases | Explore novel harness designs to maximize workflow efficiency. | D:innovation | False |
 | r01 | idea-r01-landscape-driven-1 | Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows evidence check | Investigate the impact of landscape-driven context on harness performance in agent workflows. | A:landscape-driven | True |
 | r02 | idea-r02-combination-3 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents cross-source synthesis | Combining Harness Engineering with Agent Design Principles | C:combination | False |
-| r02 | idea-r02-cross-domain-transfer-transfer-5 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents transfer pattern | Cross-Domain Transfer of Harness Engineering Techniques | E:cross-domain-transfer-transfer | False |
+| r02 | idea-r02-cross-domain-transfer-transfer-5 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents transfer pattern | Cross-Domain Transfer of Harness Engineering Techniques | E:cross-domain-transfer | False |
 | r02 | idea-r02-incremental-2 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents related-source enrichment | Incremental Extension of Harness Engineering Concepts | B:incremental | False |
 | r02 | idea-r02-innovation-4 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents validation use cases | Innovative Approaches to Runtime Substrate Design | D:innovation | False |
 | r02 | idea-r02-landscape-driven-1 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents evidence check | Landscape-Driven Validation of Runtime Substrate | A:landscape-driven | True |
@@ -160,7 +160,7 @@ Raw `idea_id` values are preserved for provenance. `display_title` is the reader
 | r11 | idea-r11-innovation-4 | LangGraph — stateful graphs for agent loops validation use cases | Innovative Experiment Design for LangGraph | D:innovation | False |
 | r11 | idea-r11-landscape-driven-1 | LangGraph — stateful graphs for agent loops evidence check | Landscape Driven Approach to LangGraph Validation | A:landscape-driven | True |
 | r12 | idea-r12-combination-3 | AutoGen — multi-agent conversation framework cross-source synthesis | Assess AutoGen's Combination of Approaches | C:combination | False |
-| r12 | idea-r12-cross-domain-transfer-5-5 | AutoGen — multi-agent conversation framework transfer pattern | Analyze AutoGen's Cross-Domain Transfer Capabilities | E:cross-domain-transfer-5 | False |
+| r12 | idea-r12-cross-domain-transfer-5-5 | AutoGen — multi-agent conversation framework transfer pattern | Analyze AutoGen's Cross-Domain Transfer Capabilities | E:cross-domain-transfer | False |
 | r12 | idea-r12-incremental-2 | AutoGen — multi-agent conversation framework related-source enrichment | Evaluate AutoGen's Incremental Development Process | B:incremental | False |
 | r12 | idea-r12-innovation-4 | AutoGen — multi-agent conversation framework validation use cases | Investigate AutoGen's Innovation Potential | D:innovation | False |
 | r12 | idea-r12-landscape-driven-1 | AutoGen — multi-agent conversation framework evidence check | Validate AutoGen's Landscape-Driven Approach | A:landscape-driven | True |

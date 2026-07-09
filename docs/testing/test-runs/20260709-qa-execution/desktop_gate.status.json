@@ -1,0 +1,10 @@
+{
+  "name": "desktop_gate",
+  "command": [
+    "bash",
+    "-lc",
+    "cd desktop && node verify.js"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0
+}

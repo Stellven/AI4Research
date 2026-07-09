@@ -4,7 +4,7 @@ Each row is an execution-level acceptance group. The raw source-of-truth feature
 
 | Group ID | L1 | L2 | Raw Rows | Covered | Missing/Indirect | Static | Partial | Pass Criteria |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| `autosci.autosci_plugin_bridge.acceptance` | AutoSci | AutoSci plugin bridge | 10 | 10 | 0 | 0 | 0 | AutoSci bridge/evaluator workflows pass deterministic fixture gates, artifact schemas validate, and unsupported/live-tool paths are explicitly BLOCKED or opt-in. |
+| `autosci.autosci_plugin_bridge.acceptance` | AutoSci | AutoSci plugin bridge | 11 | 11 | 0 | 0 | 0 | AutoSci bridge/evaluator workflows pass deterministic fixture gates, artifact schemas validate, and unsupported/live-tool paths are explicitly BLOCKED or opt-in. |
 | `autosci.scientific_evaluators.acceptance` | AutoSci | Scientific evaluators | 25 | 25 | 0 | 0 | 0 | AutoSci bridge/evaluator workflows pass deterministic fixture gates, artifact schemas validate, and unsupported/live-tool paths are explicitly BLOCKED or opt-in. |
 | `autosci.workflow_bridge.acceptance` | AutoSci | Workflow Bridge | 1 | 1 | 0 | 0 | 0 | AutoSci bridge/evaluator workflows pass deterministic fixture gates, artifact schemas validate, and unsupported/live-tool paths are explicitly BLOCKED or opt-in. |
 | `benchmarks.benchmark_runtime.acceptance` | Benchmarks | Benchmark runtime | 8 | 8 | 0 | 0 | 0 | Every raw feature row in this group has PASS evidence or a documented SKIPPED/BLOCKED/N/A reason; no unresolved critical defect remains. |
@@ -55,7 +55,7 @@ Each row is an execution-level acceptance group. The raw source-of-truth feature
 | `repository.lib.acceptance` | Repository | lib | 1 | 0 | 0 | 0 | 1 | Every raw feature row in this group has PASS evidence or a documented SKIPPED/BLOCKED/N/A reason; no unresolved critical defect remains. |
 | `repository.mempalace.acceptance` | Repository | mempalace | 4 | 0 | 3 | 0 | 1 | Every raw feature row in this group has PASS evidence or a documented SKIPPED/BLOCKED/N/A reason; no unresolved critical defect remains. |
 | `repository.package_json.acceptance` | Repository | package.json | 15 | 15 | 0 | 0 | 0 | Every raw feature row in this group has PASS evidence or a documented SKIPPED/BLOCKED/N/A reason; no unresolved critical defect remains. |
-| `repository.tools.acceptance` | Repository | tools | 63 | 34 | 29 | 0 | 0 | Every raw feature row in this group has PASS evidence or a documented SKIPPED/BLOCKED/N/A reason; no unresolved critical defect remains. |
+| `repository.tools.acceptance` | Repository | tools | 64 | 34 | 30 | 0 | 0 | Every raw feature row in this group has PASS evidence or a documented SKIPPED/BLOCKED/N/A reason; no unresolved critical defect remains. |
 | `repository.web.acceptance` | Repository | web | 1 | 0 | 0 | 0 | 1 | Every raw feature row in this group has PASS evidence or a documented SKIPPED/BLOCKED/N/A reason; no unresolved critical defect remains. |
 | `research.deepresearch_core.acceptance` | Research | DeepResearch core | 44 | 44 | 0 | 0 | 0 | Research CLI/workflow commands pass fixture-based tests, JSON outputs validate, and source/evidence/report artifacts meet declared gates. |
 | `runtime.schemas_and_policies.acceptance` | Runtime | Schemas and policies | 1 | 1 | 0 | 0 | 0 | Every raw feature row in this group has PASS evidence or a documented SKIPPED/BLOCKED/N/A reason; no unresolved critical defect remains. |

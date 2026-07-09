@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-capability-prefix-visibility.sh",
+  "source": "harness/tests/test-capability-prefix-visibility.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-capability-prefix-visibility.sh"
+  ],
+  "exit_code": 127,
+  "runtime_seconds": 0.012,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-j9i1g0_4"
+}

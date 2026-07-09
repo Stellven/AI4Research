@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_326_38f8b0e434_harness_tests_test_chatgpt_report_operator.py",
+  "source": "harness/tests/test_chatgpt_report_operator.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_chatgpt_report_operator.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.883,
+  "timeout": false
+}

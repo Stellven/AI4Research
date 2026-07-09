@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_145_77eff4ab9a_harness_tests_orchestration_test_orchestration_routes.py",
+  "source": "harness/tests/orchestration/test_orchestration_routes.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/orchestration/test_orchestration_routes.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.317,
+  "timeout": false
+}

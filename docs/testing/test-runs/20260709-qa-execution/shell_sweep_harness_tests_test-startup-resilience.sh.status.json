@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-startup-resilience.sh",
+  "source": "harness/tests/test-startup-resilience.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-startup-resilience.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.024,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-wsn9r2pr"
+}

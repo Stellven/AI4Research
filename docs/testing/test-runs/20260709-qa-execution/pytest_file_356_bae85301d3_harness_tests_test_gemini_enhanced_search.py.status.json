@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_356_bae85301d3_harness_tests_test_gemini_enhanced_search.py",
+  "source": "harness/tests/test_gemini_enhanced_search.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_gemini_enhanced_search.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.247,
+  "timeout": false
+}

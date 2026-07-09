@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-solar-kb-obsidian-autouse.sh",
+  "source": "harness/tests/test-solar-kb-obsidian-autouse.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-solar-kb-obsidian-autouse.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 7.163,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ce9ky8qv"
+}

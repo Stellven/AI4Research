@@ -1,0 +1,15 @@
+{
+  "name": "research_subtree_survey_gates_pytest",
+  "command": [
+    "env",
+    "PYTHONPATH=harness:harness/tests/research/survey",
+    "AUTOSCI_DISABLE_NETWORK_FETCH=1",
+    "harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research/survey/gates"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0
+}

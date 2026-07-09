@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_runtime_test-phase-state-machine-runtime-bridge.sh",
+  "source": "harness/tests/runtime/test-phase-state-machine-runtime-bridge.sh",
+  "command": [
+    "bash",
+    "harness/tests/runtime/test-phase-state-machine-runtime-bridge.sh"
+  ],
+  "exit_code": 127,
+  "runtime_seconds": 0.024,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-q7afkpl1"
+}

@@ -1,0 +1,2222 @@
+[
+  {
+    "name": "shell_sweep_harness_tests_benchmark_test-terminal-bench-adapter.sh",
+    "source": "harness/tests/benchmark/test-terminal-bench-adapter.sh",
+    "command": [
+      "bash",
+      "harness/tests/benchmark/test-terminal-bench-adapter.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.137,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-i32qturx"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-autopilot-kb-probe-no-pane-dispatch.sh",
+    "source": "harness/tests/control_plane/test-autopilot-kb-probe-no-pane-dispatch.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-autopilot-kb-probe-no-pane-dispatch.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-1g1lrbp6"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-autopilot-kb-probe-queue-telemetry-only.sh",
+    "source": "harness/tests/control_plane/test-autopilot-kb-probe-queue-telemetry-only.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-autopilot-kb-probe-queue-telemetry-only.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5ui9wl9n"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-autopilot-kb-probe-starts-qmd-proxy.sh",
+    "source": "harness/tests/control_plane/test-autopilot-kb-probe-starts-qmd-proxy.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-autopilot-kb-probe-starts-qmd-proxy.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-26mwdvyy"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-autopilot-model-doctor-telemetry-only.sh",
+    "source": "harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-lqmckpu1"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-dag-autopilot-planner.sh",
+    "source": "harness/tests/control_plane/test-dag-autopilot-planner.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-dag-autopilot-planner.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-0q7zpopz"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-deepresearch-quality-gate-autopilot.sh",
+    "source": "harness/tests/control_plane/test-deepresearch-quality-gate-autopilot.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-deepresearch-quality-gate-autopilot.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ssqwkuwi"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-deepresearch-quality-gate-repair-eval-dispatch.sh",
+    "source": "harness/tests/control_plane/test-deepresearch-quality-gate-repair-eval-dispatch.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-deepresearch-quality-gate-repair-eval-dispatch.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-b02_80dj"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-graph-active-guard.sh",
+    "source": "harness/tests/control_plane/test-graph-active-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-graph-active-guard.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.087,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-i5gwh0z_"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-graph-dispatch-dry-run-no-mutate.sh",
+    "source": "harness/tests/control_plane/test-graph-dispatch-dry-run-no-mutate.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-graph-dispatch-dry-run-no-mutate.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.082,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5skgftef"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-graph-node-dispatcher.sh",
+    "source": "harness/tests/control_plane/test-graph-node-dispatcher.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-graph-node-dispatcher.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-vuxqbi45"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-graph-scheduler.sh",
+    "source": "harness/tests/control_plane/test-graph-scheduler.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-graph-scheduler.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.191,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-nttyph74"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-s6-control-plane.sh",
+    "source": "harness/tests/control_plane/test-s6-control-plane.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-s6-control-plane.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.253,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-j2i_kifv"
+  },
+  {
+    "name": "shell_sweep_harness_tests_control_plane_test-worker-capability-catalog.sh",
+    "source": "harness/tests/control_plane/test-worker-capability-catalog.sh",
+    "command": [
+      "bash",
+      "harness/tests/control_plane/test-worker-capability-catalog.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.02,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-glhtf5df"
+  },
+  {
+    "name": "shell_sweep_harness_tests_evolution_test-deepresearch-quality-gate-debt-repair.sh",
+    "source": "harness/tests/evolution/test-deepresearch-quality-gate-debt-repair.sh",
+    "command": [
+      "bash",
+      "harness/tests/evolution/test-deepresearch-quality-gate-debt-repair.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-w0v503tx"
+  },
+  {
+    "name": "shell_sweep_harness_tests_evolution_test-deepresearch-quality-gate-restore-nonrequired.sh",
+    "source": "harness/tests/evolution/test-deepresearch-quality-gate-restore-nonrequired.sh",
+    "command": [
+      "bash",
+      "harness/tests/evolution/test-deepresearch-quality-gate-restore-nonrequired.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.02,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-gby4ky3_"
+  },
+  {
+    "name": "shell_sweep_harness_tests_evolution_test-deepresearch-quality-gate-scorecard.sh",
+    "source": "harness/tests/evolution/test-deepresearch-quality-gate-scorecard.sh",
+    "command": [
+      "bash",
+      "harness/tests/evolution/test-deepresearch-quality-gate-scorecard.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-wr0aas9r"
+  },
+  {
+    "name": "shell_sweep_harness_tests_evolution_test-s5-evolution-engine.sh",
+    "source": "harness/tests/evolution/test-s5-evolution-engine.sh",
+    "command": [
+      "bash",
+      "harness/tests/evolution/test-s5-evolution-engine.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.006,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-7mdfru2c"
+  },
+  {
+    "name": "shell_sweep_harness_tests_evolution_test-skill-evolution-runner.sh",
+    "source": "harness/tests/evolution/test-skill-evolution-runner.sh",
+    "command": [
+      "bash",
+      "harness/tests/evolution/test-skill-evolution-runner.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.139,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-p0lvv42h"
+  },
+  {
+    "name": "shell_sweep_harness_tests_evolution_test-skill-healthcheck-evolution.sh",
+    "source": "harness/tests/evolution/test-skill-healthcheck-evolution.sh",
+    "command": [
+      "bash",
+      "harness/tests/evolution/test-skill-healthcheck-evolution.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.086,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-fcs49asi"
+  },
+  {
+    "name": "shell_sweep_harness_tests_external-integrations_test_audit_uploads.sh",
+    "source": "harness/tests/external-integrations/test_audit_uploads.sh",
+    "command": [
+      "bash",
+      "harness/tests/external-integrations/test_audit_uploads.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.011,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-kztb_7ds"
+  },
+  {
+    "name": "shell_sweep_harness_tests_external-integrations_test_endpoint_view.sh",
+    "source": "harness/tests/external-integrations/test_endpoint_view.sh",
+    "command": [
+      "bash",
+      "harness/tests/external-integrations/test_endpoint_view.sh"
+    ],
+    "exit_code": 7,
+    "runtime_seconds": 0.135,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-foywxatf"
+  },
+  {
+    "name": "shell_sweep_harness_tests_external-integrations_test_schema_health.sh",
+    "source": "harness/tests/external-integrations/test_schema_health.sh",
+    "command": [
+      "bash",
+      "harness/tests/external-integrations/test_schema_health.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.045,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-plxknble"
+  },
+  {
+    "name": "shell_sweep_harness_tests_external-integrations_test_upload_ingest_coverage.sh",
+    "source": "harness/tests/external-integrations/test_upload_ingest_coverage.sh",
+    "command": [
+      "bash",
+      "harness/tests/external-integrations/test_upload_ingest_coverage.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.09,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-chjxex3p"
+  },
+  {
+    "name": "shell_sweep_harness_tests_external-integrations_test_wording_flags.sh",
+    "source": "harness/tests/external-integrations/test_wording_flags.sh",
+    "command": [
+      "bash",
+      "harness/tests/external-integrations/test_wording_flags.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.048,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-iih4yth0"
+  },
+  {
+    "name": "shell_sweep_harness_tests_installer_test-s1-installer.sh",
+    "source": "harness/tests/installer/test-s1-installer.sh",
+    "command": [
+      "bash",
+      "harness/tests/installer/test-s1-installer.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 1.054,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-eijcg7bi"
+  },
+  {
+    "name": "shell_sweep_harness_tests_installer_test-tvs-doctor.sh",
+    "source": "harness/tests/installer/test-tvs-doctor.sh",
+    "command": [
+      "bash",
+      "harness/tests/installer/test-tvs-doctor.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.022,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-thz52w2o"
+  },
+  {
+    "name": "shell_sweep_harness_tests_integrations_test-agent-arena-benchmark.sh",
+    "source": "harness/tests/integrations/test-agent-arena-benchmark.sh",
+    "command": [
+      "bash",
+      "harness/tests/integrations/test-agent-arena-benchmark.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 5.974,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-do34hvwb"
+  },
+  {
+    "name": "shell_sweep_harness_tests_integrations_test-capability-fusion-benchmark.sh",
+    "source": "harness/tests/integrations/test-capability-fusion-benchmark.sh",
+    "command": [
+      "bash",
+      "harness/tests/integrations/test-capability-fusion-benchmark.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.641,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-erm1iq6x"
+  },
+  {
+    "name": "shell_sweep_harness_tests_integrations_test-capability-plane-e2e.sh",
+    "source": "harness/tests/integrations/test-capability-plane-e2e.sh",
+    "command": [
+      "bash",
+      "harness/tests/integrations/test-capability-plane-e2e.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.85,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-0u7hq__6"
+  },
+  {
+    "name": "shell_sweep_harness_tests_integrations_test-expanded-capability-plane-e2e.sh",
+    "source": "harness/tests/integrations/test-expanded-capability-plane-e2e.sh",
+    "command": [
+      "bash",
+      "harness/tests/integrations/test-expanded-capability-plane-e2e.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 1.11,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-i8l9825d"
+  },
+  {
+    "name": "shell_sweep_harness_tests_integrations_test-platform-workflow-benchmark.sh",
+    "source": "harness/tests/integrations/test-platform-workflow-benchmark.sh",
+    "command": [
+      "bash",
+      "harness/tests/integrations/test-platform-workflow-benchmark.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.264,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ky8rge5m"
+  },
+  {
+    "name": "shell_sweep_harness_tests_integrations_test-remote-dispatch-productization.sh",
+    "source": "harness/tests/integrations/test-remote-dispatch-productization.sh",
+    "command": [
+      "bash",
+      "harness/tests/integrations/test-remote-dispatch-productization.sh"
+    ],
+    "exit_code": 4,
+    "runtime_seconds": 0.244,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-vv6qnr82"
+  },
+  {
+    "name": "shell_sweep_harness_tests_integrations_test-vnext-integration.sh",
+    "source": "harness/tests/integrations/test-vnext-integration.sh",
+    "command": [
+      "bash",
+      "harness/tests/integrations/test-vnext-integration.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.038,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-9hmz24j3"
+  },
+  {
+    "name": "shell_sweep_harness_tests_integrations_test-vnext-projection-replay.sh",
+    "source": "harness/tests/integrations/test-vnext-projection-replay.sh",
+    "command": [
+      "bash",
+      "harness/tests/integrations/test-vnext-projection-replay.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.041,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-3o7m882g"
+  },
+  {
+    "name": "shell_sweep_harness_tests_negative_test-vnext-approval-required.sh",
+    "source": "harness/tests/negative/test-vnext-approval-required.sh",
+    "command": [
+      "bash",
+      "harness/tests/negative/test-vnext-approval-required.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5in63j57"
+  },
+  {
+    "name": "shell_sweep_harness_tests_negative_test-vnext-capability-missing.sh",
+    "source": "harness/tests/negative/test-vnext-capability-missing.sh",
+    "command": [
+      "bash",
+      "harness/tests/negative/test-vnext-capability-missing.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-_bz1ralz"
+  },
+  {
+    "name": "shell_sweep_harness_tests_negative_test-vnext-concurrent-write.sh",
+    "source": "harness/tests/negative/test-vnext-concurrent-write.sh",
+    "command": [
+      "bash",
+      "harness/tests/negative/test-vnext-concurrent-write.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.021,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-6n_5mjkp"
+  },
+  {
+    "name": "shell_sweep_harness_tests_negative_test-vnext-evidence-gap.sh",
+    "source": "harness/tests/negative/test-vnext-evidence-gap.sh",
+    "command": [
+      "bash",
+      "harness/tests/negative/test-vnext-evidence-gap.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-xs3_rbtm"
+  },
+  {
+    "name": "shell_sweep_harness_tests_negative_test-vnext-no-contract.sh",
+    "source": "harness/tests/negative/test-vnext-no-contract.sh",
+    "command": [
+      "bash",
+      "harness/tests/negative/test-vnext-no-contract.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-dnzmnt17"
+  },
+  {
+    "name": "shell_sweep_harness_tests_negative_test-vnext-no-write-scope.sh",
+    "source": "harness/tests/negative/test-vnext-no-write-scope.sh",
+    "command": [
+      "bash",
+      "harness/tests/negative/test-vnext-no-write-scope.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-qzybptb_"
+  },
+  {
+    "name": "shell_sweep_harness_tests_negative_test-vnext-scope-violation.sh",
+    "source": "harness/tests/negative/test-vnext-scope-violation.sh",
+    "command": [
+      "bash",
+      "harness/tests/negative/test-vnext-scope-violation.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-onvefxti"
+  },
+  {
+    "name": "shell_sweep_harness_tests_plugins_test-autoresearch-integration.sh",
+    "source": "harness/tests/plugins/test-autoresearch-integration.sh",
+    "command": [
+      "bash",
+      "harness/tests/plugins/test-autoresearch-integration.sh"
+    ],
+    "exit_code": 127,
+    "runtime_seconds": 0.082,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-50_w6x9w"
+  },
+  {
+    "name": "shell_sweep_harness_tests_plugins_test-ruflo-integration.sh",
+    "source": "harness/tests/plugins/test-ruflo-integration.sh",
+    "command": [
+      "bash",
+      "harness/tests/plugins/test-ruflo-integration.sh"
+    ],
+    "exit_code": 127,
+    "runtime_seconds": 0.046,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-1r82pvrc"
+  },
+  {
+    "name": "shell_sweep_harness_tests_plugins_test-s4-extension-framework.sh",
+    "source": "harness/tests/plugins/test-s4-extension-framework.sh",
+    "command": [
+      "bash",
+      "harness/tests/plugins/test-s4-extension-framework.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-4okrvfr9"
+  },
+  {
+    "name": "shell_sweep_harness_tests_plugins_test-s4-plugins.sh",
+    "source": "harness/tests/plugins/test-s4-plugins.sh",
+    "command": [
+      "bash",
+      "harness/tests/plugins/test-s4-plugins.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.201,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-mgbfboce"
+  },
+  {
+    "name": "shell_sweep_harness_tests_regression_test-libomp-import-guard.sh",
+    "source": "harness/tests/regression/test-libomp-import-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/regression/test-libomp-import-guard.sh"
+    ],
+    "exit_code": 127,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-uy65ezpn"
+  },
+  {
+    "name": "shell_sweep_harness_tests_regression_test-vnext-graph-scheduler-shim.sh",
+    "source": "harness/tests/regression/test-vnext-graph-scheduler-shim.sh",
+    "command": [
+      "bash",
+      "harness/tests/regression/test-vnext-graph-scheduler-shim.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.011,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-x_jamvvd"
+  },
+  {
+    "name": "shell_sweep_harness_tests_regression_test-vnext-no-side-effect.sh",
+    "source": "harness/tests/regression/test-vnext-no-side-effect.sh",
+    "command": [
+      "bash",
+      "harness/tests/regression/test-vnext-no-side-effect.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-8z6gngpn"
+  },
+  {
+    "name": "shell_sweep_harness_tests_release_test-s7-release.sh",
+    "source": "harness/tests/release/test-s7-release.sh",
+    "command": [
+      "bash",
+      "harness/tests/release/test-s7-release.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-4urv0h_v"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-activity-runtime.sh",
+    "source": "harness/tests/runtime/test-activity-runtime.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-activity-runtime.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.259,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-qb_7bueq"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-context-projection-policy.sh",
+    "source": "harness/tests/runtime/test-context-projection-policy.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-context-projection-policy.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.04,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-pytpo2yl"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-events-lib-runtime-bridge.sh",
+    "source": "harness/tests/runtime/test-events-lib-runtime-bridge.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-events-lib-runtime-bridge.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-nz1s40hy"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-graph-parent-pass-runtime-status.sh",
+    "source": "harness/tests/runtime/test-graph-parent-pass-runtime-status.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-graph-parent-pass-runtime-status.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.142,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-upt52n46"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-hands-runtime.sh",
+    "source": "harness/tests/runtime/test-hands-runtime.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-hands-runtime.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.044,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-l0_irfy1"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-long-running-observability.sh",
+    "source": "harness/tests/runtime/test-long-running-observability.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-long-running-observability.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.044,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-yyie3dar"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-model-call-runtime.sh",
+    "source": "harness/tests/runtime/test-model-call-runtime.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-model-call-runtime.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.043,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-1gbmchc9"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-model-call-status-ui.sh",
+    "source": "harness/tests/runtime/test-model-call-status-ui.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-model-call-status-ui.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.041,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-os4f5q7n"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-phase-state-machine-runtime-bridge.sh",
+    "source": "harness/tests/runtime/test-phase-state-machine-runtime-bridge.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-phase-state-machine-runtime-bridge.sh"
+    ],
+    "exit_code": 127,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-q7afkpl1"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-projection-replay.sh",
+    "source": "harness/tests/runtime/test-projection-replay.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-projection-replay.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.299,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-br5dv3vk"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-runtime-adoption-bridge.sh",
+    "source": "harness/tests/runtime/test-runtime-adoption-bridge.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-runtime-adoption-bridge.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.417,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-gdyeqtrd"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-runtime-interface-chaos.sh",
+    "source": "harness/tests/runtime/test-runtime-interface-chaos.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-runtime-interface-chaos.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.041,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-8skh7rtk"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-runtime-status-transition.sh",
+    "source": "harness/tests/runtime/test-runtime-status-transition.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-runtime-status-transition.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.2,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-xb4pd5pq"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-runtime-write-path-audit.sh",
+    "source": "harness/tests/runtime/test-runtime-write-path-audit.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-runtime-write-path-audit.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.083,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-rnpwlx71"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-session-diff-log-native-evaluator.sh",
+    "source": "harness/tests/runtime/test-session-diff-log-native-evaluator.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-session-diff-log-native-evaluator.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.048,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-vtrhomzc"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-session-get-events.sh",
+    "source": "harness/tests/runtime/test-session-get-events.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-session-get-events.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.043,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-kk5nrlq7"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-session-log-v2.sh",
+    "source": "harness/tests/runtime/test-session-log-v2.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-session-log-v2.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.316,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-6tsx540o"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-session-sh-runtime-bridge.sh",
+    "source": "harness/tests/runtime/test-session-sh-runtime-bridge.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-session-sh-runtime-bridge.sh"
+    ],
+    "exit_code": 127,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-9vyo2p66"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-wake-projection-routing.sh",
+    "source": "harness/tests/runtime/test-wake-projection-routing.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-wake-projection-routing.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.377,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ehaahebh"
+  },
+  {
+    "name": "shell_sweep_harness_tests_runtime_test-worker-runtime.sh",
+    "source": "harness/tests/runtime/test-worker-runtime.sh",
+    "command": [
+      "bash",
+      "harness/tests/runtime/test-worker-runtime.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.082,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-qfsp0oxs"
+  },
+  {
+    "name": "shell_sweep_harness_tests_skills_test-s2-skill-lifecycle.sh",
+    "source": "harness/tests/skills/test-s2-skill-lifecycle.sh",
+    "command": [
+      "bash",
+      "harness/tests/skills/test-s2-skill-lifecycle.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.199,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-2k229kmx"
+  },
+  {
+    "name": "shell_sweep_harness_tests_snapshot_test-s0-snapshot-roundtrip.sh",
+    "source": "harness/tests/snapshot/test-s0-snapshot-roundtrip.sh",
+    "command": [
+      "bash",
+      "harness/tests/snapshot/test-s0-snapshot-roundtrip.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.079,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ro3zzjmx"
+  },
+  {
+    "name": "shell_sweep_harness_tests_storage_test-s3-storage.sh",
+    "source": "harness/tests/storage/test-s3-storage.sh",
+    "command": [
+      "bash",
+      "harness/tests/storage/test-s3-storage.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.195,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-09zpgaia"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-accepted-artifact-knowledge-sync.sh",
+    "source": "harness/tests/test-accepted-artifact-knowledge-sync.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-accepted-artifact-knowledge-sync.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 1.054,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5lberk_0"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-ack-contract.sh",
+    "source": "harness/tests/test-ack-contract.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-ack-contract.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-f1bs4el1"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-agent-rules-books-integration.sh",
+    "source": "harness/tests/test-agent-rules-books-integration.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-agent-rules-books-integration.sh"
+    ],
+    "exit_code": 127,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-s1nj8g_n"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-ai-influence-digest.sh",
+    "source": "harness/tests/test-ai-influence-digest.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-ai-influence-digest.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.306,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ahyeco1v"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-apple-notes-ingest.sh",
+    "source": "harness/tests/test-apple-notes-ingest.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-apple-notes-ingest.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 30.522,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-mahm4ild"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-autopilot-prereq-dict.sh",
+    "source": "harness/tests/test-autopilot-prereq-dict.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-autopilot-prereq-dict.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.141,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5jaebrgm"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-autosci-harness-entrypoint.sh",
+    "source": "harness/tests/test-autosci-harness-entrypoint.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-autosci-harness-entrypoint.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.881,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ni6zm_du"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-autosci-premerge-gate.sh",
+    "source": "harness/tests/test-autosci-premerge-gate.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-autosci-premerge-gate.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.401,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-uirbnbez"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-b4-plan-mode-guard.sh",
+    "source": "harness/tests/test-b4-plan-mode-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-b4-plan-mode-guard.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.029,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-a4cvsc1a"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-bg-entrypoint.sh",
+    "source": "harness/tests/test-bg-entrypoint.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-bg-entrypoint.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.668,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ozsjjn2s"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-capability-prefix-visibility.sh",
+    "source": "harness/tests/test-capability-prefix-visibility.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-capability-prefix-visibility.sh"
+    ],
+    "exit_code": 127,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-j9i1g0_4"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-chain-watcher-planner-target.sh",
+    "source": "harness/tests/test-chain-watcher-planner-target.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-chain-watcher-planner-target.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.039,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5221g70l"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-chatgpt-conversation-ingest.sh",
+    "source": "harness/tests/test-chatgpt-conversation-ingest.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-chatgpt-conversation-ingest.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.043,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-l1hxhyp6"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-config-server-health-normalization.sh",
+    "source": "harness/tests/test-config-server-health-normalization.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-config-server-health-normalization.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.044,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-3tfpk6f1"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-context-router-layer-ranking.sh",
+    "source": "harness/tests/test-context-router-layer-ranking.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-context-router-layer-ranking.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.04,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-2srkj0za"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-coordinator-dispatch-template-escaping.sh",
+    "source": "harness/tests/test-coordinator-dispatch-template-escaping.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-coordinator-dispatch-template-escaping.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.084,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-d7uuf5nb"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-coordinator-epic-child-unblock.sh",
+    "source": "harness/tests/test-coordinator-epic-child-unblock.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-coordinator-epic-child-unblock.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.196,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-sxaaytq0"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-coordinator-pidfile.sh",
+    "source": "harness/tests/test-coordinator-pidfile.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-coordinator-pidfile.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.046,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-mbp06bm_"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-coordinator-runtime-blocker-patterns.sh",
+    "source": "harness/tests/test-coordinator-runtime-blocker-patterns.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-coordinator-runtime-blocker-patterns.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.013,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-n1rmqnkw"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-coordinator-ts-pane-map.sh",
+    "source": "harness/tests/test-coordinator-ts-pane-map.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-coordinator-ts-pane-map.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.021,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-xn71k0w9"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-d2-wake-no-block.sh",
+    "source": "harness/tests/test-d2-wake-no-block.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-d2-wake-no-block.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-gs_6az7q"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-d2-watchdog-respawn-reliability.sh",
+    "source": "harness/tests/test-d2-watchdog-respawn-reliability.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-d2-watchdog-respawn-reliability.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.087,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ku3ffjox"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-d3-builder-worktree-consistency.sh",
+    "source": "harness/tests/test-d3-builder-worktree-consistency.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-d3-builder-worktree-consistency.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-e5w0e8z4"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-d4-no-plaintext-tokens.sh",
+    "source": "harness/tests/test-d4-no-plaintext-tokens.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-d4-no-plaintext-tokens.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-i21zjn0f"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-d5-tmux-path-escape.sh",
+    "source": "harness/tests/test-d5-tmux-path-escape.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-d5-tmux-path-escape.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ch9z3orw"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-data-plane-audit-cleanup.sh",
+    "source": "harness/tests/test-data-plane-audit-cleanup.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-data-plane-audit-cleanup.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.203,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-lnr1d094"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-deepresearch-human-search-status-ui.sh",
+    "source": "harness/tests/test-deepresearch-human-search-status-ui.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-deepresearch-human-search-status-ui.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.046,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-2kucwpj7"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-definition-of-done-policy.sh",
+    "source": "harness/tests/test-definition-of-done-policy.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-definition-of-done-policy.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.042,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-jcfm0q1r"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-diff-backup.sh",
+    "source": "harness/tests/test-diff-backup.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-diff-backup.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-cn4dyomr"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-dispatch-ledger.sh",
+    "source": "harness/tests/test-dispatch-ledger.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-dispatch-ledger.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.006,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-wfd7qwoz"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-dispatch-processing-markers.sh",
+    "source": "harness/tests/test-dispatch-processing-markers.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-dispatch-processing-markers.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-xzmaj98a"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-epic-decomposer.sh",
+    "source": "harness/tests/test-epic-decomposer.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-epic-decomposer.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.585,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-kh1mx0yj"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-everything-claude-code-integration.sh",
+    "source": "harness/tests/test-everything-claude-code-integration.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-everything-claude-code-integration.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.082,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-wkypk__h"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-experience-memory-safety.sh",
+    "source": "harness/tests/test-experience-memory-safety.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-experience-memory-safety.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.356,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-x4e5mjmo"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-experience-memory.sh",
+    "source": "harness/tests/test-experience-memory.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-experience-memory.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.61,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-0vahpuwk"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-graph-dispatch-pane-role-guard.sh",
+    "source": "harness/tests/test-graph-dispatch-pane-role-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-graph-dispatch-pane-role-guard.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.141,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ehisnkzb"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-harness-graph.sh",
+    "source": "harness/tests/test-harness-graph.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-harness-graph.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.136,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-0eycat39"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-harness-resilience.sh",
+    "source": "harness/tests/test-harness-resilience.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-harness-resilience.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.088,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-sjwkn699"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-hot-reload-noop.sh",
+    "source": "harness/tests/test-hot-reload-noop.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-hot-reload-noop.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.083,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ult0j6_v"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-hot-reload-trigger.sh",
+    "source": "harness/tests/test-hot-reload-trigger.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-hot-reload-trigger.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ma7khk56"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-hot-reload.sh",
+    "source": "harness/tests/test-hot-reload.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-hot-reload.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-vhwx4imt"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-html-anything-adapter.sh",
+    "source": "harness/tests/test-html-anything-adapter.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-html-anything-adapter.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.426,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-0znwull6"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-html-artifact-helper.sh",
+    "source": "harness/tests/test-html-artifact-helper.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-html-artifact-helper.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.15,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-3558nhx3"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-intake-entrypoint.sh",
+    "source": "harness/tests/test-intake-entrypoint.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-intake-entrypoint.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.881,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-xacb04u8"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-intent-engine-adapter.sh",
+    "source": "harness/tests/test-intent-engine-adapter.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-intent-engine-adapter.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.366,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-y4scey_h"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-intent-telemetry-audit.sh",
+    "source": "harness/tests/test-intent-telemetry-audit.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-intent-telemetry-audit.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.374,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-zx5oruk8"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-interactive-context-policy.sh",
+    "source": "harness/tests/test-interactive-context-policy.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-interactive-context-policy.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.083,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ubdop0fv"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-context-grounding.sh",
+    "source": "harness/tests/test-knowledge-context-grounding.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-context-grounding.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.087,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-_n7q4z3v"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-extract-json.sh",
+    "source": "harness/tests/test-knowledge-extract-json.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-extract-json.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.207,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-7z_nhy96"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-extracted-validator.sh",
+    "source": "harness/tests/test-knowledge-extracted-validator.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-extracted-validator.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.38,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-4debbqb9"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-ingest-dispatcher.sh",
+    "source": "harness/tests/test-knowledge-ingest-dispatcher.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-ingest-dispatcher.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.551,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-8lyxipy4"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-ingest-health.sh",
+    "source": "harness/tests/test-knowledge-ingest-health.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-ingest-health.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.309,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-4a7e4mgs"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-ingest-registry.sh",
+    "source": "harness/tests/test-knowledge-ingest-registry.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-ingest-registry.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.197,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-a5fpj2tv"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-probe-coverage.sh",
+    "source": "harness/tests/test-knowledge-probe-coverage.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-probe-coverage.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.132,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-r46ai9w_"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-qmd-watermarks.sh",
+    "source": "harness/tests/test-knowledge-qmd-watermarks.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-qmd-watermarks.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.241,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-wc7boikz"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-sample-quota.sh",
+    "source": "harness/tests/test-knowledge-sample-quota.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-sample-quota.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.641,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-swpce5ls"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-source-adapters.sh",
+    "source": "harness/tests/test-knowledge-source-adapters.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-source-adapters.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.135,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5uwtjclo"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-knowledge-spans.sh",
+    "source": "harness/tests/test-knowledge-spans.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-knowledge-spans.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.189,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-t1r6itp_"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-loud-notify.sh",
+    "source": "harness/tests/test-loud-notify.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-loud-notify.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-r6gvzaor"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-mia-runtime-adapter.sh",
+    "source": "harness/tests/test-mia-runtime-adapter.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-mia-runtime-adapter.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 33.335,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ofga0rfs"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-migrate-intent.sh",
+    "source": "harness/tests/test-migrate-intent.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-migrate-intent.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.15,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5tuz0_fv"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-migrate.sh",
+    "source": "harness/tests/test-migrate.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-migrate.sh"
+    ],
+    "exit_code": 127,
+    "runtime_seconds": 0.022,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-3rnf302u"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-mirage-substrate.sh",
+    "source": "harness/tests/test-mirage-substrate.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-mirage-substrate.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.593,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-xe7v3dqp"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-mirage-unified-vfs.sh",
+    "source": "harness/tests/test-mirage-unified-vfs.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-mirage-unified-vfs.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.046,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-cfu8gy3o"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-model-config-single-source.sh",
+    "source": "harness/tests/test-model-config-single-source.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-model-config-single-source.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.006,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-64_vqltf"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-model-live-route-doctor.sh",
+    "source": "harness/tests/test-model-live-route-doctor.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-model-live-route-doctor.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.021,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-e_il0un8"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-model-registry-guard.sh",
+    "source": "harness/tests/test-model-registry-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-model-registry-guard.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.131,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-8nniq_s8"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-multi-task-entrypoint.sh",
+    "source": "harness/tests/test-multi-task-entrypoint.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-multi-task-entrypoint.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 1.341,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-l38gn8fb"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-multi-task-pane-state-writer.sh",
+    "source": "harness/tests/test-multi-task-pane-state-writer.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-multi-task-pane-state-writer.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.046,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-rsty7urh"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-multi-task-screen-health.sh",
+    "source": "harness/tests/test-multi-task-screen-health.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-multi-task-screen-health.sh"
+    ],
+    "exit_code": 99,
+    "runtime_seconds": 0.011,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-qrjk4sf5"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-multi-task-thunderomlx-routing.sh",
+    "source": "harness/tests/test-multi-task-thunderomlx-routing.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-multi-task-thunderomlx-routing.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.196,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-5u3t1t11"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-multi-task-workers-writer.sh",
+    "source": "harness/tests/test-multi-task-workers-writer.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-multi-task-workers-writer.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.851,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-63balylv"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-nightwatch-pane-role-guard.sh",
+    "source": "harness/tests/test-nightwatch-pane-role-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-nightwatch-pane-role-guard.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 1.092,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ts4pf14k"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-notification-e2e.sh",
+    "source": "harness/tests/test-notification-e2e.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-notification-e2e.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.082,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ne3watxc"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-pane-lease.sh",
+    "source": "harness/tests/test-pane-lease.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-pane-lease.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.017,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-dy_uhi7m"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-physical-operator-registry.sh",
+    "source": "harness/tests/test-physical-operator-registry.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-physical-operator-registry.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.302,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-3f0p3_a6"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-pm-planner-dag-workflow-guard.sh",
+    "source": "harness/tests/test-pm-planner-dag-workflow-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-pm-planner-dag-workflow-guard.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.761,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-mwfwukfh"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-pm-planner-html-artifacts.sh",
+    "source": "harness/tests/test-pm-planner-html-artifacts.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-pm-planner-html-artifacts.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.145,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-msjxpcrg"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-product-delivery-layout-guard.sh",
+    "source": "harness/tests/test-product-delivery-layout-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-product-delivery-layout-guard.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.047,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-275w_abf"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-prompt-quarantine.sh",
+    "source": "harness/tests/test-prompt-quarantine.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-prompt-quarantine.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.006,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-7cuackr7"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-qmd-resolver.sh",
+    "source": "harness/tests/test-qmd-resolver.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-qmd-resolver.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-e5_419f3"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-remote-multi-task-monitor.sh",
+    "source": "harness/tests/test-remote-multi-task-monitor.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-remote-multi-task-monitor.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.417,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-zxrpqxas"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-reviewing-route-normalizer.sh",
+    "source": "harness/tests/test-reviewing-route-normalizer.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-reviewing-route-normalizer.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.041,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-x72728l4"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-role-dispatch-fallback.sh",
+    "source": "harness/tests/test-role-dispatch-fallback.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-role-dispatch-fallback.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-68wwzely"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-runtime-artifact-knowledge-export.sh",
+    "source": "harness/tests/test-runtime-artifact-knowledge-export.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-runtime-artifact-knowledge-export.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.09,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-o8zy76t4"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-safe-find-wrapper.sh",
+    "source": "harness/tests/test-safe-find-wrapper.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-safe-find-wrapper.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.137,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-j9yf6mbp"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-skill-healthcheck.sh",
+    "source": "harness/tests/test-skill-healthcheck.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-skill-healthcheck.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.075,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-00dq2iuy"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-skills-inject-idempotent.sh",
+    "source": "harness/tests/test-skills-inject-idempotent.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-skills-inject-idempotent.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.258,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-wzt7tmlq"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-skills-readiness-certify.sh",
+    "source": "harness/tests/test-skills-readiness-certify.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-skills-readiness-certify.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.083,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-dqwak58y"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-solar-harness-runtime-skill.sh",
+    "source": "harness/tests/test-solar-harness-runtime-skill.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-solar-harness-runtime-skill.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-cjpck1of"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-solar-kb-obsidian-autouse.sh",
+    "source": "harness/tests/test-solar-kb-obsidian-autouse.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-solar-kb-obsidian-autouse.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 7.163,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ce9ky8qv"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-solar-kb-qmd-fallback.sh",
+    "source": "harness/tests/test-solar-kb-qmd-fallback.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-solar-kb-qmd-fallback.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.07,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-hopd5kcu"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-ssh-migrate.sh",
+    "source": "harness/tests/test-ssh-migrate.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-ssh-migrate.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.023,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-6rsj1_vp"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-startup-resilience.sh",
+    "source": "harness/tests/test-startup-resilience.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-startup-resilience.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-wsn9r2pr"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-state-mapper.sh",
+    "source": "harness/tests/test-state-mapper.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-state-mapper.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.006,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-k10y4dzl"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-state-read-preflight.sh",
+    "source": "harness/tests/test-state-read-preflight.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-state-read-preflight.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.196,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-bvtfoy9n"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-status-capability-health-projection.sh",
+    "source": "harness/tests/test-status-capability-health-projection.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-status-capability-health-projection.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.048,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-u0ynuq3y"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-status-identity-repair.sh",
+    "source": "harness/tests/test-status-identity-repair.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-status-identity-repair.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-29epz9kt"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-tech-hotspot-baseline.sh",
+    "source": "harness/tests/test-tech-hotspot-baseline.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-tech-hotspot-baseline.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.186,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-su8p3fy4"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-tech-hotspot-radar-wiki-bridge.sh",
+    "source": "harness/tests/test-tech-hotspot-radar-wiki-bridge.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-tech-hotspot-radar-wiki-bridge.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.047,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-3gzc5ala"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-tech-hotspot-radar.sh",
+    "source": "harness/tests/test-tech-hotspot-radar.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-tech-hotspot-radar.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.195,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-i8suhoht"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-tvs-render-entrypoint.sh",
+    "source": "harness/tests/test-tvs-render-entrypoint.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-tvs-render-entrypoint.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.483,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-08pa6cnl"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-wake-queued-routing.sh",
+    "source": "harness/tests/test-wake-queued-routing.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-wake-queued-routing.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.133,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ph7ehkyh"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-watchdog-singleton.sh",
+    "source": "harness/tests/test-watchdog-singleton.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-watchdog-singleton.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 8.211,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-mn6gdu2r"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-webhook-pm-pane-resolver.sh",
+    "source": "harness/tests/test-webhook-pm-pane-resolver.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-webhook-pm-pane-resolver.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.024,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-9hg1m8xw"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-wiki-dispatch-pane-role-guard.sh",
+    "source": "harness/tests/test-wiki-dispatch-pane-role-guard.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-wiki-dispatch-pane-role-guard.sh"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.597,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-2pql6x04"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-wiki-dispatch-state-preflight.sh",
+    "source": "harness/tests/test-wiki-dispatch-state-preflight.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-wiki-dispatch-state-preflight.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-bbl1t2ox"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-wiki-quality-gate-pdf-page-dump.sh",
+    "source": "harness/tests/test-wiki-quality-gate-pdf-page-dump.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-wiki-quality-gate-pdf-page-dump.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.082,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-9st7l05s"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-wiki-upload-ingest-closure.sh",
+    "source": "harness/tests/test-wiki-upload-ingest-closure.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-wiki-upload-ingest-closure.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 1.145,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-40uq2fif"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test-youtube-influence-digest.sh",
+    "source": "harness/tests/test-youtube-influence-digest.sh",
+    "command": [
+      "bash",
+      "harness/tests/test-youtube-influence-digest.sh"
+    ],
+    "exit_code": 2,
+    "runtime_seconds": 0.084,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-1korbe5c"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test_dispatch_thinking.sh",
+    "source": "harness/tests/test_dispatch_thinking.sh",
+    "command": [
+      "bash",
+      "harness/tests/test_dispatch_thinking.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-28845ohd"
+  },
+  {
+    "name": "shell_sweep_harness_tests_test_round_n_plus_1_dispatch.sh",
+    "source": "harness/tests/test_round_n_plus_1_dispatch.sh",
+    "command": [
+      "bash",
+      "harness/tests/test_round_n_plus_1_dispatch.sh"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.012,
+    "timeout": false,
+    "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-cni0h9uh"
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "name": "script_smoke_core_policy",
+  "command": [
+    "bun",
+    "run",
+    "scripts/smoke-core-policy.ts"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0,
+  "isolated_home": "docs/testing/test-runs/20260709-qa-execution/tmp-home-script_smoke_core_policy"
+}

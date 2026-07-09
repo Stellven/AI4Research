@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_151_52e99b4c39_harness_tests_research_integration_test_real_vs_estimated_switch.py",
+  "source": "harness/tests/research/integration/test_real_vs_estimated_switch.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research/integration/test_real_vs_estimated_switch.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.19,
+  "timeout": false
+}

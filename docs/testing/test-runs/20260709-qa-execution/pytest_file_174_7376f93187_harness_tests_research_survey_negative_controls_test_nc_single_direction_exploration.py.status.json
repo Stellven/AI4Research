@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_174_7376f93187_harness_tests_research_survey_negative_controls_test_nc_single_direction_exploration.py",
+  "source": "harness/tests/research/survey/negative_controls/test_nc_single_direction_exploration.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research/survey/negative_controls/test_nc_single_direction_exploration.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.198,
+  "timeout": false
+}

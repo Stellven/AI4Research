@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_026_df74ff8d75_harness_tests_control_plane_test-autopilot-permissions-prompt.py",
+  "source": "harness/tests/control_plane/test-autopilot-permissions-prompt.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/control_plane/test-autopilot-permissions-prompt.py"
+  ],
+  "exit_code": 5,
+  "runtime_seconds": 0.195,
+  "timeout": false
+}

@@ -1,13 +1,15 @@
 enabled: true
-goal: Write a research report on WWDC Apple 2026
+goal: Official full-runtime AutoSci integration test through normal solar intake.
+  Do not call a
 success_metrics: &id001
-- 目标变更在声明范围内完成。
-- 至少一条测试/执行证据被记录。
-- 存在独立 verifier 决策。
+- Normal Solar intake emits a research.autosci.v1 task graph.
+- Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.
+- Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.
 non_goals:
-- 不做无关架构重写。
-- 不默认引入新的生产依赖。
+- 不把论文总结直接当作实现结论。
+- 不在缺证据时进入生产实现。
 acceptance: *id001
 stop_rules:
 - 缺少可验证 acceptance 不得标记为完成。
 - 缺少 verifier 决策不得进入 DONE。
+- 缺少 evidence ledger 或 critique gate 时不得推进到 adoption。

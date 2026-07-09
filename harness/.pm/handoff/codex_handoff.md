@@ -1,15 +1,15 @@
-# Codex Handoff — Write a research report on WWDC Apple 2026
+# Codex Handoff — Official full-runtime AutoSci integration test through normal solar intake. Do n
 
 ## Goal
 
-Write a research report on WWDC Apple 2026
+Official full-runtime AutoSci integration test through normal solar intake. Do not call a manual autosci shim. The workflow must ingest papers, extract claims, generate ideas, run exp-design, exp-run, exp-eval, and produce a report so we can verify whether AutoSci autonomously participates in the runtime.
 
 ## Read First
 
-- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.requirement_ir.json
-- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.prd.md
-- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.Contracts.yaml
-- sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67.task_graph.json
+- sprint-20260708-202105-intent-official-full-runtime-autosc-5626d8e8.requirement_ir.json
+- sprint-20260708-202105-intent-official-full-runtime-autosc-5626d8e8.prd.md
+- sprint-20260708-202105-intent-official-full-runtime-autosc-5626d8e8.Contracts.yaml
+- sprint-20260708-202105-intent-official-full-runtime-autosc-5626d8e8.task_graph.json
 
 ## Constraints
 
@@ -19,6 +19,6 @@ Write a research report on WWDC Apple 2026
 
 ## Acceptance
 
-- 目标变更在声明范围内完成。
-- 至少一条测试/执行证据被记录。
-- 存在独立 verifier 决策。
+- Normal Solar intake emits a research.autosci.v1 task graph.
+- Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.
+- Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_029_1a76ed3613_harness_tests_control_plane_test-autopilot-survey-block.py",
+  "source": "harness/tests/control_plane/test-autopilot-survey-block.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/control_plane/test-autopilot-survey-block.py"
+  ],
+  "exit_code": 5,
+  "runtime_seconds": 0.191,
+  "timeout": false
+}

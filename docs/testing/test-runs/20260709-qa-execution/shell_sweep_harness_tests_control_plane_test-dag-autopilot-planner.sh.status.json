@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_control_plane_test-dag-autopilot-planner.sh",
+  "source": "harness/tests/control_plane/test-dag-autopilot-planner.sh",
+  "command": [
+    "bash",
+    "harness/tests/control_plane/test-dag-autopilot-planner.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.024,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-0q7zpopz"
+}

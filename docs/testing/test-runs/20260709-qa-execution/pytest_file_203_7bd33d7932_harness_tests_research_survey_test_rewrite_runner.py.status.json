@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_203_7bd33d7932_harness_tests_research_survey_test_rewrite_runner.py",
+  "source": "harness/tests/research_survey/test_rewrite_runner.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research_survey/test_rewrite_runner.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.258,
+  "timeout": false
+}

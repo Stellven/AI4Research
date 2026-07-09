@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_414_263b9eb62b_harness_tests_test_policy.py",
+  "source": "harness/tests/test_policy.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_policy.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.205,
+  "timeout": false
+}

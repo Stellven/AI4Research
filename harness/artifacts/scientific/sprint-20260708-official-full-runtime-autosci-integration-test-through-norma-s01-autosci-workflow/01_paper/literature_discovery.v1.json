@@ -1,0 +1,91 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/sprint-20260708-official-full-runtime-autosci-integration-test-through-norma-s01-autosci-workflow/01_paper/discover_native_stdout.json",
+      "type": "discover_native_stdout_json"
+    },
+    {
+      "path": "artifacts/scientific/sprint-20260708-official-full-runtime-autosci-integration-test-through-norma-s01-autosci-workflow/01_paper/discover_native_stderr.txt",
+      "type": "discover_native_stderr"
+    },
+    {
+      "path": "artifacts/scientific/sprint-20260708-official-full-runtime-autosci-integration-test-through-norma-s01-autosci-workflow/01_paper/discover_native_payload.json",
+      "type": "discover_native_payload_json"
+    },
+    {
+      "path": "artifacts/scientific/sprint-20260708-official-full-runtime-autosci-integration-test-through-norma-s01-autosci-workflow/01_paper/discover_final_shortlist_boundary.json",
+      "type": "discover_final_shortlist_boundary_json"
+    },
+    {
+      "path": "artifacts/scientific/sprint-20260708-official-full-runtime-autosci-integration-test-through-norma-s01-autosci-workflow/01_paper/literature_discovery.v1.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allow_network_fetch": false,
+    "discover_mode": "topic",
+    "fixture_fallback": false,
+    "gate_mode": "safe",
+    "limit": 10,
+    "no_citation_expand": true,
+    "query": "AutoSci research workflow full runtime integration through norma"
+  },
+  "limitations": [
+    "Network discovery disabled; no provider/source request was made.",
+    "Final discovery shortlist requires non-empty candidates backed by non-fixture provider source channels."
+  ],
+  "node_id": "literature_discover",
+  "outputs": {
+    "candidates": [],
+    "limit": 10,
+    "mode": "topic",
+    "query": "AutoSci research workflow full runtime integration through norma",
+    "source_provider_boundary": {
+      "action": "discover_literature",
+      "candidate_count": 0,
+      "candidate_ids": [],
+      "completed": false,
+      "final_shortlist_boundary": {
+        "blocking_reasons": [
+          "discovery shortlist is empty",
+          "provider-backed source channel is missing",
+          "no source candidates were present",
+          "no non-fixture provider source channel was present"
+        ],
+        "candidate_count": 0,
+        "candidate_ids": [],
+        "final_shortlist_ready": false,
+        "limitations": [
+          "Final discovery shortlist requires non-empty candidates backed by non-fixture provider source channels."
+        ],
+        "mode": "topic",
+        "provider_channels": [],
+        "schema": "autosci_discover_final_shortlist_boundary.v1",
+        "source_provider_boundary_status": "incomplete",
+        "status": "discover_shortlist_incomplete"
+      },
+      "generic_channels": [],
+      "invalid_reasons": [
+        "no source candidates were present",
+        "no non-fixture provider source channel was present"
+      ],
+      "limitations": [
+        "Source runtime evidence did not prove a non-fixture provider channel."
+      ],
+      "provider_channels": [],
+      "runtime_record_sources": [],
+      "schema": "autosci_source_provider_boundary.v1",
+      "source_channels": [],
+      "status": "incomplete"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-08T16:47:15Z"
+  },
+  "schema": "literature_discovery.v1",
+  "sprint_id": "sprint-20260708-official-full-runtime-autosci-integration-test-through-norma-s01-autosci-workflow",
+  "status": "inconclusive",
+  "task_id": "pm-sprint-20260708-official-full-runtime-autosci-integration-test-through-norma-s01-autosci-workflow-literature_discover-e27123b5"
+}

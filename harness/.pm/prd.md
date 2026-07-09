@@ -1,26 +1,35 @@
-# Write a research report on WWDC Apple 2026
+# Official full-runtime AutoSci integration test through normal solar intake. Do n
 
-## Goal
-Write a research report on WWDC Apple 2026
+## Research Question
+Official full-runtime AutoSci integration test through normal solar intake. Do not call a
 
-## Context
-基于当前请求直接定位到局部改动范围。
+## Paper Inventory
+- 待补充来源
 
-## Scope
-- Write a research report on WWDC Apple 2026
+## Claim Extraction
+对每篇论文提取核心 claim、方法、benchmark、限制条件。
 
-## Non-goals
-- 不做无关架构重写。
-- 不默认引入新的生产依赖。
+## Evidence Map
+每个 engineering implication 都必须绑定 source + evidence + confidence。
 
-## Acceptance Criteria
-- 目标变更在声明范围内完成。
-- 至少一条测试/执行证据被记录。
-- 存在独立 verifier 决策。
+## Relevance to Our System
+输出对 Codex / solar-harness / PM pane 的工程含义。
 
-## Validation
-- 运行测试或 smoke check
-- 记录 diff / 风险 / 验证证据
+## Design Candidates
+基于证据链生成候选设计方案，并明确 pros / cons。
 
-## Rollback
-如验证失败，回退到变更前状态并保留失败证据。
+## Experiment Plan
+定义 baseline、metric、threshold 和失败退出条件。
+
+## Build Plan
+只有通过 eval gate 的研究结论才能进入实现 DAG。
+
+## Adoption Criteria
+- Normal Solar intake emits a research.autosci.v1 task graph.
+- Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.
+- Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.
+
+## Rejection Criteria
+- [medium] PRD / contract / DAG 多份产物漂移 -> 用 Requirement IR 做唯一事实源，所有视图从 IR 编译。
+- [medium] 原始需求直接派给 Builder 导致执行发散 -> 强制走 product-brief / planner handoff，不允许 raw request 直派 builder。
+- [high] 研究结论缺证据链就进入实现 -> Research mode 强制 evidence ledger 和 review gate。

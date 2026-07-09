@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-model-live-route-doctor.sh",
+  "source": "harness/tests/test-model-live-route-doctor.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-model-live-route-doctor.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.021,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-e_il0un8"
+}

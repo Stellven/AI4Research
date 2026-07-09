@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_415_0a351b4a8b_harness_tests_test_prerequisite_resolver.py",
+  "source": "harness/tests/test_prerequisite_resolver.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_prerequisite_resolver.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.198,
+  "timeout": false
+}

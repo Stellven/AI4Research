@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_303_48cc3bfb01_harness_tests_test_apo_plan_compiler.py",
+  "source": "harness/tests/test_apo_plan_compiler.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_apo_plan_compiler.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.265,
+  "timeout": false
+}

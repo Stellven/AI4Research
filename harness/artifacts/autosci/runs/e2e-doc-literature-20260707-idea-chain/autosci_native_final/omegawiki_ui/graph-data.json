@@ -3044,32 +3044,8 @@
     },
     {
       "label": "path member",
-      "source": "path:A:A:landscape-driven",
+      "source": "path:A:landscape-driven",
       "target": "idea:idea-cc-01-landscape-driven-1",
-      "type": "path_member"
-    },
-    {
-      "label": "path member",
-      "source": "path:B:B:incremental",
-      "target": "idea:idea-cc-01-incremental",
-      "type": "path_member"
-    },
-    {
-      "label": "path member",
-      "source": "path:C:C:combination",
-      "target": "idea:idea-cc-01-combination-3",
-      "type": "path_member"
-    },
-    {
-      "label": "path member",
-      "source": "path:D:D:innovation",
-      "target": "idea:idea-cc-01-innovation",
-      "type": "path_member"
-    },
-    {
-      "label": "path member",
-      "source": "path:E:E:cross-domain-transfer",
-      "target": "idea:idea-cc-01-cross-domain-transfer-5",
       "type": "path_member"
     },
     {
@@ -3303,6 +3279,12 @@
     {
       "label": "path member",
       "source": "path:B:incremental",
+      "target": "idea:idea-cc-01-incremental",
+      "type": "path_member"
+    },
+    {
+      "label": "path member",
+      "source": "path:B:incremental",
       "target": "idea:idea-cc-02-incremental",
       "type": "path_member"
     },
@@ -3526,6 +3508,12 @@
       "label": "path member",
       "source": "path:B:incremental",
       "target": "idea:idea-r19-incremental-2",
+      "type": "path_member"
+    },
+    {
+      "label": "path member",
+      "source": "path:C:combination",
+      "target": "idea:idea-cc-01-combination-3",
       "type": "path_member"
     },
     {
@@ -3759,6 +3747,12 @@
     {
       "label": "path member",
       "source": "path:D:innovation",
+      "target": "idea:idea-cc-01-innovation",
+      "type": "path_member"
+    },
+    {
+      "label": "path member",
+      "source": "path:D:innovation",
       "target": "idea:idea-cc-02-innovation",
       "type": "path_member"
     },
@@ -3987,6 +3981,12 @@
     {
       "label": "path member",
       "source": "path:E:cross-domain-transfer",
+      "target": "idea:idea-cc-01-cross-domain-transfer-5",
+      "type": "path_member"
+    },
+    {
+      "label": "path member",
+      "source": "path:E:cross-domain-transfer",
       "target": "idea:idea-cc-02-cross-domain-transfer",
       "type": "path_member"
     },
@@ -4089,6 +4089,12 @@
     {
       "label": "path member",
       "source": "path:E:cross-domain-transfer",
+      "target": "idea:idea-ghc-06-cross-domain-transfer",
+      "type": "path_member"
+    },
+    {
+      "label": "path member",
+      "source": "path:E:cross-domain-transfer",
       "target": "idea:idea-ghc-07-cross-domain-transfer",
       "type": "path_member"
     },
@@ -4096,6 +4102,12 @@
       "label": "path member",
       "source": "path:E:cross-domain-transfer",
       "target": "idea:idea-r01-cross-domain-transfer-5",
+      "type": "path_member"
+    },
+    {
+      "label": "path member",
+      "source": "path:E:cross-domain-transfer",
+      "target": "idea:idea-r02-cross-domain-transfer-transfer-5",
       "type": "path_member"
     },
     {
@@ -4155,6 +4167,12 @@
     {
       "label": "path member",
       "source": "path:E:cross-domain-transfer",
+      "target": "idea:idea-r12-cross-domain-transfer-5-5",
+      "type": "path_member"
+    },
+    {
+      "label": "path member",
+      "source": "path:E:cross-domain-transfer",
       "target": "idea:idea-r13-cross-domain-transfer-5",
       "type": "path_member"
     },
@@ -4192,24 +4210,6 @@
       "label": "path member",
       "source": "path:E:cross-domain-transfer",
       "target": "idea:idea-r19-cross-domain-transfer-5",
-      "type": "path_member"
-    },
-    {
-      "label": "path member",
-      "source": "path:E:cross-domain-transfer-transfer",
-      "target": "idea:idea-ghc-06-cross-domain-transfer",
-      "type": "path_member"
-    },
-    {
-      "label": "path member",
-      "source": "path:E:cross-domain-transfer-transfer",
-      "target": "idea:idea-r02-cross-domain-transfer-transfer-5",
-      "type": "path_member"
-    },
-    {
-      "label": "path member",
-      "source": "path:E:cross-domain-transfer-5",
-      "target": "idea:idea-r12-cross-domain-transfer-5-5",
       "type": "path_member"
     }
   ],
@@ -4261,13 +4261,15 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cc-01` as a `official documentation` resource titled \"Overview - Claude Code Docs\"."
     },
     {
-      "generation_path": "A:A:landscape-driven",
+      "display_title": "Claude Code overview documentation evidence check",
+      "generation_path": "A:landscape-driven",
       "id": "idea:idea-cc-01-landscape-driven-1",
       "item_id": "cc-01",
       "kind": "idea",
       "label": "Claude Code overview documentation evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:A:landscape-driven",
       "raw_title": "Validate Claude Code Docs Landscape",
       "recommendation": "reject",
       "selected": true
@@ -4293,49 +4295,57 @@
       "label": "cc-01: supported"
     },
     {
-      "generation_path": "B:B:incremental",
+      "display_title": "Claude Code overview documentation related-source enrichment",
+      "generation_path": "B:incremental",
       "id": "idea:idea-cc-01-incremental",
       "item_id": "cc-01",
       "kind": "idea",
       "label": "Claude Code overview documentation related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:B:incremental",
       "raw_title": "Expand Evidence Record with Related Papers",
       "recommendation": "reject",
       "selected": false
     },
     {
-      "generation_path": "C:C:combination",
+      "display_title": "Claude Code overview documentation cross-source synthesis",
+      "generation_path": "C:combination",
       "id": "idea:idea-cc-01-combination-3",
       "item_id": "cc-01",
       "kind": "idea",
       "label": "Claude Code overview documentation cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:C:combination",
       "raw_title": "Combine Claude Code Docs with Comparison Reports",
       "recommendation": "reject",
       "selected": false
     },
     {
-      "generation_path": "D:D:innovation",
+      "display_title": "Claude Code overview documentation validation use cases",
+      "generation_path": "D:innovation",
       "id": "idea:idea-cc-01-innovation",
       "item_id": "cc-01",
       "kind": "idea",
       "label": "Claude Code overview documentation validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:D:innovation",
       "raw_title": "Explore Novel Applications of Claude Code Docs",
       "recommendation": "reject",
       "selected": false
     },
     {
-      "generation_path": "E:E:cross-domain-transfer",
+      "display_title": "Claude Code overview documentation transfer pattern",
+      "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cc-01-cross-domain-transfer-5",
       "item_id": "cc-01",
       "kind": "idea",
       "label": "Claude Code overview documentation transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:E:cross-domain-transfer",
       "raw_title": "Cross-Domain Validation of AI Assistant Features",
       "recommendation": "reject",
       "selected": false
@@ -4377,6 +4387,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cc-02` as a `official documentation` resource titled \"Manage costs effectively - Claude Code Docs\"."
     },
     {
+      "display_title": "Manage costs effectively evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cc-02-landscape-driven",
       "item_id": "cc-02",
@@ -4384,6 +4395,7 @@
       "label": "Manage costs effectively evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Landscape-Driven Cost Analysis",
       "recommendation": "reject",
       "selected": true
@@ -4409,6 +4421,7 @@
       "label": "cc-02: supported"
     },
     {
+      "display_title": "Manage costs effectively related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cc-02-incremental",
       "item_id": "cc-02",
@@ -4416,11 +4429,13 @@
       "label": "Manage costs effectively related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Cost Optimization",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Manage costs effectively cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cc-02-combination",
       "item_id": "cc-02",
@@ -4428,11 +4443,13 @@
       "label": "Manage costs effectively cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combination of Techniques",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Manage costs effectively validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cc-02-innovation",
       "item_id": "cc-02",
@@ -4440,11 +4457,13 @@
       "label": "Manage costs effectively validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Cost Reduction Strategies",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Manage costs effectively transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cc-02-cross-domain-transfer",
       "item_id": "cc-02",
@@ -4452,6 +4471,7 @@
       "label": "Manage costs effectively transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Cost Transfer",
       "recommendation": "reject",
       "selected": false
@@ -4493,6 +4513,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cc-03` as a `official pricing page` resource titled \"Plans & Pricing | Claude by Anthropic\"."
     },
     {
+      "display_title": "Claude pricing and plan documentation evidence check: Analyze Pricing Strategies",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cc-03-landscape-driven-1",
       "item_id": "cc-03",
@@ -4500,6 +4521,7 @@
       "label": "Claude pricing and plan documentation evidence check: Analyze Pricing Strategies",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Analyze Pricing Strategies",
       "recommendation": "reject",
       "selected": true
@@ -4525,6 +4547,7 @@
       "label": "cc-03: supported"
     },
     {
+      "display_title": "Claude pricing and plan documentation related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cc-03-incremental-2",
       "item_id": "cc-03",
@@ -4532,11 +4555,13 @@
       "label": "Claude pricing and plan documentation related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Assess Feature Set",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude pricing and plan documentation cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cc-03-combination-3",
       "item_id": "cc-03",
@@ -4544,11 +4569,13 @@
       "label": "Claude pricing and plan documentation cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Compare Pricing Models",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude pricing and plan documentation validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cc-03-innovation-4",
       "item_id": "cc-03",
@@ -4556,11 +4583,13 @@
       "label": "Claude pricing and plan documentation validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Explore Scalability Options",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude pricing and plan documentation transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cc-03-cross-domain-transfer-5",
       "item_id": "cc-03",
@@ -4568,6 +4597,7 @@
       "label": "Claude pricing and plan documentation transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Validate Pricing Assumptions",
       "recommendation": "reject",
       "selected": false
@@ -4609,6 +4639,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cc-04` as a `official documentation` resource titled \"Connect Claude Code to tools via MCP - Claude Code Docs\"."
     },
     {
+      "display_title": "Connect Claude Code to tools via MCP evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cc-04-landscape-driven-1",
       "item_id": "cc-04",
@@ -4616,6 +4647,7 @@
       "label": "Connect Claude Code to tools via MCP evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Investigate Landscape-Driven Connections for Claude Code Tool Integration",
       "recommendation": "reject",
       "selected": true
@@ -4641,6 +4673,7 @@
       "label": "cc-04: supported"
     },
     {
+      "display_title": "Connect Claude Code to tools via MCP related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cc-04-incremental-2",
       "item_id": "cc-04",
@@ -4648,11 +4681,13 @@
       "label": "Connect Claude Code to tools via MCP related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Development of MCP Integration with Claude Code",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Connect Claude Code to tools via MCP cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cc-04-combination-3",
       "item_id": "cc-04",
@@ -4660,11 +4695,13 @@
       "label": "Connect Claude Code to tools via MCP cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine MCP with Existing Tooling Ecosystems for Claude Code",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Connect Claude Code to tools via MCP validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cc-04-innovation-4",
       "item_id": "cc-04",
@@ -4672,11 +4709,13 @@
       "label": "Connect Claude Code to tools via MCP validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Approaches to MCP Implementation for Claude Code",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Connect Claude Code to tools via MCP transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cc-04-cross-domain-transfer-5",
       "item_id": "cc-04",
@@ -4684,6 +4723,7 @@
       "label": "Connect Claude Code to tools via MCP transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer of MCP Knowledge to Other Coding Assistants",
       "recommendation": "reject",
       "selected": false
@@ -4725,6 +4765,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cc-05` as a `official documentation` resource titled \"Context windows - Claude Platform Docs\"."
     },
     {
+      "display_title": "Context windows cross-source synthesis: Combine insights from Claude documentation with other coding assistant resources",
       "generation_path": "C:combination",
       "id": "idea:idea-cc-05-combination-3",
       "item_id": "cc-05",
@@ -4732,6 +4773,7 @@
       "label": "Context windows cross-source synthesis: Combine insights from Claude documentation with other coding assistant resources",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine insights from Claude documentation with other coding assistant resources",
       "recommendation": "reject",
       "selected": true
@@ -4757,6 +4799,7 @@
       "label": "cc-05: supported"
     },
     {
+      "display_title": "Context windows transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cc-05-cross-domain-transfer-5",
       "item_id": "cc-05",
@@ -4764,11 +4807,13 @@
       "label": "Context windows transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Analyze Claude's context window for cross-domain applications",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Context windows related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cc-05-incremental-2",
       "item_id": "cc-05",
@@ -4776,11 +4821,13 @@
       "label": "Context windows related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Extend the validation of Claude's context window with incremental data",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Context windows validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cc-05-innovation-4",
       "item_id": "cc-05",
@@ -4788,11 +4835,13 @@
       "label": "Context windows validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Propose innovative use cases for Claude’s context window based on documentation",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Context windows evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cc-05-landscape-driven-1",
       "item_id": "cc-05",
@@ -4800,6 +4849,7 @@
       "label": "Context windows evidence check",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Map Claude's context window landscape to existing coding assistant tools",
       "recommendation": "reject",
       "selected": false
@@ -4841,6 +4891,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cc-06` as a `official product page` resource titled \"Claude Code by Anthropic | AI Coding Agent, Terminal, IDE\"."
     },
     {
+      "display_title": "Claude Code by Anthropic evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cc-06-landscape-driven",
       "item_id": "cc-06",
@@ -4848,6 +4899,7 @@
       "label": "Claude Code by Anthropic evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Evaluate Claude Code's Landscape-Driven Capabilities",
       "recommendation": "reject",
       "selected": true
@@ -4873,6 +4925,7 @@
       "label": "cc-06: supported"
     },
     {
+      "display_title": "Claude Code by Anthropic related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cc-06-incremental",
       "item_id": "cc-06",
@@ -4880,11 +4933,13 @@
       "label": "Claude Code by Anthropic related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Refinement of Claude Code's Suggestions",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude Code by Anthropic cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cc-06-combination",
       "item_id": "cc-06",
@@ -4892,11 +4947,13 @@
       "label": "Claude Code by Anthropic cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Claude Code with Existing Tools",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude Code by Anthropic validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cc-06-innovation",
       "item_id": "cc-06",
@@ -4904,11 +4961,13 @@
       "label": "Claude Code by Anthropic validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Use Cases for Claude Code",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude Code by Anthropic transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cc-06-cross-domain-transfer",
       "item_id": "cc-06",
@@ -4916,6 +4975,7 @@
       "label": "Claude Code by Anthropic transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Application of Claude Code's Logic",
       "recommendation": "reject",
       "selected": false
@@ -4957,6 +5017,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cc-07` as a `official documentation` resource titled \"Claude Code release notes\"."
     },
     {
+      "display_title": "Claude Code release notes evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cc-07-landscape-driven",
       "item_id": "cc-07",
@@ -4964,6 +5025,7 @@
       "label": "Claude Code release notes evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Analyze Landscape Drivers of Claude Code's Performance",
       "recommendation": "reject",
       "selected": true
@@ -4989,6 +5051,7 @@
       "label": "cc-07: supported"
     },
     {
+      "display_title": "Claude Code release notes related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cc-07-incremental",
       "item_id": "cc-07",
@@ -4996,11 +5059,13 @@
       "label": "Claude Code release notes related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Feature Expansion in Claude Code",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude Code release notes cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cc-07-combination",
       "item_id": "cc-07",
@@ -5008,11 +5073,13 @@
       "label": "Claude Code release notes cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combining Claude Code with Cursor and GitHub Copilot",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude Code release notes validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cc-07-innovation",
       "item_id": "cc-07",
@@ -5020,11 +5087,13 @@
       "label": "Claude Code release notes validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Applications of Claude Code's Agentic Features",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Claude Code release notes transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cc-07-cross-domain-transfer",
       "item_id": "cc-07",
@@ -5032,6 +5101,7 @@
       "label": "Claude Code release notes transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer of Claude Code's Knowledge",
       "recommendation": "reject",
       "selected": false
@@ -5073,6 +5143,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cu-01` as a `official product page` resource titled \"Cursor: AI coding agent\"."
     },
     {
+      "display_title": "Cursor: AI coding agent evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cu-01-landscape-driven-1",
       "item_id": "cu-01",
@@ -5080,6 +5151,7 @@
       "label": "Cursor: AI coding agent evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate the product page's description of Cursor's features and capabilities based on the comparison report.",
       "recommendation": "reject",
       "selected": true
@@ -5105,6 +5177,7 @@
       "label": "cu-01: supported"
     },
     {
+      "display_title": "Cursor: AI coding agent related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cu-01-incremental-2",
       "item_id": "cu-01",
@@ -5112,11 +5185,13 @@
       "label": "Cursor: AI coding agent related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Assess Cursor's pricing and context based on the comparison report.",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor: AI coding agent cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cu-01-combination-3",
       "item_id": "cu-01",
@@ -5124,11 +5199,13 @@
       "label": "Cursor: AI coding agent cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Investigate Cursor’s agentic features and ecosystem fit based on the comparison report.",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor: AI coding agent validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cu-01-innovation-4",
       "item_id": "cu-01",
@@ -5136,11 +5213,13 @@
       "label": "Cursor: AI coding agent validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Evaluate Cursor’s innovation potential based on the comparison report.",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor: AI coding agent transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cu-01-cross-domain-transfer-5",
       "item_id": "cu-01",
@@ -5148,6 +5227,7 @@
       "label": "Cursor: AI coding agent transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Analyze Cursor’s comparison with GitHub Copilot and Claude Code.",
       "recommendation": "reject",
       "selected": false
@@ -5189,6 +5269,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cu-02` as a `official pricing page` resource titled \"Cursor Pricing\"."
     },
     {
+      "display_title": "Cursor Pricing evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cu-02-landscape-driven",
       "item_id": "cu-02",
@@ -5196,6 +5277,7 @@
       "label": "Cursor Pricing evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate Cursor Pricing Landscape",
       "recommendation": "reject",
       "selected": true
@@ -5221,6 +5303,7 @@
       "label": "cu-02: supported"
     },
     {
+      "display_title": "Cursor Pricing related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cu-02-incremental",
       "item_id": "cu-02",
@@ -5228,11 +5311,13 @@
       "label": "Cursor Pricing related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Validation of Pricing Claims",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Pricing cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cu-02-combination",
       "item_id": "cu-02",
@@ -5240,11 +5325,13 @@
       "label": "Cursor Pricing cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Evidence for Pricing Analysis",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Pricing validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cu-02-innovation",
       "item_id": "cu-02",
@@ -5252,11 +5339,13 @@
       "label": "Cursor Pricing validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Pricing Experiment Design",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Pricing transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cu-02-cross-domain-transfer",
       "item_id": "cu-02",
@@ -5264,6 +5353,7 @@
       "label": "Cursor Pricing transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Pricing Insights",
       "recommendation": "reject",
       "selected": false
@@ -5305,6 +5395,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cu-03` as a `official documentation` resource titled \"Cursor Docs - Agent, Rules, MCP, Skills & CLI\"."
     },
     {
+      "display_title": "Cursor Docs - Agent, Rules, MCP, Skills & CLI evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cu-03-landscape-driven",
       "item_id": "cu-03",
@@ -5312,6 +5403,7 @@
       "label": "Cursor Docs - Agent, Rules, MCP, Skills & CLI evidence check",
       "potential_label": "medium",
       "potential_score": 0.476,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate Cursor Docs Landscape",
       "recommendation": "reject",
       "selected": true
@@ -5337,6 +5429,7 @@
       "label": "cu-03: inconclusive"
     },
     {
+      "display_title": "Cursor Docs - Agent, Rules, MCP, Skills & CLI related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cu-03-incremental",
       "item_id": "cu-03",
@@ -5344,11 +5437,13 @@
       "label": "Cursor Docs - Agent, Rules, MCP, Skills & CLI related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Feature Expansion",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Agent, Rules, MCP, Skills & CLI cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cu-03-combination",
       "item_id": "cu-03",
@@ -5356,11 +5451,13 @@
       "label": "Cursor Docs - Agent, Rules, MCP, Skills & CLI cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Cursor Docs with Competitive Analysis",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Agent, Rules, MCP, Skills & CLI validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cu-03-innovation",
       "item_id": "cu-03",
@@ -5368,11 +5465,13 @@
       "label": "Cursor Docs - Agent, Rules, MCP, Skills & CLI validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Use Cases for Cursor Docs",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Agent, Rules, MCP, Skills & CLI transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cu-03-cross-domain-transfer",
       "item_id": "cu-03",
@@ -5380,6 +5479,7 @@
       "label": "Cursor Docs - Agent, Rules, MCP, Skills & CLI transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Knowledge Transfer from Cursor Docs",
       "recommendation": "reject",
       "selected": false
@@ -5421,6 +5521,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cu-04` as a `official documentation` resource titled \"Cursor Docs - Rules and context\"."
     },
     {
+      "display_title": "Cursor Docs - Rules and context evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cu-04-landscape-driven",
       "item_id": "cu-04",
@@ -5428,6 +5529,7 @@
       "label": "Cursor Docs - Rules and context evidence check",
       "potential_label": "medium",
       "potential_score": 0.476,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate Cursor Docs - Rules and context through landscape analysis",
       "recommendation": "reject",
       "selected": true
@@ -5453,6 +5555,7 @@
       "label": "cu-04: inconclusive"
     },
     {
+      "display_title": "Cursor Docs - Rules and context related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cu-04-incremental",
       "item_id": "cu-04",
@@ -5460,11 +5563,13 @@
       "label": "Cursor Docs - Rules and context related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental refinement of Cursor Docs - Rules and context",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Rules and context cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cu-04-combination",
       "item_id": "cu-04",
@@ -5472,11 +5577,13 @@
       "label": "Cursor Docs - Rules and context cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine insights from Cursor Docs - Rules and context with related sources",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Rules and context validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cu-04-innovation",
       "item_id": "cu-04",
@@ -5484,11 +5591,13 @@
       "label": "Cursor Docs - Rules and context validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative application of Cursor Docs - Rules and context for AI development",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Rules and context transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cu-04-cross-domain-transfer",
       "item_id": "cu-04",
@@ -5496,6 +5605,7 @@
       "label": "Cursor Docs - Rules and context transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-domain transfer of Cursor Docs - Rules and context insights",
       "recommendation": "reject",
       "selected": false
@@ -5537,6 +5647,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cu-05` as a `official documentation` resource titled \"Cursor Docs - Pricing and tokens\"."
     },
     {
+      "display_title": "Cursor Docs - Pricing and tokens evidence check: Analyze Cursor's pricing strategy compared to other coding assistants.",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cu-05-landscape-driven-1",
       "item_id": "cu-05",
@@ -5544,6 +5655,7 @@
       "label": "Cursor Docs - Pricing and tokens evidence check: Analyze Cursor's pricing strategy compared to other coding assistants.",
       "potential_label": "medium",
       "potential_score": 0.476,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Analyze Cursor's pricing strategy compared to other coding assistants.",
       "recommendation": "reject",
       "selected": true
@@ -5569,6 +5681,7 @@
       "label": "cu-05: inconclusive"
     },
     {
+      "display_title": "Cursor Docs - Pricing and tokens related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cu-05-incremental-2",
       "item_id": "cu-05",
@@ -5576,11 +5689,13 @@
       "label": "Cursor Docs - Pricing and tokens related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Extend Cursor's documentation with feature comparisons.",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Pricing and tokens cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cu-05-combination-3",
       "item_id": "cu-05",
@@ -5588,11 +5703,13 @@
       "label": "Cursor Docs - Pricing and tokens cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Cursor's pricing data with competitor benchmarks.",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Pricing and tokens validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cu-05-innovation-4",
       "item_id": "cu-05",
@@ -5600,11 +5717,13 @@
       "label": "Cursor Docs - Pricing and tokens validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Propose a new feature based on Cursor's documentation.",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Cursor Docs - Pricing and tokens transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cu-05-cross-domain-transfer-5",
       "item_id": "cu-05",
@@ -5612,6 +5731,7 @@
       "label": "Cursor Docs - Pricing and tokens transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Investigate Cursor's agentic features through a cross-domain lens.",
       "recommendation": "reject",
       "selected": false
@@ -5653,6 +5773,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `cu-06` as a `official changelog` resource titled \"Cursor Changelog\"."
     },
     {
+      "display_title": "Cursor Changelog evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-cu-06-landscape-driven-1",
       "item_id": "cu-06",
@@ -5660,6 +5781,7 @@
       "label": "Cursor Changelog evidence check",
       "potential_label": "higher",
       "potential_score": 0.756,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate Cursor Changelog's Landscape Impact",
       "recommendation": "revise",
       "selected": true
@@ -5685,6 +5807,7 @@
       "label": "cu-06: supported"
     },
     {
+      "display_title": "Cursor Changelog related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-cu-06-incremental-2",
       "item_id": "cu-06",
@@ -5692,11 +5815,13 @@
       "label": "Cursor Changelog related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.506,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Cursor Feature Evolution",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Cursor Changelog cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-cu-06-combination-3",
       "item_id": "cu-06",
@@ -5704,11 +5829,13 @@
       "label": "Cursor Changelog cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.506,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Cursor with Other Assistants' Insights",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Cursor Changelog validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-cu-06-innovation-4",
       "item_id": "cu-06",
@@ -5716,11 +5843,13 @@
       "label": "Cursor Changelog validation use cases",
       "potential_label": "medium",
       "potential_score": 0.506,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Cursor's Innovation in Coding Assistance",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Cursor Changelog transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-cu-06-cross-domain-transfer-5",
       "item_id": "cu-06",
@@ -5728,6 +5857,7 @@
       "label": "Cursor Changelog transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.506,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer of Cursor's Techniques",
       "recommendation": "revise",
       "selected": false
@@ -5769,6 +5899,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `ghc-01` as a `official product page` resource titled \"GitHub Copilot - Your AI pair programmer\"."
     },
     {
+      "display_title": "GitHub Copilot - Your AI pair programmer evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-ghc-01-landscape-driven",
       "item_id": "ghc-01",
@@ -5776,6 +5907,7 @@
       "label": "GitHub Copilot - Your AI pair programmer evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate GitHub Copilot's Landscape-Driven Features",
       "recommendation": "reject",
       "selected": true
@@ -5801,6 +5933,7 @@
       "label": "ghc-01: supported"
     },
     {
+      "display_title": "GitHub Copilot - Your AI pair programmer related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-ghc-01-incremental",
       "item_id": "ghc-01",
@@ -5808,11 +5941,13 @@
       "label": "GitHub Copilot - Your AI pair programmer related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Feature Validation",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "GitHub Copilot - Your AI pair programmer cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-ghc-01-combination",
       "item_id": "ghc-01",
@@ -5820,11 +5955,13 @@
       "label": "GitHub Copilot - Your AI pair programmer cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Feature Validation with Comparison Data",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "GitHub Copilot - Your AI pair programmer validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-ghc-01-innovation",
       "item_id": "ghc-01",
@@ -5832,11 +5969,13 @@
       "label": "GitHub Copilot - Your AI pair programmer validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Assess GitHub Copilot's Innovative Aspects",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "GitHub Copilot - Your AI pair programmer transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-ghc-01-cross-domain-transfer",
       "item_id": "ghc-01",
@@ -5844,6 +5983,7 @@
       "label": "GitHub Copilot - Your AI pair programmer transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Validate Cross-Domain Feature Transfer Capabilities",
       "recommendation": "reject",
       "selected": false
@@ -5885,6 +6025,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `ghc-02` as a `official documentation` resource titled \"GitHub Copilot documentation\"."
     },
     {
+      "display_title": "GitHub Copilot documentation evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-ghc-02-landscape-driven",
       "item_id": "ghc-02",
@@ -5892,6 +6033,7 @@
       "label": "GitHub Copilot documentation evidence check",
       "potential_label": "higher",
       "potential_score": 0.743,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate GitHub Copilot documentation's landscape impact on coding assistance.",
       "recommendation": "revise",
       "selected": true
@@ -5917,6 +6059,7 @@
       "label": "ghc-02: supported"
     },
     {
+      "display_title": "GitHub Copilot documentation related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-ghc-02-incremental",
       "item_id": "ghc-02",
@@ -5924,11 +6067,13 @@
       "label": "GitHub Copilot documentation related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.493,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incrementally expand the documentation's feature set.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "GitHub Copilot documentation cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-ghc-02-combination",
       "item_id": "ghc-02",
@@ -5936,11 +6081,13 @@
       "label": "GitHub Copilot documentation cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.493,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine documentation with related comparison reports.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "GitHub Copilot documentation validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-ghc-02-innovation",
       "item_id": "ghc-02",
@@ -5948,11 +6095,13 @@
       "label": "GitHub Copilot documentation validation use cases",
       "potential_label": "medium",
       "potential_score": 0.493,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Explore innovative applications of GitHub Copilot documentation.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "GitHub Copilot documentation transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-ghc-02-cross-domain-transfer",
       "item_id": "ghc-02",
@@ -5960,6 +6109,7 @@
       "label": "GitHub Copilot documentation transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.493,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-domain transfer of documentation insights.",
       "recommendation": "revise",
       "selected": false
@@ -6001,6 +6151,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `ghc-03` as a `official documentation` resource titled \"Models and pricing for GitHub Copilot\"."
     },
     {
+      "display_title": "Models and pricing for GitHub Copilot evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-ghc-03-landscape-driven",
       "item_id": "ghc-03",
@@ -6008,6 +6159,7 @@
       "label": "Models and pricing for GitHub Copilot evidence check",
       "potential_label": "higher",
       "potential_score": 0.725,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate Pricing Model",
       "recommendation": "revise",
       "selected": true
@@ -6033,6 +6185,7 @@
       "label": "ghc-03: supported"
     },
     {
+      "display_title": "Models and pricing for GitHub Copilot related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-ghc-03-incremental",
       "item_id": "ghc-03",
@@ -6040,11 +6193,13 @@
       "label": "Models and pricing for GitHub Copilot related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.475,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Assess Feature Increments",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Models and pricing for GitHub Copilot cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-ghc-03-combination",
       "item_id": "ghc-03",
@@ -6052,11 +6207,13 @@
       "label": "Models and pricing for GitHub Copilot cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.475,
+      "raw_generation_path": "C:combination",
       "raw_title": "Analyze Pricing Combinations",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Models and pricing for GitHub Copilot validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-ghc-03-innovation",
       "item_id": "ghc-03",
@@ -6064,11 +6221,13 @@
       "label": "Models and pricing for GitHub Copilot validation use cases",
       "potential_label": "medium",
       "potential_score": 0.475,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Evaluate Innovative Pricing Approaches",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Models and pricing for GitHub Copilot transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-ghc-03-cross-domain-transfer",
       "item_id": "ghc-03",
@@ -6076,6 +6235,7 @@
       "label": "Models and pricing for GitHub Copilot transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.475,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Compare Pricing Across Domains",
       "recommendation": "revise",
       "selected": false
@@ -6117,6 +6277,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `ghc-04` as a `official documentation` resource titled \"About GitHub Copilot cloud agent\"."
     },
     {
+      "display_title": "About GitHub Copilot cloud agent evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-ghc-04-landscape-driven-1",
       "item_id": "ghc-04",
@@ -6124,6 +6285,7 @@
       "label": "About GitHub Copilot cloud agent evidence check",
       "potential_label": "higher",
       "potential_score": 0.743,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate GitHub Copilot's landscape-driven approach to coding assistance",
       "recommendation": "revise",
       "selected": true
@@ -6149,6 +6311,7 @@
       "label": "ghc-04: supported"
     },
     {
+      "display_title": "About GitHub Copilot cloud agent related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-ghc-04-incremental-2",
       "item_id": "ghc-04",
@@ -6156,11 +6319,13 @@
       "label": "About GitHub Copilot cloud agent related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.493,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Evaluate GitHub Copilot's incremental code generation capabilities",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "About GitHub Copilot cloud agent cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-ghc-04-combination-3",
       "item_id": "ghc-04",
@@ -6168,11 +6333,13 @@
       "label": "About GitHub Copilot cloud agent cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.493,
+      "raw_generation_path": "C:combination",
       "raw_title": "Analyze GitHub Copilot's combination of techniques for code generation",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "About GitHub Copilot cloud agent validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-ghc-04-innovation-4",
       "item_id": "ghc-04",
@@ -6180,11 +6347,13 @@
       "label": "About GitHub Copilot cloud agent validation use cases",
       "potential_label": "medium",
       "potential_score": 0.493,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Assess GitHub Copilot's innovative code generation strategies",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "About GitHub Copilot cloud agent transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-ghc-04-cross-domain-transfer-5",
       "item_id": "ghc-04",
@@ -6192,6 +6361,7 @@
       "label": "About GitHub Copilot cloud agent transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.493,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Investigate GitHub Copilot's cross-domain code transfer capabilities",
       "recommendation": "revise",
       "selected": false
@@ -6233,6 +6403,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `ghc-05` as a `official documentation` resource titled \"About Model Context Protocol (MCP) - GitHub Docs\"."
     },
     {
+      "display_title": "About Model Context Protocol (MCP) - GitHub Docs evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-ghc-05-landscape-driven",
       "item_id": "ghc-05",
@@ -6240,6 +6411,7 @@
       "label": "About Model Context Protocol (MCP) - GitHub Docs evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate MCP Documentation Landscape",
       "recommendation": "reject",
       "selected": true
@@ -6265,6 +6437,7 @@
       "label": "ghc-05: supported"
     },
     {
+      "display_title": "About Model Context Protocol (MCP) - GitHub Docs related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-ghc-05-incremental",
       "item_id": "ghc-05",
@@ -6272,11 +6445,13 @@
       "label": "About Model Context Protocol (MCP) - GitHub Docs related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Validation of MCP Components",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "About Model Context Protocol (MCP) - GitHub Docs cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-ghc-05-combination",
       "item_id": "ghc-05",
@@ -6284,11 +6459,13 @@
       "label": "About Model Context Protocol (MCP) - GitHub Docs cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine MCP with Related Wiki Resources",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "About Model Context Protocol (MCP) - GitHub Docs validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-ghc-05-innovation",
       "item_id": "ghc-05",
@@ -6296,11 +6473,13 @@
       "label": "About Model Context Protocol (MCP) - GitHub Docs validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Validation of GitHub's Comparison Report",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "About Model Context Protocol (MCP) - GitHub Docs transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-ghc-05-cross-domain-transfer",
       "item_id": "ghc-05",
@@ -6308,6 +6487,7 @@
       "label": "About Model Context Protocol (MCP) - GitHub Docs transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Validation of MCP Concepts",
       "recommendation": "reject",
       "selected": false
@@ -6349,6 +6529,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `ghc-06` as a `official pricing page` resource titled \"Pricing - Plans for every developer - GitHub\"."
     },
     {
+      "display_title": "Pricing - Plans for every developer - GitHub evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-ghc-06-landscape-driven",
       "item_id": "ghc-06",
@@ -6356,6 +6537,7 @@
       "label": "Pricing - Plans for every developer - GitHub evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Pricing Landscape Analysis",
       "recommendation": "reject",
       "selected": true
@@ -6381,6 +6563,7 @@
       "label": "ghc-06: supported"
     },
     {
+      "display_title": "Pricing - Plans for every developer - GitHub related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-ghc-06-incremental",
       "item_id": "ghc-06",
@@ -6388,11 +6571,13 @@
       "label": "Pricing - Plans for every developer - GitHub related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Pricing Adjustments",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Pricing - Plans for every developer - GitHub cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-ghc-06-combination",
       "item_id": "ghc-06",
@@ -6400,11 +6585,13 @@
       "label": "Pricing - Plans for every developer - GitHub cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Pricing Feature Combination Analysis",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Pricing - Plans for every developer - GitHub validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-ghc-06-innovation",
       "item_id": "ghc-06",
@@ -6412,18 +6599,21 @@
       "label": "Pricing - Plans for every developer - GitHub validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Pricing Innovation Exploration",
       "recommendation": "reject",
       "selected": false
     },
     {
-      "generation_path": "E:cross-domain-transfer-transfer",
+      "display_title": "Pricing - Plans for every developer - GitHub transfer pattern",
+      "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-ghc-06-cross-domain-transfer",
       "item_id": "ghc-06",
       "kind": "idea",
       "label": "Pricing - Plans for every developer - GitHub transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer-transfer",
       "raw_title": "Pricing Model Cross-Domain Transfer",
       "recommendation": "reject",
       "selected": false
@@ -6465,6 +6655,7 @@
       "summary": "The attached document `Claude Code vs Cursor vs GitHub Copilot in 2026.html` lists `ghc-07` as a `official changelog` resource titled \"GitHub Changelog - Copilot label\"."
     },
     {
+      "display_title": "GitHub Changelog - Copilot label evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-ghc-07-landscape-driven",
       "item_id": "ghc-07",
@@ -6472,6 +6663,7 @@
       "label": "GitHub Changelog - Copilot label evidence check",
       "potential_label": "medium",
       "potential_score": 0.606,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate Copilot Label Changelog",
       "recommendation": "reject",
       "selected": true
@@ -6497,6 +6689,7 @@
       "label": "ghc-07: supported"
     },
     {
+      "display_title": "GitHub Changelog - Copilot label related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-ghc-07-incremental",
       "item_id": "ghc-07",
@@ -6504,11 +6697,13 @@
       "label": "GitHub Changelog - Copilot label related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Expand Copilot Changelog Validation",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "GitHub Changelog - Copilot label cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-ghc-07-combination",
       "item_id": "ghc-07",
@@ -6516,11 +6711,13 @@
       "label": "GitHub Changelog - Copilot label cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Copilot Changelog with Related Documentation",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "GitHub Changelog - Copilot label validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-ghc-07-innovation",
       "item_id": "ghc-07",
@@ -6528,11 +6725,13 @@
       "label": "GitHub Changelog - Copilot label validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovate Validation Methodology for Changelogs",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "GitHub Changelog - Copilot label transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-ghc-07-cross-domain-transfer",
       "item_id": "ghc-07",
@@ -6540,6 +6739,7 @@
       "label": "GitHub Changelog - Copilot label transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Validation of Copilot Changelog",
       "recommendation": "reject",
       "selected": false
@@ -6581,6 +6781,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R01` as a `benchmark` resource titled \"Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows\"."
     },
     {
+      "display_title": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r01-landscape-driven-1",
       "item_id": "r01",
@@ -6588,6 +6789,7 @@
       "label": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows evidence check",
       "potential_label": "medium",
       "potential_score": 0.626,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Investigate the impact of landscape-driven context on harness performance in agent workflows.",
       "recommendation": "revise",
       "selected": true
@@ -6613,6 +6815,7 @@
       "label": "r01: inconclusive"
     },
     {
+      "display_title": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r01-incremental-2",
       "item_id": "r01",
@@ -6620,11 +6823,13 @@
       "label": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.515,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Evaluate the effectiveness of incremental harness adjustments on workflow performance.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r01-combination-3",
       "item_id": "r01",
@@ -6632,11 +6837,13 @@
       "label": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.516,
+      "raw_generation_path": "C:combination",
       "raw_title": "Assess the synergy between different harness components through a combined approach.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r01-innovation-4",
       "item_id": "r01",
@@ -6644,11 +6851,13 @@
       "label": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows validation use cases",
       "potential_label": "medium",
       "potential_score": 0.516,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Explore novel harness designs to maximize workflow efficiency.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r01-cross-domain-transfer-5",
       "item_id": "r01",
@@ -6656,6 +6865,7 @@
       "label": "Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.516,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Investigate cross-domain transfer of harness techniques to improve workflow performance.",
       "recommendation": "revise",
       "selected": false
@@ -6697,6 +6907,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R02` as a `paper` resource titled \"AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents\"."
     },
     {
+      "display_title": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r02-landscape-driven-1",
       "item_id": "r02",
@@ -6704,6 +6915,7 @@
       "label": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents evidence check",
       "potential_label": "medium",
       "potential_score": 0.593,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Landscape-Driven Validation of Runtime Substrate",
       "recommendation": "revise",
       "selected": true
@@ -6729,6 +6941,7 @@
       "label": "r02: inconclusive"
     },
     {
+      "display_title": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r02-incremental-2",
       "item_id": "r02",
@@ -6736,11 +6949,13 @@
       "label": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.473,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Extension of Harness Engineering Concepts",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r02-combination-3",
       "item_id": "r02",
@@ -6748,11 +6963,13 @@
       "label": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.473,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combining Harness Engineering with Agent Design Principles",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r02-innovation-4",
       "item_id": "r02",
@@ -6760,18 +6977,21 @@
       "label": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents validation use cases",
       "potential_label": "medium",
       "potential_score": 0.473,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Approaches to Runtime Substrate Design",
       "recommendation": "revise",
       "selected": false
     },
     {
-      "generation_path": "E:cross-domain-transfer-transfer",
+      "display_title": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents transfer pattern",
+      "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r02-cross-domain-transfer-transfer-5",
       "item_id": "r02",
       "kind": "idea",
       "label": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.473,
+      "raw_generation_path": "E:cross-domain-transfer-transfer",
       "raw_title": "Cross-Domain Transfer of Harness Engineering Techniques",
       "recommendation": "revise",
       "selected": false
@@ -6813,6 +7033,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R03` as a `paper` resource titled \"Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses\"."
     },
     {
+      "display_title": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r03-landscape-driven-1",
       "item_id": "r03",
@@ -6820,6 +7041,7 @@
       "label": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses evidence check",
       "potential_label": "medium",
       "potential_score": 0.591,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Investigate the impact of landscape-driven optimization on harness performance",
       "recommendation": "revise",
       "selected": true
@@ -6845,6 +7067,7 @@
       "label": "r03: inconclusive"
     },
     {
+      "display_title": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses related-source enrichme...",
       "generation_path": "B:incremental",
       "id": "idea:idea-r03-incremental-2",
       "item_id": "r03",
@@ -6852,11 +7075,13 @@
       "label": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses related-source enrichme...",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Evaluate the effectiveness of incremental optimization strategies",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r03-combination-3",
       "item_id": "r03",
@@ -6864,11 +7089,13 @@
       "label": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "C:combination",
       "raw_title": "Explore the combination of different optimization techniques",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r03-innovation-4",
       "item_id": "r03",
@@ -6876,11 +7103,13 @@
       "label": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses validation use cases",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Assess the potential of innovation-driven approaches to harness evolution",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r03-cross-domain-transfer-5",
       "item_id": "r03",
@@ -6888,6 +7117,7 @@
       "label": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Investigate cross-domain transfer of optimization strategies",
       "recommendation": "revise",
       "selected": false
@@ -6929,6 +7159,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R04` as a `paper` resource titled \"HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness\"."
     },
     {
+      "display_title": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r04-landscape-driven-1",
       "item_id": "r04",
@@ -6936,6 +7167,7 @@
       "label": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness evidence check",
       "potential_label": "medium",
       "potential_score": 0.476,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Investigate Landscape-Driven Adaptation Strategies",
       "recommendation": "reject",
       "selected": true
@@ -6961,6 +7193,7 @@
       "label": "r04: inconclusive"
     },
     {
+      "display_title": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r04-incremental-2",
       "item_id": "r04",
@@ -6968,11 +7201,13 @@
       "label": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Harness Adaptation",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r04-combination-3",
       "item_id": "r04",
@@ -6980,11 +7215,13 @@
       "label": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Landscape and Incremental Approaches",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r04-innovation-4",
       "item_id": "r04",
@@ -6992,11 +7229,13 @@
       "label": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Explore Novel Control Architectures",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r04-cross-domain-transfer-5",
       "item_id": "r04",
@@ -7004,6 +7243,7 @@
       "label": "HarnessBridge: Learnable Bidirectional Controller for LLM Agent Harness transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer of Control Strategies",
       "recommendation": "reject",
       "selected": false
@@ -7045,6 +7285,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R05` as a `technical report` resource titled \"AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic\"."
     },
     {
+      "display_title": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r05-landscape-driven-1",
       "item_id": "r05",
@@ -7052,6 +7293,7 @@
       "label": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic evidence check",
       "potential_label": "medium",
       "potential_score": 0.536,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate Landscape-Driven Orchestration",
       "recommendation": "reject",
       "selected": true
@@ -7077,6 +7319,7 @@
       "label": "r05: partially_supported"
     },
     {
+      "display_title": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic related-source e...",
       "generation_path": "B:incremental",
       "id": "idea:idea-r05-incremental-2",
       "item_id": "r05",
@@ -7084,11 +7327,13 @@
       "label": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic related-source e...",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Evaluate Incremental Orchestration",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic cross-source syn...",
       "generation_path": "C:combination",
       "id": "idea:idea-r05-combination-3",
       "item_id": "r05",
@@ -7096,11 +7341,13 @@
       "label": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic cross-source syn...",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Assess Combination Orchestration Strategies",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic validation use c...",
       "generation_path": "D:innovation",
       "id": "idea:idea-r05-innovation-4",
       "item_id": "r05",
@@ -7108,11 +7355,13 @@
       "label": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic validation use c...",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Explore Innovation Orchestration Techniques",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r05-cross-domain-transfer-5",
       "item_id": "r05",
@@ -7120,6 +7369,7 @@
       "label": "AI agent orchestration patterns: prompt chaining, routing, parallelization, sequential, planner-critic transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Investigate Cross-Domain Transfer of Orchestration Patterns",
       "recommendation": "reject",
       "selected": false
@@ -7161,6 +7411,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R06` as a `technical report` resource titled \"Building Effective Agents (engineering guide)\"."
     },
     {
+      "display_title": "Building Effective Agents (engineering guide) evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r06-landscape-driven-1",
       "item_id": "r06",
@@ -7168,6 +7419,7 @@
       "label": "Building Effective Agents (engineering guide) evidence check",
       "potential_label": "medium",
       "potential_score": 0.536,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Landscape Driven Agent Design",
       "recommendation": "reject",
       "selected": true
@@ -7193,6 +7445,7 @@
       "label": "r06: partially_supported"
     },
     {
+      "display_title": "Building Effective Agents (engineering guide) related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r06-incremental-2",
       "item_id": "r06",
@@ -7200,11 +7453,13 @@
       "label": "Building Effective Agents (engineering guide) related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Agent Refinement",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Building Effective Agents (engineering guide) cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r06-combination-3",
       "item_id": "r06",
@@ -7212,11 +7467,13 @@
       "label": "Building Effective Agents (engineering guide) cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combining Agent Architectures",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Building Effective Agents (engineering guide) validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r06-innovation-4",
       "item_id": "r06",
@@ -7224,11 +7481,13 @@
       "label": "Building Effective Agents (engineering guide) validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Agent Composition Strategies",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Building Effective Agents (engineering guide) transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r06-cross-domain-transfer-5",
       "item_id": "r06",
@@ -7236,6 +7495,7 @@
       "label": "Building Effective Agents (engineering guide) transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Agent Transfer",
       "recommendation": "reject",
       "selected": false
@@ -7277,6 +7537,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R07` as a `paper` resource titled \"Self-Refine: Iterative Refinement with Self-Feedback\"."
     },
     {
+      "display_title": "Self-Refine: Iterative Refinement with Self-Feedback evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r07-landscape-driven-1",
       "item_id": "r07",
@@ -7284,6 +7545,7 @@
       "label": "Self-Refine: Iterative Refinement with Self-Feedback evidence check",
       "potential_label": "medium",
       "potential_score": 0.536,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Landscape-Driven Refinement",
       "recommendation": "reject",
       "selected": true
@@ -7309,6 +7571,7 @@
       "label": "r07: partially_supported"
     },
     {
+      "display_title": "Self-Refine: Iterative Refinement with Self-Feedback related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r07-incremental-2",
       "item_id": "r07",
@@ -7316,11 +7579,13 @@
       "label": "Self-Refine: Iterative Refinement with Self-Feedback related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Refinement",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Self-Refine: Iterative Refinement with Self-Feedback cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r07-combination-3",
       "item_id": "r07",
@@ -7328,11 +7593,13 @@
       "label": "Self-Refine: Iterative Refinement with Self-Feedback cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combination Refinement",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Self-Refine: Iterative Refinement with Self-Feedback validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r07-innovation-4",
       "item_id": "r07",
@@ -7340,11 +7607,13 @@
       "label": "Self-Refine: Iterative Refinement with Self-Feedback validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovation Refinement",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Self-Refine: Iterative Refinement with Self-Feedback transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r07-cross-domain-transfer-5",
       "item_id": "r07",
@@ -7352,6 +7621,7 @@
       "label": "Self-Refine: Iterative Refinement with Self-Feedback transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer Refinement",
       "recommendation": "reject",
       "selected": false
@@ -7393,6 +7663,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R08` as a `paper` resource titled \"Reflexion: Language Agents with Verbal Reinforcement Learning\"."
     },
     {
+      "display_title": "Reflexion: Language Agents with Verbal Reinforcement Learning evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r08-landscape-driven-1",
       "item_id": "r08",
@@ -7400,6 +7671,7 @@
       "label": "Reflexion: Language Agents with Verbal Reinforcement Learning evidence check",
       "potential_label": "medium",
       "potential_score": 0.657,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Landscape-Driven Validation of Reflexion",
       "recommendation": "revise",
       "selected": true
@@ -7425,6 +7697,7 @@
       "label": "r08: partially_supported"
     },
     {
+      "display_title": "Reflexion: Language Agents with Verbal Reinforcement Learning related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r08-incremental-2",
       "item_id": "r08",
@@ -7432,11 +7705,13 @@
       "label": "Reflexion: Language Agents with Verbal Reinforcement Learning related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Improvement through Verbal Reinforcement",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Reflexion: Language Agents with Verbal Reinforcement Learning cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r08-combination-3",
       "item_id": "r08",
@@ -7444,11 +7719,13 @@
       "label": "Reflexion: Language Agents with Verbal Reinforcement Learning cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combining Verbal Reinforcement with Other Techniques",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Reflexion: Language Agents with Verbal Reinforcement Learning validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r08-innovation-4",
       "item_id": "r08",
@@ -7456,11 +7733,13 @@
       "label": "Reflexion: Language Agents with Verbal Reinforcement Learning validation use cases",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Approaches to Memory Management",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Reflexion: Language Agents with Verbal Reinforcement Learning transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r08-cross-domain-transfer-5",
       "item_id": "r08",
@@ -7468,6 +7747,7 @@
       "label": "Reflexion: Language Agents with Verbal Reinforcement Learning transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer of Verbal Reinforcement Strategies",
       "recommendation": "revise",
       "selected": false
@@ -7509,6 +7789,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R09` as a `paper` resource titled \"Let's Verify Step by Step\"."
     },
     {
+      "display_title": "Let's Verify Step by Step evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r09-landscape-driven-1",
       "item_id": "r09",
@@ -7516,6 +7797,7 @@
       "label": "Let's Verify Step by Step evidence check",
       "potential_label": "medium",
       "potential_score": 0.536,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Landscape Driven Approach to Verification",
       "recommendation": "reject",
       "selected": true
@@ -7541,6 +7823,7 @@
       "label": "r09: partially_supported"
     },
     {
+      "display_title": "Let's Verify Step by Step related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r09-incremental-2",
       "item_id": "r09",
@@ -7548,11 +7831,13 @@
       "label": "Let's Verify Step by Step related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Verification Strategy",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Let's Verify Step by Step cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r09-combination-3",
       "item_id": "r09",
@@ -7560,11 +7845,13 @@
       "label": "Let's Verify Step by Step cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combining Supervision Techniques",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Let's Verify Step by Step validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r09-innovation-4",
       "item_id": "r09",
@@ -7572,11 +7859,13 @@
       "label": "Let's Verify Step by Step validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Experiment Design",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "Let's Verify Step by Step transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r09-cross-domain-transfer-5",
       "item_id": "r09",
@@ -7584,6 +7873,7 @@
       "label": "Let's Verify Step by Step transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Verification Insights",
       "recommendation": "reject",
       "selected": false
@@ -7625,6 +7915,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R10` as a `paper` resource titled \"ReAct: Synergizing Reasoning and Acting in Language Models\"."
     },
     {
+      "display_title": "ReAct: Synergizing Reasoning and Acting in Language Models evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r10-landscape-driven-1",
       "item_id": "r10",
@@ -7632,6 +7923,7 @@
       "label": "ReAct: Synergizing Reasoning and Acting in Language Models evidence check",
       "potential_label": "medium",
       "potential_score": 0.536,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Analyze the landscape of related research on ReAct frameworks",
       "recommendation": "reject",
       "selected": true
@@ -7657,6 +7949,7 @@
       "label": "r10: partially_supported"
     },
     {
+      "display_title": "ReAct: Synergizing Reasoning and Acting in Language Models related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r10-incremental-2",
       "item_id": "r10",
@@ -7664,11 +7957,13 @@
       "label": "ReAct: Synergizing Reasoning and Acting in Language Models related-source enrichment",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Build upon the core concepts incrementally",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "ReAct: Synergizing Reasoning and Acting in Language Models cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r10-combination-3",
       "item_id": "r10",
@@ -7676,11 +7971,13 @@
       "label": "ReAct: Synergizing Reasoning and Acting in Language Models cross-source synthesis",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine different reasoning techniques",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "ReAct: Synergizing Reasoning and Acting in Language Models validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r10-innovation-4",
       "item_id": "r10",
@@ -7688,11 +7985,13 @@
       "label": "ReAct: Synergizing Reasoning and Acting in Language Models validation use cases",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Propose innovative applications of ReAct",
       "recommendation": "reject",
       "selected": false
     },
     {
+      "display_title": "ReAct: Synergizing Reasoning and Acting in Language Models transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r10-cross-domain-transfer-5",
       "item_id": "r10",
@@ -7700,6 +7999,7 @@
       "label": "ReAct: Synergizing Reasoning and Acting in Language Models transfer pattern",
       "potential_label": "lower",
       "potential_score": 0.356,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Apply ReAct to a different domain",
       "recommendation": "reject",
       "selected": false
@@ -7741,6 +8041,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R11` as a `technical report` resource titled \"LangGraph — stateful graphs for agent loops\"."
     },
     {
+      "display_title": "LangGraph — stateful graphs for agent loops evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r11-landscape-driven-1",
       "item_id": "r11",
@@ -7748,6 +8049,7 @@
       "label": "LangGraph — stateful graphs for agent loops evidence check",
       "potential_label": "medium",
       "potential_score": 0.686,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Landscape Driven Approach to LangGraph Validation",
       "recommendation": "revise",
       "selected": true
@@ -7773,6 +8075,7 @@
       "label": "r11: partially_supported"
     },
     {
+      "display_title": "LangGraph — stateful graphs for agent loops related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r11-incremental-2",
       "item_id": "r11",
@@ -7780,11 +8083,13 @@
       "label": "LangGraph — stateful graphs for agent loops related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.506,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Development of LangGraph Validation",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "LangGraph — stateful graphs for agent loops cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r11-combination-3",
       "item_id": "r11",
@@ -7792,11 +8097,13 @@
       "label": "LangGraph — stateful graphs for agent loops cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.506,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combining Approaches for LangGraph Validation",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "LangGraph — stateful graphs for agent loops validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r11-innovation-4",
       "item_id": "r11",
@@ -7804,11 +8111,13 @@
       "label": "LangGraph — stateful graphs for agent loops validation use cases",
       "potential_label": "medium",
       "potential_score": 0.506,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Experiment Design for LangGraph",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "LangGraph — stateful graphs for agent loops transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r11-cross-domain-transfer-5",
       "item_id": "r11",
@@ -7816,6 +8125,7 @@
       "label": "LangGraph — stateful graphs for agent loops transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.506,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer Validation of LangGraph",
       "recommendation": "revise",
       "selected": false
@@ -7857,6 +8167,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R12` as a `technical report` resource titled \"AutoGen — multi-agent conversation framework\"."
     },
     {
+      "display_title": "AutoGen — multi-agent conversation framework evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r12-landscape-driven-1",
       "item_id": "r12",
@@ -7864,6 +8175,7 @@
       "label": "AutoGen — multi-agent conversation framework evidence check",
       "potential_label": "medium",
       "potential_score": 0.661,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Validate AutoGen's Landscape-Driven Approach",
       "recommendation": "revise",
       "selected": true
@@ -7889,6 +8201,7 @@
       "label": "r12: partially_supported"
     },
     {
+      "display_title": "AutoGen — multi-agent conversation framework related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r12-incremental-2",
       "item_id": "r12",
@@ -7896,11 +8209,13 @@
       "label": "AutoGen — multi-agent conversation framework related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.481,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Evaluate AutoGen's Incremental Development Process",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "AutoGen — multi-agent conversation framework cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r12-combination-3",
       "item_id": "r12",
@@ -7908,11 +8223,13 @@
       "label": "AutoGen — multi-agent conversation framework cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.481,
+      "raw_generation_path": "C:combination",
       "raw_title": "Assess AutoGen's Combination of Approaches",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "AutoGen — multi-agent conversation framework validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r12-innovation-4",
       "item_id": "r12",
@@ -7920,18 +8237,21 @@
       "label": "AutoGen — multi-agent conversation framework validation use cases",
       "potential_label": "medium",
       "potential_score": 0.481,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Investigate AutoGen's Innovation Potential",
       "recommendation": "revise",
       "selected": false
     },
     {
-      "generation_path": "E:cross-domain-transfer-5",
+      "display_title": "AutoGen — multi-agent conversation framework transfer pattern",
+      "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r12-cross-domain-transfer-5-5",
       "item_id": "r12",
       "kind": "idea",
       "label": "AutoGen — multi-agent conversation framework transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.481,
+      "raw_generation_path": "E:cross-domain-transfer-5",
       "raw_title": "Analyze AutoGen's Cross-Domain Transfer Capabilities",
       "recommendation": "revise",
       "selected": false
@@ -7973,6 +8293,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R13` as a `podcast` resource titled \"Machine Learning Street Talk — agent evaluation & harness reliability episodes\"."
     },
     {
+      "display_title": "Machine Learning Street Talk — agent evaluation & harness reliability episodes evidence check: Investigate the specific...",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r13-landscape-driven-1",
       "item_id": "r13",
@@ -7980,6 +8301,7 @@
       "label": "Machine Learning Street Talk — agent evaluation & harness reliability episodes evidence check: Investigate the specific...",
       "potential_label": "medium",
       "potential_score": 0.651,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Investigate the specific methodologies discussed in the podcast regarding agent evaluation",
       "recommendation": "revise",
       "selected": true
@@ -8005,6 +8327,7 @@
       "label": "r13: partially_supported"
     },
     {
+      "display_title": "Machine Learning Street Talk — agent evaluation & harness reliability episodes related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r13-incremental-2",
       "item_id": "r13",
@@ -8012,11 +8335,13 @@
       "label": "Machine Learning Street Talk — agent evaluation & harness reliability episodes related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.486,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Analyze the evolution of agent reliability concepts over time",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Machine Learning Street Talk — agent evaluation & harness reliability episodes cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r13-combination-3",
       "item_id": "r13",
@@ -8024,11 +8349,13 @@
       "label": "Machine Learning Street Talk — agent evaluation & harness reliability episodes cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.486,
+      "raw_generation_path": "C:combination",
       "raw_title": "Synthesize insights from the podcast with existing literature on benchmarks and workflows",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Machine Learning Street Talk — agent evaluation & harness reliability episodes validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r13-innovation-4",
       "item_id": "r13",
@@ -8036,11 +8363,13 @@
       "label": "Machine Learning Street Talk — agent evaluation & harness reliability episodes validation use cases",
       "potential_label": "medium",
       "potential_score": 0.486,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Propose a new experimental design based on the podcast's recommendations",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Machine Learning Street Talk — agent evaluation & harness reliability episodes transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r13-cross-domain-transfer-5",
       "item_id": "r13",
@@ -8048,6 +8377,7 @@
       "label": "Machine Learning Street Talk — agent evaluation & harness reliability episodes transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Compare and contrast the podcast's perspective with other agent verification techniques",
       "recommendation": "revise",
       "selected": false
@@ -8089,6 +8419,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R14` as a `youtube` resource titled \"Latent Space — agent harness / evaluation episodes\"."
     },
     {
+      "display_title": "Latent Space — agent harness / evaluation episodes evidence check: Analyze Latent Space Harness Engineering Practices",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r14-landscape-driven-1",
       "item_id": "r14",
@@ -8096,6 +8427,7 @@
       "label": "Latent Space — agent harness / evaluation episodes evidence check: Analyze Latent Space Harness Engineering Practices",
       "potential_label": "medium",
       "potential_score": 0.657,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Analyze Latent Space Harness Engineering Practices",
       "recommendation": "revise",
       "selected": true
@@ -8121,6 +8453,7 @@
       "label": "r14: partially_supported"
     },
     {
+      "display_title": "Latent Space — agent harness / evaluation episodes related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r14-incremental-2",
       "item_id": "r14",
@@ -8128,11 +8461,13 @@
       "label": "Latent Space — agent harness / evaluation episodes related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Iterative Validation of Harness Techniques",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Latent Space — agent harness / evaluation episodes cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r14-combination-3",
       "item_id": "r14",
@@ -8140,11 +8475,13 @@
       "label": "Latent Space — agent harness / evaluation episodes cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Insights from Multiple Sources",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Latent Space — agent harness / evaluation episodes validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r14-innovation-4",
       "item_id": "r14",
@@ -8152,11 +8489,13 @@
       "label": "Latent Space — agent harness / evaluation episodes validation use cases",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Explore Innovative Harnessing Strategies",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Latent Space — agent harness / evaluation episodes transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r14-cross-domain-transfer-5",
       "item_id": "r14",
@@ -8164,6 +8503,7 @@
       "label": "Latent Space — agent harness / evaluation episodes transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer of Harnessing Concepts",
       "recommendation": "revise",
       "selected": false
@@ -8205,6 +8545,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R15` as a `think tank` resource titled \"CSET — autonomy, evaluation, and governance of AI agents\"."
     },
     {
+      "display_title": "CSET — autonomy, evaluation, and governance of AI agents evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r15-landscape-driven-1",
       "item_id": "r15",
@@ -8212,6 +8553,7 @@
       "label": "CSET — autonomy, evaluation, and governance of AI agents evidence check",
       "potential_label": "medium",
       "potential_score": 0.67,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Analyze the landscape of AI governance frameworks discussed in CSET’s research to identify potential applications for AutoSci’s validation capabilities.",
       "recommendation": "revise",
       "selected": true
@@ -8237,6 +8579,7 @@
       "label": "r15: partially_supported"
     },
     {
+      "display_title": "CSET — autonomy, evaluation, and governance of AI agents related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r15-incremental-2",
       "item_id": "r15",
@@ -8244,11 +8587,13 @@
       "label": "CSET — autonomy, evaluation, and governance of AI agents related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.499,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Develop an incremental approach to validating CSET’s claims about autonomous agent loops, starting with simpler iterations and gradually increasing complexity.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "CSET — autonomy, evaluation, and governance of AI agents cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r15-combination-3",
       "item_id": "r15",
@@ -8256,11 +8601,13 @@
       "label": "CSET — autonomy, evaluation, and governance of AI agents cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.499,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine CSET’s insights with data from other sources to create a more comprehensive assessment of the risks and benefits associated with autonomous agent governance.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "CSET — autonomy, evaluation, and governance of AI agents validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r15-innovation-4",
       "item_id": "r15",
@@ -8268,11 +8615,13 @@
       "label": "CSET — autonomy, evaluation, and governance of AI agents validation use cases",
       "potential_label": "medium",
       "potential_score": 0.499,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Explore innovative methods for evaluating the performance of autonomous agents, such as simulations or A/B testing.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "CSET — autonomy, evaluation, and governance of AI agents transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r15-cross-domain-transfer-5",
       "item_id": "r15",
@@ -8280,6 +8629,7 @@
       "label": "CSET — autonomy, evaluation, and governance of AI agents transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.499,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Investigate how CSET’s research on AI governance can be applied to other domains, such as healthcare or finance.",
       "recommendation": "revise",
       "selected": false
@@ -8321,6 +8671,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R16` as a `think tank` resource titled \"Stanford HAI — AI agents, oversight, and scalable evaluation\"."
     },
     {
+      "display_title": "Stanford HAI — AI agents, oversight, and scalable evaluation evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r16-landscape-driven-1",
       "item_id": "r16",
@@ -8328,6 +8679,7 @@
       "label": "Stanford HAI — AI agents, oversight, and scalable evaluation evidence check",
       "potential_label": "medium",
       "potential_score": 0.657,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Landscape Driven Experiment Design",
       "recommendation": "revise",
       "selected": true
@@ -8353,6 +8705,7 @@
       "label": "r16: partially_supported"
     },
     {
+      "display_title": "Stanford HAI — AI agents, oversight, and scalable evaluation related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r16-incremental-2",
       "item_id": "r16",
@@ -8360,11 +8713,13 @@
       "label": "Stanford HAI — AI agents, oversight, and scalable evaluation related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Validation of Claims",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Stanford HAI — AI agents, oversight, and scalable evaluation cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r16-combination-3",
       "item_id": "r16",
@@ -8372,11 +8727,13 @@
       "label": "Stanford HAI — AI agents, oversight, and scalable evaluation cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Techniques for Robust Evaluation",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Stanford HAI — AI agents, oversight, and scalable evaluation validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r16-innovation-4",
       "item_id": "r16",
@@ -8384,11 +8741,13 @@
       "label": "Stanford HAI — AI agents, oversight, and scalable evaluation validation use cases",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Experiment Design for Agent Evaluation",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Stanford HAI — AI agents, oversight, and scalable evaluation transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r16-cross-domain-transfer-5",
       "item_id": "r16",
@@ -8396,6 +8755,7 @@
       "label": "Stanford HAI — AI agents, oversight, and scalable evaluation transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer of Evaluation Strategies",
       "recommendation": "revise",
       "selected": false
@@ -8437,6 +8797,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R17` as a `company trend` resource titled \"Pega Blueprint / Agentic Process Fabric — workflow-first agent governance\"."
     },
     {
+      "display_title": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r17-landscape-driven-1",
       "item_id": "r17",
@@ -8444,6 +8805,7 @@
       "label": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance evidence check",
       "potential_label": "medium",
       "potential_score": 0.651,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Analyze the landscape driving agent governance in Pega Blueprint.",
       "recommendation": "revise",
       "selected": true
@@ -8469,6 +8831,7 @@
       "label": "r17: partially_supported"
     },
     {
+      "display_title": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r17-combination-2",
       "item_id": "r17",
@@ -8476,11 +8839,13 @@
       "label": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine insights from different sources regarding agent governance.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r17-cross-domain-transfer-3",
       "item_id": "r17",
@@ -8488,11 +8853,13 @@
       "label": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Explore cross-domain applications of workflow-first agent governance.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r17-incremental-4",
       "item_id": "r17",
@@ -8500,11 +8867,13 @@
       "label": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Validate the incremental nature of agent governance implementation.",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r17-innovation-5",
       "item_id": "r17",
@@ -8512,6 +8881,7 @@
       "label": "Pega Blueprint / Agentic Process Fabric — workflow-first agent governance validation use cases",
       "potential_label": "medium",
       "potential_score": 0.471,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Assess the innovative aspects of Pega Blueprint.",
       "recommendation": "revise",
       "selected": false
@@ -8553,6 +8923,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R18` as a `company trend` resource titled \"Cognition (Devin) — coding-agent harness / runtime\"."
     },
     {
+      "display_title": "Cognition (Devin) — coding-agent harness / runtime evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r18-landscape-driven-1",
       "item_id": "r18",
@@ -8560,6 +8931,7 @@
       "label": "Cognition (Devin) — coding-agent harness / runtime evidence check",
       "potential_label": "medium",
       "potential_score": 0.657,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Analyze the Landscape of Coding Agent Harnesses",
       "recommendation": "revise",
       "selected": true
@@ -8585,6 +8957,7 @@
       "label": "r18: partially_supported"
     },
     {
+      "display_title": "Cognition (Devin) — coding-agent harness / runtime related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r18-incremental-2",
       "item_id": "r18",
@@ -8592,11 +8965,13 @@
       "label": "Cognition (Devin) — coding-agent harness / runtime related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Incremental Improvements to Harness Design",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Cognition (Devin) — coding-agent harness / runtime cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r18-combination-3",
       "item_id": "r18",
@@ -8604,11 +8979,13 @@
       "label": "Cognition (Devin) — coding-agent harness / runtime cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine Insights from Multiple Harnesses",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Cognition (Devin) — coding-agent harness / runtime validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r18-innovation-4",
       "item_id": "r18",
@@ -8616,11 +8993,13 @@
       "label": "Cognition (Devin) — coding-agent harness / runtime validation use cases",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Innovative Approaches to Agent Runtime",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Cognition (Devin) — coding-agent harness / runtime transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r18-cross-domain-transfer-5",
       "item_id": "r18",
@@ -8628,6 +9007,7 @@
       "label": "Cognition (Devin) — coding-agent harness / runtime transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.477,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-Domain Transfer of Harness Techniques",
       "recommendation": "revise",
       "selected": false
@@ -8669,6 +9049,7 @@
       "summary": "The attached document `Loop & Harness Engineering Resource Radar.html` lists `R19` as a `social opinion` resource titled \"Practitioner signal: 'context/harness beats model' for agent reliability\"."
     },
     {
+      "display_title": "Practitioner signal: 'context/harness beats model' for agent reliability evidence check",
       "generation_path": "A:landscape-driven",
       "id": "idea:idea-r19-landscape-driven-1",
       "item_id": "r19",
@@ -8676,6 +9057,7 @@
       "label": "Practitioner signal: 'context/harness beats model' for agent reliability evidence check",
       "potential_label": "medium",
       "potential_score": 0.595,
+      "raw_generation_path": "A:landscape-driven",
       "raw_title": "Investigate the impact of landscape-driven design on agent reliability",
       "recommendation": "revise",
       "selected": true
@@ -8701,6 +9083,7 @@
       "label": "r19: inconclusive"
     },
     {
+      "display_title": "Practitioner signal: 'context/harness beats model' for agent reliability related-source enrichment",
       "generation_path": "B:incremental",
       "id": "idea:idea-r19-incremental-2",
       "item_id": "r19",
@@ -8708,11 +9091,13 @@
       "label": "Practitioner signal: 'context/harness beats model' for agent reliability related-source enrichment",
       "potential_label": "medium",
       "potential_score": 0.475,
+      "raw_generation_path": "B:incremental",
       "raw_title": "Evaluate incremental improvements to harness design",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Practitioner signal: 'context/harness beats model' for agent reliability cross-source synthesis",
       "generation_path": "C:combination",
       "id": "idea:idea-r19-combination-3",
       "item_id": "r19",
@@ -8720,11 +9105,13 @@
       "label": "Practitioner signal: 'context/harness beats model' for agent reliability cross-source synthesis",
       "potential_label": "medium",
       "potential_score": 0.475,
+      "raw_generation_path": "C:combination",
       "raw_title": "Combine context and model elements for enhanced reliability",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Practitioner signal: 'context/harness beats model' for agent reliability validation use cases",
       "generation_path": "D:innovation",
       "id": "idea:idea-r19-innovation-4",
       "item_id": "r19",
@@ -8732,11 +9119,13 @@
       "label": "Practitioner signal: 'context/harness beats model' for agent reliability validation use cases",
       "potential_label": "medium",
       "potential_score": 0.475,
+      "raw_generation_path": "D:innovation",
       "raw_title": "Explore innovative approaches to context assembly",
       "recommendation": "revise",
       "selected": false
     },
     {
+      "display_title": "Practitioner signal: 'context/harness beats model' for agent reliability transfer pattern",
       "generation_path": "E:cross-domain-transfer",
       "id": "idea:idea-r19-cross-domain-transfer-5",
       "item_id": "r19",
@@ -8744,34 +9133,10 @@
       "label": "Practitioner signal: 'context/harness beats model' for agent reliability transfer pattern",
       "potential_label": "medium",
       "potential_score": 0.475,
+      "raw_generation_path": "E:cross-domain-transfer",
       "raw_title": "Cross-domain transfer of harness design principles",
       "recommendation": "revise",
       "selected": false
-    },
-    {
-      "id": "path:A:A:landscape-driven",
-      "kind": "generation_path",
-      "label": "A:A:landscape-driven"
-    },
-    {
-      "id": "path:B:B:incremental",
-      "kind": "generation_path",
-      "label": "B:B:incremental"
-    },
-    {
-      "id": "path:C:C:combination",
-      "kind": "generation_path",
-      "label": "C:C:combination"
-    },
-    {
-      "id": "path:D:D:innovation",
-      "kind": "generation_path",
-      "label": "D:D:innovation"
-    },
-    {
-      "id": "path:E:E:cross-domain-transfer",
-      "kind": "generation_path",
-      "label": "E:E:cross-domain-transfer"
     },
     {
       "id": "path:A:landscape-driven",
@@ -8797,16 +9162,6 @@
       "id": "path:E:cross-domain-transfer",
       "kind": "generation_path",
       "label": "E:cross-domain-transfer"
-    },
-    {
-      "id": "path:E:cross-domain-transfer-transfer",
-      "kind": "generation_path",
-      "label": "E:cross-domain-transfer-transfer"
-    },
-    {
-      "id": "path:E:cross-domain-transfer-5",
-      "kind": "generation_path",
-      "label": "E:cross-domain-transfer-5"
     }
   ],
   "schema": "omegawiki_graph.v1"

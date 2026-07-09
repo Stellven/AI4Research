@@ -229,6 +229,20 @@ def path_family(generation_path: Any) -> str:
     return "landscape"
 
 
+PATH_LABELS = {
+    "landscape": "A:landscape-driven",
+    "incremental": "B:incremental",
+    "combination": "C:combination",
+    "innovation": "D:innovation",
+    "cross-domain": "E:cross-domain-transfer",
+}
+
+
+def normalize_generation_path(generation_path: Any) -> str:
+    """Collapse model-specific path variants into the five AutoSci path lanes."""
+    return PATH_LABELS[path_family(generation_path)]
+
+
 def clean_idea_tail(title: Any) -> str:
     text = " ".join(str(title or "").strip().split())
     lower = text.lower()
@@ -386,7 +400,8 @@ def build() -> dict[str, Any]:
                 "idea_id": idea_id,
                 "title": idea.get("title"),
                 "display_title": display_title,
-                "generation_path": idea.get("generation_path"),
+                "generation_path": normalize_generation_path(idea.get("generation_path")),
+                "raw_generation_path": idea.get("generation_path"),
                 "hypothesis": idea.get("hypothesis"),
                 "approach": idea.get("approach"),
                 "origin_evidence_ids": idea.get("origin_evidence_ids") or [],
@@ -413,8 +428,10 @@ def build() -> dict[str, Any]:
                 display_title,
                 "idea",
                 item_id=item_id,
+                display_title=display_title,
                 raw_title=idea.get("title"),
-                generation_path=str(idea.get("generation_path") or ""),
+                generation_path=normalize_generation_path(idea.get("generation_path")),
+                raw_generation_path=str(idea.get("generation_path") or ""),
                 selected=selected_for_experiment,
                 potential_score=potential_score,
                 potential_label=potential_label,
@@ -494,8 +511,28 @@ def build() -> dict[str, Any]:
         "nodes": list(graph_nodes.values()),
         "edges": graph_edges,
     }
+    selected_idea_ids = {
+        str(node["id"])
+        for node in graph["nodes"]
+        if node.get("kind") == "idea" and node.get("selected") is True
+    }
+    workflow_edge_types = {"grounds_idea", "validated_by", "path_member"}
+    workflow_edges = [
+        edge
+        for edge in graph_edges
+        if edge.get("type") in workflow_edge_types
+        and (edge.get("source") in selected_idea_ids or edge.get("target") in selected_idea_ids)
+    ]
+    workflow_node_ids = {
+        node_id
+        for edge in workflow_edges
+        for node_id in (edge.get("source"), edge.get("target"))
+        if node_id
+    }
     status["graph_node_count"] = len(graph["nodes"])
     status["graph_edge_count"] = len(graph["edges"])
+    status["workflow_graph_node_count"] = len(workflow_node_ids)
+    status["workflow_graph_edge_count"] = len(workflow_edges)
     status["validation_code_bundle"] = f"{FINAL_REL}/validation_code_bundle"
     return {
         "status": status,

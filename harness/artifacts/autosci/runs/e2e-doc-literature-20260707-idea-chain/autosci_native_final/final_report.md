@@ -1,6 +1,6 @@
 # AutoSci Native E2E Literature Validation Report
 
-Generated: 2026-07-07T17:39:23Z
+Generated: 2026-07-08T17:49:24Z
 
 ## Scope
 
@@ -19,7 +19,7 @@ All AutoSci actions were routed through `harness/solar-harness.sh autosci ...`. 
 - Code/experiment validation records: 39
 - Ideate final-promotion-ready items: 39
 - Final-verdict-ready items: 31
-- OmegaWiki graph nodes: 521
+- OmegaWiki graph nodes: 514
 - OmegaWiki graph edges: 702
 - Verdict counts: `{"inconclusive": 8, "partially_supported": 14, "supported": 17}`
 - Experiment outcome counts: `{"inconclusive": 8, "partially_supports": 14, "supports": 17}`
@@ -127,11 +127,11 @@ The 8 non-final-ready verdicts are the items whose experiment outcome was `incon
 
 | Item | Idea | Display title | Path | Potential | Selected | Novelty | Feasibility | Recommendation | Raw title |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| cc-01 | idea-cc-01-landscape-driven-1 | Claude Code overview documentation evidence check | A:A:landscape-driven | 0.606 (medium) | True | 0.33 | 0.6 | reject | Validate Claude Code Docs Landscape |
-| cc-01 | idea-cc-01-combination-3 | Claude Code overview documentation cross-source synthesis | C:C:combination | 0.356 (lower) | False | 0.33 | 0.6 | reject | Combine Claude Code Docs with Comparison Reports |
-| cc-01 | idea-cc-01-cross-domain-transfer-5 | Claude Code overview documentation transfer pattern | E:E:cross-domain-transfer | 0.356 (lower) | False | 0.33 | 0.6 | reject | Cross-Domain Validation of AI Assistant Features |
-| cc-01 | idea-cc-01-incremental | Claude Code overview documentation related-source enrichment | B:B:incremental | 0.356 (lower) | False | 0.33 | 0.6 | reject | Expand Evidence Record with Related Papers |
-| cc-01 | idea-cc-01-innovation | Claude Code overview documentation validation use cases | D:D:innovation | 0.356 (lower) | False | 0.33 | 0.6 | reject | Explore Novel Applications of Claude Code Docs |
+| cc-01 | idea-cc-01-landscape-driven-1 | Claude Code overview documentation evidence check | A:landscape-driven | 0.606 (medium) | True | 0.33 | 0.6 | reject | Validate Claude Code Docs Landscape |
+| cc-01 | idea-cc-01-combination-3 | Claude Code overview documentation cross-source synthesis | C:combination | 0.356 (lower) | False | 0.33 | 0.6 | reject | Combine Claude Code Docs with Comparison Reports |
+| cc-01 | idea-cc-01-cross-domain-transfer-5 | Claude Code overview documentation transfer pattern | E:cross-domain-transfer | 0.356 (lower) | False | 0.33 | 0.6 | reject | Cross-Domain Validation of AI Assistant Features |
+| cc-01 | idea-cc-01-incremental | Claude Code overview documentation related-source enrichment | B:incremental | 0.356 (lower) | False | 0.33 | 0.6 | reject | Expand Evidence Record with Related Papers |
+| cc-01 | idea-cc-01-innovation | Claude Code overview documentation validation use cases | D:innovation | 0.356 (lower) | False | 0.33 | 0.6 | reject | Explore Novel Applications of Claude Code Docs |
 | cc-02 | idea-cc-02-landscape-driven | Manage costs effectively evidence check | A:landscape-driven | 0.606 (medium) | True | 0.33 | 0.6 | reject | Landscape-Driven Cost Analysis |
 | cc-02 | idea-cc-02-combination | Manage costs effectively cross-source synthesis | C:combination | 0.356 (lower) | False | 0.33 | 0.6 | reject | Combination of Techniques |
 | cc-02 | idea-cc-02-cross-domain-transfer | Manage costs effectively transfer pattern | E:cross-domain-transfer | 0.356 (lower) | False | 0.33 | 0.6 | reject | Cross-Domain Cost Transfer |
@@ -219,7 +219,7 @@ The 8 non-final-ready verdicts are the items whose experiment outcome was `incon
 | ghc-05 | idea-ghc-05-innovation | About Model Context Protocol (MCP) - GitHub Docs validation use cases | D:innovation | 0.356 (lower) | False | 0.33 | 0.6 | reject | Innovative Validation of GitHub's Comparison Report |
 | ghc-06 | idea-ghc-06-landscape-driven | Pricing - Plans for every developer - GitHub evidence check | A:landscape-driven | 0.606 (medium) | True | 0.33 | 0.6 | reject | Pricing Landscape Analysis |
 | ghc-06 | idea-ghc-06-combination | Pricing - Plans for every developer - GitHub cross-source synthesis | C:combination | 0.356 (lower) | False | 0.33 | 0.6 | reject | Pricing Feature Combination Analysis |
-| ghc-06 | idea-ghc-06-cross-domain-transfer | Pricing - Plans for every developer - GitHub transfer pattern | E:cross-domain-transfer-transfer | 0.356 (lower) | False | 0.33 | 0.6 | reject | Pricing Model Cross-Domain Transfer |
+| ghc-06 | idea-ghc-06-cross-domain-transfer | Pricing - Plans for every developer - GitHub transfer pattern | E:cross-domain-transfer | 0.356 (lower) | False | 0.33 | 0.6 | reject | Pricing Model Cross-Domain Transfer |
 | ghc-06 | idea-ghc-06-incremental | Pricing - Plans for every developer - GitHub related-source enrichment | B:incremental | 0.356 (lower) | False | 0.33 | 0.6 | reject | Incremental Pricing Adjustments |
 | ghc-06 | idea-ghc-06-innovation | Pricing - Plans for every developer - GitHub validation use cases | D:innovation | 0.356 (lower) | False | 0.33 | 0.6 | reject | Pricing Innovation Exploration |
 | ghc-07 | idea-ghc-07-landscape-driven | GitHub Changelog - Copilot label evidence check | A:landscape-driven | 0.606 (medium) | True | 0.33 | 0.6 | reject | Validate Copilot Label Changelog |
@@ -234,7 +234,7 @@ The 8 non-final-ready verdicts are the items whose experiment outcome was `incon
 | r01 | idea-r01-incremental-2 | Harness-Bench: Measuring Harness Effects across Models in Realistic Agent Workflows related-source enrichment | B:incremental | 0.515 (medium) | False | 0.527 | 0.65 | revise | Evaluate the effectiveness of incremental harness adjustments on workflow performance. |
 | r02 | idea-r02-landscape-driven-1 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents evidence check | A:landscape-driven | 0.593 (medium) | True | 0.38 | 0.617 | revise | Landscape-Driven Validation of Runtime Substrate |
 | r02 | idea-r02-combination-3 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents cross-source synthesis | C:combination | 0.473 (medium) | False | 0.38 | 0.617 | revise | Combining Harness Engineering with Agent Design Principles |
-| r02 | idea-r02-cross-domain-transfer-transfer-5 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents transfer pattern | E:cross-domain-transfer-transfer | 0.473 (medium) | False | 0.38 | 0.617 | revise | Cross-Domain Transfer of Harness Engineering Techniques |
+| r02 | idea-r02-cross-domain-transfer-transfer-5 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents transfer pattern | E:cross-domain-transfer | 0.473 (medium) | False | 0.38 | 0.617 | revise | Cross-Domain Transfer of Harness Engineering Techniques |
 | r02 | idea-r02-incremental-2 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents related-source enrichment | B:incremental | 0.473 (medium) | False | 0.38 | 0.617 | revise | Incremental Extension of Harness Engineering Concepts |
 | r02 | idea-r02-innovation-4 | AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents validation use cases | D:innovation | 0.473 (medium) | False | 0.38 | 0.617 | revise | Innovative Approaches to Runtime Substrate Design |
 | r03 | idea-r03-landscape-driven-1 | Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses evidence check | A:landscape-driven | 0.591 (medium) | True | 0.375 | 0.615 | revise | Investigate the impact of landscape-driven optimization on harness performance |
@@ -284,7 +284,7 @@ The 8 non-final-ready verdicts are the items whose experiment outcome was `incon
 | r11 | idea-r11-innovation-4 | LangGraph — stateful graphs for agent loops validation use cases | D:innovation | 0.506 (medium) | False | 0.48 | 0.65 | revise | Innovative Experiment Design for LangGraph |
 | r12 | idea-r12-landscape-driven-1 | AutoGen — multi-agent conversation framework evidence check | A:landscape-driven | 0.661 (medium) | True | 0.405 | 0.625 | revise | Validate AutoGen's Landscape-Driven Approach |
 | r12 | idea-r12-combination-3 | AutoGen — multi-agent conversation framework cross-source synthesis | C:combination | 0.481 (medium) | False | 0.405 | 0.625 | revise | Assess AutoGen's Combination of Approaches |
-| r12 | idea-r12-cross-domain-transfer-5-5 | AutoGen — multi-agent conversation framework transfer pattern | E:cross-domain-transfer-5 | 0.481 (medium) | False | 0.405 | 0.625 | revise | Analyze AutoGen's Cross-Domain Transfer Capabilities |
+| r12 | idea-r12-cross-domain-transfer-5-5 | AutoGen — multi-agent conversation framework transfer pattern | E:cross-domain-transfer | 0.481 (medium) | False | 0.405 | 0.625 | revise | Analyze AutoGen's Cross-Domain Transfer Capabilities |
 | r12 | idea-r12-incremental-2 | AutoGen — multi-agent conversation framework related-source enrichment | B:incremental | 0.481 (medium) | False | 0.405 | 0.625 | revise | Evaluate AutoGen's Incremental Development Process |
 | r12 | idea-r12-innovation-4 | AutoGen — multi-agent conversation framework validation use cases | D:innovation | 0.481 (medium) | False | 0.405 | 0.625 | revise | Investigate AutoGen's Innovation Potential |
 | r13 | idea-r13-landscape-driven-1 | Machine Learning Street Talk — agent evaluation & harness reliability episodes evidence check: Investigate the specific... | A:landscape-driven | 0.651 (medium) | True | 0.375 | 0.615 | revise | Investigate the specific methodologies discussed in the podcast regarding agent evaluation |

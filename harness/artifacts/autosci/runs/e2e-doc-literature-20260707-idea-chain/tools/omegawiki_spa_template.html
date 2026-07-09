@@ -411,11 +411,13 @@ button:hover { background: var(--muted-bg-strong); }
   border-radius: 8px;
   position: relative;
   overflow: hidden;
+  min-height: 620px;
 }
 #graph-canvas {
   display: block;
   width: 100%;
   height: 100%;
+  min-height: 620px;
 }
 .graph-empty {
   position: absolute;
@@ -746,7 +748,9 @@ const EDGE_GROUPS = Object.freeze({
   "Method genealogy": ["extracts_method"],
   "Workflow (ideas / experiments)": ["grounds_idea", "validated_by", "runs_code", "evaluates_to", "path_member"],
 });
+const DEFAULT_GRAPH_PRESET = "Selected Workflow";
 const PRESETS = Object.freeze({
+  "Selected Workflow": { kinds: ["paper", "idea", "experiment", "generation_path"], edges: ["grounds_idea", "validated_by", "path_member"], selectedOnly: true },
   Citations: { kinds: ["paper"], edges: [], selectedOnly: false },
   Methods: { kinds: ["paper", "method"], edges: ["extracts_method"], selectedOnly: false },
   Ideas: { kinds: ["paper", "idea", "generation_path"], edges: ["grounds_idea", "path_member"], selectedOnly: false },
@@ -815,6 +819,14 @@ function itemRank(itemId) {
   const order = {cc: 0, cu: 1, ghc: 2, r: 3}[prefix] ?? 9;
   return order * 1000 + number;
 }
+function isSelectedIdea(node) {
+  return node && node.kind === "idea" && (
+    node.selected === true ||
+    node.selected === "true" ||
+    node.selected_for_experiment === true ||
+    node.selected_for_experiment === "true"
+  );
+}
 function entityColor(kind) { return COLORS[kind] || "#94A3B8"; }
 function edgeColor(type) {
   if (type === "grounds_idea" || type === "path_member") return "#F5A623";
@@ -869,8 +881,9 @@ async function boot() {
     }
     setupJumpInput();
     state.ready = true;
+    const defaultEdgeCount = state.status.workflow_graph_edge_count || state.status.graph_edge_count || state.edges.length;
     document.getElementById("boot-status").textContent =
-      `${state.status.item_count || state.entitiesByType.papers.length} pages · ${state.status.graph_edge_count || state.edges.length} edges`;
+      `${state.status.item_count || state.entitiesByType.papers.length} pages · ${defaultEdgeCount} workflow edges`;
     route();
   } catch (err) {
     document.getElementById("view").innerHTML = `
@@ -1128,13 +1141,14 @@ function destroyGraph() {
 function initGraphRuntime() {
   const canvas = document.getElementById("graph-canvas");
   const ctx = canvas.getContext("2d");
+  const preset = PRESETS[DEFAULT_GRAPH_PRESET] || PRESETS.All;
   const runtime = graphRuntime = {
     canvas,
     ctx,
-    activePreset: "All",
-    activeKinds: new Set(PRESETS.All.kinds),
-    activeEdges: new Set(PRESETS.All.edges),
-    selectedOnly: false,
+    activePreset: DEFAULT_GRAPH_PRESET,
+    activeKinds: new Set(preset.kinds),
+    activeEdges: new Set(preset.edges),
+    selectedOnly: !!preset.selectedOnly,
     query: "",
     selected: null,
     highlighted: null,
@@ -1244,19 +1258,28 @@ function visibleGraph(runtime) {
     const target = state.nodeById.get(edge.target);
     if (!source || !target) continue;
     if (!runtime.activeKinds.has(source.kind) || !runtime.activeKinds.has(target.kind)) continue;
-    if (runtime.selectedOnly && source.kind === "idea" && !source.selected) continue;
-    if (runtime.selectedOnly && target.kind === "idea" && !target.selected) continue;
+    if (runtime.selectedOnly && source.kind === "idea" && !isSelectedIdea(source)) continue;
+    if (runtime.selectedOnly && target.kind === "idea" && !isSelectedIdea(target)) continue;
     visibleIds.add(source.id);
     visibleIds.add(target.id);
   }
   for (const node of state.nodes) {
     if (!runtime.activeKinds.has(node.kind)) continue;
-    if (runtime.selectedOnly && node.kind === "idea" && !node.selected) continue;
+    if (runtime.selectedOnly && node.kind === "idea" && !isSelectedIdea(node)) continue;
     if (query && !`${titleFor(node)} ${node.id} ${node.item_id || ""}`.toLowerCase().includes(query)) continue;
     if (runtime.activePreset === "All" || visibleIds.has(node.id) || query) visibleIds.add(node.id);
   }
-  const nodes = state.nodes.filter((node) => visibleIds.has(node.id));
-  const edges = candidateEdges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+  let nodes = state.nodes.filter((node) => visibleIds.has(node.id));
+  let edges = candidateEdges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+  if (!nodes.length && runtime.activePreset === DEFAULT_GRAPH_PRESET) {
+    const fallback = PRESETS.Ideas;
+    runtime.activePreset = "Ideas";
+    runtime.activeKinds = new Set(fallback.kinds);
+    runtime.activeEdges = new Set(fallback.edges);
+    runtime.selectedOnly = false;
+    syncGraphControls(runtime);
+    return visibleGraph(runtime);
+  }
   return { nodes, edges, nodeIds: visibleIds };
 }
 
@@ -1392,6 +1415,7 @@ function drawGraph(runtime, graph) {
   }
   ctx.setLineDash([]);
   const labeled = new Set();
+  const labelBoxes = [];
   for (const node of graph.nodes) {
     const dim = highlight && !highlight.has(node.id);
     const selected = runtime.selected && runtime.selected.id === node.id;
@@ -1404,12 +1428,25 @@ function drawGraph(runtime, graph) {
     ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    const showLabel = selected || runtime.hover === node || graph.nodes.length < 120 ||
+    const importantLabel =
+      selected ||
+      runtime.hover === node ||
+      node.kind === "generation_path" ||
       (node.kind === "paper" && node.degree >= 2) ||
-      (node.kind === "idea" && node.selected && labeled.size < 40);
+      isSelectedIdea(node);
+    const showLabel = importantLabel && labeled.size < 48;
     if (showLabel) {
-      labeled.add(node.id);
-      drawLabel(ctx, truncate(titleFor(node), 38), node.x + radius + 5, node.y + 4, dim ? 0.25 : 0.88);
+      const force = selected || runtime.hover === node;
+      const placed = drawLabelAvoiding(
+        ctx,
+        truncate(titleFor(node), 38),
+        node.x + radius + 5,
+        node.y + 4,
+        dim ? 0.25 : 0.88,
+        labelBoxes,
+        force
+      );
+      if (placed) labeled.add(node.id);
     }
   }
   ctx.globalAlpha = 1;
@@ -1431,6 +1468,21 @@ function drawLabel(ctx, text, x, y, alpha) {
   ctx.strokeText(text, x, y);
   ctx.fillText(text, x, y);
   ctx.restore();
+}
+
+function drawLabelAvoiding(ctx, text, x, y, alpha, labelBoxes, force = false) {
+  ctx.save();
+  ctx.font = "11px system-ui, -apple-system, Segoe UI, sans-serif";
+  const width = ctx.measureText(text).width;
+  ctx.restore();
+  const box = { x1: x - 3, y1: y - 12, x2: x + width + 6, y2: y + 5 };
+  const overlaps = labelBoxes.some((other) =>
+    box.x1 < other.x2 && box.x2 > other.x1 && box.y1 < other.y2 && box.y2 > other.y1
+  );
+  if (overlaps && !force) return false;
+  labelBoxes.push(box);
+  drawLabel(ctx, text, x, y, alpha);
+  return true;
 }
 
 function nodeAt(runtime, x, y) {
@@ -1562,7 +1614,7 @@ function viewIdeaGraph(mount) {
         <div id="idea-status-filters" class="idea-filter-stack"></div>
         <h3>Display</h3>
         <label class="idea-filter-row"><input id="idea-show-context" type="checkbox" checked><span>Include context edges</span><span></span></label>
-        <label class="idea-filter-row"><input id="idea-show-labels" type="checkbox" checked><span>Show node labels</span><span></span></label>
+        <label class="idea-filter-row"><input id="idea-show-labels" type="checkbox"><span>Show focus labels</span><span></span></label>
         <div class="idea-graph-actions">
           <button type="button" id="idea-fit">Fit</button>
           <button type="button" id="idea-zoom-in">+</button>
@@ -1590,9 +1642,22 @@ function destroyIdeaGraph() {
 }
 
 function initIdeaGraph() {
-  const nodes = state.nodes.filter((node) => ["paper", "idea", "experiment", "generation_path"].includes(node.kind) && (node.kind !== "idea" || node.selected));
-  const nodeIds = new Set(nodes.map((n) => n.id));
-  const edges = state.edges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target) && ["grounds_idea", "validated_by", "path_member"].includes(edge.type));
+  const selectedIdeaIds = new Set(state.nodes.filter(isSelectedIdea).map((node) => node.id));
+  const focusIdeaIds = selectedIdeaIds.size
+    ? selectedIdeaIds
+    : new Set(state.nodes.filter((node) => node.kind === "idea").map((node) => node.id));
+  const workflowEdgeTypes = new Set(["grounds_idea", "validated_by", "path_member"]);
+  const connectedEdges = state.edges.filter((edge) =>
+    workflowEdgeTypes.has(edge.type) &&
+    (focusIdeaIds.has(edge.source) || focusIdeaIds.has(edge.target))
+  );
+  const nodeIds = new Set(focusIdeaIds);
+  connectedEdges.forEach((edge) => {
+    nodeIds.add(edge.source);
+    nodeIds.add(edge.target);
+  });
+  const nodes = state.nodes.filter((node) => nodeIds.has(node.id) && ["paper", "idea", "experiment", "generation_path"].includes(node.kind));
+  const edges = connectedEdges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
   computeIdeaLayout(nodes, edges);
   const statuses = Array.from(new Set(nodes.filter((n) => n.kind === "idea").map((n) => n.potential_label || "unknown"))).sort();
   ideaRuntime = {
@@ -1604,7 +1669,7 @@ function initIdeaGraph() {
     search: "",
     selected: null,
     showContext: true,
-    showLabels: true,
+    showLabels: false,
     scale: 1,
     tx: 0,
     ty: 0,
@@ -1654,29 +1719,25 @@ function initIdeaGraph() {
 }
 
 function computeIdeaLayout(nodes, edges) {
-  const groups = {
-    generation_path: { x: 210, y: 350 },
-    paper: { x: 370, y: 350 },
-    idea: { x: 650, y: 350 },
-    experiment: { x: 930, y: 350 },
+  const cx = 560;
+  const cy = 360;
+  const centers = {
+    generation_path: { x: cx - 90, y: cy - 90 },
+    paper: { x: cx - 120, y: cy + 20 },
+    idea: { x: cx + 20, y: cy },
+    experiment: { x: cx + 135, y: cy + 55 },
   };
-  const byKind = new Map();
-  for (const node of nodes) {
-    if (!byKind.has(node.kind)) byKind.set(node.kind, []);
-    byKind.get(node.kind).push(node);
-  }
-  for (const [kind, groupNodes] of byKind) {
-    const center = groups[kind] || { x: 600, y: 350 };
-    groupNodes.sort((a, b) => itemRank(a.item_id) - itemRank(b.item_id) || titleFor(a).localeCompare(titleFor(b)));
-    groupNodes.forEach((node, i) => {
-      const rows = Math.ceil(Math.sqrt(groupNodes.length));
-      const col = i % rows;
-      const row = Math.floor(i / rows);
-      node.ix = center.x + (col - rows / 2) * 32 + ((stableHash(node.id) % 11) - 5);
-      node.iy = center.y + (row - groupNodes.length / rows / 2) * 34 + ((stableHash(node.id) % 13) - 6);
+  nodes.slice()
+    .sort((a, b) => itemRank(a.item_id) - itemRank(b.item_id) || titleFor(a).localeCompare(titleFor(b)))
+    .forEach((node, i) => {
+      const hash = stableHash(node.id);
+      const angle = (i / Math.max(1, nodes.length)) * Math.PI * 2 + (hash % 628) / 170;
+      const radius = 70 + (hash % 210);
+      node.ix = cx + Math.cos(angle) * radius + (((hash >> 5) % 31) - 15);
+      node.iy = cy + Math.sin(angle) * radius * 0.72 + (((hash >> 11) % 31) - 15);
     });
-  }
-  for (let tick = 0; tick < 120; tick++) {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  for (let tick = 0; tick < 260; tick++) {
     for (let i = 0; i < nodes.length; i++) {
       const a = nodes[i];
       for (let j = i + 1; j < nodes.length; j++) {
@@ -1684,24 +1745,32 @@ function computeIdeaLayout(nodes, edges) {
         let dx = a.ix - b.ix;
         let dy = a.iy - b.iy;
         let d2 = dx * dx + dy * dy + 0.01;
-        if (d2 > 2200) continue;
+        if (d2 > 18000) continue;
         const d = Math.sqrt(d2);
-        const f = 18 / d2;
+        const f = 170 / d2;
         dx /= d; dy /= d;
         a.ix += dx * f; a.iy += dy * f;
         b.ix -= dx * f; b.iy -= dy * f;
       }
     }
     for (const edge of edges) {
-      const a = nodes.find((n) => n.id === edge.source);
-      const b = nodes.find((n) => n.id === edge.target);
+      const a = byId.get(edge.source);
+      const b = byId.get(edge.target);
       if (!a || !b) continue;
       const dx = b.ix - a.ix;
       const dy = b.iy - a.iy;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const f = (d - 170) * 0.003;
+      const desired = edge.type === "path_member" ? 120 : edge.type === "validated_by" ? 135 : 150;
+      const f = (d - desired) * 0.0048;
       a.ix += dx / d * f; a.iy += dy / d * f;
       b.ix -= dx / d * f; b.iy -= dy / d * f;
+    }
+    for (const node of nodes) {
+      const center = centers[node.kind] || { x: cx, y: cy };
+      node.ix += (center.x - node.ix) * 0.0022 + (cx - node.ix) * 0.0011;
+      node.iy += (center.y - node.iy) * 0.0022 + (cy - node.iy) * 0.0011;
+      node.ix = Math.max(110, Math.min(1030, node.ix));
+      node.iy = Math.max(110, Math.min(640, node.iy));
     }
   }
 }
@@ -1739,6 +1808,7 @@ function renderIdeaGraph() {
   }
   const minX = 80, minY = 80, maxX = 1040, maxY = 660;
   const viewBox = `${minX - rt.tx} ${minY - rt.ty} ${(maxX - minX) / rt.scale} ${(maxY - minY) / rt.scale}`;
+  const labelIds = rt.showLabels ? visibleIdeaLabelIds(graph.nodes) : new Set();
   const edgesHtml = graph.edges.map((edge) => {
     const a = state.nodeById.get(edge.source);
     const b = state.nodeById.get(edge.target);
@@ -1754,12 +1824,12 @@ function renderIdeaGraph() {
     return `
       <g class="idea-node entity-${attr(node.type)} ${selected ? "is-selected" : ""} ${!selected && selectedNeighbors.has(node.id) ? "is-neighbor" : ""} ${dim ? "is-dim" : ""}" data-id="${attr(node.id)}" transform="translate(${node.ix}, ${node.iy})">
         <circle r="${r}" fill="${entityColor(node.kind)}"></circle>
-        ${rt.showLabels ? `<text x="${r + 5}" y="4">${esc(truncate(titleFor(node), 31))}</text>` : ""}
+        ${labelIds.has(node.id) ? `<text x="${r + 5}" y="4">${esc(truncate(titleFor(node), 31))}</text>` : ""}
       </g>
     `;
   }).join("");
   svg.setAttribute("viewBox", viewBox);
-  svg.innerHTML = `<rect class="idea-svg-bg" x="-200" y="-200" width="1600" height="1200"></rect>${edgesHtml}${nodesHtml}`;
+  svg.innerHTML = `<rect class="idea-svg-bg" x="-200" y="-200" width="1600" height="1200" fill="transparent"></rect>${edgesHtml}${nodesHtml}`;
   svg.querySelectorAll("[data-id]").forEach((el) => {
     el.addEventListener("click", () => {
       rt.selected = state.nodeById.get(el.dataset.id);
@@ -1773,6 +1843,41 @@ function renderIdeaGraph() {
   });
   document.getElementById("idea-graph-stats").textContent = `${graph.nodes.length} nodes · ${graph.edges.length} edges`;
   if (rt.selected) renderIdeaDetail(rt.selected, graph.edges);
+}
+
+function visibleIdeaLabelIds(nodes) {
+  const ranked = nodes.slice().sort((a, b) => {
+    const pa = ideaLabelPriority(a);
+    const pb = ideaLabelPriority(b);
+    if (pa !== pb) return pa - pb;
+    return itemRank(a.item_id) - itemRank(b.item_id) || titleFor(a).localeCompare(titleFor(b));
+  });
+  const boxes = [];
+  const ids = new Set();
+  for (const node of ranked) {
+    const r = node.kind === "idea" ? 12 : node.kind === "paper" ? 10 : 8;
+    const text = truncate(titleFor(node), 31);
+    const width = Math.min(210, Math.max(40, text.length * 6.4));
+    const x = node.ix + r + 5;
+    const y = node.iy + 4;
+    const box = { x1: x - 3, y1: y - 12, x2: x + width + 6, y2: y + 5 };
+    const overlaps = boxes.some((other) =>
+      box.x1 < other.x2 && box.x2 > other.x1 && box.y1 < other.y2 && box.y2 > other.y1
+    );
+    if (overlaps) continue;
+    boxes.push(box);
+    ids.add(node.id);
+    if (ids.size >= 42) break;
+  }
+  return ids;
+}
+
+function ideaLabelPriority(node) {
+  if (node.kind === "generation_path") return 0;
+  if (isSelectedIdea(node)) return 1;
+  if (node.kind === "paper") return 2;
+  if (node.kind === "experiment") return 3;
+  return 4;
 }
 
 function renderIdeaDetail(node, graphEdges) {

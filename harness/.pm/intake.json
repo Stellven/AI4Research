@@ -1,14 +1,14 @@
 {
-  "request_type": "short_impl",
-  "intent_summary": "Write a research report on WWDC Apple 2026",
+  "request_type": "research",
+  "intent_summary": "Official full-runtime AutoSci integration test through normal solar intake. Do not call a manual autosci shim. The workflow must ingest papers, extract claims, generate ideas, run exp-design, exp-run, exp-eval, and produce a report so we ca",
   "source_inputs": {
     "papers": [],
     "logs": [],
     "repo_context": []
   },
   "output_mode": {
-    "prd": "short",
-    "contract": "short",
-    "dag": "short"
+    "prd": "research",
+    "contract": "research",
+    "dag": "research"
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.acceptance_verdict.v1",
-  "sprint_id": "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67",
-  "requirement_ir_id": "req-b73199da283b",
+  "sprint_id": "sprint-20260708-202105-intent-official-full-runtime-autosc-5626d8e8",
+  "requirement_ir_id": "req-2c8590a11286",
   "requested_verdict": "PASS",
   "coverage_summary": {
     "total": 4,
@@ -11,7 +11,7 @@
     "coverage_ratio": 0.0,
     "graph_complete": false
   },
-  "verdict": "FAIL",
+  "verdict": "IN_PROGRESS",
   "reasons": [
     "task_graph_incomplete",
     "requirement_missing"

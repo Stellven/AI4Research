@@ -6,9 +6,9 @@
     "supports": 17
   },
   "final_verdict_ready_count": 31,
-  "generated_at": "2026-07-07T17:39:23Z",
+  "generated_at": "2026-07-08T17:49:24Z",
   "graph_edge_count": 702,
-  "graph_node_count": 521,
+  "graph_node_count": 514,
   "idea_count": 195,
   "ideate_final_promotion_ready_count": 39,
   "item_count": 39,
@@ -31,5 +31,7 @@
     "inconclusive": 8,
     "partially_supported": 14,
     "supported": 17
-  }
+  },
+  "workflow_graph_edge_count": 117,
+  "workflow_graph_node_count": 119
 }

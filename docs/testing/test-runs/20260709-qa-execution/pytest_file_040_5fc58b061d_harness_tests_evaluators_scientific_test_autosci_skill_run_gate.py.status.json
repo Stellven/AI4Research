@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_040_5fc58b061d_harness_tests_evaluators_scientific_test_autosci_skill_run_gate.py",
+  "source": "harness/tests/evaluators/scientific/test_autosci_skill_run_gate.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/evaluators/scientific/test_autosci_skill_run_gate.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.252,
+  "timeout": false
+}

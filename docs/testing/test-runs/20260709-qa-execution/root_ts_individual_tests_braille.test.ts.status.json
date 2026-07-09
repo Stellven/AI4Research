@@ -1,0 +1,12 @@
+{
+  "name": "root_ts_individual_tests_braille.test.ts",
+  "source": "tests/braille.test.ts",
+  "command": [
+    "bun",
+    "test",
+    "tests/braille.test.ts"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.492,
+  "timeout": false
+}

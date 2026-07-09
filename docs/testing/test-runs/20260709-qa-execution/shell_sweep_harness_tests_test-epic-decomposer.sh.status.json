@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-epic-decomposer.sh",
+  "source": "harness/tests/test-epic-decomposer.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-epic-decomposer.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.585,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-kh1mx0yj"
+}

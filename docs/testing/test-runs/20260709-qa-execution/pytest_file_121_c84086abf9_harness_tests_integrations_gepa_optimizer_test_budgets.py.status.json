@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_121_c84086abf9_harness_tests_integrations_gepa_optimizer_test_budgets.py",
+  "source": "harness/tests/integrations/gepa_optimizer/test_budgets.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/integrations/gepa_optimizer/test_budgets.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.245,
+  "timeout": false
+}

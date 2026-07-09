@@ -1,0 +1,59 @@
+{
+  "action_count": 1,
+  "actions": [
+    {
+      "action": "discover_literature",
+      "evidence_ids": [
+        "tmp/sprint20260708-literature-run/discover_native_stdout.json",
+        "discover_native_stdout_json",
+        "tmp/sprint20260708-literature-run/discover_native_stderr.txt",
+        "discover_native_stderr",
+        "tmp/sprint20260708-literature-run/discover_native_payload.json",
+        "discover_native_payload_json",
+        "tmp/sprint20260708-literature-run/discover_final_shortlist_boundary.json",
+        "discover_final_shortlist_boundary_json",
+        "tmp/sprint20260708-literature-run/literature_discovery.json",
+        "solar_evidence_json",
+        "wiki",
+        "scientific research lifecycle evidence synthesis",
+        "Native discover.py failed: Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/tools/discover.py\", line 1295, in <module>\n    main()\n    ~~~~^^\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/tools/discover.py\", line 1255, in main\n    payload = build_shortlist(\n        mode=\"wiki\",\n    ...<4 lines>...\n        citation_limit=args.citation_limit,\n    )\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/tools/discover.py\", line 1008, in build_shortlist\n    raise ValueError(\"from-wiki found no anchorable papers under wiki/papers/\")\nValueError: from-wiki found no anchorable papers under wiki/papers/",
+        "Final discovery shortlist requires non-empty candidates backed by non-fixture provider source channels.",
+        "node-discover-literature",
+        "discover_literature",
+        "discovery shortlist is empty",
+        "provider-backed source channel is missing",
+        "no source candidates were present",
+        "no non-fixture provider source channel was present",
+        "autosci_discover_final_shortlist_boundary.v1",
+        "incomplete",
+        "discover_shortlist_incomplete",
+        "Source runtime evidence did not prove a non-fixture provider channel.",
+        "autosci_source_provider_boundary.v1",
+        "plugins/autosci",
+        "autosci-bridge",
+        "2026-07-08T16:46:43Z",
+        "literature_discovery.v1",
+        "phase19-skillgen-operator-smoke",
+        "failed",
+        "task-autosci-skillgen-discover_literature"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/tmp/sprint20260708-literature-run/literature_discovery.json",
+      "gate_status": "failed",
+      "reasons": [
+        "literature discovery evidence status is failed"
+      ],
+      "schema": "literature_discovery.v1",
+      "status": "failed",
+      "warnings": []
+    }
+  ],
+  "completed_count": 1,
+  "current_action": "",
+  "remaining_actions": [],
+  "run_id": "pm-literature-discover-node",
+  "schema": "autosci_skill_run_progress.v1",
+  "skill": "discover",
+  "status": "failed",
+  "updated_at": "2026-07-08T16:46:43Z",
+  "work_dir": "tmp/sprint20260708-literature-run"
+}

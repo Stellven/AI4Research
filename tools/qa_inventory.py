@@ -705,12 +705,76 @@ def apply_test_mapping(features: list[Feature], tests: list[str], workflow_refs:
             feature.pass_criteria = pass_criteria_for(feature.l1, feature.l2, feature.l3, feature.source_type)
 
 
+def specific_inputs_outputs_for_feature(feature: Feature) -> str:
+    group_hint = FEATURE_INPUT_OVERRIDES.get((feature.l1, feature.l2), "")
+    action = feature.l3.strip()
+    source = feature.source_type
+
+    if source == "python-cli":
+        io = "Inputs: CLI args, environment, local files, or stdin; Outputs: stdout/stderr, JSON/text, and generated artifacts when supported"
+    elif source == "route":
+        io = "Inputs: HTTP method/path/query/body; Outputs: HTTP status plus JSON, HTML, SSE, or static asset response"
+    elif source == "workflow":
+        io = "Inputs: GitHub Actions event, matrix, secrets, and repo checkout; Outputs: CI status, logs, and workflow artifacts"
+    elif source in {"shell-cli", "shell-script"}:
+        io = "Inputs: shell args, environment variables, filesystem fixtures; Outputs: exit code, logs, files, and runtime artifacts"
+    elif source in {"package-bin", "package-script"}:
+        io = "Inputs: package manager command args and environment; Outputs: build/test/dev logs, bundles, or process status"
+    elif source == "skill":
+        io = "Inputs: natural-language or slash-command skill invocation; Outputs: skill instructions, wrapper calls, and artifacts"
+    elif source == "manifest":
+        io = "Inputs: manifest/schema/policy files; Outputs: validation result, parsed config, and actionable errors"
+    elif source in {"domain-module", "module"}:
+        io = "Inputs: module source files and fixture data; Outputs: library behavior, runtime artifacts, and validation results"
+    else:
+        io = "Inputs: repo-tracked source/config/test fixtures; Outputs: validation results and generated artifacts"
+
+    parts = []
+    if action:
+        parts.append(f"Feature/action: {action}")
+    if group_hint:
+        parts.append(f"Formats: {group_hint}")
+    parts.append(io)
+    return " | ".join(parts)
+
+
+def feature_inventory_row(feature: Feature) -> dict[str, str]:
+    return {
+        "feature_id": feature.feature_id,
+        "l1": feature.l1,
+        "l2": feature.l2,
+        "specific_inputs_outputs": specific_inputs_outputs_for_feature(feature),
+        "source_type": feature.source_type,
+        "source_paths": feature.source_paths,
+        "entrypoints": feature.entrypoints,
+        "existing_tests": feature.existing_tests,
+        "coverage_status": feature.coverage_status,
+        "pass_criteria": feature.pass_criteria,
+        "why_testable": feature.why_testable,
+        "notes": feature.notes,
+    }
+
+
 def write_csv(features: list[Feature], path: Path) -> None:
+    fieldnames = [
+        "feature_id",
+        "l1",
+        "l2",
+        "specific_inputs_outputs",
+        "source_type",
+        "source_paths",
+        "entrypoints",
+        "existing_tests",
+        "coverage_status",
+        "pass_criteria",
+        "why_testable",
+        "notes",
+    ]
     with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(asdict(features[0]).keys()))
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for row in features:
-            writer.writerow(asdict(row))
+            writer.writerow(feature_inventory_row(row))
 
 
 def write_markdown(features: list[Feature], path: Path, *, max_rows: int | None = None) -> None:
@@ -718,13 +782,14 @@ def write_markdown(features: list[Feature], path: Path, *, max_rows: int | None 
     with path.open("w", encoding="utf-8") as f:
         f.write("# Repo-Derived QA Feature Inventory\n\n")
         f.write("Generated from tracked files. This file is evidence for planning; it does not execute tests.\n\n")
-        f.write("| Feature ID | L1 | L2 | L3 | Source | Coverage | Pass Criteria |\n")
+        f.write("| Feature ID | L1 | L2 | Specific Inputs / Outputs | Source | Coverage | Pass Criteria |\n")
         f.write("|---|---|---|---|---|---|---|\n")
         for r in rows:
             source = r.source_paths.replace("|", "\\|")
             criteria = r.pass_criteria.replace("|", "\\|")
+            io = specific_inputs_outputs_for_feature(r).replace("|", "\\|")
             f.write(
-                f"| `{r.feature_id}` | {r.l1} | {r.l2} | {r.l3} | {source} | {r.coverage_status} | {criteria} |\n"
+                f"| `{r.feature_id}` | {r.l1} | {r.l2} | {io} | {source} | {r.coverage_status} | {criteria} |\n"
             )
 
 
@@ -851,6 +916,141 @@ def write_master_table(features: list[Feature], csv_path: Path, md_path: Path) -
             )
 
 
+FEATURE_INPUT_OVERRIDES: dict[tuple[str, str], str] = {
+    ("AutoSci", "AutoSci plugin bridge"): "AutoSci slash/CLI commands; JSON evidence; Markdown reports; provider-gated live paths",
+    ("AutoSci", "Scientific evaluators"): "Scientific artifact JSON; claims; experiment plans/results; papers; reports; lifecycle evidence",
+    ("AutoSci", "Workflow Bridge"): "research.autosci.v1 workflow contracts; AutoSci capability routes; evidence envelopes",
+    ("Benchmarks", "Benchmark runtime"): "Benchmark definitions; Terminal-Bench adapter requests; JSON benchmark reports",
+    ("Browser", "Browser runtime"): "Browser jobs; URLs; profile/session metadata; Playwright/Webwright-style tasks",
+    ("Browser", "Social browser backend"): "Social/browser source records; profile metadata; collected post/thread payloads",
+    ("CLI", "solar lifecycle"): "Natural-language intake; stdin/file requests; solar/solar-harness commands; JSON status output",
+    ("Components", "Component manifests"): "component.sh files; component install/remove metadata; generated component docs",
+    ("Components", "components.d"): "components.d manifests and shell component entrypoints",
+    ("Core", "TypeScript runtime"): "Bun/TypeScript modules; daemon/dashboard runtime imports; TVS module imports",
+    ("Dashboard", "React status dashboard"): "React dashboard assets; status JSON payloads; browser UI scenarios",
+    ("Desktop", "Electron shell"): "Electron package scripts; renderer assets; Playwright scenarios; macOS/Windows/Linux package targets",
+    ("Harness", "Graph orchestration"): "task_graph.json; sprint status JSON; graph dispatch/eval commands; pane lease/status records",
+    ("Harness", "Python runtime library"): "Python CLI commands; JSON ledgers; status artifacts; runtime envelopes; fixture files",
+    ("Harness", "Solar-Harness Port"): "solar-harness shell commands; tmux pane/runtime state; sprint artifacts",
+    ("Harness", "Solar-Harness shell/runtime"): "shell commands; tmux pane state; intake records; task graphs; status JSON; runtime logs",
+    ("Hooks", "Runtime hooks"): "shell hooks; environment variables; event JSONL; dispatch files; runtime artifacts",
+    ("Ingestion", "Daily arXiv discovery"): "arXiv IDs; arXiv API/search results; paper metadata JSON/Markdown",
+    ("Ingestion", "DeepXiv fetch"): "DeepXiv URLs/API payloads; paper metadata; fetched source artifacts",
+    ("Ingestion", "Document extraction"): "PDF; PPTX; DOCX; extracted text/tables/layout metadata; source manifests",
+    ("Ingestion", "Documents"): "PDF; PPTX; DOCX; local document files",
+    ("Ingestion", "LaTeX/math rendering"): "LaTeX expressions; math blocks; rasterized/rendered formula artifacts",
+    ("Ingestion", "Research Papers"): "arXiv/Hugging Face paper metadata; PDFs; citations; section text",
+    ("Ingestion", "Research discovery"): "research queries; source search results; paper metadata; discovery JSON",
+    ("Ingestion", "Research paper preparation"): "paper URLs/IDs; local paper source files; metadata manifests",
+    ("Ingestion", "Semantic Scholar fetch"): "Semantic Scholar paper IDs/API payloads; citation metadata",
+    ("Ingestion", "Social Media"): "thread/post payloads; browser-collected social records; metadata",
+    ("Ingestion", "Source data plane"): "source-manifest JSONL; Knowledge _sources files; QMD/source ledger data",
+    ("Ingestion", "URLs"): "HTTP/HTTPS URLs; HTML; web source records",
+    ("Ingestion", "Videos"): "YouTube URLs/channels; transcripts; timestamped captions; video metadata",
+    ("Ingestion", "Wikipedia/URL fetch"): "Wikipedia URLs/pages; HTML/source text; fetched metadata",
+    ("Ingestion", "YouTube/video intelligence"): "YouTube URLs; transcript tracks; channel/video metadata; report artifacts",
+    ("Ingestion", "arXiv fetch"): "arXiv IDs; arXiv URLs; paper metadata; PDFs",
+    ("Installer", "Installer library"): "install profiles; component lists; sandbox HOME; requirements files; receipts",
+    ("Packaging", "openjiuwen-solar wrapper"): "package wrapper commands; install receipts; platform/runtime detection payloads",
+    ("Packaging", "pipx distribution"): "pipx package metadata; console scripts; Python package import paths",
+    ("QA Gates", "Repository scripts"): "check/smoke shell scripts; TypeScript smoke scripts; JSON/log gate outputs",
+    ("Reports", "GitHub intelligence"): "GitHub repository/issue/PR data; digest JSON; Markdown reports",
+    ("Research", "DeepResearch core"): "research queries; claims; citations; evidence ledgers; survey/report JSON and Markdown",
+    ("Runtime", "Schemas and policies"): "runtime schema/policy manifests; valid/invalid JSON fixtures",
+    ("Runtime", "policy"): "writer policy manifests; write-scope fixtures",
+    ("Runtime", "schema"): "runtime schema JSON; schema validation fixtures",
+    ("Skills", "Agent skill wrappers"): "SKILL.md files; slash command wrappers; skill scripts/assets",
+    ("Skills", "Shipped skills"): "SKILL.md files; skill metadata; referenced scripts/assets; wrapper commands",
+    ("Status Server", "Python HTTP status server"): "HTTP routes; JSON responses; SSE/events; static status assets",
+    ("TVS", "Terminal visual system"): "terminal render payloads; grid/theme/display data; TVS TypeScript imports",
+}
+
+
+def specific_inputs_for_group(l1: str, l2: str, items: list[Feature]) -> str:
+    override = FEATURE_INPUT_OVERRIDES.get((l1, l2))
+    if override:
+        return override
+
+    source_types = sorted({i.source_type for i in items})
+    joined = " ".join(
+        " ".join(
+            [
+            " ".join(i.source_paths.split(";")),
+            " ".join(i.entrypoints.split(";")),
+            i.l3,
+            ]
+        )
+        for i in items[:30]
+    ).lower()
+    formats: list[str] = []
+    hints = [
+        ("json", "JSON"),
+        ("jsonl", "JSONL"),
+        ("yaml", "YAML"),
+        ("yml", "YAML"),
+        ("markdown", "Markdown"),
+        (".md", "Markdown"),
+        ("pdf", "PDF"),
+        ("pptx", "PPTX"),
+        ("docx", "DOCX"),
+        ("url", "URLs"),
+        ("http", "HTTP/HTTPS"),
+        ("route", "HTTP routes"),
+        ("workflow", "GitHub Actions workflows"),
+        ("skill.md", "SKILL.md"),
+        ("shell", "shell commands"),
+        (".sh", "shell scripts"),
+        ("python", "Python CLI"),
+        (".py", "Python modules"),
+        ("typescript", "TypeScript"),
+        (".ts", "TypeScript"),
+        ("package.json", "package.json scripts"),
+    ]
+    for needle, label in hints:
+        if needle in joined and label not in formats:
+            formats.append(label)
+    if not formats:
+        source_type_labels = {
+            "domain-module": "domain source modules",
+            "manifest": "manifest files",
+            "module": "module source files",
+            "package-bin": "package bin entries",
+            "package-script": "package.json scripts",
+            "python-cli": "Python CLI commands",
+            "route": "HTTP routes",
+            "shell-cli": "shell CLI commands",
+            "shell-script": "shell scripts",
+            "skill": "SKILL.md files",
+            "workflow": "GitHub Actions workflows",
+        }
+        formats.extend(source_type_labels.get(source_type, source_type) for source_type in source_types)
+    return "; ".join(formats)
+
+
+def write_feature_list(features: list[Feature], path: Path) -> None:
+    rows = []
+    for feature in features:
+        rows.append(
+            {
+                "Level 1 Feature": feature.l1,
+                "Level 2 Feature": feature.l2,
+                "Specific Inputs / Outputs Supported": specific_inputs_outputs_for_feature(feature),
+            }
+        )
+
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "Level 1 Feature",
+                "Level 2 Feature",
+                "Specific Inputs / Outputs Supported",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def main() -> int:
     files = git_ls_files()
     tests = tracked_tests(files)
@@ -873,6 +1073,7 @@ def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     write_csv(features, OUT_DIR / "qa_feature_inventory.csv")
     write_markdown(features, OUT_DIR / "qa_feature_inventory.md")
+    write_feature_list(features, OUT_DIR / "qa_feature_list.csv")
     write_summary(features, files, tests, OUT_DIR / "qa_inventory_summary.md")
     write_master_table(features, OUT_DIR / "qa_master_pass_fail_table.csv", OUT_DIR / "qa_master_pass_fail_table.md")
 
@@ -886,6 +1087,7 @@ def main() -> int:
         "outputs": [
             "docs/testing/qa_feature_inventory.csv",
             "docs/testing/qa_feature_inventory.md",
+            "docs/testing/qa_feature_list.csv",
             "docs/testing/qa_inventory_summary.md",
             "docs/testing/qa_master_pass_fail_table.csv",
             "docs/testing/qa_master_pass_fail_table.md",

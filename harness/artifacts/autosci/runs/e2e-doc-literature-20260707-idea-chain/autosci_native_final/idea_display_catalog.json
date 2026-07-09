@@ -2,7 +2,7 @@
   "ideas": [
     {
       "display_title": "Claude Code overview documentation evidence check",
-      "generation_path": "A:A:landscape-driven",
+      "generation_path": "A:landscape-driven",
       "idea_id": "idea-cc-01-landscape-driven-1",
       "item_id": "cc-01",
       "raw_title": "Validate Claude Code Docs Landscape",
@@ -10,7 +10,7 @@
     },
     {
       "display_title": "Claude Code overview documentation related-source enrichment",
-      "generation_path": "B:B:incremental",
+      "generation_path": "B:incremental",
       "idea_id": "idea-cc-01-incremental",
       "item_id": "cc-01",
       "raw_title": "Expand Evidence Record with Related Papers",
@@ -18,7 +18,7 @@
     },
     {
       "display_title": "Claude Code overview documentation cross-source synthesis",
-      "generation_path": "C:C:combination",
+      "generation_path": "C:combination",
       "idea_id": "idea-cc-01-combination-3",
       "item_id": "cc-01",
       "raw_title": "Combine Claude Code Docs with Comparison Reports",
@@ -26,7 +26,7 @@
     },
     {
       "display_title": "Claude Code overview documentation validation use cases",
-      "generation_path": "D:D:innovation",
+      "generation_path": "D:innovation",
       "idea_id": "idea-cc-01-innovation",
       "item_id": "cc-01",
       "raw_title": "Explore Novel Applications of Claude Code Docs",
@@ -34,7 +34,7 @@
     },
     {
       "display_title": "Claude Code overview documentation transfer pattern",
-      "generation_path": "E:E:cross-domain-transfer",
+      "generation_path": "E:cross-domain-transfer",
       "idea_id": "idea-cc-01-cross-domain-transfer-5",
       "item_id": "cc-01",
       "raw_title": "Cross-Domain Validation of AI Assistant Features",
@@ -754,7 +754,7 @@
     },
     {
       "display_title": "Pricing - Plans for every developer - GitHub transfer pattern",
-      "generation_path": "E:cross-domain-transfer-transfer",
+      "generation_path": "E:cross-domain-transfer",
       "idea_id": "idea-ghc-06-cross-domain-transfer",
       "item_id": "ghc-06",
       "raw_title": "Pricing Model Cross-Domain Transfer",
@@ -874,7 +874,7 @@
     },
     {
       "display_title": "AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents transfer pattern",
-      "generation_path": "E:cross-domain-transfer-transfer",
+      "generation_path": "E:cross-domain-transfer",
       "idea_id": "idea-r02-cross-domain-transfer-transfer-5",
       "item_id": "r02",
       "raw_title": "Cross-Domain Transfer of Harness Engineering Techniques",
@@ -1274,7 +1274,7 @@
     },
     {
       "display_title": "AutoGen — multi-agent conversation framework transfer pattern",
-      "generation_path": "E:cross-domain-transfer-5",
+      "generation_path": "E:cross-domain-transfer",
       "idea_id": "idea-r12-cross-domain-transfer-5-5",
       "item_id": "r12",
       "raw_title": "Analyze AutoGen's Cross-Domain Transfer Capabilities",

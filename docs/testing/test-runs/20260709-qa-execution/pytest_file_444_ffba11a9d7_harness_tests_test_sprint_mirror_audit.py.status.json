@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_444_ffba11a9d7_harness_tests_test_sprint_mirror_audit.py",
+  "source": "harness/tests/test_sprint_mirror_audit.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_sprint_mirror_audit.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.178,
+  "timeout": false
+}

@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_control_plane_test-autopilot-kb-probe-no-pane-dispatch.sh",
+  "source": "harness/tests/control_plane/test-autopilot-kb-probe-no-pane-dispatch.sh",
+  "command": [
+    "bash",
+    "harness/tests/control_plane/test-autopilot-kb-probe-no-pane-dispatch.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.023,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-1g1lrbp6"
+}

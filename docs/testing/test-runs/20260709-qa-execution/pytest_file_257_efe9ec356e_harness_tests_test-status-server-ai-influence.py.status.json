@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_257_efe9ec356e_harness_tests_test-status-server-ai-influence.py",
+  "source": "harness/tests/test-status-server-ai-influence.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-status-server-ai-influence.py"
+  ],
+  "exit_code": 5,
+  "runtime_seconds": 0.188,
+  "timeout": false
+}

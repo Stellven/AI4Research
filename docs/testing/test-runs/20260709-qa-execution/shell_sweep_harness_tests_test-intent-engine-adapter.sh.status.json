@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-intent-engine-adapter.sh",
+  "source": "harness/tests/test-intent-engine-adapter.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-intent-engine-adapter.sh"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.366,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-y4scey_h"
+}

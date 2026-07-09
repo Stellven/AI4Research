@@ -1,0 +1,10 @@
+{
+  "name": "root_smoke_skills_after_bun_install",
+  "command": [
+    "bun",
+    "run",
+    "smoke:skills"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0
+}

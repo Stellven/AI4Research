@@ -1,5 +1,5 @@
 enabled: true
-task_scope: implementation
+task_scope: research
 allowed_paths:
 - apps/pm-pane/**
 - packages/requirement-ir/**
@@ -24,3 +24,4 @@ approval_required_when:
 stop_conditions:
 - 缺少可验证 acceptance 不得标记为完成。
 - 缺少 verifier 决策不得进入 DONE。
+- 缺少 evidence ledger 或 critique gate 时不得推进到 adoption。

@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.coverage_report.v1",
-  "sprint_id": "sprint-20260617-170416-intent-write-a-research-report-on-w-ee1ade67",
-  "requirement_ir_id": "req-b73199da283b",
+  "sprint_id": "sprint-20260708-202105-intent-official-full-runtime-autosc-5626d8e8",
+  "requirement_ir_id": "req-2c8590a11286",
   "summary": {
     "total": 4,
     "done": 0,
@@ -13,73 +13,137 @@
   "items": [
     {
       "requirement_id": "REQ-000",
-      "source_text": "Write a research report on WWDC Apple 2026",
+      "source_text": "Official full-runtime AutoSci integration test through normal solar intake. Do not call a",
       "success_criteria": [
-        "Write a research report on WWDC Apple 2026"
+        "Official full-runtime AutoSci integration test through normal solar intake. Do not call a"
       ],
       "verification_method": "task_graph_closeout",
       "mapped_nodes": [
-        "S3"
+        "literature_discover",
+        "paper_ingest",
+        "paper_analyze",
+        "memory_update_initial",
+        "graph_update",
+        "claim_extract",
+        "method_extract",
+        "code_evidence_map",
+        "idea_generate",
+        "idea_evaluate",
+        "experiment_design",
+        "experiment_run",
+        "experiment_monitor",
+        "claim_verify",
+        "report_plan",
+        "report_draft",
+        "artifact_review",
+        "publication_produce",
+        "memory_update_final",
+        "workflow_evolve"
       ],
       "expected_artifacts": [
-        "review_decision.yaml"
+        "artifact.md"
       ],
       "final_status": "missing"
     },
     {
       "requirement_id": "REQ-001",
-      "source_text": "目标变更在声明范围内完成。",
+      "source_text": "Normal Solar intake emits a research.autosci.v1 task graph.",
       "success_criteria": [
-        "目标变更在声明范围内完成。"
+        "Normal Solar intake emits a research.autosci.v1 task graph."
       ],
       "verification_method": "acceptance_evidence",
       "mapped_nodes": [
-        "S1",
-        "S2",
-        "S3"
+        "literature_discover",
+        "paper_ingest",
+        "paper_analyze",
+        "memory_update_initial",
+        "graph_update",
+        "claim_extract",
+        "method_extract",
+        "code_evidence_map",
+        "idea_generate",
+        "idea_evaluate",
+        "experiment_design",
+        "experiment_run",
+        "experiment_monitor",
+        "claim_verify",
+        "report_plan",
+        "report_draft",
+        "artifact_review",
+        "publication_produce",
+        "memory_update_final",
+        "workflow_evolve"
       ],
       "expected_artifacts": [
-        "patch.diff",
-        "review_decision.yaml",
-        "test_report.md"
+        "artifact.md"
       ],
       "final_status": "missing"
     },
     {
       "requirement_id": "REQ-002",
-      "source_text": "至少一条测试/执行证据被记录。",
+      "source_text": "Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.",
       "success_criteria": [
-        "至少一条测试/执行证据被记录。"
+        "Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators."
       ],
       "verification_method": "acceptance_evidence",
       "mapped_nodes": [
-        "S1",
-        "S2",
-        "S3"
+        "literature_discover",
+        "paper_ingest",
+        "paper_analyze",
+        "memory_update_initial",
+        "graph_update",
+        "claim_extract",
+        "method_extract",
+        "code_evidence_map",
+        "idea_generate",
+        "idea_evaluate",
+        "experiment_design",
+        "experiment_run",
+        "experiment_monitor",
+        "claim_verify",
+        "report_plan",
+        "report_draft",
+        "artifact_review",
+        "publication_produce",
+        "memory_update_final",
+        "workflow_evolve"
       ],
       "expected_artifacts": [
-        "patch.diff",
-        "review_decision.yaml",
-        "test_report.md"
+        "artifact.md"
       ],
       "final_status": "missing"
     },
     {
       "requirement_id": "REQ-003",
-      "source_text": "存在独立 verifier 决策。",
+      "source_text": "Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.",
       "success_criteria": [
-        "存在独立 verifier 决策。"
+        "Autopilot can dispatch ready graph nodes without a manual AutoSci shim call."
       ],
       "verification_method": "acceptance_evidence",
       "mapped_nodes": [
-        "S1",
-        "S2",
-        "S3"
+        "literature_discover",
+        "paper_ingest",
+        "paper_analyze",
+        "memory_update_initial",
+        "graph_update",
+        "claim_extract",
+        "method_extract",
+        "code_evidence_map",
+        "idea_generate",
+        "idea_evaluate",
+        "experiment_design",
+        "experiment_run",
+        "experiment_monitor",
+        "claim_verify",
+        "report_plan",
+        "report_draft",
+        "artifact_review",
+        "publication_produce",
+        "memory_update_final",
+        "workflow_evolve"
       ],
       "expected_artifacts": [
-        "patch.diff",
-        "review_decision.yaml",
-        "test_report.md"
+        "artifact.md"
       ],
       "final_status": "missing"
     }

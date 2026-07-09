@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_456_be8676621c_harness_tests_test_understand_anything_background_closeout.py",
+  "source": "harness/tests/test_understand_anything_background_closeout.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_understand_anything_background_closeout.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.195,
+  "timeout": false
+}

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_086_57a500ad91_harness_tests_graph_test_parent_ready_closeout.py",
+  "source": "harness/tests/graph/test_parent_ready_closeout.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph/test_parent_ready_closeout.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.299,
+  "timeout": false
+}

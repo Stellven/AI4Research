@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-knowledge-ingest-dispatcher.sh",
+  "source": "harness/tests/test-knowledge-ingest-dispatcher.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-knowledge-ingest-dispatcher.sh"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.551,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-8lyxipy4"
+}

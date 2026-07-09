@@ -1,0 +1,10 @@
+{
+  "name": "root_smoke_skills",
+  "command": [
+    "bun",
+    "run",
+    "smoke:skills"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0
+}

@@ -8,13 +8,13 @@
 
 ## Counts
 
-- Tracked files scanned: 4371
-- Test files detected: 929
-- Feature rows generated: 1722
+- Tracked files scanned: 4383
+- Test files detected: 931
+- Feature rows generated: 1724
 
 ## Feature Rows by L1
 
-- AutoSci: 36
+- AutoSci: 37
 - Benchmarks: 8
 - Browser: 2
 - CI: 22
@@ -30,7 +30,7 @@
 - Packaging: 14
 - QA Gates: 28
 - Reports: 13
-- Repository: 90
+- Repository: 91
 - Research: 44
 - Runtime: 3
 - Skills: 88
@@ -44,7 +44,7 @@
 - module: 14
 - package-bin: 2
 - package-script: 25
-- python-cli: 1109
+- python-cli: 1111
 - route: 121
 - shell-cli: 11
 - shell-script: 334
@@ -53,8 +53,8 @@
 
 ## Coverage Status
 
-- covered: 1549
-- missing-or-indirect: 132
+- covered: 1550
+- missing-or-indirect: 133
 - partial-or-unmapped: 20
 - static-validation-required: 21
 
@@ -140,7 +140,7 @@
 - `installer.installer_library.components`: lib/installer/components.sh (components)
 - `installer.installer_library.config_vars`: lib/installer/config-vars.sh (config-vars)
 - `installer.installer_library.copy_engine`: lib/installer/copy-engine.sh (copy-engine)
-- ... 52 more rows in CSV
+- ... 53 more rows in CSV
 
 ## Static Validation Rows
 

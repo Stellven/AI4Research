@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_032_0ad734e6e6_harness_tests_data_plane_test_mirage_sources_mount.py",
+  "source": "harness/tests/data_plane/test_mirage_sources_mount.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/data_plane/test_mirage_sources_mount.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.478,
+  "timeout": false
+}

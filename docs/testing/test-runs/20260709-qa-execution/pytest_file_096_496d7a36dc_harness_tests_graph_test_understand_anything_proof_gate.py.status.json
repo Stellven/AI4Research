@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_096_496d7a36dc_harness_tests_graph_test_understand_anything_proof_gate.py",
+  "source": "harness/tests/graph/test_understand_anything_proof_gate.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph/test_understand_anything_proof_gate.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.191,
+  "timeout": false
+}

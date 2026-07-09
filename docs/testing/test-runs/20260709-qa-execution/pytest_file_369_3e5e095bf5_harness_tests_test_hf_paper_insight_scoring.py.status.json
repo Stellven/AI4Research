@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_369_3e5e095bf5_harness_tests_test_hf_paper_insight_scoring.py",
+  "source": "harness/tests/test_hf_paper_insight_scoring.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_hf_paper_insight_scoring.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.244,
+  "timeout": false
+}

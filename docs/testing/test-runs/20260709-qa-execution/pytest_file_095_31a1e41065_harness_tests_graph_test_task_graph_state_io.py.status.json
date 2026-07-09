@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_095_31a1e41065_harness_tests_graph_test_task_graph_state_io.py",
+  "source": "harness/tests/graph/test_task_graph_state_io.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph/test_task_graph_state_io.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.194,
+  "timeout": false
+}
