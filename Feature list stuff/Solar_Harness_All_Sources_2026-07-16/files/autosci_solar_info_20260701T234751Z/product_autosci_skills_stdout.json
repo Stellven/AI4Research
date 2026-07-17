@@ -1,0 +1,230 @@
+{
+  "count": 28,
+  "ok": true,
+  "skills": [
+    {
+      "autosci_command": "/ask",
+      "coverage_status": "partial",
+      "physical_operator": "SkillgenResearchWikiQueryOperator",
+      "side_effect_policy": "none",
+      "skill": "ask",
+      "solar_backend_action": "ask_wiki"
+    },
+    {
+      "autosci_command": "/check",
+      "coverage_status": "partial",
+      "physical_operator": "SkillgenWikiHealthOperator",
+      "side_effect_policy": "none",
+      "skill": "check",
+      "solar_backend_action": "check_wiki_health"
+    },
+    {
+      "autosci_command": "/daily-arxiv",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedDailyArxivOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "daily-arxiv",
+      "solar_backend_action": "daily_arxiv_prepare_finalize"
+    },
+    {
+      "autosci_command": "/discover",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeLiteratureOperator",
+      "side_effect_policy": "none",
+      "skill": "discover",
+      "solar_backend_action": "discover_literature"
+    },
+    {
+      "autosci_command": "/edit",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedWikiEditOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "edit",
+      "solar_backend_action": "edit_wiki_plan"
+    },
+    {
+      "autosci_command": "/exp-design",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeExperimentDesigner",
+      "side_effect_policy": "dry_run_only",
+      "skill": "exp-design",
+      "solar_backend_action": "design_experiment"
+    },
+    {
+      "autosci_command": "/exp-eval",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeClaimVerifier",
+      "side_effect_policy": "approval_required",
+      "skill": "exp-eval",
+      "solar_backend_action": "verify_claim"
+    },
+    {
+      "autosci_command": "/exp-pilot-eval",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgePilotVerifier",
+      "side_effect_policy": "approval_required",
+      "skill": "exp-pilot-eval",
+      "solar_backend_action": "evaluate_pilot_result"
+    },
+    {
+      "autosci_command": "/exp-pilot-run",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedPilotExperimentRunner",
+      "side_effect_policy": "approval_required",
+      "skill": "exp-pilot-run",
+      "solar_backend_action": "run_pilot_experiment"
+    },
+    {
+      "autosci_command": "/exp-run",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedExperimentRunner",
+      "side_effect_policy": "approval_required",
+      "skill": "exp-run",
+      "solar_backend_action": "run_experiment"
+    },
+    {
+      "autosci_command": "/exp-status",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeExperimentMonitor",
+      "side_effect_policy": "none",
+      "skill": "exp-status",
+      "solar_backend_action": "monitor_experiment"
+    },
+    {
+      "autosci_command": "/ideate",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeIdeaOperator",
+      "side_effect_policy": "dry_run_only",
+      "skill": "ideate",
+      "solar_backend_action": "generate_ideas"
+    },
+    {
+      "autosci_command": "/ingest",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgePaperIngestor",
+      "side_effect_policy": "dry_run_only",
+      "skill": "ingest",
+      "solar_backend_action": "ingest_paper"
+    },
+    {
+      "autosci_command": "/init",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeInitSourceOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "init",
+      "solar_backend_action": "init_sources"
+    },
+    {
+      "autosci_command": "/novelty",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeNoveltyEvaluator",
+      "side_effect_policy": "dry_run_only",
+      "skill": "novelty",
+      "solar_backend_action": "evaluate_ideas"
+    },
+    {
+      "autosci_command": "/paper-compile",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedPaperCompileOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "paper-compile",
+      "solar_backend_action": "compile_paper"
+    },
+    {
+      "autosci_command": "/paper-draft",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeReportDrafter",
+      "side_effect_policy": "dry_run_only",
+      "skill": "paper-draft",
+      "solar_backend_action": "write_report"
+    },
+    {
+      "autosci_command": "/paper-plan",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeReportPlanner",
+      "side_effect_policy": "dry_run_only",
+      "skill": "paper-plan",
+      "solar_backend_action": "plan_report"
+    },
+    {
+      "autosci_command": "/poster",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedPosterOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "poster",
+      "solar_backend_action": "build_poster"
+    },
+    {
+      "autosci_command": "/prefill",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedFoundationPrefillOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "prefill",
+      "solar_backend_action": "prefill_foundations"
+    },
+    {
+      "autosci_command": "/rebuttal",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeRebuttalDrafter",
+      "side_effect_policy": "dry_run_only",
+      "skill": "rebuttal",
+      "solar_backend_action": "draft_rebuttal"
+    },
+    {
+      "autosci_command": "/refine",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedRefineOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "refine",
+      "solar_backend_action": "refine_artifact"
+    },
+    {
+      "autosci_command": "/research",
+      "coverage_status": "partial",
+      "physical_operator": "SolarScientificLifecycleOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "research",
+      "solar_backend_action": "run_research_lifecycle"
+    },
+    {
+      "autosci_command": "/reset",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedResetOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "reset",
+      "solar_backend_action": "reset_plan"
+    },
+    {
+      "autosci_command": "/review",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeReviewOperator",
+      "side_effect_policy": "dry_run_only",
+      "skill": "review",
+      "solar_backend_action": "review_artifact"
+    },
+    {
+      "autosci_command": "/setup",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedSetupStatusOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "setup",
+      "solar_backend_action": "setup_status"
+    },
+    {
+      "autosci_command": "/survey",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeSurveyWriter",
+      "side_effect_policy": "dry_run_only",
+      "skill": "survey",
+      "solar_backend_action": "write_survey"
+    },
+    {
+      "autosci_command": "/visualize",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedGraphVisualizationOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "visualize",
+      "solar_backend_action": "visualize_graph"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-07-01T23:50:37Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed source evidence for AutoSci `research` lifecycle parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/info-smoke-research/workflow_evolution.research.json",
+        "artifacts/autosci/runs/info-smoke-research/research_lifecycle_recommended_changes.md",
+        "artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md",
+        "artifacts/autosci/workspace/wiki/outputs/PIPELINE_REPORT.md",
+        "artifacts/autosci/workspace/wiki/outputs/pipeline-state.json",
+        "raw/demo-paper.md"
+      ],
+      "generated_at": "2026-07-01T23:50:37Z",
+      "native_skill": "research",
+      "production_ready": true,
+      "proof_id": "runtime:research:paper-source:20260701T235037Z",
+      "provenance": {
+        "artifact_kind": "research_lifecycle_source_evidence",
+        "captured_at": "2026-07-01T23:50:37Z",
+        "command": "run_research_lifecycle:source_evidence_report",
+        "source": "paper_source"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -1,0 +1,2 @@
+REPORT=/tmp/autosci_solar_info_20260701T234751Z/AUTOSCI_SOLAR_INFO_REPORT.md
+BUNDLE=/tmp/autosci_solar_info_20260701T234751Z.tgz

@@ -1,0 +1,5 @@
+ M .DS_Store
+ M harness/.pane-restart-state
+ M harness/PLANNER-INBOX.md
+ M harness/config/physical-operators.json
+ M harness/logs/pane-exit.jsonl

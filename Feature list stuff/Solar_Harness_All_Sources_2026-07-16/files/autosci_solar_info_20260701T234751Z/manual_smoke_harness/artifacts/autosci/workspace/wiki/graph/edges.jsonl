@@ -1,0 +1,2 @@
+{"evidence_ids": ["paper-demo-paper"], "operation": "propose", "relation": "describes", "run_id": "info-smoke-ingest", "source": "paper-demo-paper", "source_evidence": "artifacts/autosci/runs/info-smoke-ingest/research_graph_update.json", "target": "concept.solar_evidence_abi"}
+{"evidence_ids": ["paper-demo-paper"], "operation": "confirm", "relation": "has_source", "run_id": "info-smoke-ingest", "source": "paper-demo-paper", "source_evidence": "artifacts/autosci/runs/info-smoke-ingest/research_graph_update.json", "target": "raw/demo-paper.md"}

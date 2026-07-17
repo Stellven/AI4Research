@@ -1,0 +1,104 @@
+    })
+    lifecycle_status = "passed"
+    if any(item["status"] == "error" for item in checks):
+        lifecycle_status = "failed"
+    elif blocked_nodes:
+        lifecycle_status = "blocked"
+
+    lifecycle = {
+        "schema": "scientific_lifecycle.v1",
+        "workflow_id": workflow_id,
+        "job_id": args.job_id,
+        "sprint_id": args.job_id,
+        "lifecycle_status": lifecycle_status,
+        "execution_owner": "solar.operator_runtime.generic_scientific_workflow_runner",
+        "required_nodes": required_nodes,
+        "nodes": nodes,
+        "node_results": node_results,
+        "gate_results": gate_results,
+        "blocked_nodes": blocked_nodes,
+        "node_summaries": node_summaries,
+        "dispatch_input_profiles": dispatch_input_profiles,
+        "runtime_manifest_path": runtime_manifest["path"],
+        "runtime_manifest": runtime_manifest,
+        "checks": checks,
+    }
+    lifecycle["dispatch_boundary"] = _dispatch_boundary(
+        workflow_id=workflow_id,
+        workflow_config=workflow_config,
+        summary_path=summary_path,
+        required_nodes=required_nodes,
+        dispatch_input_profiles=dispatch_input_profiles,
+        blocked_nodes=blocked_nodes,
+    )
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    lifecycle["summary_path"] = _rel(summary_path, harness_dir)
+    summary_path.write_text(json.dumps(lifecycle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    lifecycle_gate = _gate_lifecycle(summary_path, harness_dir)
+    lifecycle["lifecycle_gate_result"] = lifecycle_gate
+    lifecycle_gate_ok = lifecycle_gate.get("ok") is True or (
+        bool(blocked_nodes) and str(lifecycle_gate.get("status") or "") == "inconclusive"
+    )
+    checks.append({
+        "check": "lifecycle_runtime_gate_passed",
+        "status": "ok" if lifecycle_gate_ok else "error",
+        "detail": str(lifecycle_gate.get("status")),
+    })
+    if any(item["status"] == "error" for item in checks):
+        lifecycle["lifecycle_status"] = "failed"
+    elif blocked_nodes:
+        lifecycle["lifecycle_status"] = "blocked"
+    else:
+        lifecycle["lifecycle_status"] = "passed"
+    summary_path.write_text(json.dumps(lifecycle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if lifecycle["lifecycle_status"] == "passed":
+        return 0, lifecycle
+    if lifecycle["lifecycle_status"] == "blocked":
+        return 3, lifecycle
+    return 1, lifecycle
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--harness-dir", default=str(Path(os.environ.get("HARNESS_DIR", REPO_HARNESS_DIR))))
+    parser.add_argument("--workflow-config", default=str(DEFAULT_WORKFLOW_CONFIG))
+    parser.add_argument("--job-id")
+    parser.add_argument("--node-id", action="append", help="Optional workflow node id to run; may be repeated.")
+    parser.add_argument("--paper", default=DEFAULT_PAPER)
+    parser.add_argument("--repo-path", default="")
+    parser.add_argument("--output-dir")
+    parser.add_argument("--out", help="Optional lifecycle summary JSON path, relative to --harness-dir.")
+    parser.add_argument("--timeout-seconds", type=float, default=30.0)
+    parser.add_argument("--lease-ttl-seconds", type=int, default=120)
+    parser.add_argument("--allow-existing-result", action="store_true")
+    parser.add_argument("--stop-on-blocked", action="store_true", default=True)
+    parser.add_argument("--stop-on-failure", action="store_true", default=True)
+    parser.add_argument("--require-external-evidence", action="store_true")
+    parser.add_argument("--allow-network-fetch", action="store_true")
+    parser.add_argument("--require-online-source-evidence", action="store_true")
+    parser.add_argument("--min-online-source-channels", type=int, default=1)
+    parser.add_argument("--discovery-query")
+    parser.add_argument("--discovery-limit", type=int, default=3)
+    parser.add_argument("--source-approval-ref", default="")
+    parser.add_argument("--source-runtime-evidence", action="append")
+    parser.add_argument("--experiment-approval-ref", default="")
+    parser.add_argument("--experiment-runtime-evidence", action="append")
+    parser.add_argument("--review-llm-evidence", action="append")
+    parser.add_argument("--compile-target", default="")
+    parser.add_argument("--compile-approval-ref", default="")
+    parser.add_argument("--compile-runtime-evidence", action="append")
+    parser.add_argument("--report-title", default="")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    code, summary = run(args)
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

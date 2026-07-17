@@ -1,0 +1,31 @@
+{
+  "action": "run_research_lifecycle",
+  "after_artifacts": [],
+  "after_ready": false,
+  "allowlist_evidence": [],
+  "allowlist_ready": false,
+  "approval_ref": "",
+  "approval_state": "approval_required",
+  "approved": false,
+  "before_artifacts": [],
+  "before_ready": false,
+  "execution_verified": false,
+  "missing": [
+    "approval_ref",
+    "allowlist_evidence",
+    "before_artifacts",
+    "runtime_evidence",
+    "after_artifacts"
+  ],
+  "ready_for_execution": false,
+  "runtime_evidence": [],
+  "runtime_ready": false,
+  "schema": "autosci_approval_contract.v1",
+  "side_effects": [
+    "multi_step_execution",
+    "network_fetch",
+    "workspace_mutation",
+    "experiment_deploy",
+    "paper_compile"
+  ]
+}

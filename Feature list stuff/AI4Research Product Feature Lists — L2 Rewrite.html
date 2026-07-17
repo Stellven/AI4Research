@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<!-- saved from url=(0087)file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-10 -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI4Research Product Feature Lists — L2 Rewrite</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #edf3fa;
+      --text: #17202b;
+      --muted: #5b6877;
+      --line: #d9e2ec;
+      --accent: #0f766e;
+      --workflow: #2563eb;
+      --foundation: #7c3aed;
+      --verticals: #c2410c;
+      --shadow: 0 14px 40px rgba(22, 34, 51, .08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --surface: #151b23;
+        --surface-2: #1c2530;
+        --text: #e6edf3;
+        --muted: #9ba8b7;
+        --line: #303b49;
+        --accent: #5eead4;
+        --workflow: #60a5fa;
+        --foundation: #c4b5fd;
+        --verticals: #fdba74;
+        --shadow: 0 16px 44px rgba(0, 0, 0, .32);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.58 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .shell { width: min(1480px, calc(100% - 32px)); margin: 0 auto; }
+    header {
+      padding: 44px 0 30px;
+      border-bottom: 1px solid var(--line);
+      background:
+        radial-gradient(circle at 12% 15%, color-mix(in srgb, var(--workflow) 20%, transparent), transparent 33%),
+        radial-gradient(circle at 86% 8%, color-mix(in srgb, var(--foundation) 18%, transparent), transparent 35%);
+    }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: .35rem 0 .5rem; font-size: clamp(2rem, 4vw, 4rem); line-height: 1.05; letter-spacing: -.045em; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 1.08rem; }
+    .counts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .count-chip, button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      padding: .48rem .78rem;
+      font: inherit;
+    }
+    .layout { display: grid; grid-template-columns: 275px minmax(0, 1fr); gap: 26px; padding: 28px 0 70px; }
+    aside { position: sticky; top: 18px; align-self: start; max-height: calc(100vh - 36px); overflow: auto; }
+    .panel, .l1-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+    .panel { padding: 18px; }
+    nav a { display: block; padding: 5px 7px; border-radius: 8px; color: var(--muted); text-decoration: none; }
+    nav a:hover { background: var(--surface-2); color: var(--text); }
+    nav .top { margin-top: 10px; font-weight: 850; }
+    main { min-width: 0; }
+    section { scroll-margin-top: 20px; }
+    h2 { margin: 40px 0 12px; font-size: clamp(1.55rem, 2.3vw, 2.45rem); letter-spacing: -.025em; }
+    h3 { margin: 0; font-size: 1.2rem; letter-spacing: -.012em; }
+    .workflow-color { color: var(--workflow); }
+    .foundation-color { color: var(--foundation); }
+    .verticals-color { color: var(--verticals); }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      margin: 0 0 18px;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    input[type="search"] {
+      width: min(620px, 100%);
+      padding: .66rem .85rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+    }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    .small { color: var(--muted); font-size: .9rem; }
+    .card-grid { display: grid; gap: 16px; margin-top: 16px; }
+    .l1-card { overflow: hidden; scroll-margin-top: 64px; }
+    .l1-head {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 13px;
+      align-items: center;
+      padding: 17px 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+    .id {
+      min-width: 58px;
+      padding: .35rem .5rem;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      font-weight: 850;
+      text-align: center;
+    }
+    .kind { color: var(--muted); font-size: .88rem; }
+    .feature-list { list-style: none; margin: 0; padding: 0; }
+    .feature-list li {
+      display: grid;
+      grid-template-columns: 108px minmax(190px, .72fr) minmax(260px, 1.5fr);
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .feature-list li:last-child { border-bottom: 0; }
+    .feature-id { color: var(--muted); font: 700 .86rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .feature-name { font-weight: 780; }
+    .feature-desc { color: var(--muted); }
+    .hidden { display: none !important; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; max-height: none; }
+      nav { columns: 2; }
+    }
+    @media (max-width: 720px) {
+      .shell { width: min(100% - 20px, 1480px); }
+      nav { columns: 1; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .feature-list li { grid-template-columns: 1fr; gap: 2px; }
+    }
+    @media print {
+      :root { color-scheme: light; }
+      body { background: white; color: #111; }
+      aside, .toolbar { display: none; }
+      .layout { display: block; }
+      .l1-card { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell">
+      <div class="eyebrow">AI4Research · Target Product</div>
+      <h1>Product Feature Lists</h1>
+      <p class="subtitle">Complete L2 rewrite under the fixed Workflow, Foundation, and Verticals L1s</p>
+      <div class="counts">
+        <span class="count-chip" id="workflow-count">Workflow: 9 L1 / 71 L2</span>
+        <span class="count-chip" id="foundation-count">Foundation: 10 L1 / 99 L2</span>
+        <span class="count-chip" id="verticals-count">Verticals: 6 L1 / 58 L2</span>
+        <span class="count-chip" id="total-count">Total: 25 L1 / 228 L2</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell layout">
+    <aside>
+      <div class="panel">
+        <strong>Feature lists</strong>
+        <nav id="feature-nav"><a class="top workflow-color" href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#workflow">1. Workflow feature list</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-01">W-01 Ingestion</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-02">W-02 Requirement Compilation</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-03">W-03 Search &amp; Ideation</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-04">W-04 Idea Identification &amp; Opportunity Screening</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-05">W-05 Technical Claim &amp; Hypothesis Formation</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-06">W-06 POC Implementation</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-07">W-07 Benchmarking</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-08">W-08 Evaluation</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#w-09">W-09 Delivery</a><a class="top foundation-color" href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#foundation">2. Foundation feature list</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-01">F-01 Capability Capsules</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-02">F-02 Operators</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-03">F-03 Evaluator</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-04">F-04 Foundational Models</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-05">F-05 RSI</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-06">F-06 Data Foundations</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-07">F-07 Harness Core</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-08">F-08 Intention Compilers</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-09">F-09 Planner</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#f-10">F-10 Builder</a><a class="top verticals-color" href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#verticals">3. Verticals feature list</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#v-01">V-01 Visibility / Statistics</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#v-02">V-02 Installer &amp; CLI &amp; Webapp</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#v-03">V-03 UI</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#v-04">V-04 Account Management</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#v-05">V-05 Message Channels</a><a href="file:///C:/Users/ssubr/Downloads/ai4research-product-feature-lists-l2-rewrite.html#v-06">V-06 Configurations / LLM Providers</a></nav>
+      </div>
+    </aside>
+
+    <main>
+      <div class="toolbar">
+        <input id="feature-search" type="search" placeholder="Filter L1 and L2 names or descriptions…" aria-label="Filter features">
+        <button id="clear-search" type="button">Clear</button>
+        <span id="search-count" class="small" aria-live="polite">228 of 228 L2 features shown</span>
+      </div>
+
+      <section id="workflow" data-tree="workflow" class="">
+        <h2 class="workflow-color">1. Workflow feature list</h2>
+        <div class="card-grid"><article class="l1-card" id="w-01" data-tree="workflow"><div class="l1-head"><span class="id">W-01</span><div><h3>Ingestion</h3><div class="kind">Workflow sub-stage · 7 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-01.01</span><span class="feature-name">Request Capture</span><span class="feature-desc">Receives the user’s question, instruction, desired outcome, and requested deliverable as an intake candidate without prematurely treating it as a formal requirement.</span></li><li class=""><span class="feature-id">W-01.02</span><span class="feature-name">Qualified Channel Signal Intake</span><span class="feature-desc">Accepts a V-05-qualified Slack or internal-tool clue with its permitted context, sensitivity, relevance, and provenance; raw channel traffic remains outside Workflow.</span></li><li class=""><span class="feature-id">W-01.03</span><span class="feature-name">User-Supplied Material Import</span><span class="feature-desc">Imports documents, uploads, pasted content, datasets, and explicit file, repository, or URL references supplied by the user; related-source discovery belongs to Search &amp; Ideation.</span></li><li class=""><span class="feature-id">W-01.04</span><span class="feature-name">Intake Context Binding</span><span class="feature-desc">Binds the candidate to the authorized user, session, workspace, project, originating signal, and explicitly selected prior artifacts needed for interpretation.</span></li><li class=""><span class="feature-id">W-01.05</span><span class="feature-name">Real-Time Intake Deduplication &amp; Cleaning</span><span class="feature-desc">Canonicalizes incoming candidates, filters malformed or noisy content, and merges replays, exact duplicates, and near-duplicates while preserving meaningful revisions and independent corroboration.</span></li><li class=""><span class="feature-id">W-01.06</span><span class="feature-name">Intake Provenance Registration</span><span class="feature-desc">Records origin, identity, version, timestamp, access path, acquisition mode, and transformations for every accepted intake input.</span></li><li class=""><span class="feature-id">W-01.07</span><span class="feature-name">Intake Qualification</span><span class="feature-desc">Checks accessibility, authorization, readability, and minimum completeness, then emits a qualified intake package or an explicit rejection or quarantine reason.</span></li></ol></article><article class="l1-card" id="w-02" data-tree="workflow"><div class="l1-head"><span class="id">W-02</span><div><h3>Requirement Compilation</h3><div class="kind">Workflow sub-stage · 7 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-02.01</span><span class="feature-name">Intent Interpretation</span><span class="feature-desc">Determines the user’s actual problem, desired change, audience, decision, and deliverable without selecting an opportunity or solution.</span></li><li class=""><span class="feature-id">W-02.02</span><span class="feature-name">Context Scoping</span><span class="feature-desc">Resolves applicable context, affected entities, time horizon, inclusions, exclusions, and the boundary of the decision to support.</span></li><li class=""><span class="feature-id">W-02.03</span><span class="feature-name">Ambiguity Resolution</span><span class="feature-desc">Finds missing information, conflicting instructions, undefined terms, and consequential assumptions and resolves them through focused questions or explicit defaults.</span></li><li class=""><span class="feature-id">W-02.04</span><span class="feature-name">Constraint Resolution</span><span class="feature-desc">Identifies and reconciles authorization, scope, time, cost, data, safety, policy, tool, environment, and output-format constraints with the user’s intended outcome.</span></li><li class=""><span class="feature-id">W-02.05</span><span class="feature-name">Requirement Prioritization</span><span class="feature-desc">Separates mandatory outcomes, preferences, tradeable qualities, dependencies, exclusions, and deferred requests.</span></li><li class=""><span class="feature-id">W-02.06</span><span class="feature-name">Acceptance Definition</span><span class="feature-desc">Defines observable success criteria, proof obligations, decision thresholds, failure conditions, and stopping rules.</span></li><li class=""><span class="feature-id">W-02.07</span><span class="feature-name">Requirement Contract Confirmation</span><span class="feature-desc">Assembles a versioned contract with executable task semantics, presents consequential interpretations, and records user confirmation or authorized assumptions.</span></li></ol></article><article class="l1-card" id="w-03" data-tree="workflow"><div class="l1-head"><span class="id">W-03</span><div><h3>Search &amp; Ideation</h3><div class="kind">Workflow sub-stage · 8 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-03.01</span><span class="feature-name">Search Strategy Formation</span><span class="feature-desc">Turns the requirement contract into technical themes, source families, queries, time horizons, counter-signals, diversity goals, and coverage targets.</span></li><li class=""><span class="feature-id">W-03.02</span><span class="feature-name">Multi-Source Signal Discovery</span><span class="feature-desc">Uses parallel research agents to search open-source projects, papers, patents, standards, experts, think tanks, industry reports, big-tech dynamics, technical communities, the open web, and authorized internal history.</span></li><li class=""><span class="feature-id">W-03.03</span><span class="feature-name">Source Qualification</span><span class="feature-desc">Screens discovered material for intent relevance, authority, recency, independence, incentives, duplication, access limits, and potential bias.</span></li><li class=""><span class="feature-id">W-03.04</span><span class="feature-name">Technical Signal Extraction</span><span class="feature-desc">Extracts claims, data, methods, mechanisms, results, benchmarks, limitations, failures, dependencies, adoption signals, and unresolved questions.</span></li><li class=""><span class="feature-id">W-03.05</span><span class="feature-name">Signal Organization</span><span class="feature-desc">Normalizes signals, binds provenance, clusters related findings, and maps convergence, divergence, dependencies, and opposing viewpoints.</span></li><li class=""><span class="feature-id">W-03.06</span><span class="feature-name">Trend &amp; Gap Analysis</span><span class="feature-desc">Detects momentum, decay, contradictions, bottlenecks, missing capabilities, abandoned directions, and technical white spaces.</span></li><li class=""><span class="feature-id">W-03.07</span><span class="feature-name">Idea Generation</span><span class="feature-desc">Expands a diverse candidate set from signal clusters, gaps, adjacencies, cross-domain transfers, and contrarian combinations while retaining initial supporting and opposing evidence.</span></li><li class=""><span class="feature-id">W-03.08</span><span class="feature-name">Search Coverage Review</span><span class="feature-desc">Tests source-family, technical, geographic, temporal, viewpoint, and counter-evidence coverage before the candidate space is allowed to narrow.</span></li></ol></article><article class="l1-card" id="w-04" data-tree="workflow"><div class="l1-head"><span class="id">W-04</span><div><h3>Idea Identification &amp; Opportunity Screening</h3><div class="kind">Workflow sub-stage · 7 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-04.01</span><span class="feature-name">Candidate Consolidation</span><span class="feature-desc">Combines parallel search outputs, resolves semantic duplicates, and preserves variants whose assumptions, evidence, or opportunity boundaries materially differ.</span></li><li class=""><span class="feature-id">W-04.02</span><span class="feature-name">Idea Identification</span><span class="feature-desc">Converts meaningful signal combinations and gaps into discrete candidate ideas with a recognizable technical or user value proposition.</span></li><li class=""><span class="feature-id">W-04.03</span><span class="feature-name">Idea Card Formation</span><span class="feature-desc">Forms the governing Idea Card with the candidate’s opportunity, relevance, linked evidence, assumptions, novelty, uncertainty, risks, and open questions; evidence formation is part of this card.</span></li><li class=""><span class="feature-id">W-04.04</span><span class="feature-name">Opportunity Definition</span><span class="feature-desc">States the unmet need, technical bottleneck, missing capability, unserved user, or unexploited combination that makes the idea actionable.</span></li><li class=""><span class="feature-id">W-04.05</span><span class="feature-name">Technical Opportunity Screening</span><span class="feature-desc">Screens novelty, evidence maturity, reachable data, known mechanisms, technical feasibility, and the existence of a credible verification path.</span></li><li class=""><span class="feature-id">W-04.06</span><span class="feature-name">Strategic Opportunity Screening</span><span class="feature-desc">Screens user or company value, timing, defensibility, strategic fit, adoption, safety, legal exposure, dependencies, and resource implications.</span></li><li class=""><span class="feature-id">W-04.07</span><span class="feature-name">Opportunity Portfolio Prioritization</span><span class="feature-desc">Ranks and selects a bounded, diverse opportunity portfolio using transparent criteria and records why other directions were deferred or rejected.</span></li></ol></article><article class="l1-card" id="w-05" data-tree="workflow"><div class="l1-head"><span class="id">W-05</span><div><h3>Technical Claim &amp; Hypothesis Formation</h3><div class="kind">Workflow sub-stage · 7 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-05.01</span><span class="feature-name">Research Question Formation</span><span class="feature-desc">Turns each selected opportunity into precise questions about the technical gap, target system or user, expected effect, operating conditions, and decision to support.</span></li><li class=""><span class="feature-id">W-05.02</span><span class="feature-name">Claim–Data–Method Modeling</span><span class="feature-desc">Structures the technical claims, measurements, datasets, methods, mechanisms, benchmarks, and missing evidence needed to investigate each question.</span></li><li class=""><span class="feature-id">W-05.03</span><span class="feature-name">Hypothesis Pool Generation</span><span class="feature-desc">Produces competing and complementary falsifiable hypotheses, removes semantic duplicates, and preserves materially different explanations.</span></li><li class=""><span class="feature-id">W-05.04</span><span class="feature-name">Hypothesis Mechanism Modeling</span><span class="feature-desc">Models candidate solution mechanisms, assumptions, dependencies, alternative explanations, confounders, and likely failure mechanisms.</span></li><li class=""><span class="feature-id">W-05.05</span><span class="feature-name">Falsifiability Screening</span><span class="feature-desc">Checks whether reachable data, controls, measurements, comparisons, and implementation paths can support, weaken, or reject each hypothesis.</span></li><li class=""><span class="feature-id">W-05.06</span><span class="feature-name">Hypothesis Contract Formation</span><span class="feature-desc">Creates a versioned, measurable contract covering the claim, expected effect, conditions, variables, evidence obligations, uncertainty, and decision thresholds.</span></li><li class=""><span class="feature-id">W-05.07</span><span class="feature-name">Verification Roadmapping</span><span class="feature-desc">Prioritizes hypotheses by value, uncertainty reduction, information gain, technical risk, and cost, then designs the smallest credible POC, experiment, simulation, or benchmark path.</span></li></ol></article><article class="l1-card" id="w-06" data-tree="workflow"><div class="l1-head"><span class="id">W-06</span><div><h3>POC Implementation</h3><div class="kind">Workflow sub-stage · 7 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-06.01</span><span class="feature-name">POC Scope Definition</span><span class="feature-desc">Turns the selected verification path into a bounded proof objective with required outputs, evidence, budgets, gates, update rules, and stop conditions.</span></li><li class=""><span class="feature-id">W-06.02</span><span class="feature-name">Experiment Design</span><span class="feature-desc">Defines variables, treatments, controls, ablations, sampling, repetitions, measurements, uncertainty handling, and decision logic.</span></li><li class=""><span class="feature-id">W-06.03</span><span class="feature-name">POC Architecture Design</span><span class="feature-desc">Specifies the smallest end-to-end architecture, data, dependencies, environments, tools, compute, isolation, and rollback boundaries required to test the hypothesis.</span></li><li class=""><span class="feature-id">W-06.04</span><span class="feature-name">POC Construction</span><span class="feature-desc">Uses Builder to construct and integrate the working code, models, algorithms, prompts, simulations, and technical mechanisms needed for the proof.</span></li><li class=""><span class="feature-id">W-06.05</span><span class="feature-name">Automated Experimentation</span><span class="feature-desc">Generates reproducible experiment or simulation scripts and invokes controlled runs through Harness Core, including parameter sweeps and hypothesis-driven update loops.</span></li><li class=""><span class="feature-id">W-06.06</span><span class="feature-name">Experimental Data Analysis</span><span class="feature-desc">Analyzes real run data for quality, errors, effect direction, uncertainty, anomalies, confounders, and failure modes and identifies evidence-backed refinements.</span></li><li class=""><span class="feature-id">W-06.07</span><span class="feature-name">POC Consolidation</span><span class="feature-desc">Assembles the strongest code, models, simulations, analyses, logs, counterexamples, failed configurations, and demos into one bounded POC evidence package.</span></li></ol></article><article class="l1-card" id="w-07" data-tree="workflow"><div class="l1-head"><span class="id">W-07</span><div><h3>Benchmarking</h3><div class="kind">Workflow sub-stage · 8 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-07.01</span><span class="feature-name">Benchmark Framing</span><span class="feature-desc">Defines the claims and operating conditions to compare and selects fair current methods, prior versions, reference systems, industry norms, human performance, and controls.</span></li><li class=""><span class="feature-id">W-07.02</span><span class="feature-name">Benchmark Protocol Design</span><span class="feature-desc">Defines workloads, metrics, repetitions, environments, resource limits, statistics, thresholds, run arguments, comparison rules, and evidence obligations.</span></li><li class=""><span class="feature-id">W-07.03</span><span class="feature-name">Benchmark Asset Preparation</span><span class="feature-desc">Prepares representative, difficult, boundary, adversarial, and domain-specific datasets, workloads, scripts, baselines, and environments.</span></li><li class=""><span class="feature-id">W-07.04</span><span class="feature-name">Comparative Evidence Formation</span><span class="feature-desc">Produces a controlled, comparable evidence set for the POC, variants, controls, and baselines under the approved protocol while Harness Core owns job execution and logging.</span></li><li class=""><span class="feature-id">W-07.05</span><span class="feature-name">Benchmark Result Analysis</span><span class="feature-desc">Measures quality, cost, latency, throughput, reliability, safety, resource use, scalability, variance, sensitivity, significance, tradeoffs, and regressions.</span></li><li class=""><span class="feature-id">W-07.06</span><span class="feature-name">Demo Validation</span><span class="feature-desc">Exercises the integrated POC in realistic end-to-end scenarios and records exactly what the demonstration proves and does not prove.</span></li><li class=""><span class="feature-id">W-07.07</span><span class="feature-name">Failure Case Curation</span><span class="feature-desc">Curates counterexamples, difficult cases, instability, invalid runs, resource failures, and conditions where the POC or a baseline breaks.</span></li><li class=""><span class="feature-id">W-07.08</span><span class="feature-name">Reproducible Benchmark Packaging</span><span class="feature-desc">Packages protocols, environments, datasets, baselines, scripts, run records, scorecards, limitations, failure sets, and reproduction instructions.</span></li></ol></article><article class="l1-card" id="w-08" data-tree="workflow"><div class="l1-head"><span class="id">W-08</span><div><h3>Evaluation</h3><div class="kind">Workflow sub-stage · 10 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-08.01</span><span class="feature-name">Evaluation Scope Definition</span><span class="feature-desc">Establishes the decision purpose, evaluation criteria, required evidence, independent reviewers, thresholds, failure states, and verdict vocabulary.</span></li><li class=""><span class="feature-id">W-08.02</span><span class="feature-name">Experimental Validity Review</span><span class="feature-desc">Reviews controls, sampling, data selection, ablations, repetitions, leakage, confounders, stopping rules, and whether the design can answer the hypothesis.</span></li><li class=""><span class="feature-id">W-08.03</span><span class="feature-name">Reasoning Validity Review</span><span class="feature-desc">Checks provenance, data integrity, citation anchors, supporting and opposing evidence, premise-to-claim traceability, hidden assumptions, contradictions, and causal overreach.</span></li><li class=""><span class="feature-id">W-08.04</span><span class="feature-name">External Plausibility Review</span><span class="feature-desc">Cross-checks claimed gains, tradeoffs, edge cases, and resource use against declared baselines, independent runs, engineering constraints, industry priors, and credible opposing evidence.</span></li><li class=""><span class="feature-id">W-08.05</span><span class="feature-name">Technical Feasibility Assessment</span><span class="feature-desc">Assesses correctness, reliability, scale, maintainability, observability, security, deployment, integrations, expertise, latency, cost, and operational dependencies.</span></li><li class=""><span class="feature-id">W-08.06</span><span class="feature-name">Investment Merit Assessment</span><span class="feature-desc">Assesses strategic alignment, differentiation, defensibility, ecosystem timing, capital, compute, data, talent, partnerships, opportunity cost, option value, and expected return.</span></li><li class=""><span class="feature-id">W-08.07</span><span class="feature-name">Risk Assurance Assessment</span><span class="feature-desc">Assesses safety, security, privacy, legal, regulatory, misuse, supply-chain, operational, and reputational risks and the adequacy of mitigations.</span></li><li class=""><span class="feature-id">W-08.08</span><span class="feature-name">Decision Fitness Assessment</span><span class="feature-desc">Checks that the evidence answers the confirmed user intent, supports the required decision, exposes consequential uncertainty, and yields actions the intended audience can take.</span></li><li class=""><span class="feature-id">W-08.09</span><span class="feature-name">Human-AI Adjudication</span><span class="feature-desc">Combines role-separated model review with accountable technical, domain, strategy, and investment judgment, including questions, rerun requests, dissent, and bounded overrides.</span></li><li class=""><span class="feature-id">W-08.10</span><span class="feature-name">Evaluation Verdict Formation</span><span class="feature-desc">Intercepts directions with inadequate proof and otherwise issues a confidence-calibrated continue, invest, conditionally continue, defer, reject, or human-decision verdict while qualifying successful artifacts and their limits.</span></li></ol></article><article class="l1-card" id="w-09" data-tree="workflow"><div class="l1-head"><span class="id">W-09</span><div><h3>Delivery</h3><div class="kind">Workflow sub-stage · 10 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">W-09.01</span><span class="feature-name">Investible Target Distillation</span><span class="feature-desc">Narrows evaluated directions to a small, explicitly ranked portfolio that justifies investment, staged option value, or continued strategic monitoring.</span></li><li class=""><span class="feature-id">W-09.02</span><span class="feature-name">Project Proposal Development</span><span class="feature-desc">Produces an actionable proposal covering the problem, validated approach, scope, milestones, team, resources, dependencies, risks, gates, and exit criteria.</span></li><li class=""><span class="feature-id">W-09.03</span><span class="feature-name">Investment Recommendation Development</span><span class="feature-desc">Produces an evidence-backed invest, stage, partner, acquire, monitor, defer, or reject recommendation with uncertainty, conditions, and expected value.</span></li><li class=""><span class="feature-id">W-09.04</span><span class="feature-name">Technical Roadmap Development</span><span class="feature-desc">Creates a phased path from validated POC through further research, capability hardening, integration, scaling, productization, resources, and measurable decision gates.</span></li><li class=""><span class="feature-id">W-09.05</span><span class="feature-name">Decision Package Formation</span><span class="feature-desc">Assembles the opportunity, hypotheses, design, run logs, analyses, benchmarks, evaluations, dissent, limitations, qualified artifacts, and decision rationale.</span></li><li class=""><span class="feature-id">W-09.06</span><span class="feature-name">Reusable Asset Packaging</span><span class="feature-desc">Packages approved data, benchmark suites, code, models, simulations, experiment scripts, demos, licenses, provenance, operating limits, and reproduction guidance for reuse.</span></li><li class=""><span class="feature-id">W-09.07</span><span class="feature-name">Capability Transfer</span><span class="feature-desc">Codifies an accepted approach as a reusable capability candidate with its contract, mechanism, evidence, benchmark profile, dependencies, risks, and invocation path.</span></li><li class=""><span class="feature-id">W-09.08</span><span class="feature-name">Failure Knowledge Codification</span><span class="feature-desc">Turns rejected approaches, failed experiments, counterexamples, invalid assumptions, resource traps, and boundary conditions into reusable technical learning.</span></li><li class=""><span class="feature-id">W-09.09</span><span class="feature-name">Authorized Distribution</span><span class="feature-desc">Publishes or transmits approved proposals, roadmaps, judgments, data, benchmarks, demos, and capability packages through authorized destinations and records receipt.</span></li><li class=""><span class="feature-id">W-09.10</span><span class="feature-name">Knowledge Accumulation</span><span class="feature-desc">Closes the work by storing accepted and rejected outcomes with qualification state, updating knowledge and capability indexes, and assigning follow-up ownership.</span></li></ol></article></div>
+      </section>
+
+      <section id="foundation" data-tree="foundation" class="">
+        <h2 class="foundation-color">2. Foundation feature list</h2>
+        <div class="card-grid"><article class="l1-card" id="f-01" data-tree="foundation"><div class="l1-head"><span class="id">F-01</span><div><h3>Capability Capsules</h3><div class="kind">Foundation sub-function · 8 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-01.01</span><span class="feature-name">Capsule Specification</span><span class="feature-desc">Defines the capability interface, inputs, outputs, errors, preconditions, postconditions, permissions, guarantees, resource bounds, risks, side effects, and verification obligations.</span></li><li class=""><span class="feature-id">F-01.02</span><span class="feature-name">Capsule Packaging</span><span class="feature-desc">Packages implementation, models, prompts, tools, data, workflows, documentation, tests, benchmarks, evidence, and reproduction assets behind the specification.</span></li><li class=""><span class="feature-id">F-01.03</span><span class="feature-name">Capsule Verification</span><span class="feature-desc">Performs static, symbolic, activation, runtime, and post-execution checks and certifies only versions that satisfy their declared contract.</span></li><li class=""><span class="feature-id">F-01.04</span><span class="feature-name">Capsule Registry Management</span><span class="feature-desc">Maintains stable identity, ownership, namespaces, versions, publishing scopes, compatibility, release history, deprecation, and authoritative registry state.</span></li><li class=""><span class="feature-id">F-01.05</span><span class="feature-name">Capsule Selection</span><span class="feature-desc">Lets users and agents search, compare, and match compiled intent to capsules using capability, evidence, trust, cost, compatibility, maturity, and operating limits.</span></li><li class=""><span class="feature-id">F-01.06</span><span class="feature-name">Capsule Invocation</span><span class="feature-desc">Validates parameters, caller permissions, preconditions, and resource bounds, invokes the selected capsule, and returns contracted outputs, evidence, effects, and failures.</span></li><li class=""><span class="feature-id">F-01.07</span><span class="feature-name">Capsule Composition</span><span class="feature-desc">Combines local or federated capsules through sequential, parallel, conditional, loop, and fallback patterns and derives the composite contract and trust boundary.</span></li><li class=""><span class="feature-id">F-01.08</span><span class="feature-name">Capsule Evolution</span><span class="feature-desc">Uses health, evaluation, and compatibility evidence to promote, adapt, roll back, deprecate, replace, or retire versions while preserving lineage and migration guidance.</span></li></ol></article><article class="l1-card" id="f-02" data-tree="foundation"><div class="l1-head"><span class="id">F-02</span><div><h3>Operators</h3><div class="kind">Foundation sub-function · 8 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-02.01</span><span class="feature-name">Operator Registration</span><span class="feature-desc">Creates stable logical operator identities, ownership, operator classes, declared roles, aliases, activation state, and registry lineage without binding identity to a physical host.</span></li><li class=""><span class="feature-id">F-02.02</span><span class="feature-name">Operator Profile Management</span><span class="feature-desc">Maintains role, persona, instruction policy, autonomy, data boundaries, escalation posture, and authorized decision scope.</span></li><li class=""><span class="feature-id">F-02.03</span><span class="feature-name">Operator Capability Profiling</span><span class="feature-desc">Maintains evidenced skills, tools, modalities, domains, supported task contracts, proof obligations, and locality or policy constraints.</span></li><li class=""><span class="feature-id">F-02.04</span><span class="feature-name">Operator Qualification</span><span class="feature-desc">Tests declared capability and policy compliance before activating, restricting, suspending, or retiring a logical operator.</span></li><li class=""><span class="feature-id">F-02.05</span><span class="feature-name">Operator Eligibility Matching</span><span class="feature-desc">Matches task, plan-node, capsule, policy, authorization, and independence requirements to operators that satisfy the required profile and evidence thresholds.</span></li><li class=""><span class="feature-id">F-02.06</span><span class="feature-name">Operator Selection</span><span class="feature-desc">Ranks eligible operators and records why the selected operator fits the work and why materially relevant alternatives were rejected.</span></li><li class=""><span class="feature-id">F-02.07</span><span class="feature-name">Operator Performance Learning</span><span class="feature-desc">Maintains task-class outcomes, failure patterns, calibration, quality, cost, latency, and reliability evidence for future qualification and selection.</span></li><li class=""><span class="feature-id">F-02.08</span><span class="feature-name">Operator Independence Control</span><span class="feature-desc">Prevents prohibited builder–evaluator reuse, conflicts of interest, correlated review, and policy-incompatible role combinations; physical hosts and leases remain owned by Harness Core.</span></li></ol></article><article class="l1-card" id="f-03" data-tree="foundation"><div class="l1-head"><span class="id">F-03</span><div><h3>Evaluator</h3><div class="kind">Foundation sub-function · 9 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-03.01</span><span class="feature-name">Evaluation Contract Compilation</span><span class="feature-desc">Compiles decision purpose, criteria, evidence obligations, reference sets, thresholds, uncertainty treatment, failure states, human roles, and verdict schema into an executable evaluation contract.</span></li><li class=""><span class="feature-id">F-03.02</span><span class="feature-name">Evaluation Method Selection</span><span class="feature-desc">Selects deterministic checks, design review, statistical analysis, benchmark comparison, model critique, adversarial testing, human review, or a justified combination.</span></li><li class=""><span class="feature-id">F-03.03</span><span class="feature-name">Evaluator Assignment</span><span class="feature-desc">Assigns technical, domain, strategy, investment, safety, model, or human evaluators while enforcing required independence and conflict rules.</span></li><li class=""><span class="feature-id">F-03.04</span><span class="feature-name">Reasoning Verification</span><span class="feature-desc">Verifies provenance, citation anchors, data integrity, claim support, opposing evidence, logical sufficiency, uncertainty, and conclusion consistency.</span></li><li class=""><span class="feature-id">F-03.05</span><span class="feature-name">External Plausibility Checking</span><span class="feature-desc">Cross-checks results against approved baselines, reusable benchmarks, known technical constraints, industry priors, comparable deployments, and independent runs.</span></li><li class=""><span class="feature-id">F-03.06</span><span class="feature-name">Evaluation Calibration</span><span class="feature-desc">Scores the contract’s dimensions and calibrates confidence using evidence quality, evaluator agreement, historical outcomes, and known uncertainty.</span></li><li class=""><span class="feature-id">F-03.07</span><span class="feature-name">Evidence Sufficiency Gating</span><span class="feature-desc">Blocks unsupported outputs and returns the missing evidence, controls, effect size, reproduction, feasibility, risk treatment, or decision proof required to continue.</span></li><li class=""><span class="feature-id">F-03.08</span><span class="feature-name">Evaluation Verdict Generation</span><span class="feature-desc">Produces an explained verdict, confidence, dimension scores, dissent, defects, conditions, and actionable refinement, rerun, escalation, or termination guidance.</span></li><li class=""><span class="feature-id">F-03.09</span><span class="feature-name">Evaluation Quality Learning</span><span class="feature-desc">Tracks evaluator disagreement, calibration drift, recurring blind spots, false acceptance, false rejection, and downstream decision quality to improve evaluation policies.</span></li></ol></article><article class="l1-card" id="f-04" data-tree="foundation"><div class="l1-head"><span class="id">F-04</span><div><h3>Foundational Models</h3><div class="kind">Foundation sub-function · 10 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-04.01</span><span class="feature-name">Model Capability Registry</span><span class="feature-desc">Maintains the effective capabilities, context limits, modalities, languages, tool support, safety properties, cost, speed, and evidenced task suitability of configured models.</span></li><li class=""><span class="feature-id">F-04.02</span><span class="feature-name">Task-to-Model Matching</span><span class="feature-desc">Matches an operator role and task contract to eligible model capabilities, data policies, budgets, quality requirements, and environmental constraints.</span></li><li class=""><span class="feature-id">F-04.03</span><span class="feature-name">Model Route Selection</span><span class="feature-desc">Selects a concrete model route using quality, latency, cost, locality, capacity, health, quota, and policy and records the rationale.</span></li><li class=""><span class="feature-id">F-04.04</span><span class="feature-name">Model Context Preparation</span><span class="feature-desc">Assembles authorized instructions, retrieved context, tools, schemas, and input and output budgets within the selected model’s limits.</span></li><li class=""><span class="feature-id">F-04.05</span><span class="feature-name">Model Invocation</span><span class="feature-desc">Executes the model request with the declared role, tool boundary, structured-output contract, controls, trace context, cancellation, and timeout behavior.</span></li><li class=""><span class="feature-id">F-04.06</span><span class="feature-name">Model Tool-Use Mediation</span><span class="feature-desc">Validates, authorizes, executes, and returns model-requested tool calls without exposing undeclared tools, data, credentials, or effects.</span></li><li class=""><span class="feature-id">F-04.07</span><span class="feature-name">Model Response Normalization</span><span class="feature-desc">Normalizes provider-specific content, structured outputs, tool results, finish states, usage records, and errors and validates required structure.</span></li><li class=""><span class="feature-id">F-04.08</span><span class="feature-name">Model Continuity Management</span><span class="feature-desc">Resolves availability from connectivity, quota, rate limits, concurrency, cooldown, and health evidence and selects only policy-permitted fallback routes.</span></li><li class=""><span class="feature-id">F-04.09</span><span class="feature-name">Model Policy Enforcement</span><span class="feature-desc">Enforces model eligibility, role, data-handling, region, tool, safety, quality, and cost policies at invocation time.</span></li><li class=""><span class="feature-id">F-04.10</span><span class="feature-name">Model Usage Auditing</span><span class="feature-desc">Records model, route, role, context provenance, budget, latency, token or compute usage, tools, errors, and outcomes without exposing secrets.</span></li></ol></article><article class="l1-card" id="f-05" data-tree="foundation"><div class="l1-head"><span class="id">F-05</span><div><h3>RSI</h3><div class="kind">Foundation sub-function · 8 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-05.01</span><span class="feature-name">Improvement Experience Capture</span><span class="feature-desc">Captures reusable successes, failures, corrections, evaluations, user feedback, environment state, and causal context from completed work.</span></li><li class=""><span class="feature-id">F-05.02</span><span class="feature-name">Improvement Pattern Discovery</span><span class="feature-desc">Detects recurring strengths, failure classes, regressions, bottlenecks, preference changes, and the conditions under which each pattern appears.</span></li><li class=""><span class="feature-id">F-05.03</span><span class="feature-name">Improvement Opportunity Formation</span><span class="feature-desc">Forms bounded opportunities to improve prompts, policies, operators, models, skills, capsules, plans, workflows, routing, data, or harness behavior.</span></li><li class=""><span class="feature-id">F-05.04</span><span class="feature-name">Improvement Candidate Generation</span><span class="feature-desc">Creates versioned candidates with an explicit mechanism, expected benefit, affected scope, representative evidence, and rollback boundary.</span></li><li class=""><span class="feature-id">F-05.05</span><span class="feature-name">Improvement Experimentation</span><span class="feature-desc">Designs and runs controlled comparisons against stable baselines using representative cases, metrics, budgets, safety checks, and decision thresholds.</span></li><li class=""><span class="feature-id">F-05.06</span><span class="feature-name">Improvement Evaluation</span><span class="feature-desc">Evaluates candidate effects across target quality, generalization, cost, latency, safety, compatibility, and regression dimensions.</span></li><li class=""><span class="feature-id">F-05.07</span><span class="feature-name">Improvement Deployment Control</span><span class="feature-desc">Promotes approved candidates gradually with explicit scope, observation, and rollback conditions and reverses changes that violate their contract.</span></li><li class=""><span class="feature-id">F-05.08</span><span class="feature-name">Improvement Policy Calibration</span><span class="feature-desc">Attributes observed changes to promoted candidates, detects delayed or confounded effects, and recalibrates selection, testing, promotion, and rollback policy.</span></li></ol></article><article class="l1-card" id="f-06" data-tree="foundation"><div class="l1-head"><span class="id">F-06</span><div><h3>Data Foundations</h3><div class="kind">Foundation sub-function · 15 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-06.01</span><span class="feature-name">Unified Data Access</span><span class="feature-desc">Presents authorized files, repositories, databases, object stores, research sources, artifacts, and memories through stable identities without erasing source boundaries.</span></li><li class=""><span class="feature-id">F-06.02</span><span class="feature-name">Source Connector Management</span><span class="feature-desc">Registers and maintains adapters for open-source repositories, research literature, patents, standards, expert and industry sources, the open web, authorized internal systems, and custom research sources.</span></li><li class=""><span class="feature-id">F-06.03</span><span class="feature-name">Data Acquisition Management</span><span class="feature-desc">Acquires authorized source content and preserves raw and rendered snapshots, repository states, paper versions, report editions, timestamps, and change history.</span></li><li class=""><span class="feature-id">F-06.04</span><span class="feature-name">Data Quality Management</span><span class="feature-desc">Detects, resolves, or quarantines missing, conflicting, duplicate, stale, malformed, biased, leaked, contaminated, tampered, or corrupt data and records residual limitations.</span></li><li class=""><span class="feature-id">F-06.05</span><span class="feature-name">Data Semantics Management</span><span class="feature-desc">Defines and evolves interoperable schemas and metadata for signals, opportunities, hypotheses, experiments, benchmarks, failures, artifacts, memories, and capabilities without losing meaning.</span></li><li class=""><span class="feature-id">F-06.06</span><span class="feature-name">Data Lineage Management</span><span class="feature-desc">Maintains origin, authorship, organization, incentives, version, acquisition, transformation, derivation, experiment, evaluation, and downstream-use lineage.</span></li><li class=""><span class="feature-id">F-06.07</span><span class="feature-name">Hybrid Retrieval</span><span class="feature-desc">Combines keyword, code, citation, semantic, structured, graph, recency, authority, permission, and personalization signals for reliable retrieval.</span></li><li class=""><span class="feature-id">F-06.08</span><span class="feature-name">Research Knowledge Graph Management</span><span class="feature-desc">Maintains relationships among sources, signals, claims, methods, data, people, organizations, technologies, projects, experiments, artifacts, capabilities, and decisions.</span></li><li class=""><span class="feature-id">F-06.09</span><span class="feature-name">Opportunity Graph Management</span><span class="feature-desc">Defines the graph database schema for opportunity nodes and relationships and constructs, persists, queries, and versions the graph from candidates, gaps, technologies, dependencies, alternatives, and evidence.</span></li><li class=""><span class="feature-id">F-06.10</span><span class="feature-name">Opportunity Metadata Enrichment</span><span class="feature-desc">Automatically derives, validates, and updates timeliness, momentum, evidence pointers, evidence maturity, risk, novelty, feasibility, strategic relevance, resource need, provenance, uncertainty, and review tags.</span></li><li class=""><span class="feature-id">F-06.11</span><span class="feature-name">Evidence Ledger Management</span><span class="feature-desc">Maintains exact source-to-signal-to-claim links, citation anchors, supporting and opposing evidence, experiment evidence, uncertainty, evaluations, and the decisions each item influences.</span></li><li class=""><span class="feature-id">F-06.12</span><span class="feature-name">Research Asset Repository</span><span class="feature-desc">Stores experiment plans, code, models, simulations, scripts, environments, parameters, logs, raw data, analyses, benchmark suites, demos, qualified artifacts, versions, licenses, and reproduction instructions.</span></li><li class=""><span class="feature-id">F-06.13</span><span class="feature-name">Failure Knowledge Repository</span><span class="feature-desc">Stores counterexamples, failed experiments, invalid assumptions, rejected approaches, edge cases, regressions, resource traps, and the conditions under which they occurred.</span></li><li class=""><span class="feature-id">F-06.14</span><span class="feature-name">Technical Memory Management</span><span class="feature-desc">Maintains episodic, semantic, procedural, preference, project, strategy, experiment, failure, and high-value capability memory with consolidation, retention, decay, and influence traces.</span></li><li class=""><span class="feature-id">F-06.15</span><span class="feature-name">Data Governance</span><span class="feature-desc">Enforces source terms, licenses, consent, sensitivity, project and workspace separation, retention, export, deletion, and permitted downstream use.</span></li></ol></article><article class="l1-card" id="f-07" data-tree="foundation"><div class="l1-head"><span class="id">F-07</span><div><h3>Harness Core</h3><div class="kind">Foundation sub-function · 10 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-07.01</span><span class="feature-name">Run Initialization</span><span class="feature-desc">Materializes an approved physical plan as a run with stable identities, contracts, initial facts, permissions, budgets, expected artifacts, and closure rules.</span></li><li class=""><span class="feature-id">F-07.02</span><span class="feature-name">Work Readiness Coordination</span><span class="feature-desc">Applies valid lifecycle transitions and releases work only when prerequisite nodes, artifacts, contracts, gates, and authoritative state are satisfied.</span></li><li class=""><span class="feature-id">F-07.03</span><span class="feature-name">Execution Assignment</span><span class="feature-desc">Binds selected logical operators to eligible physical hosts, manages exclusive leases, dispatches ready contracts, and collects acknowledgements and structured results.</span></li><li class=""><span class="feature-id">F-07.04</span><span class="feature-name">Execution Environment Provisioning</span><span class="feature-desc">Provisions authenticated sessions, isolated workspaces, browsers, terminals, containers, worktrees, remote machines, data access, and rollback boundaries required by approved contracts.</span></li><li class=""><span class="feature-id">F-07.05</span><span class="feature-name">Execution Admission Control</span><span class="feature-desc">Coordinates operators, hosts, tools, accounts, files, data, model capacity, compute, budgets, concurrency locks, and human or policy approval gates.</span></li><li class=""><span class="feature-id">F-07.06</span><span class="feature-name">Execution Recordkeeping</span><span class="feature-desc">Persists authoritative facts, events, commands, output references, traces, artifacts, decisions, checkpoints, and progress evidence for every run.</span></li><li class=""><span class="feature-id">F-07.07</span><span class="feature-name">Experiment Loop Automation</span><span class="feature-desc">Controls hypothesis-driven generate–execute–analyze–update loops, chooses eligible next experiments, enforces information-gain and resource policy, and stops at declared gates.</span></li><li class=""><span class="feature-id">F-07.08</span><span class="feature-name">Run Recovery Control</span><span class="feature-desc">Pauses, cancels, times out, retries, resumes, reassigns, or escalates work idempotently without duplicating accepted effects or accepting stale evidence.</span></li><li class=""><span class="feature-id">F-07.09</span><span class="feature-name">Artifact Routing</span><span class="feature-desc">Moves declared inputs, outputs, signals, hypotheses, data, experiment artifacts, benchmarks, evaluations, corrections, and approvals between plan nodes and product functions.</span></li><li class=""><span class="feature-id">F-07.10</span><span class="feature-name">Run Closure Assurance</span><span class="feature-desc">Detects stalls, unavailable hosts, blocked resources, repeated failures, budget exhaustion, inconsistent state, and projection drift and proves truthful terminal closure.</span></li></ol></article><article class="l1-card" id="f-08" data-tree="foundation"><div class="l1-head"><span class="id">F-08</span><div><h3>Intention Compilers</h3><div class="kind">Foundation sub-function · 9 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-08.01</span><span class="feature-name">Compiler Profile Selection</span><span class="feature-desc">Selects the authorized compiler profile, task dialect, trigger policy, schema family, and isolation boundary appropriate to the request and product mode.</span></li><li class=""><span class="feature-id">F-08.02</span><span class="feature-name">Intent Classification</span><span class="feature-desc">Classifies task type, domain, risk, urgency, requested action, and expected output within the selected compiler profile.</span></li><li class=""><span class="feature-id">F-08.03</span><span class="feature-name">Goal Extraction</span><span class="feature-desc">Extracts the user, affected entities, requested change, desired decision, deliverable, audience, and success language.</span></li><li class=""><span class="feature-id">F-08.04</span><span class="feature-name">Context Projection</span><span class="feature-desc">Selects authorized conversation, preferences, memory, project and workspace state, internal context, and supplied material relevant to interpretation.</span></li><li class=""><span class="feature-id">F-08.05</span><span class="feature-name">Ambiguity Detection</span><span class="feature-desc">Detects underspecified goals, conflicting instructions, undefined concepts, missing decisions, and consequential assumptions.</span></li><li class=""><span class="feature-id">F-08.06</span><span class="feature-name">Clarification Generation</span><span class="feature-desc">Generates the smallest decision-relevant questions or explicit assumption choices needed to produce a reliable contract.</span></li><li class=""><span class="feature-id">F-08.07</span><span class="feature-name">Constraint Compilation</span><span class="feature-desc">Compiles authorization, scope, resource, policy, format, data, safety, and environmental constraints into executable semantics.</span></li><li class=""><span class="feature-id">F-08.08</span><span class="feature-name">Task Contract Compilation</span><span class="feature-desc">Builds machine-readable intent, context references, scope, inputs, outputs, allowed effects, dependencies, permissions, resources, proof, stop, and acceptance semantics.</span></li><li class=""><span class="feature-id">F-08.09</span><span class="feature-name">Contract Traceability</span><span class="feature-desc">Versions and validates profile-specific contracts and binds stable requirements to plan nodes, artifacts, claims, checks, evaluations, decisions, corrections, and delivery records.</span></li></ol></article><article class="l1-card" id="f-09" data-tree="foundation"><div class="l1-head"><span class="id">F-09</span><div><h3>Planner</h3><div class="kind">Foundation sub-function · 10 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-09.01</span><span class="feature-name">Task Decomposition</span><span class="feature-desc">Breaks a compiled requirement contract into independently valuable and verifiable work units without exposing implementation microsteps as plan nodes.</span></li><li class=""><span class="feature-id">F-09.02</span><span class="feature-name">Planning Strategy Selection</span><span class="feature-desc">Selects an open-signal, research, hypothesis, experiment, build, benchmark, evaluation, investment, delivery, or mixed strategy appropriate to the contract.</span></li><li class=""><span class="feature-id">F-09.03</span><span class="feature-name">Logical Plan Generation</span><span class="feature-desc">Creates implementation-independent work units with inputs, outputs, effects, evidence, decisions, budgets, gates, stop conditions, and completion criteria.</span></li><li class=""><span class="feature-id">F-09.04</span><span class="feature-name">Dependency Graph Formation</span><span class="feature-desc">Defines prerequisite, parallel, merge, portfolio, feedback, experiment-loop, approval, and terminal relationships between work units.</span></li><li class=""><span class="feature-id">F-09.05</span><span class="feature-name">Execution Requirement Compilation</span><span class="feature-desc">Compiles the operator, model, capsule, tool, data, environment, evaluator, human-decision, and role-separation requirements each node must satisfy.</span></li><li class=""><span class="feature-id">F-09.06</span><span class="feature-name">Resource Planning</span><span class="feature-desc">Allocates data, compute, environments, time, capital, talent, context, models, tools, and human-review budgets across the plan.</span></li><li class=""><span class="feature-id">F-09.07</span><span class="feature-name">Assurance Planning</span><span class="feature-desc">Plans supporting and opposing evidence, controls, proof artifacts, failure paths, safety checks, escalation, insufficient-evidence gates, and explicit stop or defer conditions.</span></li><li class=""><span class="feature-id">F-09.08</span><span class="feature-name">Plan Validation</span><span class="feature-desc">Checks requirement coverage, dependency soundness, role separation, resource feasibility, experiment validity, proof obligations, gate closure, and executable completion before dispatch.</span></li><li class=""><span class="feature-id">F-09.09</span><span class="feature-name">Physical Plan Selection</span><span class="feature-desc">Forms and compares feasible operator, model, capsule, tool, host, sandbox, quota, cost, locality, and policy bindings and records why one was selected.</span></li><li class=""><span class="feature-id">F-09.10</span><span class="feature-name">Plan Evolution</span><span class="feature-desc">Uses execution failures, quota or health changes, evaluator rejection, new evidence, and user decisions to revise only affected regions while preserving rationale and completed work.</span></li></ol></article><article class="l1-card" id="f-10" data-tree="foundation"><div class="l1-head"><span class="id">F-10</span><div><h3>Builder</h3><div class="kind">Foundation sub-function · 12 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">F-10.01</span><span class="feature-name">Build Contract Interpretation</span><span class="feature-desc">Interprets the required technical or decision artifact, interfaces, constraints, proof obligations, evaluation needs, environment, and allowed state changes before construction.</span></li><li class=""><span class="feature-id">F-10.02</span><span class="feature-name">Build Preparation</span><span class="feature-desc">Selects the build approach and prepares isolated, authorized workspaces with required repositories, tools, data, dependencies, compute, environments, and rollback boundaries.</span></li><li class=""><span class="feature-id">F-10.03</span><span class="feature-name">Code Construction</span><span class="feature-desc">Constructs, integrates, tests, refactors, and modifies working code through real repositories, runtimes, services, APIs, and tools.</span></li><li class=""><span class="feature-id">F-10.04</span><span class="feature-name">Model Construction</span><span class="feature-desc">Constructs or adapts models, algorithms, prompts, retrieval methods, optimizers, decision policies, and other computational mechanisms.</span></li><li class=""><span class="feature-id">F-10.05</span><span class="feature-name">Experimental Asset Construction</span><span class="feature-desc">Constructs simulations, synthetic environments, scenario generators, notebooks, pipelines, parameter sweeps, job definitions, checkpoints, and automation workflows.</span></li><li class=""><span class="feature-id">F-10.06</span><span class="feature-name">Benchmark Asset Construction</span><span class="feature-desc">Constructs datasets, schemas, transformations, workloads, baselines, metrics, scorecards, fixtures, failure sets, and reproducibility assets.</span></li><li class=""><span class="feature-id">F-10.07</span><span class="feature-name">Verification Asset Construction</span><span class="feature-desc">Constructs executable functional, failure, security, performance, hypothesis, benchmark, and acceptance checks tied to contracts.</span></li><li class=""><span class="feature-id">F-10.08</span><span class="feature-name">Decision Artifact Construction</span><span class="feature-desc">Constructs source-backed reports, manuscripts, specifications, proposals, roadmaps, evidence packs, charts, diagrams, dashboards, and interactive decision artifacts.</span></li><li class=""><span class="feature-id">F-10.09</span><span class="feature-name">Prototype Assembly</span><span class="feature-desc">Integrates code, models, simulations, scripts, data, interfaces, and operating scenarios into coherent POCs and reviewable demonstrations.</span></li><li class=""><span class="feature-id">F-10.10</span><span class="feature-name">Product Integration</span><span class="feature-desc">Integrates constructed components and packages them into the target repository, application, deployment, benchmark, capability, or delivery structure.</span></li><li class=""><span class="feature-id">F-10.11</span><span class="feature-name">Defect Repair</span><span class="feature-desc">Repairs failed code, models, simulations, experiments, benchmarks, documents, or integrations against evaluator findings while preserving scope and unaffected behavior.</span></li><li class=""><span class="feature-id">F-10.12</span><span class="feature-name">Build Evidence Generation</span><span class="feature-desc">Emits manifests, diffs, commands, outputs, configurations, dependency records, checks, experiment links, and artifact references needed for evaluation and reuse.</span></li></ol></article></div>
+      </section>
+
+      <section id="verticals" data-tree="verticals" class="">
+        <h2 class="verticals-color">3. Verticals feature list</h2>
+        <div class="card-grid"><article class="l1-card" id="v-01" data-tree="verticals"><div class="l1-head"><span class="id">V-01</span><div><h3>Visibility / Statistics</h3><div class="kind">Vertical function · 9 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">V-01.01</span><span class="feature-name">Workflow Status Visibility</span><span class="feature-desc">Shows current phase, completed and active work, blocked work, operators, hosts, gates, budgets, authoritative state, and expected next transitions.</span></li><li class=""><span class="feature-id">V-01.02</span><span class="feature-name">Execution Trace Search</span><span class="feature-desc">Provides a time-ordered, filterable search across requests, events, transitions, tool calls, experiments, artifacts, failures, approvals, decisions, and outcomes.</span></li><li class=""><span class="feature-id">V-01.03</span><span class="feature-name">Opportunity Intelligence Analytics</span><span class="feature-desc">Reports source coverage, credibility, freshness, signal clusters, momentum, gaps, opportunity-graph growth, node timeliness, evidence maturity, risk, ranking, and portfolio diversity.</span></li><li class=""><span class="feature-id">V-01.04</span><span class="feature-name">Experiment Analytics</span><span class="feature-desc">Reports experiment queues, iteration history, active variants, model or code updates, information gain, failures, budget burn, data quality, and POC readiness.</span></li><li class=""><span class="feature-id">V-01.05</span><span class="feature-name">Evaluation Analytics</span><span class="feature-desc">Reports baseline comparisons, uncertainty, regressions, demo outcomes, failure clusters, reproducibility, evidence gaps, evaluator agreement, verdict history, and calibration.</span></li><li class=""><span class="feature-id">V-01.06</span><span class="feature-name">Innovation Portfolio Analytics</span><span class="feature-desc">Reports investible targets, strategic fit, expected value, resources, staged options, decisions, validated capabilities, capsule certification, reuse, and capability gaps.</span></li><li class=""><span class="feature-id">V-01.07</span><span class="feature-name">Resource Economics Analytics</span><span class="feature-desc">Reports model, compute, tool, storage, data, token, quota, human-review, budget, cost, and capacity usage by project, hypothesis, experiment, capability, and time.</span></li><li class=""><span class="feature-id">V-01.08</span><span class="feature-name">Platform Health Visibility</span><span class="feature-desc">Shows run, host, lease, session, queue, checkpoint, provider, data source, repository, experiment infrastructure, browser, capsule, operator, and message-channel readiness without replacing authoritative state.</span></li><li class=""><span class="feature-id">V-01.09</span><span class="feature-name">Evidence &amp; Decision Reporting</span><span class="feature-desc">Produces source-backed reports and exports of experiments, metrics, evaluations, decisions, investment judgments, provenance, evidence, and capability references for technical and investment review.</span></li></ol></article><article class="l1-card" id="v-02" data-tree="verticals"><div class="l1-head"><span class="id">V-02</span><div><h3>Installer &amp; CLI &amp; Webapp</h3><div class="kind">Vertical function · 11 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">V-02.01</span><span class="feature-name">Guided Installation</span><span class="feature-desc">Guides users through the storage, model providers, research sources, message channels, execution environments, and CLI or web access needed to start the product.</span></li><li class=""><span class="feature-id">V-02.02</span><span class="feature-name">Compatibility Validation</span><span class="feature-desc">Validates operating system, shell, hardware, dependencies, permissions, network, storage, browser, and supported runtime assumptions.</span></li><li class=""><span class="feature-id">V-02.03</span><span class="feature-name">Dependency Provisioning</span><span class="feature-desc">Resolves, installs, and configures required product dependencies, background services, databases, and selected optional integrations.</span></li><li class=""><span class="feature-id">V-02.04</span><span class="feature-name">Product Initialization</span><span class="feature-desc">Initializes product state, storage, services, default configuration, selected providers, and required integrations.</span></li><li class=""><span class="feature-id">V-02.05</span><span class="feature-name">Installation Verification</span><span class="feature-desc">Runs real readiness checks for services, storage, providers, access surfaces, permissions, and a minimal end-to-end workflow.</span></li><li class=""><span class="feature-id">V-02.06</span><span class="feature-name">Installation Repair</span><span class="feature-desc">Explains and repairs missing dependencies, broken configuration, failed services, permission errors, stale state, and installation drift.</span></li><li class=""><span class="feature-id">V-02.07</span><span class="feature-name">Product Update Control</span><span class="feature-desc">Updates application components and schemas safely, verifies the upgrade, and restores the prior working version when required.</span></li><li class=""><span class="feature-id">V-02.08</span><span class="feature-name">Safe Uninstallation</span><span class="feature-desc">Removes installed components and services while preserving, exporting, or securely deleting user data according to explicit choices.</span></li><li class=""><span class="feature-id">V-02.09</span><span class="feature-name">CLI Product Access</span><span class="feature-desc">Exposes research tasks, runs, configuration, diagnostics, updates, and exports through a coherent command-line interface.</span></li><li class=""><span class="feature-id">V-02.10</span><span class="feature-name">Web Application Access</span><span class="feature-desc">Starts and securely exposes the web application in the selected local or approved shared environment and verifies browser access and service health.</span></li><li class=""><span class="feature-id">V-02.11</span><span class="feature-name">Supported Environment Packaging</span><span class="feature-desc">Packages and maintains installable releases for the product’s explicitly supported operating systems and execution environments.</span></li></ol></article><article class="l1-card" id="v-03" data-tree="verticals"><div class="l1-head"><span class="id">V-03</span><div><h3>UI</h3><div class="kind">Vertical function · 12 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">V-03.01</span><span class="feature-name">Conversational Task Interaction</span><span class="feature-desc">Lets users express innovation goals, supply documents, answer clarifications, guide active work, challenge conclusions, and receive decision-oriented explanations.</span></li><li class=""><span class="feature-id">V-03.02</span><span class="feature-name">Work Navigation</span><span class="feature-desc">Lets users browse, search, organize, resume, and compare workspaces, research topics, projects, opportunity portfolios, experiments, sessions, and runs.</span></li><li class=""><span class="feature-id">V-03.03</span><span class="feature-name">Signal Exploration</span><span class="feature-desc">Lets users inspect source families, search lanes, projects, papers, reports, experts, company dynamics, open-web signals, signal clusters, gaps, coverage, freshness, and credibility.</span></li><li class=""><span class="feature-id">V-03.04</span><span class="feature-name">Opportunity Workspace</span><span class="feature-desc">Lets users inspect, compare, annotate, merge, split, challenge, enrich, rank, defer, and reject candidate ideas and their governing Idea Cards.</span></li><li class=""><span class="feature-id">V-03.05</span><span class="feature-name">Opportunity Portfolio Visualization</span><span class="feature-desc">Provides an interactive 2D portfolio matrix with configurable axes, filters, grouping, zoom, selection, and visual encodings for timeliness, evidence, risk, value, feasibility, resources, and diversity.</span></li><li class=""><span class="feature-id">V-03.06</span><span class="feature-name">Experiment Workspace</span><span class="feature-desc">Lets users inspect, edit, cluster, prioritize, and trace hypotheses and review verification paths, POCs, experiments, scripts, queues, budgets, gates, failures, and stop conditions.</span></li><li class=""><span class="feature-id">V-03.07</span><span class="feature-name">Evidence Review Workspace</span><span class="feature-desc">Lets users compare POCs, variants, baselines, workloads, metrics, uncertainty, demos, failure samples, and reproducibility and trace claims to exact sources, data, runs, and opposing evidence.</span></li><li class=""><span class="feature-id">V-03.08</span><span class="feature-name">Collaborative Evaluation</span><span class="feature-desc">Lets authorized reviewers question assumptions, compare independent AI reviews, request evidence or reruns, record dissent, override bounded judgments, and approve, defer, or terminate directions.</span></li><li class=""><span class="feature-id">V-03.09</span><span class="feature-name">Investment Decision Workspace</span><span class="feature-desc">Lets decision makers compare target portfolios, proposals, investment recommendations, expected value, resource commitments, options, milestones, risks, and technical roadmaps.</span></li><li class=""><span class="feature-id">V-03.10</span><span class="feature-name">Capability Library Access</span><span class="feature-desc">Lets users discover, compare, inspect evidence for, invoke, compose, reuse, and provide feedback on accumulated capabilities and capsules.</span></li><li class=""><span class="feature-id">V-03.11</span><span class="feature-name">Live Execution Inspection</span><span class="feature-desc">Lets users inspect active plans, dependencies, operators, hosts, models, tools, gates, resource use, failures, recovery, next actions, and why execution choices were selected or rejected.</span></li><li class=""><span class="feature-id">V-03.12</span><span class="feature-name">Research Interaction Preferences</span><span class="feature-desc">Lets users control permitted sources, quality, cost, speed, autonomy, approvals, privacy, notifications, presentation, and accessibility for research work.</span></li></ol></article><article class="l1-card" id="v-04" data-tree="verticals"><div class="l1-head"><span class="id">V-04</span><div><h3>Account Management</h3><div class="kind">Vertical function · 5 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">V-04.01</span><span class="feature-name">Account Registration</span><span class="feature-desc">Creates an individual product account with verified identity, accepted terms, and initial personal settings.</span></li><li class=""><span class="feature-id">V-04.02</span><span class="feature-name">User Authentication</span><span class="feature-desc">Supports secure sign-in, sign-out, session establishment, reauthentication, and recovery through configured identity methods.</span></li><li class=""><span class="feature-id">V-04.03</span><span class="feature-name">User Profile Management</span><span class="feature-desc">Manages identity, expertise, role, research preferences, notification choices, accessibility choices, and default product behavior.</span></li><li class=""><span class="feature-id">V-04.04</span><span class="feature-name">Account Security</span><span class="feature-desc">Protects active account sessions, supports session revocation and recovery, and surfaces suspicious access.</span></li><li class=""><span class="feature-id">V-04.05</span><span class="feature-name">Privacy Controls</span><span class="feature-desc">Lets users inspect, export, retain, or delete personal settings and user-supplied data and manage consent for message-derived information.</span></li></ol></article><article class="l1-card" id="v-05" data-tree="verticals"><div class="l1-head"><span class="id">V-05</span><div><h3>Message Channels</h3><div class="kind">Vertical function · 9 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">V-05.01</span><span class="feature-name">Channel Connection Management</span><span class="feature-desc">Establishes and maintains authorized Slack and supported internal messaging, collaboration, incident, project, and knowledge-tool connections.</span></li><li class=""><span class="feature-id">V-05.02</span><span class="feature-name">Channel Sensing Governance</span><span class="feature-desc">Defines which workspaces, channels, conversations, participants, content classes, time windows, and events may be sensed, retained, and used for research intake.</span></li><li class=""><span class="feature-id">V-05.03</span><span class="feature-name">Continuous Signal Sensing</span><span class="feature-desc">Continuously observes authorized channel activity and change events so potentially valuable clues do not depend on manual submission.</span></li><li class=""><span class="feature-id">V-05.04</span><span class="feature-name">Conversation Context Capture</span><span class="feature-desc">Captures permitted messages, replies, edits, reactions, mentions, attachments, links, timestamps, participants, threads, projects, teams, and workspace context.</span></li><li class=""><span class="feature-id">V-05.05</span><span class="feature-name">Channel Content Normalization</span><span class="feature-desc">Converts heterogeneous channel events into stable signal records and binds each record to its source message, version, author, conversation, attachment, time, and acquisition path.</span></li><li class=""><span class="feature-id">V-05.06</span><span class="feature-name">Weak-Signal Detection</span><span class="feature-desc">Detects emerging technical themes, repeated pain points, accelerating discussion, expert attention, unresolved questions, decisions, incidents, and early opportunity clues.</span></li><li class=""><span class="feature-id">V-05.07</span><span class="feature-name">Channel Signal Qualification</span><span class="feature-desc">Screens sensed content for research relevance, confidentiality, personal or restricted information, policy exclusions, low-value chatter, and evidence limitations.</span></li><li class=""><span class="feature-id">V-05.08</span><span class="feature-name">Cross-Channel Correlation</span><span class="feature-desc">Links repeated or related clues across channels, threads, tools, teams, and time while preserving distinct sources, disagreements, and independent confirmations.</span></li><li class=""><span class="feature-id">V-05.09</span><span class="feature-name">Qualified Signal Routing</span><span class="feature-desc">Packages a qualified clue with context, provenance, sensitivity, relevance, and suggested intake scope and routes it to W-01 without compiling requirements or selecting an opportunity.</span></li></ol></article><article class="l1-card" id="v-06" data-tree="verticals"><div class="l1-head"><span class="id">V-06</span><div><h3>Configurations / LLM Providers</h3><div class="kind">Vertical function · 12 L2</div></div></div><ol class="feature-list"><li class=""><span class="feature-id">V-06.01</span><span class="feature-name">Configuration Editing</span><span class="feature-desc">Lets authorized users inspect and change supported product, deployment, workspace, project, workflow, capability, and personal settings.</span></li><li class=""><span class="feature-id">V-06.02</span><span class="feature-name">Configuration Resolution</span><span class="feature-desc">Resolves installation, workspace, project, environment, and user settings deterministically and explains which value is effective.</span></li><li class=""><span class="feature-id">V-06.03</span><span class="feature-name">Configuration Validation</span><span class="feature-desc">Validates types, schemas, required fields, paths, permissions, dependencies, policy constraints, and cross-setting compatibility before activation.</span></li><li class=""><span class="feature-id">V-06.04</span><span class="feature-name">Configuration Lifecycle</span><span class="feature-desc">Imports, exports, compares, versions, migrates, applies, and rolls back portable configuration profiles without exposing protected secrets.</span></li><li class=""><span class="feature-id">V-06.05</span><span class="feature-name">Signal Source Configuration</span><span class="feature-desc">Configures research source families, repositories, indexes, websites, feeds, Slack or internal-tool targets, sensing scopes, crawl limits, freshness, licenses, consent, and connector policy.</span></li><li class=""><span class="feature-id">V-06.06</span><span class="feature-name">Experiment Infrastructure Configuration</span><span class="feature-desc">Configures code environments, clusters, sandboxes, data stores, simulations, job systems, benchmark runners, demo environments, quotas, and isolation policy.</span></li><li class=""><span class="feature-id">V-06.07</span><span class="feature-name">Decision Policy Configuration</span><span class="feature-desc">Configures company strategy, technical priorities, investment horizon, risk appetite, review roles, evidence thresholds, gates, resource assumptions, and decision vocabulary.</span></li><li class=""><span class="feature-id">V-06.08</span><span class="feature-name">Operator &amp; Capsule Configuration</span><span class="feature-desc">Configures operator roles and policies, capsule catalogs and availability, host eligibility, verification thresholds, and capability lifecycle rules.</span></li><li class=""><span class="feature-id">V-06.09</span><span class="feature-name">LLM Provider Connection Management</span><span class="feature-desc">Registers, edits, tests, disables, and removes provider endpoints and connections and records their declared adapter capabilities.</span></li><li class=""><span class="feature-id">V-06.10</span><span class="feature-name">Credential Reference Management</span><span class="feature-desc">Configures protected credential references, authentication methods, rotation state, and access scope for models, sources, repositories, data, compute, channels, and services.</span></li><li class=""><span class="feature-id">V-06.11</span><span class="feature-name">Model Governance Configuration</span><span class="feature-desc">Configures model identifiers, modalities, context limits, pricing, regions, role eligibility, enablement, data classes, budgets, and provider or model restrictions.</span></li><li class=""><span class="feature-id">V-06.12</span><span class="feature-name">Provider Diagnostics</span><span class="feature-desc">Diagnoses credentials, endpoints, model access, rate limits, quota, billing, network, region, policy, capacity, and adapter failures.</span></li></ol></article></div>
+      </section>
+    </main>
+  </div>
+
+  <noscript>
+    <p class="shell">This standalone feature list requires JavaScript to render its embedded inventory.</p>
+  </noscript>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var inventories = [
+        {
+          key: "workflow",
+          kind: "Workflow sub-stage",
+          l1: [
+            {
+              id: "W-01",
+              name: "Ingestion",
+              items: [
+                ["Request Capture", "Receives the user’s question, instruction, desired outcome, and requested deliverable as an intake candidate without prematurely treating it as a formal requirement."],
+                ["Qualified Channel Signal Intake", "Accepts a V-05-qualified Slack or internal-tool clue with its permitted context, sensitivity, relevance, and provenance; raw channel traffic remains outside Workflow."],
+                ["User-Supplied Material Import", "Imports documents, uploads, pasted content, datasets, and explicit file, repository, or URL references supplied by the user; related-source discovery belongs to Search & Ideation."],
+                ["Intake Context Binding", "Binds the candidate to the authorized user, session, workspace, project, originating signal, and explicitly selected prior artifacts needed for interpretation."],
+                ["Real-Time Intake Deduplication & Cleaning", "Canonicalizes incoming candidates, filters malformed or noisy content, and merges replays, exact duplicates, and near-duplicates while preserving meaningful revisions and independent corroboration."],
+                ["Intake Provenance Registration", "Records origin, identity, version, timestamp, access path, acquisition mode, and transformations for every accepted intake input."],
+                ["Intake Qualification", "Checks accessibility, authorization, readability, and minimum completeness, then emits a qualified intake package or an explicit rejection or quarantine reason."]
+              ]
+            },
+            {
+              id: "W-02",
+              name: "Requirement Compilation",
+              items: [
+                ["Intent Interpretation", "Determines the user’s actual problem, desired change, audience, decision, and deliverable without selecting an opportunity or solution."],
+                ["Context Scoping", "Resolves applicable context, affected entities, time horizon, inclusions, exclusions, and the boundary of the decision to support."],
+                ["Ambiguity Resolution", "Finds missing information, conflicting instructions, undefined terms, and consequential assumptions and resolves them through focused questions or explicit defaults."],
+                ["Constraint Resolution", "Identifies and reconciles authorization, scope, time, cost, data, safety, policy, tool, environment, and output-format constraints with the user’s intended outcome."],
+                ["Requirement Prioritization", "Separates mandatory outcomes, preferences, tradeable qualities, dependencies, exclusions, and deferred requests."],
+                ["Acceptance Definition", "Defines observable success criteria, proof obligations, decision thresholds, failure conditions, and stopping rules."],
+                ["Requirement Contract Confirmation", "Assembles a versioned contract with executable task semantics, presents consequential interpretations, and records user confirmation or authorized assumptions."]
+              ]
+            },
+            {
+              id: "W-03",
+              name: "Search & Ideation",
+              items: [
+                ["Search Strategy Formation", "Turns the requirement contract into technical themes, source families, queries, time horizons, counter-signals, diversity goals, and coverage targets."],
+                ["Multi-Source Signal Discovery", "Uses parallel research agents to search open-source projects, papers, patents, standards, experts, think tanks, industry reports, big-tech dynamics, technical communities, the open web, and authorized internal history."],
+                ["Source Qualification", "Screens discovered material for intent relevance, authority, recency, independence, incentives, duplication, access limits, and potential bias."],
+                ["Technical Signal Extraction", "Extracts claims, data, methods, mechanisms, results, benchmarks, limitations, failures, dependencies, adoption signals, and unresolved questions."],
+                ["Signal Organization", "Normalizes signals, binds provenance, clusters related findings, and maps convergence, divergence, dependencies, and opposing viewpoints."],
+                ["Trend & Gap Analysis", "Detects momentum, decay, contradictions, bottlenecks, missing capabilities, abandoned directions, and technical white spaces."],
+                ["Idea Generation", "Expands a diverse candidate set from signal clusters, gaps, adjacencies, cross-domain transfers, and contrarian combinations while retaining initial supporting and opposing evidence."],
+                ["Search Coverage Review", "Tests source-family, technical, geographic, temporal, viewpoint, and counter-evidence coverage before the candidate space is allowed to narrow."]
+              ]
+            },
+            {
+              id: "W-04",
+              name: "Idea Identification & Opportunity Screening",
+              items: [
+                ["Candidate Consolidation", "Combines parallel search outputs, resolves semantic duplicates, and preserves variants whose assumptions, evidence, or opportunity boundaries materially differ."],
+                ["Idea Identification", "Converts meaningful signal combinations and gaps into discrete candidate ideas with a recognizable technical or user value proposition."],
+                ["Idea Card Formation", "Forms the governing Idea Card with the candidate’s opportunity, relevance, linked evidence, assumptions, novelty, uncertainty, risks, and open questions; evidence formation is part of this card."],
+                ["Opportunity Definition", "States the unmet need, technical bottleneck, missing capability, unserved user, or unexploited combination that makes the idea actionable."],
+                ["Technical Opportunity Screening", "Screens novelty, evidence maturity, reachable data, known mechanisms, technical feasibility, and the existence of a credible verification path."],
+                ["Strategic Opportunity Screening", "Screens user or company value, timing, defensibility, strategic fit, adoption, safety, legal exposure, dependencies, and resource implications."],
+                ["Opportunity Portfolio Prioritization", "Ranks and selects a bounded, diverse opportunity portfolio using transparent criteria and records why other directions were deferred or rejected."]
+              ]
+            },
+            {
+              id: "W-05",
+              name: "Technical Claim & Hypothesis Formation",
+              items: [
+                ["Research Question Formation", "Turns each selected opportunity into precise questions about the technical gap, target system or user, expected effect, operating conditions, and decision to support."],
+                ["Claim–Data–Method Modeling", "Structures the technical claims, measurements, datasets, methods, mechanisms, benchmarks, and missing evidence needed to investigate each question."],
+                ["Hypothesis Pool Generation", "Produces competing and complementary falsifiable hypotheses, removes semantic duplicates, and preserves materially different explanations."],
+                ["Hypothesis Mechanism Modeling", "Models candidate solution mechanisms, assumptions, dependencies, alternative explanations, confounders, and likely failure mechanisms."],
+                ["Falsifiability Screening", "Checks whether reachable data, controls, measurements, comparisons, and implementation paths can support, weaken, or reject each hypothesis."],
+                ["Hypothesis Contract Formation", "Creates a versioned, measurable contract covering the claim, expected effect, conditions, variables, evidence obligations, uncertainty, and decision thresholds."],
+                ["Verification Roadmapping", "Prioritizes hypotheses by value, uncertainty reduction, information gain, technical risk, and cost, then designs the smallest credible POC, experiment, simulation, or benchmark path."]
+              ]
+            },
+            {
+              id: "W-06",
+              name: "POC Implementation",
+              items: [
+                ["POC Scope Definition", "Turns the selected verification path into a bounded proof objective with required outputs, evidence, budgets, gates, update rules, and stop conditions."],
+                ["Experiment Design", "Defines variables, treatments, controls, ablations, sampling, repetitions, measurements, uncertainty handling, and decision logic."],
+                ["POC Architecture Design", "Specifies the smallest end-to-end architecture, data, dependencies, environments, tools, compute, isolation, and rollback boundaries required to test the hypothesis."],
+                ["POC Construction", "Uses Builder to construct and integrate the working code, models, algorithms, prompts, simulations, and technical mechanisms needed for the proof."],
+                ["Automated Experimentation", "Generates reproducible experiment or simulation scripts and invokes controlled runs through Harness Core, including parameter sweeps and hypothesis-driven update loops."],
+                ["Experimental Data Analysis", "Analyzes real run data for quality, errors, effect direction, uncertainty, anomalies, confounders, and failure modes and identifies evidence-backed refinements."],
+                ["POC Consolidation", "Assembles the strongest code, models, simulations, analyses, logs, counterexamples, failed configurations, and demos into one bounded POC evidence package."]
+              ]
+            },
+            {
+              id: "W-07",
+              name: "Benchmarking",
+              items: [
+                ["Benchmark Framing", "Defines the claims and operating conditions to compare and selects fair current methods, prior versions, reference systems, industry norms, human performance, and controls."],
+                ["Benchmark Protocol Design", "Defines workloads, metrics, repetitions, environments, resource limits, statistics, thresholds, run arguments, comparison rules, and evidence obligations."],
+                ["Benchmark Asset Preparation", "Prepares representative, difficult, boundary, adversarial, and domain-specific datasets, workloads, scripts, baselines, and environments."],
+                ["Comparative Evidence Formation", "Produces a controlled, comparable evidence set for the POC, variants, controls, and baselines under the approved protocol while Harness Core owns job execution and logging."],
+                ["Benchmark Result Analysis", "Measures quality, cost, latency, throughput, reliability, safety, resource use, scalability, variance, sensitivity, significance, tradeoffs, and regressions."],
+                ["Demo Validation", "Exercises the integrated POC in realistic end-to-end scenarios and records exactly what the demonstration proves and does not prove."],
+                ["Failure Case Curation", "Curates counterexamples, difficult cases, instability, invalid runs, resource failures, and conditions where the POC or a baseline breaks."],
+                ["Reproducible Benchmark Packaging", "Packages protocols, environments, datasets, baselines, scripts, run records, scorecards, limitations, failure sets, and reproduction instructions."]
+              ]
+            },
+            {
+              id: "W-08",
+              name: "Evaluation",
+              items: [
+                ["Evaluation Scope Definition", "Establishes the decision purpose, evaluation criteria, required evidence, independent reviewers, thresholds, failure states, and verdict vocabulary."],
+                ["Experimental Validity Review", "Reviews controls, sampling, data selection, ablations, repetitions, leakage, confounders, stopping rules, and whether the design can answer the hypothesis."],
+                ["Reasoning Validity Review", "Checks provenance, data integrity, citation anchors, supporting and opposing evidence, premise-to-claim traceability, hidden assumptions, contradictions, and causal overreach."],
+                ["External Plausibility Review", "Cross-checks claimed gains, tradeoffs, edge cases, and resource use against declared baselines, independent runs, engineering constraints, industry priors, and credible opposing evidence."],
+                ["Technical Feasibility Assessment", "Assesses correctness, reliability, scale, maintainability, observability, security, deployment, integrations, expertise, latency, cost, and operational dependencies."],
+                ["Investment Merit Assessment", "Assesses strategic alignment, differentiation, defensibility, ecosystem timing, capital, compute, data, talent, partnerships, opportunity cost, option value, and expected return."],
+                ["Risk Assurance Assessment", "Assesses safety, security, privacy, legal, regulatory, misuse, supply-chain, operational, and reputational risks and the adequacy of mitigations."],
+                ["Decision Fitness Assessment", "Checks that the evidence answers the confirmed user intent, supports the required decision, exposes consequential uncertainty, and yields actions the intended audience can take."],
+                ["Human-AI Adjudication", "Combines role-separated model review with accountable technical, domain, strategy, and investment judgment, including questions, rerun requests, dissent, and bounded overrides."],
+                ["Evaluation Verdict Formation", "Intercepts directions with inadequate proof and otherwise issues a confidence-calibrated continue, invest, conditionally continue, defer, reject, or human-decision verdict while qualifying successful artifacts and their limits."]
+              ]
+            },
+            {
+              id: "W-09",
+              name: "Delivery",
+              items: [
+                ["Investible Target Distillation", "Narrows evaluated directions to a small, explicitly ranked portfolio that justifies investment, staged option value, or continued strategic monitoring."],
+                ["Project Proposal Development", "Produces an actionable proposal covering the problem, validated approach, scope, milestones, team, resources, dependencies, risks, gates, and exit criteria."],
+                ["Investment Recommendation Development", "Produces an evidence-backed invest, stage, partner, acquire, monitor, defer, or reject recommendation with uncertainty, conditions, and expected value."],
+                ["Technical Roadmap Development", "Creates a phased path from validated POC through further research, capability hardening, integration, scaling, productization, resources, and measurable decision gates."],
+                ["Decision Package Formation", "Assembles the opportunity, hypotheses, design, run logs, analyses, benchmarks, evaluations, dissent, limitations, qualified artifacts, and decision rationale."],
+                ["Reusable Asset Packaging", "Packages approved data, benchmark suites, code, models, simulations, experiment scripts, demos, licenses, provenance, operating limits, and reproduction guidance for reuse."],
+                ["Capability Transfer", "Codifies an accepted approach as a reusable capability candidate with its contract, mechanism, evidence, benchmark profile, dependencies, risks, and invocation path."],
+                ["Failure Knowledge Codification", "Turns rejected approaches, failed experiments, counterexamples, invalid assumptions, resource traps, and boundary conditions into reusable technical learning."],
+                ["Authorized Distribution", "Publishes or transmits approved proposals, roadmaps, judgments, data, benchmarks, demos, and capability packages through authorized destinations and records receipt."],
+                ["Knowledge Accumulation", "Closes the work by storing accepted and rejected outcomes with qualification state, updating knowledge and capability indexes, and assigning follow-up ownership."]
+              ]
+            }
+          ]
+        },
+        {
+          key: "foundation",
+          kind: "Foundation sub-function",
+          l1: [
+            {
+              id: "F-01",
+              name: "Capability Capsules",
+              items: [
+                ["Capsule Specification", "Defines the capability interface, inputs, outputs, errors, preconditions, postconditions, permissions, guarantees, resource bounds, risks, side effects, and verification obligations."],
+                ["Capsule Packaging", "Packages implementation, models, prompts, tools, data, workflows, documentation, tests, benchmarks, evidence, and reproduction assets behind the specification."],
+                ["Capsule Verification", "Performs static, symbolic, activation, runtime, and post-execution checks and certifies only versions that satisfy their declared contract."],
+                ["Capsule Registry Management", "Maintains stable identity, ownership, namespaces, versions, publishing scopes, compatibility, release history, deprecation, and authoritative registry state."],
+                ["Capsule Selection", "Lets users and agents search, compare, and match compiled intent to capsules using capability, evidence, trust, cost, compatibility, maturity, and operating limits."],
+                ["Capsule Invocation", "Validates parameters, caller permissions, preconditions, and resource bounds, invokes the selected capsule, and returns contracted outputs, evidence, effects, and failures."],
+                ["Capsule Composition", "Combines local or federated capsules through sequential, parallel, conditional, loop, and fallback patterns and derives the composite contract and trust boundary."],
+                ["Capsule Evolution", "Uses health, evaluation, and compatibility evidence to promote, adapt, roll back, deprecate, replace, or retire versions while preserving lineage and migration guidance."]
+              ]
+            },
+            {
+              id: "F-02",
+              name: "Operators",
+              items: [
+                ["Operator Registration", "Creates stable logical operator identities, ownership, operator classes, declared roles, aliases, activation state, and registry lineage without binding identity to a physical host."],
+                ["Operator Profile Management", "Maintains role, persona, instruction policy, autonomy, data boundaries, escalation posture, and authorized decision scope."],
+                ["Operator Capability Profiling", "Maintains evidenced skills, tools, modalities, domains, supported task contracts, proof obligations, and locality or policy constraints."],
+                ["Operator Qualification", "Tests declared capability and policy compliance before activating, restricting, suspending, or retiring a logical operator."],
+                ["Operator Eligibility Matching", "Matches task, plan-node, capsule, policy, authorization, and independence requirements to operators that satisfy the required profile and evidence thresholds."],
+                ["Operator Selection", "Ranks eligible operators and records why the selected operator fits the work and why materially relevant alternatives were rejected."],
+                ["Operator Performance Learning", "Maintains task-class outcomes, failure patterns, calibration, quality, cost, latency, and reliability evidence for future qualification and selection."],
+                ["Operator Independence Control", "Prevents prohibited builder–evaluator reuse, conflicts of interest, correlated review, and policy-incompatible role combinations; physical hosts and leases remain owned by Harness Core."]
+              ]
+            },
+            {
+              id: "F-03",
+              name: "Evaluator",
+              items: [
+                ["Evaluation Contract Compilation", "Compiles decision purpose, criteria, evidence obligations, reference sets, thresholds, uncertainty treatment, failure states, human roles, and verdict schema into an executable evaluation contract."],
+                ["Evaluation Method Selection", "Selects deterministic checks, design review, statistical analysis, benchmark comparison, model critique, adversarial testing, human review, or a justified combination."],
+                ["Evaluator Assignment", "Assigns technical, domain, strategy, investment, safety, model, or human evaluators while enforcing required independence and conflict rules."],
+                ["Reasoning Verification", "Verifies provenance, citation anchors, data integrity, claim support, opposing evidence, logical sufficiency, uncertainty, and conclusion consistency."],
+                ["External Plausibility Checking", "Cross-checks results against approved baselines, reusable benchmarks, known technical constraints, industry priors, comparable deployments, and independent runs."],
+                ["Evaluation Calibration", "Scores the contract’s dimensions and calibrates confidence using evidence quality, evaluator agreement, historical outcomes, and known uncertainty."],
+                ["Evidence Sufficiency Gating", "Blocks unsupported outputs and returns the missing evidence, controls, effect size, reproduction, feasibility, risk treatment, or decision proof required to continue."],
+                ["Evaluation Verdict Generation", "Produces an explained verdict, confidence, dimension scores, dissent, defects, conditions, and actionable refinement, rerun, escalation, or termination guidance."],
+                ["Evaluation Quality Learning", "Tracks evaluator disagreement, calibration drift, recurring blind spots, false acceptance, false rejection, and downstream decision quality to improve evaluation policies."]
+              ]
+            },
+            {
+              id: "F-04",
+              name: "Foundational Models",
+              items: [
+                ["Model Capability Registry", "Maintains the effective capabilities, context limits, modalities, languages, tool support, safety properties, cost, speed, and evidenced task suitability of configured models."],
+                ["Task-to-Model Matching", "Matches an operator role and task contract to eligible model capabilities, data policies, budgets, quality requirements, and environmental constraints."],
+                ["Model Route Selection", "Selects a concrete model route using quality, latency, cost, locality, capacity, health, quota, and policy and records the rationale."],
+                ["Model Context Preparation", "Assembles authorized instructions, retrieved context, tools, schemas, and input and output budgets within the selected model’s limits."],
+                ["Model Invocation", "Executes the model request with the declared role, tool boundary, structured-output contract, controls, trace context, cancellation, and timeout behavior."],
+                ["Model Tool-Use Mediation", "Validates, authorizes, executes, and returns model-requested tool calls without exposing undeclared tools, data, credentials, or effects."],
+                ["Model Response Normalization", "Normalizes provider-specific content, structured outputs, tool results, finish states, usage records, and errors and validates required structure."],
+                ["Model Continuity Management", "Resolves availability from connectivity, quota, rate limits, concurrency, cooldown, and health evidence and selects only policy-permitted fallback routes."],
+                ["Model Policy Enforcement", "Enforces model eligibility, role, data-handling, region, tool, safety, quality, and cost policies at invocation time."],
+                ["Model Usage Auditing", "Records model, route, role, context provenance, budget, latency, token or compute usage, tools, errors, and outcomes without exposing secrets."]
+              ]
+            },
+            {
+              id: "F-05",
+              name: "RSI",
+              items: [
+                ["Improvement Experience Capture", "Captures reusable successes, failures, corrections, evaluations, user feedback, environment state, and causal context from completed work."],
+                ["Improvement Pattern Discovery", "Detects recurring strengths, failure classes, regressions, bottlenecks, preference changes, and the conditions under which each pattern appears."],
+                ["Improvement Opportunity Formation", "Forms bounded opportunities to improve prompts, policies, operators, models, skills, capsules, plans, workflows, routing, data, or harness behavior."],
+                ["Improvement Candidate Generation", "Creates versioned candidates with an explicit mechanism, expected benefit, affected scope, representative evidence, and rollback boundary."],
+                ["Improvement Experimentation", "Designs and runs controlled comparisons against stable baselines using representative cases, metrics, budgets, safety checks, and decision thresholds."],
+                ["Improvement Evaluation", "Evaluates candidate effects across target quality, generalization, cost, latency, safety, compatibility, and regression dimensions."],
+                ["Improvement Deployment Control", "Promotes approved candidates gradually with explicit scope, observation, and rollback conditions and reverses changes that violate their contract."],
+                ["Improvement Policy Calibration", "Attributes observed changes to promoted candidates, detects delayed or confounded effects, and recalibrates selection, testing, promotion, and rollback policy."]
+              ]
+            },
+            {
+              id: "F-06",
+              name: "Data Foundations",
+              items: [
+                ["Unified Data Access", "Presents authorized files, repositories, databases, object stores, research sources, artifacts, and memories through stable identities without erasing source boundaries."],
+                ["Source Connector Management", "Registers and maintains adapters for open-source repositories, research literature, patents, standards, expert and industry sources, the open web, authorized internal systems, and custom research sources."],
+                ["Data Acquisition Management", "Acquires authorized source content and preserves raw and rendered snapshots, repository states, paper versions, report editions, timestamps, and change history."],
+                ["Data Quality Management", "Detects, resolves, or quarantines missing, conflicting, duplicate, stale, malformed, biased, leaked, contaminated, tampered, or corrupt data and records residual limitations."],
+                ["Data Semantics Management", "Defines and evolves interoperable schemas and metadata for signals, opportunities, hypotheses, experiments, benchmarks, failures, artifacts, memories, and capabilities without losing meaning."],
+                ["Data Lineage Management", "Maintains origin, authorship, organization, incentives, version, acquisition, transformation, derivation, experiment, evaluation, and downstream-use lineage."],
+                ["Hybrid Retrieval", "Combines keyword, code, citation, semantic, structured, graph, recency, authority, permission, and personalization signals for reliable retrieval."],
+                ["Research Knowledge Graph Management", "Maintains relationships among sources, signals, claims, methods, data, people, organizations, technologies, projects, experiments, artifacts, capabilities, and decisions."],
+                ["Opportunity Graph Management", "Defines the graph database schema for opportunity nodes and relationships and constructs, persists, queries, and versions the graph from candidates, gaps, technologies, dependencies, alternatives, and evidence."],
+                ["Opportunity Metadata Enrichment", "Automatically derives, validates, and updates timeliness, momentum, evidence pointers, evidence maturity, risk, novelty, feasibility, strategic relevance, resource need, provenance, uncertainty, and review tags."],
+                ["Evidence Ledger Management", "Maintains exact source-to-signal-to-claim links, citation anchors, supporting and opposing evidence, experiment evidence, uncertainty, evaluations, and the decisions each item influences."],
+                ["Research Asset Repository", "Stores experiment plans, code, models, simulations, scripts, environments, parameters, logs, raw data, analyses, benchmark suites, demos, qualified artifacts, versions, licenses, and reproduction instructions."],
+                ["Failure Knowledge Repository", "Stores counterexamples, failed experiments, invalid assumptions, rejected approaches, edge cases, regressions, resource traps, and the conditions under which they occurred."],
+                ["Technical Memory Management", "Maintains episodic, semantic, procedural, preference, project, strategy, experiment, failure, and high-value capability memory with consolidation, retention, decay, and influence traces."],
+                ["Data Governance", "Enforces source terms, licenses, consent, sensitivity, project and workspace separation, retention, export, deletion, and permitted downstream use."]
+              ]
+            },
+            {
+              id: "F-07",
+              name: "Harness Core",
+              items: [
+                ["Run Initialization", "Materializes an approved physical plan as a run with stable identities, contracts, initial facts, permissions, budgets, expected artifacts, and closure rules."],
+                ["Work Readiness Coordination", "Applies valid lifecycle transitions and releases work only when prerequisite nodes, artifacts, contracts, gates, and authoritative state are satisfied."],
+                ["Execution Assignment", "Binds selected logical operators to eligible physical hosts, manages exclusive leases, dispatches ready contracts, and collects acknowledgements and structured results."],
+                ["Execution Environment Provisioning", "Provisions authenticated sessions, isolated workspaces, browsers, terminals, containers, worktrees, remote machines, data access, and rollback boundaries required by approved contracts."],
+                ["Execution Admission Control", "Coordinates operators, hosts, tools, accounts, files, data, model capacity, compute, budgets, concurrency locks, and human or policy approval gates."],
+                ["Execution Recordkeeping", "Persists authoritative facts, events, commands, output references, traces, artifacts, decisions, checkpoints, and progress evidence for every run."],
+                ["Experiment Loop Automation", "Controls hypothesis-driven generate–execute–analyze–update loops, chooses eligible next experiments, enforces information-gain and resource policy, and stops at declared gates."],
+                ["Run Recovery Control", "Pauses, cancels, times out, retries, resumes, reassigns, or escalates work idempotently without duplicating accepted effects or accepting stale evidence."],
+                ["Artifact Routing", "Moves declared inputs, outputs, signals, hypotheses, data, experiment artifacts, benchmarks, evaluations, corrections, and approvals between plan nodes and product functions."],
+                ["Run Closure Assurance", "Detects stalls, unavailable hosts, blocked resources, repeated failures, budget exhaustion, inconsistent state, and projection drift and proves truthful terminal closure."]
+              ]
+            },
+            {
+              id: "F-08",
+              name: "Intention Compilers",
+              items: [
+                ["Compiler Profile Selection", "Selects the authorized compiler profile, task dialect, trigger policy, schema family, and isolation boundary appropriate to the request and product mode."],
+                ["Intent Classification", "Classifies task type, domain, risk, urgency, requested action, and expected output within the selected compiler profile."],
+                ["Goal Extraction", "Extracts the user, affected entities, requested change, desired decision, deliverable, audience, and success language."],
+                ["Context Projection", "Selects authorized conversation, preferences, memory, project and workspace state, internal context, and supplied material relevant to interpretation."],
+                ["Ambiguity Detection", "Detects underspecified goals, conflicting instructions, undefined concepts, missing decisions, and consequential assumptions."],
+                ["Clarification Generation", "Generates the smallest decision-relevant questions or explicit assumption choices needed to produce a reliable contract."],
+                ["Constraint Compilation", "Compiles authorization, scope, resource, policy, format, data, safety, and environmental constraints into executable semantics."],
+                ["Task Contract Compilation", "Builds machine-readable intent, context references, scope, inputs, outputs, allowed effects, dependencies, permissions, resources, proof, stop, and acceptance semantics."],
+                ["Contract Traceability", "Versions and validates profile-specific contracts and binds stable requirements to plan nodes, artifacts, claims, checks, evaluations, decisions, corrections, and delivery records."]
+              ]
+            },
+            {
+              id: "F-09",
+              name: "Planner",
+              items: [
+                ["Task Decomposition", "Breaks a compiled requirement contract into independently valuable and verifiable work units without exposing implementation microsteps as plan nodes."],
+                ["Planning Strategy Selection", "Selects an open-signal, research, hypothesis, experiment, build, benchmark, evaluation, investment, delivery, or mixed strategy appropriate to the contract."],
+                ["Logical Plan Generation", "Creates implementation-independent work units with inputs, outputs, effects, evidence, decisions, budgets, gates, stop conditions, and completion criteria."],
+                ["Dependency Graph Formation", "Defines prerequisite, parallel, merge, portfolio, feedback, experiment-loop, approval, and terminal relationships between work units."],
+                ["Execution Requirement Compilation", "Compiles the operator, model, capsule, tool, data, environment, evaluator, human-decision, and role-separation requirements each node must satisfy."],
+                ["Resource Planning", "Allocates data, compute, environments, time, capital, talent, context, models, tools, and human-review budgets across the plan."],
+                ["Assurance Planning", "Plans supporting and opposing evidence, controls, proof artifacts, failure paths, safety checks, escalation, insufficient-evidence gates, and explicit stop or defer conditions."],
+                ["Plan Validation", "Checks requirement coverage, dependency soundness, role separation, resource feasibility, experiment validity, proof obligations, gate closure, and executable completion before dispatch."],
+                ["Physical Plan Selection", "Forms and compares feasible operator, model, capsule, tool, host, sandbox, quota, cost, locality, and policy bindings and records why one was selected."],
+                ["Plan Evolution", "Uses execution failures, quota or health changes, evaluator rejection, new evidence, and user decisions to revise only affected regions while preserving rationale and completed work."]
+              ]
+            },
+            {
+              id: "F-10",
+              name: "Builder",
+              items: [
+                ["Build Contract Interpretation", "Interprets the required technical or decision artifact, interfaces, constraints, proof obligations, evaluation needs, environment, and allowed state changes before construction."],
+                ["Build Preparation", "Selects the build approach and prepares isolated, authorized workspaces with required repositories, tools, data, dependencies, compute, environments, and rollback boundaries."],
+                ["Code Construction", "Constructs, integrates, tests, refactors, and modifies working code through real repositories, runtimes, services, APIs, and tools."],
+                ["Model Construction", "Constructs or adapts models, algorithms, prompts, retrieval methods, optimizers, decision policies, and other computational mechanisms."],
+                ["Experimental Asset Construction", "Constructs simulations, synthetic environments, scenario generators, notebooks, pipelines, parameter sweeps, job definitions, checkpoints, and automation workflows."],
+                ["Benchmark Asset Construction", "Constructs datasets, schemas, transformations, workloads, baselines, metrics, scorecards, fixtures, failure sets, and reproducibility assets."],
+                ["Verification Asset Construction", "Constructs executable functional, failure, security, performance, hypothesis, benchmark, and acceptance checks tied to contracts."],
+                ["Decision Artifact Construction", "Constructs source-backed reports, manuscripts, specifications, proposals, roadmaps, evidence packs, charts, diagrams, dashboards, and interactive decision artifacts."],
+                ["Prototype Assembly", "Integrates code, models, simulations, scripts, data, interfaces, and operating scenarios into coherent POCs and reviewable demonstrations."],
+                ["Product Integration", "Integrates constructed components and packages them into the target repository, application, deployment, benchmark, capability, or delivery structure."],
+                ["Defect Repair", "Repairs failed code, models, simulations, experiments, benchmarks, documents, or integrations against evaluator findings while preserving scope and unaffected behavior."],
+                ["Build Evidence Generation", "Emits manifests, diffs, commands, outputs, configurations, dependency records, checks, experiment links, and artifact references needed for evaluation and reuse."]
+              ]
+            }
+          ]
+        },
+        {
+          key: "verticals",
+          kind: "Vertical function",
+          l1: [
+            {
+              id: "V-01",
+              name: "Visibility / Statistics",
+              items: [
+                ["Workflow Status Visibility", "Shows current phase, completed and active work, blocked work, operators, hosts, gates, budgets, authoritative state, and expected next transitions."],
+                ["Execution Trace Search", "Provides a time-ordered, filterable search across requests, events, transitions, tool calls, experiments, artifacts, failures, approvals, decisions, and outcomes."],
+                ["Opportunity Intelligence Analytics", "Reports source coverage, credibility, freshness, signal clusters, momentum, gaps, opportunity-graph growth, node timeliness, evidence maturity, risk, ranking, and portfolio diversity."],
+                ["Experiment Analytics", "Reports experiment queues, iteration history, active variants, model or code updates, information gain, failures, budget burn, data quality, and POC readiness."],
+                ["Evaluation Analytics", "Reports baseline comparisons, uncertainty, regressions, demo outcomes, failure clusters, reproducibility, evidence gaps, evaluator agreement, verdict history, and calibration."],
+                ["Innovation Portfolio Analytics", "Reports investible targets, strategic fit, expected value, resources, staged options, decisions, validated capabilities, capsule certification, reuse, and capability gaps."],
+                ["Resource Economics Analytics", "Reports model, compute, tool, storage, data, token, quota, human-review, budget, cost, and capacity usage by project, hypothesis, experiment, capability, and time."],
+                ["Platform Health Visibility", "Shows run, host, lease, session, queue, checkpoint, provider, data source, repository, experiment infrastructure, browser, capsule, operator, and message-channel readiness without replacing authoritative state."],
+                ["Evidence & Decision Reporting", "Produces source-backed reports and exports of experiments, metrics, evaluations, decisions, investment judgments, provenance, evidence, and capability references for technical and investment review."]
+              ]
+            },
+            {
+              id: "V-02",
+              name: "Installer & CLI & Webapp",
+              items: [
+                ["Guided Installation", "Guides users through the storage, model providers, research sources, message channels, execution environments, and CLI or web access needed to start the product."],
+                ["Compatibility Validation", "Validates operating system, shell, hardware, dependencies, permissions, network, storage, browser, and supported runtime assumptions."],
+                ["Dependency Provisioning", "Resolves, installs, and configures required product dependencies, background services, databases, and selected optional integrations."],
+                ["Product Initialization", "Initializes product state, storage, services, default configuration, selected providers, and required integrations."],
+                ["Installation Verification", "Runs real readiness checks for services, storage, providers, access surfaces, permissions, and a minimal end-to-end workflow."],
+                ["Installation Repair", "Explains and repairs missing dependencies, broken configuration, failed services, permission errors, stale state, and installation drift."],
+                ["Product Update Control", "Updates application components and schemas safely, verifies the upgrade, and restores the prior working version when required."],
+                ["Safe Uninstallation", "Removes installed components and services while preserving, exporting, or securely deleting user data according to explicit choices."],
+                ["CLI Product Access", "Exposes research tasks, runs, configuration, diagnostics, updates, and exports through a coherent command-line interface."],
+                ["Web Application Access", "Starts and securely exposes the web application in the selected local or approved shared environment and verifies browser access and service health."],
+                ["Supported Environment Packaging", "Packages and maintains installable releases for the product’s explicitly supported operating systems and execution environments."]
+              ]
+            },
+            {
+              id: "V-03",
+              name: "UI",
+              items: [
+                ["Conversational Task Interaction", "Lets users express innovation goals, supply documents, answer clarifications, guide active work, challenge conclusions, and receive decision-oriented explanations."],
+                ["Work Navigation", "Lets users browse, search, organize, resume, and compare workspaces, research topics, projects, opportunity portfolios, experiments, sessions, and runs."],
+                ["Signal Exploration", "Lets users inspect source families, search lanes, projects, papers, reports, experts, company dynamics, open-web signals, signal clusters, gaps, coverage, freshness, and credibility."],
+                ["Opportunity Workspace", "Lets users inspect, compare, annotate, merge, split, challenge, enrich, rank, defer, and reject candidate ideas and their governing Idea Cards."],
+                ["Opportunity Portfolio Visualization", "Provides an interactive 2D portfolio matrix with configurable axes, filters, grouping, zoom, selection, and visual encodings for timeliness, evidence, risk, value, feasibility, resources, and diversity."],
+                ["Experiment Workspace", "Lets users inspect, edit, cluster, prioritize, and trace hypotheses and review verification paths, POCs, experiments, scripts, queues, budgets, gates, failures, and stop conditions."],
+                ["Evidence Review Workspace", "Lets users compare POCs, variants, baselines, workloads, metrics, uncertainty, demos, failure samples, and reproducibility and trace claims to exact sources, data, runs, and opposing evidence."],
+                ["Collaborative Evaluation", "Lets authorized reviewers question assumptions, compare independent AI reviews, request evidence or reruns, record dissent, override bounded judgments, and approve, defer, or terminate directions."],
+                ["Investment Decision Workspace", "Lets decision makers compare target portfolios, proposals, investment recommendations, expected value, resource commitments, options, milestones, risks, and technical roadmaps."],
+                ["Capability Library Access", "Lets users discover, compare, inspect evidence for, invoke, compose, reuse, and provide feedback on accumulated capabilities and capsules."],
+                ["Live Execution Inspection", "Lets users inspect active plans, dependencies, operators, hosts, models, tools, gates, resource use, failures, recovery, next actions, and why execution choices were selected or rejected."],
+                ["Research Interaction Preferences", "Lets users control permitted sources, quality, cost, speed, autonomy, approvals, privacy, notifications, presentation, and accessibility for research work."]
+              ]
+            },
+            {
+              id: "V-04",
+              name: "Account Management",
+              items: [
+                ["Account Registration", "Creates an individual product account with verified identity, accepted terms, and initial personal settings."],
+                ["User Authentication", "Supports secure sign-in, sign-out, session establishment, reauthentication, and recovery through configured identity methods."],
+                ["User Profile Management", "Manages identity, expertise, role, research preferences, notification choices, accessibility choices, and default product behavior."],
+                ["Account Security", "Protects active account sessions, supports session revocation and recovery, and surfaces suspicious access."],
+                ["Privacy Controls", "Lets users inspect, export, retain, or delete personal settings and user-supplied data and manage consent for message-derived information."]
+              ]
+            },
+            {
+              id: "V-05",
+              name: "Message Channels",
+              items: [
+                ["Channel Connection Management", "Establishes and maintains authorized Slack and supported internal messaging, collaboration, incident, project, and knowledge-tool connections."],
+                ["Channel Sensing Governance", "Defines which workspaces, channels, conversations, participants, content classes, time windows, and events may be sensed, retained, and used for research intake."],
+                ["Continuous Signal Sensing", "Continuously observes authorized channel activity and change events so potentially valuable clues do not depend on manual submission."],
+                ["Conversation Context Capture", "Captures permitted messages, replies, edits, reactions, mentions, attachments, links, timestamps, participants, threads, projects, teams, and workspace context."],
+                ["Channel Content Normalization", "Converts heterogeneous channel events into stable signal records and binds each record to its source message, version, author, conversation, attachment, time, and acquisition path."],
+                ["Weak-Signal Detection", "Detects emerging technical themes, repeated pain points, accelerating discussion, expert attention, unresolved questions, decisions, incidents, and early opportunity clues."],
+                ["Channel Signal Qualification", "Screens sensed content for research relevance, confidentiality, personal or restricted information, policy exclusions, low-value chatter, and evidence limitations."],
+                ["Cross-Channel Correlation", "Links repeated or related clues across channels, threads, tools, teams, and time while preserving distinct sources, disagreements, and independent confirmations."],
+                ["Qualified Signal Routing", "Packages a qualified clue with context, provenance, sensitivity, relevance, and suggested intake scope and routes it to W-01 without compiling requirements or selecting an opportunity."]
+              ]
+            },
+            {
+              id: "V-06",
+              name: "Configurations / LLM Providers",
+              items: [
+                ["Configuration Editing", "Lets authorized users inspect and change supported product, deployment, workspace, project, workflow, capability, and personal settings."],
+                ["Configuration Resolution", "Resolves installation, workspace, project, environment, and user settings deterministically and explains which value is effective."],
+                ["Configuration Validation", "Validates types, schemas, required fields, paths, permissions, dependencies, policy constraints, and cross-setting compatibility before activation."],
+                ["Configuration Lifecycle", "Imports, exports, compares, versions, migrates, applies, and rolls back portable configuration profiles without exposing protected secrets."],
+                ["Signal Source Configuration", "Configures research source families, repositories, indexes, websites, feeds, Slack or internal-tool targets, sensing scopes, crawl limits, freshness, licenses, consent, and connector policy."],
+                ["Experiment Infrastructure Configuration", "Configures code environments, clusters, sandboxes, data stores, simulations, job systems, benchmark runners, demo environments, quotas, and isolation policy."],
+                ["Decision Policy Configuration", "Configures company strategy, technical priorities, investment horizon, risk appetite, review roles, evidence thresholds, gates, resource assumptions, and decision vocabulary."],
+                ["Operator & Capsule Configuration", "Configures operator roles and policies, capsule catalogs and availability, host eligibility, verification thresholds, and capability lifecycle rules."],
+                ["LLM Provider Connection Management", "Registers, edits, tests, disables, and removes provider endpoints and connections and records their declared adapter capabilities."],
+                ["Credential Reference Management", "Configures protected credential references, authentication methods, rotation state, and access scope for models, sources, repositories, data, compute, channels, and services."],
+                ["Model Governance Configuration", "Configures model identifiers, modalities, context limits, pricing, regions, role eligibility, enablement, data classes, budgets, and provider or model restrictions."],
+                ["Provider Diagnostics", "Diagnoses credentials, endpoints, model access, rate limits, quota, billing, network, region, policy, capacity, and adapter failures."]
+              ]
+            }
+          ]
+        }
+      ];
+
+      function pad(number) {
+        return String(number).padStart(2, "0");
+      }
+
+      var totalL1 = 0;
+      var totalL2 = 0;
+      var nav = document.getElementById("feature-nav");
+
+      inventories.forEach(function (inventory) {
+        var section = document.getElementById(inventory.key);
+        var grid = section.querySelector(".card-grid");
+        var sectionL2 = inventory.l1.reduce(function (sum, group) {
+          return sum + group.items.length;
+        }, 0);
+
+        totalL1 += inventory.l1.length;
+        totalL2 += sectionL2;
+        document.getElementById(inventory.key + "-count").textContent =
+          inventory.key.charAt(0).toUpperCase() + inventory.key.slice(1) + ": " +
+          inventory.l1.length + " L1 / " + sectionL2 + " L2";
+
+        var top = document.createElement("a");
+        top.className = "top " + inventory.key + "-color";
+        top.href = "#" + inventory.key;
+        top.textContent = section.querySelector("h2").textContent;
+        nav.appendChild(top);
+
+        inventory.l1.forEach(function (group) {
+          var article = document.createElement("article");
+          article.className = "l1-card";
+          article.id = group.id.toLowerCase();
+          article.dataset.tree = inventory.key;
+
+          var head = document.createElement("div");
+          head.className = "l1-head";
+
+          var id = document.createElement("span");
+          id.className = "id";
+          id.textContent = group.id;
+
+          var titleWrap = document.createElement("div");
+          var title = document.createElement("h3");
+          title.textContent = group.name;
+          var kind = document.createElement("div");
+          kind.className = "kind";
+          kind.textContent = inventory.kind + " · " + group.items.length + " L2";
+          titleWrap.appendChild(title);
+          titleWrap.appendChild(kind);
+
+          head.appendChild(id);
+          head.appendChild(titleWrap);
+          article.appendChild(head);
+
+          var list = document.createElement("ol");
+          list.className = "feature-list";
+          group.items.forEach(function (item, index) {
+            var row = document.createElement("li");
+            var featureId = document.createElement("span");
+            featureId.className = "feature-id";
+            featureId.textContent = group.id + "." + pad(index + 1);
+            var featureName = document.createElement("span");
+            featureName.className = "feature-name";
+            featureName.textContent = item[0];
+            var featureDesc = document.createElement("span");
+            featureDesc.className = "feature-desc";
+            featureDesc.textContent = item[1];
+            row.appendChild(featureId);
+            row.appendChild(featureName);
+            row.appendChild(featureDesc);
+            list.appendChild(row);
+          });
+          article.appendChild(list);
+          grid.appendChild(article);
+
+          var link = document.createElement("a");
+          link.href = "#" + article.id;
+          link.textContent = group.id + " " + group.name;
+          nav.appendChild(link);
+        });
+      });
+
+      document.getElementById("total-count").textContent =
+        "Total: " + totalL1 + " L1 / " + totalL2 + " L2";
+
+      var input = document.getElementById("feature-search");
+      var clear = document.getElementById("clear-search");
+      var count = document.getElementById("search-count");
+      var cards = Array.prototype.slice.call(document.querySelectorAll(".l1-card"));
+      var rows = Array.prototype.slice.call(document.querySelectorAll(".feature-list li"));
+      var sections = Array.prototype.slice.call(document.querySelectorAll("main > section"));
+
+      function applyFilter() {
+        var query = input.value.trim().toLowerCase();
+        rows.forEach(function (row) {
+          row.classList.toggle("hidden", Boolean(query) && row.textContent.toLowerCase().indexOf(query) === -1);
+        });
+        cards.forEach(function (card) {
+          var cardMatch = !query || card.querySelector(".l1-head").textContent.toLowerCase().indexOf(query) !== -1;
+          if (cardMatch && query) {
+            card.querySelectorAll(".feature-list li").forEach(function (row) {
+              row.classList.remove("hidden");
+            });
+          }
+          var visibleRows = card.querySelectorAll(".feature-list li:not(.hidden)").length;
+          card.classList.toggle("hidden", Boolean(query) && visibleRows === 0);
+        });
+        sections.forEach(function (section) {
+          section.classList.toggle("hidden", Boolean(query) && section.querySelectorAll(".l1-card:not(.hidden)").length === 0);
+        });
+        var shown = document.querySelectorAll(".feature-list li:not(.hidden)").length;
+        count.textContent = shown + " of " + rows.length + " L2 features shown";
+      }
+
+      input.addEventListener("input", applyFilter);
+      clear.addEventListener("click", function () {
+        input.value = "";
+        applyFilter();
+        input.focus();
+      });
+      applyFilter();
+    }());
+  </script>
+
+
+</body></html>

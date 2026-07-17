@@ -1,0 +1,624 @@
+# Native AutoSci keywords
+
+===== .claude/skills/research/SKILL.md =====
+3:argument-hint: <research-direction-or-brief> [--auto] [--start-from stage1|stage2|stage3|stage3-collect|stage3-check|stage4|stage5] [--skip-paper] [--venue ICLR|NeurIPS|ICML|ACL|CVPR]
+9:> Stage 0 (Bootstrap) + 5 Stages + 2 Human Gates, covering the full pipeline from empty wiki to paper submission.
+11:> Every Gate and Stage saves progress to `wiki/outputs/pipeline-progress.md`, supporting cross-session recovery.
+13:> **Stage 3 is non-blocking**: experiments are deployed and control returns immediately (`--auto` mode automatically sets up a CronCreate to monitor every 30 minutes).
+14:> When all experiments finish, Stage 4 is triggered automatically. Use `/exp-status` at any time to check progress.
+23:- `--auto` (optional): fully automatic mode; Gate 1 auto-selects top-1 idea, Gate 2 auto-continues, Stage 3b auto-creates CronCreate
+24:- `--start-from <stage>` (optional): resume execution from the specified stage
+25:  - Valid values: `stage1`, `stage2`, `stage3`, `stage3-collect`, `stage3-check`, `stage4`, `stage5`
+26:  - `stage3-collect`: skip deploy, go directly to Stage 3c (collect results from already-deployed experiments)
+29:- `--skip-paper` (optional): run research only (Stages 1-4), skip paper writing (Stage 5), but still run /exp-eval (Stage 4)
+37:- **paper/ directory** (if not --skip-paper) — submittable paper
+45:- `wiki/ideas/*.md` — Gate 1 selection, Stage 4 verdict, Stage 5 paper planning
+46:- `wiki/experiments/*.md` — Stage 3-4 status checks
+47:- `wiki/methods/*.md` — Stage 5 paper writing context
+49:- `wiki/papers/*.md` — Stage 5 paper writing context
+52:- `wiki/outputs/pipeline-progress.md` — save progress at each Gate (wiki entity writes are delegated to sub-skills)
+93:     - Read progress file, restore idea_slug, experiment_slugs, stage3a_deployed, linked_idea_slugs, monitoring_cron_id
+97:   - **`--start-from stage3-collect`**: skip Stage 3a+3b; go directly to Stage 3c (collect already-deployed experiments)
+112:   stage3a_deployed: []
+116:   ## Stage Log
+117:   - Stage 0 (Bootstrap): skipped
+118:   - Stage 1: pending
+119:   - Gate 1: pending
+120:   - Stage 2: pending
+121:   - Stage 3a (Deploy): pending
+122:   - Stage 3b (Await): pending
+123:   - Stage 3c (Collect): pending
+124:   - Stage 4: pending
+125:   - Gate 2: pending
+126:   - Stage 5: pending
+137:   python3 tools/research_wiki.py maturity wiki/ --json
+139:   Save returned JSON to memory variable `maturity_before`.
+141:### Stage 0: Bootstrap (triggered automatically when wiki is empty)
+143:**Trigger condition**: run `python3 tools/research_wiki.py maturity wiki/ --json`. If `level == "cold"` and `papers < 3`: enter Bootstrap automatically. Otherwise skip and proceed to Stage 1.
+151:   - DeepXiv: `python3 tools/fetch_deepxiv.py search "{direction}" --mode hybrid --limit 20`
+152:   - Semantic Scholar: `python3 tools/fetch_s2.py search "{direction}" --limit 20`
+154:   - If DeepXiv is unavailable: skip; use only S2 + arXiv
+158:   - Ranking priority: DeepXiv relevance score > S2 citation count > recency
+176:   python3 tools/research_wiki.py maturity wiki/ --json
+183:   Proceeding to Stage 1: Idea Discovery...
+189:     "research | stage0-bootstrap | auto-ingested {N} papers | maturity: {level}"
+194:### Stage 1: Idea Discovery
+205:2. Update pipeline-progress: Stage 1 → completed, record generated idea slugs
+208:### Gate 1: Select Idea
+220:- Update pipeline-progress: Gate 1 → passed, record idea_slug
+223:### Stage 2: Experiment Design
+234:2. Update pipeline-progress: Stage 2 → completed, record experiment_slugs
+236:### Stage 3: Experiment Execution (non-blocking)
+238:Stage 3 is divided into three sub-stages, allowing experiments to run asynchronously in the background without blocking the session.
+240:#### Stage 3a: Deploy All
+242:Deploy each experiment in run order (baseline → validation → ablation → robustness) by calling `/exp-run {experiment_slug}` (default deploy mode, Phase 1+2):
+249:(Default deploy mode, Phase 1+2: returns immediately after deployment, does not wait for experiment to finish)
+251:**After each deployment**:
+252:- Record deployment result (success/failure) in memory
+253:- If deploy fails: record to pipeline-progress with a warning (baseline deploy failure gets a stronger warning), but **continue deploying remaining experiments** (do not abort)
+255:**After all deployments complete**, update pipeline-progress.md:
+260:  wiki/outputs/pipeline-progress.md stage3a_deployed \
+266:  "research | stage3a | deployed {N} experiments | pipeline: {slug}"
+269:#### Stage 3b: Await (non-blocking)
+271:After all experiments are deployed, compute ETA, save progress, and end the current session.
+279:   For each deployed experiment, read `started` and `estimated_hours` from frontmatter:
+289:   Stage 3a complete: {N} experiments all deployed:
+294:   exp-foo-validation              remote (gpu1)   ~6h             Today 23:00
+301:     /research --start-from stage3-collect    ← collect results and continue
+306:#### Stage 3c: Collect (triggered after experiments complete)
+308:**Trigger**: user manually runs `/research --start-from stage3-collect`
+310:For each deployed experiment (read from `stage3a_deployed` list):
+313:Args: "{experiment_slug} --collect"
+316:(Collect mode, Phase 3+4: check completion status and collect results)
+318:**Decision after each collect**:
+320:- If outcome == failed and this is a validation experiment → record failure, continue collecting remaining experiments, proceed to Stage 4 evaluation
+323:**After all collects complete**:
+324:- Update pipeline-progress: Stage 3 → completed
+332:    "research | stage3c | collected {N} experiments | pipeline: {slug}"
+337:- Proceed to Stage 4
+339:### Stage 4: Verdict & Iteration
+351:   - **Sufficient** (primary linked idea has been transitioned to `validated`, OR ≥1 supporting experiment has `outcome=succeeded`) → proceed to Gate 2
+361:3. Re-run Stage 3 → Stage 4 for new/modified experiments
+365:- Update pipeline-progress: Stage 4 → completed, record linked_idea_slugs
+367:### Gate 2: Confirm Paper Ready
+369:**If `--skip-paper`**: skip Gate 2 and Stage 5, generate final report directly
+371:**If `--auto` mode**: automatically continue, enter Stage 5
+380:- If "need more experiments": return to Stage 2 for replanning
+384:- Update pipeline-progress: Gate 2 → passed
+386:### Stage 5: Paper Writing
+395:(passes the validated idea slug(s) collected in Stage 4 to /paper-plan)
+406:Args: "paper/main.tex" --max-rounds 3 --target-score 8 --focus writing
+412:Args: "paper/"
+416:- Update pipeline-progress: Stage 5 → completed, status: completed
+425:## Stage Summary
+426:| Stage | Status | Duration |
+428:| Stage 0: Bootstrap | completed/skipped | ... |
+429:| Stage 1: Idea Discovery | completed | ... |
+430:| Gate 1: Idea Selection | passed | ... |
+431:| Stage 2: Experiment Design | completed | ... |
+432:| Stage 3a: Deploy Experiments | completed | ... |
+433:| Stage 3b: Await (async) | completed | ... |
+434:| Stage 3c: Collect Results | completed | ... |
+435:| Stage 4: Verdict | completed | ... |
+436:| Gate 2: Paper Ready | passed | ... |
+437:| Stage 5: Paper Writing | completed | ... |
+463:- Paper: paper/main.pdf (if applicable)
+475:(Data from comparing `maturity_before` from Step 0 against a fresh call to `maturity --json` here. Only rows with delta != 0 are shown.)
+492:- **Gates and Stages must save progress**: every Gate and Stage must save pipeline-progress.md when completed or entering await
+493:- **Stage 3a deploy failures do not abort**: record a warning and continue deploying; do not terminate early (baseline collect failure is what triggers termination)
+494:- **Baseline collect failure terminates**: in Stage 3c, if baseline outcome == failed, terminate the pipeline
+495:- **Stage 3b ends the session**: after Stage 3b completes, the current session ends; do not continue waiting for experiments
+496:- **Maximum 2 iterations**: Stage 4 iterates at most 2 times to prevent infinite loops
+498:- **--skip-paper still runs Stage 4 /exp-eval**: idea/experiment updates must be completed even when not writing a paper
+500:- **Log every Stage**: append a log.md audit entry after each Stage completes
+503:- **Auto-recovery first**: if no --start-from is given and an unfinished pipeline exists, default to prompting the user to resume rather than starting fresh
+508:- **pipeline-progress corrupted or malformed**: attempt to infer progress from current wiki state (read ideas/experiments statuses), recover to the nearest Gate
+509:- **Sub-skill call fails**: record error to pipeline-progress, report the failed stage, suggest --start-from to resume
+511:- **All experiment deploys fail**: terminate pipeline (Stage 3a); generate failure report; suggest checking GPU/SSH configuration
+512:- **Stage 3c baseline collect fails**: terminate pipeline; report baseline cannot be reproduced; suggest re-running /exp-design
+513:- **All experiment collects fail (non-baseline)**: proceed to Stage 4 evaluation (treat failures as evidence)
+514:- **Gate user selects stop**: save progress to pipeline-progress; generate partial report
+516:- **Wiki empty (no papers/concepts)**: auto-trigger Stage 0 Bootstrap (search + auto-ingest 5 papers)
+523:- `/ingest` — Stage 0 Bootstrap auto-ingest
+524:- `/ideate` — Stage 1 idea discovery
+525:- `/exp-design` — Stage 2 experiment design
+526:- `/exp-run` — Stage 3a (deploy mode) and Stage 3c (--collect mode)
+527:- `/exp-status` — user manually checks experiment progress; `--auto-advance` can automatically trigger Stage 4 when all complete
+528:- `/exp-eval` — Stage 4 verdict
+529:- `/refine` — Stage 4 iteration + Stage 5 paper improvement
+530:- `/paper-plan` — Stage 5 paper planning
+531:- `/paper-draft` — Stage 5 paper writing
+532:- `/paper-compile` — Stage 5 paper compilation
+538:- `python3 tools/research_wiki.py maturity wiki/ --json` — check wiki maturity (Stage 0 trigger + Growth Report)
+539:- `python3 tools/research_wiki.py init wiki/` — initialize wiki structure (Stage 0)
+540:- `python3 tools/fetch_deepxiv.py search "{query}" --mode hybrid --limit 20` — DeepXiv semantic search (Stage 0)
+541:- `python3 tools/fetch_s2.py search "{query}" --limit 20` — Semantic Scholar search (Stage 0)
+542:- `python3 tools/fetch_arxiv.py` — arXiv RSS search (Stage 0)
+545:- None directly — all Review LLM interactions are used indirectly via sub-skills
+552:- `AskUserQuestion` — user interaction at Gates and auto-recovery detection
+
+===== .claude/skills/ideate/SKILL.md =====
+9:> Phase 1 scans the research landscape (wiki + WebSearch + S2), Phase 2 runs a dual-model brainstorm (Claude + Review LLM independently),
+10:> Phase 3 applies first-pass filter + deep validation (feasibility, novelty, review), Phase 4 writes ideas to the wiki (including eliminated ideas, with failure reasons recorded as anti-repetition memory),
+11:> Phase 5 runs pilot experiments on surviving ideas (idea pages already exist) and updates results.
+17:- `--skip-validation`: skip Phase 3 Step 2 deep validation (skip /novelty and /review; fast mode: first-pass filter only)
+18:- `--skip-pilot`: skip Phase 5 pilot experiments (fast mode: Phase 1–4 only)
+50:- `inspired_by`: idea → paper/method/concept (source of inspiration for the idea)
+56:2. **Check wiki maturity**:
+58:   python3 tools/research_wiki.py maturity wiki/ --json
+60:   Adjust subsequent behavior based on maturity level:
+61:   - **cold**: expand Phase 1 external search (WebSearch queries from 5 to 8, S2/DeepXiv limit from 20 to 30),
+64:   - **hot**: reduce Phase 1 external search (WebSearch queries from 5 to 2, S2/DeepXiv limit from 20 to 10),
+65:     raise Phase 3 gap_alignment_bonus from +2 to +3, prioritize ideas that close gaps already enumerated in topic / concept open-problem sections
+67:   Save the JSON returned by maturity to memory variable `maturity_before`
+69:### Phase 1: Landscape Scan
+79:   - Read `wiki/topics/*.md` and `wiki/concepts/*.md`: collect bullet items under `## Open problems` (including `### Known gaps` and `### Methodological gaps`) → **gap candidates list**
+84:   - **Semantic Scholar**:
+89:   - **DeepXiv semantic search**:
+98:   - **DeepXiv trending papers**:
+104:   - **If DeepXiv is unavailable**: skip DeepXiv search and trending, rely on S2 + WebSearch only (fallback to original behavior).
+113:### Phase 2: Dual-Model Brainstorm
+115:Goal: generate ideas independently with Claude and Review LLM, exploiting the diversity that comes from different model perspectives.
+117:**Follow `shared-references/cross-model-review.md`**: Claude and Review LLM generate independently without seeing each other's output.
+125:     | A | Landscape-driven | `direction` + landscape report from Phase 1 (no dependency on existing methods) | "Design directly from topic/research description" |
+138:2. **Review LLM independently generates 4–6 ideas** (run in parallel):
+161:       {landscape report from Phase 1 — gaps, SOTA, trends}
+182:   - Combine Claude's and Review LLM's ideas (10–16 candidates)
+188:### Phase 3: Filter & Validation
+200:2. **Quick novelty screening** (2–3 WebSearch queries per idea):
+211:   - Eliminate if: feasibility=low AND quick novelty screening found similar published work
+218:(Skip if `--skip-validation`: proceed directly to Phase 4: Write to Wiki with default priority = 3 for all survivors.)
+247:### Phase 4: Write to Wiki
+267:   novelty_score: ""         # 1-5 — written by /novelty --write in Phase 3 Deep Validation; leave empty otherwise
+269:   pilot_result: ""          # Leave blank; pilots run in Phase 5, results filled in by /exp-pilot-eval after.
+277:   **Priority computation** (maps Phase 3 validation signals into the 1-5 scale):
+305:   Leave blank; filled in by /exp-pilot-eval in Phase 5.
+312:   For ideas eliminated in Phase 3, also create `wiki/ideas/{slug}.md` using the **same template above**, with these overrides:
+316:   - `failure_reason: "[filter] <specific elimination reason>"` — the `[filter]` prefix distinguishes Phase 3 filter eliminations from post-experiment failures from /exp-eval. Example: `"[filter] highly similar published work exists: <paper-title>"`. Pilot failures (Phase 5) are handled by `/exp-pilot-eval` which writes `[pilot]` failure_reason directly to the existing idea page.
+351:   - Phase 1: Scanned {N} external papers, {M} wiki gaps identified
+352:   - Phase 2: Generated {X} candidates (Claude: {a}, Review LLM: {b})
+353:   - Phase 3: {Y} survived filter & validation (from {X})
+354:   - Phase 4: {K} ideas written to wiki
+371:   - If --skip-pilot is not specified, run the pilot experiment for further screening.
+383:   (Only rows with delta != 0 are shown. Data is computed by comparing `maturity_before` from the pre-condition step against a fresh `maturity --json` call here.)
+388:### Phase 5: Pilot Experiments
+390:(Skip if `--skip-pilot` is set; pipeline ends after Phase 4.)
+411:  # --- Core context (from idea Phase 2) ---
+457:- **hypothesis / approach_sketch**: copy from the idea generated in Phase 2 (these are the same 1-2 sentence hypothesis and 3-5 sentence approach sketch)
+487:After `/exp-pilot-run` returns the PILOT_REPORT, evaluate results and update the idea page (which already exists from Phase 4):
+496:- **Fail**: sets `failure_reason: "[pilot] ..."`, transitions status to `failed`.Meanwhile set pilot_result: "fail — ..."
+501:**After all pilots complete**: print the final IDEA_REPORT (see Phase 4 Step 6).
+505:- **Auto-switch to cold-start mode when wiki is cold**: expand external search (WebSearch 8 queries, S2/DeepXiv limit 30), do not block execution
+507:- **Banlist must be loaded**: Phase 1 must read failed ideas' failure_reason; Phase 2/3/5 must check for overlap
+508:- **Review LLM independence**: in Phase 2, Review LLM does not see Claude's idea list (cross-model-review.md)
+516:- **Wiki is empty**: proceed with external search (Phase 1 sources B/C/D), but skip wiki internal context; prompt user to build the knowledge base first
+518:- **Semantic Scholar API unavailable**: skip S2 search, rely on DeepXiv + WebSearch for compensation
+519:- **DeepXiv API unavailable**: skip DeepXiv search and trending, fall back to S2 + WebSearch (original behavior)
+520:- **Review LLM unavailable**: Phase 2 uses Claude only (no dual-model diversity, noted in report)
+521:- **/novelty fails**: if novelty fails for a single idea in Phase 3, mark "novelty unverified" and continue
+522:- **/review fails**: if review fails in Phase 3, mark "unreviewed" and continue; recommend user manually runs /review
+524:- **All pilots fail**: idea pages already exist (written in Phase 4); report recommends user review pilot logs and adjust approach
+531:- `python3 tools/research_wiki.py maturity wiki/ --json` — check wiki maturity + Growth Report
+537:- `python3 tools/fetch_s2.py search "<query>" --limit 20` — Semantic Scholar search
+538:- `python3 tools/fetch_deepxiv.py search "<query>" --mode hybrid --limit 20` — DeepXiv semantic search
+543:- `/novelty` — Phase 3 deep novelty validation
+544:- `/review` — Phase 3 cross-model review
+545:- `/exp-pilot-run` — Phase 5 pilot experiment execution
+546:- `/exp-pilot-eval` — Phase 5 pilot result evaluation and idea page update
+549:- `mcp__llm-review__chat` — Phase 2 Review LLM independent brainstorm
+552:- `WebSearch` — Phase 1 external search, Phase 3 quick novelty screening, Phase 5 pilot validation
+553:- `Agent` tool — Phase 1 parallel search, Phase 2 parallel brainstorm
+556:- `.claude/skills/shared-references/cross-model-review.md` — Phase 2 Review LLM independence principle
+
+===== .claude/skills/exp-run/SKILL.md =====
+2:description: Full experiment execution pipeline — prepare code → deploy(Confirm with the user before operation and ask the applicant to conduct manual inspection) → monitor → collect results, supporting three run modes
+3:argument-hint: <experiment-slug> [--review] [--collect] [--full] [--env local|remote]
+9:> **No matter which operation mode it is, before preparing the experimental codes and deploying them for operation, confirmation shall be obtained from users. Users need to manually check relevant information such as codes and experimental configurations(Dataset paths, interface parameter selection, API configuration, etc.). The operation can only be launched after confirmation; otherwise, revisions shall be made repeatedly until users approve the execution.**
+11:> - **Default (deploy)**: Phase 1-2 only — deploy and return immediately. Best for experiments that take hours or days.
+12:> - **`--collect`**: Phase 3-4 only — check whether a deployed experiment has finished; collect results if so (`--check` is an alias).
+15:> Recommended flow: `/exp-run <slug>` to deploy → `/exp-status` to monitor → `/exp-run <slug> --collect` to collect.
+20:  - deploy mode: status must be `planned`
+21:  - --collect mode: status must be `running`
+23:- `--review` (optional): enable Review LLM code review for experiment code in Phase 1 (valid in deploy / full mode)
+24:- `--collect` (optional): collect mode — check if the experiment has finished and collect results; `--check` is an alias
+26:- `--env local|remote` (optional, default `local`): deployment environment
+28:  - `remote`: deploy to remote machine via SSH (requires `config/server.yaml`)
+32:- **deploy mode**:
+33:  - Experiment code: `experiments/code/{slug}/` (generated in Phase 1)
+35:  - **DEPLOY_REPORT** (printed to terminal) — deployment confirmation, session info, next steps
+36:  - `wiki/log.md` — appended deploy log
+37:- **collect mode** (experiment has finished):
+40:  - `wiki/log.md` — appended collect log
+41:- **collect mode** (experiment still running):
+43:- **full mode**: all outputs from both deploy and collect
+54:- `experiments/code/{slug}/` — experiment code directory (Phase 1, deploy / full mode)
+59:- `wiki/experiments/{slug}.md` — update status, outcome, key_result, date_completed, run_log, remote block (deploy / collect mode)
+73:**Phase 1: Prepare**
+78:   - If status is `running`, prompt user to use `--collect` mode
+88:   - Obtain the dataset path (select local or remote access based on the --env parameter). You may ask users for the local or remote dataset paths and conduct independent retrieval.
+103:     - Checkpoint save/restore (`checkpoints/{slug}/`)
+109:5. **Optional Review LLM code review** (`--review`):
+129:   Fix code based on Review LLM feedback.
+137:**Gate: Manual User Inspection**
+139:> **Note**: Before preparing experimental code for deployment and execution, confirm with users and request them to manually check relevant information including codes and experimental configurations(Dataset paths, interface parameter selection, API configuration, etc.). Proceed with operation only after confirmation; otherwise, make revisions repeatedly until users approve the execution.
+141:**Phase 2: Deploy**
+148:   screen -dmS exp-{slug} bash -c \
+172:     "exp-run | deployed {slug} | env: local | session: exp-{slug} | eta: {N}h"
+175:#### Remote mode (`--env remote`)
+179:1. **Confirm connectivity**: `python3 tools/remote.py status`
+181:2. **Find free GPU**: `python3 tools/remote.py gpu-status` (skip if `setup.hardware` is `cpu`/`none`/empty and code has no CUDA/GPU keywords)
+183:3. **Sync code**: `python3 tools/remote.py sync-code`
+184:4. **Install dependencies** (first time or if requirements changed): `python3 tools/remote.py setup-env`
+185:5. **Launch remote experiment**:
+187:   python3 tools/remote.py launch \
+199:   The nested `remote:` block cannot be updated via `set-meta` (it only handles top-level scalar fields). Use the `Edit` tool directly to replace the five empty sub-field values in place. The pre-existing block in the file looks like:
+201:   remote:
+208:   Use five Edit calls (one per sub-field) to set `server`, `gpu`, `session`, `started`. Leave `completed: ""` — Phase 4 fills that. If you find the `remote:` block missing from the file, that means `/exp-design` did not write the full CLAUDE.md template; stop and report the bug rather than trying to append the block here (appending would drift the file away from the canonical order and break future edits).
+220:     "exp-run | deployed {slug} | env: remote | server: {host} | gpu: {gpu} | eta: {N}h"
+231:- Environment: local | remote ({host} GPU {gpu})
+239:2. Check this experiment: `/exp-run {slug} --collect`
+245:screen -ls | grep exp-{slug}
+254:### Collect Mode (`--collect` or `--check`, status == running)
+256:**Phase 3: Monitor / Check Run Status**
+258:1. **Read deployment info**: from `wiki/experiments/{slug}.md` frontmatter, get environment (local or remote) and session name.
+261:   - **Local**: `screen -ls | grep exp-{slug}`
+262:   - **Remote**: `python3 tools/remote.py check --name "exp-{slug}"`, parse `alive` field
+267:     - Remote: `python3 tools/remote.py tail-log --name "exp-{slug}" --lines 30`
+274:     - NaN/exploding → resume from latest checkpoint, reduce learning rate
+283:     Run `/exp-status` to monitor all running experiments.
+285:   - **Return** (do not execute Phase 4)
+288:   - Continue to Phase 4
+290:**Phase 4: Collect Results**
+292:1. **Pull remote results** (remote mode only):
+294:   python3 tools/remote.py pull-results \
+295:     --remote-path "results/{slug}/" \
+298:   python3 tools/remote.py pull-results \
+299:     --remote-path "logs/exp-{slug}.log" \
+320:   - If remote mode: update `remote.completed` timestamp
+352:Execute all 4 phases in sequence (Phase 1 → Phase 2 → Phase 3 → Phase 4) without returning.
+356:In Phase 3, instead of checking "is it still running", wait for the screen session to actually exit before executing Phase 4:
+359:while screen -ls | grep -q "exp-{slug}"; do
+362:# Session gone, proceed to Phase 4
+369:- **Deploy mode only accepts planned experiments**: if status is running, prompt to use --collect; if completed, refuse
+370:- **Collect mode only accepts running experiments**: if status is planned, prompt to deploy first; if completed, note it is already done
+374:- **Sanity check must pass**: Phase 1 sanity failure blocks deployment (unless user explicitly overrides)
+383:- **Deploy mode but status == running**: prompt "already running — use `/exp-run {slug} --collect` to check status"
+385:- **GPU unavailable**: report error, suggest using --env remote or waiting for GPU to free up
+386:- **Review LLM unavailable** (--review mode): skip code review, note "unreviewed" in DEPLOY_REPORT
+389:- **Result files missing** (collect mode): report which seeds are missing results; summarize available results normally; if successful seeds < 2, mark inconclusive
+390:- **Experiment crashed** (traceback detected in collect mode): include crash info and suggested fix directions in report
+391:- **--full mode wait timeout**: if screen session persists beyond 2× the estimated time, warn user but do not force-terminate
+400:- `python3 tools/remote.py <command>` — remote operations (status, gpu-status, sync-code, setup-env, launch, check, tail-log, pull-results)
+402:- `screen` — local background process management
+405:- `config/server.yaml` — remote server config (required only with `--env remote`)
+408:- `mcp__llm-review__chat` — Phase 1 code review (optional, when `--review` is used)
+413:- `Bash` — execute deployment commands, monitor processes
+416:- `/research` Stage 3a (deploy mode) and Stage 3c (collect mode)
+417:- `/exp-status --collect-ready` (collect mode)
+
+===== .claude/skills/paper-draft/SKILL.md =====
+2:description: Draft a LaTeX paper from PAPER_PLAN — write each section from wiki sources + generate figures/tables + BibTeX verification + de-AI polish
+10:> generates LaTeX + figures + tables. BibTeX is fetched from DBLP/CrossRef (following citation-verification).
+12:> Optional per-section Review LLM review. Output a compilable paper/ directory.
+17:- `--review` (optional): enable per-section Review LLM review
+22:- `paper/` directory (under the wiki project root):
+23:  - `paper/main.tex` — master file (includes each section)
+24:  - `paper/sections/introduction.tex`
+25:  - `paper/sections/related_work.tex`
+26:  - `paper/sections/method.tex`
+27:  - `paper/sections/experiments.tex`
+28:  - `paper/sections/conclusion.tex`
+29:  - `paper/sections/appendix.tex` (if applicable)
+30:  - `paper/figures/` — generated figures (PDF/PNG)
+31:  - `paper/tables/` — standalone table files (optional)
+32:  - `paper/math_commands.tex` — shared math symbol definitions
+33:  - `paper/references.bib` — verified BibTeX entries
+39:- `wiki/outputs/paper-plan-*.md` — PAPER_PLAN (section outline, evidence map, figure plan, citation plan)
+43:- `wiki/papers/*.md` — Method, Results, Related (as citation content and baseline reference)
+46:- `wiki/people/*.md` — author names and institutions (citation formatting)
+50:- `.claude/skills/shared-references/citation-verification.md` — citation discipline
+53:- `paper/` directory (all files)
+66:2. If `paper/` directory already exists:
+71:   paper/
+76:   └── figures/
+85:   ```latex
+115:   - Use TikZ or pgfplots to generate native LaTeX figures
+117:   - Save to `paper/figures/{figure-name}.pdf`
+128:     python3 paper/figures/plot_{name}.py
+130:   - Save to `paper/figures/{figure-name}.pdf`
+135:   - Embed directly in section .tex file (small tables) or standalone `paper/tables/{name}.tex` (large tables)
+146:- planned figures/tables
+147:- citation list
+160:- Insert `\cite{key}` citations (keys mapped from citation plan)
+161:- Insert `\ref{fig:name}` / `\ref{tab:name}` references to figures/tables
+176:**3d. Optional Review LLM Review (--review)**
+201:Revise the section based on Review LLM feedback (inline edits; do not rewrite the entire section).
+205:Following `shared-references/citation-verification.md`:
+207:1. Collect all `\cite{key}` citations used across sections
+208:2. For each citation, retrieve BibTeX from the PAPER_PLAN's citation plan:
+212:4. Validate BibTeX format correctness (each entry has title, author, year)
+239:    4. Are all figures/tables referenced and discussed?
+244:Make final adjustments based on Review LLM feedback.
+248:1. Confirm all files are written to the `paper/` directory
+251:   - all files referenced by `\includegraphics{figures/X}` exist
+257:     "paper-draft | drafted {venue} paper '{title}' | {N} sections, {M} figures, {K} citations ({V} verified)"
+264:   - paper/main.tex (master file)
+265:   - paper/sections/ ({N} section files)
+266:   - paper/figures/ ({M} figure files)
+267:   - paper/references.bib ({K} entries, {V_count} [UNCONFIRMED])
+268:   - paper/math_commands.tex
+273:   - Review LLM review: {yes/no, if yes: overall score}
+274:   - [UNCONFIRMED] citations: {count} (resolve before /paper-compile)
+277:   - Run `/paper-compile paper/` to compile and verify
+278:   - Resolve [UNCONFIRMED] citations manually
+279:   - Run `/refine paper/main.tex --focus writing` for further polish
+285:- **BibTeX follows citation-verification.md**: fetch from DBLP/CrossRef/S2; do not generate from LLM memory
+291:- **Back up existing paper/ before overwriting**: do not overwrite directly; back up first
+301:- **All BibTeX fetches failed**: use [UNCONFIRMED] placeholders; report the count requiring manual handling in the terminal
+302:- **Review LLM unavailable** (--review mode): skip section review and cross-review; annotate as "unreviewed"
+310:- `python3 tools/fetch_s2.py search "<title>"` — BibTeX fallback (S2 search)
+319:- `Write` — write files to paper/ directory
+321:- `WebFetch` — DBLP / CrossRef BibTeX fetch
+325:- `.claude/skills/shared-references/citation-verification.md` — BibTeX fetch workflow + [UNCONFIRMED] protocol
+328:- `/research` Stage 5 (paper writing stage)
+
+===== .claude/skills/paper-compile/SKILL.md =====
+2:description: LaTeX compile → PDF — latexmk compile + auto-fix + page count/anonymity/font/[UNCONFIRMED] checks + submission checklist
+9:> Input: the paper/ directory generated by /paper-draft. Run latexmk compilation,
+16:- `paper_dir` (optional, default `paper/`): LaTeX project directory containing `main.tex`
+22:- `paper/main.pdf` — compiled PDF
+30:- `.claude/skills/shared-references/citation-verification.md` — [UNCONFIRMED] marker check rules
+33:- `paper/main.pdf` — compilation output
+41:**Precondition**: confirm `paper/main.tex` exists. Confirm `latexmk` is installed (`which latexmk`).
+47:   cd paper/ && latexmk -pdf -interaction=nonstopmode main.tex 2>&1
+56:     - **Undefined citation**: `LaTeX Warning: Citation 'xxx' on page N undefined`
+57:     - **Missing figure**: `! LaTeX Error: File 'figures/xxx' not found`
+77:**2b. Undefined reference/citation**:
+79:- Undefined citation: check if `references.bib` contains the key
+81:  - If present but bibtex has not run: re-run `latexmk` (latexmk usually handles this automatically)
+84:- Check if `paper/figures/` contains a file with a different extension (.pdf vs .png vs .eps)
+95:cd paper/ && latexmk -pdf -interaction=nonstopmode main.tex 2>&1
+107:result = subprocess.run(['pdfinfo', 'paper/main.pdf'], capture_output=True, text=True)
+122:- Search for "our previous work" / "we previously" → should use third-person citation
+128:grep -rn "VERIFY" paper/
+131:- Per citation-verification.md: [UNCONFIRMED] is a hard submission blocker
+135:pdffonts paper/main.pdf
+143:- Search for unreferenced figures/tables (`\includegraphics` present but no `\ref`)
+153:- Compiler: latexmk + pdflatex
+164:| [UNCONFIRMED] citations | {PASS/FAIL} | {N} remaining |
+174:- [ ] All [UNCONFIRMED] citations resolved
+178:- [ ] All figures referenced in text
+191:- Run `/refine paper/main.tex --focus writing` for final polish
+203:- **Do not modify wiki content**: only operate on the paper/ directory and wiki/log.md
+214:- **latexmk not installed**: error; provide installation command (`sudo apt install texlive-full` or `brew install --cask mactex`)
+223:- `latexmk` — LaTeX compilation
+238:- `.claude/skills/shared-references/citation-verification.md` — [UNCONFIRMED] marker check rules
+242:- `/research` Stage 5 (paper compilation stage)
+
+===== tools/research_wiki.py =====
+22:    add-citation <wiki_root> --from papers/a --to papers/b [--source semantic_scholar]
+25:    dedup-citations <wiki_root>
+39:    transition <path> --to <status> [--reason "..."]
+43:    maturity <wiki_root> [--json]
+45:    # Checkpoint (batch operation resume)
+46:    checkpoint-save <wiki_root> <task_id> <item> [--failed]
+47:    checkpoint-load <wiki_root> <task_id>
+48:    checkpoint-clear <wiki_root> <task_id>
+49:    checkpoint-set-meta <wiki_root> <task_id> <key> <value>
+50:    checkpoint-get-meta <wiki_root> <task_id> [<key>]
+60:from collections import defaultdict
+87:    validate_lifecycle_transition,
+106:    """Generate a kebab-case slug from a paper/concept title.
+141:      - graph/ with empty edges.jsonl, citations.jsonl, context_brief.md, open_questions.md
+162:    _write_if_missing(graph / "citations.jsonl", "")
+189:# Edge and citation management
+360:def load_citations(wiki_root: str) -> list[dict]:
+361:    """Load all bibliographic citation rows from citations.jsonl."""
+362:    citations_path = Path(wiki_root) / DERIVED_DIR / "citations.jsonl"
+363:    citations = []
+364:    if not citations_path.exists():
+365:        return citations
+366:    for line in citations_path.read_text(encoding="utf-8").splitlines():
+371:            citations.append(json.loads(line))
+374:    return citations
+377:def add_citation(wiki_root: str, from_id: str, to_id: str,
+379:    """Append a deterministic bibliographic paper citation to graph/citations.jsonl."""
+383:            "message": f"Unknown citation source '{source}'. Valid: {sorted(CITATION_SOURCES)}"
+388:    citations_path = root / DERIVED_DIR / "citations.jsonl"
+389:    citations_path.parent.mkdir(parents=True, exist_ok=True)
+397:    if citations_path.exists():
+398:        for line in citations_path.read_text(encoding="utf-8").splitlines():
+408:                                "citation": f"{from_id} --cites--> {to_id}"}
+414:    citation = {
+421:    with open(citations_path, "a", encoding="utf-8") as f:
+422:        f.write(json.dumps(citation, ensure_ascii=False) + "\n")
+425:                     "citation": f"{from_id} --cites--> {to_id}"}
+432:    """Map arXiv ID (and S2 ID) → paper slug, for citation resolution.
+451:def add_citations_batch(wiki_root: str, citer_id: str) -> None:
+453:    matching `cites` rows to graph/citations.jsonl in one pass.
+467:    citations_path = root / DERIVED_DIR / "citations.jsonl"
+468:    citations_path.parent.mkdir(parents=True, exist_ok=True)
+484:    if citations_path.exists():
+485:        for line in citations_path.read_text(encoding="utf-8").splitlines():
+538:        with open(citations_path, "a", encoding="utf-8") as f:
+754:def dedup_citations(wiki_root: str) -> None:
+755:    """Deduplicate citations.jsonl by (from, to), keeping first occurrence."""
+756:    citations_path = Path(wiki_root) / DERIVED_DIR / "citations.jsonl"
+757:    if not citations_path.exists():
+761:    lines = citations_path.read_text(encoding="utf-8").splitlines()
+781:    citations_path.write_text(
+843:    _collect_section_items(root / "papers",   "Open questions", gaps, "paper")
+844:    _collect_section_items(root / "topics",   "Open problems",  gaps, "topic")
+845:    _collect_section_items(root / "concepts", "Open problems",  gaps, "concept")
+858:def _collect_section_items(directory: Path, section_name: str,
+865:    and their bullet items are collected — so topic ``## Open problems``
+881:                continue  # H3+ heading inside the block: skip header, keep collecting
+1083:                "maturity": fm.get("maturity", ""),
+1455:        "citations": len(load_citations(wiki_root)),
+1472:        print(f"  Citations:   {stats['citations']}")
+1485:def get_maturity(wiki_root: str, as_json: bool = False) -> dict:
+1486:    """Assess wiki maturity level (cold/warm/hot) and related metrics."""
+1515:    # Total entities counted toward maturity. Terminal kinds (foundations) are
+1588:# Lifecycle: transition
+1591:# Lifecycle transitions are declared in runtime/schema/entities.yaml — derived
+1594:    kind: e['lifecycle']['transitions']
+1599:# Fields auto-set on transition
+1607:def transition(path: str, new_status: str, reason: str = "") -> None:
+1608:    """Enforce lifecycle state transitions with validation."""
+1645:                                         "to transition to in_progress"}))
+1651:                              "message": "--reason is required to transition to failed"}))
+1658:                                         "to transition to completed"}))
+1661:    # Apply transition
+1679:    # Set failure_reason if transitioning idea to failed
+1870:            if "maturity" in fm:
+1871:                line_parts.append(f"    maturity: {fm['maturity']}")
+1898:    is what finally repairs them after Phase B merges complete.
+2452:def _checkpoint_path(wiki_root: str, task_id: str) -> Path:
+2453:    return Path(wiki_root) / ".checkpoints" / f"{task_id}.json"
+2456:def _checkpoint_read(wiki_root: str, task_id: str, strict: bool = False) -> dict:
+2457:    """Load a checkpoint file and normalize it to the current schema.
+2459:    Backward-compat: old checkpoints written before the `metadata` field existed
+2462:    strict=False (default, used by writers like checkpoint_save / checkpoint_set_meta):
+2465:    strict=True (used by checkpoint_load):
+2467:        Lets checkpoint_load surface an explicit corruption report to the caller.
+2469:    cp_file = _checkpoint_path(wiki_root, task_id)
+2483:            raise ValueError("checkpoint top-level JSON is not an object")
+2492:def _checkpoint_write(wiki_root: str, task_id: str, data: dict) -> None:
+2493:    cp_dir = Path(wiki_root) / ".checkpoints"
+2499:def checkpoint_save(wiki_root: str, task_id: str, item: str,
+2501:    """Record an item as completed/failed in a checkpoint file."""
+2502:    data = _checkpoint_read(wiki_root, task_id)
+2508:    _checkpoint_write(wiki_root, task_id, data)
+2513:def checkpoint_set_meta(wiki_root: str, task_id: str, key: str, value: str) -> None:
+2514:    """Persist a key/value pair in the checkpoint's metadata dict.
+2516:    Creates the checkpoint file if it does not exist. Preserves the existing
+2520:    data = _checkpoint_read(wiki_root, task_id)
+2522:    _checkpoint_write(wiki_root, task_id, data)
+2527:def checkpoint_get_meta(wiki_root: str, task_id: str, key: str = "") -> None:
+2535:    data = _checkpoint_read(wiki_root, task_id)
+2545:def checkpoint_load(wiki_root: str, task_id: str) -> None:
+2546:    """Load checkpoint state for a task. Returns JSON with completed/failed/metadata.
+2549:    A corrupt or non-dict file reports `exists: false` with `error: "corrupt checkpoint"`
+2550:    — the writers (checkpoint_save / checkpoint_set_meta) will silently repair it on
+2553:    cp_file = _checkpoint_path(wiki_root, task_id)
+2561:        data = _checkpoint_read(wiki_root, task_id, strict=True)
+2565:                          "error": "corrupt checkpoint"}))
+2572:def checkpoint_clear(wiki_root: str, task_id: str) -> None:
+2573:    """Remove a checkpoint file."""
+2575:    cp_file = root / ".checkpoints" / f"{task_id}.json"
+2607:    # add-citation
+2608:    p = sub.add_parser("add-citation", help="Add paper citation to graph/citations.jsonl")
+2615:    # add-citations-batch
+2616:    p = sub.add_parser("add-citations-batch",
+2645:    # maturity
+2646:    p = sub.add_parser("maturity",
+2647:                        help="Assess wiki maturity level (cold/warm/hot)")
+2708:    # transition
+2709:    p = sub.add_parser("transition", help="Transition entity lifecycle status")
+2723:    # dedup-citations
+2724:    p = sub.add_parser("dedup-citations",
+2725:                       help="Deduplicate citations.jsonl by paper pair")
+2737:    # checkpoint-save
+2738:    p = sub.add_parser("checkpoint-save", help="Save item to batch checkpoint")
+2744:    # checkpoint-load
+2745:    p = sub.add_parser("checkpoint-load", help="Load batch checkpoint state")
+2749:    # checkpoint-clear
+2750:    p = sub.add_parser("checkpoint-clear", help="Remove a batch checkpoint")
+2754:    # checkpoint-set-meta
+2755:    p = sub.add_parser("checkpoint-set-meta",
+2756:                       help="Persist a key/value pair in checkpoint metadata")
+2762:    # checkpoint-get-meta
+2763:    p = sub.add_parser("checkpoint-get-meta",
+2780:    elif args.command == "add-citation":
+2781:        add_citation(args.wiki_root, args.from_id, args.to_id, args.source)
+2782:    elif args.command == "add-citations-batch":
+2783:        add_citations_batch(args.wiki_root, args.citer_id)
+2792:    elif args.command == "maturity":
+2793:        get_maturity(args.wiki_root, as_json=args.json)
+2832:    elif args.command == "transition":
+2833:        transition(args.path, args.new_status, args.reason)
+2838:    elif args.command == "dedup-citations":
+2839:        dedup_citations(args.wiki_root)
+2844:    elif args.command == "checkpoint-save":
+2845:        checkpoint_save(args.wiki_root, args.task_id, args.item,
+2847:    elif args.command == "checkpoint-load":
+2848:        checkpoint_load(args.wiki_root, args.task_id)
+2849:    elif args.command == "checkpoint-clear":
+2850:        checkpoint_clear(args.wiki_root, args.task_id)
+2851:    elif args.command == "checkpoint-set-meta":
+2852:        checkpoint_set_meta(args.wiki_root, args.task_id, args.key, args.value)
+2853:    elif args.command == "checkpoint-get-meta":
+2854:        checkpoint_get_meta(args.wiki_root, args.task_id, args.key)
+
+===== tools/remote.py =====
+4:Unified SSH tool for remote experiment execution: server status, GPU
+5:monitoring, code sync, environment setup, job launch/monitor, and result
+8:Called by skills via:  Bash: python3 tools/remote.py <command> [args]
+13:    sync-code [--dry-run]               rsync project code to remote
+14:    setup-env [--requirements FILE]     Install Python dependencies on remote
+15:    launch --name S --cmd C [--gpu N]   Start screen session on remote
+17:    tail-log --name S [--lines N]       Get recent log output from remote
+18:    pull-results --remote-path P --local-path P   Download result files
+50:    "checkpoints/", "*.pt", "*.pth", "*.ckpt", "*.safetensors",
+270:    """Build SSH transport string for rsync -e option."""
+287:def run_ssh(cfg: dict, remote_cmd: str, timeout: int = 30) -> tuple[int, str, str]:
+288:    """Execute a command on the remote server via SSH."""
+289:    cmd = build_ssh_cmd(cfg) + [remote_cmd]
+454:    """Sync project code to remote server via rsync."""
+458:    # Ensure remote directory exists
+461:    # Build rsync command
+467:    cmd = ["rsync", "-avz", "--delete", "-e", transport]
+469:    # rsync evaluates filters top-to-bottom, first match wins. Excludes for
+471:    # --include=*/ (and --include=*.py) match first, rsync descends into them
+472:    # and --delete clobbers remote files that live there. See issue #65.
+484:    # Source must end with / for rsync to sync contents
+492:            _error(f"rsync failed: {proc.stderr.strip()}")
+494:        # Count transferred files from rsync output
+504:            "remote_path": work_dir,
+509:        _error("rsync timed out after 120s")
+511:        _error("rsync command not found")
+515:    """Install Python dependencies on remote server."""
+522:    # scp requirements file to remote
+558:    """Validate a screen session name (alphanumeric, hyphens, underscores)."""
+565:    """Launch a screen session on the remote server."""
+572:    rc, stdout, _ = run_ssh(cfg, "screen -ls", timeout=10)
+580:    # Ensure log directory exists on remote
+583:    # Build the full remote command
+592:    # Construct the screen command
+599:    # Escape for SSH + screen
+601:    screen_cmd = f"screen -dmS {session_name} bash -c '{escaped_inner}'"
+602:    rc, stdout, stderr = run_ssh(cfg, screen_cmd, timeout=15)
+604:        _error(f"Failed to launch screen session: {stderr.strip()}")
+607:    rc, stdout, _ = run_ssh(cfg, "screen -ls", timeout=10)
+615:        "remote_cmd": inner_cmd,
+621:    """Check if a screen session is alive and detect anomalies."""
+626:    # Check screen session
+627:    rc, stdout, _ = run_ssh(cfg, "screen -ls", timeout=10)
+638:    # Fallback: screen hardcopy
+640:        tmp_file = f"/tmp/screen_{session_name}.txt"
+641:        run_ssh(cfg, f"screen -S {session_name} -X hardcopy {shlex.quote(tmp_file)}", timeout=5)
+671:    """Get recent log output from remote."""
+692:    # Fallback: screen hardcopy
+693:    tmp_file = f"/tmp/screen_{session_name}.txt"
+694:    run_ssh(cfg, f"screen -S {session_name} -X hardcopy {shlex.quote(tmp_file)}", timeout=5)
+703:            "source": "screen_hardcopy",
+712:    """Download result files from remote server."""
+714:    remote_path = args.remote_path
+718:    if ".." in remote_path.split("/"):
+719:        _error("remote-path must not contain '..' components")
+721:    # If remote_path is relative, prepend work_dir
+722:    if not remote_path.startswith("/"):
+723:        remote_path = f"{work_dir}/{remote_path}"
+728:    # Build rsync command
+730:    cmd = ["rsync", "-avz", "-e", transport]
+736:    src = f"{cfg['user']}@{cfg['host']}:{remote_path.rstrip('/')}/"
+743:            _error(f"rsync pull failed: {proc.stderr.strip()}")
+752:            "remote_path": remote_path,
+757:        _error("rsync pull timed out after 300s")
+759:        _error("rsync command not found")
+785:    p_sync = sub.add_parser("sync-code", help="Sync project code to remote")
+790:    p_env = sub.add_parser("setup-env", help="Install Python dependencies on remote")
+794:    p_launch = sub.add_parser("launch", help="Start screen session on remote")
+798:    p_launch.add_argument("--log-file", default=None, help="Log file path on remote")
+810:    p_pull = sub.add_parser("pull-results", help="Download result files from remote")
+811:    p_pull.add_argument("--remote-path", required=True, help="Remote path (relative to work_dir or absolute)")

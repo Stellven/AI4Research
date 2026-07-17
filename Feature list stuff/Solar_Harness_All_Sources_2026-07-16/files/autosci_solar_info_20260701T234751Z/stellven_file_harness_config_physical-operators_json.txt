@@ -1,0 +1,361 @@
+===== harness/config/physical-operators.json =====
+{
+  "version": 1,
+  "updated_at": "2026-06-02T03:53:03Z",
+  "operators": {
+    "mini-claude-opus-planner": {
+      "display_name": "Mac mini Claude Opus planner",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "auto_edit",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model opus"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "architecture",
+        "requirements",
+        "schema-design"
+      ],
+      "strengths": [
+        "architecture",
+        "debugging",
+        "complex-reasoning"
+      ],
+      "preferred_for": [
+        "planner",
+        "architecture",
+        "schema-design"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "planner"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-opus-planner-2": {
+      "display_name": "Mac mini Claude Opus planner (instance 2)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "auto_edit",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model opus"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-01T23:58:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "architecture",
+        "requirements",
+        "schema-design"
+      ],
+      "strengths": [
+        "architecture",
+        "debugging",
+        "complex-reasoning"
+      ],
+      "preferred_for": [
+        "planner",
+        "architecture",
+        "schema-design"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "planner"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-opus-planner-3": {
+      "display_name": "Mac mini Claude Opus planner (instance 3)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "auto_edit",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model opus"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-01T23:58:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "architecture",
+        "requirements",
+        "schema-design"
+      ],
+      "strengths": [
+        "architecture",
+        "debugging",
+        "complex-reasoning"
+      ],
+      "preferred_for": [
+        "planner",
+        "architecture",
+        "schema-design"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "planner"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-sonnet-builder": {
+      "display_name": "Mac mini Claude Sonnet builder",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "model_config": "yolo",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model sonnet"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "implementation",
+        "debugging"
+      ],
+      "avoid_for": [
+        "bulk-extraction"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "builder_pool": {
+        "enabled": true,
+        "group": "sonnet",
+        "slot": 1,
+        "priority": 10
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-opus-evaluator": {
+      "display_name": "Mac mini Claude Opus evaluator",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "evaluator",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "auto_edit",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model opus"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
