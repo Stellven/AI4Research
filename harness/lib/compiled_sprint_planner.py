@@ -224,8 +224,20 @@ def generate_planner_artifacts(*, runtime_root: Path, sprint_id: str) -> dict[st
     contract_text = _read_text(contract_path)
     graph = _read_json(graph_path)
 
+    from plan_validator import compile_planner_graph  # noqa: WPS433
     from graph_scheduler import validate_graph  # noqa: WPS433
     from runtime_status import transition_status  # noqa: WPS433
+
+    compile_verdict = compile_planner_graph(sprint_root, sprint_id)
+    if not compile_verdict.get("ok"):
+        return {
+            "ok": False,
+            "reason": "plan_compile_failed",
+            "compile": compile_verdict,
+            "sprint_id": sprint_id,
+        }
+    if compile_verdict.get("stamped"):
+        graph = _read_json(graph_path)
 
     validation = validate_graph(graph)
     if not validation.get("ok"):

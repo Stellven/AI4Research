@@ -102,8 +102,23 @@ confirm_if_needed() {
 # anything (all gates run `solar doctor --json` separately), and a wall of
 # JSON is not an onboarding step. Printed to stderr to match green()/the
 # wizard and keep stdout clean.
+installed_pane_runtime() {
+    python3 - "$SOLAR_HOME/harness/config/solar-user-config.json" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        runtime = str(json.load(handle).get("runtime") or "claude").strip().lower()
+except (OSError, ValueError, TypeError):
+    runtime = "claude"
+print(runtime if runtime in {"claude", "codex"} else "claude")
+PY
+}
+
 print_get_started() {
     bindir="$SOLAR_HOME/bin"
+    pane_runtime="$(installed_pane_runtime)"
     {
         printf '\n'
         if [ -x "$bindir/solar" ]; then
@@ -122,17 +137,27 @@ print_get_started() {
         printf '       solar doctor\n'
     } >&2
     case " $SELECTED_COMPONENTS " in
-        *" kernel "*)
+        *" harness "*)
+            if [ "$pane_runtime" = "codex" ]; then
+                {
+                    printf '  3. Authenticate the selected runtime (Codex):\n'
+                    printf '       codex login --device-auth\n'
+                } >&2
+            else
+                {
+                    printf '  3. Authenticate the selected runtime (Claude Code):\n'
+                    printf '       claude\n'
+                    printf '       (complete login/trust and approve the one-time @~/.claude/solar/SOLAR.md import)\n'
+                } >&2
+            fi
             {
-                printf '  3. Start Claude Code and approve the one-time Solar import:\n'
-                printf '       claude\n'
-                printf '       (approve the prompt to import @~/.claude/solar/SOLAR.md)\n'
-                printf '       Claude must be authenticated once; panes self-initialize after login.\n'
-                printf '  4. Choose model credentials:\n'
-                printf '       add ZHIPU_AUTH_TOKEN to ~/.solar/secrets/zhipu.env, or\n'
-                printf '       solar-harness models set-lab-matrix anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet\n'
-                printf '  5. In that session, describe what you want done --\n'
-                printf '       Solar plans, delegates, and gates the work.\n'
+                printf '       To switch between Codex and Claude Code before launch, start the dashboard\n'
+                printf '       with `solar harness status-server start` and use Settings > Runtime.\n'
+                printf '  4. Start the Product Delivery cockpit in your project:\n'
+                printf '       solar harness start "$(pwd)"\n'
+                printf '  5. Submit work in the dashboard or from the CLI:\n'
+                printf '       solar harness intake "Describe the result you want"\n'
+                printf '       Solar plans, delegates, gates, and publishes the result.\n'
             } >&2
             ;;
     esac

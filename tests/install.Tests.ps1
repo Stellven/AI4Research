@@ -18,7 +18,7 @@ Describe 'Get-ForwardString' {
         . "$PSScriptRoot/../install.ps1"
         $s = Get-ForwardString
         $s | Should -Match 'kernel,harness,status-daemon'
-        $s | Should -Match '(^|\s)--yes(\s|$)'
+        $s | Should -Match ([regex]::Escape("'--yes'"))
         $s | Should -Match '--bootstrap-system-deps'
     }
     It 'respects a caller-provided --components (no status-daemon injection)' {
@@ -28,6 +28,40 @@ Describe 'Get-ForwardString' {
     It 'does not double-add --yes' {
         . "$PSScriptRoot/../install.ps1" -ForwardArgs '--yes'
         ([regex]::Matches((Get-ForwardString), '--yes')).Count | Should -Be 1
+    }
+    It 'preserves spaces and apostrophes as single bash arguments' {
+        . "$PSScriptRoot/../install.ps1" -ForwardArgs '--solar-home', '/tmp/My Home', "O'Reilly"
+        $s = Get-ForwardString
+        $bashQuote = "'" + '"' + "'" + '"' + "'"
+        $s | Should -Match ([regex]::Escape("'/tmp/My Home'"))
+        $s | Should -Match ([regex]::Escape("'O${bashQuote}Reilly'"))
+    }
+}
+
+Describe 'Self invocation persistence' {
+    It 'round-trips custom parameters and forwarded arguments through EncodedCommand' {
+        . "$PSScriptRoot/../install.ps1" `
+            -Distro 'Ubuntu Custom' `
+            -BootstrapUrl "https://example.invalid/get-solar.sh?owner=O'Reilly" `
+            -RepoUrl 'https://example.invalid/My Repo.git' `
+            -ForwardArgs '--solar-home', '/tmp/My Home'
+        $encoded = New-SelfInvocationEncodedCommand 'C:\Program Files\OpenSolar\install.ps1'
+        $decoded = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($encoded))
+        $decoded | Should -Match ([regex]::Escape("-Distro 'Ubuntu Custom'"))
+        $decoded | Should -Match ([regex]::Escape("-BootstrapUrl 'https://example.invalid/get-solar.sh?owner=O''Reilly'"))
+        $decoded | Should -Match ([regex]::Escape("-RepoUrl 'https://example.invalid/My Repo.git'"))
+        $decoded | Should -Match ([regex]::Escape("-ForwardArgs @('--solar-home','/tmp/My Home')"))
+        $tokens = $null
+        $errors = $null
+        [void][System.Management.Automation.Language.Parser]::ParseInput($decoded, [ref]$tokens, [ref]$errors)
+        $errors.Count | Should -Be 0
+    }
+
+    It 'uses the encoded self-invocation helper for elevation and reboot resume' {
+        $source = Get-Content "$PSScriptRoot/../install.ps1" -Raw
+        ([regex]::Matches($source, 'New-SelfInvocationEncodedCommand')).Count | Should -BeGreaterOrEqual 3
+        $source | Should -Not -Match '\$argList = .*\+ \$ForwardArgs'
+        $source | Should -Not -Match 'RunOnce.*Get-ForwardString'
     }
 }
 
@@ -45,6 +79,15 @@ Describe 'Resolve-Distro (W6: consistent distro)' {
     It 'falls back to the first registered distro when the requested one is absent' {
         Mock Get-RegisteredDistro { @('Debian', 'Ubuntu-22.04') }
         Resolve-Distro | Should -Be 'Debian'
+    }
+    It 'skips Docker Desktop internal distros when choosing a fallback' {
+        Mock Get-RegisteredDistro { @('docker-desktop', 'docker-desktop-data', 'Debian') }
+        Resolve-Distro | Should -Be 'Debian'
+    }
+    It 'does not honor an explicit Docker Desktop internal distro target' {
+        . "$PSScriptRoot/../install.ps1" -Distro 'docker-desktop'
+        Mock Get-RegisteredDistro { @('docker-desktop', 'Ubuntu-24.04') }
+        Resolve-Distro | Should -Be 'Ubuntu-24.04'
     }
 }
 

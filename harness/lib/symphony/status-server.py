@@ -62,7 +62,7 @@ HARNESS_DIR = Path(
 SOURCE_HARNESS_DIR = Path(os.environ.get("SOLAR_SOURCE_HARNESS_DIR", str(Path.home() / "Solar" / "harness")))
 if str(HARNESS_DIR / "lib") not in sys.path:
     sys.path.insert(0, str(HARNESS_DIR / "lib"))
-SPRINTS_DIR = HARNESS_DIR / "sprints"
+SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR") or (HARNESS_DIR / "sprints"))
 REPORTS_DIR = HARNESS_DIR / "reports"
 SESSIONS_DIR = HARNESS_DIR / "sessions"
 EVENTS_DIR = HARNESS_DIR / "events"
@@ -210,7 +210,6 @@ _ACTIVE_SPRINT_STATUSES = {
     "approved",
     "reviewing",
     "ready_for_review",
-    "needs_human_review",
     "failed_review",
 }
 
@@ -544,6 +543,165 @@ def _orchestration_projection_payload(sprint_id: str = "", mode: str = "full") -
     }
 
 
+def _load_harness_lib_module(module_name: str):
+    module_path = Path(__file__).resolve().parents[1] / f"{module_name}.py"
+    spec = importlib.util.spec_from_file_location(f"solar_status_{module_name}", str(module_path))
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"unable to load {module_name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _sprint_contract_graph(sid: str) -> tuple[dict, Path | None]:
+    for path in (
+        SPRINTS_DIR / f"{sid}.task_graph.json",
+        SPRINTS_DIR / f"{sid}.task_dag.state.json",
+    ):
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(data, dict):
+            return data, path
+    return {}, None
+
+
+def _graph_node_status(graph: dict, node_id: str) -> str:
+    results = graph.get("node_results") if isinstance(graph.get("node_results"), dict) else {}
+    result = results.get(node_id) if isinstance(results, dict) else None
+    if isinstance(result, dict) and result.get("status"):
+        return str(result.get("status") or "")
+    for node in graph.get("nodes") or []:
+        if isinstance(node, dict) and str(node.get("id") or node.get("node_id") or "") == node_id:
+            return str(node.get("status") or "")
+    return ""
+
+
+def _graph_stage_rows(graph: dict) -> list[dict]:
+    rows: list[dict] = []
+    for node in graph.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        node_id = str(node.get("id") or node.get("node_id") or "").strip()
+        if not node_id:
+            continue
+        rows.append({
+            "id": node_id,
+            "dashboard_label": str(node.get("dashboard_label") or node.get("label") or node_id),
+        })
+    return rows
+
+
+def _manifest_link(artifact_manifest, sid: str, node_id: str) -> dict:
+    path = artifact_manifest.manifest_path(SPRINTS_DIR, sid, node_id)
+    exists = path.exists()
+    return {
+        "path": str(path),
+        "exists": exists,
+        "url": ("/file/view?path=" + urllib.parse.quote(str(path))) if exists else "",
+    }
+
+
+def _sprint_contract_payload(sid: str) -> dict:
+    sid = str(sid or "").strip()
+    if not _valid_sprint_id(sid):
+        return {"ok": False, "status": "error", "error": "invalid sprint id", "sprint_id": sid}
+
+    graph, graph_path = _sprint_contract_graph(sid)
+    if graph_path is None:
+        return {
+            "ok": False,
+            "status": "not_found",
+            "error": "sprint_not_found",
+            "contracted": False,
+            "sprint_id": sid,
+            "graph_path": "",
+            "contract": {},
+            "stages": [],
+        }
+    workflow_id = str(graph.get("workflow_contract_id") or graph.get("contract_id") or "").strip()
+    workflow_version = str(graph.get("workflow_contract_version") or graph.get("contract_version") or "").strip()
+    gate_ledger = _load_harness_lib_module("gate_ledger")
+    artifact_manifest = _load_harness_lib_module("artifact_manifest")
+
+    if not workflow_id:
+        stages = []
+        for row in _graph_stage_rows(graph):
+            node_id = row["id"]
+            stages.append({
+                "id": node_id,
+                "label": row["dashboard_label"],
+                "state": _graph_node_status(graph, node_id),
+                "state_source": "graph",
+                "manifest": {"path": "", "exists": False, "url": ""},
+            })
+        return {
+            "ok": True,
+            "status": "legacy_uncontracted",
+            "contracted": False,
+            "sprint_id": sid,
+            "graph_path": str(graph_path) if graph_path else "",
+            "contract": {},
+            "stages": stages,
+        }
+
+    workflow_contract = _load_harness_lib_module("workflow_contract")
+    workflows_dir = Path(__file__).resolve().parents[2] / "config" / "workflows"
+    contract = workflow_contract.find_contract(workflow_id, workflows_dir=workflows_dir)
+    if not contract:
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "workflow contract not found",
+            "contracted": True,
+            "sprint_id": sid,
+            "graph_path": str(graph_path) if graph_path else "",
+            "contract": {"workflow_id": workflow_id, "version": workflow_version},
+            "stages": [],
+        }
+
+    contract_version = workflow_version or str(contract.get("version") or "")
+    contract_stages = list(contract.get("stages") or []) or _graph_stage_rows(graph)
+    stages = []
+    for stage in contract_stages:
+        if not isinstance(stage, dict):
+            continue
+        node_id = str(stage.get("id") or stage.get("node_id") or "").strip()
+        if not node_id:
+            continue
+        projected = gate_ledger.project_node_status(SPRINTS_DIR, sid, node_id)
+        ledger_records = gate_ledger.read_records(SPRINTS_DIR, sid, node_id=node_id, kind="status_transition")
+        graph_status = _graph_node_status(graph, node_id)
+        state = projected or graph_status
+        stages.append({
+            "id": node_id,
+            "label": str(stage.get("dashboard_label") or stage.get("label") or node_id),
+            "state": state,
+            "state_source": "gate_ledger" if projected or ledger_records else "graph",
+            "graph_state": graph_status,
+            "ledger_record_count": len(ledger_records),
+            "manifest": _manifest_link(artifact_manifest, sid, node_id),
+        })
+
+    return {
+        "ok": True,
+        "status": "ok",
+        "contracted": True,
+        "sprint_id": sid,
+        "graph_path": str(graph_path) if graph_path else "",
+        "contract": {
+            "workflow_id": workflow_id,
+            "version": contract_version,
+            "identity": f"{workflow_id}@{contract_version}" if contract_version else workflow_id,
+            "source_path": str(contract.get("_source_path") or ""),
+        },
+        "stages": stages,
+    }
+
+
 def _projection_signature(data: dict) -> dict:
     """Compact, comparable signature of the projection bits that drive live UI — phase, per-node
     status, gate/verdict state, active node, stall. The projection stream emits an SSE update only
@@ -734,9 +892,56 @@ def _intake_command(task: str) -> list[str]:
     return [str(harness_sh), "intake", "--request", task]
 
 
+_RUNTIME_DEFAULT_PROVIDER = {"claude": "anthropic", "codex": "openai"}
+_RUNTIME_PROVIDER_ENV_KEYS = (
+    "SOLAR_PM_DEFAULT_PROVIDERS",
+    "SOLAR_MULTI_TASK_DEFAULT_PROVIDERS",
+)
+
+
+def _intake_subprocess_env() -> dict[str, str]:
+    """Pin dashboard intake to the runtime currently selected on disk.
+
+    The status server can remain alive across a settings change.  Its process
+    environment then describes the runtime that started the server, not the
+    runtime the user just selected.  Correct only defaults derived from that
+    stale runtime; preserve a different provider value as an intentional
+    advanced/hybrid override.
+    """
+    env = dict(os.environ)
+    selected_runtime, _source = _read_user_config_runtime()
+    stale_runtime = str(env.get("SOLAR_PANE_RUNTIME") or "").strip().lower()
+    env["SOLAR_PANE_RUNTIME"] = selected_runtime
+
+    selected_provider = _RUNTIME_DEFAULT_PROVIDER.get(selected_runtime, "")
+    stale_provider = _RUNTIME_DEFAULT_PROVIDER.get(stale_runtime, "")
+    for key in _RUNTIME_PROVIDER_ENV_KEYS:
+        current = str(env.get(key) or "").strip().lower()
+        if selected_provider and (not current or current == stale_provider):
+            env[key] = selected_provider
+
+    # A runtime switch must not carry launch flags computed for the previous
+    # runtime.  The child solar-harness process will rebuild Codex flags from
+    # the same current config when Codex is selected.
+    if selected_runtime != stale_runtime:
+        env.pop("SOLAR_CODEX_EXTRA_FLAGS", None)
+    return env
+
+
 def _intake_payload(data: dict) -> dict:
     task = str(data.get("task") or data.get("request") or "").strip()
     request_id = re.sub(r"[^A-Za-z0-9_.:-]", "-", str(data.get("request_id") or "").strip())[:96]
+    # P2 contracted intake: an explicit workflow_id is forwarded to the intake
+    # CLI via env; the solar-harness contract branch fails closed on unknown
+    # ids (never a silent fall-through to the generic planner path).
+    workflow_id = re.sub(r"[^A-Za-z0-9_.-]", "", str(data.get("workflow_id") or "").strip())[:96]
+    workflow_inputs: dict = {}
+    raw_inputs = data.get("workflow_inputs")
+    if isinstance(raw_inputs, dict):
+        for key, value in list(raw_inputs.items())[:16]:
+            key = str(key).strip()
+            if re.fullmatch(r"[a-z_][a-z0-9_]*", key):
+                workflow_inputs[key] = str(value)[:200]
     if not request_id:
         request_id = f"intake-{int(time.time() * 1000)}-{secrets.token_hex(4)}"
     if not task:
@@ -753,13 +958,18 @@ def _intake_payload(data: dict) -> dict:
         (req_dir / f"{request_id}.json").write_text(json.dumps({
             "request_id": request_id,
             "task_preview": task[:500],
+            "workflow_id": workflow_id,
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     except OSError:
         pass
-    env = dict(os.environ)
+    env = _intake_subprocess_env()
     env["HARNESS_DIR"] = str(HARNESS_DIR)
     env["SOLAR_INTAKE_REQUEST_ID"] = request_id
+    if workflow_id:
+        env["SOLAR_INTAKE_WORKFLOW_ID"] = workflow_id
+        if workflow_inputs:
+            env["SOLAR_INTAKE_WORKFLOW_INPUTS"] = json.dumps(workflow_inputs, ensure_ascii=False)
     try:
         proc = subprocess.run(
             cmd,
@@ -864,6 +1074,31 @@ def _refresh_quota_footer_cache() -> list[dict]:
 
 
 def _usage_payload(refresh: bool = False) -> dict:
+    runtime, runtime_source = _read_user_config_runtime()
+    if runtime == "codex":
+        # quota-footer.sh is specifically a Claude JSONL scanner. Running it
+        # in Codex mode creates plausible-looking ``claude-opus 0`` rows, which
+        # is worse than admitting that Codex account usage is not exposed by
+        # this local runtime. Do not relabel or estimate another provider's
+        # data.
+        return {
+            "ok": True,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "runtime": runtime,
+            "runtime_source": runtime_source,
+            "availability": "unavailable",
+            "reason": "codex_account_usage_not_exposed",
+            "source": "Codex account usage not exposed",
+            "source_path": "",
+            "scope": "selected-runtime account usage",
+            "not_per_sprint": True,
+            "not_per_agent": True,
+            "label": "Codex account-wide token usage is not exposed by the local CLI; per-run evidence remains on the session view.",
+            "total_used_tokens": None,
+            "total_used_tokens_label": "unavailable",
+            "models": [],
+            "refresh_attempts": [],
+        }
     rows = _quota_footer_cache_rows()
     refresh_attempts = []
     if refresh or not rows:
@@ -873,6 +1108,10 @@ def _usage_payload(refresh: bool = False) -> dict:
     return {
         "ok": True,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "runtime": runtime,
+        "runtime_source": runtime_source,
+        "availability": "available",
+        "reason": "",
         "source": "Claude log scan / quota-footer",
         "source_path": _safe_rel(HARNESS_DIR / "quota-footer.sh", HARNESS_DIR),
         "scope": "model-day estimate",
@@ -1411,12 +1650,30 @@ def _find_cwd_value(obj) -> str:
 
 
 def _sprint_workdir(sid: str) -> Path | None:
-    """Discover the sprint's working directory (where the builder produced the REAL
-    output — code, reports). That output lives in the workdir, not under SPRINTS_DIR,
-    so without surfacing it the deliverables rail shows only process plumbing. The
-    `cwd` field is recorded in the sprint's raw_intent / eval artifacts."""
+    """Discover the sprint's working directory where the builder produced output.
+
+    Product-mode sprints use ``sprints/<sid>/workdir``. Older/external-workspace
+    sprints record a ``cwd`` in raw-intent or eval artifacts, so retain that fallback.
+    """
     if not _valid_sprint_id(sid):
         return None
+
+    # The governed product path is sprint-owned. Resolve both sides so a symlinked
+    # ``workdir`` cannot escape the sprint while still being exposed as output.
+    try:
+        sprint_root = (SPRINTS_DIR / sid).resolve()
+        canonical = (sprint_root / "workdir").resolve()
+    except OSError:
+        canonical = None
+        sprint_root = None
+    if (
+        canonical is not None
+        and sprint_root is not None
+        and canonical.is_dir()
+        and _is_within(canonical, sprint_root)
+    ):
+        return canonical
+
     cwd = ""
     for name in (f"{sid}.raw_intent.json", f"{sid}.S1-eval.json", f"{sid}.S2-eval.json", f"{sid}.S3-eval.json"):
         p = SPRINTS_DIR / name
@@ -1458,6 +1715,25 @@ _PIPELINE_STAGE_ORDER = {
     "other": 8,
 }
 
+# Task-graph stages that produce proof ABOUT the requested deliverable rather
+# than the deliverable itself.  These outputs remain visible and can still be
+# the result when they are the only thing produced; they merely rank behind a
+# delivery-stage output.  The classification comes from the graph contract,
+# not prompt text or a particular report filename.
+_SUPPORTING_OUTPUT_TASK_TYPES = {
+    "audit_inventory",
+    "evaluation",
+    "evidence",
+    "planning",
+    "requirements",
+    "review",
+    "test",
+    "testing",
+    "tests",
+    "verification",
+}
+_SUPPORTING_OUTPUT_DIRS = {"evidence", "test", "tests"}
+
 
 def _deliverable_stage(name: str, rel_path: str, source: str) -> str:
     """Classify a deliverable by its producing pipeline stage from the file name/dir
@@ -1496,10 +1772,76 @@ def _deliverable_stage(name: str, rel_path: str, source: str) -> str:
     return "other"
 
 
+def _declared_output_contracts(sid: str, workdir: Path) -> list[tuple[Path, str]]:
+    """Resolve graph write-scope declarations into sprint-owned output paths.
+
+    Planner graphs use both workdir-relative declarations (``workspace/x``)
+    and harness-relative declarations (``sprints/<sid>/workdir/x``).  Normalize
+    both forms, reject anything outside the sprint workdir, and retain the
+    producing task type for result ranking.
+    """
+    graph, _path = _sprint_contract_graph(sid)
+    nodes = graph.get("nodes") if isinstance(graph.get("nodes"), list) else []
+    contracts: list[tuple[Path, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        task_type = str(
+            node.get("task_type") or node.get("dispatch_task_type") or ""
+        ).strip().lower()
+        write_scope = node.get("write_scope")
+        if not isinstance(write_scope, list):
+            continue
+        for raw in write_scope:
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            declared = Path(raw.strip())
+            candidates = [declared] if declared.is_absolute() else [
+                workdir / declared,
+                HARNESS_DIR / declared,
+                SPRINTS_DIR / sid / declared,
+            ]
+            if "workdir" in declared.parts:
+                workdir_index = declared.parts.index("workdir")
+                candidates.append(workdir.joinpath(*declared.parts[workdir_index + 1 :]))
+            for candidate in candidates:
+                try:
+                    resolved = candidate.resolve()
+                except OSError:
+                    continue
+                if not _is_within(resolved, workdir):
+                    continue
+                key = (str(resolved), task_type)
+                if key not in seen:
+                    contracts.append((resolved, task_type))
+                    seen.add(key)
+    return contracts
+
+
+def _output_role(path: Path, workdir: Path, contracts: list[tuple[Path, str]]) -> tuple[str, bool]:
+    """Return producer task type and whether an output is supporting evidence."""
+    matches = [
+        (len(declared.parts), task_type)
+        for declared, task_type in contracts
+        if path == declared or _is_within(path, declared)
+    ]
+    producer_task_type = max(matches, default=(0, ""))[1]
+    try:
+        parts = tuple(part.lower() for part in path.relative_to(workdir).parts[:-1])
+    except ValueError:
+        parts = ()
+    supporting = (
+        producer_task_type in _SUPPORTING_OUTPUT_TASK_TYPES
+        or any(part in _SUPPORTING_OUTPUT_DIRS for part in parts)
+    )
+    return producer_task_type, supporting
+
+
 def _select_result_index(rows: list[dict]) -> int:
     """Pick the single canonical result among discovered rows. Preference: the
-    evaluator-accepted artifact, then a rendered report (HTML, then md/pdf), then the
-    largest produced output, then any produced output, then the newest primary."""
+    evaluator-accepted artifact, then workdir output, then process reports.  Within
+    each tier prefer rendered reports (HTML, then md/pdf) before raw output."""
     if not rows:
         return -1
 
@@ -1512,12 +1854,24 @@ def _select_result_index(rows: list[dict]) -> int:
     def renderable(row: dict) -> bool:
         return kind(row) in {"html", "htm", "md", "markdown", "pdf"}
 
+    def produced(row: dict) -> bool:
+        return row.get("source") == "output"
+
+    def delivery(row: dict) -> bool:
+        return produced(row) and not bool(row.get("supporting"))
+
     tiers = (
         lambda r: "accepted" in name_l(r) and renderable(r),
+        lambda r: delivery(r) and r.get("stage") == "report" and kind(r) in {"html", "htm"},
+        lambda r: delivery(r) and r.get("stage") == "report" and renderable(r),
+        lambda r: delivery(r) and renderable(r),
+        lambda r: delivery(r),
+        lambda r: produced(r) and r.get("stage") == "report" and kind(r) in {"html", "htm"},
+        lambda r: produced(r) and r.get("stage") == "report" and renderable(r),
+        lambda r: produced(r) and renderable(r),
+        lambda r: produced(r),
         lambda r: r.get("stage") == "report" and kind(r) in {"html", "htm"},
         lambda r: r.get("stage") == "report" and renderable(r),
-        lambda r: r.get("source") == "output" and renderable(r),
-        lambda r: r.get("source") == "output",
         lambda r: bool(r.get("primary")),
         lambda r: True,
     )
@@ -1536,6 +1890,7 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
     if not _valid_sprint_id(sid):
         return []
     allowed_suffixes = {".html", ".htm", ".md", ".markdown", ".json", ".txt", ".log", ".pdf", ".png", ".jpg", ".jpeg"}
+    workdir = _sprint_workdir(sid)
     candidates: list[Path] = []
     try:
         for pattern in (f"{sid}*.html", f"{sid}*.htm", f"{sid}*.md", f"{sid}*.json"):
@@ -1553,6 +1908,19 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
             continue
         try:
             for path in root.rglob("*"):
+                # A canonical workdir sits below the sprint root. Do not classify
+                # its cache/readme files as process artifacts; the bounded output
+                # scan below owns this subtree and applies its stricter filters.
+                if workdir is not None:
+                    try:
+                        # Use lexical containment here: resolving first would let
+                        # a workdir symlink to another sprint re-enter this process
+                        # scan under its target's path.
+                        path.absolute().relative_to(workdir.absolute())
+                    except ValueError:
+                        pass
+                    else:
+                        continue
                 if path.is_file() and path.suffix.lower() in allowed_suffixes:
                     candidates.append(path)
         except OSError:
@@ -1588,7 +1956,6 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
     # Surface the REAL produced output from the sprint's working directory. The
     # builder writes code/reports to the workdir (cwd), not under SPRINTS_DIR, so
     # without this the rail shows only process plumbing and never the deliverable.
-    workdir = _sprint_workdir(sid)
     if workdir is not None:
         # Only surface files PRODUCED during the sprint (mtime at/after start), so a
         # workdir that is a populated repo doesn't dump pre-existing files as deliverables.
@@ -1609,6 +1976,7 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
             ".git", "__pycache__", ".pytest_cache", "node_modules", ".venv", "venv",
             "dist", "build", ".vite", ".mypy_cache", ".ruff_cache", ".idea", ".cache", "site-packages",
         }
+        output_contracts = _declared_output_contracts(sid, workdir)
         wd_count = 0
         try:
             for path in sorted(workdir.rglob("*"), key=lambda p: str(p)):
@@ -1626,6 +1994,8 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                     continue
                 try:
                     resolved = path.resolve()
+                    if not _is_within(resolved, workdir):
+                        continue
                     key = _safe_rel(resolved, HARNESS_DIR)  # absolute string for workdir files
                     if key in seen:
                         continue
@@ -1635,6 +2005,9 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                     continue
                 if cutoff and stat.st_mtime < cutoff:
                     continue
+                producer_task_type, supporting = _output_role(
+                    resolved, workdir, output_contracts
+                )
                 rows.append({
                     "name": resolved.name,
                     "rel_path": key,
@@ -1643,6 +2016,8 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                     "mtime": stat.st_mtime,
                     "source": "output",
                     "primary": True,
+                    "producer_task_type": producer_task_type,
+                    "supporting": supporting,
                     "stage": _deliverable_stage(resolved.name, key, "output"),
                     "view_url": f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(key)}",
                 })
@@ -6524,7 +6899,7 @@ def _execution_plan_summary(sid: str) -> dict:
         try:
             physical_data = json.loads(physical_path.read_text(encoding="utf-8"))
             if isinstance(physical_data, dict):
-                selected_operator_id = str(physical_data.get("selected_operator_id") or "")
+                selected_operator_id = str(physical_data.get("suggested_operator_id") or physical_data.get("selected_operator_id") or "")
                 capability_capsule_id = str(physical_data.get("capability_capsule_id") or "")
         except Exception:
             selected_operator_id = ""
@@ -13638,6 +14013,12 @@ class StatusHandler(BaseHTTPRequestHandler):
                 "port": bound_port,
                 "bind_host": BIND_HOST,
                 "python": sys.executable,
+                # G4-lite run 4 (STATUS_SERVER_OWNERSHIP_MISMATCH): a stale
+                # server on the shared port answered an alien sandbox's
+                # health checks while this server silently took a fallback
+                # port. Liveness proves nothing about ownership — clients
+                # verify THIS field against their own HARNESS_DIR.
+                "harness_dir": str(HARNESS_DIR),
             })
 
         elif path == "/status":
@@ -13905,6 +14286,14 @@ class StatusHandler(BaseHTTPRequestHandler):
                         self._send_file(target, content_type)
             else:
                 self._send_json(_sprint_deliverables_payload(sid))
+
+        elif re.match(r"^/api/sprints/[^/]+/contract$", path):
+            sid = urllib.parse.unquote(path.split("/api/sprints/", 1)[1].split("/contract", 1)[0])
+            try:
+                payload = _sprint_contract_payload(sid)
+                self._send_json(payload, status=404 if payload.get("status") == "not_found" else 200)
+            except Exception as exc:
+                self._send_json({"ok": False, "status": "error", "error": f"{type(exc).__name__}: {exc}"}, status=500)
 
         elif re.match(r"^/api/sprints/[^/]+/projection$", path):
             sid = urllib.parse.unquote(path.split("/api/sprints/", 1)[1].split("/projection", 1)[0])

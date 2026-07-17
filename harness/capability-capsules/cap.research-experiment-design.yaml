@@ -87,7 +87,7 @@ verification:
     - Execution scope and approval need are visible before any run node.
 operator_compatibility:
   preferred:
-    - ScientificExperimentDesigner
+    - autosci-experiment-design-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

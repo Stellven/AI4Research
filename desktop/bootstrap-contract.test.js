@@ -18,8 +18,13 @@ function assert(name, ok, detail = "") {
 
 const main = read("src/main.js");
 const getSolar = read("../get-solar.sh");
+const releaseVersion = read("../VERSION").trim();
 const app = read("../harness/status-server/react-app/src/App.tsx");
 const pkg = JSON.parse(read("package.json"));
+const autotest = read("autotest.sh");
+const selftestElectron = read("selftest-electron.test.js");
+const desktopWorkflow = read("../.github/workflows/desktop-build.yml");
+const desktopGateJob = desktopWorkflow.split("\n  gate:\n")[1] || "";
 const macResources = (pkg.build.mac.extraResources || []).map((entry) => entry.to);
 
 assert(
@@ -58,9 +63,8 @@ assert(
 );
 
 assert(
-  "get-solar fallback defaults to a published channel until rc8 tag exists",
-  getSolar.includes('SOLAR_CHANNEL="${SOLAR_CHANNEL:-v1.0.0-rc.6}"') &&
-    !getSolar.includes('SOLAR_CHANNEL="${SOLAR_CHANNEL:-v1.0.0-rc.8}"'),
+  "get-solar fallback defaults to the package release channel",
+  getSolar.includes(`SOLAR_CHANNEL="\${SOLAR_CHANNEL:-v${releaseVersion}}"`),
 );
 
 assert(
@@ -76,4 +80,67 @@ assert(
     main.includes("desktop.log") &&
     main.includes("renderer-process-gone") &&
     main.includes("window-unresponsive"),
+);
+
+assert(
+  "desktop selftest validates the loaded runtime dashboard",
+  main.includes("assessSelftestSnapshot") &&
+    main.includes("collectSelftestSnapshot") &&
+    main.includes("fallback_renderer_loaded") &&
+    main.includes("finishSelftest(false") &&
+    main.includes("app.exit(code)"),
+);
+
+assert(
+  "desktop selftest fails when a requested screenshot cannot be written",
+  main.includes('reason: "screenshot_capture_failed"') &&
+    main.includes("capturePage returned an empty PNG") &&
+    !main.includes("SHOT_FAIL"),
+);
+
+assert(
+  "desktop selftest fails immediately on renderer crash or unresponsiveness",
+  main.includes('reason: "renderer_process_gone"') &&
+    main.includes('reason: "window_unresponsive"'),
+);
+
+assert(
+  "dashboard listener cleanup tolerates renderer teardown",
+  main.includes("const targetWebContents = win.webContents") &&
+    main.includes("if (targetWebContents.isDestroyed()) return") &&
+    main.includes("targetWebContents.removeListener"),
+);
+
+assert(
+  "desktop autotest runs the selftest truth suite",
+  autotest.includes("node src/selftest-verdict.test.js") &&
+    autotest.includes("node selftest-electron.test.js"),
+);
+
+assert(
+  "Electron selftest can verify a built executable",
+  selftestElectron.includes("SOLAR_ELECTRON_EXECUTABLE_PATH") &&
+    selftestElectron.includes("executablePath") &&
+    desktopWorkflow.includes("dist/linux-unpacked/solar-desktop"),
+);
+
+assert(
+  "Linux desktop entry matches Electron's runtime window class",
+  pkg.desktopName === "solar-desktop.desktop" &&
+    pkg.build.linux.syncDesktopName === true,
+);
+
+assert(
+  "desktop autotest runs this bootstrap/package contract",
+  autotest.includes("node bootstrap-contract.test.js"),
+);
+
+assert(
+  "desktop artifacts wait for the gate before building",
+  /\n  build:\n    needs: gate\n/.test(desktopWorkflow),
+);
+
+assert(
+  "desktop tag gate runs release coherence before packaging",
+  desktopGateJob.includes("bash scripts/check-release-coherence.sh"),
 );

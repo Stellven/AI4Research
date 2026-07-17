@@ -8,12 +8,15 @@ minimum evidence/citation constraints.
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import re
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+
+from .source_pack import canonical_source_type
 
 
 DEFAULT_MAX_UNSUPPORTED_RATE = 0.05
@@ -161,7 +164,7 @@ def policy_doctor() -> dict[str, Any]:
 
 def explain_source_authority(source_type: str, url: str = "", title: str = "", text: str = "") -> dict[str, Any]:
     """Explain the active policy score for one source candidate."""
-    normalized_type = str(source_type or "unknown").strip().lower() or "unknown"
+    normalized_type = canonical_source_type(source_type or "unknown")
     policy = _policy()
     rules = (policy.get("source_authority") or {}).get(normalized_type) or (policy.get("source_authority") or {}).get("unknown") or []
     haystack = f"{url}\n{title}\n{text}".lower()
@@ -226,7 +229,7 @@ def audit_sources(output_dir: str | Path, research_profile: str = "general", str
 
     for source in sources:
         source_id = str(source.get("id") or source.get("source_id") or "")
-        source_type = str(source.get("source_type") or "unknown").strip().lower() or "unknown"
+        source_type = canonical_source_type(source.get("source_type") or "unknown")
         type_counts[source_type] = type_counts.get(source_type, 0) + 1
         title = str(source.get("title") or "")
         url = str(source.get("url") or "")
@@ -372,6 +375,33 @@ def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
     except Exception:
         return []
     return rows
+
+
+def _read_retrieval_jsonl(path: Path, label: str) -> tuple[list[dict[str, Any]], list[str]]:
+    """Read retrieval JSONL without the tolerant skip behavior used by reports."""
+    if not path.exists():
+        return [], [f"{label}_missing"]
+    rows: list[dict[str, Any]] = []
+    issues: list[str] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return [], [f"{label}_unreadable"]
+    for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            issues.append(f"{label}_invalid_json:line={line_number}")
+            continue
+        if not isinstance(row, dict):
+            issues.append(f"{label}_invalid_row:line={line_number}")
+            continue
+        rows.append(row)
+    if not rows:
+        issues.append(f"{label}_empty")
+    return rows, issues
 
 
 def _evidence_text(row: dict[str, Any]) -> str:
@@ -1114,12 +1144,15 @@ def evaluate_final_closeout(
     *,
     min_finalized: int | None = None,
     require_complete: bool = False,
+    persist: bool = False,
 ) -> dict[str, Any]:
     """Single-source final closeout gate for DeepResearch runs.
 
     Reads blueprint, section contracts, and evaluation/survey files.
     Returns payload with verdict in {pass, repairable_fail, hard_fail}.
-    Persists final_closeout.json and run.finalized artifacts in output_dir.
+    Evaluation is read-only by default. Finalization commands may opt in to
+    blueprint/contract preparation and closeout artifacts with
+    ``persist=True``.
     """
     import datetime
     root = Path(output_dir).expanduser()
@@ -1127,9 +1160,10 @@ def evaluate_final_closeout(
     # 1. Determine if it is a survey run or standard run
     is_survey = (root / "survey_report_ast.json").exists() or (root / "report_blueprint.json").exists()
 
-    # Ensure blueprint and contracts are persisted
-    from research.cli import _ensure_blueprint_and_contracts
-    _ensure_blueprint_and_contracts(root)
+    if persist:
+        from research.cli import _ensure_blueprint_and_contracts
+
+        _ensure_blueprint_and_contracts(root)
 
     # 2. Get baseline verdict and issues
     issues: list[str] = []
@@ -1145,6 +1179,7 @@ def evaluate_final_closeout(
             strict=strict,
             min_finalized=min_finalized,
             require_complete=require_complete,
+            persist=persist,
         )
         ok = bool(base_data.get("ok"))
         issues = (base_data.get("scorecard") or {}).get("issues") or []
@@ -1254,53 +1289,241 @@ def evaluate_final_closeout(
         }
     }
 
-    # 5. Persist final_closeout.json
+    # 5. Persist only when an artifact-producing finalizer explicitly asks.
     closeout_path = root / "final_closeout.json"
-    closeout_path.write_text(json.dumps(closeout_artifact, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-    # 6. run.finalized requires persisted final closeout artifact
     run_finalized_path = root / "run.finalized"
-    if verdict == "pass":
-        run_finalized_data = {
-            "run_id": closeout_artifact["run_id"],
-            "finalized_at": closeout_artifact["timestamp"],
-            "closeout_artifact": "final_closeout.json",
-            "verdict": "pass"
-        }
-        run_finalized_path.write_text(json.dumps(run_finalized_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    else:
-        if run_finalized_path.exists():
+    if persist:
+        closeout_path.write_text(
+            json.dumps(closeout_artifact, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
+        # 6. run.finalized requires a persisted passing closeout artifact.
+        if verdict == "pass":
+            run_finalized_data = {
+                "run_id": closeout_artifact["run_id"],
+                "finalized_at": closeout_artifact["timestamp"],
+                "closeout_artifact": "final_closeout.json",
+                "verdict": "pass",
+            }
+            run_finalized_path.write_text(
+                json.dumps(run_finalized_data, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+        elif run_finalized_path.exists():
             try:
                 run_finalized_path.unlink()
             except OSError:
                 pass
 
-    # Also write research_quality_gate field to eval.json/survey_eval.json for dispatcher compatibility
-    eval_json_path = root / ("survey_eval.json" if is_survey else "eval.json")
-    if eval_json_path.exists():
-        try:
-            eval_data = json.loads(eval_json_path.read_text(encoding="utf-8"))
-            if isinstance(eval_data, dict):
-                eval_data["research_quality_gate"] = {
-                    "ok": verdict == "pass",
-                    "verdict": "PASS" if verdict == "pass" else "FAIL",
-                    "closeout_verdict": verdict,
-                    "issues": issues,
-                    "errors": issues,
-                }
-                eval_json_path.write_text(json.dumps(eval_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        except Exception:
-            pass
+        # Persist compatibility metadata only during explicit finalization.
+        eval_json_path = root / ("survey_eval.json" if is_survey else "eval.json")
+        if eval_json_path.exists():
+            try:
+                eval_data = json.loads(eval_json_path.read_text(encoding="utf-8"))
+                if isinstance(eval_data, dict):
+                    eval_data["research_quality_gate"] = {
+                        "ok": verdict == "pass",
+                        "verdict": "PASS" if verdict == "pass" else "FAIL",
+                        "closeout_verdict": verdict,
+                        "issues": issues,
+                        "errors": issues,
+                    }
+                    eval_json_path.write_text(
+                        json.dumps(eval_data, indent=2, ensure_ascii=False) + "\n",
+                        encoding="utf-8",
+                    )
+            except Exception:
+                pass
 
     return {
         "ok": verdict == "pass",
         "verdict": verdict,
         "issues": issues,
+        "persisted": persist,
         "artifact_paths": {
-            "final_closeout": str(closeout_path),
-            "run_finalized": str(run_finalized_path) if verdict == "pass" else None,
+            "final_closeout": str(closeout_path) if persist else None,
+            "run_finalized": str(run_finalized_path) if persist and verdict == "pass" else None,
         }
     }
+
+
+def evaluate_retrieval_closeout(
+    output_dir: str | Path,
+    research_profile: str = "general",
+    *,
+    persist: bool = False,
+) -> dict[str, Any]:
+    """Judge a retrieval-only source pack without demanding report artifacts.
+
+    Missing/empty retrieval is repairable.  Malformed provenance, escaped
+    extracts, unverifiable hashes, and evidence that does not map back to the
+    fetched bytes are hard failures. Evaluation is read-only by default so it
+    can safely inspect a frozen source pack. Artifact-producing tools may opt
+    in to a closeout sidecar with ``persist=True``.
+    """
+    from .hashing import content_hash
+
+    root = Path(output_dir).expanduser()
+    sources, source_issues = _read_retrieval_jsonl(root / "sources.jsonl", "sources_jsonl")
+    evidence, evidence_issues = _read_retrieval_jsonl(root / "evidence.jsonl", "evidence_jsonl")
+    issues = [*source_issues, *evidence_issues]
+    warnings: list[str] = []
+
+    try:
+        root_resolved = root.resolve(strict=False)
+        extracts_root = (root / "extracts").resolve(strict=False)
+    except OSError:
+        root_resolved = root
+        extracts_root = root / "extracts"
+
+    source_ids: set[str] = set()
+    source_extracts: dict[str, str] = {}
+    extract_missing = 0
+    hash_mismatch = 0
+    for row in sources:
+        source_id = str(row.get("id") or row.get("source_id") or "").strip()
+        if not source_id:
+            issues.append("source_id_missing")
+            continue
+        if source_id in source_ids:
+            issues.append(f"source_id_duplicate:{source_id}")
+            continue
+        source_ids.add(source_id)
+
+        required_metadata = ("url", "title", "source_type", "retrieved_at", "provider")
+        missing_metadata = [field for field in required_metadata if not str(row.get(field) or "").strip()]
+        if missing_metadata:
+            issues.append(f"source_metadata_missing:{source_id}:{','.join(missing_metadata)}")
+        url = str(row.get("url") or "").strip()
+        parsed_url = urlparse(url)
+        if url and (parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc):
+            issues.append(f"source_url_invalid:{source_id}")
+
+        extract_raw = str(row.get("extract_path") or "").strip()
+        extract_path = Path(extract_raw) if extract_raw else Path("")
+        candidate = root / extract_path if extract_raw and not extract_path.is_absolute() else extract_path
+        try:
+            resolved = candidate.resolve(strict=False) if extract_raw else Path("")
+            contained = bool(
+                extract_raw
+                and not extract_path.is_absolute()
+                and resolved.is_relative_to(extracts_root)
+                and resolved.is_relative_to(root_resolved)
+            )
+        except OSError:
+            contained = False
+        if extract_raw and not contained:
+            issues.append(f"source_extract_path_outside_pack:{source_id}")
+            continue
+        if not extract_raw or not candidate.is_file():
+            issues.append(f"source_extract_missing:{source_id}")
+            extract_missing += 1
+            continue
+        try:
+            extract_text = candidate.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            issues.append(f"source_extract_unreadable:{source_id}")
+            extract_missing += 1
+            continue
+        declared_hash = str(row.get("content_sha256") or row.get("content_hash") or "").strip()
+        if not declared_hash:
+            issues.append(f"source_hash_missing:{source_id}")
+            continue
+        if content_hash(extract_text) != declared_hash:
+            issues.append(f"source_extract_hash_mismatch:{source_id}")
+            hash_mismatch += 1
+            continue
+        source_extracts[source_id] = extract_text
+
+    evidence_ids: set[str] = set()
+    evidenced_sources: set[str] = set()
+    for row in evidence:
+        ev_id = str(row.get("id") or row.get("evidence_id") or "").strip()
+        if not ev_id:
+            issues.append("evidence_id_missing")
+            continue
+        if ev_id in evidence_ids:
+            issues.append(f"evidence_id_duplicate:{ev_id}")
+            continue
+        evidence_ids.add(ev_id)
+
+        source_id = str(row.get("source_id") or "").strip()
+        if source_id not in source_ids:
+            issues.append(f"evidence_source_unknown:{source_id or '?'}")
+        else:
+            evidenced_sources.add(source_id)
+        content = str(row.get("content") or row.get("span_text") or "")
+        if not content:
+            issues.append(f"evidence_content_missing:{ev_id}")
+        declared_hash = str(row.get("content_hash") or "").strip()
+        if not declared_hash:
+            issues.append(f"evidence_content_hash_missing:{ev_id}")
+        elif content and content_hash(content) != declared_hash:
+            issues.append(f"evidence_content_hash_mismatch:{ev_id}")
+
+        start = row.get("span_start")
+        end = row.get("span_end")
+        valid_bounds = (
+            isinstance(start, int)
+            and not isinstance(start, bool)
+            and isinstance(end, int)
+            and not isinstance(end, bool)
+            and 0 <= start <= end
+        )
+        source_text = source_extracts.get(source_id)
+        if not valid_bounds:
+            issues.append(f"evidence_span_invalid:{ev_id}")
+        elif source_text is not None and (end > len(source_text) or source_text[start:end] != content):
+            issues.append(f"evidence_span_mismatch:{ev_id}")
+
+    for source_id in sorted(source_ids - evidenced_sources):
+        issues.append(f"source_evidence_missing:{source_id}")
+
+    metrics: dict[str, Any] = {
+        "source_count": len(sources),
+        "evidence_count": len(evidence),
+        "extract_missing_count": extract_missing,
+        "hash_mismatch_count": hash_mismatch,
+    }
+    try:
+        authority = audit_sources(root, research_profile, strict_profile=False)
+        metrics["source_authority_average"] = authority.get("source_authority_average")
+        metrics["source_high_authority_count"] = authority.get("source_high_authority_count")
+        warnings.extend(authority.get("warnings") or [])
+    except Exception:
+        warnings.append("source_authority_audit_unavailable")
+
+    repairable = {
+        "sources_jsonl_missing",
+        "sources_jsonl_empty",
+        "evidence_jsonl_missing",
+        "evidence_jsonl_empty",
+    }
+    hard_issues = [issue for issue in issues if issue not in repairable]
+    if hard_issues:
+        verdict = "hard_fail"
+    elif issues:
+        verdict = "repairable_fail"
+    else:
+        verdict = "pass"
+
+    payload = {
+        "ok": verdict == "pass",
+        "verdict": verdict,
+        "retrieval_only": True,
+        "output_dir": str(root),
+        "issues": issues,
+        "warnings": warnings,
+        "metrics": metrics,
+        "timestamp": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    if persist and root.is_dir():
+        (root / "retrieval_closeout.json").write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    return payload
 
 
 def evaluate_figures_grounding(output_dir: Path) -> tuple[bool, list[str], list[str]]:

@@ -17,13 +17,23 @@ from pathlib import Path
 HARNESS_LIB = Path(__file__).resolve().parent.parent.parent / "lib"
 sys.path.insert(0, str(HARNESS_LIB))
 
-from requirement_coverage import build_acceptance_verdict
+from requirement_coverage import build_acceptance_verdict, build_coverage_report
 
 
-def _verdict(*, graph_complete: bool, missing: int = 0, partial: int = 0, requested: str = "pass") -> dict:
+def _verdict(
+    *,
+    graph_complete: bool,
+    graph_terminal: bool = False,
+    graph_failed: bool = False,
+    missing: int = 0,
+    partial: int = 0,
+    requested: str = "pass",
+) -> dict:
     coverage = {
         "summary": {
             "graph_complete": graph_complete,
+            "graph_terminal": graph_terminal,
+            "graph_failed": graph_failed,
             "missing": missing,
             "partial": partial,
         }
@@ -42,6 +52,13 @@ def test_incomplete_graph_is_in_progress_not_fail():
     assert "task_graph_incomplete" in v["reasons"]
 
 
+def test_terminal_failed_graph_is_fail_not_in_progress():
+    v = _verdict(graph_complete=False, graph_terminal=True, graph_failed=True, missing=1)
+    assert v["verdict"] == "FAIL"
+    assert "task_graph_failed" in v["reasons"]
+    assert "task_graph_incomplete" not in v["reasons"]
+
+
 def test_complete_and_fully_covered_is_pass():
     assert _verdict(graph_complete=True, missing=0, partial=0)["verdict"] == "PASS"
 
@@ -53,3 +70,21 @@ def test_complete_but_uncovered_is_fail():
 
 def test_non_pass_request_is_fail_even_when_incomplete():
     assert _verdict(graph_complete=False, requested="reject")["verdict"] == "FAIL"
+
+
+def test_coverage_report_distinguishes_terminal_failure_from_running_graph():
+    trace = {
+        "requirement_ir_id": "req-x",
+        "items": [{"requirement_id": "REQ-1", "final_status": "partial"}],
+    }
+    graph = {
+        "sprint_id": "sid-x",
+        "nodes": [{"id": "N1"}, {"id": "N2"}],
+        "node_results": {"N1": {"status": "passed"}, "N2": {"status": "failed"}},
+    }
+
+    summary = build_coverage_report(trace, graph)["summary"]
+
+    assert summary["graph_complete"] is False
+    assert summary["graph_terminal"] is True
+    assert summary["graph_failed"] is True

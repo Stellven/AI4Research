@@ -87,7 +87,7 @@ verification:
     - Missing runnable entrypoints are reported as limitations.
 operator_compatibility:
   preferred:
-    - ScientificCodeEvidenceMapper
+    - autosci-code-evidence-map-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

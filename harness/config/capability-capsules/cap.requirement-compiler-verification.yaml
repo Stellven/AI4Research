@@ -107,7 +107,7 @@ verification:
     - eval_json exists
 operator_compatibility:
   preferred:
-    - mini-claude-opus-evaluator
+    - mini-claude-sonnet-evaluator-print
   forbidden:
     - mini-antigravity-gemini35-flash-high
 provenance:

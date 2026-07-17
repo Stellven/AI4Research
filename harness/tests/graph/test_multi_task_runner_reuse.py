@@ -71,6 +71,33 @@ def test_select_reusable_tmux_window_skips_active_and_non_shell_windows() -> Non
     assert target == ""
 
 
+def test_idle_candidates_exclude_windows_visible_to_any_client(monkeypatch) -> None:
+    tasks = [{
+        "id": "task-visible",
+        "window": "mt-visible-window",
+        "effective_status": "completed",
+    }]
+    windows = [{
+        "window_id": "@19",
+        "window": "mt-visible-window",
+        "target": "solar-harness-multi-task:@19",
+        "active": "0",
+        "dead": "0",
+        "command": "bash",
+    }]
+    monkeypatch.setattr(
+        multi_task_runner,
+        "tmux_client_records",
+        lambda: [{
+            "tty": "/dev/pts/19",
+            "window_id": "@19",
+            "session": multi_task_runner.SESSION,
+        }],
+    )
+
+    assert multi_task_runner.idle_tmux_window_candidates(tasks=tasks, windows=windows) == []
+
+
 def test_tmux_start_uses_respawn_window_for_reuse(monkeypatch, tmp_path: Path) -> None:
     runner = tmp_path / "runner.sh"
     runner.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
@@ -97,6 +124,52 @@ def test_tmux_start_uses_respawn_window_for_reuse(monkeypatch, tmp_path: Path) -
 
     assert any(cmd[:3] == ["tmux", "respawn-window", "-k"] for cmd in calls)
     assert not any(cmd[:3] == ["tmux", "new-window", "-d"] for cmd in calls)
+
+
+def test_tmux_start_reuse_restores_the_previously_active_window(monkeypatch, tmp_path: Path) -> None:
+    runner = tmp_path / "runner.sh"
+    runner.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    class _Proc:
+        returncode = 0
+
+    monkeypatch.setattr(
+        multi_task_runner,
+        "tmux_window_records",
+        lambda: [
+            {
+                "window": "mt-current",
+                "target": "solar-harness-multi-task:@20",
+                "active": "1",
+            },
+            {
+                "window": "mt-reuse",
+                "target": "solar-harness-multi-task:@21",
+                "active": "0",
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        multi_task_runner.subprocess,
+        "run",
+        lambda cmd, **kwargs: calls.append(cmd) or _Proc(),
+    )
+    monkeypatch.setattr(
+        multi_task_runner.subprocess,
+        "check_call",
+        lambda cmd, **kwargs: calls.append(cmd) or 0,
+    )
+
+    multi_task_runner.tmux_start(
+        "mt-reuse",
+        runner,
+        tmp_path,
+        reuse=True,
+        reuse_target="solar-harness-multi-task:@21",
+    )
+
+    assert ["tmux", "select-window", "-t", "solar-harness-multi-task:@20"] in calls
 
 
 def test_prune_idle_tmux_windows_kills_only_excess_old_shells(monkeypatch) -> None:
@@ -245,3 +318,36 @@ def test_detach_and_anchor_selects_anchor(monkeypatch, tmp_path: Path) -> None:
     assert result["target"] == "solar-harness-multi-task:@121"
     assert result["action"] == "selected"
     assert any(cmd[:3] == ["tmux", "select-window", "-t"] and cmd[3] == "solar-harness-multi-task:@121" for cmd in calls)
+
+
+def test_tmux_lifecycle_controls_are_wired_to_cli(monkeypatch, tmp_path: Path) -> None:
+    calls: list[tuple] = []
+    monkeypatch.setattr(multi_task_runner, "print_table", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        multi_task_runner,
+        "prune_idle_tmux_windows",
+        lambda target_keep, dry_run=False: calls.append(("shrink", target_keep, dry_run))
+        or {"killed": []},
+    )
+    monkeypatch.setattr(
+        multi_task_runner,
+        "compact_tmux_session",
+        lambda target_keep, dry_run=False, cwd=None: calls.append(
+            ("compact", target_keep, dry_run, cwd)
+        ) or {"closed": [], "switches": []},
+    )
+    monkeypatch.setattr(
+        multi_task_runner,
+        "detach_and_anchor",
+        lambda cwd=None, dry_run=False: calls.append(("anchor", cwd, dry_run))
+        or {"target": "session:@1", "created_anchor": False, "action": "dry-run"},
+    )
+
+    assert multi_task_runner.main(["shrink-idle", "--target-keep", "2", "--dry-run"]) == 0
+    assert multi_task_runner.main(["compact-session", "--target-keep", "3", "--dry-run"]) == 0
+    assert multi_task_runner.main(["detach-and-anchor", "--dry-run"]) == 0
+    assert calls == [
+        ("shrink", 2, True),
+        ("compact", 3, True, Path.cwd()),
+        ("anchor", Path.cwd(), True),
+    ]

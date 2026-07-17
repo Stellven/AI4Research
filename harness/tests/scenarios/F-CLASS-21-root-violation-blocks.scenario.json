@@ -1,0 +1,34 @@
+{
+  "id": "F-CLASS-21",
+  "class": 21,
+  "title": "A manifest carrying an ARTIFACT_ROOT_VIOLATION blocks the proof gate (CONSULT half only)",
+  "retires": "F-CLASS-21 artifact half, CONSULT ONLY (round-4 G5: no live observed-writes producer exists; AC-R6.3 is NOT enforced end-to-end in production); R6/AC-R6.3 partial",
+  "release_proof_level": "P1.5",
+  "mode": "gate_replay",
+  "driver": "drivers/f_class_21_root_violation_blocks.py",
+  "daemon_cap_sec": 60,
+  "env": {
+    "SOLAR_GATE_LEDGER": "1"
+  },
+  "expect": [
+    {
+      "fact": "driver_rc",
+      "op": "eq",
+      "value": 0
+    },
+    {
+      "fact": "violation_blocked",
+      "op": "truthy"
+    },
+    {
+      "fact": "gate_ok",
+      "op": "falsy"
+    }
+  ],
+  "fault": {
+    "env": {
+      "SOLAR_GATE_LEDGER": "0"
+    }
+  },
+  "notes": "CONSULT HALF ONLY (round-4 G5). The driver hand-builds the manifest with observed=[stray] because NO live producer of observed writes exists: node_verdict's write_manifest call passes no observed=, operator result.json carries no artifact list, and there is no workspace write-scan — so in production violations is always [] and AC-R6.3 does not fire. What this scenario DOES prove, red-green: a manifest carrying ARTIFACT_ROOT_VIOLATION blocks _evaluate_proof_obligations even though the declared obligation is satisfied (GREEN), and with SOLAR_GATE_LEDGER=0 the contamination is invisible and the gate passes (RED). The catalog row is 'partial' with the missing producer named in pending_remainder; the path-selection half of class 21 is Lane 0.5's preflight (verified)."
+}

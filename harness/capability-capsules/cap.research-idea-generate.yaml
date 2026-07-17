@@ -87,7 +87,7 @@ verification:
     - Unsupported seed material produces inconclusive status.
 operator_compatibility:
   preferred:
-    - ScientificIdeaGenerator
+    - autosci-idea-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

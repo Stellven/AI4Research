@@ -44,6 +44,13 @@ MODEL_DOCTOR_INTERVAL_SEC = int(os.environ.get("SOLAR_MODEL_DOCTOR_INTERVAL_SEC"
 MODEL_DOCTOR_TIMEOUT_SEC = int(os.environ.get("SOLAR_MODEL_DOCTOR_TIMEOUT_SEC", "120"))
 PM_INBOX_DIR = HARNESS / "run" / "pm-inbox"
 ROLE_HANDOFF_RETRY_COOLDOWN_SEC = int(os.environ.get("SOLAR_ROLE_HANDOFF_RETRY_COOLDOWN_SEC", "30"))
+try:
+    PLANNER_DISPATCH_CLAIM_TTL_SEC = max(
+        1,
+        int(os.environ.get("SOLAR_PLANNER_DISPATCH_CLAIM_TTL_SEC", "180") or "180"),
+    )
+except (TypeError, ValueError):
+    PLANNER_DISPATCH_CLAIM_TTL_SEC = 180
 
 REAL_HARNESS = Path(os.environ.get("REAL_HARNESS_DIR", HARNESS))
 sys.path.insert(0, str(REAL_HARNESS / "lib"))
@@ -108,7 +115,7 @@ SAFE_CONTINUE_PROMPT_RE = re.compile(r"^\s*❯[\s\u00a0]*(继续|continue|继续
 SQLITE_ONLY_RE = re.compile(r"sqlite3\s+~?/?.*\.solar/solar\.db", re.I)
 CONTEXT_INJECT_RE = re.compile(r"solar-harness\s+context\s+inject|Solar Unified Context", re.I)
 CONTEXT_TIMEOUT_RE = re.compile(r"context inject[\s\S]{0,240}timeout\s+\d+s|timeout\s+\d+s[\s\S]{0,240}context inject", re.I)
-ACTIVE_STATUSES = {"drafting", "queued", "active", "planning", "approved", "reviewing", "ready_for_review", "needs_human_review", "failed_review"}
+ACTIVE_STATUSES = {"drafting", "queued", "active", "planning", "approved", "reviewing", "ready_for_review", "failed_review"}
 TERMINAL_STATUSES = {"passed", "completed", "finalized", "done", "cancelled", "archived"}
 GRAPH_READY_HANDOFFS = {"builder", "builder_main", "builder_parallel", "builder-lab"}
 GRAPH_EVAL_HANDOFFS = {"evaluator", "reviewer"}
@@ -1526,6 +1533,46 @@ def role_for_handoff_finding(ftype: str) -> str:
     return ""
 
 
+def _transition_planner_dispatch_claim(
+    status: dict,
+    state: str,
+    detail: dict | None = None,
+) -> bool:
+    """Persist the operator-pool planner claim lifecycle on sprint status."""
+    now = utc_now()
+    before = json.dumps(status.get("planner_dispatch_claim"), sort_keys=True, default=str)
+    existing = status.get("planner_dispatch_claim")
+    claim = dict(existing) if isinstance(existing, dict) else {}
+    claim["owner"] = "operator_pool"
+    claim.setdefault("source", "solar_autopilot")
+    claim.setdefault("claimed_at", now)
+    claim.setdefault("ttl_seconds", PLANNER_DISPATCH_CLAIM_TTL_SEC)
+    if state in {"pending", "submitting"}:
+        expires = datetime.fromtimestamp(
+            time.time() + PLANNER_DISPATCH_CLAIM_TTL_SEC,
+            timezone.utc,
+        )
+        claim["expires_at"] = expires.strftime("%Y-%m-%dT%H:%M:%SZ")
+    claim["state"] = state
+    claim["updated_at"] = now
+    detail = detail or {}
+    task_id = str(detail.get("task_id") or "").strip()
+    if task_id:
+        claim["task_id"] = task_id
+    if state == "submitted":
+        claim["submitted_at"] = now
+        claim.pop("released_at", None)
+        claim.pop("failure_reason", None)
+    elif state == "failed":
+        claim["released_at"] = now
+        reason = str(detail.get("reason") or detail.get("error") or "role_pool_dispatch_failed")
+        if detail.get("returncode") is not None:
+            reason = f"{reason}_rc_{detail.get('returncode')}"
+        claim["failure_reason"] = reason[-300:]
+    status["planner_dispatch_claim"] = claim
+    return before != json.dumps(claim, sort_keys=True, default=str)
+
+
 def objective_for_role_handoff(sid: str, role: str) -> str:
     base = str(SPRINTS / sid)
     if role == "planner":
@@ -1971,10 +2018,12 @@ def _child_state_to_epic_node_projection(child_state: str) -> tuple[str | None, 
     state = str(child_state or "").lower()
     if state in {"passed", "completed", "eval_passed"}:
         return "passed", "passed"
-    if state in {"active", "approved", "planning", "reviewing", "ready_for_review", "needs_human_review"}:
+    if state in {"active", "approved", "planning", "reviewing", "ready_for_review"}:
         return "active", None
     if state in {"queued", "drafting"}:
         return "pending", None
+    if state == "needs_human_review":
+        return "needs_human_review", None
     if state in {"failed", "failed_review", "blocked"}:
         return "failed", None
     if state in {"cancelled", "archived"}:
@@ -2371,7 +2420,7 @@ def assigned_graph_node_for_pane(target: str) -> dict:
 def assigned_eval_graph_node_for_pane(target: str) -> dict:
     if load_graph is None:
         return {}
-    active_node_statuses = {"reviewing", "ready_for_review", "needs_human_review", "failed_review"}
+    active_node_statuses = {"reviewing", "ready_for_review", "failed_review"}
     for status in active_statuses():
         sid = status.get("_sid") or status.get("sprint_id") or status.get("id")
         if not sid:
@@ -2506,6 +2555,28 @@ def dispatch_ready_graph_nodes(sid: str, lease: bool = True) -> dict:
     if load_graph is None or validate_graph is None:
         return {"ok": False, "reason": "graph_scheduler_unavailable"}
     graph = load_graph(path)
+    try:
+        import plan_validator  # type: ignore
+
+        plan_guard = plan_validator.check_planner_graph_dispatchable(
+            graph, sprints_dir=SPRINTS_DIR, sid=sid
+        )
+    except Exception as guard_exc:
+        if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
+            return {
+                "ok": False,
+                "reason": "plan_validator_dispatch_refused",
+                "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"],
+                "sprint_id": sid,
+            }
+        plan_guard = {"ok": True}
+    if not plan_guard.get("ok"):
+        return {
+            "ok": False,
+            "reason": "plan_validator_dispatch_refused",
+            "errors": plan_guard.get("errors") or [],
+            "sprint_id": sid,
+        }
     validation = validate_graph(graph) if validate_graph else {"ok": False, "errors": ["graph_scheduler_unavailable"]}
     if not validation.get("ok"):
         return {"ok": False, "reason": "task_graph_invalid", "validation": validation}
@@ -2571,10 +2642,22 @@ def instruction_for(status: dict, files: dict[str, bool]) -> str:
             "完成后把 status 更新为 phase=prd_ready handoff_to=planner target_role=planner。"
         )
     if handoff == "planner" and files["prd"] and planner_outputs_missing(files):
-        return (
+        instruction = (
             f"请接手 {sid}：读取 .prd.md 和 .contract.md，产出 {sid}.design.md、{sid}.plan.md 和 {sid}.task_graph.json。"
             "task_graph 必须通过 solar-harness graph-scheduler validate。不要问用户拍板；这是 P0 reliability 默认推进。"
         )
+        # P5 G2b: the legacy pane-wake path does not flow through pm_dispatch
+        # submit, so it appends the compile-policy block itself (env-gated
+        # inside the helper; "" when SOLAR_PLAN_VALIDATOR is off).
+        try:
+            import plan_validator  # type: ignore
+
+            policy_block = plan_validator.planner_compile_policy_block(SPRINTS, str(sid))
+        except Exception:
+            policy_block = ""
+        if policy_block:
+            instruction = f"{instruction}\n\n{policy_block}"
+        return instruction
     if (
         handoff in ("builder", "builder_main", "builder_parallel", "builder-lab")
         and files["plan"]
@@ -2629,6 +2712,29 @@ def normalize_status_to_workflow_route(sid: str, status: dict, route: dict) -> b
         }.get(role)
         if not fields:
             return False
+        if role in {"builder", "builder_main"}:
+            try:
+                import plan_validator  # type: ignore
+
+                compile_verdict = plan_validator.compile_planner_graph(
+                    SPRINTS,
+                    sid,
+                    config_dir=HARNESS / "config",
+                    workflows_dir=HARNESS / "config" / "workflows",
+                )
+            except Exception as exc:
+                compile_verdict = {
+                    "ok": False,
+                    "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}"],
+                }
+            if not compile_verdict.get("ok"):
+                append_event(
+                    sid,
+                    "plan_compile_failed",
+                    "warn",
+                    {"route_role": role, "stage": stage, "verdict": compile_verdict},
+                )
+                return False
     new_status, new_phase, handoff, target_role = fields
     changed = any(
         str(status.get(k, "")) != v
@@ -3461,6 +3567,38 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
                 if not graph_path.exists() or not node_id:
                     raise RuntimeError("missing_graph_or_node")
                 graph = load_graph(graph_path) if load_graph else load_json(graph_path)
+                target_node = next(
+                    (
+                        item
+                        for item in (graph.get("nodes", []) or [])
+                        if isinstance(item, dict) and str(item.get("id") or "") == node_id
+                    ),
+                    None,
+                )
+                raw_status = str((target_node or {}).get("status") or "").strip().lower()
+                try:
+                    current_status = str(
+                        node_status(graph, node_id) if node_status else raw_status
+                    ).strip().lower()
+                except Exception:
+                    current_status = raw_status
+                if "needs_human_review" in {current_status, raw_status}:
+                    result.update(
+                        {
+                            "ok": True,
+                            "reopened": False,
+                            "skipped": "needs_human_review_requires_explicit_resume",
+                        }
+                    )
+                    append_event(
+                        sid,
+                        "autopilot_deepresearch_quality_gate_repair_deferred",
+                        "info",
+                        result,
+                    )
+                    mark_action(state, f, result)
+                    actions.append(result)
+                    continue
                 repaired = False
                 for node in graph.get("nodes", []) or []:
                     if not isinstance(node, dict) or str(node.get("id") or "") != node_id:
@@ -3536,6 +3674,9 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
                         status_changed = True
             if _append_status_history_once(status, f"autopilot_{ftype}", str(f.get("message", ""))):
                 status_changed = True
+            if dispatch and role_pool_handoff and role_for_handoff_finding(ftype) == "planner":
+                if _transition_planner_dispatch_claim(status, "submitting"):
+                    status_changed = True
             if status_changed:
                 status["updated_at"] = utc_now()
                 save_json(status_path, status)
@@ -3545,6 +3686,17 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
             if dispatch and sid and role_pool_handoff:
                 live_task = _live_pm_task_for_sprint_role(sid, role_for_handoff_finding(ftype))
                 if live_task is not None:
+                    if role_for_handoff_finding(ftype) == "planner":
+                        _transition_planner_dispatch_claim(
+                            status,
+                            "submitted",
+                            {
+                                "task_id": str(live_task.get("task_id") or ""),
+                                "pm_status": str(live_task.get("status") or ""),
+                            },
+                        )
+                        status["updated_at"] = utc_now()
+                        save_json(status_path, status)
                     result = {
                         "sid": sid,
                         "action": ftype,
@@ -3558,6 +3710,10 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
                     continue
                 sent, role_dispatch_detail = dispatch_role_handoff(sid, ftype)
                 if not sent:
+                    if role_for_handoff_finding(ftype) == "planner":
+                        _transition_planner_dispatch_claim(status, "failed", role_dispatch_detail)
+                        status["updated_at"] = utc_now()
+                        save_json(status_path, status)
                     append_event(sid, "autopilot_role_pool_dispatch_failed", "warn", {"target": target, "type": ftype, **role_dispatch_detail})
                     enqueue_action(f, "role_pool_unavailable", role_dispatch_detail)
                     result = {
@@ -3571,6 +3727,10 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
                     mark_action(state, f, result)
                     actions.append(result)
                     continue
+                if role_for_handoff_finding(ftype) == "planner":
+                    _transition_planner_dispatch_claim(status, "submitted", role_dispatch_detail)
+                    status["updated_at"] = utc_now()
+                    save_json(status_path, status)
             elif dispatch and sid:
                 sent = wake_sid(sid)
             elif dispatch and f.get("message") and f.get("target"):

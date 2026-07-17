@@ -9,10 +9,12 @@ import sys
 import time
 from typing import Any, Dict
 
+from harness_paths import resolve_runtime_harness_dir
+
 from . import mia_adapter
 
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = str(resolve_runtime_harness_dir())
 MIA_DIR = os.path.join(HARNESS_DIR, "vendor", "MIA", "Memory-Serve")
 MIA_ENTRYPOINT = os.path.join(MIA_DIR, "memory_serve.py")
 LIB_EXPERIENCE_DIR = os.path.dirname(os.path.abspath(__file__))

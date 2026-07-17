@@ -16,18 +16,57 @@ sys.path.insert(0, str(ROOT / "lib"))
 import operator_runtime as optime
 
 
+_ENABLED_OPERATOR = "mini-claude-sonnet-builder"
+_DISABLED_OPERATOR = "mini-antigravity-gemini35-flash-high"
+_TEST_REGISTRY = {
+    "version": 1,
+    "operators": {
+        _ENABLED_OPERATOR: {
+            "display_name": "Mac mini Claude Sonnet builder",
+            "role": "builder",
+            "persona": "builder",
+            "backend": "command",
+            "model": "test-command",
+            "enabled": True,
+        },
+        _DISABLED_OPERATOR: {
+            "display_name": "Disabled test builder",
+            "role": "builder",
+            "persona": "builder",
+            "backend": "command",
+            "model": "test-command",
+            "enabled": False,
+        },
+    },
+}
+
+
 @pytest.fixture(autouse=True)
 def setup_teardown_env(monkeypatch):
-    """Fixture to isolate run directories and environmental variables for test execution."""
+    """Own the complete runtime boundary used by these unit tests.
+
+    Product operator availability changes with the deployed machine and must
+    not change a unit-test outcome.  Submissions in this file also assert the
+    pre-daemon lease/inbox state, so they intentionally disable the product's
+    separately-tested operatord auto-kick.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
+        registry_path = tmp_path / "config" / "physical-operators.json"
+        registry_path.parent.mkdir(parents=True)
+        registry_path.write_text(json.dumps(_TEST_REGISTRY), encoding="utf-8")
+
+        monkeypatch.setenv("HARNESS_DIR", str(tmp_path))
+        monkeypatch.setenv("SOLAR_HARNESS_DIR", str(tmp_path))
+        monkeypatch.setenv("SOLAR_OPERATORD_AUTO_KICK", "0")
+        monkeypatch.delenv("HARNESS_SPRINTS_DIR", raising=False)
+        monkeypatch.setattr(optime, "HARNESS_DIR", tmp_path)
         monkeypatch.setattr(optime, "OPERATOR_LEASE_DIR", tmp_path / "run" / "operator-leases")
         monkeypatch.setattr(optime, "OPERATOR_STATUS_DIR", tmp_path / "run" / "operator-status")
         monkeypatch.setattr(optime, "OPERATOR_INBOX_DIR", tmp_path / "run" / "operator-inbox")
+        monkeypatch.setattr(optime, "OPERATOR_RESULTS_DIR", tmp_path / "run" / "operator-results")
         monkeypatch.setattr(optime, "OPERATOR_PERSONAS_DIR", ROOT / "personas")
-
-        # Point the registry to the real config in the harness dir
-        monkeypatch.setattr(optime, "PHYSICAL_OPERATORS_PATH", ROOT / "config" / "physical-operators.json")
+        monkeypatch.setattr(optime, "PHYSICAL_OPERATORS_PATH", registry_path)
 
         yield
 
@@ -154,6 +193,30 @@ def test_running_status_with_dead_recorded_process_is_recovered(monkeypatch):
     assert optime.get_operator_status(operator_id) is None
 
 
+def test_stale_running_status_without_pid_is_recovered(monkeypatch):
+    """Interrupted once-mode workers can leave active status without pid evidence."""
+    operator_id = "mini-claude-sonnet-builder"
+    optime.set_operator_status(operator_id, "running")
+    status_path = optime.OPERATOR_STATUS_DIR / f"{operator_id}.json"
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    status.pop("updated_at", None)
+    status["heartbeat_at"] = "2026-01-01T00:00:00Z"
+    status_path.write_text(json.dumps(status), encoding="utf-8")
+    monkeypatch.setenv("SOLAR_OPERATOR_ACTIVE_STATUS_STALE_SECONDS", "60")
+
+    assert optime.get_operator_runtime_state(operator_id) == "idle"
+    assert optime.get_operator_status(operator_id) is None
+
+
+def test_fresh_running_status_without_pid_remains_active(monkeypatch):
+    """Fresh no-pid active status is tolerated briefly while daemon metadata catches up."""
+    operator_id = "mini-claude-sonnet-builder"
+    optime.set_operator_status(operator_id, "running")
+    monkeypatch.setenv("SOLAR_OPERATOR_ACTIVE_STATUS_STALE_SECONDS", "3600")
+
+    assert optime.get_operator_runtime_state(operator_id) == "running"
+
+
 def test_status_override_states():
     """Test dynamic status overrides (cooldown, quota_exhausted, auth_expired)."""
     operator_id = "mini-claude-sonnet-builder"
@@ -260,9 +323,19 @@ def test_submit_rejects_disabled_operator():
         optime.submit(envelope)
 
 
-def test_submit_rejects_leased_operator():
-    """Operator already leased raises RuntimeError."""
+def test_submit_rejects_leased_operator(monkeypatch):
+    """Operator already leased raises a machine-classifiable busy rejection."""
     operator_id = "mini-claude-sonnet-builder"
+    monkeypatch.setattr(
+        optime,
+        "get_operator_config",
+        lambda _operator_id: {
+            "operator_id": operator_id,
+            "enabled": True,
+            "role": "builder",
+            "persona": "builder",
+        },
+    )
     optime.acquire_operator_lease(
         operator_id=operator_id,
         task_id="T-pre-lease",
@@ -271,13 +344,25 @@ def test_submit_rejects_leased_operator():
         ttl_seconds=60,
     )
     envelope = _make_envelope(operator_id=operator_id)
-    with pytest.raises(RuntimeError, match="not dispatchable.*leased"):
+    with pytest.raises(optime.OperatorSubmitRejected, match="not dispatchable.*leased") as raised:
         optime.submit(envelope)
+    assert raised.value.reason == "operator_busy"
+    assert raised.value.state == "leased"
 
 
-def test_submit_rejects_running_operator():
-    """Operator in running state raises RuntimeError."""
+def test_submit_rejects_running_operator(monkeypatch):
+    """Operator in running state raises a machine-classifiable busy rejection."""
     operator_id = "mini-claude-sonnet-builder"
+    monkeypatch.setattr(
+        optime,
+        "get_operator_config",
+        lambda _operator_id: {
+            "operator_id": operator_id,
+            "enabled": True,
+            "role": "builder",
+            "persona": "builder",
+        },
+    )
     optime.acquire_operator_lease(
         operator_id=operator_id,
         task_id="T-pre-run",
@@ -287,8 +372,31 @@ def test_submit_rejects_running_operator():
     )
     optime.update_operator_lease_state(operator_id, "running")
     envelope = _make_envelope(operator_id=operator_id)
-    with pytest.raises(RuntimeError, match="not dispatchable.*running"):
+    with pytest.raises(optime.OperatorSubmitRejected, match="not dispatchable.*running") as raised:
         optime.submit(envelope)
+    assert raised.value.reason == "operator_busy"
+    assert raised.value.state == "running"
+
+
+def test_submit_rejects_draining_operator(monkeypatch):
+    """A draining operator cannot accept a new envelope."""
+    operator_id = "mini-claude-sonnet-builder"
+    monkeypatch.setattr(
+        optime,
+        "get_operator_config",
+        lambda _operator_id: {
+            "operator_id": operator_id,
+            "enabled": True,
+            "role": "builder",
+            "persona": "builder",
+        },
+    )
+    monkeypatch.setattr(optime, "get_operator_runtime_state", lambda _operator_id: "draining")
+
+    with pytest.raises(optime.OperatorSubmitRejected, match="not dispatchable.*draining") as raised:
+        optime.submit(_make_envelope(operator_id=operator_id))
+    assert raised.value.reason == "operator_busy"
+    assert raised.value.state == "draining"
 
 
 def test_submit_rejects_quota_exhausted_operator():

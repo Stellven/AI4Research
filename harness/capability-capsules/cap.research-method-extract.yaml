@@ -85,7 +85,7 @@ verification:
     - Ambiguous methods are represented as limitations or rejected candidates.
 operator_compatibility:
   preferred:
-    - ScientificMethodExtractor
+    - autosci-method-extract-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

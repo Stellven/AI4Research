@@ -90,7 +90,7 @@ verification:
     - Missing evidence produces an inconclusive or failed review, not a pass.
 operator_compatibility:
   preferred:
-    - ScientificArtifactReviewer
+    - autosci-artifact-review-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

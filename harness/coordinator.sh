@@ -52,14 +52,34 @@ LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"
 HARNESS_MANAGE_LAB="${SOLAR_HARNESS_MANAGE_LAB:-${SOLAR_WATCHDOG_MANAGE_LAB:-0}}"
 COORD_STATE="$HARNESS_DIR/.coordinator-state"
 SESSION_SH="$HARNESS_DIR/session.sh"
-export LANG="en_US.UTF-8"
-export LC_ALL="en_US.UTF-8"
 
-# LOCAL-ONLY product architecture: the shipped single-Mac .app has no remote operator
-# pool — dispatch must land on the 4 local cockpit panes. Default the builder/evaluator
-# operator pool OFF here (gate read by lib/graph_node_dispatcher.py). Dev rigs can still
-# scale out by exporting SOLAR_GRAPH_BUILDER_OPERATOR_POOL=1 before the coordinator launches.
-export SOLAR_GRAPH_BUILDER_OPERATOR_POOL="${SOLAR_GRAPH_BUILDER_OPERATOR_POOL:-0}"
+solar_choose_utf8_locale() {
+  local locs
+  locs="$(locale -a 2>/dev/null || true)"
+  if printf '%s\n' "$locs" | grep -Eiq '^C\.UTF-?8$'; then
+    printf 'C.UTF-8'
+  elif printf '%s\n' "$locs" | grep -Eiq '^en_US\.UTF-?8$'; then
+    printf 'en_US.UTF-8'
+  else
+    printf 'C'
+  fi
+}
+
+SOLAR_COORD_LOCALE="${SOLAR_COORD_LOCALE:-$(solar_choose_utf8_locale)}"
+export LANG="$SOLAR_COORD_LOCALE"
+export LC_ALL="$SOLAR_COORD_LOCALE"
+
+# Product mode deliberately leaves the four cockpit panes as passive viewers;
+# its local operatord pool is therefore the only executable builder path.  Keep
+# legacy cockpit mode's pool default OFF, and preserve an explicit 0 as the
+# product-mode emergency kill switch.
+if [[ -z "${SOLAR_GRAPH_BUILDER_OPERATOR_POOL:-}" ]]; then
+  case "${SOLAR_PRODUCT_MODE:-0}" in
+    1|[Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn]) SOLAR_GRAPH_BUILDER_OPERATOR_POOL=1 ;;
+    *) SOLAR_GRAPH_BUILDER_OPERATOR_POOL=0 ;;
+  esac
+fi
+export SOLAR_GRAPH_BUILDER_OPERATOR_POOL
 
 # sprint-20260503-163542 D3: bridge ledger
 [[ -f "$HARNESS_DIR/lib/bridge-ledger.sh" ]] && . "$HARNESS_DIR/lib/bridge-ledger.sh"
@@ -77,6 +97,7 @@ export SOLAR_GRAPH_BUILDER_OPERATOR_POOL="${SOLAR_GRAPH_BUILDER_OPERATOR_POOL:-0
 [[ -f "$HARNESS_DIR/lib/ack-watcher.sh" ]] && . "$HARNESS_DIR/lib/ack-watcher.sh"
 [[ -f "$HARNESS_DIR/lib/prompt-quarantine.sh" ]] && . "$HARNESS_DIR/lib/prompt-quarantine.sh"
 [[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
+[[ -f "$HARNESS_DIR/lib/optional-hooks.sh" ]] && . "$HARNESS_DIR/lib/optional-hooks.sh"
 
 # Coordinator predates strict-mode helper libs and intentionally treats corrupt
 # sprint files as data-plane warnings. Do not let sourced libs' shell options
@@ -1136,13 +1157,30 @@ pane_has_runtime_blocker_snapshot() {
   printf '%s\n' "$snapshot" | grep -qiE "You've hit your limit|hit your limit|rate[- ]limit|usage limit reached|usage limit exceeded|monthly usage limit|/upgrade to increase your usage limit|resets .*\\(America/Toronto\\)|How is Claude doing this session|1:[[:space:]]*Bad[[:space:]]+2:[[:space:]]*Fine[[:space:]]+3:[[:space:]]*Good[[:space:]]+0:[[:space:]]*Dismiss"
 }
 
+pane_has_active_work_snapshot() {
+  local snapshot="$1"
+  # Active Claude spinners carry an ellipsis before the live duration.  Match
+  # that shape (including new playful verbs such as Simmering/Warping) instead
+  # of bare glyphs: completed history uses "Worked for"/"Churned for" and must
+  # not keep an otherwise empty composer permanently busy.
+  printf '%s\n' "$snapshot" | grep -qE 'esc to interrupt|• Working|Working \(|Crafting|Cogitating|Wandering|Sock-hopping|Puzzling|Gusting|Ideating|Musing|Orbiting|Reticulating|[·✻✶✳✢].*(…|\.\.\.)[[:space:]]*\('
+}
+
 pane_has_processing_snapshot() {
   local snapshot="$1"
-  printf '%s\n' "$snapshot" | grep -qE 'esc to interrupt|• Working|Working \(|Crafting|Cogitating|Wandering|Sock-hopping|Crunched|Puzzling|Gusting|Ideating|Musing|Orbiting|Reticulating|Read\(|Bash\(|Edit\(|Write\(|按 dispatch|合约、PRD 读毕|What should Claude do|⎿|✻|✶|✳|✢'
+  pane_has_active_work_snapshot "$snapshot" && return 0
+  printf '%s\n' "$snapshot" | grep -qE 'Crunched|Read\(|Bash\(|Edit\(|Write\(|按 dispatch|合约、PRD 读毕|What should Claude do|⎿|✻|✶|✳|✢'
 }
 
 pane_is_idle_snapshot() {
   local snapshot="$1"
+  local live_tail
+  live_tail="$(printf '%s\n' "$snapshot" | tail -14)"
+  # The edit-mode footer and an empty-looking composer remain visible while
+  # Claude is working or has queued input.  Those are not dispatch windows.
+  pane_has_runtime_blocker_snapshot "$live_tail" && return 1
+  pane_has_active_work_snapshot "$live_tail" && return 1
+  printf '%s\n' "$live_tail" | grep -qiE 'Press up to edit queued messages|queued messages' && return 1
   # sprint-20260502-182804 hot-reload follow-up: 修 idle 检测正则
   # 旧 bug: '❯ $' 要求 ❯ 后**只有一个空格**到行尾
   #         实际 Claude Code 输入框 = "❯" + 多个空格 (输入框宽度填充) + 行尾
@@ -2061,6 +2099,26 @@ dispatch_to_pane() {
     # Ideating/Musing/Orbiting/Reticulating before a tool call; treating those
     # as idle causes false dispatch failures while the pane is actually working.
     pane_has_processing_snapshot "$verify_output" && has_processing=1
+
+    # The graph dispatcher already proved this recovery against live Claude:
+    # some builds render the complete instruction in the composer but accept
+    # Return only after the paste has settled.  Give that visible residue two
+    # delayed standalone Enter attempts before quarantine clears and retransmits
+    # the text.  This avoids prompt stacking while keeping capture verification.
+    if (( !has_runtime_blocker && has_keyword && !has_processing )); then
+      local rescue_try
+      for rescue_try in 1 2; do
+        log "${Y}[dispatch] residual prompt rescue: pane=${pane} try=${rescue_try}/2${N}"
+        tmux send-keys -t "$pane" Enter 2>/dev/null || true
+        sleep 3
+        verify_output=$(tmux capture-pane -t "$pane" -p 2>/dev/null | tail -120)
+        printf '%s\n' "$verify_output" | grep -qiE "You've hit your limit|hit your limit|rate[- ]limit|usage limit reached|usage limit exceeded|monthly usage limit|/upgrade to increase your usage limit|resets .*\(America/Toronto\)" && has_runtime_blocker=1
+        printf '%s\n' "$verify_output" | grep -qiE "How is Claude doing this session|1:[[:space:]]*Bad[[:space:]]+2:[[:space:]]*Fine[[:space:]]+3:[[:space:]]*Good[[:space:]]+0:[[:space:]]*Dismiss" && has_runtime_blocker=1
+        pane_has_processing_snapshot "$verify_output" && has_processing=1
+        (( has_runtime_blocker || has_processing )) && break
+      done
+    fi
+
     if (( has_runtime_blocker )); then
       log "${Y}[dispatch] runtime limit/blocker detected; not assigning pane=${pane} sid=${sid} try=$((tries + 1))/${max_tries}${N}"
     elif (( has_keyword && has_processing )); then
@@ -2581,38 +2639,51 @@ check_needs_human() {
 auto_checkpoint() {
   local sid="$1" new_status="$2"
 
-  # 找到工作目录 (从 sprint 合约中读取，或用当前目录)
+  # Git commits and tags are user-repository mutations.  Keep them explicitly
+  # opt-in: a normal product run must never create commits merely because its
+  # HOME/HARNESS_DIR happens to live below an unrelated git repository.
+  case "${SOLAR_AUTO_CHECKPOINT:-0}" in
+    1|[Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn]) ;;
+    *) return 0 ;;
+  esac
+
+  # The durable workspace binding is the only authority for an opted-in
+  # checkpoint.  Never fall back to $HOME/.claude or a contract string: git
+  # walks parent directories, which caused an installed run to commit runtime
+  # sprint artifacts into an unrelated state repository.
   local work_dir=""
-  local contract="$SPRINTS_DIR/${sid}.contract.md"
-  if [[ -f "$contract" ]]; then
-    work_dir=$(grep '^Project:' "$contract" 2>/dev/null | sed 's/^Project:[[:space:]]*//')
+  local binding_helper="$HARNESS_DIR/lib/workspace_binding.py"
+  if [[ -f "$binding_helper" ]]; then
+    work_dir=$(python3 "$binding_helper" show --harness-dir "$HARNESS_DIR" 2>/dev/null || true)
   fi
-  [[ -z "$work_dir" ]] && work_dir="$HOME/.claude"
+  [[ -n "$work_dir" && -d "$work_dir" ]] || return 0
 
-  # 检查是否是 git 仓库
-  if ! git -C "$work_dir" rev-parse --git-dir &>/dev/null; then
-    return 0
+  local git_root rel_work
+  git_root=$(git -C "$work_dir" rev-parse --show-toplevel 2>/dev/null) || return 0
+  git_root=$(cd "$git_root" 2>/dev/null && pwd -P) || return 0
+  work_dir=$(cd "$work_dir" 2>/dev/null && pwd -P) || return 0
+  case "$work_dir/" in
+    "$git_root/"*) ;;
+    *) return 0 ;;
+  esac
+  if [[ "$work_dir" == "$git_root" ]]; then
+    rel_work="."
+  else
+    rel_work="${work_dir#"$git_root"/}"
   fi
 
-  # 检查是否有变更 (避免空 commit)
-  if git -C "$work_dir" diff --quiet 2>/dev/null && git -C "$work_dir" diff --cached --quiet 2>/dev/null; then
-    # 检查 untracked files (只在 sprints 目录)
-    local untracked
-    untracked=$(git -C "$work_dir" ls-files --others --exclude-standard -- "$SPRINTS_DIR/" 2>/dev/null | head -5)
-    if [[ -z "$untracked" ]]; then
-      return 0  # 无变更，跳过
-    fi
-  fi
+  # Scope both detection and commit to the bound workspace.  In particular,
+  # never stage $SPRINTS_DIR: runtime state belongs to the harness, not the
+  # user's project history.
+  [[ -n "$(git -C "$git_root" status --porcelain -- "$rel_work" 2>/dev/null)" ]] || return 0
 
   local tag="checkpoint/${sid}/${new_status}/$(date +%H%M%S)"
 
-  # stage sprint 相关文件 + 工作区变更
-  git -C "$work_dir" add "$SPRINTS_DIR/${sid}"* 2>/dev/null || true
-
-  # 创建检查点 commit
-  git -C "$work_dir" commit --allow-empty -m "checkpoint: ${sid} → ${new_status}" --no-gpg-sign 2>/dev/null && {
+  # --only protects unrelated paths that may already be staged in the repo.
+  git -C "$git_root" add -A -- "$rel_work" 2>/dev/null || return 0
+  git -C "$git_root" commit --only -m "checkpoint: ${sid} → ${new_status}" --no-gpg-sign -- "$rel_work" 2>/dev/null && {
     # 打 tag 方便回滚
-    git -C "$work_dir" tag "$tag" 2>/dev/null
+    git -C "$git_root" tag "$tag" 2>/dev/null
     log "${G}检查点: ${tag}${N}"
   } || true
 }
@@ -2688,6 +2759,15 @@ planner_artifacts_ready() {
   python3 "$HARNESS_DIR/lib/workflow_guard.py" route "$sid" --field route_role 2>/dev/null | grep -Eq '^(builder|builder_main)$'
 }
 
+planner_artifacts_present() {
+  # File-level presence (design+plan+task_graph non-empty) — deliberately NOT
+  # the workflow_guard route: with SOLAR_PLAN_VALIDATOR=1 the route stays pm
+  # until the graph is certified, and the acceptance seam below needs a
+  # certificate-independent "the planner already ran" signal (G3 run-4 fix).
+  local sid="$1"
+  [[ -s "$SPRINTS_DIR/${sid}.design.md" && -s "$SPRINTS_DIR/${sid}.plan.md" && -s "$SPRINTS_DIR/${sid}.task_graph.json" ]]
+}
+
 workflow_guard_route_role() {
   local sid="$1"
   python3 "$HARNESS_DIR/lib/workflow_guard.py" route "$sid" --field route_role 2>/dev/null || echo pm
@@ -2696,6 +2776,46 @@ workflow_guard_route_role() {
 workflow_guard_violations() {
   local sid="$1"
   python3 "$HARNESS_DIR/lib/workflow_guard.py" route "$sid" --field violations 2>/dev/null || echo '[]'
+}
+
+compile_generic_plan_graph() {
+  local sid="$1" out rc
+  out=$(HARNESS_DIR="$HARNESS_DIR" HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
+    python3 "$HARNESS_DIR/lib/plan_validator.py" compile-generic "$sid" --sprints-dir "$SPRINTS_DIR" 2>&1)
+  rc=$?
+  case "$rc" in
+    0)
+      return 0
+      ;;
+    3)
+      log "${Y}[plan-compile] ${sid} failed; planner bounce remains available: ${out}${N}"
+      emit_event "$sid" "plan_compile_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+      return 1
+      ;;
+    4)
+      log "${R}[plan-compile] ${sid} exhausted planner bounce budget; terminal failed/plan_compile_failed written: ${out}${N}"
+      emit_event "$sid" "plan_compile_terminal" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+      return 1
+      ;;
+    *)
+      log "${R}[plan-compile] ${sid} validator error rc=${rc}: ${out}${N}"
+      emit_event "$sid" "plan_compile_error" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+      return 1
+      ;;
+  esac
+}
+
+plan_validator_dispatch_ready() {
+  local sid="$1" out rc
+  out=$(HARNESS_DIR="$HARNESS_DIR" HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
+    python3 "$HARNESS_DIR/lib/plan_validator.py" check-generic-dispatch "$sid" --sprints-dir "$SPRINTS_DIR" 2>&1)
+  rc=$?
+  if (( rc == 0 )); then
+    return 0
+  fi
+  log "${R}[plan-compile] ${sid} graph dispatch refused by plan validator rc=${rc}: ${out}${N}"
+  emit_event "$sid" "plan_validator_dispatch_refused" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+  return 1
 }
 
 status_has_bypass_pm() {
@@ -2747,6 +2867,25 @@ gate_check() {
 	      local guard_role guard_violations
 	      guard_role="$(workflow_guard_route_role "$sid")"
 	      guard_violations="$(workflow_guard_violations "$sid")"
+	      # G3 run-4 fix (p5-g3-live-rung-20260709T201817Z): the acceptance
+	      # seam for plain-sprint planner output. With the validator on, a
+	      # completed planner graph is uncertified until compile-generic
+	      # stamps it, so workflow_guard reports plan_certificate_required and
+	      # guard_role stays pm — the [backfill] compile below never fires (it
+	      # is gated on guard=builder: circular), and the legacy PRD schema
+	      # gate then demoted planning_complete back to drafting/spec, wedging
+	      # the sprint for 600s. Compile FIRST when the planner artifacts
+	      # exist, then re-read the route; the CLI is env-gated (flag off =
+	      # no-op exit 0), idempotent on stamped graphs, and skips
+	      # epic/fixed-contract graphs itself. A bounce (rc 3) leaves the
+	      # route on planner and the flow below re-dispatches the planner
+	      # with the compile errors.
+	      if [[ "$guard_role" != "builder_main" && "$guard_role" != "builder" ]] && planner_artifacts_present "$sid"; then
+	        if compile_generic_plan_graph "$sid"; then
+	          guard_role="$(workflow_guard_route_role "$sid")"
+	          guard_violations="$(workflow_guard_violations "$sid")"
+	        fi
+	      fi
 	      if [[ "$guard_role" == "builder_main" || "$guard_role" == "builder" ]]; then
 	        # Once workflow_guard says planner artifacts + task_graph are ready,
 	        # coordinator must not roll the sprint back to PM because of legacy
@@ -2762,7 +2901,11 @@ gate_check() {
         runtime_status_transition "$sid" "drafting" "active_blocked_missing_prd" "coordinator" '{"status_fields":{"phase":"spec","handoff_to":"pm","target_role":"pm"}}' || true
         return 1
       fi
-      if [[ "$req_file" == "$sprint_dir/${sid}.prd.md" ]]; then
+      # G3 run-4 fix: PM quality belongs BEFORE planner completion (the
+      # doctrine above). Once design+plan+task_graph exist, a PRD schema
+      # miss must not demote the sprint back to PM — that rollback wedged
+      # run 4 in a drafting/spec loop the headless runtime can never exit.
+      if [[ "$req_file" == "$sprint_dir/${sid}.prd.md" ]] && ! planner_artifacts_present "$sid"; then
         local prd_err
         if prd_err=$(validate_doc "prd" "$req_file"); then :; else
           log "${R}门禁拦截: PRD 结构不完整${N}"
@@ -2965,6 +3108,171 @@ mark_builder_flow() {
   grep -qx "${sid}:${intent}" "$marker" 2>/dev/null || echo "${sid}:${intent}" >> "$marker"
 }
 
+truthy_env() {
+  case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+pm_operator_role_pool_enabled() {
+  truthy_env "${SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH:-}" && return 0
+  truthy_env "${SOLAR_PM_OPERATOR_DISPATCH:-}" && return 0
+  return 1
+}
+
+pm_operator_role_pool_claim_active() {
+  local status_file="$1" role="${2:-planner}"
+  [[ -f "$status_file" && "$role" == "planner" ]] || return 1
+  python3 - "$status_file" <<'PY' 2>/dev/null
+import datetime
+import json
+import sys
+
+try:
+    status = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+
+claim = status.get("planner_dispatch_claim")
+if not isinstance(claim, dict) or claim.get("owner") != "operator_pool":
+    sys.exit(1)
+if str(claim.get("state") or "") not in {"pending", "submitting", "submitted"}:
+    sys.exit(1)
+
+try:
+    expires = datetime.datetime.fromisoformat(str(claim.get("expires_at") or "").replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=datetime.timezone.utc)
+except Exception:
+    # A claim without a parseable lease boundary must not suppress recovery.
+    sys.exit(1)
+
+sys.exit(0 if expires > datetime.datetime.now(datetime.timezone.utc) else 1)
+PY
+}
+
+pm_operator_role_pool_task_seen() {
+  local sid="$1" role="${2:-planner}" node="N0"
+  [[ -n "$sid" ]] || return 1
+  case "$role" in
+    planner) node="N0" ;;
+    builder) node="B0" ;;
+    evaluator) node="E0" ;;
+  esac
+  python3 - "$HARNESS_DIR" "$sid" "$role" "$node" <<'PY' 2>/dev/null
+import json
+import sys
+from pathlib import Path
+
+h = Path(sys.argv[1])
+sid = sys.argv[2]
+role = sys.argv[3]
+node = sys.argv[4]
+prefix = f"pm-{sid}-{node}-"
+released = set()
+
+for task_path in (h / "run" / "pm-inbox").glob(f"{prefix}*.json"):
+    try:
+        data = json.loads(task_path.read_text(encoding="utf-8"))
+    except Exception:
+        data = {}
+    task_id = str(data.get("task_id") or task_path.stem)
+    if data and str(data.get("requested_role") or role) != role:
+        continue
+    status = str(data.get("status") or "").strip().lower()
+    if status in {"completed", "cancelled"} or status.startswith("failed"):
+        released.add(task_id)
+        continue
+    # Missing status is a legacy non-terminal record and remains active for
+    # compatibility. New claims use explicit pending/submitting/submitted.
+    sys.exit(0)
+
+for status_path in (h / "run" / "operator-status").glob("*.json"):
+    try:
+        data = json.loads(status_path.read_text(encoding="utf-8"))
+    except Exception:
+        continue
+    task_id = str(data.get("current_task_id") or data.get("task_id") or "")
+    if task_id.startswith(prefix) and task_id not in released:
+        sys.exit(0)
+
+results_root = h / "run" / "operator-results"
+for operator_dir in results_root.glob("*"):
+    if not operator_dir.is_dir():
+        continue
+    for result_path in operator_dir.glob(f"{prefix}*"):
+        if result_path.name not in released:
+            sys.exit(0)
+
+sys.exit(1)
+PY
+}
+
+pm_operator_role_pool_task_live() {
+  local sid="$1" role="${2:-planner}" node="N0"
+  [[ -n "$sid" ]] || return 1
+  case "$role" in
+    planner) node="N0" ;;
+    builder) node="B0" ;;
+    evaluator) node="E0" ;;
+  esac
+  python3 - "$HARNESS_DIR" "$sid" "$node" <<'PY' 2>/dev/null
+import datetime
+import json
+import os
+import sys
+from pathlib import Path
+
+h = Path(sys.argv[1])
+prefix = f"pm-{sys.argv[2]}-{sys.argv[3]}-"
+
+# Strongest evidence: a registry-owned process whose immutable birth identity
+# still matches and whose task metadata names this planner request.
+try:
+    sys.path.insert(0, str(h / "lib"))
+    import run_process_registry
+
+    for entry in run_process_registry.live_entries("harness", harness_dir=h):
+        task_id = str((entry.get("meta") or {}).get("task_id") or "")
+        if task_id.startswith(prefix):
+            sys.exit(0)
+except Exception:
+    pass
+
+# Compatibility fallback for older operators: require both an active state and
+# a fresh heartbeat. A stale status file must never suppress recovery forever.
+try:
+    stale_seconds = max(
+        15,
+        int(os.environ.get("SOLAR_PM_OPERATOR_HEARTBEAT_STALE_SEC", "90") or "90"),
+    )
+except (TypeError, ValueError):
+    stale_seconds = 90
+now = datetime.datetime.now(datetime.timezone.utc)
+for status_path in (h / "run" / "operator-status").glob("*.json"):
+    try:
+        data = json.loads(status_path.read_text(encoding="utf-8"))
+        task_id = str(data.get("current_task_id") or data.get("task_id") or "")
+        state = str(data.get("runtime_state") or data.get("state") or "").lower()
+        heartbeat = datetime.datetime.fromisoformat(
+            str(data.get("heartbeat_at") or data.get("updated_at") or "").replace("Z", "+00:00")
+        )
+        if heartbeat.tzinfo is None:
+            heartbeat = heartbeat.replace(tzinfo=datetime.timezone.utc)
+    except Exception:
+        continue
+    if (
+        task_id.startswith(prefix)
+        and state in {"leased", "running", "draining", "busy"}
+        and (now - heartbeat).total_seconds() <= stale_seconds
+    ):
+        sys.exit(0)
+
+sys.exit(1)
+PY
+}
+
 handle_queued() {
   local sid="$1" sf="$2"
   local blocked_by
@@ -3077,6 +3385,25 @@ PY
   guard_role="$(workflow_guard_route_role "$sid")"
 
   if [[ "$guard_role" != "builder_main" && "$guard_role" != "builder" ]]; then
+    if pm_operator_role_pool_enabled; then
+      if pm_operator_role_pool_task_live "$sid" "planner"; then
+        log "${G}PRD ready → planner role-pool task already active; suppress legacy pane planner dispatch for ${sid}${N}"
+        emit_event "$sid" "planner_role_pool_inflight" "coordinator" "{\"reason\":\"suppress_legacy_pane_dispatch\"}"
+        return 0
+      fi
+      if [[ ! -s "$design" ]] || [[ ! -s "$plan" ]] || [[ ! -s "$graph" ]]; then
+        if pm_operator_role_pool_task_seen "$sid" "planner"; then
+          log "${G}PRD ready → planner role-pool task already visible; suppress legacy pane planner dispatch for ${sid}${N}"
+          emit_event "$sid" "planner_role_pool_inflight" "coordinator" "{\"reason\":\"suppress_legacy_pane_dispatch\"}"
+          return 0
+        fi
+        if pm_operator_role_pool_claim_active "$sf" "planner"; then
+          log "${G}PRD ready → planner operator-pool claim pending; suppress legacy pane planner dispatch for ${sid}${N}"
+          emit_event "$sid" "planner_role_pool_claimed" "coordinator" "{\"reason\":\"suppress_legacy_pane_dispatch_until_claim_resolves\"}"
+          return 0
+        fi
+      fi
+    fi
     if [[ "$req_file" == "$prd" ]]; then
       local prd_err
       if prd_err=$(validate_doc "prd" "$req_file"); then :; else
@@ -3152,6 +3479,15 @@ PY
 
 **不要写业务代码，不要重启 harness，不要触碰 live tmux pane。**"
 
+    # G2b review finding 5: this legacy planner dispatch never carried the
+    # compile policy. The helper is env-gated (SOLAR_PLAN_VALIDATOR): it
+    # prints nothing when off, keeping the dispatch file byte-identical.
+    local planner_compile_policy_block=""
+    planner_compile_policy_block=$(python3 "$HARNESS_DIR/lib/plan_validator.py" planner-policy-block "$sid" --sprints-dir "$SPRINTS_DIR" 2>/dev/null || true)
+    if [[ -n "$planner_compile_policy_block" ]]; then
+      append_dispatch "$sid" "$planner_compile_policy_block"
+    fi
+
     dispatch_to_planner "$sid" "planner_design_plan" "$SPRINTS_DIR/${sid}.dispatch.md"
     local rc=$?
     if (( rc == 2 )); then
@@ -3174,6 +3510,10 @@ PY
   if ! annotate_requirement_matrix_for_planning "$sid"; then
     log "${R}Planner 产物存在但 Requirement Trace Matrix 注入失败，阻止推进 planning_complete${N}"
     emit_event "$sid" "gate_blocked" "coordinator" "{\"stage\":\"planning\",\"reason\":\"requirement_trace_annotation_failed\"}"
+    rollback_state_cache "$sid"
+    return 0
+  fi
+  if ! compile_generic_plan_graph "$sid"; then
     rollback_state_cache "$sid"
     return 0
   fi
@@ -3406,6 +3746,10 @@ handle_active() {
         local _guard_role _old_phase="$phase"
         _guard_role="$(workflow_guard_route_role "$sid" 2>/dev/null || true)"
         if [[ "$_guard_role" == "builder_main" || "$_guard_role" == "builder" ]]; then
+          if ! compile_generic_plan_graph "$sid"; then
+            rollback_state_cache "$sid"
+            return 0
+          fi
           log "${G}[backfill] ${sid} active/${_old_phase} but planner artifacts+task_graph ready (guard=${_guard_role}) → promote planning_complete/builder_main${N}"
           drafting_flow_clear "$sid" "planner"
           runtime_status_transition "$sid" "active" "active_artifacts_ready_backfill" "coordinator" '{"status_fields":{"phase":"planning_complete","handoff_to":"builder_main","target_role":"builder_main"},"note":"Backfilled split active/prd_ready state: planner artifacts and task_graph are complete."}' || true
@@ -3497,6 +3841,10 @@ EOF
   esac
   if [[ "$phase" == "graph_dispatch_active" || "$phase" == "planning_complete" ]]; then
     if [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
+      if ! plan_validator_dispatch_ready "$sid"; then
+        rollback_state_cache "$sid"
+        return 0
+      fi
       log "${G}Sprint ${sid} ${phase} + task_graph → DAG graph_node 派发${N}"
       # Option A self-complete: for an APPROVED sprint (graph_dispatch_active), advance the DAG via the
       # proven multi-task path (build->eval->verdict->next-node) instead of graph-dispatch panes. Run a
@@ -3505,15 +3853,22 @@ EOF
       if [[ "${SOLAR_COORD_MULTITASK_SELFCOMPLETE:-0}" == "1" && "$phase" == "graph_dispatch_active" ]]; then
         local mt_rc=0 mt_out="" mt_log="$HARNESS_DIR/run/coord-multitask-${sid}.log"
         local mt_timeout="${SOLAR_COORD_MULTITASK_TIMEOUT_SEC:-90}"
+        local mt_stamp mt_out_file
+        mt_stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+        mt_out_file="$HARNESS_DIR/run/coord-multitask-${sid}-${mt_stamp}.out"
         mkdir -p "$HARNESS_DIR/run"
-        mt_out="$(SOLAR_GRAPH_EVAL_OPERATOR_POOL="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-1}" \
+        HARNESS_DIR="$HARNESS_DIR" \
+          SPRINTS_DIR="$SPRINTS_DIR" \
+          SOLAR_GRAPH_EVAL_OPERATOR_POOL="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-1}" \
           SOLAR_MULTI_TASK_AUTO_ADVANCE="${SOLAR_MULTI_TASK_AUTO_ADVANCE:-1}" \
+          PYTHONFAULTHANDLER="${PYTHONFAULTHANDLER:-1}" \
           run_with_timeout "$mt_timeout" python3 "$HARNESS_DIR/lib/multi_task_runner.py" start \
             --graph "$SPRINTS_DIR/${sid}.task_graph.json" \
             --max-workers "${SOLAR_COORD_MULTITASK_WORKERS:-1}" \
-            --interval 20 --renderer plain --once 2>&1)" || mt_rc=$?
+            --interval 20 --renderer plain --once >"$mt_out_file" 2>&1 || mt_rc=$?
+        mt_out="$(tail -c 2000 "$mt_out_file" 2>/dev/null || true)"
         {
-          printf '\n[%s] rc=%s workers=%s timeout=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$mt_rc" "${SOLAR_COORD_MULTITASK_WORKERS:-1}" "$mt_timeout"
+          printf '\n[%s] rc=%s workers=%s timeout=%s output=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$mt_rc" "${SOLAR_COORD_MULTITASK_WORKERS:-1}" "$mt_timeout" "$mt_out_file"
           printf '%s\n' "$mt_out"
         } >> "$mt_log"
         if (( mt_rc != 0 )); then
@@ -3976,71 +4331,31 @@ handle_reviewing() {
     if [[ "$parent_ready" != "1" && -f "$SPRINTS_DIR/${sid}.handoff.md" ]]; then
       local reconcile_result reconcile_changed
       reconcile_result=$(python3 - "$graph_path" "$HARNESS_DIR" <<'PY' 2>/dev/null || true
-import datetime
 import json
 import pathlib
 import sys
 
 graph_path = pathlib.Path(sys.argv[1])
 harness_dir = pathlib.Path(sys.argv[2])
+lib_dir = harness_dir / "lib"
+if str(lib_dir) not in sys.path:
+    sys.path.insert(0, str(lib_dir))
+
 try:
-    graph = json.loads(graph_path.read_text())
+    from graph_scheduler import (  # noqa: E402
+        load_graph,
+        reconcile_legacy_write_scope_artifacts,
+        save_graph,
+    )
+
+    graph = load_graph(graph_path)
+    result = reconcile_legacy_write_scope_artifacts(graph, harness_dir)
+    if result.get("changed"):
+        save_graph(graph_path, graph)
 except Exception as exc:
-    print(json.dumps({"ok": False, "error": str(exc)}))
-    raise SystemExit(0)
+    result = {"ok": False, "changed": [], "error": f"{type(exc).__name__}: {exc}"}
 
-nodes = graph.get("nodes") or []
-results = graph.setdefault("node_results", {})
-changed = []
-now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
-def artifact_exists(item: str) -> bool:
-    p = pathlib.Path(str(item))
-    if not p.is_absolute():
-        p = harness_dir / p
-    if p.is_file():
-        return p.stat().st_size > 0
-    if p.is_dir():
-        try:
-            return any(child.is_file() and child.stat().st_size > 0 for child in p.rglob("*"))
-        except OSError:
-            return False
-    return False
-
-for node in nodes:
-    node_id = str(node.get("id") or "")
-    if not node_id:
-        continue
-    result = results.get(node_id) if isinstance(results.get(node_id), dict) else {}
-    status = str(result.get("status") or node.get("status") or "").lower()
-    if status in {"passed", "done", "completed"}:
-        continue
-    write_scope = node.get("write_scope") or []
-    if not write_scope or not all(artifact_exists(item) for item in write_scope):
-        continue
-    gate = node.get("gate")
-    node["status"] = "passed"
-    results[node_id] = {
-        "status": "passed",
-        "gate_status": "passed" if gate else "",
-        "updated_at": now,
-        "note": "coordinator auto-reconciled from complete write_scope artifacts before evaluator dispatch",
-    }
-    changed.append(node_id)
-
-if changed:
-    gate_results = graph.setdefault("gate_results", {})
-    for gate in {str(n.get("gate")) for n in nodes if n.get("gate")}:
-        gated_nodes = [n for n in nodes if str(n.get("gate") or "") == gate]
-        if gated_nodes and all(str((results.get(str(n.get("id") or "")) or {}).get("status") or n.get("status") or "").lower() in {"passed", "done", "completed"} for n in gated_nodes):
-            gate_results[gate] = {
-                "status": "passed",
-                "updated_at": now,
-                "note": "coordinator auto-reconciled after write_scope artifact completion",
-            }
-    graph_path.write_text(json.dumps(graph, ensure_ascii=False, indent=2) + "\n")
-
-print(json.dumps({"ok": True, "changed": changed}, ensure_ascii=False))
+print(json.dumps(result, ensure_ascii=False))
 PY
 )
       reconcile_changed=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]) if sys.argv[1].strip() else {}; print(len(d.get('changed') or []))" "$reconcile_result" 2>/dev/null || echo 0)
@@ -4465,9 +4780,9 @@ ${fail_info}
   emit_event "$sid" "dispatched" "coordinator" "{\"to\":\"builder\",\"task\":\"fix\",\"round\":${round}}"
 
   # FAIL 时也提取教训 (FAIL 比 PASS 更有学习价值)
-  (bash ~/.claude/hooks/subconscious-learn.sh 2>> "$HARNESS_DIR/brain/learn.log") &
+  (solar_run_optional_claude_hook "subconscious-learn.sh" 2>> "$HARNESS_DIR/brain/learn.log") &
   # ── D9: 自进化钩子 (Sprint sprint-20260417-213037) ──
-  (bash ~/.claude/hooks/self-evolve-postmortem.sh "$sid" 2>> "$COORD_LOG") &
+  (solar_run_optional_claude_hook "self-evolve-postmortem.sh" "$sid" 2>> "$COORD_LOG") &
 
   # ── D1: 桌面通知 (同步, || true 兜底) ──
   bash "$HARNESS_DIR/osascript-notify.sh" "Sprint FAIL" "Round ${round}, ${sid}" "Blow" || true
@@ -4896,9 +5211,9 @@ handle_passed() {
   (bash "$HARNESS_DIR/token-tracker.sh" report "$sid" > "$HARNESS_DIR/.token-report.log" 2>&1) &
 
   # 异步教训提取 — 潜意识闭环核心入口 (不依赖 Claude Stop hook)
-  (bash ~/.claude/hooks/subconscious-learn.sh 2>> "$HARNESS_DIR/brain/learn.log") &
+  (solar_run_optional_claude_hook "subconscious-learn.sh" 2>> "$HARNESS_DIR/brain/learn.log") &
   # ── D9: 自进化钩子 (Sprint sprint-20260417-213037) ──
-  (bash ~/.claude/hooks/self-evolve-postmortem.sh "$sid" 2>> "$COORD_LOG") &
+  (solar_run_optional_claude_hook "self-evolve-postmortem.sh" "$sid" 2>> "$COORD_LOG") &
 
   # ── D1: 桌面通知 (同步, || true 兜底) ──
   bash "$HARNESS_DIR/osascript-notify.sh" "Sprint PASSED" "${title}" "Glass" || true
@@ -5390,7 +5705,7 @@ with open('$patches_file','w') as f:
       # D2: 检查规划者通知 (每 ~60s)
       check_planner_notice
       # D4: 扫 auto-generated drafting Sprint, Done>=3 则通知规划者
-      (bash ~/.claude/hooks/planner-review-drafting.sh 2>> "$COORD_LOG") || true
+      (solar_run_optional_claude_hook "planner-review-drafting.sh" 2>> "$COORD_LOG") || true
       # P0 lazy path: drive any drafting contract through PM → planner → active.
       auto_drive_drafting_sprints
       # D5: 扫 PLANNER-INBOX 未读条目, 派发到规划者 (silent)
@@ -5431,8 +5746,8 @@ PY
     # D3: 低分能力自愈 每 30 次迭代 (~5 分钟)
     if (( loop_count % 30 == 0 )); then
       log "[probe] mod30 branch reached, loop=$loop_count"
-      (bash ~/.claude/hooks/scan-low-quality-capabilities.sh 2>> "$COORD_LOG" && \
-       bash ~/.claude/hooks/auto-boost-capability.sh 2>> "$COORD_LOG") &
+      (solar_run_optional_claude_hook "scan-low-quality-capabilities.sh" 2>> "$COORD_LOG" && \
+       solar_run_optional_claude_hook "auto-boost-capability.sh" 2>> "$COORD_LOG") &
 
       # Sprint 20260420-113026: handle_passed 运行时补偿
       # 扫所有 status=passed 但无 .finalized 的 sprint → 补跑 handle_passed

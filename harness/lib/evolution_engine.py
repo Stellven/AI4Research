@@ -21,6 +21,10 @@ from capability_registry import LEVEL_REVERSE, _open_db as open_capability_db  #
 from eval_runner import run_pack  # type: ignore  # noqa: E402
 from failure_miner import mine as mine_failures  # type: ignore  # noqa: E402
 try:
+    from graph_scheduler import node_status as graph_node_status  # type: ignore  # noqa: E402
+except Exception:  # pragma: no cover - compatibility with minimal diagnostic bundles
+    graph_node_status = None  # type: ignore
+try:
     from runtime_bridge import record_legacy_event  # type: ignore  # noqa: E402
 except Exception:
     record_legacy_event = None  # type: ignore
@@ -35,6 +39,30 @@ RUNTIME_BONUS = {
 }
 EVENTS_FILE = HARNESS_DIR / "events" / "all.jsonl"
 SPRINTS_DIR = HARNESS_DIR / "sprints"
+
+try:  # Lane 3 gate ledger (round-4 G3): the quality-gate sweeps write node status
+    import gate_ledger as _gate_ledger
+except Exception:  # pragma: no cover
+    _gate_ledger = None
+
+
+def _ledger_transition(sid: str, node_id: str, from_status: str, to_status: str,
+                       writer: str, note: str | None = None) -> None:
+    """Report an evolution-engine node-status write to the gate ledger.
+
+    No-op unless SOLAR_GATE_LEDGER=1; never raises into the sweep."""
+    if _gate_ledger is None:
+        return
+    try:
+        if not _gate_ledger.enabled():
+            return
+        _gate_ledger.record_status_transition(
+            SPRINTS_DIR, sid, node_id,
+            from_status=from_status or "", to_status=to_status,
+            author_type="policy", writer=writer, note=note,
+        )
+    except Exception:
+        pass
 
 
 def _now() -> str:
@@ -261,9 +289,41 @@ def _node_requires_deepresearch_quality_gate(node: dict[str, Any]) -> bool:
 
 def _node_result_status(graph: dict[str, Any], node: dict[str, Any]) -> str:
     node_id = str(node.get("id") or "")
+    if graph_node_status is not None:
+        try:
+            return str(graph_node_status(graph, node_id) or "").lower()
+        except Exception:
+            # Historical debt repair must fail closed on malformed complete
+            # graphs rather than guessing from stale status mirrors.
+            return "unknown"
+
     results = graph.get("node_results") if isinstance(graph.get("node_results"), dict) else {}
     row = results.get(node_id) if isinstance(results, dict) else {}
-    if isinstance(row, dict) and row.get("status"):
+    row = row if isinstance(row, dict) else {}
+    raw_statuses = {
+        str(node.get("status") or "").strip().lower(),
+        str(row.get("status") or "").strip().lower(),
+    }
+    if "needs_human_review" in raw_statuses:
+        return "needs_human_review"
+
+    # Minimal diagnostic bundles may intentionally omit graph_scheduler.  In
+    # that compatibility mode, preserve the old status fold but still honor a
+    # durable human block.  Highest generation wins; blocked wins ties.
+    records = [node.get("human_review"), row.get("human_review")]
+    ranked: list[tuple[tuple[int, int], dict[str, Any]]] = []
+    for record in records:
+        if not isinstance(record, dict) or record.get("schema_version") != "solar.human_review.v1":
+            continue
+        try:
+            generation = max(0, int(record.get("generation") or 0))
+        except (TypeError, ValueError):
+            generation = 0
+        blocked = int(str(record.get("state") or "").strip().lower() == "blocked")
+        ranked.append(((generation, blocked), record))
+    if ranked and str(max(ranked, key=lambda item: item[0])[1].get("state") or "").lower() == "blocked":
+        return "needs_human_review"
+    if row.get("status"):
         return str(row.get("status")).lower()
     return str(node.get("status") or "").lower()
 
@@ -382,6 +442,9 @@ def repair_deepresearch_gates(apply: bool = False, limit: int = 0) -> dict[str, 
                 continue
 
             node["status"] = "reviewing"
+            _ledger_transition(sid, node_id, status, "reviewing",
+                               "repair_deepresearch_gates",
+                               note=f"deepresearch_quality_gate_{gate_status}")
             node["updated_at"] = _now()
             node["quality_gate_repair_requested_at"] = _now()
             node["quality_gate_repair_reason"] = gate_status
@@ -486,6 +549,9 @@ def restore_nonrequired_deepresearch_repairs(apply: bool = False, limit: int = 0
                 continue
 
             node["status"] = original_status
+            _ledger_transition(sid, node_id, current, original_status,
+                               "restore_nonrequired_deepresearch_repairs",
+                               note="quality_gate_not_required_after_classifier_tightening")
             node["updated_at"] = _now()
             node["quality_gate_repair_restored_at"] = _now()
             node["quality_gate_repair_restored_reason"] = "quality_gate_not_required_after_classifier_tightening"

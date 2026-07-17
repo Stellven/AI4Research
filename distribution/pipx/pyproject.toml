@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openjiuwen-solar"
-version = "1.0.0rc6"
+version = "1.0.0rc9"
 description = "OpenJiuwen Solar installer wrapper for the shell bootstrap and lifecycle command"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -27,9 +27,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Stellven/OpenSolar"
-Source = "https://github.com/Stellven/OpenSolar"
-Issues = "https://github.com/Stellven/OpenSolar/issues"
+Homepage = "https://github.com/suraj-subrahmanyan/OpenSolar"
+Source = "https://github.com/suraj-subrahmanyan/OpenSolar"
+Issues = "https://github.com/suraj-subrahmanyan/OpenSolar/issues"
 
 [project.scripts]
 openjiuwen-solar = "opensolar_cli.cli:main"

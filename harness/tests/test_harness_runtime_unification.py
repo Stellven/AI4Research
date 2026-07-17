@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -30,6 +32,41 @@ def test_resolve_runtime_harness_dir_prefers_canonical_runtime(monkeypatch, tmp_
     monkeypatch.setattr(hp, "DEFAULT_RUNTIME_HARNESS_DIR", runtime_root)
     monkeypatch.setattr(hp, "SOURCE_HARNESS_DIR", tmp_path / "repo-harness")
     assert hp.resolve_runtime_harness_dir() == runtime_root.resolve()
+
+
+def test_experience_subsystem_uses_shared_runtime_root(tmp_path):
+    runtime_root = tmp_path / "experience-runtime"
+    runtime_root.mkdir()
+    module_names = [
+        "experience.index",
+        "experience.query",
+        "experience.extractor",
+        "experience.backfill",
+        "experience.compressor",
+        "experience.memory_serve_daemon",
+        "coordinator_hooks",
+    ]
+    script = (
+        "import importlib, json; "
+        f"names={module_names!r}; "
+        "print(json.dumps({name: str(importlib.import_module(name).HARNESS_DIR) for name in names}))"
+    )
+    env = dict(os.environ)
+    env["HARNESS_DIR"] = str(runtime_root)
+    env["SOLAR_HARNESS_DIR"] = str(runtime_root)
+    env["PYTHONPATH"] = str(ROOT / "lib")
+
+    proc = subprocess.run(
+        [sys.executable, "-c", script],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    roots = json.loads(proc.stdout)
+    assert roots == {name: str(runtime_root.resolve()) for name in module_names}
 
 
 def test_load_actor_registry_derives_from_physical_and_applies_override(tmp_path):

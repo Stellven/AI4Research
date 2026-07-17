@@ -499,13 +499,24 @@ def test_ready_for_planner_role_pool_failure_queues_without_wake(monkeypatch) ->
     monkeypatch.setattr(mod, "pane_gate", lambda target, sid: (False, "pane_leased", {}))
     monkeypatch.setattr(mod, "pane_is_busy", lambda target: True)
     monkeypatch.setattr(mod, "clear_current_prompt", lambda target: None)
-    monkeypatch.setattr(mod, "save_json", lambda *args, **kwargs: None)
+    saved_statuses: list[dict] = []
+    monkeypatch.setattr(
+        mod,
+        "save_json",
+        lambda path, payload: saved_statuses.append(json.loads(json.dumps(payload))),
+    )
     monkeypatch.setattr(mod, "append_event", lambda *args, **kwargs: None)
     monkeypatch.setattr(mod, "load_json", lambda path: {
         "sprint_id": sid,
         "status": "drafting",
         "phase": "prd_ready",
         "handoff_to": "planner",
+        "planner_dispatch_claim": {
+            "owner": "operator_pool",
+            "state": "pending",
+            "claimed_at": _utc_after(-1),
+            "expires_at": _utc_after(120),
+        },
     })
     monkeypatch.setattr(mod, "enqueue_action", lambda f, reason, detail=None: queued.append((f, reason, detail or {})))
     monkeypatch.setattr(mod, "dispatch_role_handoff", lambda s, t: (False, {"role": "planner", "stderr": "no planner"}))
@@ -518,3 +529,47 @@ def test_ready_for_planner_role_pool_failure_queues_without_wake(monkeypatch) ->
     assert queued[0][1] == "role_pool_unavailable"
     assert actions[0]["queued"] is True
     assert actions[0]["reason"] == "role_pool_unavailable"
+    assert saved_statuses[-1]["planner_dispatch_claim"]["state"] == "failed"
+    assert saved_statuses[-1]["planner_dispatch_claim"]["released_at"]
+
+
+def test_ready_for_planner_role_pool_success_marks_claim_submitted(monkeypatch) -> None:
+    sid = "sprint-planner-claimed"
+    finding = {
+        "sid": sid,
+        "type": "ready_for_planner",
+        "target": "solar-harness:0.1",
+        "message": "planner dispatch",
+        "severity": "info",
+    }
+    state: dict = {"actions": {}, "target_actions": {}}
+    saved_statuses: list[dict] = []
+    monkeypatch.setattr(mod, "should_act", lambda state, f, cooldown: True)
+    monkeypatch.setattr(mod, "target_recently_dispatched", lambda state, target, cooldown: False)
+    monkeypatch.setattr(mod, "save_json", lambda path, payload: saved_statuses.append(json.loads(json.dumps(payload))))
+    monkeypatch.setattr(mod, "append_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod, "load_json", lambda path: {
+        "sprint_id": sid,
+        "status": "drafting",
+        "phase": "prd_ready",
+        "handoff_to": "planner",
+        "planner_dispatch_claim": {
+            "owner": "operator_pool",
+            "state": "pending",
+            "claimed_at": _utc_after(-1),
+            "expires_at": _utc_after(120),
+        },
+    })
+    monkeypatch.setattr(mod, "mark_action", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod, "_live_pm_task_for_sprint_role", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        mod,
+        "dispatch_role_handoff",
+        lambda s, t: (True, {"role": "planner", "task_id": "pm-sprint-planner-claimed-N0-abc123"}),
+    )
+
+    actions = mod.apply_findings([finding], dispatch=True, state=state, cooldown=0)
+
+    assert actions[0]["dispatched"] is True
+    assert saved_statuses[-1]["planner_dispatch_claim"]["state"] == "submitted"
+    assert saved_statuses[-1]["planner_dispatch_claim"]["task_id"] == "pm-sprint-planner-claimed-N0-abc123"

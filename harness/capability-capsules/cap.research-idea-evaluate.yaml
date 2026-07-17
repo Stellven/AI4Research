@@ -89,7 +89,7 @@ verification:
     - Insufficient novelty evidence is marked inconclusive or as a risk.
 operator_compatibility:
   preferred:
-    - ScientificIdeaEvaluator
+    - autosci-idea-evaluate-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

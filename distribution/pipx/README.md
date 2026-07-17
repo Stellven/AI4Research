@@ -20,10 +20,10 @@ Local checkout:
 pipx install ./distribution/pipx
 ```
 
-From the rc.6 tag:
+From the rc.9 tag:
 
 ```bash
-pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.6#subdirectory=distribution/pipx"
+pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.9#subdirectory=distribution/pipx"
 ```
 
 ## Commands
@@ -52,7 +52,7 @@ OPENJIUWEN_SOLAR_GET_SOLAR_URL
 
 Use `OPENJIUWEN_SOLAR_GET_SOLAR_URL=/path/to/get-solar.sh` or a `file://` URL
 for offline/local tests. Without that override, the wrapper downloads the
-`v1.0.0-rc.6` tag `get-solar.sh`. The older `OPENSOLAR_GET_SOLAR_URL` override
+`v1.0.0-rc.9` tag `get-solar.sh`. The older `OPENSOLAR_GET_SOLAR_URL` override
 is still accepted for local compatibility.
 
 Pip/pipx cannot install system binaries. For a first-time machine, run the

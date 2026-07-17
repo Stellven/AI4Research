@@ -43,6 +43,9 @@ PY
 )"
 echo "selected pane runtime: $selected_runtime"
 
+python3 "$home_dir/.solar/harness/tools/check_capsule_operator_bindings.py"
+echo "stable capsule/operator bindings: coherent"
+
 fake_ok="$sandbox/fake-ok"
 mkdir -p "$fake_ok"
 cat > "$fake_ok/claude" <<'SH'

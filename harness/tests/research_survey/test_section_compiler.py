@@ -91,6 +91,8 @@ def test_compile_section_and_survey(tmp_path):
     assert "## Claim Map" not in human_text
     assert "## Evidence Map" not in human_text
     assert "prompt packet" not in human_text.lower()
+    assert "ch01/sec01" not in human_text
+    assert "Agentic Runtime" not in human_text
     assert "## 核心结论" in human_text
     assert "## 证据基础" in human_text
     matrix = json.loads((tmp_path / "survey_contribution_matrix.json").read_text(encoding="utf-8"))

@@ -13,7 +13,8 @@
     best-effort and independent, so missing pieces are reported rather than aborting.
 
 .PARAMETER Distro
-    WSL distro to inspect. Defaults to the first registered distro (or Ubuntu-24.04).
+    WSL distro to inspect. Defaults to the first usable registered distro (or
+    Ubuntu-24.04). Docker Desktop's internal distros are never Solar targets.
 
 .PARAMETER Json
     Emit the report as JSON instead of text.
@@ -29,15 +30,23 @@ param(
 )
 $ErrorActionPreference = "Continue"
 
+function Test-SolarDistroName {
+    param([AllowEmptyString()][string]$Name)
+    $value = $Name.Trim()
+    return ($value -ne '' -and $value -notmatch '^(?i:docker-desktop(?:-data)?)$')
+}
+
 function Get-RegisteredDistro {
     try { $out = & wsl.exe -l -q 2>$null } catch { return @() }
     if ($LASTEXITCODE -ne 0) { return @() }
-    return @($out -split "`r?`n" | ForEach-Object { ($_ -replace "`0", '').Trim() } | Where-Object { $_ })
+    return @($out -split "`r?`n" |
+        ForEach-Object { ($_ -replace "`0", '').Trim() } |
+        Where-Object { Test-SolarDistroName $_ })
 }
 
 function Resolve-Distro {
-    $list = Get-RegisteredDistro
-    if ($Distro -and ($list -contains $Distro)) { return $Distro }
+    $list = @(Get-RegisteredDistro | Where-Object { Test-SolarDistroName $_ })
+    if ((Test-SolarDistroName $Distro) -and ($list -contains $Distro)) { return $Distro }
     if ($list.Count -gt 0) { return $list[0] }
     return "Ubuntu-24.04"
 }
@@ -45,10 +54,40 @@ function Resolve-Distro {
 function Invoke-WslText([string]$cmd, [string]$distro) {
     try {
         $r = & wsl.exe -d $distro -- bash -lc $cmd 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Verbose "wsl '$cmd' exited $LASTEXITCODE"
+            return ""
+        }
         return (($r -join "`n").Trim())
     } catch {
         Write-Verbose "wsl '$cmd' failed: $($_.Exception.Message)"
         return ""
+    }
+}
+
+function Get-WslStatusServerEvidence([string]$distro) {
+    $port = Invoke-WslText "cat `$HOME/.solar/harness/run/status-server.port 2>/dev/null" $distro
+    if ($port -notmatch '^\d+$') {
+        return [pscustomobject]@{
+            PortNumber = ''
+            StatusServerPort = '(not running)'
+            WslToLoopback = ''
+        }
+    }
+
+    $health = Invoke-WslText "curl -fsS -m 3 http://127.0.0.1:$port/healthz >/dev/null 2>&1 && echo ok || echo fail" $distro
+    if ($health -ne 'ok') {
+        return [pscustomobject]@{
+            PortNumber = ''
+            StatusServerPort = "(not running; stale port file $port)"
+            WslToLoopback = 'fail'
+        }
+    }
+
+    return [pscustomobject]@{
+        PortNumber = $port
+        StatusServerPort = $port
+        WslToLoopback = 'ok'
     }
 }
 
@@ -69,6 +108,7 @@ function Test-WinUrl([string]$url) {
     }
 }
 
+if ($MyInvocation.InvocationName -ne '.') {
 $distro = Resolve-Distro
 $r = [ordered]@{}
 
@@ -96,12 +136,13 @@ $r["systemd_enabled"] = Invoke-WslText "grep -q 'systemd=true' /etc/wsl.conf 2>/
 $prereqMissing = (Invoke-WslText "for b in git python3 pip3 tmux jq curl; do command -v `$b >/dev/null 2>&1 || echo `$b; done" $distro) -replace "`n", " "
 $r["prereqs_missing"] = if ($prereqMissing.Trim()) { $prereqMissing.Trim() } else { "(none)" }
 $r["solar_runtime_installed"] = Invoke-WslText "test -f `$HOME/.solar/harness/lib/symphony/status-server.py && echo yes || echo no" $distro
-$port = Invoke-WslText "cat `$HOME/.solar/harness/run/status-server.port 2>/dev/null" $distro
-$r["status_server_port"] = if ($port) { $port } else { "(not running)" }
+$server = Get-WslStatusServerEvidence $distro
+$port = $server.PortNumber
+$r["status_server_port"] = $server.StatusServerPort
+if ($server.WslToLoopback) { $r["wsl_to_loopback"] = $server.WslToLoopback }
 
 # --- reachability (only if the server is up) ---
 if ($port -match '^\d+$') {
-    $r["wsl_to_loopback"] = Invoke-WslText "curl -fsS -m 3 http://127.0.0.1:$port/healthz >/dev/null 2>&1 && echo ok || echo fail" $distro
     $r["windows_to_loopback"] = Test-WinUrl "http://127.0.0.1:$port/healthz"
     if ($r["wsl_ip"]) { $r["windows_to_wsl_ip"] = Test-WinUrl "http://$($r['wsl_ip']):$port/healthz" }
 }
@@ -128,4 +169,5 @@ Write-Output $text
 if ($OutFile) {
     try { $text | Out-File -FilePath $OutFile -Encoding UTF8; Write-Output "`n(written to $OutFile)" }
     catch { Write-Verbose "could not write $OutFile : $($_.Exception.Message)" }
+}
 }

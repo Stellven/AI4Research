@@ -9,7 +9,7 @@
 #        owner-identifying personal tokens (paths / handles / emails / LAN IPs).
 #   Architectural-name excision (solar-farm/gstack/brain-router/...) is gated
 #   SEPARATELY and strictly in the INSTALLED tree by scripts/check-kernel-gen.sh
-#   (untouched). Persona/handle names (小爱/昊哥/xiaoai/sihaoli/Li Sihao) are
+#   (untouched). Other persona names (小爱/昊哥/xiaoai/sihaoli/Li Sihao) are
 #   personal-but-parked in non-installed contributor content on pkg/migration;
 #   their repo-wide zero-tolerance is enforced by the orphan-cut verification
 #   (P4 step 3), NOT here.
@@ -27,7 +27,7 @@ cd "$repo_dir"
 
 # Unambiguous owner-identifying personal tokens. NOT the architectural names
 # (parked by design; gated in the installed tree by check-kernel-gen.sh).
-PERSONAL='/Users/lisihao|lisihao@|sihaoli@|haogege1977|SihaodeMacBook|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'
+PERSONAL='lisihao|sihaoli@|haogege1977|SihaodeMacBook|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'
 
 # Scanner scripts legitimately embed the token PATTERNS in their own source.
 EXCLUDE=(
@@ -40,7 +40,7 @@ EXCLUDE=(
 
 if [ "${1:-}" = "--self-test" ]; then
     tmp="$(mktemp)"
-    printf 'guardian home = /Users/lisihao/private\n' >"$tmp"
+    printf 'private mirror = opensolar-state/lisihao-Solar-mirror\n' >"$tmp"
     if grep -qIE "$PERSONAL" "$tmp"; then
         rm -f "$tmp"
         echo "self-test ok: planted personal token detected by the scan pattern"

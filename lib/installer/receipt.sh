@@ -62,10 +62,30 @@ def compute_version(src):
 
 
 version = compute_version(source)
+
+
+def channel_fallback(src):
+    # Derive the fallback channel from the source tree's VERSION file — a
+    # literal tag here goes stale at the next cut and records a channel the
+    # downgrade guard then has to refuse on the very first `solar update`
+    # (PKG-001 sibling, found by a real dev-tree install on 2026-07-13).
+    # Uses the VERSION file, not compute_version(), because git-describe
+    # decorations are not fetchable channels. check-release-coherence.sh
+    # check 6 keeps this derived.
+    try:
+        with open(os.path.join(src, "VERSION"), encoding="utf-8") as vf:
+            text = vf.read().strip()
+            if text:
+                return "v" + text
+    except Exception:
+        pass
+    return "unknown"
+
+
 # Channel + source repo the install tracks, so `solar update` knows where to
-# fetch from. get-solar.sh exports these; a direct install.sh run falls back to
-# the published defaults (kept in sync with get-solar.sh).
-channel = os.environ.get("SOLAR_CHANNEL") or "v1.0.0-rc.6"
+# fetch from. get-solar.sh exports these; a direct install.sh run derives the
+# channel from the tree's own VERSION.
+channel = os.environ.get("SOLAR_CHANNEL") or channel_fallback(source)
 repo = (
     os.environ.get("SOLAR_REPO")
     or "https://github.com/suraj-subrahmanyan/OpenSolar.git"

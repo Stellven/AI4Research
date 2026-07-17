@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
 from .auto_repair import run_auto_repair
+from .chief_editor import run_chief_editor
 from .evaluator import evaluate_survey
 from .evidence_pack import build_evidence_packs
 from .planner import create_survey_plan, write_survey_plan
@@ -23,6 +25,12 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _fallback_model_string(value: str | list[str] | None) -> str:
+    if isinstance(value, list):
+        return ",".join(str(item).strip() for item in value if str(item).strip())
+    return str(value or "").strip()
 
 
 def finalize_survey_run(
@@ -54,11 +62,11 @@ def finalize_survey_run(
     min_claims: int = 8,
     narrative_backend: str = "",
     narrative_model: str = "",
-    narrative_fallback_models: list[str] | None = None,
+    narrative_fallback_models: str | list[str] | None = None,
     narrative_command: str = "",
-    narrative_timeout: int = 0,
-    narrative_max_budget_usd: float = 0.0,
-    narrative_min_chars: int = 0,
+    narrative_timeout: int = 240,
+    narrative_max_budget_usd: float = 3.0,
+    narrative_min_chars: int = 8000,
     narrative_require_hitl: bool = False,
 ) -> dict[str, Any]:
     root = Path(output_dir).expanduser()
@@ -126,7 +134,14 @@ def finalize_survey_run(
     )
     steps.append({"step": "write", **write_result})
 
-    initial_eval = evaluate_survey(root, strict=True, min_finalized=min_finalized, require_complete=require_complete)
+    initial_eval = evaluate_survey(
+        root,
+        strict=True,
+        min_finalized=min_finalized,
+        require_complete=require_complete,
+        check_reader_projection=False,
+        persist=True,
+    )
     steps.append({"step": "eval", "ok": initial_eval.get("ok"), "issues": (initial_eval.get("scorecard") or {}).get("issues", [])})
 
     repair = {"ok": initial_eval.get("ok"), "reason": "not_needed", "iterations": []}
@@ -150,20 +165,108 @@ def finalize_survey_run(
 
     compiled = compile_survey(root)
     steps.append({"step": "compile", **compiled})
-    final_eval = evaluate_survey(root, strict=True, min_finalized=min_finalized, require_complete=require_complete)
-    steps.append({"step": "final_eval", "ok": final_eval.get("ok"), "issues": (final_eval.get("scorecard") or {}).get("issues", [])})
+    compiled_eval = evaluate_survey(
+        root,
+        strict=True,
+        min_finalized=min_finalized,
+        require_complete=require_complete,
+        reader_final=compiled.get("human_final_md") or root / "human_final.md",
+        persist=True,
+    )
+    steps.append({"step": "final_eval", "ok": compiled_eval.get("ok"), "issues": (compiled_eval.get("scorecard") or {}).get("issues", [])})
 
-    final_ok = bool(final_eval.get("ok"))
+    normalized_narrative_backend = narrative_backend.strip().lower()
+    narrative_enabled = normalized_narrative_backend not in {"", "off", "none", "skip"}
+    narrative: dict[str, Any] = {
+        "ok": True,
+        "enabled": False,
+        "backend": normalized_narrative_backend or "off",
+        "reason": "disabled",
+    }
+    final_eval = compiled_eval
+    if narrative_enabled:
+        if not compiled_eval.get("ok"):
+            narrative = {
+                "ok": False,
+                "enabled": True,
+                "backend": normalized_narrative_backend,
+                "reason": "compiled_report_eval_failed",
+            }
+            steps.append({"step": "chief_editor", **narrative, "skipped": True})
+        else:
+            try:
+                narrative = run_chief_editor(
+                    root,
+                    backend=normalized_narrative_backend,
+                    model=narrative_model or "opus",
+                    fallback_models=_fallback_model_string(narrative_fallback_models),
+                    command=narrative_command,
+                    timeout=max(1, narrative_timeout),
+                    max_budget_usd=max(0.01, narrative_max_budget_usd),
+                    min_chars=max(0, narrative_min_chars),
+                    require_hitl=narrative_require_hitl,
+                )
+                narrative["enabled"] = True
+            except (RuntimeError, ValueError, subprocess.TimeoutExpired) as exc:
+                narrative = {
+                    "ok": False,
+                    "enabled": True,
+                    "backend": normalized_narrative_backend,
+                    "reason": str(exc),
+                }
+            steps.append({
+                "step": "chief_editor",
+                "ok": bool(narrative.get("ok")),
+                "backend": normalized_narrative_backend,
+                "reason": narrative.get("reason") or "",
+                "final_md": narrative.get("chief_editor_final") or "",
+            })
+            if narrative.get("ok"):
+                final_eval = evaluate_survey(
+                    root,
+                    strict=True,
+                    min_finalized=min_finalized,
+                    require_complete=require_complete,
+                    reader_final=narrative.get("chief_editor_final") or root / "chief_editor_final.md",
+                    persist=True,
+                )
+                steps.append({
+                    "step": "narrative_eval",
+                    "ok": final_eval.get("ok"),
+                    "issues": (final_eval.get("scorecard") or {}).get("issues", []),
+                })
+
+    final_ok = bool(
+        compiled_eval.get("ok")
+        and (not narrative_enabled or (narrative.get("ok") and final_eval.get("ok")))
+    )
+    if final_ok:
+        final_reason = "passed"
+    elif not compiled_eval.get("ok"):
+        final_reason = "final_eval_failed"
+    elif not narrative.get("ok"):
+        final_reason = "narrative_failed"
+    else:
+        final_reason = "narrative_eval_failed"
+    audit_final_md = compiled.get("final_md", str(root / "final.md"))
+    human_final_md = compiled.get("human_final_md", str(root / "human_final.md"))
+    final_md = human_final_md
+    if narrative_enabled and narrative.get("ok"):
+        final_md = narrative.get("chief_editor_final") or final_md
     payload = {
         "ok": final_ok,
-        "reason": "passed" if final_ok else "final_eval_failed",
+        "reason": final_reason,
         "closeout_gate": "passed" if final_ok else "repairable_fail",
         "steps": steps,
         "initial_eval": initial_eval,
         "repair": repair,
         "compile": compiled,
+        "compiled_eval": compiled_eval,
+        "narrative": narrative,
         "final_eval": final_eval,
-        "final_md": compiled.get("final_md", str(root / "final.md")),
+        "final_md": final_md,
+        "human_final_md": human_final_md,
+        "audit_final_md": audit_final_md,
         "run_path": str(root / "survey_finalize_run.json"),
     }
     (root / "survey_finalize_run.json").write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

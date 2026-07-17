@@ -125,6 +125,14 @@ def test_survey_pack_attaches_matching_paper_trends(tmp_path):
                 "min_evidence": 2,
                 "min_claims": 3,
                 "required_source_types": ["paper", "code"],
+            },
+            {
+                "section_id": "ch02/sec01",
+                "title": "Windows installer packaging",
+                "research_question": "How should release artifacts be installed and upgraded?",
+                "min_evidence": 2,
+                "min_claims": 3,
+                "required_source_types": ["paper", "code"],
             }
         ]
     }
@@ -134,6 +142,9 @@ def test_survey_pack_attaches_matching_paper_trends(tmp_path):
 
     assert pack["status"] == "ready"
     assert pack["paper_trend_ids"] == ["trend_agent"]
+    assert pack["paper_trends"][0]["claim"].startswith("Agent architecture uses context")
+    assert payload["packs"][1]["paper_trend_ids"] == []
+    assert payload["packs"][1]["paper_trends"] == []
     assert (tmp_path / "sections" / "ch01" / "sec01" / "evidence_pack.json").exists()
 
 

@@ -105,7 +105,7 @@ verification:
     - plan_md exists
 operator_compatibility:
   preferred:
-    - mini-claude-opus-planner
+    - mini-claude-opus-planner-print
   forbidden:
     - mini-antigravity-gemini35-flash-high
 provenance:

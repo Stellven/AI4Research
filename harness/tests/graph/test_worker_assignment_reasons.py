@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+os.environ["HARNESS_DIR"] = str(ROOT)
+for _env in ("SOLAR_HARNESS_DIR", "HARNESS_SPRINTS_DIR"):
+    os.environ.pop(_env, None)
 sys.path.insert(0, str(ROOT / "lib"))
+for _module in ("graph_scheduler", "capability_inference", "apo_plan_compiler"):
+    sys.modules.pop(_module, None)
 
+import graph_scheduler as gs  # noqa: E402
 from graph_scheduler import assign_workers, enqueue_ready  # noqa: E402
 
 
@@ -248,7 +255,38 @@ def test_code_impl_and_test_generation_aliases_bind_general_builder_workers() ->
     assert result["assigned"][0]["node"] == "N1"
 
 
+def test_capability_alias_groups_do_not_bridge_unrelated_requirements() -> None:
+    worker = {
+        "skills": ["python"],
+        "capabilities": ["python"],
+    }
+
+    # Direct synonyms in one declared group remain equivalent.
+    assert gs._capabilities_match(worker, ["code_impl"])
+    # Overlap between the algorithm and API groups must not make every Python
+    # worker an algorithm-design worker through api-design -> python.
+    assert not gs._capabilities_match(worker, ["algorithm_design"])
+
+
+def test_repo_workspace_is_dispatch_provisioned_not_worker_advertised() -> None:
+    worker = _worker("pane-a")
+    worker["skills"] = ["python", "pytest", "ImplementationWorker"]
+    worker["capabilities"] = ["code_impl"]
+    node = {
+        "id": "N1",
+        "preferred_model": "glm-5.1",
+        "logical_operator": "ImplementationWorker",
+        "required_skills": ["python", "testing"],
+        "required_capabilities": ["repo-workspace", "python-cli-implementation"],
+    }
+    result = assign_workers([node], [worker])
+    assert result["queued"] == []
+    assert result["assigned"][0]["node"] == "N1"
+    assert result["assigned"][0]["required_capabilities"] == ["python-cli-implementation"]
+
+
 def test_enqueue_ready_marks_no_matching_worker_nodes_as_worker_blocked(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(gs, "SPRINTS_DIR", tmp_path / "sprints")
     graph = {
         "sprint_id": "sid",
         "nodes": [
@@ -277,6 +315,7 @@ def test_enqueue_ready_marks_no_matching_worker_nodes_as_worker_blocked(tmp_path
 
 
 def test_worker_blocked_nodes_are_retryable_after_capability_fix(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(gs, "SPRINTS_DIR", tmp_path / "sprints")
     graph = {
         "sprint_id": "sid",
         "nodes": [
@@ -312,6 +351,7 @@ def test_worker_blocked_nodes_are_retryable_after_capability_fix(tmp_path: Path,
 
 
 def test_worker_blocked_node_becomes_queued_when_matching_worker_is_pane_busy(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(gs, "SPRINTS_DIR", tmp_path / "sprints")
     graph = {
         "sprint_id": "sid",
         "nodes": [

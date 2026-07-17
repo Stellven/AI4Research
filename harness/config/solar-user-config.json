@@ -4,7 +4,7 @@
   "setup_complete": true,
   "user": {
     "display_name": "Solar-Harness",
-    "timezone": "America/Toronto"
+    "timezone": "UTC"
   },
   "paths": {
     "knowledge_vault": "~/Knowledge",
@@ -15,13 +15,13 @@
     "planner": "opus",
     "builder": "opus",
     "evaluator": "opus",
-    "lab_builder_matrix": "glm,glm,glm,anthropic-sonnet",
+    "lab_builder_matrix": "anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet",
     "pm": "opus"
   },
   "providers": {
     "zhipu_base_url": "https://api.z.ai/api/anthropic",
     "deepseek_base_url": "https://api.deepseek.com/anthropic",
-    "prefer_zhipu": true
+    "prefer_zhipu": false
   },
   "wiki": {
     "qmd_collection": "solar-wiki",
@@ -29,12 +29,12 @@
     "capture_server_port": 8788
   },
   "mirage": {
-    "enabled": true,
+    "enabled": false,
     "workspace_id": "solar-default",
     "config_path": "~/.solar/harness/config/mirage.solar.yaml"
   },
   "apple_notes": {
-    "enabled": true,
+    "enabled": false,
     "folder": "Solar Inbox",
     "interval_seconds": 7200
   },

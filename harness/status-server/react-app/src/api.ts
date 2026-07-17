@@ -230,12 +230,65 @@ function newRequestId(prefix: string): string {
   return `${prefix}-${raw}`;
 }
 
-export function submitIntake(task: string): Promise<IntakeResponse> {
+// Dashboard-initiated CONTRACTED runs (P4): a task whose first line is
+//   /workflow <workflow_id> [key=value ...]
+// is routed through the registered workflow contract instead of the generic
+// planner. The server's /intake already accepts workflow_id/workflow_inputs
+// (fail-closed on unknown ids); this parses the directive out of the task
+// text so both intake entry points support it without extra form chrome.
+export function parseIntakeDirectives(raw: string): {
+  task: string;
+  workflowId?: string;
+  workflowInputs?: Record<string, string>;
+} {
+  const text = String(raw ?? "");
+  const newline = text.indexOf("\n");
+  const firstLine = (newline === -1 ? text : text.slice(0, newline)).trim();
+  if (!firstLine.startsWith("/workflow ")) {
+    return { task: text.trim() };
+  }
+  const rest = newline === -1 ? "" : text.slice(newline + 1);
+  const parts = firstLine.slice("/workflow ".length).trim().split(/\s+/);
+  const workflowId = (parts.shift() ?? "").replace(/[^A-Za-z0-9_.-]/g, "");
+  const workflowInputs: Record<string, string> = {};
+  for (const part of parts) {
+    const eq = part.indexOf("=");
+    if (eq > 0) {
+      const key = part.slice(0, eq);
+      if (/^[a-z_][a-z0-9_]*$/.test(key)) {
+        workflowInputs[key] = part.slice(eq + 1);
+      }
+    }
+  }
+  if (!workflowId) {
+    return { task: text.trim() };
+  }
+  return {
+    task: rest.trim() || `Contracted run: ${workflowId}`,
+    workflowId,
+    workflowInputs: Object.keys(workflowInputs).length
+      ? workflowInputs
+      : undefined,
+  };
+}
+
+export function submitIntake(rawTask: string): Promise<IntakeResponse> {
+  const { task, workflowId, workflowInputs } = parseIntakeDirectives(rawTask);
+  const body: Record<string, unknown> = {
+    task,
+    request_id: newRequestId("webapp-intake"),
+  };
+  if (workflowId) {
+    body.workflow_id = workflowId;
+    if (workflowInputs) {
+      body.workflow_inputs = workflowInputs;
+    }
+  }
   return requestJson<IntakeResponse>(
     "/intake",
     {
       method: "POST",
-      body: JSON.stringify({ task, request_id: newRequestId("webapp-intake") }),
+      body: JSON.stringify(body),
     },
     LONG_REQUEST_TIMEOUT_MS,
   );

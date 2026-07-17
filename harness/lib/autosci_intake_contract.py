@@ -145,6 +145,13 @@ def build_autosci_task_graph(
         node = dict(raw_node)
         logical_operator = str(node.get("logical_operator") or "")
         capsule_id = SCIENTIFIC_LOGICAL_TO_CAPSULE.get(logical_operator, "")
+        architecture_policy = dict(node.get("architecture_policy") or {})
+        # Scientific discovery/idea generation explores evidence, not Solar's
+        # architecture. The shared architecture guard treats a plugin boundary
+        # plus words such as "candidate" as architectural exploration unless
+        # the fixed workflow contract states this distinction explicitly.
+        architecture_policy.setdefault("online_exploration", False)
+        node["architecture_policy"] = architecture_policy
         node["workflow_contract"] = WORKFLOW_CONTRACT_ID
         node.setdefault("status", "pending")
         node["type"] = "scientific-research"

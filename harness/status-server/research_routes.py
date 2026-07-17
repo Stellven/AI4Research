@@ -631,7 +631,7 @@ def generate_markdown_report(sprints_dir: Path | str | None, sid: str) -> str:
     gate_items = quality_gates.get("items") or []
     if gate_items:
         lines.extend([
-            "## DeepDive Quality Gates",
+            "## DeepResearch Quality Gates",
             "",
             "| Node | Status | Verdict | Auto Run | Errors |",
             "|------|--------|---------|----------|--------|",

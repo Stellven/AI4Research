@@ -1,0 +1,25 @@
+{
+  "id": "F-CLASS-08",
+  "class": 8,
+  "title": "A busy (leased) singleton is classified busy, not absent",
+  "retires": "F-CLASS-08 busy/absent misclassification (classification half; the bounded-wait half is F-CLASS-28; the evaluator_gate wait policy is pending_lane_1)",
+  "release_proof_level": "P1.5",
+  "mode": "pre_lease_then_submit",
+  "operator_id": "fake-builder",
+  "envelope": {
+    "fake_behavior": {
+      "exit_code": 0,
+      "stdout_lines": ["contended dispatch should not run"]
+    }
+  },
+  "expect": [
+    { "fact": "submit_ok", "op": "falsy" },
+    { "fact": "submit_error", "op": "contains", "value": "leased" },
+    { "fact": "submit_error", "op": "not_contains", "value": "disabled" }
+  ],
+  "fault": {
+    "skip_pre_lease": true,
+    "operators": { "fake-builder": { "enabled": false, "available": false } }
+  },
+  "notes": "GREEN: the singleton is busy (leased) -> rejection reason is state-specific ('leased'), distinct from absence. RED: instead of being busy, the operator is absent (disabled) -> reason becomes 'disabled' -> the 'contains leased' and 'not_contains disabled' checks both fail. This exercises the busy!=absent classification that the corpus records as the root of F-CLASS-08's wrong human-review cascade."
+}

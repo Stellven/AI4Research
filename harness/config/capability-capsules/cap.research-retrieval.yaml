@@ -1,0 +1,109 @@
+capability_capsule_id: cap.research-retrieval
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Research Retrieval
+  description: Gather real sources for a research question and land a provenance-complete source pack on disk.
+applicability:
+  task_types:
+    - research
+    - knowledge-extraction
+  positive_signals:
+    - research
+    - source
+    - retrieval
+    - evidence
+    - citation
+    - web
+  negative_signals:
+    - refactor
+    - implementation
+contract:
+  inputs:
+    required:
+      - name: research_question
+        type: markdown
+    optional:
+      - name: scope_hints
+        type: json
+  outputs:
+    required:
+      - name: sources_jsonl
+        type: jsonl
+      - name: evidence_jsonl
+        type: jsonl
+      - name: extracts_dir
+        type: directory
+    optional:
+      - name: retrieval_log
+        type: markdown
+  preconditions:
+    - check: task_type_in
+      values:
+        - research
+        - knowledge-extraction
+  postconditions:
+    - check: output_present
+      field: sources_jsonl
+    - check: output_present
+      field: evidence_jsonl
+    - check: output_present
+      field: extracts_dir
+  invariants:
+    - Every source row carries url, title, source_type, retrieved_at, content_sha256, extract_path, and provider.
+    - Every evidence row resolves to a source and a verified span in that source's extract.
+    - Extract files contain fetched source content, never model-authored summaries.
+    - Retrieval failure escalates instead of fabricating sources or evidence.
+composition:
+  consumes:
+    - type: artifact.research_question
+  produces:
+    - type: artifact.source_pack
+  compatible_with:
+    - guard.secret-leak-guard
+    - resource.github-readonly
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+    - research.question
+  write:
+    - artifacts.research
+  execute: []
+  network:
+    - web
+  cost:
+    - model_quota
+  risk:
+    - low_authority_sources
+    - stale_source_inventory
+bindings:
+  skills:
+    required: []
+    optional: []
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules:
+    - guard.secret-leak-guard
+  required_resource_capsules: []
+verification:
+  self_check:
+    - check.sources_jsonl_written
+    - check.evidence_jsonl_written
+    - check.extracts_written
+  external_verifier:
+    required: true
+    preferred_capsules:
+      - cap.requirement-compiler-verification
+  pass_conditions:
+    - sources.jsonl exists and is non-empty
+    - evidence.jsonl exists and is non-empty
+    - every extract and evidence hash verifies
+operator_compatibility:
+  preferred:
+    - mini-codex-gpt55-medium-builder-1
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-07-12T00:00:00Z"

@@ -42,6 +42,47 @@
         "anthropic"
       ]
     },
+    "openai-gpt-5.5": {
+      "label": "OpenAI GPT 5.5",
+      "short_label": "GPT 5.5",
+      "provider": "openai",
+      "model_flag": "--model gpt-5.5",
+      "model_key": "gpt-5.5",
+      "main_allowed": true,
+      "lab_allowed": true,
+      "aliases": [
+        "gpt-5.5",
+        "codex-gpt-5.5",
+        "openai-gpt-5.5"
+      ]
+    },
+    "openai-gpt-5.3-codex-spark": {
+      "label": "OpenAI GPT 5.3 Codex Spark",
+      "short_label": "GPT 5.3 Spark",
+      "provider": "openai",
+      "model_flag": "--model gpt-5.3-codex-spark",
+      "model_key": "gpt-5.3-codex-spark",
+      "main_allowed": true,
+      "lab_allowed": true,
+      "aliases": [
+        "gpt-5.3-codex-spark",
+        "codex-gpt-5.3-spark",
+        "codex-spark",
+        "gpt53-spark"
+      ]
+    },
+    "openai-chatgpt-5.5": {
+      "label": "OpenAI ChatGPT 5.5",
+      "short_label": "ChatGPT 5.5",
+      "provider": "openai",
+      "model_flag": "--model chatgpt-5.5",
+      "model_key": "chatgpt-5.5",
+      "main_allowed": false,
+      "lab_allowed": true,
+      "aliases": [
+        "chatgpt-5.5"
+      ]
+    },
     "zhipu-glm-5.1": {
       "label": "GLM-5.1",
       "short_label": "GLM-5.1",

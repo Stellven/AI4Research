@@ -1,0 +1,58 @@
+{
+  "schema_version": "solar.workflow_contract.v1",
+  "workflow_id": "pm.generic.v1",
+  "version": "1.0",
+  "title": "Validated generic path (LLM planner)",
+  "stages_mode": "planner_generated",
+  "stages": [],
+  "trigger": {
+    "explicit_markers": [],
+    "selection": "fallback",
+    "on_match": "never trigger-matched; this contract is the no-match fallback — its policy blocks are applied by plan_validator to planner-emitted task graphs"
+  },
+  "provider_policy": {
+    "runtime": "pool",
+    "allowed_providers": ["openai", "anthropic"],
+    "route_proof_required": true,
+    "route_records": "per_stage_execution_append_only"
+  },
+  "artifact_roots": {
+    "canonical": "workspace/",
+    "aliases": ["sprints/<sid>/workdir/", "workdir/"],
+    "root_policy": "normalize_then_check",
+    "publish_rule": "none (planner-declared write_scope must already resolve inside a declared root; a bare relative path is the v9 shape and is rejected as ARTIFACT_ROOT_UNRESOLVED, corpus F-051)"
+  },
+  "control_plane_read_policy": {
+    "namespace": "sprints/<sid>.",
+    "root_policy": "exact_current_sprint_file",
+    "content_policy": "snapshot_at_evaluator_dispatch_and_revalidate_before_verdict",
+    "suffixes": [
+      "request_envelope.json",
+      "raw_intent.json",
+      "rewritten_intent.json",
+      "requirement_ir.json",
+      "prd.md",
+      "product-brief.md",
+      "Contracts.yaml",
+      "contract.md",
+      "capsule_plan.json",
+      "codex_handoff.md",
+      "handoff.md",
+      "design.md",
+      "plan.md",
+      "task_graph.json"
+    ]
+  },
+  "required_roles": ["planner", "builder", "evaluator"],
+  "plan_compile": {
+    "env_gate": "SOLAR_PLAN_VALIDATOR",
+    "max_planner_bounces": 2,
+    "errors_artifact": "<sid>.plan-compile-errors.json",
+    "terminal_state": "PLAN_COMPILE_FAILED"
+  },
+  "release_proof_level": "P4",
+  "dashboard": {
+    "pipeline_strip": false
+  },
+  "note": "pm.generic.v1 is itself a contract (workflow-contract-unification-plan.md section 4): stages are planner-generated, so it is never instantiated; plan_validator applies the same compile-check core (task_type admission, obligation legality by node_kind, normalize-then-check root containment, route resolvability) to planner output. Node-kind proof legality is the single exported table in workflow_contract.NODE_KIND_LEGAL_PROOF_KINDS, not a per-contract copy."
+}

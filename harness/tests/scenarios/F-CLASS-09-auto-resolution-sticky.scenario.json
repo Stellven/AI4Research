@@ -1,0 +1,34 @@
+{
+  "id": "F-CLASS-09",
+  "class": 9,
+  "title": "A recorded auto-resolution decision survives a doctor drift-repair clobber",
+  "retires": "F-CLASS-09 (sticky auto-resolution clobbered); R4 append-only decisions",
+  "release_proof_level": "P1.5",
+  "mode": "gate_replay",
+  "driver": "drivers/f_class_09_auto_resolution_sticky.py",
+  "daemon_cap_sec": 60,
+  "env": {
+    "SOLAR_GATE_LEDGER": "1"
+  },
+  "expect": [
+    {
+      "fact": "driver_rc",
+      "op": "eq",
+      "value": 0
+    },
+    {
+      "fact": "decision_preserved",
+      "op": "truthy"
+    },
+    {
+      "fact": "doctor_suppressed",
+      "op": "truthy"
+    }
+  ],
+  "fault": {
+    "env": {
+      "SOLAR_GATE_LEDGER": "0"
+    }
+  },
+  "notes": "GREEN: doctor neutralized on the contracted path (applied=false record) and the ledger projection reports the recorded pass. RED: no record; the doctor applies the stale node_results drift over the pass. gate_replay mode: the driver exercises the REAL scheduler/dispatcher/ledger seams inside the sandbox HARNESS_DIR. GREEN env sets SOLAR_GATE_LEDGER=1 (the Lane 3 fix); RED injects SOLAR_GATE_LEDGER=0 (the pre-contract world) and the same expect must fail — proving the scenario discriminates the class, not the plumbing."
+}

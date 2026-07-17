@@ -92,6 +92,35 @@ def _graph_valid(path: Path) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _plan_certificate_ready(path: Path) -> tuple[bool, str]:
+    if not _nonempty(path):
+        return True, "not_applicable"
+    try:
+        graph = json.loads(path.read_text())
+    except Exception as exc:
+        return False, f"plan_certificate_parse_error:{exc}"
+    try:
+        import plan_validator
+    except Exception as exc:
+        if str(os.environ.get("SOLAR_PLAN_VALIDATOR", "") or "").strip().lower() not in {"0", "false", "no", "off"}:
+            return False, f"plan_certificate_uncheckable:{type(exc).__name__}"
+        return True, "not_applicable"
+    sid = str(graph.get("sprint_id") or path.name.removesuffix(".task_graph.json"))
+    verdict = plan_validator.check_planner_graph_dispatchable(
+        graph, sprints_dir=SPRINTS_DIR, sid=sid
+    )
+    if verdict.get("ok"):
+        return True, str(verdict.get("skipped_reason") or "ok")
+    errors = verdict.get("errors") if isinstance(verdict.get("errors"), list) else []
+    codes = []
+    for error in errors:
+        if isinstance(error, dict):
+            codes.append(str(error.get("code") or "PLAN_CERTIFICATE_ERROR"))
+        else:
+            codes.append(str(error))
+    return False, "plan_certificate_required:" + ",".join(codes or ["PLAN_CERTIFICATE_ERROR"])
+
+
 def _graph_parent_ready(path: Path) -> bool:
     if not _nonempty(path):
         return False
@@ -216,6 +245,10 @@ def route(sid: str) -> dict[str, Any]:
         if _triface_ok is None and _triface_reason == "spec_missing":
             # spec just not created yet — use legacy result
             pass
+    if graph_ok:
+        cert_ok, cert_reason = _plan_certificate_ready(graph)
+        if not cert_ok:
+            graph_ok, graph_reason = False, cert_reason
 
     # Parent-ready: prefer triface (closure/state), fall back to legacy
     triface_ready = _triface_parent_ready(sid)
@@ -258,9 +291,30 @@ def route(sid: str) -> dict[str, Any]:
     if phase in {"prd_ready", "contract_ready"} and not requirements_ready:
         violations.append("phase_requires_pm_prd")
     if _nonempty(graph) and not graph_ok:
-        violations.append(f"invalid_task_graph:{graph_reason}")
+        # A missing/failed plan certificate on a PRE-PLANNER sprint (no
+        # design/plan yet) is the expected state, not a violation: the intake
+        # parent graph is generic and uncertified until the planner runs, and
+        # the planner route is exactly the repair path. Emitting a violation
+        # here made autopilot's ok-and-no-violations gate refuse to advance
+        # handoff pm->planner, starving the sprint at drafting/prd_ready
+        # (G2b live finding, case E5). Builder-readiness still demands the
+        # certificate: with design+plan present the violation is emitted, and
+        # planner_ready stays false either way because graph_ok is false.
+        certificate_pending_planner = graph_reason.startswith("plan_certificate_required") and not (
+            artifacts["design"] and artifacts["plan"]
+        )
+        if not certificate_pending_planner:
+            violations.append(f"invalid_task_graph:{graph_reason}")
 
-    if st in {"passed", "done", "eval_pass", "finalized", "superseded"} or graph_parent_ready:
+    if st == "failed":
+        # Top-level "failed" is terminal (review G1+G1b finding 5): a failed +
+        # phase=plan_compile_failed sprint that still has planner artifacts
+        # must not route as builder_main/planning_complete to chain-watcher/
+        # autopilot. Stage is deliberately NOT "done" — autopilot normalizes
+        # role=none + stage=done to status "passed". Repair statuses
+        # (failed_review) are untouched: only the top-level terminal is caught.
+        role, stage, reason = "none", "failed", "terminal_status"
+    elif st in {"passed", "done", "eval_pass", "finalized", "superseded"} or graph_parent_ready:
         role, stage, reason = "none", "done", "terminal_status"
     elif st in {"reviewing", "ready_for_review"} or (artifacts["handoff"] and handoff_to == "evaluator"):
         role, stage, reason = "evaluator", "build_complete", "handoff_ready_for_eval"

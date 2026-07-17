@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "lib"))
 import capability_capsules as cc  # noqa: E402
 
 
-def test_understand_anything_default_plan_for_codebase_understanding_goal():
+def test_understand_anything_draft_is_not_auto_routed_for_normal_product_goal():
     plan = cc.default_capability_plan_for_logical_operator(
         "ResearchScout",
         request_type="research",
@@ -19,8 +19,7 @@ def test_understand_anything_default_plan_for_codebase_understanding_goal():
         node={"goal": "Build codebase knowledge graph and onboarding architecture map for this repo"},
         registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
     )
-    assert plan["capability_capsule_id"] == "cap.understand-anything-indexer"
-    assert plan["dispatch_task_type"] == "code-understanding"
+    assert plan == {}
 
 
 def test_skill_driven_override_maps_knowledge_graph_builder(monkeypatch):

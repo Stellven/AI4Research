@@ -86,7 +86,7 @@ verification:
     - No memory or ingestion artifact is created by this capsule alone.
 operator_compatibility:
   preferred:
-    - ScientificLiteratureDiscoverer
+    - autosci-literature-discover-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

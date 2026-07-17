@@ -39,11 +39,26 @@ PACKAGE_PREFIXES = (
     "packages/",
 )
 
-FEATURE_RE = re.compile(
-    r"新增|集成|开发|feature|integration|plugin|package|skill|connector|source|research|能力",
+FEATURE_ACTION_RE = re.compile(
+    r"\b(?:add|implement|develop|integrate|introduce|extend|create|migrate|refactor)\b|"
+    r"新增|集成|开发|实现|引入|扩展|迁移|重构",
     re.I,
 )
-EXPLORATION_RE = re.compile(r"exploration|探索|尝试|候选|方案|淘汰", re.I)
+FEATURE_OBJECT_RE = re.compile(
+    r"\b(?:feature|integration|plugin|package|skill|connector|capability|module|runtime)\b|"
+    r"功能|能力|插件|连接器|模块|运行时",
+    re.I,
+)
+EXPLORATION_RE = re.compile(
+    r"\b(?:explor(?:e|ation|atory)|candidate|alternative|approach)\b|"
+    r"探索|尝试|候选|方案|淘汰",
+    re.I,
+)
+ARCHITECTURE_CONTEXT_RE = re.compile(
+    r"\b(?:architecture|architectural|design|implementation|package|plugin|connector|module|runtime)\b|"
+    r"架构|设计|实现|插件|连接器|模块|运行时",
+    re.I,
+)
 
 
 def _rel(path: str) -> str:
@@ -84,20 +99,32 @@ def _has_package_boundary(node: dict[str, Any]) -> bool:
 
 
 def _is_feature_node(node: dict[str, Any]) -> bool:
+    policy = node.get("architecture_policy") or {}
+    if isinstance(policy.get("feature_change"), bool):
+        return bool(policy["feature_change"])
+    if _has_package_boundary(node):
+        return True
     text = " ".join([
         str(node.get("goal") or ""),
-        " ".join(str(x) for x in (node.get("required_capabilities") or [])),
-        " ".join(str(x) for x in (node.get("required_skills") or [])),
+        str(node.get("description") or ""),
     ])
-    return bool(FEATURE_RE.search(text))
+    return bool(FEATURE_ACTION_RE.search(text) and FEATURE_OBJECT_RE.search(text))
 
 
 def _is_exploration_node(node: dict[str, Any]) -> bool:
-    text = " ".join([
-        str(node.get("goal") or ""),
-        json.dumps(node.get("architecture_policy") or {}, ensure_ascii=False),
-    ])
-    return bool(EXPLORATION_RE.search(text))
+    policy = node.get("architecture_policy") or {}
+    explicit = policy.get("online_exploration")
+    if isinstance(explicit, bool):
+        return explicit
+    if policy.get("exploration_alternatives") or policy.get("kill_criteria") or policy.get("淘汰标准"):
+        return True
+    text = " ".join([str(node.get("goal") or ""), str(node.get("description") or "")])
+    architecture_changing = bool(
+        ARCHITECTURE_CONTEXT_RE.search(text)
+        or _touches_core(node)
+        or _has_package_boundary(node)
+    )
+    return bool(architecture_changing and EXPLORATION_RE.search(text))
 
 
 def assess_graph(graph: dict[str, Any], *, strict: bool | None = None) -> dict[str, Any]:
@@ -158,14 +185,24 @@ def dispatch_policy_block(node: dict[str, Any], graph: dict[str, Any] | None = N
     graph = graph or {"nodes": [node]}
     assessed = assess_graph({"nodes": [node], "architecture_guard": (graph or {}).get("architecture_guard", {})})
     policy = node.get("architecture_policy") or {}
+    report = assessed["nodes"][0] if assessed.get("nodes") else {}
+    feature_node = bool(report.get("feature_node"))
+    exploration_node = bool(report.get("exploration_node"))
+    exploration_requirement = (
+        "`required`: provide >=2 architecture alternatives and kill_criteria."
+        if exploration_node
+        else "`not_applicable`: retrieval/search/network activity alone is not architecture exploration."
+    )
     return "\n".join([
         "## Architecture Guard",
         "",
         "- 默认原则: 新能力必须做成可插拔 package / plugin / skill / connector，不改主架构和主循环。",
         "- 允许例外: 仅限 P0 bugfix，并且 node.architecture_policy.core_patch_allowed=true 且写明 rollback。",
-        "- Online Exploration: 涉及探索/尝试时必须列出 >=2 个候选方向和 kill_criteria，快速淘汰弱方案。",
+        f"- feature_node: `{str(feature_node).lower()}`",
+        f"- exploration_node: `{str(exploration_node).lower()}`",
+        f"- exploration_requirement: {exploration_requirement}",
         f"- package_boundary: `{policy.get('package_boundary') or policy.get('plugin_id') or policy.get('package_id') or 'N/A'}`",
-        f"- core_hits: `{','.join(assessed['nodes'][0]['core_hits']) if assessed['nodes'] else 'N/A'}`",
+        f"- core_hits: `{','.join(report.get('core_hits') or []) or 'N/A'}`",
         f"- guard_warnings: `{'; '.join(assessed.get('warnings') or []) or 'none'}`",
         f"- guard_errors: `{'; '.join(assessed.get('errors') or []) or 'none'}`",
     ])

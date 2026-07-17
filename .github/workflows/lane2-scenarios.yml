@@ -1,0 +1,72 @@
+name: Lane 2 fake-operator scenarios
+
+# Hermetic fault-catalog gate (runtime-validation-ladder P1.5). No network at test time, no
+# quota, no models: every scenario drives the real operator-pool command backend
+# (operator_runtime.submit -> operatord daemon --once -> result.json) with a deterministic
+# fake_operator.py worker. Each verified_here scenario is run red-before-green, so a scenario
+# that stops discriminating its failure class fails the build. See
+# docs/product/lane2-spec-mismatches.md for scope and the operator-seam rationale.
+
+on:
+  pull_request:
+    branches:
+      - main
+      - integration/rc8-runtime-mode-contract
+  push:
+    branches:
+      - main
+      - integration/rc8-runtime-mode-contract
+      - "contract/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lane2-scenarios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hermetic-catalog:
+    name: Hermetic fake-operator catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+
+      - name: Syntax check Lane 2 sources
+        run: |
+          python -m py_compile \
+            harness/tools/fake_operator.py \
+            harness/tests/run_scenario.py \
+            harness/tests/test_lane2_scenarios.py
+
+      - name: Validate catalog + scenario JSON
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          root = pathlib.Path("harness/tests/scenarios")
+          catalog = json.loads((root / "catalog.json").read_text())
+          assert {c["class"] for c in catalog["classes"]} == set(range(1, 31)), "catalog must cover 1..30"
+          for p in root.glob("F-CLASS-*.scenario.json"):
+              json.loads(p.read_text())  # must parse
+          print(f"catalog ok: {len(catalog['classes'])} classes; scenario files parse")
+          PY
+
+      - name: Run red-before-green scenario suite
+        env:
+          SOLAR_OPERATORD_AUTO_KICK: "0"
+        run: |
+          python -m pytest -q -p no:cacheprovider \
+            harness/tests/test_lane2_scenarios.py

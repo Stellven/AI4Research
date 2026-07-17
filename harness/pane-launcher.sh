@@ -358,6 +358,79 @@ prepare_codex_role_file() {
   printf '%s\n' "$role_dir/${persona}.md"
 }
 
+prepare_codex_trust_profile() {
+  local work_dir="$1" session="$2" owner_id="$3"
+  local codex_home="${CODEX_HOME:-$HOME/.codex}"
+  local helper="$HARNESS_DIR/lib/codex_trust_profiles.py"
+  [[ -f "$helper" ]] || {
+    echo "FATAL: managed Codex trust profile helper missing: $helper" >&2
+    return 78
+  }
+  python3 "$helper" create \
+    --work-dir "$work_dir" \
+    --codex-home "$codex_home" \
+    --session "$session" \
+    --owner-id "$owner_id" \
+    --pane "${TMUX_PANE:-}" \
+    --persona "$PERSONA" \
+    --harness-dir "$HARNESS_DIR" \
+    --launcher-pid "$$"
+}
+
+cleanup_codex_trust_profile() {
+  [[ -n "${CODEX_TRUST_PROFILE_PATH:-}" ]] || return 0
+  [[ -n "${CODEX_TRUST_SESSION:-}" ]] || return 1
+  python3 "$HARNESS_DIR/lib/codex_trust_profiles.py" remove \
+    --harness-dir "$HARNESS_DIR" \
+    --session "$CODEX_TRUST_SESSION" \
+    --owner-id "$CODEX_TRUST_OWNER_ID" \
+    --profile-path "$CODEX_TRUST_PROFILE_PATH" >/dev/null
+}
+
+resolve_codex_trust_session() {
+  local session=""
+  if [[ -n "${TMUX_PANE:-}" ]]; then
+    session="$(tmux display-message -p -t "$TMUX_PANE" '#S' 2>/dev/null || true)"
+  fi
+  session="${session:-${SOLAR_HARNESS_SESSION:-solar-harness}}"
+  printf '%s\n' "$session"
+}
+
+resolve_codex_trust_owner_id() {
+  local session="$1" owner_id=""
+  if [[ -n "${TMUX_PANE:-}" ]]; then
+    owner_id="$(tmux display-message -p -t "$TMUX_PANE" '#{socket_path}|#{session_id}|#{session_name}' 2>/dev/null || true)"
+  fi
+  owner_id="${owner_id:-standalone:${session}:$$}"
+  printf '%s\n' "$owner_id"
+}
+
+append_codex_extra_args() {
+  local raw="${1:-}"
+  [[ -n "$raw" ]] || return 0
+  local -a parsed=()
+  mapfile -d '' -t parsed < <(python3 - "$raw" <<'PY'
+import os
+import shlex
+import sys
+
+try:
+    args = shlex.split(sys.argv[1])
+except ValueError as exc:
+    os.write(1, f"ERROR:{exc}".encode("utf-8") + b"\0")
+else:
+    os.write(1, b"OK\0")
+    for arg in args:
+        os.write(1, arg.encode("utf-8", "surrogateescape") + b"\0")
+PY
+  )
+  if [[ "${parsed[0]:-}" != "OK" ]]; then
+    echo "FATAL: invalid SOLAR_CODEX_EXTRA_FLAGS: ${parsed[0]#ERROR:}" >&2
+    return 64
+  fi
+  CODEX_ARGS+=("${parsed[@]:1}")
+}
+
 # 退出信号捕获 → pane-exit.jsonl
 EXIT_LOG="$HARNESS_DIR/logs/pane-exit.jsonl"
 mkdir -p "$(dirname "$EXIT_LOG")" 2>/dev/null || true
@@ -368,26 +441,50 @@ _whisper=$(inject_whisper "$PERSONA")
 _prefix_policy=$(inject_prefix_policy "$PERSONA")
 record_pane_model_session "session-started" ""
 if [[ "$PANE_RUNTIME" == "codex" ]]; then
-  CODEX_CMD=("$CODEX_BIN")
+  CODEX_ARGS=("$CODEX_BIN")
   SOLAR_CODEX_BYPASS="${SOLAR_CODEX_BYPASS:-1}"
   if [[ "$SOLAR_CODEX_BYPASS" == "1" ]]; then
-    CODEX_CMD+=(--dangerously-bypass-approvals-and-sandbox)
+    CODEX_ARGS+=("--dangerously-bypass-approvals-and-sandbox")
   fi
+  SOLAR_CODEX_TRUST_WORKSPACE="${SOLAR_CODEX_TRUST_WORKSPACE:-$SOLAR_CODEX_BYPASS}"
+  case "$SOLAR_CODEX_TRUST_WORKSPACE" in
+    0) ;;
+    1)
+      CODEX_TRUST_SESSION="$(resolve_codex_trust_session)"
+      CODEX_TRUST_OWNER_ID="$(resolve_codex_trust_owner_id "$CODEX_TRUST_SESSION")"
+      CODEX_TRUST_PROFILE_RECORD=()
+      mapfile -t CODEX_TRUST_PROFILE_RECORD < <(prepare_codex_trust_profile "$ORIGINAL_WORK_DIR" "$CODEX_TRUST_SESSION" "$CODEX_TRUST_OWNER_ID")
+      if [[ "${#CODEX_TRUST_PROFILE_RECORD[@]}" -ne 2 ]]; then
+        echo "FATAL: failed to prepare the managed Codex workspace trust profile" >&2
+        exit 78
+      fi
+      CODEX_TRUST_PROFILE_NAME="${CODEX_TRUST_PROFILE_RECORD[0]}"
+      CODEX_TRUST_PROFILE_PATH="${CODEX_TRUST_PROFILE_RECORD[1]}"
+      CODEX_ARGS+=("--profile" "$CODEX_TRUST_PROFILE_NAME")
+      trap 'cleanup_codex_trust_profile || true' EXIT
+      ;;
+    *)
+      echo "FATAL: invalid SOLAR_CODEX_TRUST_WORKSPACE='$SOLAR_CODEX_TRUST_WORKSPACE' (expected 0|1)" >&2
+      exit 64
+      ;;
+  esac
   # Solar dispatches into long-lived Codex panes. Interactive update prompts
   # steal the first Enter during clean/dispatch and can drop the pane back to
   # shell, so managed panes disable the startup check by default. Operators can
   # still run `codex update` manually outside the cockpit.
   if [[ "${SOLAR_CODEX_CHECK_FOR_UPDATE_ON_STARTUP:-0}" != "1" ]]; then
-    CODEX_CMD+=(-c check_for_update_on_startup=false)
+    CODEX_ARGS+=("-c" "check_for_update_on_startup=false")
   fi
-  [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && CODEX_CMD+=(--model "$SOLAR_CODEX_MODEL")
-  [[ -n "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] && CODEX_CMD+=( ${SOLAR_CODEX_EXTRA_FLAGS} )
+  [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && CODEX_ARGS+=("--model" "$SOLAR_CODEX_MODEL")
+  append_codex_extra_args "${SOLAR_CODEX_EXTRA_FLAGS:-}" || exit $?
   CODEX_ROLE_FILE="$(prepare_codex_role_file "$PERSONA")"
   echo -e "${Y}[${PERSONA}] Codex runtime selected${N}"
   echo -e "  Role instructions: ${CODEX_ROLE_FILE}"
   echo -e "  Starting Codex idle; dispatcher prompts will include role + task files."
-  "${CODEX_CMD[@]}"
+  "${CODEX_ARGS[@]}"
   RUNTIME_EXIT=$?
+  cleanup_codex_trust_profile || true
+  trap - EXIT
 else
   CLAUDE_CMD=("$CLAUDE_BIN")
   SOLAR_CLAUDE_BYPASS="${SOLAR_CLAUDE_BYPASS:-1}"

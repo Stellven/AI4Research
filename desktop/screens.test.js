@@ -43,8 +43,8 @@ const CASES = [
 ];
 
 (async () => {
-  // Probe: can Electron launch here at all? A CI runner without GUI system libs / display can't —
-  // treat that as a SKIP (infra), not a FAIL (product). A real assertion failure below still fails.
+  // Probe: can Electron launch here at all? Exit 2 means NOT VERIFIED; callers must never
+  // translate that into a green product gate.
   try {
     const probe = await electron.launch({
       args: ["."],
@@ -62,7 +62,7 @@ const CASES = [
         String(e.message).split("\n")[0] +
         ") - screen gate skipped",
     );
-    process.exit(0);
+    process.exit(2);
   }
 
   let pass = 0;

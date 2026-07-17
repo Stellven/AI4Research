@@ -114,13 +114,15 @@ check "stable skill export dry-run ok" "$OUT" "ok"
 
 # ── T9: solar_skills.py eval subcommand ──────────────────────────────────────
 echo "T9: solar_skills eval"
-OUT=$(python3 "$LIB/solar_skills.py" eval --skill plan --json 2>/dev/null)
-check "eval: ok=true" "$OUT" '"ok": true'
-check "eval: passed" "$OUT" '"passed": true'
+OUT=$(python3 "$LIB/solar_skills.py" eval --skill plan --json 2>/dev/null || true)
+check "eval: declarative pack is not called executed" "$OUT" '"executed": false'
+check "eval: declarative pack is not called passed" "$OUT" '"passed": false'
+check "eval: explicit reason" "$OUT" '"reason": "behavioral_eval_not_executable"'
 
 # ── T10: solar_skills.py registry subcommand ─────────────────────────────────
 echo "T10: solar_skills registry"
 OUT=$(python3 "$LIB/solar_skills.py" registry --json 2>/dev/null)
+check "registry: integrity ok" "$OUT" '"ok": true'
 check "registry: total" "$OUT" '"total"'
 check "registry: stable entries" "$OUT" '"stable"'
 
@@ -150,8 +152,7 @@ PYEOF
 # ── T13: skill promote dual-gate flow ────────────────────────────────────────
 echo "T13: promote dual-gate flow"
 OUT=$(python3 "$LIB/solar_skills.py" promote --skill qa --skip-regression 2>/dev/null || true)
-# qa is candidate; if eval fails (no eval pack passing), rollback test still proves gating
-[[ -n "$OUT" ]] && ok "promote: returns output (gate active)" || fail "promote: no output"
+check "promote: gate bypass rejected" "$OUT" '"error": "unsafe_gate_bypass_rejected"'
 
 echo ""
 echo "=== S2 Skill Platform: PASS=$PASS FAIL=$FAIL ==="

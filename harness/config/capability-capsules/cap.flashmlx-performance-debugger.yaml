@@ -111,7 +111,7 @@ verification:
     - benchmark_report exists
 operator_compatibility:
   preferred:
-    - mini-claude-sonnet-builder
+    - mini-claude-sonnet-builder-2
   forbidden:
     - mini-antigravity-gemini35-flash-high
 provenance:

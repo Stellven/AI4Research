@@ -62,3 +62,27 @@ def test_terminally_closed_overrides_stale_status_to_pass(tmp_path):
     assert av["verdict"] == "PASS"
     assert av["reasons"] == []
     assert bundle["coverage_report"]["summary"]["graph_complete"] is True
+
+
+def test_written_coverage_refreshes_terminal_closure_traceability(tmp_path):
+    """CLOSURE_TRACEABILITY_STALE: closure must reflect canonical coverage."""
+    sprints, sid = _setup(tmp_path, "reviewing")
+    closure_path = sprints / f"{sid}.closure.json"
+    closure_path.write_text(
+        json.dumps(
+            {
+                "status": "closed",
+                "all_nodes_passed": True,
+                "all_required_gates_passed": True,
+                "acceptance_traceability_coverage": 0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    bundle = rc.evaluate_sid(sid, sprints_dir=sprints, write=True)
+    closure = json.loads(closure_path.read_text(encoding="utf-8"))
+
+    assert bundle["acceptance_verdict"]["verdict"] == "PASS"
+    assert bundle["coverage_report"]["summary"]["coverage_ratio"] == 1.0
+    assert closure["acceptance_traceability_coverage"] == 1.0

@@ -88,7 +88,7 @@ verification:
     - Provisional memory is not presented as verified evidence.
 operator_compatibility:
   preferred:
-    - ScientificMemoryUpdater
+    - autosci-memory-update-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

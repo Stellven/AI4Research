@@ -1,0 +1,38 @@
+{
+  "id": "F-CLASS-30",
+  "class": 30,
+  "title": "Self-graded/backfilled verdict provenance is recorded and never gate-consumable",
+  "retires": "F-CLASS-30 (verdict provenance); R4/AC-R4.3 provenance rule",
+  "release_proof_level": "P1.5",
+  "mode": "gate_replay",
+  "driver": "drivers/f_class_30_verdict_provenance.py",
+  "daemon_cap_sec": 60,
+  "env": {
+    "SOLAR_GATE_LEDGER": "1"
+  },
+  "expect": [
+    {
+      "fact": "driver_rc",
+      "op": "eq",
+      "value": 0
+    },
+    {
+      "fact": "self_graded_blocked",
+      "op": "truthy"
+    },
+    {
+      "fact": "provenance_recorded",
+      "op": "truthy"
+    },
+    {
+      "fact": "backfill_consumable",
+      "op": "falsy"
+    }
+  ],
+  "fault": {
+    "env": {
+      "SOLAR_GATE_LEDGER": "0"
+    }
+  },
+  "notes": "GREEN: the legacy self-graded guard blocks in both worlds (4df6477d); Lane 3 adds the provable trail — a gate_check record flagged self_graded plus fail-closed consumability for repair_backfill records. RED: the rejection leaves no evidence. gate_replay mode: the driver exercises the REAL scheduler/dispatcher/ledger seams inside the sandbox HARNESS_DIR. GREEN env sets SOLAR_GATE_LEDGER=1 (the Lane 3 fix); RED injects SOLAR_GATE_LEDGER=0 (the pre-contract world) and the same expect must fail — proving the scenario discriminates the class, not the plumbing."
+}

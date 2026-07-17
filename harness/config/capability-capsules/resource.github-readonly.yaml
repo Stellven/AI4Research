@@ -76,7 +76,7 @@ verification:
     - resource_binding exists
 operator_compatibility:
   preferred:
-    - mini-claude-sonnet-builder
+    - mini-claude-sonnet-builder-2
   forbidden: []
 provenance:
   owner: opensolar

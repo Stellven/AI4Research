@@ -39,7 +39,14 @@ def run_auto_repair(
     iterations: list[dict[str, Any]] = []
     max_passes = max(int(max_passes or 1), 1)
     waiting_total = 0
-    final_eval = evaluate_survey(root, strict=True, min_finalized=min_finalized, require_complete=require_complete)
+    final_eval = evaluate_survey(
+        root,
+        strict=True,
+        min_finalized=min_finalized,
+        require_complete=require_complete,
+        check_reader_projection=False,
+        persist=True,
+    )
     if final_eval.get("ok"):
         payload = {
             "ok": True,
@@ -89,7 +96,14 @@ def run_auto_repair(
             replace_final=True,
         )
         waiting_total += int(rewrite_run.get("waiting") or 0)
-        final_eval = evaluate_survey(root, strict=True, min_finalized=min_finalized, require_complete=require_complete)
+        final_eval = evaluate_survey(
+            root,
+            strict=True,
+            min_finalized=min_finalized,
+            require_complete=require_complete,
+            check_reader_projection=False,
+            persist=True,
+        )
         iterations.append({
             "pass_index": pass_index,
             "before_ok": before.get("ok"),

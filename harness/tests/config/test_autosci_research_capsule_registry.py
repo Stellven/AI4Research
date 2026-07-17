@@ -20,9 +20,11 @@ def test_autosci_manifest_research_capsules_are_registered_and_resolvable():
     entries = {
         str(entry["capability_capsule_id"]): entry
         for entry in registry["entries"]
-        if str(entry["capability_capsule_id"]).startswith("cap.research-")
+        if str(entry["capability_capsule_id"]) in manifest_caps
     }
 
+    # AutoSci owns the capabilities it declares, not the entire shared
+    # cap.research-* namespace (which also contains generic retrieval).
     assert manifest_caps == set(entries)
 
     for capsule_id, entry in entries.items():
