@@ -1,0 +1,76 @@
+---
+id: autosci
+name: "AutoSci Backend Adapter"
+version: "0.1.0"
+description: "Backend adapter package for AutoSci-derived scientific research actions. Solar owns workflow semantics, capsules, Evidence ABI, and gates; this plugin only converts bounded backend outputs into Solar evidence."
+status: candidate
+
+write_scope:
+  - "artifacts/autosci"
+  - "artifacts/scientific"
+
+read_scope:
+  - "plugins/autosci"
+  - "schemas/evidence"
+  - "artifacts/autosci"
+  - "artifacts/scientific"
+
+capabilities:
+  - "cap.research-literature-discover"
+  - "cap.research-paper-ingest"
+  - "cap.research-paper-analyze"
+  - "cap.research-memory-update"
+  - "cap.research-graph-update"
+  - "cap.research-claim-extract"
+  - "cap.research-method-extract"
+  - "cap.research-code-evidence-map"
+  - "cap.research-idea-generate"
+  - "cap.research-idea-evaluate"
+  - "cap.research-experiment-design"
+  - "cap.research-experiment-run"
+  - "cap.research-experiment-monitor"
+  - "cap.research-claim-verify"
+  - "cap.research-report-plan"
+  - "cap.research-report-draft"
+  - "cap.research-artifact-review"
+  - "cap.research-publication-produce"
+  - "cap.research-workflow-evolve"
+
+commands:
+  - "python3 plugins/autosci/bin/autosci_bridge.py --help"
+  - "python3 plugins/autosci/bin/autosci_bridge.py smoke"
+  - "python3 plugins/autosci/bin/autosci_bridge.py validate --result <path>"
+  - "python3 plugins/autosci/bin/autosci_bridge.py run --action <action> --envelope <path>"
+
+background_safety:
+  mode: bounded
+  idle_only: false
+  rate_limit: "fixture and explicit envelope execution only"
+  max_runtime_s: 300
+  max_memory_mb: 512
+
+eval_packs:
+  - "plugins/autosci/eval_packs/autosci_adapter_smoke.yaml"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable autosci"
+
+integration_level: basic_usable
+
+entry: "plugins/autosci/bin/autosci_bridge.py"
+
+events:
+  - "autosci.bridge.smoke"
+  - "autosci.bridge.run"
+  - "autosci.bridge.validate"
+  - "autosci.bridge.evolve_workflow"
+
+depends_on: []
+
+tags:
+  - "research"
+  - "scientific-runtime"
+  - "backend-adapter"
+  - "autosci"

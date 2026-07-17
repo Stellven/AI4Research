@@ -1,0 +1,361 @@
+===== harness/config/logical-operators.json =====
+{
+  "version": 1,
+  "updated_at": "2026-06-02T01:59:19Z",
+  "logical_operators": {
+    "DeepArchitect": {
+      "operator_type": "DeepArchitect",
+      "description": "System architecture design, schema design, high-level technical planning. Requires strong architecture_reasoning and long_context.",
+      "primary_role": "planner",
+      "required_capabilities": {
+        "architecture_reasoning": 4,
+        "long_context": 3,
+        "multi_agent_coordination": 3
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 6,
+        "singleton": false
+      }
+    },
+    "RootCauseDebugger": {
+      "operator_type": "RootCauseDebugger",
+      "description": "Deep root cause analysis of failures, crashes, and regressions. Requires strong root_cause_debug and code_impl.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "root_cause_debug": 4,
+        "code_impl": 3,
+        "long_context": 2
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "ImplementationWorker": {
+      "operator_type": "ImplementationWorker",
+      "description": "General-purpose code implementation: new features, modules, integrations. Requires strong code_impl.",
+      "primary_role": "builder",
+      "required_capabilities": {
+        "code_impl": 4,
+        "test_generation": 2
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 5,
+        "singleton": false
+      }
+    },
+    "PatchWorker": {
+      "operator_type": "PatchWorker",
+      "description": "Targeted surgical patches: one-line fixes, config corrections, minor refactors. Optimized for speed and low cost.",
+      "primary_role": "builder",
+      "required_capabilities": {
+        "code_impl": 3,
+        "root_cause_debug": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 8,
+        "singleton": false
+      }
+    },
+    "TestDesigner": {
+      "operator_type": "TestDesigner",
+      "description": "Designs test suites, edge-case matrices, property-based tests, and test plans. Requires strong test_generation.",
+      "primary_role": "builder",
+      "required_capabilities": {
+        "test_generation": 4,
+        "architecture_reasoning": 2
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "TestRunner": {
+      "operator_type": "TestRunner",
+      "description": "Executes test suites, interprets results, reports failures. Requires test_execution capability.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "test_execution": 4,
+        "root_cause_debug": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 6,
+        "singleton": false
+      }
+    },
+    "BenchmarkRunner": {
+      "operator_type": "BenchmarkRunner",
+      "description": "Runs performance benchmarks, collects latency/throughput metrics, compares before/after. Shell access required.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "test_execution": 3,
+        "code_impl": 2
+      },
+      "risk_constraints": {
+        "allowed_shell_scope": "allowed"
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "ParallelExplorer": {
+      "operator_type": "ParallelExplorer",
+      "description": "Spawns parallel research or exploration threads, aggregates results. Requires multi_agent_coordination.",
+      "primary_role": "planner",
+      "required_capabilities": {
+        "multi_agent_coordination": 4,
+        "research_synthesis": 3
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 5,
+        "singleton": false
+      }
+    },
+    "ResearchScout": {
+      "operator_type": "ResearchScout",
+      "description": "Rapid information gathering: web search, documentation triage, codebase exploration. Optimized for speed.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 3,
+        "speed": 4
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 6,
+        "singleton": false
+      }
+    },
+    "ResearchSynthesizer": {
+      "operator_type": "ResearchSynthesizer",
+      "description": "Deep research synthesis: cross-source analysis, literature review, technical comparisons. Requires strong research_synthesis and long_context.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 4,
+        "long_context": 4,
+        "academic_critique": 3
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "Critic": {
+      "operator_type": "Critic",
+      "description": "Critical review of designs, proposals, and plans. Applies academic_critique and adversarial questioning.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "academic_critique": 4,
+        "architecture_reasoning": 3
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "Verifier": {
+      "operator_type": "Verifier",
+      "description": "End-to-end verification: confirms implementations match specs, evidence collection, acceptance sign-off.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "test_execution": 3,
+        "root_cause_debug": 3
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "VerifierLite": {
+      "operator_type": "VerifierLite",
+      "description": "Constrained structural verification: validates tests, artifact layout, metadata, and machine-readable sidecars without issuing final acceptance sign-off.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "test_execution": 3,
+        "code_impl": 2
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "harness_readonly",
+        "destructive_actions": "denied",
+        "final_signoff": "denied",
+        "machine_structural_verification_only": true
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "SecurityGate": {
+      "operator_type": "SecurityGate",
+      "description": "Security review gate: checks for vulnerabilities, validates risk profiles, enforces security policies before promotion.",
+      "primary_role": "auditor",
+      "required_capabilities": {
+        "root_cause_debug": 3,
+        "academic_critique": 3
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "harness_readonly",
+        "destructive_actions": "denied"
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 2,
+        "singleton": false
+      }
+    },
+    "QuotaBroker": {
+      "operator_type": "QuotaBroker",
+      "description": "Manages token/cost quotas across actors, enforces budget limits, routes overflow to fallbacks.",
+      "primary_role": "router",
+      "required_capabilities": {
+        "multi_agent_coordination": 3,
+        "speed": 4
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": true
+      }
+    },
+    "ContextCompressor": {
+      "operator_type": "ContextCompressor",
+      "description": "Compresses long context windows into context packets, generates memory summaries, trims stale state.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "long_context": 4,
+        "research_synthesis": 3
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "ArtifactCurator": {
+      "operator_type": "ArtifactCurator",
+      "description": "Manages build artifacts, evidence ledgers, handoff documents, and sprint closeout artifacts.",
+      "primary_role": "auditor",
+      "required_capabilities": {
+        "code_impl": 2,
+        "research_synthesis": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "DeepResearchBrowser": {
+      "operator_type": "DeepResearchBrowser",
+      "description": "Runs long-horizon browser-mediated research tasks that require persistent webapp sessions and async artifact collection.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 5,
+        "browser_use": 5,
+        "gui_use": 4,
+        "long_context": 4
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 2,
+        "singleton": false
+      }
+    },
+    "DeepResearchGemini": {
+      "operator_type": "DeepResearchGemini",
+      "description": "Routes deep research tasks to Gemini-oriented long-context synthesis workers when browser-first execution is unavailable.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 5,
+        "long_context": 5,
+        "browser_use": 2
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "DeepResearchChatGPT": {
+      "operator_type": "DeepResearchChatGPT",
+      "description": "Routes deep research tasks to ChatGPT-oriented synthesis workers as a premium fallback path.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 5,
+        "academic_critique": 4,
+        "long_context": 5
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "WebwrightPlaywright": {
+      "operator_type": "WebwrightPlaywright",
+      "description": "Runs deterministic Playwright/Webwright browser automation for browser research, UI inspection, and web artifact collection.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "browser_use": 5,
+        "gui_use": 4,
+        "data_extraction": 4
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "artifact_dir_only",
+        "payment_or_external_action": "denied"
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 2,
+        "singleton": false
+      }
+    },
+    "BrowserUseMcp": {
+      "operator_type": "BrowserUseMcp",
+      "description": "Runs quick browser-use MCP automation for lightweight snapshots, extraction, and browser-mediated checks.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "browser_use": 4,
+        "gui_use": 3,
+        "data_extraction": 4,
+        "speed": 4
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "artifact_dir_only",
+        "payment_or_external_action": "denied"
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "YoutubeTranscriptExtractor": {
+      "operator_type": "YoutubeTranscriptExtractor",
+      "description": "Extracts YouTube transcripts and related metadata through browser/webapp automation into auditable artifacts.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "browser_use": 4,
+        "data_extraction": 5,
+        "speed": 3
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "artifact_dir_only",
+        "payment_or_external_action": "denied"
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 2,
+        "singleton": false

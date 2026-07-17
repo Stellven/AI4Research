@@ -1,0 +1,43 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/info-smoke-research/scheduler_lifecycle/paper_ingest/task-info-smoke-research-scheduler-paper_ingest/research_memory_update.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allow_network_fetch": false,
+    "paper_id": "paper-info-smoke-research-scheduler",
+    "paper_path": "/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/raw/demo-paper.md",
+    "workflow_id": "scientific_research_lifecycle_full_v1",
+    "workflow_runner": "generic_workflow_runner"
+  },
+  "limitations": [
+    "Fixture proposes a memory update; it does not mutate wiki state."
+  ],
+  "node_id": "paper_ingest",
+  "outputs": {
+    "changes": [
+      {
+        "confidence": 0.9,
+        "entity_id": "paper-info-smoke-research-scheduler",
+        "entity_type": "paper",
+        "evidence_ids": [
+          "paper-info-smoke-research-scheduler"
+        ],
+        "operation": "propose",
+        "path": "knowledge/research/papers/paper-info-smoke-research-scheduler.md",
+        "summary": "Propose recording normalized metadata for Demo Paper."
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-01T23:50:36Z"
+  },
+  "schema": "research_memory_update.v1",
+  "sprint_id": "info-smoke-research-scheduler",
+  "status": "completed",
+  "task_id": "task-info-smoke-research-scheduler-paper_ingest"
+}

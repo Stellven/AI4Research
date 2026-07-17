@@ -1,0 +1,30 @@
+# Local comparison only
+No fetch was performed. Comparing current local OpenSolar worktree/index metadata to current local BetterSolar worktree.
+
+# OpenSolar HEAD
+9d68c5baa (HEAD -> feature/autosci-solar-native, origin/feature/autosci-solar-native) progress
+# BetterSolar HEAD
+cdc7e903 (HEAD -> openJiuwen-Solar, origin/pkg/migration, origin/openJiuwen-Solar, origin/HEAD) chore(dashboard): rebuild static bundle after rc8 integration
+
+# Files likely requiring manual merge
+different README.md
+different AGENTS.md
+different CLAUDE.md
+stellven_only bin/solar
+different harness/solar-harness.sh
+stellven_only core/daemon/skill-dispatcher.ts
+different harness/config/logical-operators.json
+different harness/config/physical-operators.json
+different harness/config/capability-capsules.registry.yaml
+different .gitignore
+
+# AutoSci module target path presence in BetterSolar
+absent harness/plugins/autosci
+absent harness/tools/run_scientific_workflow.py
+absent harness/tools/run_scientific_node_smoke.py
+absent harness/tools/run_scientific_lifecycle_smoke.py
+absent harness/workflows/scientific_research_lifecycle_full_v1.json
+absent harness/evaluators/scientific
+absent harness/schemas/evidence
+absent .agents/skills
+absent docs/integrations/autosci

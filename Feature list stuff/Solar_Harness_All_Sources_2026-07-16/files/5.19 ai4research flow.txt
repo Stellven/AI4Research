@@ -1,0 +1,47 @@
+ai4research flow (for solving an existing problem):
+- input: topic
+- agent: scan the latest progress of technology under that topic, generate analysis on that topic (find out what's the issue, and how can we improve on it)
+- agent generate 5 or 6 requirements (in sys v2 which addresses the issue) for the research, but human do final decision, confirm the requirements.
+- after decision made, ai generate research design
+- agents use ai coding capabilities to generate POC demo.
+- agents do benchmark testing on the benchmark demos
+- use to define the logic and world model to the agent, model can also be part of the verification (cuz output not stable)
+- have a agent to review the benchmark results (if demo work or not)
+- in the end model will be released to opensource community
+- V-model (waterfall model) will be used in the pipeline
+	- Requirement -> User Acceptance test with test case ready (manifestation of the required specs)
+	- Design -> Integration test
+	- Coding -> Unit test
+
+look at opensource ai4research projects
+
+use codex as agent environment
+use codex to generate code
+function requirements is input (a research report) doc, and (use agent + skills) to output a ppt (having word, diagram, charts)
+
+
+ai4research: function workflow
+
+1. topic -> 
+2. generate research report (containing proposals to address the issue) -> human intervention
+3. design of the demo of the POC -> human intervention
+4. ai coding to workout the demo 
+5. demo
+|                        |
+\                        /
+could have some human intervention but not necessary
+
+(e.g: what are the skill life cycle management of top companies)
+
+
+working for:
+- ourselfs
+- team	**expected
+- enterprises
+
+how do we goverance skills?
+- formalization (use equations and constraints mathmatically to prove skill is correct)
+- Testing (write test cases and use practical ways to prove skill.) **use this method to govern skills
+
+topic (assume worth research):
+e.g: how does the top companies govern ai?

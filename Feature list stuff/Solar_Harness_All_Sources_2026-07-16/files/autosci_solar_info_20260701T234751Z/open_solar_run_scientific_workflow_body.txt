@@ -1,0 +1,301 @@
+            "report_title": args.report_title or "Scientific Workflow Report Plan",
+        })
+    if node_id == "report_draft":
+        inputs.update({
+            "claim_id": "claim-001",
+            "experiment_id": "exp-001",
+            "report_id": f"report-{args.job_id}",
+            "report_title": args.report_title or "Scientific Workflow Report",
+            "paper_draft": True,
+        })
+        if report_plan_path:
+            inputs["report_plan_evidence"] = report_plan_path
+    if node_id == "artifact_review" and report_path:
+        inputs["target"] = report_path
+        inputs["artifact_path"] = report_path
+    if node_id == "publication_produce":
+        inputs["checklist"] = True
+        inputs["title"] = args.report_title or "Scientific Workflow Publication"
+        if args.compile_target:
+            inputs["target"] = args.compile_target
+            inputs["paper_path"] = args.compile_target
+        if args.compile_runtime_evidence:
+            inputs["runtime_evidence"] = list(args.compile_runtime_evidence)
+        if args.compile_approval_ref:
+            inputs["approval_ref"] = args.compile_approval_ref
+    if node_id == "memory_update_final" and report_path:
+        inputs["source_evidence"] = report_path
+    if node_id == "workflow_evolve":
+        inputs["failed_run"] = {
+            "workflow_id": args.workflow_id,
+            "sprint_id": args.job_id,
+            "nodes": [],
+            "gate_results": {},
+            "ambiguous_manuals_or_prompts": [],
+            "insufficient_schemas": [],
+            "poor_operator_bindings": [],
+            "human_intervention_points": [],
+            "runtime_errors": [],
+        }
+    return inputs
+
+
+def _contains_fixture_reference(value: Any) -> bool:
+    if isinstance(value, str):
+        normalized = value.replace("\\", "/")
+        return "fixtures/" in normalized or "/fixtures/" in normalized
+    if isinstance(value, list):
+        return any(_contains_fixture_reference(item) for item in value)
+    if isinstance(value, dict):
+        return any(_contains_fixture_reference(item) for item in value.values())
+    return False
+
+
+def _dispatch_input_profile(spec: dict[str, Any], node_args: argparse.Namespace) -> dict[str, Any]:
+    fixture_markers: list[str] = []
+    if _contains_fixture_reference(getattr(node_args, "paper", "")):
+        fixture_markers.append("fixture_reference_in_paper")
+    if _contains_fixture_reference(getattr(node_args, "extra_inputs", {})):
+        fixture_markers.append("fixture_reference_in_inputs")
+    return {
+        "node_id": spec["node_id"],
+        "logical_operator": spec["logical_operator"],
+        "operator_id": spec["operator_id"],
+        "action": spec["action"],
+        "runner_mode": str(getattr(node_args, "runtime_mode", "")),
+        "runner_contract": str(getattr(node_args, "runner_contract", "")),
+        "smoke_mode": False,
+        "fixture_markers": fixture_markers,
+        "uses_fixture_or_smoke_input": bool(fixture_markers),
+    }
+
+
+def _node_args(
+    args: argparse.Namespace,
+    harness_dir: Path,
+    workflow_output_dir: Path,
+    spec: dict[str, Any],
+    node_results: dict[str, Any],
+) -> argparse.Namespace:
+    node_id = spec["node_id"]
+    return argparse.Namespace(
+        harness_dir=str(harness_dir),
+        operator_id=spec["operator_id"],
+        node_id=node_id,
+        action=spec["action"],
+        logical_operator=spec["logical_operator"],
+        expected_schema=None,
+        evidence_name=spec["evidence_name"],
+        task_id=f"task-{args.job_id}-{node_id}",
+        sprint_id=args.job_id,
+        paper=args.paper,
+        paper_id=f"paper-{args.job_id}",
+        input_json=None,
+        extra_inputs=_extra_inputs_for(spec, node_results, args),
+        output_dir=_rel(workflow_output_dir / node_id, harness_dir),
+        out=None,
+        timeout_seconds=float(args.timeout_seconds),
+        lease_ttl_seconds=int(args.lease_ttl_seconds),
+        allow_existing_result=bool(args.allow_existing_result),
+        runtime_mode="solar_scientific_workflow",
+        runner_contract="generic_workflow_runner",
+        objective=f"Run {node_id} from scientific workflow {args.workflow_id}.",
+    )
+
+
+def _gate_lifecycle(summary_path: Path, harness_dir: Path) -> dict[str, Any]:
+    env = os.environ.copy()
+    env["HARNESS_DIR"] = str(harness_dir)
+    proc = subprocess.run(
+        [sys.executable, str(REPO_HARNESS_DIR / "evaluators/scientific/lifecycle_runtime_gate.py"), str(summary_path)],
+        cwd=str(REPO_HARNESS_DIR),
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        payload = {
+            "ok": False,
+            "status": "failed",
+            "reasons": [f"lifecycle_runtime_gate emitted non-json output: {proc.stdout.strip()}"],
+            "warnings": [proc.stderr.strip()] if proc.stderr.strip() else [],
+        }
+    payload["exit_code"] = proc.returncode
+    if proc.stderr.strip():
+        payload.setdefault("warnings", []).append(proc.stderr.strip())
+    return payload
+
+
+def _runtime_manifest(
+    *,
+    workflow_id: str,
+    job_id: str,
+    node_results: dict[str, Any],
+    harness_dir: Path,
+    out_path: Path,
+) -> dict[str, Any]:
+    proofs: list[dict[str, Any]] = []
+    for node_id, result in sorted(node_results.items()):
+        if not isinstance(result, dict):
+            continue
+        native_skill = CAPABILITY_NATIVE_SKILL_BY_NODE.get(node_id, node_id)
+        refs = [
+            str(result.get("artifact_path") or ""),
+            str(result.get("operator_result_path") or ""),
+            str(result.get("bridge_result_path") or ""),
+        ]
+        proofs.append({
+            "proof_id": f"workflow-runtime:{workflow_id}:{job_id}:{node_id}",
+            "native_skill": native_skill,
+            "categories": ["workflow_node_runtime_evidence"],
+            "evidence_refs": [ref for ref in refs if ref],
+            "description": "Generic scientific workflow runner dispatched this node through operator_runtime and the AutoSci bridge.",
+        })
+    manifest = {
+        "schema": "scientific_workflow_runtime_manifest.v1",
+        "workflow_id": workflow_id,
+        "job_id": job_id,
+        "generated_by": "harness.tools.run_scientific_workflow",
+        "proofs": proofs,
+    }
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest["path"] = _rel(out_path, harness_dir)
+    return manifest
+
+
+def _dispatch_boundary(
+    *,
+    workflow_id: str,
+    workflow_config: Path,
+    summary_path: Path,
+    required_nodes: list[str],
+    dispatch_input_profiles: dict[str, Any],
+    blocked_nodes: dict[str, Any],
+) -> dict[str, Any]:
+    fixture_nodes = [
+        node_id
+        for node_id, profile in sorted(dispatch_input_profiles.items())
+        if isinstance(profile, dict) and profile.get("uses_fixture_or_smoke_input")
+    ]
+    blocking_reasons: list[str] = []
+    if fixture_nodes:
+        blocking_reasons.append("node_inputs_include_fixture_or_fixture_fallback")
+    if blocked_nodes:
+        blocking_reasons.append("workflow_has_blocked_nodes")
+    production_ready = not fixture_nodes and not blocked_nodes
+    return {
+        "schema": "autosci_scheduler_dispatch_boundary.v1",
+        "status": "generic_workflow_runner",
+        "production_ready": production_ready,
+        "runner": _rel(Path(__file__).resolve(), REPO_HARNESS_DIR),
+        "runner_contract": "generic_workflow_runner",
+        "workflow_id": workflow_id,
+        "workflow_config_path": _rel(workflow_config, REPO_HARNESS_DIR),
+        "workflow_config_sha256": _sha256(workflow_config),
+        "summary_path": _rel(summary_path, Path(os.environ.get("HARNESS_DIR", REPO_HARNESS_DIR)).resolve()),
+        "required_nodes": list(required_nodes),
+        "profiled_nodes": sorted(dispatch_input_profiles),
+        "smoke_nodes": [],
+        "fixture_nodes": fixture_nodes,
+        "blocking_reasons": blocking_reasons,
+        "limitations": [] if production_ready else [
+            "Generic workflow dispatch is present, but some nodes still need non-fixture inputs or supplied external runtime evidence."
+        ],
+    }
+
+
+def run(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
+    harness_dir = Path(args.harness_dir).expanduser().resolve()
+    workflow_config = _resolve_harness_path(harness_dir, args.workflow_config)
+    selected = set(args.node_id or []) or None
+    workflow_id, specs = _workflow_nodes(workflow_config, selected)
+    args.workflow_id = workflow_id
+    args.job_id = args.job_id or f"job-scientific-workflow-{_utc_stamp()}"
+
+    scientific_artifact_root = _artifact_root_from_env(
+        harness_dir,
+        "SCIENTIFIC_ARTIFACT_ROOT",
+        "artifacts/scientific",
+    )
+    output_dir = _resolve_harness_path(
+        harness_dir,
+        args.output_dir or scientific_artifact_root / "workflow-runs" / args.job_id,
+    )
+    summary_path = _resolve_harness_path(
+        harness_dir,
+        args.out or output_dir / "scientific_workflow_runtime.json",
+    )
+    runtime_manifest_path = output_dir / "scientific_workflow_runtime_manifest.json"
+
+    node_summaries: dict[str, Any] = {}
+    node_results: dict[str, Any] = {}
+    gate_results: dict[str, Any] = {}
+    blocked_nodes: dict[str, Any] = {}
+    dispatch_input_profiles: dict[str, Any] = {}
+    checks: list[dict[str, str]] = []
+    required_nodes = [spec["node_id"] for spec in specs]
+    nodes = [
+        {
+            "id": spec["node_id"],
+            "logical_operator": spec["logical_operator"],
+            "operator_id": spec["operator_id"],
+            "action": spec["action"],
+            "gate": spec["gate"],
+            "depends_on": list(spec.get("depends_on") or []),
+        }
+        for spec in specs
+    ]
+
+    for spec in specs:
+        node_id = spec["node_id"]
+        block_reason = _should_block_before_dispatch(args, spec, node_results)
+        if block_reason:
+            blocked_nodes[node_id] = _blocked_node(args.job_id, spec, block_reason)
+            checks.append({
+                "check": f"{node_id}_blocked",
+                "status": "ok",
+                "detail": block_reason,
+            })
+            if args.stop_on_blocked:
+                break
+            continue
+        node_args = _node_args(args, harness_dir, output_dir, spec, node_results)
+        dispatch_input_profiles[node_id] = _dispatch_input_profile(spec, node_args)
+        code, node_summary = node_runtime.run(node_args)
+        node_summaries[node_id] = node_summary
+        node_ok = code == 0 and node_summary.get("status") == "passed"
+        checks.append({
+            "check": f"{node_id}_dispatched",
+            "status": "ok" if node_ok else "error",
+            "detail": str(node_summary.get("status")),
+        })
+        if not node_ok:
+            if args.stop_on_failure:
+                break
+            continue
+        node_result, gate_result = lifecycle_smoke._node_result_from_summary(
+            node_summary=node_summary,
+            harness_dir=harness_dir,
+            job_id=args.job_id,
+            gate_name=spec["gate"],
+        )
+        node_results[node_id] = node_result
+        gate_results[node_id] = gate_result
+
+    runtime_manifest = _runtime_manifest(
+        workflow_id=workflow_id,
+        job_id=args.job_id,
+        node_results=node_results,
+        harness_dir=harness_dir,
+        out_path=runtime_manifest_path,
+    )
+    checks.append({
+        "check": "generic_workflow_runtime_manifest_written",
+        "status": "ok" if Path(runtime_manifest_path).exists() else "error",
+        "detail": _rel(runtime_manifest_path, harness_dir),
+    })

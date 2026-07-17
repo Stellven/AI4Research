@@ -1,0 +1,699 @@
+{
+  "package_name": "solar_harness_complete_sources_2026-07-16",
+  "package_date": "2026-07-16",
+  "scope": "Solar Harness / Solar-native AutoSci / OpenSolar / BetterSolar / AI4Research",
+  "source_file_count": 83,
+  "source_bytes": 14242079,
+  "empty_source_files": [],
+  "category_counts": {
+    "Architecture and visual artifacts": 5,
+    "Coding-agent and review prompts": 9,
+    "Current feature deliverable": 1,
+    "Feature inventory and QA": 23,
+    "Fixtures and packaged evidence": 1,
+    "Other Solar Harness source": 1,
+    "Plans, manifests, and status documents": 11,
+    "Raw evidence and extraction": 20,
+    "Supporting report guidance": 2,
+    "Technical and project reports": 10
+  },
+  "extension_counts": {
+    ".docx": 12,
+    ".html": 2,
+    ".md": 22,
+    ".pdf": 2,
+    ".png": 2,
+    ".pptx": 2,
+    ".tgz": 1,
+    ".txt": 18,
+    ".xlsx": 18,
+    ".yaml": 2,
+    ".zip": 2
+  },
+  "files": [
+    {
+      "relative_path": "files/5.19 ai4research flow.txt",
+      "filename": "5.19 ai4research flow.txt",
+      "category": "Other Solar Harness source",
+      "extension": ".txt",
+      "size_bytes": 2030,
+      "sha256": "bfd6c82c37eb2f8340d2255925515fdf417293014967031c4e9cf2fbd9f3c4e5"
+    },
+    {
+      "relative_path": "files/AI4Research/ai4research final l1 l2 feature deliverable.xlsx",
+      "filename": "ai4research final l1 l2 feature deliverable.xlsx",
+      "category": "Current feature deliverable",
+      "extension": ".xlsx",
+      "size_bytes": 41878,
+      "sha256": "6ccbccff262bb5a121a586822cc184c6126abe79e21764cd548f216fe6b375ac"
+    },
+    {
+      "relative_path": "files/AI4Research/solar_harness_source_inventory_2026-07-16.md",
+      "filename": "solar_harness_source_inventory_2026-07-16.md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 13227,
+      "sha256": "6b6586b0fcf14e126fc8d2fe9d06f4c07d694fc3af9ab9f37994088a3a96a70f"
+    },
+    {
+      "relative_path": "files/AI4Research_Planning_Report_Enhanced.docx",
+      "filename": "AI4Research_Planning_Report_Enhanced.docx",
+      "category": "Feature inventory and QA",
+      "extension": ".docx",
+      "size_bytes": 64360,
+      "sha256": "78cd71b6de76093dc9bb6ba24466c714a82b9d0cc978379445eb931e47979b16"
+    },
+    {
+      "relative_path": "files/AI4Research_Solar_RSI_汇报版_逻辑顺序最终版_深度分析主干重构版.html",
+      "filename": "AI4Research_Solar_RSI_汇报版_逻辑顺序最终版_深度分析主干重构版.html",
+      "category": "Feature inventory and QA",
+      "extension": ".html",
+      "size_bytes": 283787,
+      "sha256": "c8186365c308e4f9e63478f48d5c29e3272bbe95a6c19a21b73ec432fb5829df"
+    },
+    {
+      "relative_path": "files/AI时代技术创新与技术规划中的AI4Research闭环实践报告.docx",
+      "filename": "AI时代技术创新与技术规划中的AI4Research闭环实践报告.docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 124467,
+      "sha256": "7f8ee5f1138c0323d8975aafe593e5a3492f09e04742d901da8e1f2724970fd4"
+    },
+    {
+      "relative_path": "files/AUTOSCI_SOLAR_INFO_REPORT.md",
+      "filename": "AUTOSCI_SOLAR_INFO_REPORT.md",
+      "category": "Raw evidence and extraction",
+      "extension": ".md",
+      "size_bytes": 19226,
+      "sha256": "573486ca45c06f21da05bb9b2fa73b367a700839bac511131ef540acb2cd30b3"
+    },
+    {
+      "relative_path": "files/AutoSci_Solar_100_Percent_Parity_Fast_Track_Coding_Agent_Prompt.md",
+      "filename": "AutoSci_Solar_100_Percent_Parity_Fast_Track_Coding_Agent_Prompt.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 23686,
+      "sha256": "da95597148dfc8071d0f21cbe7ba80bf3cb49a2990484bb5e983f3a7d3d11c34"
+    },
+    {
+      "relative_path": "files/AutoSci_Solar_Info_Gathering_Coding_Agent_Prompt.md",
+      "filename": "AutoSci_Solar_Info_Gathering_Coding_Agent_Prompt.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 34820,
+      "sha256": "d63d4f7a8b0defbcbb20de36b70c25e95e82071a3ba5dccc27716e0f51dce6b2"
+    },
+    {
+      "relative_path": "files/AutoSci_Solar_Native_ChatGPT_Check_Status_Report.md",
+      "filename": "AutoSci_Solar_Native_ChatGPT_Check_Status_Report.md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 27248,
+      "sha256": "65d604065d3549aae8331d8fc5c52d356e4ea2685ed2b8aa8a15bd40e6134471"
+    },
+    {
+      "relative_path": "files/AutoSci_Solar_Native_Migration_Master_Handoff_2026-06-26.md",
+      "filename": "AutoSci_Solar_Native_Migration_Master_Handoff_2026-06-26.md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 156216,
+      "sha256": "9ea49b252fbc605728f138e820a2eb9024455b87cdc67df7ad6355ae8b9033fe"
+    },
+    {
+      "relative_path": "files/AutoSci_Solar_Parity_Recheck_and_Coding_Agent_Execution_Plan_2026-06-29.md",
+      "filename": "AutoSci_Solar_Parity_Recheck_and_Coding_Agent_Execution_Plan_2026-06-29.md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 24836,
+      "sha256": "3185808f2f1aac92f1bbb3fb5242f981bddeade4d781f9410db58af6e311c16e"
+    },
+    {
+      "relative_path": "files/AutoSci_Solar_Prioritized_Integration_Plan_2026-06-30.md",
+      "filename": "AutoSci_Solar_Prioritized_Integration_Plan_2026-06-30.md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 31003,
+      "sha256": "2109a0c5e679964f9ebe044bb03ee3848310fc9e447a44cda64601a9acf4dba3"
+    },
+    {
+      "relative_path": "files/DO_Agent_A_Unification_Hardening.md",
+      "filename": "DO_Agent_A_Unification_Hardening.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 14353,
+      "sha256": "4798757e3e288aafddf77ba02cff5f554d440a2d83eb44b07d3aa4e0bed96fed"
+    },
+    {
+      "relative_path": "files/DO_Agent_B_Full_Parity.md",
+      "filename": "DO_Agent_B_Full_Parity.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 12804,
+      "sha256": "aade46a7a2bcbc6589236e77e87e417cc61d0dbc79bcfc68bf936105a636db6c"
+    },
+    {
+      "relative_path": "files/First-Draft-of-Technical-Report-Template(1).docx",
+      "filename": "First-Draft-of-Technical-Report-Template(1).docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 196801,
+      "sha256": "a5679b4beea3eae3d169da719cd504fcad04233eb637325ca5c950623cfee8c5"
+    },
+    {
+      "relative_path": "files/First-Draft-of-Technical-Report-Template.docx",
+      "filename": "First-Draft-of-Technical-Report-Template.docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 41777,
+      "sha256": "ea7592c26131fdf9d59cfba3335a690345b693d7fdea78eb8ed69237915e8afb"
+    },
+    {
+      "relative_path": "files/Parallel_AutoSci_Solar_Agent_Coordination.md",
+      "filename": "Parallel_AutoSci_Solar_Agent_Coordination.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 3732,
+      "sha256": "9a0aff72f6f16632c1ea4b8fadc5f7da34d3aec84f4b17878936a061f6e4c37f"
+    },
+    {
+      "relative_path": "files/Pasted text.txt",
+      "filename": "Pasted text.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 19727,
+      "sha256": "9b20d5c29fdc15739e580fee2a5b32df6eae1c349a8b73fe467514baa5a0d795"
+    },
+    {
+      "relative_path": "files/Prompt_A_Solar_Unification_Agent.md",
+      "filename": "Prompt_A_Solar_Unification_Agent.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 21914,
+      "sha256": "16727c4e852dea702dcbe80085819c131223fa1cca57831de610d41c73d01a25"
+    },
+    {
+      "relative_path": "files/Prompt_B_AutoSci_Full_Parity_Agent.md",
+      "filename": "Prompt_B_AutoSci_Full_Parity_Agent.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 18484,
+      "sha256": "705b73df5181f0a3435a2f73171e524782540b84dce43eba6fb365e775d10770"
+    },
+    {
+      "relative_path": "files/Second-Draft-of-Technical-Report.docx",
+      "filename": "Second-Draft-of-Technical-Report.docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 117700,
+      "sha256": "db10a587805ccf49c254ee41e6cdf0ac49d5fb8091f84c6a2f60591e953ea1c3"
+    },
+    {
+      "relative_path": "files/Second-Draft-of-Technical-Report_Revised.docx",
+      "filename": "Second-Draft-of-Technical-Report_Revised.docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 185661,
+      "sha256": "cdeef60e9b2ce0dc1bb8befcdd85bb29b6b139ee584dc337350df7f10301f7e9"
+    },
+    {
+      "relative_path": "files/Section 1: Drafting a Technical Report.pdf",
+      "filename": "Section 1: Drafting a Technical Report.pdf",
+      "category": "Supporting report guidance",
+      "extension": ".pdf",
+      "size_bytes": 1775070,
+      "sha256": "b51498ebced608f6016e46900a62adfd9ad8e5ef034aff564b1523f4ac87100b"
+    },
+    {
+      "relative_path": "files/Section 1: The Structure of a Technical Report.pdf",
+      "filename": "Section 1: The Structure of a Technical Report.pdf",
+      "category": "Supporting report guidance",
+      "extension": ".pdf",
+      "size_bytes": 209722,
+      "sha256": "0f4ec965cb5020836e8e6d128ea7fba224a10d33669b0943f19cda6f06e8233a"
+    },
+    {
+      "relative_path": "files/Solar_Harness_Architecture_OnePage(1).pptx",
+      "filename": "Solar_Harness_Architecture_OnePage(1).pptx",
+      "category": "Architecture and visual artifacts",
+      "extension": ".pptx",
+      "size_bytes": 47543,
+      "sha256": "191d6cb66387010384b8bf323f49a0818fc9d1e7f97945c0c460d0ef3669c225"
+    },
+    {
+      "relative_path": "files/Solar_Harness_Architecture_OnePage.pptx",
+      "filename": "Solar_Harness_Architecture_OnePage.pptx",
+      "category": "Architecture and visual artifacts",
+      "extension": ".pptx",
+      "size_bytes": 32895,
+      "sha256": "8fd435a970c23b2e2afe15931ae13829c57e0ffd8eaab66420278ad496535bf8"
+    },
+    {
+      "relative_path": "files/Solar_Native_AutoSci_Technical_Report_Draft.docx",
+      "filename": "Solar_Native_AutoSci_Technical_Report_Draft.docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 192613,
+      "sha256": "546cf52e6ef581caf3bbe2dfd9b53a49a5c7de9a79568e012e3e3b53a9c9d877"
+    },
+    {
+      "relative_path": "files/Solar_Native_AutoSci_Technical_Report_PD11_Operator_Assimilation.docx",
+      "filename": "Solar_Native_AutoSci_Technical_Report_PD11_Operator_Assimilation.docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 182852,
+      "sha256": "1463f677208cb7f0e3d8c1e0de2c20b6128dcb28de91104d16a84f08615dd6d1"
+    },
+    {
+      "relative_path": "files/Solar_Native_AutoSci_Technical_Report_PD11_Revised(1).docx",
+      "filename": "Solar_Native_AutoSci_Technical_Report_PD11_Revised(1).docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 120418,
+      "sha256": "e1a2269f93090b958dbe807e51f350e3c4f2a04a6547c332403dc5416b4ff5d5"
+    },
+    {
+      "relative_path": "files/Solar_Native_AutoSci_Technical_Report_PD11_Revised.docx",
+      "filename": "Solar_Native_AutoSci_Technical_Report_PD11_Revised.docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 120418,
+      "sha256": "e1a2269f93090b958dbe807e51f350e3c4f2a04a6547c332403dc5416b4ff5d5"
+    },
+    {
+      "relative_path": "files/ai4research_coding_agent_qa_control_pack.docx",
+      "filename": "ai4research_coding_agent_qa_control_pack.docx",
+      "category": "Feature inventory and QA",
+      "extension": ".docx",
+      "size_bytes": 41603,
+      "sha256": "842d17b32ebe2de3a7610315d17d44b33f6f1993ff12a7650c214bb22a0ef142"
+    },
+    {
+      "relative_path": "files/ai4research_fixture_set_instructions.md",
+      "filename": "ai4research_fixture_set_instructions.md",
+      "category": "Feature inventory and QA",
+      "extension": ".md",
+      "size_bytes": 3393,
+      "sha256": "a819db3f2977250f096bc2a067f2bcf9b0dd05d8d5d3abcf4a9527a8182df31e"
+    },
+    {
+      "relative_path": "files/ai4research_qa_agent_package.zip",
+      "filename": "ai4research_qa_agent_package.zip",
+      "category": "Feature inventory and QA",
+      "extension": ".zip",
+      "size_bytes": 1226154,
+      "sha256": "8e33ce371e8fd2d5d39b72fcb3bbb976ef5391a83ccf48d8aee1ec95aa435cdd"
+    },
+    {
+      "relative_path": "files/ai4research_recursive_feature_split.xlsx",
+      "filename": "ai4research_recursive_feature_split.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 126584,
+      "sha256": "d65ffc5d5e63ff9b1fd41c3d11bbc979ebfc8b31f16f8580506209b2cb40fd69"
+    },
+    {
+      "relative_path": "files/ai4research_recursive_feature_split_qa_execution.xlsx",
+      "filename": "ai4research_recursive_feature_split_qa_execution.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 1228842,
+      "sha256": "80432dffecfa896a7ff34aa70545232441ef584f445356ad36cfc073afd74403"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook(1).xlsx",
+      "filename": "ai4research_restructured_feature_workbook(1).xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 319749,
+      "sha256": "2733ed1b072eb2dbb62531d8fd5fdeb4cb9fa4c9157273611c9de11e3642ab99"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook.xlsx",
+      "filename": "ai4research_restructured_feature_workbook.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 299434,
+      "sha256": "4540553243b15d791462d8e3d571c4c8382718ae3e2d83307c5c391148817f19"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_annotated_zh.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_annotated_zh.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 434418,
+      "sha256": "7755782ec7b23a129cb5e9fe2c878116e9f65eb323f55bca0bf8eee99dc9803d"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_annotated_zh_action.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_annotated_zh_action.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 435257,
+      "sha256": "b9eaa5ae9e203f7890c9f906dc1f851929fa9519bfd734cc78494e3f95c18acc"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_updated.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_updated.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 309988,
+      "sha256": "3aec8ce64d36e45d8f81da931f05a634942f4d4d30601456a8f7fc6bc6c87dd9"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_workflow_audited_dimensions.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_workflow_audited_dimensions.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 356298,
+      "sha256": "edcde0511ade16d878d3f9241c15f6837ea69dd5b81668b7f6cf1d4189f0fbb5"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_workflow_finer_sorted.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_workflow_finer_sorted.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 335635,
+      "sha256": "e4fbdb0817fde06dc762e8c0f1caae6ce11b8398a09d9d4b262fbab6745ed4a5"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_workflow_l2_pipeline.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_workflow_l2_pipeline.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 448248,
+      "sha256": "010c15980e803ab3256d974b4d1db1bcc80a11772ff74a78cf8dda3cead47421"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_workflow_l2_pipeline_v2.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_workflow_l2_pipeline_v2.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 466004,
+      "sha256": "97281e8c8cce5e570b6de5c06336d44dcc86f08d16eea8137021af268c95a4a5"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_workflow_l2_pipeline_v2_no_chinese_annotations.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_workflow_l2_pipeline_v2_no_chinese_annotations.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 370021,
+      "sha256": "68bb4c17140d32e1ea8c978b48d483c8be8b36d6647ff3fe5eda6f10d8bb9cc6"
+    },
+    {
+      "relative_path": "files/ai4research_restructured_feature_workbook_workflow_refined.xlsx",
+      "filename": "ai4research_restructured_feature_workbook_workflow_refined.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 316014,
+      "sha256": "f5d9de1f8546391bd42fb09e98ef30d42eb7b2907edab2e6a5edc8061226c2ed"
+    },
+    {
+      "relative_path": "files/ai4research_test_execution_runbook.md",
+      "filename": "ai4research_test_execution_runbook.md",
+      "category": "Feature inventory and QA",
+      "extension": ".md",
+      "size_bytes": 4118,
+      "sha256": "17a3d899c93cc825293d6c1e4dc3a304ed65ebe50736fec8f525b267de83894b"
+    },
+    {
+      "relative_path": "files/ai4research_three_part_level1_features.xlsx",
+      "filename": "ai4research_three_part_level1_features.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 13446,
+      "sha256": "0dae50c608100b6c4d3a8b50418455cb6db3d5bbba42aeebc7286a436dcef5d4"
+    },
+    {
+      "relative_path": "files/autosci_example_wiki.zip",
+      "filename": "autosci_example_wiki.zip",
+      "category": "Fixtures and packaged evidence",
+      "extension": ".zip",
+      "size_bytes": 15315,
+      "sha256": "692710c6be06f06347049320ae9d46752bc056fe5f86579dc238b3e37d50ccb0"
+    },
+    {
+      "relative_path": "files/autosci_migration_coding_agent_prompt_2026-06-25.md",
+      "filename": "autosci_migration_coding_agent_prompt_2026-06-25.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 49069,
+      "sha256": "cb79cfb3a2dda60750ec8a0b5557c9c1a77539b1ee650b91398bd788a9dffa0e"
+    },
+    {
+      "relative_path": "files/autosci_perfect_run_acceptance_manifest.md",
+      "filename": "autosci_perfect_run_acceptance_manifest.md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 23133,
+      "sha256": "21eb9120c0b6c9123a21e6bd9548e4a8c4e1d7c2c36050997e6f8a9c5764f1e7"
+    },
+    {
+      "relative_path": "files/autosci_perfect_run_acceptance_manifest.yaml",
+      "filename": "autosci_perfect_run_acceptance_manifest.yaml",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".yaml",
+      "size_bytes": 5653,
+      "sha256": "c3cc410596a54e09b595d5481ebe3d93a910c9829a0a5d91b455aad10895bf21"
+    },
+    {
+      "relative_path": "files/autosci_solar_gap_analysis_2026-06-25.md",
+      "filename": "autosci_solar_gap_analysis_2026-06-25.md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 49849,
+      "sha256": "fd06a275074cd94b80b4d70a411db89598fe53d6c4d9502dff627348b11b6e28"
+    },
+    {
+      "relative_path": "files/autosci_solar_info_20260701T234751Z.tgz",
+      "filename": "autosci_solar_info_20260701T234751Z.tgz",
+      "category": "Raw evidence and extraction",
+      "extension": ".tgz",
+      "size_bytes": 374361,
+      "sha256": "53a9656bf4579a87149028d262c310da489b7b165dbded162183fb4ef66372a9"
+    },
+    {
+      "relative_path": "files/autosci_solar_native_implementation_plan(1)(1).md",
+      "filename": "autosci_solar_native_implementation_plan(1)(1).md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 52283,
+      "sha256": "3fd380d97a681e5854a6d5434fa33382ea0ab288f6cab697f2e71aaa3598915d"
+    },
+    {
+      "relative_path": "files/autosci_solar_native_implementation_plan(1).md",
+      "filename": "autosci_solar_native_implementation_plan(1).md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 52283,
+      "sha256": "3fd380d97a681e5854a6d5434fa33382ea0ab288f6cab697f2e71aaa3598915d"
+    },
+    {
+      "relative_path": "files/autosci_solar_native_implementation_plan.md",
+      "filename": "autosci_solar_native_implementation_plan.md",
+      "category": "Plans, manifests, and status documents",
+      "extension": ".md",
+      "size_bytes": 52426,
+      "sha256": "a952d4b12cb74f9ceca4a062ed96c591fb710c56bd94b1bdc1b2239ba86b37d4"
+    },
+    {
+      "relative_path": "files/fa921640-d5ea-4446-bbde-aa0020b04136.png",
+      "filename": "fa921640-d5ea-4446-bbde-aa0020b04136.png",
+      "category": "Architecture and visual artifacts",
+      "extension": ".png",
+      "size_bytes": 593745,
+      "sha256": "4a8a8c53031226f82754ad365de74d8430076c74805a628f00eebd71b81f2913"
+    },
+    {
+      "relative_path": "files/final_git_status.txt",
+      "filename": "final_git_status.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 2405,
+      "sha256": "91a96679519296ced364fe3674a4ed942fa56905b177d586a08c823e304e8cea"
+    },
+    {
+      "relative_path": "files/final_paths.txt",
+      "filename": "final_paths.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 129,
+      "sha256": "de644f703f9ddfa7b8ac006a10fd209ba04a30625e7973183cdcf800f6e39a2f"
+    },
+    {
+      "relative_path": "files/initial_git_status.txt",
+      "filename": "initial_git_status.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 2405,
+      "sha256": "91a96679519296ced364fe3674a4ed942fa56905b177d586a08c823e304e8cea"
+    },
+    {
+      "relative_path": "files/native_file__claude_skills_paper-compile_SKILL_md.txt",
+      "filename": "native_file__claude_skills_paper-compile_SKILL_md.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 9523,
+      "sha256": "c8de0df6e6e3fa1e359e9462648a5405ed20493177b64bac7116ae94607e38c6"
+    },
+    {
+      "relative_path": "files/native_file_tools_init_discovery_py.txt",
+      "filename": "native_file_tools_init_discovery_py.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 17660,
+      "sha256": "6316a31d9768b7c5ba9a0bc6453c12fbe4ae054b3a81996cfef170fac2d4a945"
+    },
+    {
+      "relative_path": "files/native_file_tools_research_wiki_py.txt",
+      "filename": "native_file_tools_research_wiki_py.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 18760,
+      "sha256": "175831ed214e3698e1d5afd1b87dcd47be3a4666b8d6da41671296efc7153783"
+    },
+    {
+      "relative_path": "files/open_solar_artifact_hygiene.txt",
+      "filename": "open_solar_artifact_hygiene.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 3751,
+      "sha256": "59f8f228be00721fc4c4388be1a3dfc355182977b03955a1486a2401895708b9"
+    },
+    {
+      "relative_path": "files/open_solar_autosci_manifest.yaml",
+      "filename": "open_solar_autosci_manifest.yaml",
+      "category": "Raw evidence and extraction",
+      "extension": ".yaml",
+      "size_bytes": 2079,
+      "sha256": "206238bb57d7d30e057dcb3e56709b530d0d31731005e3d4e64928fc7deb29d8"
+    },
+    {
+      "relative_path": "files/open_solar_git_status_after_tests.txt",
+      "filename": "open_solar_git_status_after_tests.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 146,
+      "sha256": "f533446f5df243d50d4fd0058018f0b235da82218ef63c06481fbdc70496e9b4"
+    },
+    {
+      "relative_path": "files/open_solar_ls_files.txt",
+      "filename": "open_solar_ls_files.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 617453,
+      "sha256": "1aad44911da813b195453e08f27d08453339c10628346d07ed71885944103982"
+    },
+    {
+      "relative_path": "files/open_solar_manual_product_smoke.txt",
+      "filename": "open_solar_manual_product_smoke.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 37691,
+      "sha256": "423b9485a2ce6959c5620eae8dafd339d14a55b00ed4263b3ca7e23fe2cd4f40"
+    },
+    {
+      "relative_path": "files/open_solar_run_scientific_workflow_head.txt",
+      "filename": "open_solar_run_scientific_workflow_head.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 10834,
+      "sha256": "1ca81b82b006919679f03c114a2aa9f6dd99f36f22bdaa008f93882df0c90c84"
+    },
+    {
+      "relative_path": "files/open_solar_shim_head.txt",
+      "filename": "open_solar_shim_head.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 4728,
+      "sha256": "2257ff88f3a3726700670a9ed6d08cda26981007ba21dcc54188f083c8de5cd4"
+    },
+    {
+      "relative_path": "files/qa_inventory_test_mapping_and_pass_fail_merged(1).xlsx",
+      "filename": "qa_inventory_test_mapping_and_pass_fail_merged(1).xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 196052,
+      "sha256": "ce8a55ccb4a28be998814e154aa8def0d000f7dc69acc70e1b0bb2c4898d2910"
+    },
+    {
+      "relative_path": "files/qa_inventory_test_mapping_and_pass_fail_merged(2).xlsx",
+      "filename": "qa_inventory_test_mapping_and_pass_fail_merged(2).xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 196052,
+      "sha256": "ce8a55ccb4a28be998814e154aa8def0d000f7dc69acc70e1b0bb2c4898d2910"
+    },
+    {
+      "relative_path": "files/qa_inventory_test_mapping_and_pass_fail_merged.xlsx",
+      "filename": "qa_inventory_test_mapping_and_pass_fail_merged.xlsx",
+      "category": "Feature inventory and QA",
+      "extension": ".xlsx",
+      "size_bytes": 196052,
+      "sha256": "ce8a55ccb4a28be998814e154aa8def0d000f7dc69acc70e1b0bb2c4898d2910"
+    },
+    {
+      "relative_path": "files/slide-1.png",
+      "filename": "slide-1.png",
+      "category": "Architecture and visual artifacts",
+      "extension": ".png",
+      "size_bytes": 316508,
+      "sha256": "394c317c96d69a3711d4bd0dcd12154ca0b938edcd1a31a933dc1ffb286aecba"
+    },
+    {
+      "relative_path": "files/solar-architecture-deck.html",
+      "filename": "solar-architecture-deck.html",
+      "category": "Architecture and visual artifacts",
+      "extension": ".html",
+      "size_bytes": 267217,
+      "sha256": "5450f3a6c049b5961c5dfc1237d771ce4a1e7eb5e061f529d1cbe559ca2a7eae"
+    },
+    {
+      "relative_path": "files/solar_autosci_strict_parity_audit_prompt.md",
+      "filename": "solar_autosci_strict_parity_audit_prompt.md",
+      "category": "Coding-agent and review prompts",
+      "extension": ".md",
+      "size_bytes": 25867,
+      "sha256": "c8a2577ac48f4633af7b8dbf3a26a16970332c44b5dc994c0f5c05636def0efd"
+    },
+    {
+      "relative_path": "files/stellven_file_core_daemon_skill-dispatcher_ts.txt",
+      "filename": "stellven_file_core_daemon_skill-dispatcher_ts.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 2536,
+      "sha256": "f62e4f3b6147094e652a3df2d9df448cb17f8575808548768fc056912d7a430f"
+    },
+    {
+      "relative_path": "files/stellven_file_harness_config_logical-operators_json.txt",
+      "filename": "stellven_file_harness_config_logical-operators_json.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 11830,
+      "sha256": "a950bed81c7bad3de8a2d7364c37c669377e4d616bc28de474ddef043bf70da5"
+    },
+    {
+      "relative_path": "files/stellven_only_files.txt",
+      "filename": "stellven_only_files.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 6000,
+      "sha256": "4a8f86cbfea699a17f857182f4952ad024eb51b6b7e524d21b452326b80b837e"
+    },
+    {
+      "relative_path": "files/stellven_runtime_tree.txt",
+      "filename": "stellven_runtime_tree.txt",
+      "category": "Raw evidence and extraction",
+      "extension": ".txt",
+      "size_bytes": 67464,
+      "sha256": "8561e00d3fa23a0801f42791392868667867e499f19dc1343f2b5a36e7886c67"
+    },
+    {
+      "relative_path": "files/跨领域大颗粒技术规划的机制和方法研究报告_AI4Research增强版.docx",
+      "filename": "跨领域大颗粒技术规划的机制和方法研究报告_AI4Research增强版.docx",
+      "category": "Technical and project reports",
+      "extension": ".docx",
+      "size_bytes": 64346,
+      "sha256": "ca67da1f71eb3d20f6034c198b5ef17b1fbdbe4dbfa0467d7fb4698cbc0b7130"
+    }
+  ]
+}
