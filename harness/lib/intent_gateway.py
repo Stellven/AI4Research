@@ -71,26 +71,345 @@ def extract_research_artifact(args: argparse.Namespace) -> dict[str, Any] | None
     }
 
 
+def _contains_marker(value: str, marker: str) -> bool:
+    marker = marker.strip().lower()
+    if not marker:
+        return False
+    if any(ord(character) > 127 for character in marker):
+        return marker in value
+    return re.search(
+        rf"(?<![a-z0-9_]){re.escape(marker)}(?![a-z0-9_])",
+        value,
+    ) is not None
+
+
+_DELIVERY_ACTIONS = (
+    "build",
+    "building",
+    "implement",
+    "implementing",
+    "develop",
+    "developing",
+    "write",
+    "writing",
+    "code",
+    "coding",
+    "create",
+    "creating",
+    "add",
+    "adding",
+    "make",
+    "making",
+)
+
+_TECHNICAL_ARTIFACTS = (
+    "cli",
+    "command-line",
+    "script",
+    "function",
+    "api",
+    "web app",
+    "application",
+    "service",
+    "library",
+    "package",
+    "plugin",
+    "tool",
+    "component",
+    "endpoint",
+    "test suite",
+    "codebase",
+)
+
+_UNAMBIGUOUS_SOFTWARE_ACTIONS = (
+    "implement",
+    "implementing",
+    "develop",
+    "developing",
+    "code",
+    "coding",
+    "add",
+    "adding",
+)
+
+_ENGINEERING_MARKERS = (
+    "operator",
+    "runtime",
+    "schema",
+    "registry",
+    "scheduler",
+    "actorhost",
+    "agentactor",
+    "logical_operator",
+    "physicaloperator",
+    "实现",
+    "开发",
+    "接入",
+    "算子",
+    "物理执行",
+    "状态机",
+    "注册",
+)
+
+_AMBIGUOUS_STRATEGY_ACTIONS = (
+    "build",
+    "create",
+    "add",
+)
+
+_UNAMBIGUOUS_STRATEGY_ACTIONS = (
+    "implement",
+    "develop",
+    "design",
+    "architect",
+    "refactor",
+    "migrate",
+    "integrate",
+    "wire",
+    "extend",
+    "optimize",
+    "实现",
+    "开发",
+    "接入",
+    "增加",
+    "改造",
+    "迁移",
+    "设计",
+    "优化",
+)
+
+_NEGATION_CUE = re.compile(
+    r"\b(?:do\s+not|does\s+not|did\s+not|not|no|never|without|rather\s+than|instead\s+of)\b"
+    r"|\b(?:don't|doesn't|didn't|isn't|aren't|wasn't|weren't)\b",
+    re.IGNORECASE,
+)
+_HARD_CLAUSE_BREAK = re.compile(r"[.!?;:\n]|\b(?:but|however|yet)\b", re.IGNORECASE)
+
+
+def _marker_pattern(marker: str) -> re.Pattern[str]:
+    marker = marker.strip().lower()
+    if any(ord(character) > 127 for character in marker):
+        return re.compile(re.escape(marker), re.IGNORECASE)
+    return re.compile(
+        rf"(?<![a-z0-9_]){re.escape(marker)}(?![a-z0-9_])",
+        re.IGNORECASE,
+    )
+
+
+def _negation_scope_prefix(value: str, marker_start: int, *, marker_is_action: bool) -> str:
+    """Return the local phrase whose negation can govern this marker.
+
+    Intent routing only needs a bounded grammar distinction: requested output
+    versus an explicitly excluded output. Hard punctuation and contrast words
+    end negation scope. A comma also ends a fronted negative modifier when the
+    following phrase starts a new delivery action (``without X, build Y``), or
+    when a parenthetical negative phrase is enclosed by two commas. Commas in
+    coordinated lists stay inside the scope (``not a CLI, package, or plugin``).
+    """
+    before = value[:marker_start]
+    breaks = list(_HARD_CLAUSE_BREAK.finditer(before))
+    clause = before[breaks[-1].end():] if breaks else before
+
+    comma_positions = [index for index, character in enumerate(clause) if character == ","]
+    if comma_positions:
+        last_comma = comma_positions[-1]
+        after_comma = clause[last_comma + 1:]
+        starts_new_action = marker_is_action or any(
+            _contains_marker(after_comma, action) for action in _DELIVERY_ACTIONS
+        )
+        enclosed_negative = False
+        if len(comma_positions) >= 2:
+            between_commas = clause[comma_positions[-2] + 1:last_comma]
+            enclosed_negative = _NEGATION_CUE.search(between_commas) is not None
+        if starts_new_action or enclosed_negative:
+            clause = after_comma
+
+    # These common modifiers contain negation-shaped tokens but affirm that a
+    # software artifact is requested (for example, "build a no-code tool").
+    clause = re.sub(r"\bnot\s+only\b", "", clause, flags=re.IGNORECASE)
+    clause = re.sub(r"\bno[-\s]+code\b", "", clause, flags=re.IGNORECASE)
+    return clause
+
+
+def _requested_marker_matches(
+    value: str,
+    marker: str,
+    *,
+    marker_is_action: bool = False,
+) -> list[re.Match[str]]:
+    """Return marker occurrences that are requested, not locally negated."""
+    requested: list[re.Match[str]] = []
+    for match in _marker_pattern(marker).finditer(value):
+        prefix = _negation_scope_prefix(value, match.start(), marker_is_action=marker_is_action)
+        if _NEGATION_CUE.search(prefix) is None:
+            requested.append(match)
+    return requested
+
+
+def _has_requested_action_artifact_pair(
+    value: str,
+    actions: tuple[str, ...],
+    artifacts: tuple[str, ...],
+    *,
+    max_intervening_words: int,
+) -> bool:
+    """Recognize an action applied to a nearby artifact in the same clause.
+
+    Global keyword co-occurrence confused the topic of a report with its
+    requested output (``write a report comparing API schemas``). Pairing the
+    action with the artifact it actually governs keeps technical subjects from
+    overriding a research outcome while retaining real build requests.
+    """
+    for action in actions:
+        action_matches = _requested_marker_matches(value, action, marker_is_action=True)
+        for artifact in artifacts:
+            artifact_matches = _requested_marker_matches(value, artifact)
+            for action_match in action_matches:
+                for artifact_match in artifact_matches:
+                    if artifact_match.start() < action_match.end():
+                        continue
+                    between = value[action_match.end():artifact_match.start()]
+                    if _HARD_CLAUSE_BREAK.search(between):
+                        continue
+                    intervening_words = re.findall(r"[a-z0-9_]+", between, flags=re.IGNORECASE)
+                    if len(intervening_words) <= max_intervening_words:
+                        return True
+    return False
+
+
+def _looks_like_research_request(value: str) -> bool:
+    """Recognize evidence-seeking user outcomes without product-name patches."""
+    explicit_markers = (
+        "research",
+        "report",
+        "literature review",
+        "survey",
+        "white paper",
+        "论文",
+        "调研",
+        "报告",
+    )
+    if any(_contains_marker(value, marker) for marker in explicit_markers):
+        return True
+
+    source_markers = (
+        "sources",
+        "citations",
+        "references",
+        "documentation",
+        "official documentation",
+        "docs",
+        "websites",
+        "web pages",
+        "videos",
+        "articles",
+        "papers",
+        "publications",
+        "news coverage",
+        "benchmark",
+        "benchmarks",
+        "links",
+        "evidence",
+    )
+    research_actions = (
+        "summarize",
+        "summarizes",
+        "summarizing",
+        "summary",
+        "compare",
+        "compares",
+        "comparing",
+        "comparison",
+        "evaluate",
+        "evaluates",
+        "evaluating",
+        "analyze",
+        "analyzes",
+        "analyzing",
+        "investigate",
+        "investigates",
+        "find",
+        "gather",
+        "review",
+        "cite",
+    )
+    if any(_contains_marker(value, marker) for marker in source_markers) and any(
+        _contains_marker(value, action) for action in research_actions
+    ):
+        return True
+
+    comparative_markers = ("compare", "comparison", "versus", "vs", "between")
+    decision_markers = ("which", "best", "recommend", "trade-off", "tradeoff")
+    freshness_or_evidence = (
+        "right now",
+        "current",
+        "latest",
+        "today",
+        "evidence",
+        "cite",
+        "sources",
+    )
+    return (
+        any(_contains_marker(value, marker) for marker in comparative_markers)
+        and any(_contains_marker(value, marker) for marker in decision_markers)
+        and any(_contains_marker(value, marker) for marker in freshness_or_evidence)
+    )
+
+
+def _looks_like_technical_delivery_request(value: str) -> bool:
+    """Keep requests to build software out of the research lane.
+
+    The action alone is insufficient because people naturally say "build me a
+    report".  It must be paired with a concrete software artifact.
+    """
+    return _has_requested_action_artifact_pair(
+        value,
+        _DELIVERY_ACTIONS,
+        _TECHNICAL_ARTIFACTS,
+        max_intervening_words=3,
+    ) or _has_requested_action_artifact_pair(
+        value,
+        _UNAMBIGUOUS_SOFTWARE_ACTIONS,
+        _TECHNICAL_ARTIFACTS,
+        max_intervening_words=8,
+    )
+
+
+def _looks_like_engineering_strategy_request(value: str) -> bool:
+    return _has_requested_action_artifact_pair(
+        value,
+        _AMBIGUOUS_STRATEGY_ACTIONS,
+        _ENGINEERING_MARKERS,
+        max_intervening_words=2,
+    ) or _has_requested_action_artifact_pair(
+        value,
+        _UNAMBIGUOUS_STRATEGY_ACTIONS,
+        _ENGINEERING_MARKERS,
+        max_intervening_words=8,
+    )
+
+
 def infer_mode(text: str) -> str:
     value = text.lower()
-    # Engineering intents can contain words like "research" or "Deep Research"
-    # as product names. Route explicit implementation/runtime/schema/operator
-    # work to strategy before applying generic research keyword matching.
-    engineering_markers = (
-        "operator", "runtime", "schema", "registry", "scheduler",
-        "actorhost", "agentactor", "logical_operator", "physicaloperator",
-        "实现", "开发", "接入", "算子", "物理执行", "状态机", "注册",
-    )
-    if any(token in value for token in engineering_markers):
-        return "strategy"
+    # Failure/debug intent is more specific than the subsystem being repaired:
+    # "fix the scheduler bug" is debugging, not generic runtime strategy.
     if any(token in value for token in ("debug", "bug", "失败", "报错", "修复", "卡住")):
         return "debug"
-    if any(token in value for token in ("架构", "设计", "strategy", "architecture")):
-        return "strategy"
     if any(token in value for token in ("monitor", "heartbeat", "巡检", "监控")):
         return "monitor"
-    if any(token in value for token in ("research", "report", "论文", "调研", "报告")):
+    # Engineering requests can contain "research" as a product name. Require a
+    # positive action→subsystem relationship instead of letting a subsystem noun
+    # anywhere in a sourced report override the user's research outcome.
+    if _looks_like_engineering_strategy_request(value):
+        return "strategy"
+    if _looks_like_technical_delivery_request(value):
+        return "delivery"
+    if _looks_like_research_request(value):
         return "research"
+    if any(token in value for token in ("架构", "设计", "strategy", "architecture")):
+        return "strategy"
+    if any(_contains_marker(value, token) for token in _ENGINEERING_MARKERS):
+        return "strategy"
     return "delivery"
 
 
@@ -111,6 +430,20 @@ def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
         "Compiled work is routable through PM/Planner/task_graph and multi-task operator runtime.",
         "Completion requires evidence artifacts and verifier-visible status.",
     ]
+    logical_operators = [
+        "RequirementCompiler",
+        "Planner",
+        "ImplementationWorker",
+        "Verifier",
+    ]
+    if mode == "research":
+        logical_operators = [
+            "RequirementCompiler",
+            "Planner",
+            "ResearchScout",
+            "ResearchSynthesizer",
+            "Verifier",
+        ]
     return {
         "schema_version": "solar.rewritten_intent.v1",
         "rewrite_method": "deterministic_fallback",
@@ -122,12 +455,7 @@ def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
         "non_goals": ["Do not dispatch raw natural language directly to builder panes."],
         "acceptance": acceptance,
         "suggested_lane": mode,
-        "suggested_logical_operators": [
-            "RequirementCompiler",
-            "Planner",
-            "ImplementationWorker",
-            "Verifier",
-        ],
+        "suggested_logical_operators": logical_operators,
     }
 
 
@@ -303,7 +631,52 @@ def bind_intent_artifacts(intent_id: str, sprint_id: str) -> dict[str, Any]:
         "requirement_trace.json": SPRINTS_DIR / f"{sprint_id}.requirement_trace.json",
     }
     for name, dst in mapping.items():
-        payload = json.loads((base / name).read_text(encoding="utf-8"))
+        gateway_payload = json.loads((base / name).read_text(encoding="utf-8"))
+        payload = gateway_payload
+        if (
+            dst.exists()
+            and not dst.is_symlink()
+            and name in {"requirement_ir.json", "requirement_trace.json"}
+        ):
+            try:
+                compiled = json.loads(dst.read_text(encoding="utf-8"))
+            except Exception:
+                compiled = None
+            compiled_ir = (
+                name == "requirement_ir.json"
+                and isinstance(compiled, dict)
+                and compiled.get("schema_version") == "solar.requirement_ir.v1"
+                and bool(compiled.get("id"))
+            )
+            compiled_trace = (
+                name == "requirement_trace.json"
+                and isinstance(compiled, dict)
+                and compiled.get("schema_version") == "solar.requirement_trace.v1"
+                and bool(compiled.get("requirement_ir_id"))
+                and isinstance(compiled.get("items"), list)
+            )
+            if compiled_ir or compiled_trace:
+                # The requirement compiler runs before RawIntent binding and
+                # writes the richer, acceptance-mapped package at this path.
+                # Never replace it with the gateway's earlier capture-stage
+                # placeholder.  Bind ingress identity into the compiled
+                # artifact while preserving its requirements and trace.
+                payload = compiled
+                payload["intent_id"] = intent_id
+                payload["sprint_id"] = sprint_id
+                if compiled_ir:
+                    gateway_source = gateway_payload.get("source")
+                    if not payload.get("source") and isinstance(gateway_source, dict):
+                        payload["source"] = gateway_source
+                    compiled_inputs = payload.get("source_inputs")
+                    if not isinstance(compiled_inputs, dict):
+                        compiled_inputs = {}
+                    gateway_inputs = gateway_payload.get("source_inputs")
+                    if isinstance(gateway_inputs, dict):
+                        for key in ("raw_request", "repo_context", "research_artifact"):
+                            if not compiled_inputs.get(key) and gateway_inputs.get(key):
+                                compiled_inputs[key] = gateway_inputs[key]
+                    payload["source_inputs"] = compiled_inputs
         if isinstance(payload, dict):
             payload["sprint_id"] = sprint_id
         write_json(dst, payload)

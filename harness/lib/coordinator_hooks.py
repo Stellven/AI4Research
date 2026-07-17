@@ -13,9 +13,11 @@ import sys
 import time
 from typing import Any, Dict
 
+from harness_paths import resolve_runtime_harness_dir
+
 logger = logging.getLogger(__name__)
 
-HARNESS_DIR = os.environ.get("HARNESS_DIR", os.path.expanduser("~/.solar/harness"))
+HARNESS_DIR = str(resolve_runtime_harness_dir())
 DECISIONS_LOG = os.path.join(HARNESS_DIR, "experience", "decisions.jsonl")
 TIMEOUT_MS = 50
 

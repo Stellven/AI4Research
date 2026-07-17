@@ -1,137 +1,246 @@
-"""E2E synthetic test for Solar Experience Memory Layer.
+"""Isolated end-to-end tests for the Solar Experience Memory layer.
 
-Scenario: synthetic sprint in phase=passed (terminal) → coordinator wake attempted
-→ hook detects terminal_phase_wake → abort decision logged to decisions.jsonl
-
-Also verifies: experience stats shows 5 anti-pattern classes known.
+Every scenario exercises the real modules, SQLite database, and filesystem in a
+fresh subprocess rooted under ``tmp_path``.  Test collection must never import
+from or write to the user's installed ``~/.solar/harness`` runtime.
 """
+from __future__ import annotations
+
 import json
 import os
+import subprocess
 import sys
-import tempfile
-import time
-import unittest
-
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
-sys.path.insert(0, os.path.join(HARNESS_DIR, "lib"))
+from pathlib import Path
 
 
-class TestExperienceMemoryE2E(unittest.TestCase):
-
-    def setUp(self):
-        from experience.index import init_db
-        init_db()
-
-    def test_terminal_phase_wake_abort(self):
-        """Synthetic passed sprint → pre_dispatch should abort."""
-        from coordinator_hooks import pre_dispatch
-
-        # Create synthetic status file for a terminal sprint
-        syn_sid = "sprint-synthetic-e2e-test-001"
-        syn_path = os.path.join(HARNESS_DIR, "sprints", f"{syn_sid}.status.json")
-        try:
-            with open(syn_path, "w") as f:
-                json.dump({
-                    "sid": syn_sid,
-                    "status": "passed",
-                    "phase": "finalized",
-                    "round": 1,
-                    "updated_at": "2026-05-10T00:00:00Z",
-                }, f)
-
-            decision = pre_dispatch(syn_sid, "test_dispatch")
-            # Terminal sprint → hook should abort
-            self.assertEqual(decision.action, "abort",
-                             f"Expected abort for terminal sprint, got {decision.action}")
-            self.assertEqual(decision.pattern, "terminal_phase_wake")
-            self.assertGreater(decision.confidence, 0.5)
-        finally:
-            if os.path.exists(syn_path):
-                os.remove(syn_path)
-
-    def test_experience_hook_disabled(self):
-        """EXPERIENCE_HOOK=0 → always allow."""
-        os.environ["EXPERIENCE_HOOK"] = "0"
-        try:
-            from coordinator_hooks import pre_dispatch
-            decision = pre_dispatch("any-sprint", "test")
-            self.assertEqual(decision.action, "allow")
-            self.assertEqual(decision.reason, "hook_disabled")
-        finally:
-            os.environ.pop("EXPERIENCE_HOOK", None)
-
-    def test_decisions_audit_written(self):
-        """decisions.jsonl gets an entry after pre_dispatch call."""
-        from coordinator_hooks import pre_dispatch
-        decisions_path = os.path.join(HARNESS_DIR, "experience", "decisions.jsonl")
-        before = 0
-        if os.path.exists(decisions_path):
-            with open(decisions_path) as f:
-                before = sum(1 for line in f if line.strip())
-
-        pre_dispatch("sprint-synthetic-audit-test", "test_audit")
-
-        after = 0
-        with open(decisions_path) as f:
-            after = sum(1 for line in f if line.strip())
-        self.assertGreater(after, before, "decisions.jsonl should have grown")
-
-    def test_stats_shows_anti_patterns(self):
-        """experience stats --json shows pattern classes."""
-        from experience.query import get_stats
-        s = get_stats()
-        by_pattern = s.get("by_pattern", {})
-        # At minimum repair_recipe (seeded) and success_workflow should be present
-        known = {"repair_recipe", "success_workflow"}
-        present = set(by_pattern.keys())
-        self.assertTrue(known & present, f"Expected some of {known} in {present}")
-
-    def test_query_for_sprint_returns_memories(self):
-        """query_for_sprint returns result with memories key."""
-        from experience.query import query_for_sprint
-        result = query_for_sprint("sprint-20260509-205414", limit=5)
-        self.assertTrue(result.get("ok"))
-        self.assertIn("memories", result)
-
-    def test_extract_idempotent(self):
-        """extract_sprint is idempotent for terminal sprints."""
-        from experience.extractor import extract_sprint
-        # Use a real terminal sprint if available
-        sprints_dir = os.path.join(HARNESS_DIR, "sprints")
-        terminal_sid = None
-        for fname in sorted(os.listdir(sprints_dir), reverse=True):
-            if not fname.endswith(".status.json"):
-                continue
-            sid = fname[:-len(".status.json")]
-            try:
-                with open(os.path.join(sprints_dir, fname)) as f:
-                    d = json.load(f)
-                if d.get("status") in ("passed", "failed", "cancelled"):
-                    terminal_sid = sid
-                    break
-            except Exception:
-                continue
-        if terminal_sid is None:
-            self.skipTest("No terminal sprint found for idempotency test")
-        t1 = extract_sprint(terminal_sid)
-        t2 = extract_sprint(terminal_sid)
-        self.assertIsNotNone(t1)
-        self.assertIsNotNone(t2)
-        self.assertEqual(t1["sid"], t2["sid"])
-
-    def test_schema_validation_rejects_bad_entry(self):
-        """validate_entry rejects entries with invalid pattern_class."""
-        from experience.schema import validate_entry
-        with self.assertRaises(ValueError):
-            validate_entry({
-                "schema_version": "1.0.0",
-                "entry_id": "test",
-                "trigger_sig": "abc",
-                "pattern_class": "not_a_valid_pattern",
-                "outcome": "failure",
-                "created_at": "2026-01-01T00:00:00Z",
-            })
+HARNESS_DIR = Path(__file__).resolve().parents[2]
+LIB_DIR = HARNESS_DIR / "lib"
 
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
+def _run_isolated(
+    runtime_root: Path,
+    script: str,
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> dict:
+    runtime_root.mkdir(parents=True, exist_ok=True)
+    isolated_home = runtime_root.parent / "home"
+    isolated_home.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ)
+    env.update(
+        {
+            "HOME": str(isolated_home),
+            "HARNESS_DIR": str(runtime_root),
+            "SOLAR_HARNESS_DIR": str(runtime_root),
+            "PYTHONPATH": str(LIB_DIR),
+            "PYTHONDONTWRITEBYTECODE": "1",
+        }
+    )
+    if extra_env:
+        env.update(extra_env)
+
+    proc = subprocess.run(
+        [sys.executable, "-c", script],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr or proc.stdout
+    lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    assert lines, "isolated Experience Memory scenario produced no output"
+    return json.loads(lines[-1])
+
+
+def test_terminal_phase_wake_abort(tmp_path):
+    runtime_root = tmp_path / "runtime"
+    sprints_dir = runtime_root / "sprints"
+    sprints_dir.mkdir(parents=True)
+    sid = "sprint-synthetic-e2e-test-001"
+    (sprints_dir / f"{sid}.status.json").write_text(
+        json.dumps(
+            {
+                "sid": sid,
+                "status": "passed",
+                "phase": "finalized",
+                "round": 1,
+                "updated_at": "2026-05-10T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = _run_isolated(
+        runtime_root,
+        f"""
+import json
+from coordinator_hooks import pre_dispatch
+decision = pre_dispatch({sid!r}, "test_dispatch")
+print(json.dumps(decision.to_dict()))
+""",
+    )
+
+    assert result["action"] == "abort"
+    assert result["pattern"] == "terminal_phase_wake"
+    assert result["confidence"] > 0.5
+    assert (runtime_root / "experience" / "decisions.jsonl").is_file()
+
+
+def test_experience_hook_disabled(tmp_path):
+    result = _run_isolated(
+        tmp_path / "runtime",
+        """
+import json
+from coordinator_hooks import pre_dispatch
+print(json.dumps(pre_dispatch("any-sprint", "test").to_dict()))
+""",
+        extra_env={"EXPERIENCE_HOOK": "0"},
+    )
+
+    assert result["action"] == "allow"
+    assert result["reason"] == "hook_disabled"
+
+
+def test_decisions_audit_written(tmp_path):
+    runtime_root = tmp_path / "runtime"
+    result = _run_isolated(
+        runtime_root,
+        """
+import json
+from coordinator_hooks import pre_dispatch
+decision = pre_dispatch("sprint-synthetic-audit-test", "test_audit")
+print(json.dumps(decision.to_dict()))
+""",
+    )
+
+    decisions_path = runtime_root / "experience" / "decisions.jsonl"
+    entries = [
+        json.loads(line)
+        for line in decisions_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert result["action"] == "allow"
+    assert entries[-1]["sid"] == "sprint-synthetic-audit-test"
+    assert entries[-1]["action_requested"] == "test_audit"
+
+
+def test_stats_reflects_real_persisted_entry(tmp_path):
+    result = _run_isolated(
+        tmp_path / "runtime",
+        """
+import json
+from experience.compressor import compress_trajectories
+from experience.query import get_stats
+trajectory = {
+    "schema_version": "1.0.0",
+    "sid": "sprint-synthetic-success",
+    "status": "passed",
+    "phase": "finalized",
+    "trigger_sig": "synthetic-trigger",
+    "state_sig": "synthetic-state",
+    "tags": ["test:isolated"],
+    "events_summary": {
+        "total_events": 1,
+        "c_u_events": 0,
+        "dispatch_events": 0,
+        "eval_rounds": 1,
+        "duration_minutes": 1.0,
+    },
+    "anti_patterns": [],
+    "outcome": "success",
+    "repair_actions": [],
+    "extracted_at": "2026-05-10T00:00:00Z",
+}
+entries = compress_trajectories([trajectory])
+print(json.dumps({"entries": entries, "stats": get_stats()}))
+""",
+    )
+
+    assert result["entries"][0]["pattern_class"] == "success_workflow"
+    assert result["stats"]["total_entries"] == 1
+    assert result["stats"]["by_pattern"] == {"success_workflow": 1}
+
+
+def test_query_for_sprint_returns_memories_contract(tmp_path):
+    runtime_root = tmp_path / "runtime"
+    sprints_dir = runtime_root / "sprints"
+    sprints_dir.mkdir(parents=True)
+    sid = "sprint-synthetic-query"
+    (sprints_dir / f"{sid}.status.json").write_text(
+        json.dumps({"sid": sid, "status": "active", "phase": "building", "round": 1}),
+        encoding="utf-8",
+    )
+
+    result = _run_isolated(
+        runtime_root,
+        f"""
+import json
+from experience.query import query_for_sprint
+print(json.dumps(query_for_sprint({sid!r}, limit=5, include_mia=False)))
+""",
+    )
+
+    assert result["ok"] is True
+    assert result["sid"] == sid
+    assert isinstance(result["memories"], list)
+
+
+def test_extract_sprint_is_repeatable_for_synthetic_terminal_sprint(tmp_path):
+    runtime_root = tmp_path / "runtime"
+    sprints_dir = runtime_root / "sprints"
+    sprints_dir.mkdir(parents=True)
+    sid = "sprint-synthetic-extract"
+    (sprints_dir / f"{sid}.status.json").write_text(
+        json.dumps(
+            {
+                "sid": sid,
+                "status": "passed",
+                "phase": "finalized",
+                "round": 1,
+                "updated_at": "2026-05-10T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = _run_isolated(
+        runtime_root,
+        f"""
+import json
+from experience.extractor import extract_sprint
+first = extract_sprint({sid!r})
+second = extract_sprint({sid!r})
+print(json.dumps({{"first": first, "second": second}}))
+""",
+    )
+
+    assert result["first"]["sid"] == sid
+    assert result["second"]["sid"] == sid
+    assert result["first"]["trigger_sig"] == result["second"]["trigger_sig"]
+    assert (runtime_root / "experience" / "trajectory" / f"{sid}.json").is_file()
+
+
+def test_schema_validation_rejects_bad_entry(tmp_path):
+    result = _run_isolated(
+        tmp_path / "runtime",
+        """
+import json
+from experience.schema import validate_entry
+try:
+    validate_entry({
+        "schema_version": "1.0.0",
+        "entry_id": "test",
+        "trigger_sig": "abc",
+        "pattern_class": "not_a_valid_pattern",
+        "outcome": "failure",
+        "created_at": "2026-01-01T00:00:00Z",
+    })
+except ValueError as exc:
+    print(json.dumps({"rejected": True, "error": str(exc)}))
+else:
+    print(json.dumps({"rejected": False}))
+""",
+    )
+
+    assert result["rejected"] is True
+    assert "invalid pattern_class" in result["error"]

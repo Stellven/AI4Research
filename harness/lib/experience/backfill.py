@@ -7,9 +7,11 @@ import logging
 import os
 from typing import Any, Dict
 
+from harness_paths import resolve_runtime_harness_dir
+
 logger = logging.getLogger(__name__)
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = str(resolve_runtime_harness_dir())
 SPRINTS_DIR = os.path.join(HARNESS_DIR, "sprints")
 TRAJECTORY_DIR = os.path.join(HARNESS_DIR, "experience", "trajectory")
 LOCK_FILE = os.path.join(HARNESS_DIR, "experience", "backfill.lock")

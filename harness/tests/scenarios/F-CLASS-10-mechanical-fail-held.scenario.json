@@ -1,0 +1,46 @@
+{
+  "id": "F-CLASS-10",
+  "class": 10,
+  "title": "A mechanical FAIL (research_eval_json_missing) cannot flip a policy-passed node",
+  "retires": "F-CLASS-10 (mechanical vs content eval FAIL); R4/AC-R4.1 v5 replay",
+  "release_proof_level": "P1.5",
+  "mode": "gate_replay",
+  "driver": "drivers/f_class_10_mechanical_fail_held.py",
+  "daemon_cap_sec": 60,
+  "env": {
+    "SOLAR_GATE_LEDGER": "1"
+  },
+  "expect": [
+    {
+      "fact": "driver_rc",
+      "op": "eq",
+      "value": 0
+    },
+    {
+      "fact": "final_status",
+      "op": "eq",
+      "value": "passed"
+    },
+    {
+      "fact": "held_reason",
+      "op": "eq",
+      "value": "mechanical_fail_cannot_flip_passed_node"
+    },
+    {
+      "fact": "v5_final_status",
+      "op": "eq",
+      "value": "passed"
+    },
+    {
+      "fact": "v5_held_reason",
+      "op": "eq",
+      "value": "mechanical_fail_cannot_flip_passed_node"
+    }
+  ],
+  "fault": {
+    "env": {
+      "SOLAR_GATE_LEDGER": "0"
+    }
+  },
+  "notes": "GREEN: node_verdict holds the mechanical FAIL (runner-owned vocabulary), archives it non-consumable — for BOTH the no-handoff driver shape and the real v5 shape (handoff present, eval.json missing, repair budget exhausted; round-4 G1: the hold gates on the RECORDED pass, not the downgraded effective status). RED: legacy flips the passed node to failed (v5 shape terminally). gate_replay mode: the driver exercises the REAL scheduler/dispatcher/ledger seams inside the sandbox HARNESS_DIR. GREEN env sets SOLAR_GATE_LEDGER=1 (the Lane 3 fix); RED injects SOLAR_GATE_LEDGER=0 (the pre-contract world) and the same expect must fail — proving the scenario discriminates the class, not the plumbing."
+}

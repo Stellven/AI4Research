@@ -1,3 +1,4 @@
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -42,3 +43,15 @@ def test_missing_required_capabilities_are_still_inferred() -> None:
 
     assert "ruflo.swarm" in enriched["nodes"][0]["required_capabilities"]
     assert enriched["capability_inference"]["changed_nodes"] == ["R1"]
+
+
+def test_tools_entrypoint_forwards_to_lib_capability_authority() -> None:
+    tools_module_path = HARNESS_LIB.parent / "tools" / "capability_inference.py"
+    spec = importlib.util.spec_from_file_location("capability_inference_tools_probe", tools_module_path)
+    assert spec is not None and spec.loader is not None
+    tools_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tools_module)
+
+    assert Path(tools_module.enrich_graph.__code__.co_filename).resolve() == (
+        HARNESS_LIB / "capability_inference.py"
+    ).resolve()

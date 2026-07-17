@@ -88,7 +88,7 @@ verification:
     - Missing build outputs produce failed or inconclusive evidence.
 operator_compatibility:
   preferred:
-    - ScientificPublicationProducer
+    - autosci-publication-compile-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

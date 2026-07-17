@@ -21,10 +21,12 @@
 release-exclude.txt
 
 # --- root trigger docs (CLAUDE.md is scrubbed + KEPT, not excluded) ---
+DESIGN_WORKLOG.md
 SPRINTS-HIGHLIGHTS.md
 TRIGGERS.md
 
 # --- docs/ design reports (dev artifacts, not user docs) ---
+docs/CLAUDE_USAGE_REPORT.md
 docs/CAPSULE_ARCHITECTURE.md
 docs/MEMORY_ISOLATION_PROBLEM.md
 docs/MEMORY_LOSS_ANALYSIS.md

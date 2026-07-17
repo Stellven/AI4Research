@@ -87,7 +87,7 @@ verification:
     - Evidence gaps remain visible in unsupported_claims or limitations.
 operator_compatibility:
   preferred:
-    - ScientificReportPlanner
+    - autosci-report-plan-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

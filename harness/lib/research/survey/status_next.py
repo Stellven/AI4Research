@@ -10,6 +10,8 @@ from typing import Any
 
 ARTIFACT_NAMES = [
     "final.md",
+    "human_final.md",
+    "chief_editor_final.md",
     "survey_finalize_run.json",
     "survey_source_gap.json",
     "survey_source_gap_handoff.md",
@@ -105,6 +107,24 @@ def _returned_markdown(root: Path, returned_md: str | Path = "") -> Path:
     return root / "returned_sources.md"
 
 
+def _current_final_path(root: Path, finalize: dict[str, Any]) -> Path:
+    raw = str(finalize.get("final_md") or "").strip()
+    if raw:
+        candidate = Path(raw).expanduser()
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        try:
+            candidate.resolve().relative_to(root.resolve())
+        except (OSError, ValueError):
+            candidate = root / "__invalid_final_projection__"
+        if candidate.is_file():
+            return candidate
+    for candidate in (root / "human_final.md", root / "final.md"):
+        if candidate.is_file():
+            return candidate
+    return root / "final.md"
+
+
 def survey_status_next_action(
     output_dir: str | Path,
     *,
@@ -127,7 +147,7 @@ def survey_status_next_action(
     imported = _read_json(root / "survey_import_search_results.json")
     survey_eval = _read_json(root / "survey_eval.json")
     final_quality = _read_json(root / "survey_final_quality.json")
-    final_path = root / "final.md"
+    final_path = _current_final_path(root, finalize)
     handoff_path = Path(str(source_gap.get("handoff_path") or root / "survey_source_gap_handoff.md")).expanduser()
 
     waiting, waiting_reason = _has_waiting_writer(root)

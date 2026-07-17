@@ -74,6 +74,9 @@ def _fixture_tree(tmp_path: Path) -> dict[str, Path]:
             {
                 "id": "N1",
                 "goal": "status api",
+                "owner": "builder_main",
+                "task_type": "implementation",
+                "dispatch_task_type": "implementation",
                 "depends_on": [],
                 "status": "dispatched",
                 "required_capabilities": ["harness.status"],
@@ -83,6 +86,9 @@ def _fixture_tree(tmp_path: Path) -> dict[str, Path]:
             {
                 "id": "N2",
                 "goal": "blocked branch",
+                "owner": "verifier",
+                "task_type": "verification",
+                "dispatch_task_type": "verification",
                 "depends_on": ["N1"],
                 "status": "blocked",
                 "required_capabilities": ["dag.ready_nodes"],
@@ -211,6 +217,25 @@ def test_dashboard_payload_exposes_route_decision_and_blocked_reason(tmp_path: P
     assert nodes["N1"]["actor_id"] == "builder-a"
     assert nodes["N2"]["route_decision"] == "blocked"
     assert nodes["N2"]["blocked_reason"] == "dependency_blocked"
+
+
+def test_dashboard_payload_preserves_compiler_owned_node_role_authority(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _fixture_tree(tmp_path)
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {"pane-builder": ["harness.status"]}
+
+    payload, degraded = mod.build_dashboard_payload("sprint-active")
+
+    assert degraded == []
+    nodes = {node["id"]: node for node in payload["dag"]["nodes"]}
+    assert nodes["N1"]["owner"] == "builder_main"
+    assert nodes["N1"]["task_type"] == "implementation"
+    assert nodes["N1"]["dispatch_task_type"] == "implementation"
+    assert nodes["N1"]["status"] == "active"
+    assert nodes["N1"]["workflow_status"] == "dispatched"
+    assert nodes["N2"]["owner"] == "verifier"
+    assert nodes["N2"]["task_type"] == "verification"
 
 
 def test_dashboard_payload_reports_degraded_missing_task_graph(tmp_path: Path) -> None:

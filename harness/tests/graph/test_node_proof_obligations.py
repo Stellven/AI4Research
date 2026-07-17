@@ -312,6 +312,14 @@ class TestEvalPassAllowsPassed:
         (sprints / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
 
         monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+        workspace = tmp_path / "user-workspace"
+        workspace.mkdir()
+        (sprints / f"{sid}.raw_intent.json").write_text(
+            json.dumps({"context": {"repo": str(workspace)}}),
+            encoding="utf-8",
+        )
+        assert gnd._workspace_binding is not None
+        gnd._workspace_binding.bind_active_workspace(tmp_path, workspace)
         monkeypatch.setattr(gnd, "release_lease", lambda *a, **kw: {"released": False})
         monkeypatch.setattr(gnd, "_mark_parent_sprint_passed_if_ready", lambda *a, **kw: False)
 
@@ -342,3 +350,59 @@ class TestEvalPassAllowsPassed:
         assert str(guard) in eval_prompt
         assert str(resource) in eval_prompt
         assert str(bridge) in eval_prompt
+
+    def test_unbound_resource_sidecar_cannot_satisfy_resource_proof(self, tmp_path, monkeypatch):
+        sid = "sprint-ac3-unbound-resource-proof"
+        graph_path = _setup_dispatcher_graph(tmp_path, monkeypatch, sid)
+
+        graph = json.loads(graph_path.read_text(encoding="utf-8"))
+        graph["nodes"][0]["proof_obligations"] = [
+            {
+                "kind": "self_check",
+                "source_capsule_id": "resource.github-readonly",
+                "requirement": "check.resource_binding_written",
+            },
+            {
+                "kind": "pass_condition",
+                "source_capsule_id": "resource.github-readonly",
+                "requirement": "resource_binding exists",
+            },
+            {
+                "kind": "postcondition",
+                "source_capsule_id": "resource.github-readonly",
+                "requirement": "output_present",
+                "field": "resource_binding",
+            },
+        ]
+        graph_path.write_text(json.dumps(graph, ensure_ascii=False), encoding="utf-8")
+
+        sprints = tmp_path / "sprints"
+        (sprints / f"{sid}.N1-handoff.md").write_text(
+            "# Handoff\nNo workspace was bound.\n",
+            encoding="utf-8",
+        )
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_json.write_text(
+            json.dumps({"node_id": "N1", "verdict": "PASS"}),
+            encoding="utf-8",
+        )
+        (sprints / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
+
+        monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **kw: {"released": False})
+        monkeypatch.setattr(gnd, "_mark_parent_sprint_passed_if_ready", lambda *a, **kw: False)
+
+        result = gnd.node_verdict(
+            str(graph_path),
+            "N1",
+            "pass",
+            eval_json=str(eval_json),
+            dry_run=True,
+            dispatch_downstream=False,
+        )
+
+        resource = sprints / f"{sid}.N1-resource_binding.json"
+        assert json.loads(resource.read_text(encoding="utf-8"))["bound"] is False
+        assert result["ok"] is False
+        assert result["reason"] == "proof_obligations_failed"
+        assert result["proof_gate"]["ok"] is False

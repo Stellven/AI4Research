@@ -60,6 +60,49 @@ def test_standard_compiled_prd_passes_existing_schema_validator(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_short_compiled_prd_passes_existing_schema_validator(tmp_path):
+    router = _load_router()
+    payload = router.build_pm_intake(
+        "Create a Python CLI named hello.py with pytest tests.",
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+    assert payload["requirement_ir"]["prd_view"]["variant"] == "short"
+    prd_path = tmp_path / "short.prd.md"
+    prd_path.write_text(payload["compiled_artifacts"]["prd_markdown"], encoding="utf-8")
+
+    result = subprocess.run(
+        ["bash", str(ROOT / "schemas" / "validate.sh"), "prd", str(prd_path)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_research_compiled_prd_passes_existing_schema_validator(tmp_path):
+    router = _load_router()
+    payload = router.build_pm_intake(
+        "Read these papers and synthesize research implications for the planner.",
+        papers=["paper-a"],
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+    assert payload["requirement_ir"]["prd_view"]["variant"] == "research"
+    prd_path = tmp_path / "research.prd.md"
+    prd_path.write_text(payload["compiled_artifacts"]["prd_markdown"], encoding="utf-8")
+
+    result = subprocess.run(
+        ["bash", str(ROOT / "schemas" / "validate.sh"), "prd", str(prd_path)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_parallel_delivery_still_enforces_ready_width_gate():
     router = _load_router()
     payload = router.build_pm_intake(
@@ -89,9 +132,124 @@ def test_build_pm_intake_emits_capsule_plan_for_research_request():
     )
     nodes = payload["compiled_artifacts"]["task_dag"]["nodes"]
     by_id = {node["id"]: node for node in nodes}
-    assert by_id["R1"]["capability_capsule_id"] == "cap.requirement-research-scout"
+    assert by_id["R1"]["capability_capsule_id"] == "cap.research-retrieval"
     assert by_id["R4"]["capability_capsule_id"] == "cap.requirement-research-synthesizer"
     assert by_id["R5"]["capability_capsule_id"] == "cap.requirement-compiler-verification"
+
+
+def test_general_user_research_prompts_share_the_frontdoor_classification_contract():
+    router = _load_router()
+    research_prompts = [
+        "Build a deep research report comparing GitHub Copilot, Cursor, and Claude Code with current sources.",
+        "Summarize websites and videos that discuss RSI, with citations.",
+        "Which AI provider is best right now between Anthropic, OpenAI, and Grok? Cite current evidence.",
+    ]
+    delivery_prompts = [
+        "Build a JSON CLI comparing GitHub repositories.",
+        "Implement the deep-research runtime operator and schema.",
+        "Write a script that summarizes a list of websites.",
+    ]
+
+    assert all(router.classify_request_type(prompt) == router.RESEARCH for prompt in research_prompts)
+    assert all(router.classify_request_type(prompt) != router.RESEARCH for prompt in delivery_prompts)
+
+
+def test_live_dashboard_research_prompt_with_negative_scope_compiles_as_research():
+    router = _load_router()
+    prompt = (
+        "Create a deep research report comparing GitHub Copilot, Cursor, and Claude Code for a solo "
+        "software developer as of July 2026. Use current official documentation plus independent "
+        "sources where available. Compare capabilities, pricing, IDE and terminal workflows, privacy "
+        "and security controls, and limitations. Clearly distinguish vendor claims from independent "
+        "evidence, surface contradictions and missing evidence, cite every material factual claim, and "
+        "conclude with conditional recommendations for different workflows. Deliver a readable Markdown "
+        "report, not a CLI or JSON tool."
+    )
+
+    payload = router.build_pm_intake(
+        prompt,
+        sprint_id="sprint-live-dashboard-research-shape",
+        target_system="solar-harness",
+    )
+    nodes = payload["compiled_artifacts"]["task_dag"]["nodes"]
+
+    assert payload["requirement_ir"]["request_type"] == "research"
+    assert any(node["logical_operator"] == "ResearchScout" for node in nodes)
+    assert any(node["logical_operator"] == "ResearchSynthesizer" for node in nodes)
+
+
+def test_research_fallback_graph_is_valid_parallel_retrieval():
+    router = _load_router()
+    payload = router.build_pm_intake(
+        "Survey current papers and official documentation about retrieval-augmented generation.",
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+    graph = payload["compiled_artifacts"]["task_dag"]
+    by_id = {node["id"]: node for node in graph["nodes"]}
+    roots = [node for node in graph["nodes"] if not node.get("depends_on")]
+
+    assert router.validate_compiled_package(payload)["ok"] is True
+    assert [node["id"] for node in roots] == ["R1", "R2"]
+    assert all(node["capability_capsule_id"] == "cap.research-retrieval" for node in roots)
+    for node in roots:
+        outputs = set(node["outputs"])
+        assert any(path.endswith("sources.jsonl") for path in outputs)
+        assert any(path.endswith("evidence.jsonl") for path in outputs)
+        assert any(path.endswith("extracts") for path in outputs)
+        assert {item["target"] for item in node["validation"]} == outputs
+    assert set(by_id["R1"]["outputs"]).isdisjoint(by_id["R2"]["outputs"])
+    assert by_id["R4"]["depends_on"] == ["R1", "R2", "R3"]
+    assert {
+        "workspace/research/report/synthesis_plan.json",
+        "workspace/research/report/claims.jsonl",
+        "workspace/research/report/claim_evidence.jsonl",
+        "workspace/research/report/sections.jsonl",
+        "workspace/research/report/section_checks.jsonl",
+        "workspace/research/report/report_ast.json",
+        "workspace/research/report/final.bibliography.json",
+        "workspace/research/report/final.md",
+        "workspace/research/report/research_eval.json",
+    }.issubset(set(by_id["R4"]["outputs"]))
+    assert {item["target"] for item in by_id["R4"]["validation"]} == set(by_id["R4"]["outputs"])
+
+
+def test_general_research_contract_describes_evidence_not_dag_experiments():
+    router = _load_router()
+    payload = router.build_pm_intake(
+        "Compare current AI coding assistants and cite the evidence behind each material claim.",
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+    contract = payload["compiled_artifacts"]["contract_files"]["research"]
+    serialized = json.dumps(contract, sort_keys=True)
+
+    assert contract["enabled"] is True
+    assert contract["question"]
+    assert contract["evidence_contract"]["source_pack"] == [
+        "sources.jsonl",
+        "evidence.jsonl",
+        "extracts/",
+    ]
+    assert {
+        "synthesis_plan.json",
+        "claims.jsonl",
+        "claim_evidence.jsonl",
+        "sections.jsonl",
+        "section_checks.jsonl",
+        "report_ast.json",
+        "final.bibliography.json",
+        "final.md",
+        "research_eval.json",
+    }.issubset(set(contract["evidence_contract"]["report_artifacts"]))
+    assert contract["failure_policy"]["fabricate_missing_evidence"] is False
+    assert "dag_quality_eval" not in serialized
+
+    handoff = payload["handoff_package"]["research_artifacts"]
+    assert "workspace/research/source-pack-a/sources.jsonl" in handoff
+    assert "workspace/research/report/synthesis_plan.json" in handoff
+    assert "workspace/research/report/claim_evidence.jsonl" in handoff
+    assert "workspace/research/report/final.md" in handoff
 
 
 def test_browser_agent_operator_request_is_standard_implementation_not_research():

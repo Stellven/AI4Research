@@ -86,7 +86,7 @@ verification:
     - Claims without evidence appear in unsupported_claims or limitations.
 operator_compatibility:
   preferred:
-    - ScientificReportDrafter
+    - autosci-report-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

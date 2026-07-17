@@ -1,0 +1,83 @@
+{
+  "_provenance": "Reconstructed AC-R2.1 rejection fixture for RSI demo v7 (run sprint-20260703-155749-...-bf66d46b @ 8f05dfb7). The raw /tmp evidence bundle was lost; S1's field shapes are verbatim from docs/product/rsi-demo-artifact-node-proof-contract-diagnosis.md ('The 8 answers' section 1, branch feat/rc8-demo-golden-path) and corpus F-049. S1 is a pure artifact-authoring node (write_scope is data/markdown only) that the planner bound to cap.requirement-compiler-implementation, whose proof contract requires patch_diff — unsatisfiable for a no-code node. S2-S4 were dependency-skipped in the run and their full shapes were not preserved: they appear here as skeleton nodes (no capsule binding, no proof obligations) so this fixture isolates exactly the v7 defect.",
+  "sprint_id": "sprint-20260703-155749-rsi-demo-v7-bf66d46b",
+  "dag_variant": "standard",
+  "nodes": [
+    {
+      "id": "S1",
+      "goal": "Create the report output directory and transform the local source-pack metadata into an evaluator-ready sources.json array without modifying the source pack.",
+      "logical_operator": "ImplementationWorker",
+      "task_type": "implementation",
+      "dispatch_task_type": "implementation",
+      "capability_capsule_id": "cap.requirement-compiler-implementation",
+      "write_scope": [
+        "workspace/rsi-deep-research-report/sources.json",
+        "workspace/rsi-deep-research-report/evaluation-checklist.md"
+      ],
+      "required_capabilities": ["local-file-read", "artifact-write"],
+      "required_skills": ["research-synthesis", "json-validation"],
+      "proof_obligations": [
+        {
+          "kind": "postcondition",
+          "requirement": "output_present",
+          "field": "patch_diff"
+        },
+        {
+          "kind": "postcondition",
+          "requirement": "output_present",
+          "field": "handoff_md"
+        },
+        {
+          "kind": "self_check",
+          "requirement": "check.patch_within_scope"
+        },
+        {
+          "kind": "self_check",
+          "requirement": "check.handoff_written"
+        },
+        {
+          "kind": "pass_condition",
+          "requirement": "patch_diff exists"
+        },
+        {
+          "kind": "pass_condition",
+          "requirement": "handoff_md exists"
+        },
+        {
+          "kind": "external_verifier",
+          "requirement": "required"
+        }
+      ],
+      "depends_on": [],
+      "status": "pending"
+    },
+    {
+      "id": "S2",
+      "goal": "Compile claims from collected sources (skeleton: full v7 shape not preserved).",
+      "depends_on": ["S1"],
+      "write_scope": ["workspace/rsi-deep-research-report/claims.json"],
+      "status": "pending"
+    },
+    {
+      "id": "S3",
+      "goal": "Author the report (skeleton: full v7 shape not preserved).",
+      "depends_on": ["S2"],
+      "write_scope": [
+        "workspace/rsi-deep-research-report/report.md",
+        "workspace/rsi-deep-research-report/report.html"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "S4",
+      "goal": "Validate and publish the report set (skeleton: full v7 shape not preserved).",
+      "depends_on": ["S3"],
+      "write_scope": [
+        "workspace/rsi-deep-research-report/evaluation-checklist.md"
+      ],
+      "status": "pending"
+    }
+  ],
+  "node_results": {},
+  "gate_results": {}
+}

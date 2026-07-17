@@ -80,6 +80,8 @@ import {
 } from "./api";
 import type { AuthLoginStatus, AuthStatus } from "./api";
 import type { AgentRole } from "./format";
+import { activeNodeActor, nodeActor } from "./nodeActor";
+import { pipelineStages, type TerminalRunOutcome } from "./runPipeline";
 import {
   ROLE_META,
   ROLE_ORDER,
@@ -108,6 +110,7 @@ import type {
   EventRecord,
   HumanGate,
   NarrativeStep,
+  PlanGovernance,
   ProjectionAction,
   ProjectionData,
   ProjectionResponse,
@@ -902,9 +905,27 @@ function useSessionData(
     "connecting" | "live" | "retrying" | "off"
   >("connecting");
   const selectedSprintRef = useRef(sprintId);
+  // G4 UI-rung run 6: a late poll response landed AFTER a fresher SSE delta
+  // and regressed a node from active back to pending on screen for ~45s
+  // (truthful-states UI_STALE). Projections apply MONOTONICALLY by
+  // generated_at — a stale response is dropped, whatever path it came by.
+  const lastProjectionAtRef = useRef("");
+  const applyProjection = useCallback(
+    (response: ProjectionResponse): boolean => {
+      const at = asString(response.generated_at);
+      if (at && lastProjectionAtRef.current && at < lastProjectionAtRef.current) {
+        return false;
+      }
+      if (at) lastProjectionAtRef.current = at;
+      setProjection(response);
+      return true;
+    },
+    [],
+  );
 
   useEffect(() => {
     selectedSprintRef.current = sprintId;
+    lastProjectionAtRef.current = "";
   }, [sprintId]);
 
   const refresh = useCallback(async () => {
@@ -939,7 +960,7 @@ function useSessionData(
     const results = await Promise.allSettled([
       fetchProjection(sprintId, "fast").then((projectionResponse) => {
         if (!isCurrent()) return;
-        setProjection(projectionResponse);
+        if (!applyProjection(projectionResponse)) return; // stale vs SSE
         cachePatch({ projection: projectionResponse });
         patchProvenance({
           lastProjectionAt:
@@ -1014,6 +1035,7 @@ function useSessionData(
     const cached = sessionDataCache.get(sprintId);
     if (cached) {
       setStatus(cached.status);
+      lastProjectionAtRef.current = asString(cached.projection?.generated_at);
       setProjection(cached.projection);
       setEvents(cached.events);
       setUsage(cached.usage);
@@ -1084,7 +1106,7 @@ function useSessionData(
           generated_at: msg.generated_at,
           schema_version: msg.data?.projection_schema,
         };
-        setProjection(projectionResponse);
+        if (!applyProjection(projectionResponse)) return; // stale frame
         setProvenance((prev) => ({
           ...prev,
           sprintId,
@@ -1200,50 +1222,21 @@ function projectionProgress(projection?: ProjectionResponse): {
   return { total, done, percent: Math.min(100, Math.max(0, percent)) };
 }
 
-function isTerminalRun(status: string, phase: string): boolean {
-  return /\b(passed|done|completed|eval_pass|eval_passed)\b/.test(
-    `${status} ${phase}`.toLowerCase(),
-  );
+function terminalRunOutcome(status: string, phase: string): TerminalRunOutcome {
+  const value = `${status} ${phase}`.toLowerCase();
+  // Failure wins if legacy projections disagree (for example a stale
+  // "completed" status paired with the current phase "failed").
+  if (/\b(failed|error|cancelled|canceled)\b/.test(value)) {
+    return "failure";
+  }
+  if (/\b(passed|done|completed|eval_pass|eval_passed)\b/.test(value)) {
+    return "success";
+  }
+  return "";
 }
 
-// The PM -> Planner -> Builder -> Evaluator pipeline, matched against the projection's
-// phase/status/gate so the user can see which stage the run is actually in.
-const RUN_PIPELINE: Array<{ role: AgentRole; match: RegExp }> = [
-  { role: "pm", match: /intake|spec|prd|scope/ },
-  { role: "planner", match: /plan|design|dag|rout/ },
-  { role: "builder", match: /build|implement|dispatch|handoff/ },
-  {
-    role: "evaluator",
-    match: /review|eval|accept|verdict|passed|done|complete/,
-  },
-];
-
-type StageState = "done" | "active" | "blocked" | "pending";
-
-function pipelineStages(
-  phase: string,
-  status: string,
-  isBlocked: boolean,
-  terminal: boolean,
-  actionType: string,
-): Array<{ role: AgentRole; state: StageState }> {
-  const text = `${phase} ${status}`.toLowerCase();
-  let activeIdx = 0;
-  RUN_PIPELINE.forEach((stage, index) => {
-    if (stage.match.test(text)) activeIdx = Math.max(activeIdx, index);
-  });
-  // A live human gate is the most reliable signal of the current stage.
-  if (actionType === "plan_review") activeIdx = 1;
-  else if (actionType === "handoff_submit") activeIdx = 2;
-  else if (actionType === "eval_review") activeIdx = 3;
-  return RUN_PIPELINE.map((stage, index) => {
-    let state: StageState;
-    if (terminal) state = "done";
-    else if (index < activeIdx) state = "done";
-    else if (index === activeIdx) state = isBlocked ? "blocked" : "active";
-    else state = "pending";
-    return { role: stage.role, state };
-  });
+function isTerminalRun(status: string, phase: string): boolean {
+  return Boolean(terminalRunOutcome(status, phase));
 }
 
 // The one surface above the stream that answers: where are we, what's done, what's
@@ -1272,17 +1265,59 @@ function RunOverview({
   const actionType = asString(humanAction.type);
   const gate = GATE_KINDS[actionType];
   const activeNode = asString(data?.summary?.active_node);
+  const graphNodes = data?.task_graph?.nodes || data?.nodes || [];
+  const activeGraphNode = graphNodes.find(
+    (node) => asString(node.id || node.node_id) === activeNode,
+  );
+  const activeRole: AgentRole | "" = activeGraphNode
+    ? normalizeRole(activeNodeActor(activeGraphNode))
+    : "";
   const progress = projectionProgress(projection);
   const result =
     deliverables.find((item) => item.result) ||
     deliverables.find((item) => item.primary);
-  const terminal = isTerminalRun(status, phase);
-  const stages = pipelineStages(phase, status, isBlocked, terminal, actionType);
+  const terminalOutcome = terminalRunOutcome(status, phase);
+  const failedNode = graphNodes.find(
+    (node) => asString(node.status).trim().toLowerCase() === "failed",
+  );
+  const failedRole = failedNode ? normalizeRole(nodeActor(failedNode)) : "";
+  const stages = pipelineStages(
+    phase,
+    status,
+    isBlocked,
+    terminalOutcome,
+    actionType,
+    failedRole,
+    activeRole,
+  );
+  const governance = (data?.plan_governance || {}) as PlanGovernance;
+  const governanceState = asString(governance.state);
+  const bounces = Number(governance.plan_compile_bounces || 0);
+  const bounceCodes = (governance.compile_error_codes || []).join(", ");
 
   let kicker = "In progress";
   let line = activeNode ? `Working on ${activeNode}` : "Agents are working…";
   let tone: "working" | "blocked" | "complete" | "decision" = "working";
-  if (gate) {
+  if (governanceState === "plan_compile_failed") {
+    // Truthful terminal (G4 §3): bounces exhausted, plan never compiled.
+    kicker = "Plan failed to compile";
+    line = `The plan failed to compile after ${bounces || "several"} attempt${bounces === 1 ? "" : "s"}${bounceCodes ? ` (${bounceCodes})` : ""}.`;
+    tone = "blocked";
+  } else if (governanceState === "plan_certificate_invalid") {
+    // Truthful terminal (G4 §3): certified plan was modified after validation.
+    kicker = "Plan integrity failure";
+    line = "The certified plan was modified after validation.";
+    tone = "blocked";
+  } else if (terminalOutcome === "failure") {
+    kicker = "Run failed";
+    line =
+      "A required step failed. Review the failed step and evaluation evidence below.";
+    tone = "blocked";
+  } else if (terminalOutcome === "success") {
+    kicker = "Done";
+    line = result ? "The result is ready." : "Run complete.";
+    tone = "complete";
+  } else if (gate) {
     kicker = "Your decision";
     line = asString(humanAction.title) || gate.title;
     tone = "decision";
@@ -1290,10 +1325,6 @@ function RunOverview({
     kicker = "Paused";
     line = stallCopy(stall) || "Blocked — needs your attention.";
     tone = "blocked";
-  } else if (terminal) {
-    kicker = "Done";
-    line = result ? "The result is ready." : "Run complete.";
-    tone = "complete";
   }
 
   return (
@@ -1305,6 +1336,21 @@ function RunOverview({
           {gate && humanAction.detail && (
             <span className="run-state-detail">
               {asString(humanAction.detail)}
+            </span>
+          )}
+          {governanceState === "certified" && (
+            <span className="plan-badge plan-badge-certified" data-testid="plan-badge-certified" title={`Plan certificate PASS${governance.certificate?.validated_at ? ` · ${governance.certificate.validated_at}` : ""}`}>
+              ✓ Certified plan
+            </span>
+          )}
+          {governanceState === "compiling" && (
+            <span className="plan-badge plan-badge-compiling" data-testid="plan-badge-compiling">
+              Plan compiling…
+            </span>
+          )}
+          {bounces > 0 && governanceState !== "plan_compile_failed" && (
+            <span className="plan-badge plan-badge-bounce" data-testid="plan-badge-bounce" title={bounceCodes || undefined}>
+              {bounces} compile bounce{bounces === 1 ? "" : "s"}
             </span>
           )}
         </div>
@@ -1376,10 +1422,10 @@ function SessionView({
   const phase = asString(
     projectionData?.phase || currentSprint.phase || currentSprint.status,
   );
-  const isBlocked = isSystemBlocked(stall, humanActionType);
   const status = asString(projectionData?.status || currentSprint.status);
   const gateOpen = Boolean(GATE_KINDS[humanActionType]);
   const terminal = isTerminalRun(status, phase);
+  const isBlocked = !terminal && isSystemBlocked(stall, humanActionType);
   // The run is genuinely "active" (latest step spins) only when it isn't finished,
   // isn't paused on a human gate, and isn't blocked.
   const runActive = !terminal && !gateOpen && !isBlocked;
@@ -1620,13 +1666,24 @@ function PlanFlow({
   const done = nodes.filter(
     (node) => statusTone(asString(node.status)) === "complete",
   ).length;
-  const headMeta = isBlocked
-    ? "blocked at a capability gate"
-    : activeId
-      ? `active: ${activeId}`
-      : total
-        ? "in progress"
-        : "";
+  // G4 UI-rung run 5: this meta fell through to "in progress" at TERMINAL —
+  // the main card said DONE while this panel said in progress on the same
+  // screen. Terminal truth wins over the fallthrough.
+  const runStatus = asString(data?.status || data?.sprint?.status);
+  const runPhase = asString(data?.phase || data?.sprint?.phase);
+  const terminal = isTerminalRun(runStatus, runPhase);
+  const outcome = terminalRunOutcome(runStatus, runPhase);
+  const headMeta = terminal
+    ? outcome === "success"
+      ? "done"
+      : `ended: ${runStatus || "failed"}`
+    : isBlocked
+      ? "blocked at a capability gate"
+      : activeId
+        ? `active: ${activeId}`
+        : total
+          ? "in progress"
+          : "";
 
   return (
     <section className="plan-flow" aria-label="Plan" data-testid="plan-flow">
@@ -1644,10 +1701,10 @@ function PlanFlow({
               {stage.map((node) => {
                 const id = asString(node.node_id || node.id);
                 const tone = statusTone(asString(node.status));
-                const status = asString(node.status, "pending").replace(
-                  /_/g,
-                  " ",
-                );
+                const status = asString(
+                  node.workflow_status || node.status,
+                  "pending",
+                ).replace(/_/g, " ");
                 // Only show a blocked reason for an actually-blocked node (a pending node
                 // can carry a long missing_capabilities list that isn't a live blocker), and
                 // keep it short so one node can't balloon the card.
@@ -1884,7 +1941,9 @@ function RunHealth({ projection }: { projection?: ProjectionResponse }) {
     .resources as Record<string, unknown> | undefined;
   const cost = Number(resources?.estimated_total_cost) || 0;
   const mismatch = data.capability_mismatch;
-  const hasBlocker = Boolean(mismatch?.present);
+  const status = asString(data.status || data.sprint?.status);
+  const phase = asString(data.phase || data.sprint?.phase);
+  const hasBlocker = !isTerminalRun(status, phase) && Boolean(mismatch?.present);
   const blockedNode = asString(mismatch?.blocked_node);
   const missing = asString(mismatch?.missing_capability);
   if (stats.total === 0 && !cost && !hasBlocker) return null;
@@ -1977,6 +2036,9 @@ function DecisionZone({
 }) {
   const data = projection?.data;
   if (!data) return null;
+  const status = asString(data.status || data.sprint?.status);
+  const phase = asString(data.phase || data.sprint?.phase);
+  if (isTerminalRun(status, phase)) return null;
   const actions = data.available_actions || [];
   // human_action_required.type is the backend's single "what does the human do now"
   // signal — and the only one that covers handoff (which has no human_gates entry).
@@ -3336,30 +3398,14 @@ function processStepFromEvent(
   };
 }
 
-// Infer which agent a DAG node belongs to (node-based steps have no event actor),
-// so node logs attach the right artifacts (build->Builder, review->Evaluator, ...).
-function nodeActor(node: { [key: string]: unknown }): string {
-  const caps = (
-    Array.isArray(node.required_capabilities) ? node.required_capabilities : []
-  )
-    .map((cap) => asString(cap).toLowerCase())
-    .join(" ");
-  const text = `${asString(nodeId(node)).toLowerCase()} ${caps}`;
-  if (/eval|review|verdict|gate|accept/.test(text)) return "Evaluator";
-  if (/build|impl|code|frontend|backend|server|handoff/.test(text))
-    return "Builder";
-  if (/plan|design|dag|rout/.test(text)) return "Planner";
-  if (/spec|prd|intake|scope|product/.test(text)) return "PM";
-  return "Planner";
-}
-
 function processStepFromNode(
   node: { [key: string]: unknown },
   latest: boolean,
   phase: string,
 ): ProcessStep {
-  const status = asString(node.status, "pending");
-  const tone = statusTone(status);
+  const actor = nodeActor(node);
+  const status = asString(node.workflow_status || node.status, "pending");
+  const tone = statusTone(asString(node.status, status));
   const state: ProcessStepState =
     tone === "blocked"
       ? "blocked"
@@ -3370,11 +3416,11 @@ function processStepFromNode(
           : "pending";
   return {
     id: `node-${nodeId(node)}`,
-    actor: nodeActor(node),
+    actor,
     node: nodeId(node),
     title: `${nodeId(node)} is ${status.replace(/_/g, " ")}`,
     summary: nodeTitle(node),
-    detail: `Planner DAG node ${nodeId(node)} is currently ${status.replace(/_/g, " ")}.`,
+    detail: `${actor} DAG node ${nodeId(node)} is currently ${status.replace(/_/g, " ")}.`,
     timestamp: "",
     state,
     tone:
@@ -3504,7 +3550,9 @@ function TopBar({
             </span>
           )}
           <span className="provenance-chip">{eventCount} events</span>
-          {cache && <span className="provenance-chip">status: {cache}</span>}
+          {cache && (
+            <span className="provenance-chip">status cache: {cache}</span>
+          )}
           {updatedAt && (
             <span className="provenance-chip">
               refreshed {formatDateTime(updatedAt)}
@@ -3544,7 +3592,9 @@ function TopBar({
 }
 
 function UsagePanel({ usage }: { usage?: UsagePayload }) {
-  const total = usage?.total_used_tokens_label || "0 tok";
+  const total =
+    usage?.total_used_tokens_label ||
+    (usage?.availability === "unavailable" ? "Unavailable" : "0 tok");
   const models = usage?.models || [];
   return (
     <section className="panel usage-panel" data-testid="usage-panel">
@@ -3564,8 +3614,8 @@ function UsagePanel({ usage }: { usage?: UsagePayload }) {
         ))}
       </div>
       <p className="usage-foot">
-        Per model, per day (account-wide) — runtime does not report per-sprint
-        tokens.
+        {usage?.label ||
+          "Per model, per day (account-wide) — runtime does not report per-sprint tokens."}
       </p>
     </section>
   );
@@ -3666,7 +3716,11 @@ function activityLevel(count: number): number {
 function normalizeCrewPreset(value: string): string {
   const clean = value.trim().toLowerCase().replace(/_/g, "-");
   if (CREW_PRESETS.some((preset) => preset.id === clean)) return clean;
-  if (clean.includes("codex") || clean.includes("openai") || clean.includes("gpt"))
+  if (
+    clean.includes("codex") ||
+    clean.includes("openai") ||
+    clean.includes("gpt")
+  )
     return "all-codex";
   if (clean.includes("fast") || clean.includes("glm")) return "fast";
   if (clean.includes("quality") || clean.includes("opus"))
@@ -4296,7 +4350,7 @@ function UsageLimitsPane({ usage }: { usage?: UsagePayload }) {
     <SettingsSection
       title="Usage & limits"
       detail={usage?.total_used_tokens_label || "unavailable"}
-      description="Account-wide model-day token usage from the runtime quota scan. Per-run numbers stay on the session view."
+      description="Account-wide model-day token usage from the selected runtime when that provider exposes it. Per-run evidence stays on the session view."
     >
       {!usage && (
         <SettingsEmptyState
@@ -4314,8 +4368,15 @@ function UsageLimitsPane({ usage }: { usage?: UsagePayload }) {
       </div>
       {usage && !hasUsageRows && (
         <SettingsEmptyState
-          title="No usage rows in this harness"
-          detail="The /usage endpoint is reachable, but it has no model-day rows for the current harness data."
+          title={
+            usage.availability === "unavailable"
+              ? `Usage unavailable for ${usage.runtime === "codex" ? "Codex" : "the selected runtime"}`
+              : "No usage rows in this harness"
+          }
+          detail={
+            usage.label ||
+            "The /usage endpoint is reachable, but it has no model-day rows for the current harness data."
+          }
         />
       )}
       <div className="usage-models settings-usage-models">

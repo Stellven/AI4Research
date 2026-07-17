@@ -14,19 +14,19 @@ broker_coverage subfields (7 required):
   human_approval_pending — actions currently awaiting human approval
 
 Source priority (fail-open at every level):
-  1. harness/lib/observability/metrics.py  (N4 module — available after N4 passes)
-  2. sprint events.jsonl lightweight parse  (when sprint_id is known)
-  3. Zero defaults                          (always guarantees all fields present)
+  1. Exact sprint events.jsonl (when sprint_id is known)
+  2. Zero defaults          (always guarantees all fields present)
+
+The exact sprint ledger is authoritative.  Global observability helpers accept
+an explicit event iterable and must never shadow a sprint ledger with defaults.
 """
 from __future__ import annotations
 
 import argparse
-import importlib
 import json
 import os
-import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
@@ -53,68 +53,162 @@ BROKER_COVERAGE_DEFAULTS: dict[str, Any] = {
 }
 
 
-def _try_metrics_module() -> dict[str, Any] | None:
-    """Attempt to populate coverage from observability.metrics (N4). Fail-open."""
-    obs_path = HARNESS_DIR / "lib" / "observability"
-    if not obs_path.is_dir():
-        return None
-    lib_path = str(HARNESS_DIR / "lib")
-    if lib_path not in sys.path:
-        sys.path.insert(0, lib_path)
-    try:
-        metrics = importlib.import_module("observability.metrics")
-    except Exception:
-        return None
-    result: dict[str, Any] = dict(BROKER_COVERAGE_DEFAULTS)
-    try:
-        if hasattr(metrics, "broker_coverage_pct"):
-            result["coverage_pct"] = float(metrics.broker_coverage_pct() or 0.0)
-        if hasattr(metrics, "policy_denied_rate"):
-            result["policy_denied_count"] = int(metrics.policy_denied_rate() or 0)
-        if hasattr(metrics, "approval_pending_count"):
-            result["human_approval_pending"] = int(metrics.approval_pending_count() or 0)
-    except Exception:
-        pass
-    return result
+def _event_payload(event: dict[str, Any]) -> dict[str, Any]:
+    payload = event.get("payload")
+    if payload is None:
+        payload = event.get("data")
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def compute_broker_coverage_from_events(
+    events: Iterable[dict[str, Any]],
+) -> dict[str, Any]:
+    """Compute the canonical broker-coverage contract from event records.
+
+    EventLedger records (``action.proposed`` / ``policy.verdict``) and the
+    older sprint JSONL action records are normalized into one representation.
+    Additional diagnostic fields are allowed by the JSON schema and are used
+    by the activation-proof CLI to decide PASS/FAIL without inventing a second
+    coverage percentage.
+    """
+    proposed_ids: set[str] = set()
+    contracted_ids: set[str] = set()
+    executed_ids: set[str] = set()
+    legacy_ids: set[str] = set()
+    pending_approval_ids: set[str] = set()
+    resolved_approval_ids: set[str] = set()
+    unscoped_write_count = 0
+    policy_denied_count = 0
+    lease_denied_count = 0
+    direct_approval_pending = 0
+    by_kind: dict[str, int] = {}
+    legacy_action_types = {
+        "command_issued",
+        "tool_called",
+        "write_action",
+        "graph_event",
+    }
+
+    for index, event in enumerate(events):
+        if not isinstance(event, dict):
+            continue
+        event_type = str(event.get("event_type") or event.get("type") or event.get("event") or "")
+        payload = _event_payload(event)
+        action_id = str(payload.get("action_id") or "").strip()
+
+        if event_type == "action.proposed" and action_id:
+            proposed_ids.add(action_id)
+            kind = str(payload.get("kind") or "unknown")
+            by_kind[kind] = by_kind.get(kind, 0) + 1
+            if payload.get("legacy") is True:
+                legacy_ids.add(action_id)
+            continue
+
+        if event_type in legacy_action_types:
+            synthetic_id = action_id or f"legacy-event-{index}"
+            proposed_ids.add(synthetic_id)
+            kind = str(payload.get("kind") or event_type)
+            by_kind[kind] = by_kind.get(kind, 0) + 1
+            if payload.get("write_scope") or payload.get("contracted"):
+                contracted_ids.add(synthetic_id)
+            else:
+                unscoped_write_count += 1
+            continue
+
+        if event_type == "policy.verdict" and action_id:
+            verdict = str(payload.get("verdict") or "").upper()
+            reason = str(payload.get("reason") or "").lower()
+            detail = str(payload.get("detail") or "")
+            combined = f"{reason} {detail}".lower()
+            if verdict == "PASS":
+                contracted_ids.add(action_id)
+                resolved_approval_ids.add(action_id)
+            else:
+                if reason == "lease_denied" or "lease_denied" in combined:
+                    lease_denied_count += 1
+                else:
+                    policy_denied_count += 1
+                if "write_scope" in combined:
+                    unscoped_write_count += 1
+                if "approval" in combined:
+                    pending_approval_ids.add(action_id)
+            continue
+
+        if event_type in {"action.executed", "action.failed", "action.cancelled"} and action_id:
+            executed_ids.add(action_id)
+            resolved_approval_ids.add(action_id)
+            continue
+
+        if event_type == "policy_denied":
+            policy_denied_count += 1
+            if "write_scope" in str(payload).lower():
+                unscoped_write_count += 1
+        elif event_type in {"lease_denied", "lease_failed"}:
+            lease_denied_count += 1
+        elif event_type == "human_approval_requested":
+            if action_id:
+                pending_approval_ids.add(action_id)
+            else:
+                direct_approval_pending += 1
+
+    total_actions = len(proposed_ids)
+    contracted_actions = len(proposed_ids.intersection(contracted_ids))
+    coverage_pct = (
+        round(contracted_actions / total_actions * 100, 2)
+        if total_actions
+        else 0.0
+    )
+    uncontracted_action_count = len(executed_ids - contracted_ids)
+    human_approval_pending = (
+        len(pending_approval_ids - resolved_approval_ids) + direct_approval_pending
+    )
+    health = (
+        "PASS"
+        if (
+            uncontracted_action_count == 0
+            and unscoped_write_count == 0
+            and (total_actions == 0 or contracted_actions == total_actions)
+        )
+        else "FAIL"
+    )
+    return {
+        "total_actions": total_actions,
+        "contracted_actions": contracted_actions,
+        "coverage_pct": coverage_pct,
+        "unscoped_write_count": unscoped_write_count,
+        "policy_denied_count": policy_denied_count,
+        "lease_denied_count": lease_denied_count,
+        "human_approval_pending": human_approval_pending,
+        "uncontracted_action_count": uncontracted_action_count,
+        "legacy_path_actions": len(legacy_ids),
+        "by_kind": by_kind,
+        "health": health,
+    }
 
 
 def _parse_events_jsonl(sprint_id: str) -> dict[str, Any]:
     """Lightweight fallback: count broker-relevant actions from events.jsonl."""
-    result = dict(BROKER_COVERAGE_DEFAULTS)
     events_path = HARNESS_DIR / "sprints" / f"{sprint_id}.events.jsonl"
     if not events_path.exists():
-        return result
-    total = contracted = unscoped = policy_denied = lease_denied = pending = 0
+        return dict(BROKER_COVERAGE_DEFAULTS)
+    events: list[dict[str, Any]] = []
     try:
         for raw in events_path.read_text(encoding="utf-8", errors="ignore").splitlines():
             try:
-                ev = json.loads(raw)
+                event = json.loads(raw)
             except Exception:
                 continue
-            ev_type = str(ev.get("type") or ev.get("event") or "")
-            data = ev.get("data") or ev.get("payload") or {}
-            if ev_type in {"command_issued", "tool_called", "write_action", "graph_event"}:
-                total += 1
-                if data.get("write_scope") or data.get("contracted"):
-                    contracted += 1
-                else:
-                    unscoped += 1
-            elif ev_type == "policy_denied":
-                policy_denied += 1
-            elif ev_type in {"lease_denied", "lease_failed"}:
-                lease_denied += 1
-            elif ev_type == "human_approval_requested":
-                pending += 1
+            if isinstance(event, dict):
+                events.append(event)
     except Exception:
-        pass
-    result["total_actions"] = total
-    result["contracted_actions"] = contracted
-    result["coverage_pct"] = round(contracted / total * 100, 2) if total > 0 else 0.0
-    result["unscoped_write_count"] = unscoped
-    result["policy_denied_count"] = policy_denied
-    result["lease_denied_count"] = lease_denied
-    result["human_approval_pending"] = pending
-    return result
+        return dict(BROKER_COVERAGE_DEFAULTS)
+    computed = compute_broker_coverage_from_events(events)
+    return {field: computed[field] for field in BROKER_COVERAGE_FIELDS}
 
 
 def build_broker_coverage(sprint_id: str | None = None) -> dict[str, Any]:
@@ -125,11 +219,7 @@ def build_broker_coverage(sprint_id: str | None = None) -> dict[str, Any]:
     coverage: dict[str, Any] = dict(BROKER_COVERAGE_DEFAULTS)
     source = "defaults"
 
-    from_metrics = _try_metrics_module()
-    if from_metrics is not None:
-        coverage.update({k: from_metrics[k] for k in BROKER_COVERAGE_FIELDS if k in from_metrics})
-        source = "observability.metrics"
-    elif sprint_id:
+    if sprint_id:
         from_events = _parse_events_jsonl(sprint_id)
         coverage.update({k: from_events[k] for k in BROKER_COVERAGE_FIELDS if k in from_events})
         source = f"events.jsonl:{sprint_id}"

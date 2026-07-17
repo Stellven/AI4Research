@@ -1751,6 +1751,52 @@ def _registry_skill(name: str) -> "dict | None":
     return None
 
 
+def _skill_integrity(entry: dict) -> dict[str, Any]:
+    """Validate the on-disk assets required before a skill may be called stable."""
+    issues: list[str] = []
+    paths: dict[str, str | None] = {"entry": None, "eval_pack": None}
+    root = HARNESS_DIR.resolve()
+
+    for field in ("entry", "eval_pack"):
+        declared = entry.get(field)
+        if not declared:
+            issues.append(f"{field}_not_declared")
+            continue
+        relative = Path(str(declared))
+        if relative.is_absolute():
+            issues.append(f"{field}_path_absolute")
+            paths[field] = str(relative)
+            continue
+        candidate = HARNESS_DIR / relative
+        try:
+            resolved = candidate.resolve()
+            resolved.relative_to(root)
+        except (OSError, ValueError):
+            issues.append(f"{field}_path_outside_harness")
+            paths[field] = str(candidate)
+            continue
+        paths[field] = str(resolved)
+        if not resolved.is_file():
+            issues.append(f"{field}_file_missing")
+
+    return {
+        "ok": not issues,
+        "issues": issues,
+        "paths": paths,
+    }
+
+
+def _stable_integrity_failures(skills: list[dict] | None = None) -> list[dict[str, Any]]:
+    failures: list[dict[str, Any]] = []
+    for skill in skills if skills is not None else _load_registry():
+        if skill.get("status") != "stable":
+            continue
+        integrity = _skill_integrity(skill)
+        if not integrity["ok"]:
+            failures.append({"skill": skill.get("name", "?"), **integrity})
+    return failures
+
+
 def _update_registry_field(skill_name: str, field: str, value: "str | None") -> bool:
     if not REGISTRY_PATH.exists():
         return False
@@ -1778,6 +1824,109 @@ def _update_registry_field(skill_name: str, field: str, value: "str | None") -> 
 
 # ── eval ──────────────────────────────────────────────────────────────────────
 
+def _load_skill_eval_pack(path: Path) -> dict[str, Any]:
+    if path.suffix in {".yaml", ".yml"}:
+        import yaml  # type: ignore
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    else:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("eval pack root must be an object")
+    return payload
+
+
+def _emit_skill_eval_metric(skill_name: str, *, passed: bool, score: float) -> None:
+    try:
+        import skill_metrics
+        skill_metrics.emit(
+            skill_name,
+            event_type="eval_pass" if passed else "eval_fail",
+            score=score,
+        )
+    except Exception:
+        pass
+
+
+def _evaluate_registry_skill(entry: dict) -> dict[str, Any]:
+    skill_name = str(entry.get("name", "?"))
+    integrity = _skill_integrity(entry)
+    base: dict[str, Any] = {
+        "ok": False,
+        "skill": skill_name,
+        "executed": False,
+        "passed": False,
+        "score": 0.0,
+        "integrity": integrity,
+    }
+    if not integrity["ok"]:
+        return {**base, "reason": "skill_integrity_failed"}
+
+    eval_path = Path(str(integrity["paths"]["eval_pack"]))
+    base["eval_pack"] = str(eval_path)
+    try:
+        pack = _load_skill_eval_pack(eval_path)
+    except Exception as exc:
+        return {**base, "reason": "eval_pack_invalid", "error": str(exc)}
+
+    checks = pack.get("checks")
+    declarative_cases = pack.get("cases")
+    if not isinstance(checks, list) or not checks:
+        return {
+            **base,
+            "reason": "behavioral_eval_not_executable",
+            "declarative_cases": len(declarative_cases) if isinstance(declarative_cases, list) else 0,
+        }
+    malformed = [
+        str(check.get("name", index)) if isinstance(check, dict) else str(index)
+        for index, check in enumerate(checks)
+        if not isinstance(check, dict) or not str(check.get("cmd", "")).strip()
+    ]
+    if malformed:
+        return {
+            **base,
+            "reason": "executable_eval_check_invalid",
+            "invalid_checks": malformed,
+        }
+
+    try:
+        min_score = float(pack.get("min_score", entry.get("min_score", 1.0)))
+    except (TypeError, ValueError):
+        return {**base, "reason": "eval_pack_invalid", "error": "min_score must be numeric"}
+    if not 0.0 < min_score <= 1.0:
+        return {**base, "reason": "eval_pack_invalid", "error": "min_score must be in (0, 1]"}
+
+    try:
+        import eval_runner
+        eval_runner.HARNESS_DIR = HARNESS_DIR
+        execution = eval_runner.run_pack(eval_path)
+    except Exception as exc:
+        _emit_skill_eval_metric(skill_name, passed=False, score=0.0)
+        return {
+            **base,
+            "executed": True,
+            "reason": "behavioral_eval_execution_failed",
+            "error": str(exc),
+        }
+
+    check_count = int(execution.get("checks", 0))
+    passed_count = int(execution.get("passed", 0))
+    score = passed_count / check_count if check_count else 0.0
+    passed = bool(execution.get("ok")) and score >= min_score
+    _emit_skill_eval_metric(skill_name, passed=passed, score=score)
+    return {
+        **base,
+        "ok": passed,
+        "executed": True,
+        "passed": passed,
+        "score": score,
+        "min_score": min_score,
+        "checks": check_count,
+        "checks_passed": passed_count,
+        "reason": "behavioral_eval_passed" if passed else "behavioral_eval_failed",
+        "execution": execution,
+    }
+
+
 def cmd_eval(args: list[str]) -> int:
     import argparse as _ap
     p = _ap.ArgumentParser(prog="solar-harness skills eval")
@@ -1790,50 +1939,9 @@ def cmd_eval(args: list[str]) -> int:
     if entry is None:
         print(json.dumps({"ok": False, "error": f"skill '{skill_name}' not in registry"}))
         return 1
-
-    eval_pack_rel = entry.get("eval_pack")
-    if not eval_pack_rel:
-        print(json.dumps({"ok": False, "error": f"no eval_pack for '{skill_name}'"}))
-        return 1
-
-    eval_pack_path = HARNESS_DIR / eval_pack_rel
-    if not eval_pack_path.exists():
-        print(json.dumps({"ok": False, "error": f"eval_pack not found: {eval_pack_path}"}))
-        return 1
-
-    # Minimal YAML reader for eval pack
-    text = eval_pack_path.read_text()
-    min_score_line = next((l for l in text.splitlines() if l.strip().startswith("min_score:")), "")
-    min_score = float(min_score_line.split(":", 1)[1].strip()) if min_score_line else 0.75
-
-    # Count cases
-    case_count = text.count("- id:")
-
-    # Score: structural eval (eval pack exists + has cases + min_score defined)
-    score = 1.0 if (case_count >= 1 and min_score > 0) else 0.0
-    passed = score >= min_score
-
-    # Emit metric
-    try:
-        sys.path.insert(0, str(HARNESS_DIR / "lib"))
-        import skill_metrics
-        skill_metrics.emit(skill_name,
-                           event_type="eval_pass" if passed else "eval_fail",
-                           score=score)
-    except Exception:
-        pass
-
-    result = {
-        "ok": True,
-        "skill": skill_name,
-        "eval_pack": str(eval_pack_path),
-        "cases": case_count,
-        "score": score,
-        "min_score": min_score,
-        "passed": passed,
-    }
+    result = _evaluate_registry_skill(entry)
     print(json.dumps(result, indent=2))
-    return 0 if passed else 1
+    return 0 if result.get("passed") else 1
 
 
 # ── promote ───────────────────────────────────────────────────────────────────
@@ -1852,28 +1960,64 @@ def cmd_promote(args: list[str]) -> int:
         print(json.dumps({"ok": False, "error": f"skill '{skill_name}' not in registry"}))
         return 1
 
+    if ns.skip_eval or ns.skip_regression:
+        print(json.dumps({
+            "ok": False,
+            "error": "unsafe_gate_bypass_rejected",
+            "skill": skill_name,
+            "requested": {
+                "skip_eval": ns.skip_eval,
+                "skip_regression": ns.skip_regression,
+            },
+        }))
+        return 2
+
+    integrity = _skill_integrity(entry)
+    if not integrity["ok"]:
+        print(json.dumps({
+            "ok": False,
+            "error": "skill_integrity_failed",
+            "skill": skill_name,
+            "issues": integrity["issues"],
+            "integrity": integrity,
+        }))
+        return 1
+
+    eval_result = _evaluate_registry_skill(entry)
+    if not eval_result.get("passed"):
+        print(json.dumps({
+            "ok": False,
+            "error": "skill_eval_gate_failed",
+            "skill": skill_name,
+            "eval": eval_result,
+        }))
+        return 1
+
+    regression_failures: list[dict[str, Any]] = []
+    for stable in _load_registry():
+        if stable.get("status") != "stable" or stable.get("name") == skill_name:
+            continue
+        result = _evaluate_registry_skill(stable)
+        if not result.get("passed"):
+            regression_failures.append({"skill": stable.get("name", "?"), "eval": result})
+    if regression_failures:
+        print(json.dumps({
+            "ok": False,
+            "error": "stable_skill_regression_gate_failed",
+            "skill": skill_name,
+            "regressions": regression_failures,
+        }))
+        return 1
+
     current_status = entry.get("status", "")
     if current_status == "stable":
-        print(json.dumps({"ok": True, "result": "already_stable", "skill": skill_name}))
+        print(json.dumps({
+            "ok": True,
+            "result": "already_stable_revalidated",
+            "skill": skill_name,
+            "eval": eval_result,
+        }))
         return 0
-
-    # Gate 1: eval pass
-    if not ns.skip_eval:
-        eval_rc = cmd_eval(["--skill", skill_name, "--json"])
-        if eval_rc != 0:
-            print(json.dumps({
-                "ok": False,
-                "error": f"eval gate failed for '{skill_name}'; use --skip-eval only if you have external evidence",
-            }))
-            return 1
-
-    # Gate 2: regression pass — check that no previously stable skill regressed
-    if not ns.skip_regression:
-        stable = [sk for sk in _load_registry() if sk.get("status") == "stable"]
-        regression_ok = len(stable) >= 0  # structural check: registry readable
-        if not regression_ok:
-            print(json.dumps({"ok": False, "error": "regression check failed: registry unreadable"}))
-            return 1
 
     # Update registry
     from datetime import datetime, timezone
@@ -2001,14 +2145,24 @@ def cmd_registry_list(args: list[str]) -> int:
     as_json = "--json" in args
     skills = _load_registry()
     by_status: dict[str, list[str]] = {}
+    enriched: list[dict[str, Any]] = []
     for sk in skills:
         st = sk.get("status", "unknown")
         by_status.setdefault(st, []).append(sk.get("name", "?"))
+        enriched.append({**sk, "integrity": _skill_integrity(sk)})
+
+    stable_issues = _stable_integrity_failures(skills)
+    declared_stable_count = len(by_status.get("stable", []))
 
     result = {
+        "ok": not stable_issues,
         "total": len(skills),
+        "declared_stable_count": declared_stable_count,
+        "integrity_valid_stable_count": declared_stable_count - len(stable_issues),
+        "behavioral_verification": "not_attested_by_registry; run skills eval",
+        "stable_integrity_issues": stable_issues,
         "by_status": {k: sorted(v) for k, v in sorted(by_status.items())},
-        "skills": skills,
+        "skills": enriched,
     }
     if as_json:
         print(json.dumps(result, indent=2))
@@ -2016,7 +2170,12 @@ def cmd_registry_list(args: list[str]) -> int:
         print(f"Registry: {len(skills)} skills")
         for st, names in sorted(by_status.items()):
             print(f"  {st:12s}: {', '.join(names)}")
-    return 0
+        print(
+            "  stable integrity: "
+            f"{result['integrity_valid_stable_count']}/{declared_stable_count} valid"
+        )
+        print("  behavioral verification: not attested; run skills eval")
+    return 0 if result["ok"] else 1
 
 
 # ── main ───────────────────────────────────────────────────────────────────────

@@ -110,7 +110,7 @@ operator_compatibility:
   preferred:
     - mini-codex-gpt53-spark-builder-1
     - mini-codex-gpt55-medium-builder-1
-    - mini-claude-sonnet-builder
+    - mini-claude-sonnet-builder-2
   forbidden:
     - mini-antigravity-gemini35-flash-high
 provenance:

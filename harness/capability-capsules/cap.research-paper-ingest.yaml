@@ -86,7 +86,7 @@ verification:
     - Failed or partial parsing is represented with failed or inconclusive status, not hidden success.
 operator_compatibility:
   preferred:
-    - ScientificPaperIngestor
+    - autosci-paper-ingest-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

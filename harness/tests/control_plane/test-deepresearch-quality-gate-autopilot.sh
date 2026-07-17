@@ -65,3 +65,64 @@ print(json.dumps({"ok": True, "feature": "deepresearch_quality_gate_autopilot_re
 PY
 
 echo "PASS: autopilot reopens completed DeepResearch nodes with missing/failed quality gate"
+
+python3 - "$TMPDIR_TEST/sprints/$SID.task_graph.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+graph = json.loads(path.read_text())
+record = {
+    "schema_version": "solar.human_review.v1",
+    "generation": 1,
+    "state": "blocked",
+    "reason": "operator result failed repeatedly",
+}
+graph["nodes"][0]["status"] = "needs_human_review"
+graph["nodes"][0]["human_review"] = record
+graph["node_results"]["R8"] = {
+    "status": "needs_human_review",
+    "human_review": record,
+}
+path.write_text(json.dumps(graph))
+PY
+
+HARNESS_DIR="$TMPDIR_TEST" python3 - "$TMPDIR_TEST/tools/solar-autopilot-monitor.py" "$TMPDIR_TEST/sprints/$SID.task_graph.json" <<'PY'
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+module_path = Path(sys.argv[1])
+graph_path = Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location("solar_autopilot_monitor", module_path)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(module)
+
+# Simulate a finding collected immediately before another writer escalated the
+# node.  Apply-time validation must protect the newer human-review authority.
+actions = module.apply_findings(
+    [{
+        "sid": "sprint-test-deepresearch-gate-autopilot",
+        "type": "deepresearch_quality_gate_repair",
+        "node_id": "R8",
+        "graph_path": str(graph_path),
+        "node_status": "passed",
+        "gate_status": "missing",
+    }],
+    dispatch=False,
+    state={"actions": {}},
+    cooldown=0,
+)
+graph = json.loads(graph_path.read_text())
+node = graph["nodes"][0]
+if node.get("status") != "needs_human_review":
+    raise SystemExit(f"stale repair finding reopened human review: {node}")
+if not any(a.get("skipped") == "needs_human_review_requires_explicit_resume" for a in actions):
+    raise SystemExit(f"missing explicit-resume skip: {actions}")
+print(json.dumps({"ok": True, "feature": "human_review_absorbs_stale_autopilot_repair"}))
+PY
+
+echo "PASS: stale quality-gate findings cannot reopen human review"

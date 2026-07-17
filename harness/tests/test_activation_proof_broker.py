@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -227,6 +228,50 @@ class TestBrokerCoverageSourceFallback:
         assert abs(coverage["coverage_pct"] - 50.0) < 0.01
         assert "sprint-test" in coverage.get("_source", "")
 
+    def test_sprint_events_are_not_shadowed_by_metrics_module(self, tmp_path):
+        runtime_root = tmp_path / "runtime"
+        (runtime_root / "sprints").mkdir(parents=True)
+        observability = runtime_root / "lib" / "observability"
+        observability.mkdir(parents=True)
+        (observability / "__init__.py").write_text("", encoding="utf-8")
+        (observability / "metrics.py").write_text(
+            """
+def broker_coverage_pct(events): return 100.0
+def policy_denied_rate(events): return 0.0
+def approval_pending_count(events): return 0
+""",
+            encoding="utf-8",
+        )
+        (runtime_root / "sprints" / "sprint-real.events.jsonl").write_text(
+            json.dumps({"type": "command_issued", "data": {"contracted": True}}) + "\n",
+            encoding="utf-8",
+        )
+        env = dict(os.environ)
+        env["HARNESS_DIR"] = str(runtime_root)
+        env["SOLAR_HARNESS_DIR"] = str(runtime_root)
+        env["PYTHONPATH"] = str(HARNESS_LIB)
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import json; from activation_proof import build_broker_coverage; "
+                    "print(json.dumps(build_broker_coverage('sprint-real')))"
+                ),
+            ],
+            text=True,
+            capture_output=True,
+            env=env,
+            check=False,
+        )
+
+        assert proc.returncode == 0, proc.stderr
+        coverage = json.loads(proc.stdout)
+        assert coverage["total_actions"] == 1
+        assert coverage["contracted_actions"] == 1
+        assert coverage["coverage_pct"] == 100.0
+        assert coverage["_source"] == "events.jsonl:sprint-real"
+
     def test_all_fields_present_even_with_empty_events(self, tmp_path, monkeypatch):
         monkeypatch.setattr(self.mod, "HARNESS_DIR", tmp_path)
         (tmp_path / "sprints").mkdir()
@@ -242,29 +287,48 @@ class TestBrokerCoverageSourceFallback:
         coverage = self.mod.build_broker_coverage("sprint-no-events")
         assert coverage["coverage_pct"] == 0.0
 
-    def test_observability_metrics_used_when_available(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(self.mod, "HARNESS_DIR", tmp_path)
-        obs_dir = tmp_path / "lib" / "observability"
-        obs_dir.mkdir(parents=True)
-        (obs_dir / "__init__.py").write_text("")
-        metrics_code = """
-def broker_coverage_pct(): return 75.0
-def policy_denied_rate(): return 3
-def approval_pending_count(): return 1
-"""
-        (obs_dir / "metrics.py").write_text(metrics_code)
+    def test_event_ledger_shape_uses_canonical_coverage_contract(self):
+        events = [
+            {"event_type": "action.proposed", "payload": {"action_id": "A1", "kind": "shell"}},
+            {"event_type": "policy.verdict", "payload": {"action_id": "A1", "verdict": "PASS"}},
+            {"event_type": "action.executed", "payload": {"action_id": "A1"}},
+            {"event_type": "action.proposed", "payload": {"action_id": "A2", "kind": "file_write"}},
+            {
+                "event_type": "policy.verdict",
+                "payload": {
+                    "action_id": "A2",
+                    "verdict": "FAIL",
+                    "reason": "policy_denied",
+                    "detail": "write_scope: outside node scope",
+                },
+            },
+            {"event_type": "action.proposed", "payload": {"action_id": "A3", "kind": "shell"}},
+            {
+                "event_type": "policy.verdict",
+                "payload": {"action_id": "A3", "verdict": "FAIL", "reason": "lease_denied"},
+            },
+            {"event_type": "action.proposed", "payload": {"action_id": "A4", "kind": "human_approval"}},
+            {
+                "event_type": "policy.verdict",
+                "payload": {
+                    "action_id": "A4",
+                    "verdict": "FAIL",
+                    "reason": "policy_denied",
+                    "detail": "approval required",
+                },
+            },
+        ]
 
-        # Reload to pick up new HARNESS_DIR
-        import importlib
-        import activation_proof as mod
-        importlib.reload(mod)
-        monkeypatch.setattr(mod, "HARNESS_DIR", tmp_path)
+        coverage = self.mod.compute_broker_coverage_from_events(events)
 
-        coverage = mod.build_broker_coverage()
-        assert coverage["_source"] == "observability.metrics"
-        assert float(coverage["coverage_pct"]) == 75.0
-        assert int(coverage["policy_denied_count"]) == 3
-        assert int(coverage["human_approval_pending"]) == 1
+        assert coverage["total_actions"] == 4
+        assert coverage["contracted_actions"] == 1
+        assert coverage["coverage_pct"] == 25.0
+        assert coverage["unscoped_write_count"] == 1
+        assert coverage["policy_denied_count"] == 2
+        assert coverage["lease_denied_count"] == 1
+        assert coverage["human_approval_pending"] == 1
+        assert coverage["health"] == "FAIL"
 
 
 # ---------------------------------------------------------------------------

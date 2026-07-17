@@ -31,9 +31,9 @@ def test_build_capsule_plan_node_inserts_guard_resource_and_verifier():
             "required_resource_capsules": ["resource.repo-workspace"],
             "selected_skills": ["skill.multi-file-implementation"],
             "operator_constraints": {
-                "preferred": ["mini-claude-sonnet-builder"],
+                "preferred": ["mini-claude-sonnet-builder-2"],
                 "forbidden": [],
-                "default_operator_profile": "mini-claude-sonnet-builder",
+                "default_operator_profile": "mini-claude-sonnet-builder-2",
             },
         },
     }
@@ -103,9 +103,9 @@ def test_build_physical_plan_for_capsule_node_prefers_capsule_operator():
                 "role": "builder",
                 "task_type": "implementation",
                 "operator_constraints": {
-                    "preferred": ["mini-claude-sonnet-builder"],
+                    "preferred": ["mini-claude-sonnet-builder-2"],
                     "forbidden": [],
-                    "default_operator_profile": "mini-claude-sonnet-builder",
+                    "default_operator_profile": "mini-claude-sonnet-builder-2",
                 },
             }
         ],
@@ -115,5 +115,5 @@ def test_build_physical_plan_for_capsule_node_prefers_capsule_operator():
         require_dispatchable=False,
         operators_path=ROOT / "config" / "physical-operators.json",
     )
-    assert plan["selected_operator_id"] == "mini-claude-sonnet-builder"
-    assert plan["execution_candidates"][0]["operator_id"] == "mini-claude-sonnet-builder"
+    assert plan["selected_operator_id"] == "mini-claude-sonnet-builder-2"
+    assert plan["execution_candidates"][0]["operator_id"] == "mini-claude-sonnet-builder-2"

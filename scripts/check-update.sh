@@ -27,6 +27,77 @@ db="$home/.solar/db/solar.db"
 
 fail() { echo "check-update FAILED: $*" >&2; exit 1; }
 
+# --- legacy receipt: missing repo/channel must stay on maintained origin ----
+# Use a fake git transport so this regression check is deterministic and never
+# reaches the network.  A pre-channel receipt still has its installed release
+# version; that version must select the corresponding maintained-origin tag.
+legacy_home="$sandbox/legacy-home"
+legacy_solar_home="$legacy_home/.solar"
+legacy_fake_bin="$sandbox/legacy-fake-bin"
+legacy_git_log="$sandbox/legacy-git.log"
+mkdir -p "$legacy_solar_home/bin" "$legacy_fake_bin"
+cp "$repo_dir/bin/solar" "$legacy_solar_home/bin/solar"
+cat > "$legacy_solar_home/install-receipt.json" <<'JSON'
+{
+  "version": "1.2.3",
+  "git_sha": "abc1234",
+  "channel": "",
+  "repo": "",
+  "components": ["kernel", "harness"]
+}
+JSON
+cat > "$legacy_fake_bin/git" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$FAKE_GIT_LOG"
+if [ "${1:-}" = "clone" ]; then
+    dest=""
+    for arg in "$@"; do dest="$arg"; done
+    mkdir -p "$dest"
+    printf '#!/usr/bin/env bash\nexit 0\n' > "$dest/install.sh"
+    chmod +x "$dest/install.sh"
+    printf '1.2.3\n' > "$dest/VERSION"
+    exit 0
+fi
+if [ "${1:-}" = "-C" ] && [ "${3:-}" = "rev-parse" ]; then
+    case "${4:-}" in
+        --short) printf 'abc1234\n' ;;
+        HEAD) printf 'abc1234567890\n' ;;
+    esac
+    exit 0
+fi
+exit 1
+SH
+chmod +x "$legacy_fake_bin/git"
+FAKE_GIT_LOG="$legacy_git_log" PATH="$legacy_fake_bin:$PATH" \
+    HOME="$legacy_home" SOLAR_SRC="$sandbox/legacy-src/OpenSolar" \
+    "$legacy_solar_home/bin/solar" update >"$sandbox/legacy-update.log" 2>&1 \
+    || { cat "$sandbox/legacy-update.log" >&2; fail "legacy receipt update target resolution"; }
+grep -Fq -- "--branch v1.2.3 https://github.com/suraj-subrahmanyan/OpenSolar.git" "$legacy_git_log" \
+    || { cat "$legacy_git_log" >&2; fail "legacy receipt did not use maintained origin at version-derived channel"; }
+echo "legacy receipt target: ok (maintained origin @ v1.2.3)"
+
+# A git-describe development version is not a fetchable release tag.  Refuse
+# to guess instead of silently redirecting the install to an unrelated branch.
+cat > "$legacy_solar_home/install-receipt.json" <<'JSON'
+{
+  "version": "1.2.3-4-gabc1234",
+  "git_sha": "abc1234",
+  "channel": "",
+  "repo": "",
+  "components": ["kernel", "harness"]
+}
+JSON
+: > "$legacy_git_log"
+if FAKE_GIT_LOG="$legacy_git_log" PATH="$legacy_fake_bin:$PATH" \
+    HOME="$legacy_home" SOLAR_SRC="$sandbox/legacy-src-invalid/OpenSolar" \
+    "$legacy_solar_home/bin/solar" update >"$sandbox/legacy-invalid.log" 2>&1; then
+    fail "legacy development-version receipt guessed an update channel"
+fi
+grep -Fq "legacy receipt has no fetchable release channel" "$sandbox/legacy-invalid.log" \
+    || { cat "$sandbox/legacy-invalid.log" >&2; fail "legacy invalid-version refusal was not actionable"; }
+[ ! -s "$legacy_git_log" ] || { cat "$legacy_git_log" >&2; fail "legacy invalid-version receipt reached git"; }
+echo "legacy receipt invalid version: refused before fetch"
+
 receipt_sha() {
     HOME="$home" "$solar" version --json \
         | python3 -c 'import json,sys;print(json.load(sys.stdin)["git_sha"])'

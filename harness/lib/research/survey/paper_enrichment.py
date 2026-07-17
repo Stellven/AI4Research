@@ -432,6 +432,7 @@ def load_matching_paper_trends(output_dir: str | Path, section: dict[str, Any], 
     for idx, trend in enumerate(trends):
         hay = " ".join([str(trend.get("label") or ""), str(trend.get("claim") or ""), " ".join(trend.get("representative_titles") or [])]).lower()
         score = len(set(re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{3,}", section_text)) & set(re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{3,}", hay)))
-        scored.append((-score, idx, trend))
+        if score > 0 and str(trend.get("trend_id") or "").strip():
+            scored.append((-score, idx, trend))
     scored.sort(key=lambda item: (item[0], item[1]))
     return [trend for _score, _idx, trend in scored[:limit]]

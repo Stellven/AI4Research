@@ -23,6 +23,11 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import yaml
 
+from physical_operator_catalog import (
+    load_physical_operator_catalog,
+    resolve_static_operator_reference,
+)
+
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
 CAPSULE_REGISTRY_PATH = HARNESS_DIR / "config" / "capability-capsules.registry.yaml"
@@ -53,7 +58,7 @@ DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR = {
     "TestRunner": "cap.requirement-compiler-verification",
     "Verifier": "cap.requirement-compiler-verification",
     "Critic": "cap.requirement-compiler-verification",
-    "ResearchScout": "cap.requirement-research-scout",
+    "ResearchScout": "cap.research-retrieval",
     "ResearchSynthesizer": "cap.requirement-research-synthesizer",
     "ArtifactCurator": "cap.requirement-research-synthesizer",
     "ScientificLiteratureDiscoverer": "cap.research-literature-discover",
@@ -361,6 +366,58 @@ def iter_registry_entries(
         if entry.status == "revoked" and include_revoked:
             filtered.append(entry)
     return filtered
+
+
+def audit_stable_capsule_operator_bindings(
+    *,
+    registry_path: Path,
+    operators_path: Path,
+) -> List[Dict[str, Any]]:
+    """Audit stable capsule defaults/preferences against one operator authority.
+
+    ``default_operator_profile`` may intentionally name a reusable profile when
+    no operator has that exact ID.  Manifest ``preferred`` entries are operator
+    IDs and therefore require an exact, statically selectable record.
+    """
+    operators = load_physical_operator_catalog(Path(operators_path))
+    issues: List[Dict[str, Any]] = []
+
+    for entry in iter_registry_entries(path=Path(registry_path)):
+        references: List[tuple[str, str, bool]] = []
+        if entry.default_operator_profile:
+            references.append(
+                ("default_operator_profile", str(entry.default_operator_profile), True)
+            )
+        manifest = load_capability_capsule_manifest(Path(entry.manifest_path))
+        for reference in manifest.get("operator_compatibility", {}).get("preferred", []) or []:
+            references.append(
+                ("operator_compatibility.preferred", str(reference), False)
+            )
+
+        for field, reference, allow_profile in references:
+            resolution = resolve_static_operator_reference(
+                reference,
+                operators,
+                allow_profile=allow_profile,
+            )
+            if resolution["selectable_matches"]:
+                continue
+            issues.append(
+                {
+                    "capability_capsule_id": entry.capability_capsule_id,
+                    "field": field,
+                    "reference": reference,
+                    "reason": (
+                        "operator_not_found"
+                        if resolution["resolution_kind"] == "missing"
+                        else "operator_not_selectable"
+                    ),
+                    "resolution_kind": resolution["resolution_kind"],
+                    "matches": resolution["matches"],
+                    "rejection_reasons": resolution["rejection_reasons"],
+                }
+            )
+    return issues
 
 
 def get_registry_entry(
@@ -987,10 +1044,37 @@ def default_capability_plan_for_logical_operator(
         selection_mode = "read_only_audit_heuristic"
         fallback_used = False
         fallback_reason = None
+    elif str(logical_operator or "") in {
+        "ResearchScout",
+        "ResearchSynthesizer",
+        "ArtifactCurator",
+    }:
+        # Named research operators have explicit, governed artifact contracts.
+        # Bind those contracts before the generic research guard below so a
+        # ResearchScout can retrieve a provenance-complete source pack and the
+        # synthesizer/curator can consume it without falling through to a
+        # code-oriented goal classifier.
+        capsule_id = DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR[str(logical_operator)]
+        dispatch_task_type = DEFAULT_TASK_TYPE_BY_LOGICAL_OPERATOR[str(logical_operator)]
+        selection_mode = "research_logical_operator_default"
+        fallback_used = False
+        fallback_reason = None
     elif (
         str(request_type).strip().lower() == "research"
-        or str(logical_operator).strip().lower()
-        in {"researcher", "researchscout", "researchsynthesizer", "artifactcurator"}
+        and str(logical_operator or "") in DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR
+    ):
+        # A research request does not erase an explicitly named support role.
+        # Verifiers, critics, planners, and implementation workers still need
+        # their declared capsule contract; only an untyped Researcher should
+        # bypass code-oriented goal inference.
+        capsule_id = DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR[str(logical_operator)]
+        dispatch_task_type = DEFAULT_TASK_TYPE_BY_LOGICAL_OPERATOR[str(logical_operator)]
+        selection_mode = "research_support_operator_default"
+        fallback_used = False
+        fallback_reason = None
+    elif (
+        str(request_type).strip().lower() == "research"
+        or str(logical_operator).strip().lower() == "researcher"
         or str((node or {}).get("type", "")).strip().lower() == "research"
     ):
         # Research nodes must NOT bind code-capability capsules. Their goal text routinely
@@ -999,9 +1083,10 @@ def default_capability_plan_for_logical_operator(
         # research dimension pulled cap.flashmlx-performance-debugger, whose
         # root_cause_report/benchmark_report proof obligations a research node can never
         # produce → permanent eval FAIL → the research gate wedges (observed: S2a failed while
-        # sibling S2b–S2e, identical Researcher nodes, passed with no capsule). Research
-        # capability capsules are bound via the skill-driven override (Priority 1:
-        # ResearchScout/Synthesizer/ArtifactCurator); a plain Researcher node correctly gets none.
+        # sibling S2b–S2e, identical Researcher nodes, passed with no capsule).
+        # Named ResearchScout/Synthesizer/ArtifactCurator operators bind their
+        # dedicated research capsules above; a plain Researcher node correctly
+        # gets none.
         capsule_id = None
         dispatch_task_type = ""
         fallback_used = False
@@ -1045,7 +1130,14 @@ def default_capability_plan_for_logical_operator(
 
     if not capsule_id:
         return {}
-    entry = get_registry_entry(capsule_id, path=registry_path, include_nonstable=True)
+    # Normal product routing admits only stable capsules.  A skill-registry
+    # override is an explicit experimental opt-in and may resolve its draft
+    # capsule; heuristic goal matching must never promote a draft surface.
+    entry = get_registry_entry(
+        capsule_id,
+        path=registry_path,
+        include_nonstable=bool(skill_override),
+    )
     if entry is None or entry.status == "revoked":
         return {}
     manifest = load_capability_capsule_manifest(Path(entry.manifest_path))

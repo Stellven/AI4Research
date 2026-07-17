@@ -86,7 +86,7 @@ verification:
     - Unknown or stale state is marked blocked or unknown, not completed.
 operator_compatibility:
   preferred:
-    - ScientificExperimentMonitor
+    - autosci-experiment-monitor-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

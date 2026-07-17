@@ -85,7 +85,7 @@ verification:
     - source_manifest exists
 operator_compatibility:
   preferred:
-    - mini-thunderomlx-qwen36-knowledge
+    - mini-codex-gpt55-medium-builder-1
   forbidden:
     - mini-antigravity-gemini35-flash-high
 provenance:

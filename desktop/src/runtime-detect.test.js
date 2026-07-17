@@ -83,11 +83,33 @@ const cases = [
     (m) => m.wslHasDistro() === true,
   ],
   [
+    "Docker Desktop internal distros do not count as a Solar distro",
+    { statusExit: 0, distros: ["docker-desktop", "docker-desktop-data"] },
+    (m) => m.wslHasDistro() === false && m.wslState() === "missing",
+  ],
+  [
+    "first real Linux distro wins over Docker Desktop internals",
+    {
+      distros: ["docker-desktop", "docker-desktop-data", "Ubuntu-24.04"],
+    },
+    (m) => m.wslDistro() === "Ubuntu-24.04",
+  ],
+  [
     "wslDistro honors SOLAR_WSL_DISTRO env",
     { distros: ["Ubuntu-24.04"] },
     (m) => {
       process.env.SOLAR_WSL_DISTRO = "Custom-Distro";
       const ok = m.wslDistro() === "Custom-Distro";
+      delete process.env.SOLAR_WSL_DISTRO;
+      return ok;
+    },
+  ],
+  [
+    "internal SOLAR_WSL_DISTRO override cannot target Docker Desktop",
+    { distros: ["docker-desktop", "Debian"] },
+    (m) => {
+      process.env.SOLAR_WSL_DISTRO = "docker-desktop";
+      const ok = m.wslDistro() === "Debian";
       delete process.env.SOLAR_WSL_DISTRO;
       return ok;
     },

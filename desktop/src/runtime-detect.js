@@ -9,6 +9,22 @@
 const cp = require("child_process");
 
 let _distroCache = null;
+const INTERNAL_WSL_DISTRO = /^docker-desktop(?:-data)?$/i;
+
+// Docker Desktop registers implementation-only WSL distributions that are not
+// user Linux environments. Solar must never install into or start inside them.
+function isSolarWslDistro(name) {
+  const value = String(name || "").trim();
+  return Boolean(value) && !INTERNAL_WSL_DISTRO.test(value);
+}
+
+function usableWslDistros(stdout) {
+  return String(stdout || "")
+    .replace(/\x00/g, "")
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(isSolarWslDistro);
+}
 
 // Reset the discovered-distro cache (e.g. after `wsl --shutdown`, the default distro may change).
 function resetDistroCache() {
@@ -16,18 +32,15 @@ function resetDistroCache() {
 }
 
 function wslDistro() {
-  if (process.env.SOLAR_WSL_DISTRO) return process.env.SOLAR_WSL_DISTRO;
+  const override = String(process.env.SOLAR_WSL_DISTRO || "").trim();
+  if (isSolarWslDistro(override)) return override;
   if (_distroCache !== null) return _distroCache;
   try {
     const r = cp.spawnSync("wsl.exe", ["-l", "-q"], {
       timeout: 5000,
       encoding: "utf8",
     });
-    const first = (r.stdout || "")
-      .replace(/\x00/g, "")
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .filter(Boolean)[0];
+    const first = usableWslDistros(r.stdout)[0];
     _distroCache = first || "Ubuntu-24.04";
   } catch {
     _distroCache = "Ubuntu-24.04";
@@ -60,13 +73,7 @@ function wslHasDistro() {
     encoding: "utf8",
   });
   if (r.error || r.status !== 0) return false;
-  return (
-    (r.stdout || "")
-      .replace(/\x00/g, "")
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .filter(Boolean).length > 0
-  );
+  return usableWslDistros(r.stdout).length > 0;
 }
 
 // 'missing' (WSL/distro not usable) | 'stopped' (installed, VM cold) | 'up'.
@@ -87,4 +94,5 @@ module.exports = {
   wslHasDistro,
   wslState,
   resetDistroCache,
+  isSolarWslDistro,
 };

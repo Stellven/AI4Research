@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "prebuild": "npm run test:node-actor && npm run test:run-pipeline",
+    "test:node-actor": "node scripts/test-node-actor.mjs",
+    "test:run-pipeline": "node scripts/test-run-pipeline.mjs",
     "typecheck": "tsc --noEmit",
     "dev": "vite --host 127.0.0.1"
   },

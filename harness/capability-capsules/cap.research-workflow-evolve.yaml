@@ -93,7 +93,7 @@ verification:
     - Proposed changes are not applied by this capsule without separate approval.
 operator_compatibility:
   preferred:
-    - ScientificWorkflowEvolver
+    - autosci-workflow-evolve-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

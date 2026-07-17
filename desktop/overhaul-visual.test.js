@@ -264,6 +264,187 @@ fs.writeFileSync(
   }) + "\n",
 );
 
+// A terminal failed sprint carrying a stale no-routing diagnostic. The terminal
+// state must win: the UI must report the evaluator failure, not tell the user to
+// connect a worker after the run has already ended.
+const SID3 = "sprint-20260714-terminal-failure--fed987";
+writeJson(sp(`${SID3}.status.json`), {
+  sprint_id: SID3,
+  id: SID3,
+  title: "Verify a completed implementation",
+  status: "failed",
+  phase: "failed",
+  stage: "failed",
+  task_graph_status: "failed",
+  failed_nodes: ["S3"],
+  created_at: "2026-07-14T00:00:00Z",
+});
+writeJson(sp(`${SID3}.task_graph.json`), {
+  sprint_id: SID3,
+  nodes: [
+    { id: "S1", goal: "Implement the product", status: "passed" },
+    {
+      id: "S2",
+      goal: "Run deterministic tests",
+      status: "passed",
+      depends_on: ["S1"],
+    },
+    {
+      id: "S3",
+      goal: "Independently evaluate the result",
+      logical_operator: "Evaluator",
+      status: "failed",
+      depends_on: ["S2"],
+      route_decision: "no_routing_record",
+      blocked_reason: "no_routing_record",
+    },
+  ],
+  node_results: {
+    S1: { status: "passed" },
+    S2: { status: "passed" },
+    S3: { status: "failed" },
+  },
+});
+writeJson(sp(`${SID3}.closure.json`), {
+  status: "failed",
+  all_nodes_passed: false,
+  open_nodes: ["S3"],
+  failed_nodes: ["S3"],
+});
+writeJson(sp(`${SID3}.acceptance_verdict.json`), {
+  verdict: "FAIL",
+  reasons: ["task_graph_failed"],
+});
+fs.mkdirSync(path.join(TMP, "sessions", SID3), { recursive: true });
+fs.writeFileSync(
+  path.join(TMP, "sessions", SID3, "events.jsonl"),
+  JSON.stringify({
+    sprint_id: SID3,
+    ts: "2026-07-14T00:05:00Z",
+    type: "log_message",
+    actor: "evaluator",
+    payload: {
+      legacy_event: "graph_parent_failed",
+      node_id: "S3",
+      phase: "failed",
+    },
+  }) + "\n",
+);
+
+// A certified generic plan in the execution handoff: planning_complete is the
+// parent phase, but S1's durable node owner says a builder is actively running.
+// The UI must not infer Evaluator from the substring "complete", and opaque S*
+// ids must not fall back to Planner when owner/task_type are present.
+const SID4 = "sprint-20260716-active-role--a1b2c3";
+writeJson(sp(`${SID4}.status.json`), {
+  sprint_id: SID4,
+  id: SID4,
+  title: "Build a dependency-free inventory CLI",
+  status: "active",
+  phase: "planning_complete",
+  created_at: "2026-07-16T15:38:10Z",
+});
+writeJson(sp(`${SID4}.task_graph.json`), {
+  sprint_id: SID4,
+  workflow_contract_id: "pm.generic.v1",
+  workflow_contract_version: "1.0",
+  plan_compile_required: true,
+  plan_certificate: {
+    schema: "solar.plan_certificate.v1",
+    verdict: "PASS",
+    validator: "plan_validator",
+    validated_at: "2026-07-16T15:38:19Z",
+    graph_hash: "8fa3923169786971ec2d40ede9581193360b9614c11c210c03ff7099782c5aec",
+  },
+  nodes: [
+    {
+      id: "S1",
+      goal: "Implement the inventory CLI",
+      status: "dispatched",
+      owner: "builder_main",
+      task_type: "implementation",
+      dispatch_task_type: "implementation",
+    },
+    {
+      id: "S2",
+      goal: "Independently verify the result",
+      status: "pending",
+      owner: "verifier",
+      task_type: "verification",
+      dispatch_task_type: "verification",
+      depends_on: ["S1"],
+    },
+  ],
+});
+fs.mkdirSync(path.join(TMP, "sessions", SID4), { recursive: true });
+fs.writeFileSync(
+  path.join(TMP, "sessions", SID4, "events.jsonl"),
+  JSON.stringify({
+    sprint_id: SID4,
+    ts: "2026-07-16T15:38:24Z",
+    type: "graph_builder_operator_pool_dispatched",
+    actor: "coordinator",
+    payload: { node_id: "S1", role: "builder" },
+  }) + "\n",
+);
+
+// The same builder-owned node after its evaluator has been dispatched. The
+// normalized display status remains "active", while workflow_status must keep
+// "reviewing" so the pipeline can highlight the actual Evaluator without
+// relabelling the plan node's durable Builder ownership.
+const SID5 = "sprint-20260716-evaluator-role--d4e5f6";
+writeJson(sp(`${SID5}.status.json`), {
+  sprint_id: SID5,
+  id: SID5,
+  title: "Review a completed implementation",
+  status: "active",
+  phase: "planning_complete",
+  created_at: "2026-07-16T16:32:40Z",
+});
+writeJson(sp(`${SID5}.task_graph.json`), {
+  sprint_id: SID5,
+  workflow_contract_id: "pm.generic.v1",
+  workflow_contract_version: "1.0",
+  plan_compile_required: true,
+  plan_certificate: {
+    schema: "solar.plan_certificate.v1",
+    verdict: "PASS",
+    validator: "plan_validator",
+    validated_at: "2026-07-16T16:31:12Z",
+    graph_hash: "b7d4f5639b84d3056fc2b31f6e2170f6d877d5fcfc48e97f78d1bf569475acbe",
+  },
+  nodes: [
+    {
+      id: "S1_IMPLEMENT_CLI",
+      goal: "Implement the JSON outline CLI",
+      status: "reviewing",
+      owner: "builder_main",
+      task_type: "implementation",
+      dispatch_task_type: "implementation",
+    },
+    {
+      id: "S2_VERIFY_BEHAVIOR",
+      goal: "Verify CLI behavior independently",
+      status: "pending",
+      owner: "verifier",
+      task_type: "verification",
+      dispatch_task_type: "verification",
+      depends_on: ["S1_IMPLEMENT_CLI"],
+    },
+  ],
+});
+fs.mkdirSync(path.join(TMP, "sessions", SID5), { recursive: true });
+fs.writeFileSync(
+  path.join(TMP, "sessions", SID5, "events.jsonl"),
+  JSON.stringify({
+    sprint_id: SID5,
+    ts: "2026-07-16T16:32:51Z",
+    type: "graph_evaluator_operator_pool_dispatched",
+    actor: "coordinator",
+    payload: { node_id: "S1_IMPLEMENT_CLI", role: "evaluator" },
+  }) + "\n",
+);
+
 function waitPort(ms) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
@@ -435,6 +616,131 @@ const log = (k, ok, extra = "") => {
         .screenshot({ path: shot, fullPage: true, animations: "disabled" })
         .catch(() => {});
       console.log(`SHOT gate ${shot}`);
+      await page.close();
+    }
+
+    // A stale dispatch mismatch must never override an already-terminal failure.
+    {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 920 },
+      });
+      await page.goto(`${base}/#/sessions/${SID3}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 15000,
+      });
+      await page.waitForTimeout(2500);
+      const failed = await page.evaluate(() => {
+        const body = document.body.innerText || "";
+        const overview =
+          document.querySelector('[data-testid="run-overview"]')?.textContent ||
+          "";
+        const plan =
+          document.querySelector('[data-testid="plan-flow"]')?.textContent ||
+          "";
+        return {
+          overview,
+          plan,
+          hasStallCard: !!document.querySelector('[data-testid="system-stall"]'),
+          hasWorkerInstruction: /connect a worker/i.test(body),
+        };
+      });
+      log(
+        "failed-terminal:overview-is-failed",
+        /run failed/i.test(failed.overview),
+        failed.overview.trim(),
+      );
+      log(
+        "failed-terminal:plan-ended-failed",
+        /ended:\s*failed/i.test(failed.plan),
+        failed.plan.trim(),
+      );
+      log("failed-terminal:no-stall-card", !failed.hasStallCard);
+      log("failed-terminal:no-worker-instruction", !failed.hasWorkerInstruction);
+      const shot = path.join(OUT_DIR, "overhaul-terminal-failed.png");
+      await page
+        .screenshot({ path: shot, fullPage: true, animations: "disabled" })
+        .catch(() => {});
+      console.log(`SHOT failed-terminal ${shot}`);
+      await page.close();
+    }
+
+    // The active role and per-node labels must come from the current graph
+    // node's compiler-owned authority, not broad parent-phase substrings or
+    // opaque S1/S2 ids.
+    {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 920 },
+      });
+      await page.goto(`${base}/#/sessions/${SID4}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 15000,
+      });
+      await page.waitForTimeout(2500);
+      const roles = await page.evaluate(() => ({
+        active:
+          document.querySelector(".run-stage-active .run-stage-label")
+            ?.textContent || "",
+        cards: Array.from(document.querySelectorAll(".plan-card-role")).map(
+          (node) => node.textContent || "",
+        ),
+      }));
+      log("active-role:builder", roles.active.trim() === "Builder", roles.active);
+      log(
+        "active-role:node-cards",
+        JSON.stringify(roles.cards) === JSON.stringify(["Builder", "Evaluator"]),
+        JSON.stringify(roles.cards),
+      );
+      const shot = path.join(OUT_DIR, "overhaul-active-role.png");
+      await page
+        .screenshot({ path: shot, fullPage: true, animations: "disabled" })
+        .catch(() => {});
+      console.log(`SHOT active-role ${shot}`);
+      await page.close();
+    }
+
+    // A reviewing builder-owned node is still a Builder plan card, but the
+    // live pipeline role must transition to Evaluator and expose the exact
+    // workflow state instead of flattening it to "active".
+    {
+      const page = await browser.newPage({
+        viewport: { width: 1440, height: 920 },
+      });
+      await page.goto(`${base}/#/sessions/${SID5}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 15000,
+      });
+      await page.waitForTimeout(2500);
+      const roles = await page.evaluate(() => ({
+        active:
+          document.querySelector(".run-stage-active .run-stage-label")
+            ?.textContent || "",
+        cards: Array.from(document.querySelectorAll(".plan-card-role")).map(
+          (node) => node.textContent || "",
+        ),
+        statuses: Array.from(document.querySelectorAll(".plan-card-status")).map(
+          (node) => node.textContent || "",
+        ),
+      }));
+      log(
+        "evaluator-role:active",
+        roles.active.trim() === "Evaluator",
+        roles.active,
+      );
+      log(
+        "evaluator-role:node-cards",
+        JSON.stringify(roles.cards) === JSON.stringify(["Builder", "Evaluator"]),
+        JSON.stringify(roles.cards),
+      );
+      log(
+        "evaluator-role:workflow-status",
+        JSON.stringify(roles.statuses) === JSON.stringify(["reviewing", "pending"]),
+        JSON.stringify(roles.statuses),
+      );
+      const shot = path.join(OUT_DIR, "overhaul-evaluator-role.png");
+      await page
+        .screenshot({ path: shot, fullPage: true, animations: "disabled" })
+        .catch(() => {});
+      console.log(`SHOT evaluator-role ${shot}`);
       await page.close();
     }
 

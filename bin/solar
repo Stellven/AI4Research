@@ -70,6 +70,7 @@ if [ -z "${CLAUDE_DIR:-}" ]; then
     CLAUDE_DIR="$(receipt_value "$RECEIPT_PATH" claude_dir 2>/dev/null || true)"
 fi
 CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
+DEFAULT_SOLAR_REPO="https://github.com/suraj-subrahmanyan/OpenSolar.git"
 
 usage() {
     cat <<'EOF'
@@ -460,6 +461,37 @@ fetch_channel() {
     git clone --depth 1 --branch "$_channel" "$_repo" "$_dest" >/dev/null 2>&1
 }
 
+# Compare two release versions (e.g. 1.0.0-rc.6 vs 1.0.0). Prints lt|eq|gt,
+# or "unknown" when either side is missing/unparseable. Pre-releases order
+# BEFORE their final release: the "-rc." suffix is normalized to Debian's
+# tilde, which GNU sort -V ranks below end-of-string (1.0.0~rc.8 < 1.0.0).
+version_compare() {
+    a="${1:-}"; b="${2:-}"
+    if [ -z "$a" ] || [ -z "$b" ] || [ "$a" = "unknown" ] || [ "$b" = "unknown" ]; then
+        echo unknown; return 0
+    fi
+    an="$(printf '%s' "$a" | sed 's/^v//; s/-/~/')"
+    bn="$(printf '%s' "$b" | sed 's/^v//; s/-/~/')"
+    if [ "$an" = "$bn" ]; then echo eq; return 0; fi
+    first="$(printf '%s\n%s\n' "$an" "$bn" | sort -V | head -n1)"
+    if [ "$first" = "$an" ]; then echo lt; else echo gt; fi
+    return 0
+}
+
+# Recover the fetchable tag for a pre-channel receipt.  Development describe
+# strings (for example 1.0.0-rc.8-6-gabc123) are deliberately rejected: they
+# are not guaranteed to exist as remote refs, so guessing would make update
+# fetch an unrelated tree.  A user can still recover explicitly with
+# SOLAR_CHANNEL when the old receipt lacks a release version.
+release_channel_from_version() {
+    candidate="${1:-}"
+    if printf '%s\n' "$candidate" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'; then
+        printf 'v%s\n' "$candidate"
+        return 0
+    fi
+    return 1
+}
+
 # Real update: fetch the recorded channel, compare against the installed sha,
 # and either report up-to-date or reinstall from the fetched source (which runs
 # db_init + migrations + rewrites the receipt), then gate on doctor.
@@ -472,11 +504,21 @@ do_update() {
     repo="$(receipt_field repo)"
     channel="$(receipt_field channel)"
     cur_sha="$(receipt_field git_sha)"
+    cur_version="$(receipt_field version)"
     [ -n "$comps" ] || { echo "receipt has no components" >&2; exit 1; }
-    # Pre-channel receipts fall back to the published defaults (kept in sync
-    # with get-solar.sh and receipt.sh).
-    [ -n "$repo" ] || repo="https://github.com/Stellven/OpenSolar.git"
-    [ -n "$channel" ] || channel="v1.0.0-rc.3"
+    # Pre-channel receipts recover only onto the maintained repository and the
+    # release tag recorded by their own installed version.  Never silently
+    # redirect an old installation to a different fork or a stale fixed tag.
+    [ -n "$repo" ] || repo="${SOLAR_REPO:-$DEFAULT_SOLAR_REPO}"
+    if [ -z "$channel" ]; then
+        channel="${SOLAR_CHANNEL:-}"
+        [ -n "$channel" ] || channel="$(release_channel_from_version "$cur_version" || true)"
+    fi
+    if [ -z "$channel" ]; then
+        echo "update failed: legacy receipt has no fetchable release channel" >&2
+        echo "  reinstall from the current OpenSolar release, or set SOLAR_CHANNEL explicitly." >&2
+        exit 1
+    fi
 
     command -v git >/dev/null 2>&1 || {
         echo "git is required for solar update; install git, or use solar repair to reinstall in place" >&2
@@ -516,6 +558,20 @@ do_update() {
                 return 0
                 ;;
         esac
+    fi
+
+    # A receipt's channel can lag the installed tree (rc.8 installs recorded
+    # rc.6 — P6 corpus PKG-001), so fetching the recorded channel must never
+    # silently move an install BACKWARDS. Refuse a downgrade unless forced.
+    [ -n "$cur_version" ] || cur_version="$(cat "$fetch_dir/VERSION" 2>/dev/null || echo unknown)"
+    new_version="$(cat "$tmp_fetch/VERSION" 2>/dev/null || echo unknown)"
+    if [ "${SOLAR_UPDATE_ALLOW_DOWNGRADE:-0}" != "1" ] \
+        && [ "$(version_compare "$new_version" "$cur_version")" = "lt" ]; then
+        rm -rf "$tmp_fetch"
+        echo "update refused: channel '$channel' serves version $new_version, OLDER than installed $cur_version" >&2
+        echo "  the recorded update channel is stale; reinstall from the current release to fix it," >&2
+        echo "  or rerun with SOLAR_UPDATE_ALLOW_DOWNGRADE=1 to downgrade deliberately." >&2
+        exit 1
     fi
 
     echo "updating $cur_sha -> $new_sha (channel: $channel, components: $comps)" >&2
@@ -564,6 +620,7 @@ result = {
     "paths": {},
     "python": {},
     "system": {},
+    "runtime": {},
     "models": {},
     "drift": [],
     "schema_version": None,
@@ -712,6 +769,7 @@ for name, item in system.items():
         result["warnings"].append("system dependency missing: " + name)
 
 lab_matrix = ""
+cfg = {}
 user_config = os.path.join(solar_home, "harness", "config", "solar-user-config.json")
 try:
     with open(user_config, encoding="utf-8") as f:
@@ -725,8 +783,69 @@ if not lab_matrix:
 zhipu_ready = credential_present({"ZHIPU_AUTH_TOKEN", "ZHIPU_API_KEY"})
 anthropic_ready = credential_present({"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"})
 claude_cli = shutil.which("claude") or ""
+codex_cli = shutil.which("codex") or ""
 uses_glm = "glm" in lab_matrix.lower() or "zhipu" in lab_matrix.lower()
-all_claude_hint = "solar-harness models set-lab-matrix anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet"
+runtime_override = str(os.environ.get("SOLAR_PANE_RUNTIME") or "").strip()
+selected_runtime = str(runtime_override or cfg.get("runtime") or "claude").strip().lower()
+runtime_source = (
+    "SOLAR_PANE_RUNTIME"
+    if runtime_override
+    else "solar-user-config.json"
+    if cfg.get("runtime")
+    else "default"
+)
+home_dir = os.path.expanduser("~")
+
+
+def nonempty_file(path):
+    try:
+        return os.path.isfile(path) and os.path.getsize(path) > 0
+    except OSError:
+        return False
+
+
+if selected_runtime == "codex":
+    runtime_label = "Codex"
+    runtime_cli = codex_cli
+    codex_home = os.path.expanduser(os.environ.get("CODEX_HOME") or os.path.join(home_dir, ".codex"))
+    runtime_auth = bool(os.environ.get("OPENAI_API_KEY")) or nonempty_file(os.path.join(codex_home, "auth.json"))
+    login_command = "codex login --device-auth"
+    runtime_guidance = (
+        "Run `codex login --device-auth` once, then start the cockpit with "
+        "`solar harness start <project-dir>`."
+    )
+elif selected_runtime == "claude":
+    runtime_label = "Claude Code"
+    runtime_cli = claude_cli
+    runtime_auth = bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")) or nonempty_file(
+        os.path.join(claude_dir, ".credentials.json")
+    )
+    login_command = "claude"
+    runtime_guidance = (
+        "Run `claude` once and complete login/trust, then start the cockpit with "
+        "`solar harness start <project-dir>`."
+    )
+else:
+    runtime_label = selected_runtime or "unknown"
+    runtime_cli = ""
+    runtime_auth = False
+    login_command = ""
+    runtime_guidance = "Set runtime to `codex` or `claude` in solar-user-config.json."
+    result["verdict"] = "fail"
+    result["warnings"].append(
+        "unsupported selected runtime: %s (expected codex or claude)" % (selected_runtime or "empty")
+    )
+
+result["runtime"] = {
+    "selected": selected_runtime,
+    "label": runtime_label,
+    "source": runtime_source,
+    "cli": "present" if runtime_cli else "missing",
+    "cli_path": runtime_cli,
+    "auth": "ok" if runtime_auth else "unauthenticated",
+    "login_command": login_command,
+    "guidance": runtime_guidance,
+}
 result["models"] = {
     "lab_matrix": lab_matrix,
     "zhipu_credentials": "present" if zhipu_ready else "missing",
@@ -734,15 +853,22 @@ result["models"] = {
     "claude_cli": "present" if claude_cli else "missing",
     "claude_cli_path": claude_cli,
     "guidance": (
-        "Provide ZHIPU_AUTH_TOKEN in ~/.solar/secrets/zhipu.env or ~/.solar/secrets/solar-user-secrets.env, "
-        "or run: " + all_claude_hint
+        "Provide ZHIPU_AUTH_TOKEN in ~/.solar/secrets/zhipu.env or "
+        "~/.solar/secrets/solar-user-secrets.env."
+        if uses_glm
+        else "Role-model overrides are optional; the selected runtime supplies the default provider route."
     ),
-    "claude_auth_note": "Claude Code must be authenticated once with `claude`; after login, panes self-initialize.",
 }
 if uses_glm and not zhipu_ready:
     result["warnings"].append("lab matrix uses GLM/Zhipu but no ZHIPU credentials were found")
-if not claude_cli:
-    result["warnings"].append("claude CLI missing; install/authenticate Claude Code before launching panes")
+if selected_runtime in {"codex", "claude"} and not runtime_cli:
+    result["warnings"].append(
+        "selected %s runtime CLI missing; install it before launching panes" % runtime_label
+    )
+elif selected_runtime in {"codex", "claude"} and not runtime_auth:
+    result["warnings"].append(
+        "selected %s runtime appears unauthenticated; run: %s" % (runtime_label, login_command)
+    )
 
 # Drift check: every component root the receipt recorded must still exist.
 # Catches a removed install tree (e.g. rm -rf ~/.solar/harness) that the fixed
@@ -800,16 +926,25 @@ else:
             name,
             item.get("path") or item.get("state"),
         ))
+    runtime = result["runtime"]
+    if runtime:
+        print("  selected runtime: %s (%s)" % (
+            runtime.get("selected", "unknown"),
+            runtime.get("source", "unknown"),
+        ))
+        print("  runtime CLI/auth: %s/%s" % (
+            runtime.get("cli", "missing"),
+            runtime.get("auth", "unauthenticated"),
+        ))
+        print("  runtime guidance: %s" % runtime.get("guidance", ""))
     models = result["models"]
     if models:
         print("  model lab matrix: %s" % models.get("lab_matrix", "unknown"))
-        print("  credentials: zhipu=%s anthropic=%s claude_cli=%s" % (
+        print("  optional provider credentials: zhipu=%s anthropic=%s" % (
             models.get("zhipu_credentials", "missing"),
             models.get("anthropic_credentials", "missing"),
-            models.get("claude_cli", "missing"),
         ))
-        print("  guidance: %s" % models.get("guidance", ""))
-        print("  claude: %s" % models.get("claude_auth_note", ""))
+        print("  model guidance: %s" % models.get("guidance", ""))
     if result["schema_version"] is not None:
         print("  schema_version: %s" % result["schema_version"])
     if result["warnings"]:
@@ -1261,6 +1396,7 @@ case "$cmd" in
     status) shift; do_status "$@" ;;
     doctor) shift; doctor "$@" ;;
     update) shift; do_update "$@" ;;
+    version-compare) shift; version_compare "${1:-}" "${2:-}" ;;
     repair) shift; do_repair "$@" ;;
     backup) shift; do_backup "$@" ;;
     restore) shift; do_restore "$@" ;;

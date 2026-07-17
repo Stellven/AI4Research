@@ -85,6 +85,57 @@ def tmp_harness(tmp_path, monkeypatch):
 class TestSendToPaneLiteral:
     """send_to_pane uses literal input and verifies Claude actually started."""
 
+    def test_node_scoped_patch_diff_satisfies_proof_presence(self, tmp_harness):
+        """A real {sid}.{node}-patch.diff counts as patch_diff proof evidence."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["proof_obligations"] = [
+            {"kind": "postcondition", "requirement": "output_present", "field": "patch_diff"}
+        ]
+        (sprints / f"{sid}.N1-handoff.md").write_text("# Handoff\n", encoding="utf-8")
+
+        before = gnd._proof_artifact_presence(sid, node)
+        assert before["patch_diff"] is False
+
+        patch_file = sprints / f"{sid}.N1-patch.diff"
+        patch_file.write_text("--- a/x\n+++ b/x\n@@\n+print('ok')\n", encoding="utf-8")
+
+        after = gnd._proof_artifact_presence(sid, node)
+        assert after["patch_diff"] is True
+
+    def test_node_scoped_patch_diff_is_listed_for_evaluator_support(self, tmp_harness):
+        """Eval prompt support artifacts list the node-scoped patch diff path."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["proof_obligations"] = [
+            {"kind": "postcondition", "requirement": "output_present", "field": "patch_diff"}
+        ]
+        patch_file = sprints / f"{sid}.N1-patch_diff.diff"
+        patch_file.write_text("--- a/x\n+++ b/x\n@@\n+print('ok')\n", encoding="utf-8")
+
+        block = gnd._proof_support_artifacts_block(sid, node)
+
+        assert "patch_diff" in block
+        assert str(patch_file) in block
+        assert "(present)" in block
+
+    def test_guard_scan_targets_include_node_scoped_patch_diff(self, tmp_harness):
+        """Secret/resource guard scans the patch file the node actually wrote."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        patch_file = sprints / f"{sid}.N1-patch-diff.diff"
+        patch_file.write_text("--- a/x\n+++ b/x\n@@\n+safe = True\n", encoding="utf-8")
+
+        targets = gnd._collect_guard_scan_targets(sid, node)
+
+        assert patch_file in targets
+
     def test_uses_literal_flag(self, tmp_harness, monkeypatch):
         """_send_to_pane sends command with -l flag (literal mode)."""
         calls_log = []
@@ -454,6 +505,12 @@ class TestSendToPaneLiteral:
         assert Path(archived["eval_json"]).exists()
         assert Path(archived["eval_md"]).exists()
         assert any(key.startswith("eval_dispatch_") and Path(path).exists() for key, path in archived.items())
+        assert Path(archived["_attempt_archive_dir"]) == sprints / sid / "attempts" / "N1" / "1"
+        attempt_sidecars = archived["_attempt_sidecars"]
+        assert Path(attempt_sidecars["handoff_md"]).read_text(encoding="utf-8") == "# handoff\n"
+        assert Path(attempt_sidecars["eval_md"]).read_text(encoding="utf-8") == "## Verdict\nFAIL\n\nEvidence\n"
+        assert json.loads(Path(attempt_sidecars["eval_json"]).read_text(encoding="utf-8"))["verdict"] == "FAIL"
+        assert any(key.startswith("eval_dispatch_") and Path(path).exists() for key, path in attempt_sidecars.items())
         assert len(release_calls) == 1
         assert repaired == [
             {
@@ -598,6 +655,96 @@ class TestSendToPaneLiteral:
         assert Path(repaired[0]["archived_sidecars"]["eval_md"]).exists()
         assert not any(item.get("reason") == "eval_sidecar_exists" for item in repaired)
 
+    def test_repaired_node_ignores_doctor_backfill_without_matching_eval_generation(self, tmp_harness, monkeypatch):
+        """A repaired node must not be failed by a doctor/backfill eval sidecar from the wrong evidence generation."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        def epoch(raw: str) -> float:
+            return datetime.datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["repair_attempts"] = 1
+        node["repair_context"] = {"attempt": 1, "created_at": "2026-06-29T20:00:00Z"}
+        node["eval_assignments"] = [
+            {
+                "pane": "operator:mini-codex-evaluator",
+                "dispatch_id": "eval-after-repair",
+                "pm_task_id": "pm-eval-after-repair",
+                "role": "primary",
+                "eval_generation": 1,
+                "repair_context_created_at": "2026-06-29T20:00:00Z",
+                "dispatched_at": "2026-06-29T20:01:00Z",
+                "eval_md_path": str(sprints / f"{sid}.N1-eval.md"),
+                "eval_json_path": str(sprints / f"{sid}.N1-eval.json"),
+            }
+        ]
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_md = sprints / f"{sid}.N1-eval.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# repaired handoff\n", encoding="utf-8")
+        eval_md.write_text("## Verdict\nFAIL\n\nstale backfill still says missing patch\n", encoding="utf-8")
+        eval_json.write_text(
+            json.dumps(
+                {
+                    "verdict": "FAIL",
+                    "node_id": "N1",
+                    "summary": "stale backfill missing patch_diff",
+                    "generated_by": "graph_scheduler.doctor",
+                    "generation_mode": "repair_backfill",
+                    "checked_at": "2026-06-29T20:05:00Z",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        os.utime(handoff, (epoch("2026-06-29T20:02:00Z"), epoch("2026-06-29T20:02:00Z")))
+        os.utime(eval_md, (epoch("2026-06-29T20:05:00Z"), epoch("2026-06-29T20:05:00Z")))
+        os.utime(eval_json, (epoch("2026-06-29T20:05:00Z"), epoch("2026-06-29T20:05:00Z")))
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert node["status"] == "reviewing"
+        assert graph["node_results"]["N1"]["status"] == "reviewing"
+        assert handoff.exists()
+        assert not eval_json.exists()
+        assert not eval_md.exists()
+        assert repaired[0]["reason"] == "stale_eval_generation_archived"
+        assert repaired[0]["stale_reason"] == "eval_missing_repair_generation_after_repair"
+        assert Path(repaired[0]["archived_sidecars"]["eval_json"]).exists()
+        assert Path(repaired[0]["archived_sidecars"]["eval_md"]).exists()
+        assert not any(item.get("reason") == "eval_sidecar_exists" for item in repaired)
+
+    def test_eval_dispatch_text_requires_generation_metadata_for_repaired_node(self, tmp_harness):
+        """Evaluator instructions must carry the repair generation so sidecars can be freshness-checked."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["repair_attempts"] = 2
+        node["repair_context"] = {"attempt": 2, "created_at": "2026-06-29T20:00:00Z"}
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        handoff.write_text("# repaired handoff\n", encoding="utf-8")
+
+        text = gnd.build_eval_dispatch_text(
+            graph,
+            str(sprints / f"{sid}.task_graph.json"),
+            node,
+            "operator:mini-codex-evaluator",
+            "eval-after-repair",
+        )
+
+        assert "## Eval Generation Contract" in text
+        assert "- Eval Generation: `2`" in text
+        assert '"eval_generation": 2' in text
+        assert '"repair_attempt": 2' in text
+        assert '"eval_dispatch_id": "eval-after-repair"' in text
+        assert '"repair_context_created_at": "2026-06-29T20:00:00Z"' in text
+
     def test_direct_node_verdict_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
         """Primary evaluator node-verdict FAIL uses the same repair path as sidecar reconcile."""
         tmp_path, sprints, sid, graph = tmp_harness
@@ -677,6 +824,53 @@ class TestSendToPaneLiteral:
         assert ("solar-harness-lab:0.2", "dispatch-N1", "node_failed_review") in release_calls
         assert ("solar-harness-lab:0.3", "eval-N1", "node_failed_review") in release_calls
 
+    def test_eval_reconcile_ignores_failed_result_from_older_pm_task(self, tmp_harness, monkeypatch):
+        """A retrying eval assignment must not be closed by an older failed PM task result."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["eval_assignments"] = [
+            {
+                "pane": "operator:mini-codex-evaluator",
+                "dispatch_id": "eval-new",
+                "pm_task_id": "pm-test-graph-submit-N1-new",
+                "role": "primary",
+                "eval_md_path": str(sprints / f"{sid}.N1-eval.md"),
+                "eval_json_path": str(sprints / f"{sid}.N1-eval.json"),
+            }
+        ]
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+
+        old_result_dir = tmp_path / "run" / "operator-results" / "mini-codex-evaluator" / "pm-test-graph-submit-N1-old"
+        old_result_dir.mkdir(parents=True)
+        (old_result_dir / "result.json").write_text(
+            json.dumps(
+                {
+                    "task_id": "pm-test-graph-submit-N1-old",
+                    "operator_id": "mini-codex-evaluator",
+                    "sprint_id": sid,
+                    "node_id": "N1",
+                    "status": "failed",
+                    "exit_code": 1,
+                    "started_at": "2026-06-30T01:00:00Z",
+                    "finished_at": "2026-06-30T01:00:01Z",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(graph, sprints / f"{sid}.task_graph.json")
+
+        assert repaired == []
+        assert node["status"] == "reviewing"
+        assert node["eval_assignments"][0]["pm_task_id"] == "pm-test-graph-submit-N1-new"
+        assert node.get("eval_retry_reason") is None
+        assert node.get("last_eval_closeout_failure") is None
+
     def test_direct_node_verdict_fail_after_repair_limit_marks_terminal_failed(self, tmp_harness, monkeypatch):
         """Direct evaluator FAIL still terminal-fails once repair attempts are exhausted."""
         tmp_path, sprints, sid, graph = tmp_harness
@@ -728,6 +922,78 @@ class TestSendToPaneLiteral:
         ready = ready_nodes(graph)
 
         assert [node["id"] for node in ready] == ["N2"]
+
+    def test_active_repair_is_not_dependency_terminalized_by_stale_failed_result(self, tmp_harness):
+        """A stale failed node_result from the first eval round must not close downstream nodes."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        from graph_scheduler import (
+            node_status,
+            parent_ready_check,
+            terminalize_dependency_blocked_nodes,
+        )
+
+        graph["nodes"] = [
+            {
+                "id": "S1",
+                "status": "failed_review",
+                "depends_on": [],
+                "write_scope": ["/tmp/uniqwords.py"],
+                "repair_attempts": 1,
+                "repair_context": {
+                    "attempt": 1,
+                    "max_attempts": 1,
+                    "created_at": "2026-07-01T19:00:44Z",
+                },
+            },
+            {"id": "S2", "status": "pending", "depends_on": ["S1"], "write_scope": ["/tmp/test_uniqwords.py"]},
+        ]
+        graph["node_results"] = {
+            "S1": {"status": "failed", "updated_at": "2026-07-01T19:00:58Z"},
+        }
+
+        terminalized = terminalize_dependency_blocked_nodes(graph)
+        parent = parent_ready_check(graph)
+
+        assert terminalized == []
+        assert node_status(graph, "S1") == "failed_review"
+        assert graph["nodes"][1]["status"] == "pending"
+        assert parent["failed_nodes"] == []
+        assert parent["open_nodes"] == ["S1", "S2"]
+
+    def test_repair_completed_handoff_schedules_fresh_evaluator_dispatch(self, tmp_harness, monkeypatch):
+        """After repair output exists, the node returns to review and gets a new eval generation."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph_path = sprints / f"{sid}.task_graph.json"
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        node["repair_attempts"] = 1
+        node["repair_context"] = {
+            "attempt": 1,
+            "max_attempts": 1,
+            "created_at": "2026-07-01T19:00:44Z",
+        }
+        graph["node_results"] = {"N1": {"status": "reviewing"}}
+        graph_path.write_text(json.dumps(graph) + "\n", encoding="utf-8")
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        handoff.write_text("# repaired handoff\n\nUnicode normalization fixed.\n", encoding="utf-8")
+        monkeypatch.setattr(
+            gnd,
+            "_discover_evaluators",
+            lambda dry_run=False: [{"pane": "operator:mini-codex-gpt55-medium-evaluator-1", "busy": False}],
+        )
+
+        result = gnd.dispatch_node_evals(str(graph_path), dry_run=True, max_items=1)
+
+        assert result["ok"] is True
+        assert result["dispatched"][0]["node"] == "N1"
+        assert result["dispatched"][0]["pane"] == "operator:mini-codex-gpt55-medium-evaluator-1"
+        instruction = sprints / f"{sid}.N1-eval-dispatch-q1.md"
+        text = instruction.read_text(encoding="utf-8")
+        assert '"eval_generation": 1' in text
+        assert '"repair_attempt": 1' in text
+        assert '"repair_context_created_at": "2026-07-01T19:00:44Z"' in text
 
     def test_dispatch_text_includes_repair_feedback(self, tmp_harness):
         """A repair dispatch gives the builder evaluator errors and fix hints."""
@@ -996,16 +1262,38 @@ class TestSubmitFailureRecovery:
         assert len(enqueue_calls) == 1
 
     def test_dispatch_success_no_lease_release(self, tmp_harness, monkeypatch):
-        """When _send_to_pane succeeds, lease is NOT released."""
+        """A successful direct builder dispatch keeps its lease and records attribution."""
         import graph_node_dispatcher as gnd
+        import model_call_runtime
 
         tmp_path, sprints, sid, graph = tmp_harness
 
         monkeypatch.setattr(gnd, "_pane_exists", lambda p: True)
+        monkeypatch.setattr(gnd, "_assigned_pane_unavailable_reason", lambda _pane: "")
         monkeypatch.setattr(gnd, "acquire_lease", lambda *a, **kw: {"acquired": True})
         monkeypatch.setattr(gnd, "_send_to_pane", lambda *a, **kw: True)
         monkeypatch.setattr(gnd, "_write_submit_ack", lambda *a: None)
         monkeypatch.setattr(gnd, "_inject_dispatch_context", lambda *a, **kw: None)
+        monkeypatch.setattr(
+            model_call_runtime,
+            "pane_runtime_metadata",
+            lambda _pane: {
+                "pane_runtime": "claude",
+                "provider": "anthropic",
+                "model": "claude-opus-4-8",
+                "persona": "builder",
+                "runtime_bin": "/usr/local/bin/claude",
+                "metadata_source": "/tmp/pane-env/_2.json",
+            },
+            raising=False,
+        )
+
+        attribution_calls = []
+        monkeypatch.setattr(
+            gnd,
+            "_record_node_attribution",
+            lambda sprint_id, node_id, fields: attribution_calls.append((sprint_id, node_id, fields)),
+        )
 
         release_calls = []
         def mock_release(*a, **kw):
@@ -1032,6 +1320,15 @@ class TestSubmitFailureRecovery:
         result = gnd.dispatch_queue_item(item, dry_run=False)
         assert result["ok"] is True
         assert len(release_calls) == 0, "Lease should NOT be released on success"
+        assert len(attribution_calls) == 1
+        recorded_sid, recorded_node, attribution = attribution_calls[0]
+        assert (recorded_sid, recorded_node) == (sid, "N1")
+        assert attribution["role"] == "builder"
+        assert attribution["dispatch_mode"] == "direct_pane"
+        assert attribution["dispatch_id"] == "dispatch-123"
+        assert attribution["pane"] == "test:0.1"
+        assert attribution["provider"] == "anthropic"
+        assert attribution["model"] == "claude-opus-4-8"
 
     def test_pane_missing_requeues(self, tmp_harness, monkeypatch):
         """When pane does not exist, node is requeued."""

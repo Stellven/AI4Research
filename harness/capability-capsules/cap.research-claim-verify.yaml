@@ -91,7 +91,7 @@ verification:
     - Failing fixture emits refuted, blocked, not_testable, or inconclusive verdict.
 operator_compatibility:
   preferred:
-    - ScientificClaimVerifier
+    - autosci-claim-verify-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

@@ -5,9 +5,11 @@ import os
 import sqlite3
 from typing import Any, Dict, List, Optional
 
+from harness_paths import resolve_runtime_harness_dir
+
 logger = logging.getLogger(__name__)
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = str(resolve_runtime_harness_dir())
 DB_PATH = os.path.join(HARNESS_DIR, "experience", "experience.db")
 SCHEMA_PATH = os.path.join(HARNESS_DIR, "experience", "index.db.schema.sql")
 

@@ -39,7 +39,7 @@ def test_golden_style_gate_rejects_smoke_like_report(tmp_path):
         "# DeepResearch Report: smoke test\n\n## Summary\n\nThis section should summarize architecture for `executive_summary`.\n",
         encoding="utf-8",
     )
-    payload = assess_golden_style(tmp_path)
+    payload = assess_golden_style(tmp_path, persist=True)
     assert payload["enabled"] is True
     assert payload["ok"] is False
     assert any(issue.startswith("golden_final_chars_low:") for issue in payload["issues"])
@@ -100,7 +100,7 @@ def test_audience_hygiene_rejects_internal_report_process_html(tmp_path):
         </body></html>""",
         encoding="utf-8",
     )
-    payload = assess_audience_hygiene(tmp_path)
+    payload = assess_audience_hygiene(tmp_path, persist=True)
     assert payload["ok"] is False
     assert any("internal_system_roadmap" in issue for issue in payload["issues"])
     assert any("internal_writer_process" in issue for issue in payload["issues"])

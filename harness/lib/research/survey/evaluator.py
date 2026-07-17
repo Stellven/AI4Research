@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 from .schemas import SurveyScorecard, to_dict
+from .golden_style_gate import assess_golden_style
 from .quality import assess_survey_quality
 
 
@@ -44,6 +45,10 @@ def evaluate_survey(
     *,
     min_finalized: int | None = None,
     require_complete: bool = False,
+    require_golden_style: bool = False,
+    reader_final: str | Path | None = None,
+    check_reader_projection: bool = True,
+    persist: bool = False,
 ) -> dict:
     root = Path(output_dir).expanduser()
     ast = _read_json(root / "survey_report_ast.json")
@@ -73,7 +78,7 @@ def evaluate_survey(
     finalized = sum(1 for path in section_dirs if (path / "final.md").exists())
     reviews = [_read_json(path / "review.json") for path in section_dirs if (path / "review.json").exists()]
     blocked_sections = int(packs.get("blocked") or 0) if isinstance(packs, dict) else len(sections)
-    quality = assess_survey_quality(root, ast=ast, packs=packs)
+    quality = assess_survey_quality(root, ast=ast, packs=packs, persist=persist)
     taxonomy = quality.get("taxonomy", {})
     contradiction_matrix = quality.get("contradiction_matrix", {})
     section_factual_audit = quality.get("section_factual_audit", {})
@@ -85,6 +90,29 @@ def evaluate_survey(
     chapter_review = quality.get("chapter_review", {})
     chief_editor_review = quality.get("chief_editor_review", {})
     depth_profile = quality.get("depth_profile", {})
+    if check_reader_projection:
+        golden_style = assess_golden_style(
+            root,
+            final_md=reader_final,
+            require_benchmark=require_golden_style,
+            persist=persist,
+        )
+    else:
+        golden_style = {
+            "ok": True,
+            "enabled": False,
+            "required": False,
+            "skipped": True,
+            "reason": "reader_projection_not_finalized",
+            "issues": [],
+            "audience_hygiene": {
+                "ok": True,
+                "skipped": True,
+                "reason": "reader_projection_not_finalized",
+                "issues": [],
+            },
+        }
+    audience_hygiene = golden_style.get("audience_hygiene") or {}
     issues: list[str] = []
     if len(chapters) < 8:
         issues.append(f"chapter_count_low:{len(chapters)}<8")
@@ -142,6 +170,11 @@ def evaluate_survey(
             issues.append(str(issue))
         if require_complete:
             for issue in final_quality.get("issues", []):
+                issues.append(str(issue))
+        for issue in audience_hygiene.get("issues", []):
+            issues.append(str(issue))
+        if golden_style.get("enabled") or require_golden_style:
+            for issue in golden_style.get("issues", []):
                 issues.append(str(issue))
     required_finalized = len(sections) if require_complete else (min_finalized if min_finalized is not None else 3)
     if strict and finalized < required_finalized:
@@ -216,6 +249,13 @@ def evaluate_survey(
         "chapter_review": chapter_review,
         "chief_editor_review": chief_editor_review,
         "depth_profile": depth_profile,
+        "require_golden_style": require_golden_style,
+        "golden_style": golden_style,
+        "audience_hygiene": audience_hygiene,
     }
-    (root / "survey_eval.json").write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if persist:
+        (root / "survey_eval.json").write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
     return payload

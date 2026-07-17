@@ -9,11 +9,13 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
+from harness_paths import resolve_runtime_harness_dir
+
 from .index import init_db, query_by_trigger, query_by_pattern, query_fts, stats as index_stats
 
 logger = logging.getLogger(__name__)
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = str(resolve_runtime_harness_dir())
 SPRINTS_DIR = os.path.join(HARNESS_DIR, "sprints")
 
 

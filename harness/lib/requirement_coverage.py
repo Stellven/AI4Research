@@ -12,6 +12,7 @@ from typing import Any
 
 PASS_STATES = {"passed"}
 PROGRESS_STATES = {"queued", "assigned", "dispatched", "in_progress", "reviewing"}
+TERMINAL_STATES = {"passed", "failed", "skipped", "cancelled", "skipped_parent_passed"}
 
 
 def _sid_terminally_closed(sprints_dir: Path, sid: str) -> bool:
@@ -33,6 +34,23 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _sync_closure_traceability(sprints_dir: Path, sid: str, coverage: dict[str, Any]) -> bool:
+    """Project canonical requirement coverage into an existing closure record."""
+    closure_path = sprints_dir / f"{sid}.closure.json"
+    try:
+        closure = _load_json(closure_path)
+    except (OSError, ValueError):
+        return False
+    if not isinstance(closure, dict):
+        return False
+    ratio = (coverage.get("summary") or {}).get("coverage_ratio")
+    if isinstance(ratio, bool) or not isinstance(ratio, (int, float)):
+        return False
+    closure["acceptance_traceability_coverage"] = float(ratio)
+    _write_json(closure_path, closure)
+    return True
 
 
 def _derive_requirements(requirement_ir: dict[str, Any]) -> list[dict[str, Any]]:
@@ -171,7 +189,10 @@ def build_coverage_report(trace: dict[str, Any], graph: dict[str, Any]) -> dict[
         str((graph.get("node_results") or {}).get(str(node.get("id")), {}).get("status") or node.get("status") or "pending")
         for node in (graph.get("nodes") or [])
     ]
+    node_statuses = [status.strip().lower() for status in node_statuses]
     graph_complete = bool(node_statuses) and all(status in PASS_STATES for status in node_statuses)
+    graph_terminal = bool(node_statuses) and all(status in TERMINAL_STATES for status in node_statuses)
+    graph_failed = graph_terminal and not graph_complete
     return {
         "schema_version": "solar.coverage_report.v1",
         "sprint_id": graph.get("sprint_id", "N/A"),
@@ -183,6 +204,8 @@ def build_coverage_report(trace: dict[str, Any], graph: dict[str, Any]) -> dict[
             "missing": summary.get("missing", 0),
             "coverage_ratio": 0 if not items else summary.get("done", 0) / len(items),
             "graph_complete": graph_complete,
+            "graph_terminal": graph_terminal,
+            "graph_failed": graph_failed,
         },
         "items": items,
     }
@@ -197,6 +220,8 @@ def build_acceptance_verdict(
 ) -> dict[str, Any]:
     summary = coverage_report.get("summary", {})
     graph_complete = bool(summary.get("graph_complete"))
+    graph_terminal = graph_complete or bool(summary.get("graph_terminal"))
+    graph_failed = bool(summary.get("graph_failed"))
     requested = requested_verdict.lower()
     ok = (
         requested == "pass"
@@ -207,7 +232,9 @@ def build_acceptance_verdict(
     reasons: list[str] = []
     if requested != "pass":
         reasons.append("requested_verdict_is_not_pass")
-    if not graph_complete:
+    if graph_failed:
+        reasons.append("task_graph_failed")
+    elif not graph_terminal:
         reasons.append("task_graph_incomplete")
     if int(summary.get("partial", 0)) > 0:
         reasons.append("requirement_partial")
@@ -215,7 +242,7 @@ def build_acceptance_verdict(
         reasons.append("requirement_missing")
     if ok:
         verdict = "PASS"
-    elif requested == "pass" and not graph_complete:
+    elif requested == "pass" and not graph_terminal:
         # A sprint whose graph is still running has NOT failed — it is in progress.
         # Emitting FAIL mid-run poisons per-node evidence-consistency checks that read
         # the parent acceptance verdict: every node would inherit a FAIL until the whole
@@ -253,6 +280,8 @@ def render_coverage_markdown(
         f"- missing: {summary.get('missing', 0)}",
         f"- coverage_ratio: {summary.get('coverage_ratio', 0):.2f}",
         f"- graph_complete: {summary.get('graph_complete', False)}",
+        f"- graph_terminal: {summary.get('graph_terminal', False)}",
+        f"- graph_failed: {summary.get('graph_failed', False)}",
         f"- acceptance_verdict: {verdict.get('verdict', 'N/A')}",
         "",
         "### Requirement Diff",
@@ -339,7 +368,8 @@ def evaluate_sid(
         total = int(coverage.get("summary", {}).get("total", 0))
         coverage["summary"].update(
             {"done": total, "partial": 0, "missing": 0,
-             "coverage_ratio": 1.0 if total else 0, "graph_complete": True}
+             "coverage_ratio": 1.0 if total else 0, "graph_complete": True,
+             "graph_terminal": True, "graph_failed": False}
         )
         for item in trace.get("items", []):
             item["final_status"] = "done"
@@ -350,6 +380,7 @@ def evaluate_sid(
         _write_json(sprints_dir / f"{sid}.requirement_trace.json", trace)
         _write_json(sprints_dir / f"{sid}.coverage_report.json", coverage)
         _write_json(sprints_dir / f"{sid}.acceptance_verdict.json", verdict)
+        _sync_closure_traceability(sprints_dir, sid, coverage)
     if require_pass and verdict["verdict"] != "PASS":
         raise SystemExit(2)
     return bundle

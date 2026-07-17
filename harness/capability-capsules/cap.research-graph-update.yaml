@@ -86,7 +86,7 @@ verification:
     - Missing evidence produces inconclusive or failed status rather than silent graph mutation.
 operator_compatibility:
   preferred:
-    - ScientificGraphUpdater
+    - autosci-graph-update-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

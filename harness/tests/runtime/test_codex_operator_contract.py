@@ -7,6 +7,8 @@ must be correct before a live model call is attempted.
 from __future__ import annotations
 
 import importlib.util
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -199,8 +201,88 @@ def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, m
     assert str(tmp_path) in cmd
 
 
+def test_codex_operator_binds_model_shell_to_active_harness(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_active_harness", ROOT / "tools" / "codex_operator.py")
+    harness_dir = tmp_path / "clean-harness"
+    harness_dir.mkdir()
+    (harness_dir / "lib").mkdir()
+    (harness_dir / "tools").mkdir()
+    harness_cmd = harness_dir / "solar-harness.sh"
+    harness_cmd.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf 'active-harness=%s\\n' \"$HARNESS_DIR\"\n"
+        "printf 'args=%s\\n' \"$*\"\n",
+        encoding="utf-8",
+    )
+    harness_cmd.chmod(0o755)
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    task_dir.mkdir(parents=True)
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.delenv("SOLAR_HARNESS_DIR", raising=False)
+
+    env = codex_operator._codex_exec_env(task_dir)
+    shim = task_dir / "cmd-shims" / "solar-harness"
+
+    assert env["HARNESS_DIR"] == str(harness_dir)
+    assert env["SOLAR_HARNESS_DIR"] == str(harness_dir)
+    assert env["SOLAR_HARNESS_CMD"] == str(shim)
+    assert os.access(shim, os.X_OK)
+    assert env["PATH"].split(os.pathsep)[0] == str(task_dir / "cmd-shims")
+    assert str(harness_dir / "lib") in env["PYTHONPATH"].split(os.pathsep)
+    assert str(harness_dir / "tools") in env["PYTHONPATH"].split(os.pathsep)
+
+    completed = subprocess.run(
+        [str(shim), "context", "inject", "--node", "N0"],
+        env=env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert f"active-harness={harness_dir}" in completed.stdout
+    assert "args=context inject --node N0" in completed.stdout
+
+
 def test_codex_operator_respects_explicit_non_ephemeral(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_no_ephemeral", ROOT / "tools" / "codex_operator.py")
     monkeypatch.setenv("SOLAR_CODEX_OPERATOR_EPHEMERAL", "0")
     cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), tmp_path / "last.md")
     assert "--ephemeral" not in cmd
+
+
+def test_codex_operator_places_requested_live_search_before_exec(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_live_search", ROOT / "tools" / "codex_operator.py")
+    monkeypatch.setenv(
+        "SOLAR_CODEX_EXTRA_FLAGS",
+        "--search -c model_reasoning_effort=high",
+    )
+
+    cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), tmp_path / "last.md")
+
+    assert cmd[:3] == ["codex", "--search", "exec"]
+    assert cmd.count("--search") == 1
+    assert "-c" not in cmd
+
+
+def test_codex_operator_does_not_forward_unrecognized_extra_flags(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_flag_allowlist", ROOT / "tools" / "codex_operator.py")
+    monkeypatch.setenv(
+        "SOLAR_CODEX_EXTRA_FLAGS",
+        "--json --add-dir /tmp/not-authorized-by-the-operator-contract",
+    )
+
+    cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), tmp_path / "last.md")
+
+    assert cmd[:2] == ["codex", "exec"]
+    assert "--json" not in cmd
+    assert "--add-dir" not in cmd
+    assert "/tmp/not-authorized-by-the-operator-contract" not in cmd
+
+
+def test_codex_operator_treats_malformed_extra_flags_as_search_disabled(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_malformed_flags", ROOT / "tools" / "codex_operator.py")
+    monkeypatch.setenv("SOLAR_CODEX_EXTRA_FLAGS", "'--search")
+
+    cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), tmp_path / "last.md")
+
+    assert cmd[:2] == ["codex", "exec"]
+    assert "--search" not in cmd

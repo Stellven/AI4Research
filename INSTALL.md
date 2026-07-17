@@ -37,13 +37,15 @@ Runtime launch tools for `solar-harness start <workdir>`:
 - `python3`
 - `tmux`
 - `jq`
-- Claude Code CLI (`claude`) on `PATH`
+- one selected agent runtime on `PATH`: Codex CLI (`codex`) or Claude Code CLI
+  (`claude`)
 
 Run `~/.solar/bin/solar-harness preflight` to check these before opening tmux
 panes. Preflight is deterministic: it proves launch dependencies and filesystem
-plumbing, not live Claude behavior. After `solar-harness start`, live Claude
-pane behavior and real delegation are owner-manual until Claude starts,
-responds, and any trust/auth/quota prompts are resolved.
+plumbing, not live model behavior. Select Codex or Claude Code in Dashboard
+**Settings > Runtime** and authenticate only the selected runtime. After
+`solar-harness start`, a fresh live delegation is proven only when that runtime
+starts, responds, and any trust/auth/quota prompts are resolved.
 
 No root/`sudo` is needed. Nothing is written outside your home directory.
 
@@ -54,7 +56,7 @@ No root/`sudo` is needed. Nothing is written outside your home directory.
 Clone and run the installer:
 
 ```bash
-git clone --branch v1.0.0-rc.8 https://github.com/suraj-subrahmanyan/OpenSolar.git
+git clone --branch v1.0.0-rc.9 https://github.com/suraj-subrahmanyan/OpenSolar.git
 cd OpenSolar
 ./install.sh
 ```
@@ -204,7 +206,7 @@ Solar for you, hold it to this protocol:
 A minimal agent install + self-check:
 
 ```bash
-git clone --branch v1.0.0-rc.8 https://github.com/suraj-subrahmanyan/OpenSolar.git && cd OpenSolar
+git clone --branch v1.0.0-rc.9 https://github.com/suraj-subrahmanyan/OpenSolar.git && cd OpenSolar
 ./install.sh --yes --components kernel,harness
 ~/.solar/bin/solar doctor --json   # expect "verdict": "ok"
 ```
@@ -226,13 +228,20 @@ and only after you approve them. Never overwrite a user's existing skills.
 ~/.solar/bin/solar doctor --json
 ```
 
-Expect `"verdict": "ok"` and the installed components listed. Then start
-Claude Code and confirm the kernel loads:
+Expect `"verdict": "ok"`, the installed components, and the selected runtime
+listed. Start the dashboard, choose the runtime, and authenticate it before
+starting the cockpit:
 
 ```bash
-claude
-# On first run, approve the one-time @~/.claude/solar/SOLAR.md import prompt.
+~/.solar/bin/solar-harness status-server start
+# In Settings > Runtime, choose Codex or Claude Code.
+codex login --device-auth  # when Codex is selected
+claude                     # when Claude Code is selected
 ```
+
+For Claude Code, approve the one-time `@~/.claude/solar/SOLAR.md` import prompt.
+Do not authenticate Claude merely because it is installed when Codex is the
+selected runtime, or vice versa.
 
 For Product Delivery harness runtime readiness:
 
@@ -242,10 +251,10 @@ For Product Delivery harness runtime readiness:
 ~/.solar/bin/solar-harness status
 ```
 
-`status` reports required failures, manual-pending/auth-quota blocked Claude
-panes, and optional warnings separately. It should say "ready for manual Claude
-start" only when launch plumbing is ready; it must not claim live Claude is
-verified unless Claude actually launched and responded.
+`status` reports required failures, manual-pending/auth-quota blocked panes,
+and optional warnings separately. It must name the selected runtime and must
+not claim live execution is verified unless that runtime actually launched and
+responded.
 
 ---
 

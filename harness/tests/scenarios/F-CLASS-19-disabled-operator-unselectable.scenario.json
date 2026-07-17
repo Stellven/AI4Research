@@ -1,0 +1,34 @@
+{
+  "id": "F-CLASS-19",
+  "class": 19,
+  "title": "A disabled operator is unselectable at submit (no silent dispatch)",
+  "retires": "F-CLASS-19 (hazard half); R8/AC-R8.2",
+  "release_proof_level": "P1.5",
+  "mode": "submit_once",
+  "operator_id": "fake-builder",
+  "operators": {
+    "fake-builder": {
+      "display_name": "Disabled fake builder",
+      "role": "builder",
+      "persona": "builder",
+      "backend": "command",
+      "model": "fake-local",
+      "enabled": false,
+      "available": false,
+      "roles": ["builder"]
+    }
+  },
+  "envelope": {
+    "fake_behavior": { "exit_code": 0, "stdout_lines": ["should never run"] }
+  },
+  "expect": [
+    { "fact": "submit_ok", "op": "falsy" },
+    { "fact": "submit_error", "op": "contains", "value": "not dispatchable" },
+    { "fact": "submit_error", "op": "contains", "value": "disabled" },
+    { "fact": "result_exists", "op": "falsy" }
+  ],
+  "fault": {
+    "operators": { "fake-builder": { "enabled": true, "available": true } }
+  },
+  "notes": "GREEN: operator disabled -> operator_runtime.submit() raises 'not dispatchable: state=disabled' (operator_runtime.py:474). RED: fault flips enabled=true -> submit succeeds and the task runs -> submit_ok=true, so the same expect fails."
+}

@@ -302,6 +302,31 @@ workflow_guard_builder_ready() {
   [[ "$role" == "builder_main" || "$role" == "builder" ]]
 }
 
+compile_generic_plan_graph() {
+  local sid="$1" out rc
+  out=$(HARNESS_DIR="$HARNESS_DIR" HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
+    python3 "$HARNESS_DIR/lib/plan_validator.py" compile-generic "$sid" --sprints-dir "$SPRINTS_DIR" 2>&1)
+  rc=$?
+  case "$rc" in
+    0)
+      return 0
+      ;;
+    3)
+      echo "[$(date '+%H:%M:%S')] auto-chain: skip $sid (plan_compile_failed; planner bounce available)"
+      return 1
+      ;;
+    4)
+      echo "[$(date '+%H:%M:%S')] auto-chain: skip $sid (PLAN_COMPILE_FAILED terminal written)"
+      return 1
+      ;;
+    *)
+      echo "[$(date '+%H:%M:%S')] auto-chain: skip $sid (plan_validator error rc=$rc)"
+      printf '%s\n' "$out" | tail -5
+      return 1
+      ;;
+  esac
+}
+
 # D10: 启动恢复 — flock 后先扫一轮清积压
 ingest_codex_all_files
 
@@ -325,7 +350,11 @@ while true; do
         continue
       fi
 
-      echo "[$(date '+%H:%M:%S')] auto-chain: 起 $NEXT (workflow_guard builder ready)"
+      if ! compile_generic_plan_graph "$NEXT"; then
+        sleep 60
+        continue
+      fi
+      echo "[$(date '+%H:%M:%S')] auto-chain: 起 $NEXT (workflow_guard builder ready + plan compiled)"
       python3 "$HARNESS_DIR/lib/runtime_status.py" "$SPRINTS_DIR/$NEXT.status.json" "active" "auto_chain" "chain-watcher" '{"status_fields":{"phase":"planning_complete","handoff_to":"builder_main","target_role":"builder_main"},"note":"workflow_guard confirmed planner artifacts and task_graph before auto-chain activation"}' >/dev/null 2>&1 || true
       sleep 60
     fi

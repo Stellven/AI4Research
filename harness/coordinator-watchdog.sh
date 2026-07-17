@@ -25,8 +25,8 @@ fi
 HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
 export HARNESS_DIR SPRINTS_DIR
-SESSION_NAME="solar-harness"
-LAB_SESSION_NAME="solar-harness-lab"
+SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"
+LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"
 WATCHDOG_PID_FILE="$HARNESS_DIR/.watchdog.pid"
 WATCHDOG_STATE="$HARNESS_DIR/.watchdog-state"
 COORD_PID_FILE="$HARNESS_DIR/.coordinator.pid"
@@ -179,6 +179,16 @@ do_check() {
     fi
   done
 
+  # Lane 0 PR-3 (F4 / AC-R7.4, M1 rule): a run-terminal marker from the process
+  # registry suppresses respawn — check the resolved sprint's marker when one
+  # resolves, else the harness-global marker; fail-open (respawn) when neither
+  # exists. Defeats the watchdog-respawns-coordinator-past-teardown class (F-043).
+  local _prt="$HARNESS_DIR/run/process-registry"
+  if [[ -f "$_prt/harness.terminal" ]] || { [[ -n "$active_sid" ]] && [[ -f "$_prt/${active_sid}.terminal" ]]; }; then
+    log "Coordinator respawn suppressed: run-terminal marker present (process registry)"
+    return 0
+  fi
+
   bash "$HARNESS_DIR/coordinator.sh" >> "$HARNESS_DIR/.coordinator.log" 2>&1 &
   log "Coordinator 重启已触发 (spawn PID: $!, pidfile 由 coordinator 接管)"
 
@@ -327,30 +337,70 @@ _load_layout_panes() {
       continue
     fi
     PERSONA_PANES["$target"]="$role"
-  done < <(python3 -c "
+  done < <(python3 - "$layout" "$SESSION_NAME" <<'PY'
 import json
-d=json.load(open('$layout'))
-default_session=d.get('session_name','solar-harness')
-for w in d.get('windows',[]):
-    session=w.get('session') or default_session
-    win=w.get('index',0)
-    for p in w.get('panes',[]):
-        print(f\"{session}:{win}.{p.get('pane_index')}\\t{p.get('persona') or p.get('role') or ''}\")
-" 2>/dev/null || true)
+import sys
+
+layout, configured_session = sys.argv[1:3]
+d = json.load(open(layout, encoding="utf-8"))
+layout_default = d.get("session_name", "solar-harness")
+for w in d.get("windows", []):
+    declared = w.get("session")
+    session = configured_session if not declared or declared == layout_default else declared
+    win = w.get("index", 0)
+    for p in w.get("panes", []):
+        print(f"{session}:{win}.{p.get('pane_index')}\t{p.get('persona') or p.get('role') or ''}")
+PY
+  )
 }
 _load_layout_panes
+
+tmux_has_exact_session() {
+  local wanted="$1"
+  tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -Fxq -- "$wanted"
+}
+
+resolve_pane_restart_runtime() {
+  local session="$1" configured="" runtime=""
+
+  # A tmux session owns the effective runtime for every pane it launches.
+  # Read that durable session environment instead of trusting the watchdog's
+  # process environment: a long-lived watchdog can outlive a settings change,
+  # while solar-harness.sh refreshes the session environment at launch.
+  configured=$(tmux show-environment -t "$session" SOLAR_PANE_RUNTIME 2>/dev/null || true)
+  case "$configured" in
+    SOLAR_PANE_RUNTIME=*) runtime="${configured#SOLAR_PANE_RUNTIME=}" ;;
+  esac
+  case "$runtime" in
+    claude|codex) printf '%s\n' "$runtime"; return 0 ;;
+  esac
+
+  # Compatibility fallback for an older/external tmux session with no Solar
+  # runtime marker.  Preserve the watchdog's effective launch runtime, then the
+  # historical Claude default, but never accept an arbitrary command value.
+  runtime="${SOLAR_PANE_RUNTIME:-claude}"
+  case "$runtime" in
+    claude|codex) printf '%s\n' "$runtime" ;;
+    *) printf '%s\n' "claude" ;;
+  esac
+}
 
 ensure_tmux_sessions() {
   local missing=0
 
-  if ! tmux has-session -t "$SESSION_NAME" &>/dev/null; then
+  # G3 zombie-factory fix: never rebuild sessions for a terminal run.
+  if [[ -f "$HARNESS_DIR/run/process-registry/harness.terminal" ]]; then
+    return 0
+  fi
+
+  if ! tmux_has_exact_session "$SESSION_NAME"; then
     warn "tmux session missing: ${SESSION_NAME}; rebuilding Product Delivery"
     TERM=dumb "$HARNESS_DIR/solar-harness.sh" --skip-doctor "$HOME" >> "$HARNESS_DIR/.watchdog-launchd.log" 2>&1 || true
     missing=1
   fi
 
   if [[ "$WATCHDOG_MANAGE_LAB" == "1" || "$WATCHDOG_MANAGE_LAB" == "true" ]]; then
-    if ! tmux has-session -t "$LAB_SESSION_NAME" &>/dev/null; then
+    if ! tmux_has_exact_session "$LAB_SESSION_NAME"; then
       warn "tmux session missing: ${LAB_SESSION_NAME}; rebuilding Strategy Lab"
       TERM=dumb "$HARNESS_DIR/solar-harness.sh" 扩展 "$HOME" >> "$HARNESS_DIR/.watchdog-launchd.log" 2>&1 || true
       missing=1
@@ -374,6 +424,14 @@ check_panes() {
 
   ensure_tmux_sessions
 
+  # Product mode deliberately leaves the four persona panes as viewers while
+  # the governed operator pool executes work.  Treating those idle shells as
+  # crashed personas silently launches a second execution path, spends quota,
+  # and can race the operator pool.
+  case "${SOLAR_PRODUCT_MODE:-0}" in
+    1|true|yes|on) return 0 ;;
+  esac
+
   if [[ -f "$SESSION_RECOVERY_MARKER" ]]; then
     local recovered_at grace_elapsed
     recovered_at=$(cat "$SESSION_RECOVERY_MARKER" 2>/dev/null || echo 0)
@@ -395,7 +453,7 @@ check_panes() {
   local target
   for target in "${!PERSONA_PANES[@]}"; do
     local session="${target%%:*}"
-    tmux has-session -t "$session" &>/dev/null || continue
+    tmux_has_exact_session "$session" || continue
 
     local pane_info pcmd pdead pane_pid
     pane_info=$(tmux display-message -p -t "$target" '#{pane_current_command} #{pane_dead} #{pane_pid}' 2>/dev/null) || continue
@@ -481,20 +539,29 @@ check_panes() {
     _esc_w=$(printf '%q' "$_respawn_workdir")
     # sprint-20260502-200424 D2: 用绝对路径 bash + 注入完整 PATH
     # 根因: tmux respawn-pane 不继承用户 shell profile, ~/n/bin/claude 找不到 → exit 127
-    local _restart_bash
+    local _restart_bash _restart_runtime _restart_launcher
     _restart_bash=$(resolve_bash4 2>/dev/null || command -v bash 2>/dev/null || echo /bin/bash)
+    _restart_runtime=$(resolve_pane_restart_runtime "$session")
+    _restart_launcher="start-incarnation.sh"
+    if [[ "$_restart_runtime" == "codex" ]]; then
+      # start-incarnation.sh is the legacy Claude-only recovery launcher.
+      # Codex must return through the same runtime-aware launcher used by the
+      # initial session, otherwise recovery silently opens Claude OAuth.
+      _restart_launcher="pane-launcher.sh"
+    fi
     local _user_path="${PATH}"
     for _p in /opt/homebrew/bin /usr/local/bin "$HOME/n/bin" "$HOME/.local/bin" "$HOME/.npm-global/bin" "$HOME/.bun/bin"; do
       [[ -d "$_p" ]] && case ":${_user_path}:" in *":$_p:"*) ;; *) _user_path="$_p:${_user_path}" ;; esac
     done
     local _pane_id
     _pane_id=$(tmux display-message -p -t "$target" '#{pane_id}' 2>/dev/null || true)
-    # respawn start-incarnation: keep watchdog pane recovery on the non-interactive launcher.
+    # Respawn through the selected non-interactive launcher. Claude keeps the
+    # legacy incarnation path; Codex uses the runtime-aware primary launcher.
     tmux respawn-pane -k -t "$target" \
-      "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_EXECPATH HOME='${HOME}' PATH='${_user_path}' TMUX_PANE='${_pane_id}' ${_restart_bash} ${_esc_h}/start-incarnation.sh $persona ${_esc_w}" 2>/dev/null || {
+      "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_EXECPATH SOLAR_PANE_RUNTIME='${_restart_runtime}' HOME='${HOME}' PATH='${_user_path}' TMUX_PANE='${_pane_id}' ${_restart_bash} ${_esc_h}/${_restart_launcher} $persona ${_esc_w}" 2>/dev/null || {
       warn "respawn-pane 失败, 尝试 send-keys..."
       tmux send-keys -t "$target" \
-        "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_EXECPATH PATH='${_user_path}' TMUX_PANE='${_pane_id}' ${_restart_bash} ${_esc_h}/start-incarnation.sh $persona ${_esc_w}" Enter 2>/dev/null || {
+        "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_EXECPATH SOLAR_PANE_RUNTIME='${_restart_runtime}' PATH='${_user_path}' TMUX_PANE='${_pane_id}' ${_restart_bash} ${_esc_h}/${_restart_launcher} $persona ${_esc_w}" Enter 2>/dev/null || {
         warn "send-keys 失败, pane 不存在或不可写: $target; 跳过本 pane 恢复"
         continue
       }
@@ -631,6 +698,18 @@ run_watchdog() {
   local pane_ticks=0
 
   while true; do
+    # G3 zombie-factory fix: a run-terminal marker means this run is OVER —
+    # the watchdog itself exits instead of merely suppressing coordinator
+    # respawn (F-043 covered respawn only; 18 marker-less watchdogs from
+    # completed e2e sandboxes kept rebuilding sessions and re-running
+    # harness startup for up to 30h, and their stale-code status-server
+    # sweeps killed live runs' servers).
+    if [[ -f "$HARNESS_DIR/run/process-registry/harness.terminal" ]]; then
+      log "run-terminal marker present — watchdog exiting"
+      rm -f "$WATCHDOG_PID_FILE"
+      break
+    fi
+
     # Coordinator 检查 (每 CHECK_INTERVAL)
     if (( coord_ticks >= CHECK_INTERVAL )); then
       do_check || {
@@ -666,6 +745,12 @@ case "${1:-help}" in
       rm -f "$WATCHDOG_PID_FILE"
     fi
     log "启动 Watchdog..."
+    # A stale terminal marker would make the freshly spawned daemon exit on
+    # its first tick and refuse its registration — clear it: starting the
+    # watchdog IS the new run's birth.
+    if [[ -f "$HARNESS_DIR/lib/run_process_registry.py" && -f "$HARNESS_DIR/run/process-registry/harness.terminal" ]]; then
+      python3 "$HARNESS_DIR/lib/run_process_registry.py" clear-terminal --run-id harness >/dev/null 2>&1 || true
+    fi
     if [[ "$(uname -s)" == "Darwin" && "${SOLAR_WATCHDOG_NO_LAUNCHD:-0}" != "1" ]] && command -v launchctl >/dev/null 2>&1; then
       if start_launchd_watchdog; then
         exit 0
@@ -816,6 +901,16 @@ case "${1:-help}" in
     daemon_loop_count=0
 
     while true; do
+      # G3 zombie-factory fix: a run-terminal marker means this run is OVER —
+      # the watchdog exits instead of merely suppressing coordinator respawn
+      # (F-043 covered respawn only; marker-less/suppression-only watchdogs
+      # from completed e2e sandboxes kept rebuilding sessions for 30+ hours
+      # and their stale-code status-server sweeps killed live runs' servers).
+      if [[ -f "$HARNESS_DIR/run/process-registry/harness.terminal" ]]; then
+        log "run-terminal marker present — watchdog exiting"
+        rm -f "$WATCHDOG_PID_FILE"
+        exit 0
+      fi
       if (( coord_ticks >= CHECK_INTERVAL )); then
         do_check || {
           err "Watchdog daemon 因熔断退出"

@@ -977,7 +977,13 @@ def _build_depth_profile(
     }
 
 
-def assess_survey_quality(output_dir: str | Path, ast: dict | None = None, packs: dict | None = None) -> dict[str, Any]:
+def assess_survey_quality(
+    output_dir: str | Path,
+    ast: dict | None = None,
+    packs: dict | None = None,
+    *,
+    persist: bool = False,
+) -> dict[str, Any]:
     root = Path(output_dir).expanduser()
     ast = ast or _read_json(root / "survey_report_ast.json")
     packs = packs or _read_json(root / "survey_evidence_packs.json")
@@ -1053,15 +1059,23 @@ def assess_survey_quality(output_dir: str | Path, ast: dict | None = None, packs
         "chief_editor_review": chief_editor_review,
         "depth_profile": depth_profile,
     }
-    (root / "survey_taxonomy.json").write_text(json.dumps(taxonomy, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_contradiction_matrix.json").write_text(json.dumps(contradiction_matrix, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_section_factual_audit.json").write_text(json.dumps(section_factual_audit, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_section_scorecard.json").write_text(json.dumps(section_scorecard, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_final_quality.json").write_text(json.dumps(final_quality, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_source_coverage.json").write_text(json.dumps(source_coverage, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_literature_map.json").write_text(json.dumps(literature_map, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_controversy_matrix.json").write_text(json.dumps(controversy_review, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_chapter_review.json").write_text(json.dumps(chapter_review, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_chief_editor.json").write_text(json.dumps(chief_editor_review, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (root / "survey_depth_profile.json").write_text(json.dumps(depth_profile, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if persist:
+        artifacts = {
+            "survey_taxonomy.json": taxonomy,
+            "survey_contradiction_matrix.json": contradiction_matrix,
+            "survey_section_factual_audit.json": section_factual_audit,
+            "survey_section_scorecard.json": section_scorecard,
+            "survey_final_quality.json": final_quality,
+            "survey_source_coverage.json": source_coverage,
+            "survey_literature_map.json": literature_map,
+            "survey_controversy_matrix.json": controversy_review,
+            "survey_chapter_review.json": chapter_review,
+            "survey_chief_editor.json": chief_editor_review,
+            "survey_depth_profile.json": depth_profile,
+        }
+        for filename, artifact in artifacts.items():
+            (root / filename).write_text(
+                json.dumps(artifact, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
     return payload

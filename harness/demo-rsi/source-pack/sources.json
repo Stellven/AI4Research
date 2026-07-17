@@ -1,0 +1,110 @@
+{
+  "pack_id": "demo-rsi-source-pack-v1",
+  "topic": "Recursive Self-Improving Models",
+  "provenance": "Curated seed corpus of real, well-established works spanning recursive self-improvement, self-improving LLMs, test-time recursive thinking, verifier-driven improvement, AI research agents, RSI safety/governance, and AI scientific research workbenches. Assembled offline for a product demo. Bibliographic details (years, venues, arXiv ids) are best-effort from model knowledge and MUST be verified before any external publication. Not fabricated fixtures — these are real sources, but treat the citation hints as unverified.",
+  "generated_for": "demo prompt: 'Give me a deep research report on Recursive Self-Improving Models in HTML format.'",
+  "sources": [
+    {
+      "id": "good1965",
+      "title": "Speculations Concerning the First Ultraintelligent Machine",
+      "authors": "I. J. Good",
+      "year": 1965,
+      "venue": "Advances in Computers, vol. 6",
+      "citation_hint": "Good, I. J. (1965). Advances in Computers 6:31-88.",
+      "topic_tags": ["recursive-self-improvement", "rsi-safety-governance"],
+      "source_path": "source-notes/good1965.md"
+    },
+    {
+      "id": "concreteproblems2016",
+      "title": "Concrete Problems in AI Safety",
+      "authors": "Amodei, Olah, Steinhardt, Christiano, Schulman, Mane",
+      "year": 2016,
+      "venue": "arXiv preprint",
+      "citation_hint": "arXiv:1606.06565 (best-effort, verify)",
+      "topic_tags": [
+        "rsi-safety-governance",
+        "evaluator-verifier-driven-improvement"
+      ],
+      "source_path": "source-notes/concreteproblems2016.md"
+    },
+    {
+      "id": "star2022",
+      "title": "STaR: Bootstrapping Reasoning With Reasoning",
+      "authors": "Zelikman, Wu, Mu, Goodman",
+      "year": 2022,
+      "venue": "NeurIPS",
+      "citation_hint": "arXiv:2203.14465 (best-effort, verify)",
+      "topic_tags": ["self-improving-llms", "test-time-recursive-thinking"],
+      "source_path": "source-notes/star2022.md"
+    },
+    {
+      "id": "selfrefine2023",
+      "title": "Self-Refine: Iterative Refinement with Self-Feedback",
+      "authors": "Madaan, Tandon, Gupta, et al.",
+      "year": 2023,
+      "venue": "NeurIPS",
+      "citation_hint": "arXiv:2303.17651 (best-effort, verify)",
+      "topic_tags": ["self-improving-llms", "test-time-recursive-thinking"],
+      "source_path": "source-notes/selfrefine2023.md"
+    },
+    {
+      "id": "reflexion2023",
+      "title": "Reflexion: Language Agents with Verbal Reinforcement Learning",
+      "authors": "Shinn, Cassano, Gopinath, Narasimhan, Yao",
+      "year": 2023,
+      "venue": "NeurIPS",
+      "citation_hint": "arXiv:2303.11366 (best-effort, verify)",
+      "topic_tags": [
+        "evaluator-verifier-driven-improvement",
+        "ai-research-agents"
+      ],
+      "source_path": "source-notes/reflexion2023.md"
+    },
+    {
+      "id": "tot2023",
+      "title": "Tree of Thoughts: Deliberate Problem Solving with Large Language Models",
+      "authors": "Yao, Yu, Zhao, Shafran, Griffiths, Cao, Narasimhan",
+      "year": 2023,
+      "venue": "NeurIPS",
+      "citation_hint": "arXiv:2305.10601 (best-effort, verify)",
+      "topic_tags": ["test-time-recursive-thinking"],
+      "source_path": "source-notes/tot2023.md"
+    },
+    {
+      "id": "verifystepwise2023",
+      "title": "Let's Verify Step by Step",
+      "authors": "Lightman, Kosaraju, Burda, et al. (OpenAI)",
+      "year": 2023,
+      "venue": "arXiv preprint",
+      "citation_hint": "arXiv:2305.20050 (best-effort, verify)",
+      "topic_tags": ["evaluator-verifier-driven-improvement"],
+      "source_path": "source-notes/verifystepwise2023.md"
+    },
+    {
+      "id": "aiscientist2024",
+      "title": "The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery",
+      "authors": "Lu, Lu, Lange, Foerster, Ha, Clune (Sakana AI)",
+      "year": 2024,
+      "venue": "arXiv preprint",
+      "citation_hint": "arXiv:2408.06292 (best-effort, verify)",
+      "topic_tags": [
+        "ai-research-agents",
+        "ai-scientific-research-workbenches"
+      ],
+      "source_path": "source-notes/aiscientist2024.md"
+    },
+    {
+      "id": "coscientist2023",
+      "title": "Autonomous Chemical Research with Large Language Models (Coscientist)",
+      "authors": "Boiko, MacKnight, Kline, Gomes",
+      "year": 2023,
+      "venue": "Nature",
+      "citation_hint": "Nature 624 (2023) (best-effort, verify)",
+      "topic_tags": [
+        "ai-scientific-research-workbenches",
+        "ai-research-agents"
+      ],
+      "source_path": "source-notes/coscientist2023.md"
+    }
+  ]
+}

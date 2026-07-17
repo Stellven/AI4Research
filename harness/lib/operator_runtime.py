@@ -18,9 +18,128 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from operator_persona import resolve_persona
+from task_lifecycle import converge_execution_attempt_result, converge_status_file
+
+try:  # Lane 3 gate ledger (R5/AC-R5.1): route records at the operatord seam (F7)
+    import gate_ledger as _gate_ledger
+except Exception:  # pragma: no cover
+    _gate_ledger = None
+
+
+def _route_sprints_dir() -> Path:
+    """Single shared sprints-dir resolution for route records (round-4 G7).
+
+    The ledger the route writer appends to must be the ledger the gates read —
+    gate_ledger.default_sprints_dir() (HARNESS_SPRINTS_DIR > HARNESS_DIR >
+    SOLAR_HARNESS_DIR > install default) is that shared rule."""
+    if _gate_ledger is not None:
+        try:
+            return Path(_gate_ledger.default_sprints_dir())
+        except Exception:
+            pass
+    return HARNESS_DIR / "sprints"
+
+
+def _ledger_route(sprint_id: str, node_id: str, task_id: str, phase: str,
+                  route: Dict[str, Any]) -> None:
+    """Append a route record to the sprint's gate ledger.
+
+    No-op unless SOLAR_GATE_LEDGER=1; best-effort — route evidence must never
+    break the operator hot path."""
+    if _gate_ledger is None:
+        return
+    try:
+        if not _gate_ledger.enabled():
+            return
+        _gate_ledger.append_route_record(
+            _route_sprints_dir(), sprint_id,
+            node_id=node_id, task_id=task_id, phase=phase, route=route,
+        )
+    except Exception:
+        pass
+
+
+def _sync_graph_after_route_result(
+    sprint_id: str,
+    result_payload: Dict[str, Any] | None = None,
+    result_path: Path | None = None,
+) -> Dict[str, Any]:
+    """Converge terminal graph proof after result.json becomes durable.
+
+    An evaluator can invoke ``node-verdict`` from inside its model process.
+    That updates the graph before operatord writes the provider-bearing
+    ``result.json``.  Closeout deliberately waits at that point, so the result
+    writer must provide the next convergence edge instead of relying on an
+    unrelated coordinator mtime change.
+
+    Non-graph operator tasks are a no-op.  Graph sync remains best-effort for
+    the operator hot path; its return value keeps the failure inspectable in
+    focused tests and callers that choose to surface it.
+    """
+    sid = str(sprint_id or "").strip()
+    if not sid:
+        return {"ok": True, "reason": "missing_sprint_id"}
+    sprints_dir = _route_sprints_dir()
+    graph_path = sprints_dir / f"{sid}.task_graph.json"
+    if not graph_path.is_file():
+        return {"ok": True, "reason": "graph_missing", "graph_path": str(graph_path)}
+    try:
+        import graph_scheduler  # type: ignore
+
+        # operator_runtime may be imported before tests or an installed runner
+        # override HARNESS_DIR.  Keep the scheduler on the same runtime roots as
+        # the result artifact rather than its import-time defaults.
+        graph_scheduler.HARNESS_DIR = HARNESS_DIR
+        graph_scheduler.SPRINTS_DIR = sprints_dir
+        graph = graph_scheduler.load_graph(graph_path)
+        attempt_convergence: Dict[str, Any] = {
+            "matched": False,
+            "reason": "result_payload_missing",
+        }
+        if isinstance(result_payload, dict):
+            node_id = str(result_payload.get("node_id") or "").strip()
+            node = next(
+                (
+                    item
+                    for item in graph.get("nodes", [])
+                    if str(item.get("id") or "") == node_id
+                ),
+                None,
+            )
+            if isinstance(node, dict):
+                attempt_convergence = converge_execution_attempt_result(
+                    node,
+                    result_payload,
+                    result_path=result_path or "",
+                )
+                if attempt_convergence.get("matched"):
+                    graph_scheduler.save_graph(graph_path, graph)
+            else:
+                attempt_convergence = {"matched": False, "reason": "node_missing"}
+        projection = graph_scheduler.sync_status_cache_from_graph(
+            graph,
+            graph_path,
+            actor="operator_runtime",
+            event="route_result_recorded",
+        )
+        return {**projection, "attempt_convergence": attempt_convergence}
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": "route_result_sync_failed",
+            "graph_path": str(graph_path),
+            "error": f"{type(exc).__name__}: {exc}",
+        }
 
 HOME = Path.home()
-HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
+# HARNESS_DIR > SOLAR_HARNESS_DIR > install default — the graph_scheduler rule
+# (round-4 G7: operator_runtime ignored SOLAR_HARNESS_DIR and could land run
+# state in the live ~/.solar/harness during sandboxed runs).
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or HOME / ".solar" / "harness"
+)
 OPERATOR_LEASE_DIR = HARNESS_DIR / "run" / "operator-leases"
 OPERATOR_STATUS_DIR = HARNESS_DIR / "run" / "operator-status"
 OPERATOR_INBOX_DIR = HARNESS_DIR / "run" / "operator-inbox"
@@ -39,6 +158,15 @@ VALID_STATES = {
     "auth_expired",
     "disabled"
 }
+
+
+class OperatorSubmitRejected(RuntimeError):
+    """Structured refusal for capacity/policy states that forbid fallback."""
+
+    def __init__(self, message: str, *, reason: str, state: str) -> None:
+        super().__init__(message)
+        self.reason = str(reason)
+        self.state = str(state)
 
 
 def _now() -> str:
@@ -100,11 +228,37 @@ def _active_record_processes_dead(record: Dict[str, Any]) -> bool:
     return bool(pids) and all(not _pid_exists(pid) for pid in pids)
 
 
+def _active_status_without_process_stale(record: Dict[str, Any]) -> bool:
+    """True when an active status has no process evidence and its heartbeat is stale."""
+    if str(record.get("runtime_state") or record.get("state") or "") not in {"leased", "running", "draining"}:
+        return False
+    if _coerce_pid(record.get("worker_pid")) is not None or _coerce_pid(record.get("daemon_pid")) is not None:
+        return False
+    observed_at = _parse_utc(
+        str(
+            record.get("heartbeat_at")
+            or record.get("updated_at")
+            or record.get("started_at")
+            or record.get("leased_at")
+            or ""
+        )
+    )
+    if observed_at is None:
+        return True
+    try:
+        stale_seconds = int(os.environ.get("SOLAR_OPERATOR_ACTIVE_STATUS_STALE_SECONDS", "900") or "900")
+    except Exception:
+        stale_seconds = 900
+    return (datetime.datetime.now(datetime.timezone.utc) - observed_at).total_seconds() >= max(1, stale_seconds)
+
+
 def _clear_stale_active_status(operator_id: str) -> bool:
     status = get_operator_status(operator_id)
     if not status:
         return False
-    if status.get("runtime_state") in {"leased", "running"} and _active_record_processes_dead(status):
+    if status.get("runtime_state") in {"leased", "running", "draining"} and (
+        _active_record_processes_dead(status) or _active_status_without_process_stale(status)
+    ):
         clear_operator_status(operator_id)
         return True
     return False
@@ -258,7 +412,11 @@ def acquire_operator_lease(
                 except Exception:
                     pass  # Overwrite corrupt lease files
                 if existing and existing.get("expires_at", "") > _now():
-                    raise RuntimeError(f"Duplicate active lease rejected: operator '{operator_id}' is already leased")
+                    raise OperatorSubmitRejected(
+                        f"Duplicate active lease rejected: operator '{operator_id}' is already leased",
+                        reason="operator_busy",
+                        state=str(existing.get("state") or "leased"),
+                    )
             
             # Create new lease
             now_str = _now()
@@ -397,7 +555,9 @@ def get_operator_runtime_state(operator_id: str) -> str:
     status = get_operator_status(operator_id)
     if status:
         r_state = status.get("runtime_state")
-        if r_state in {"leased", "running"} and _active_record_processes_dead(status):
+        if r_state in {"leased", "running", "draining"} and (
+            _active_record_processes_dead(status) or _active_status_without_process_stale(status)
+        ):
             clear_operator_status(operator_id)
             r_state = ""
         if r_state in VALID_STATES:
@@ -423,6 +583,7 @@ _NON_DISPATCHABLE_STATES = {
     "disabled",
     "leased",
     "running",
+    "draining",
     "cooldown",
     "quota_exhausted",
     "auth_expired",
@@ -476,6 +637,30 @@ def _kick_operatord_once(operator_id: str) -> int:
         env=env,
         start_new_session=True,
     )
+    # The auto-kicked daemon is itself run-owned.  Register it immediately so
+    # `solar-harness kill` can reap both the daemon and the detached worker it
+    # may spawn.  Fail closed if ownership cannot be established: leaving an
+    # unregistered daemon is precisely the RC9 live-run leak this seam guards.
+    try:
+        import run_process_registry as _rpr
+
+        _rpr.register(
+            "harness",
+            "operatord",
+            int(proc.pid),
+            meta={"operator_id": str(operator_id)},
+            harness_dir=HARNESS_DIR,
+        )
+    except Exception:
+        try:
+            proc.terminate()
+            proc.wait(timeout=1)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+        raise
     return int(proc.pid)
 
 
@@ -534,8 +719,15 @@ def submit(task_envelope: Dict[str, Any]) -> Dict[str, Any]:
     # ── 3. Dispatchability check ───────────────────────────────────────────
     current_state = get_operator_runtime_state(operator_id)
     if current_state in _NON_DISPATCHABLE_STATES:
-        raise RuntimeError(
-            f"Operator '{operator_id}' is not dispatchable: state={current_state}"
+        reason = (
+            "operator_busy"
+            if current_state in {"leased", "running", "draining"}
+            else "operator_unavailable"
+        )
+        raise OperatorSubmitRejected(
+            f"Operator '{operator_id}' is not dispatchable: state={current_state}",
+            reason=reason,
+            state=current_state,
         )
 
     # ── 4. Persona binding check ───────────────────────────────────────────
@@ -581,6 +773,19 @@ def submit(task_envelope: Dict[str, Any]) -> Dict[str, Any]:
             raise RuntimeError(
                 f"Operator '{operator_id}' submit bootstrap failed: unable to start operatord --once: {exc}"
             ) from exc
+
+    # AC-R5.1: the envelope write IS the stage-start route evidence — a run
+    # killed before any result still proves what was routed where. Recorded
+    # AFTER the auto-kick block (round-4 G8): a bootstrap failure rolls the
+    # envelope+lease back, so a 'submitted' record for a stage that never ran
+    # would be untruthful.
+    _ledger_route(sprint_id, node_id, task_id, "submitted", {
+        "provider": str((config or {}).get("provider") or ""),
+        "model": str((config or {}).get("model") or ""),
+        "operator_id": operator_id,
+        "backend": str((config or {}).get("backend") or ""),
+        "started_at": submitted_at,
+    })
 
     result = {
         "task_id": task_id,
@@ -750,6 +955,30 @@ def write_result(
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
     os.replace(tmp_path, str(result_path))
+
+    converge_status_file(
+        HARNESS_DIR / "run" / "multi-task" / task_id / "status.json",
+        result,
+        result_path=result_path,
+    )
+
+    route = dict(model_route or {})
+    try:
+        config = get_operator_config(operator_id) or {}
+    except Exception:
+        config = {}
+    _ledger_route(sprint_id, node_id, task_id, "completed", {
+        "provider": str(route.get("effective_provider") or config.get("provider") or ""),
+        "model": str(route.get("effective_model") or route.get("routing_model")
+                     or route.get("requested_model") or config.get("model") or ""),
+        "operator_id": operator_id,
+        "backend": str(config.get("backend") or ""),
+        "exit_code": exit_code,
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "result_status": status,
+    })
+    _sync_graph_after_route_result(sprint_id, result, result_path)
     return result_path
 
 

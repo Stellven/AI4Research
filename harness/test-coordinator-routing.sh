@@ -59,6 +59,8 @@ with open(__import__('os').environ["COORDINATOR_SH"]) as f:
 # Extract discover_pane_by_persona, choose_* functions and pane_title_persona
 funcs_to_extract = [
     "pane_is_idle_snapshot",
+    "pane_has_runtime_blocker_snapshot",
+    "pane_has_active_work_snapshot",
     "pane_has_processing_snapshot",
     "pane_has_prompt_snapshot",
     "pane_prompt_input_snapshot",
@@ -249,6 +251,41 @@ assert "dispatch_to_pane writes in-progress ACK after capture verification" \
   'grep -qF '\''write_ack_file "$sid" "$_dispatch_id" "$role" "in_progress"'\'' "$COORDINATOR_SH"'
 assert "ACK watcher still launches after capture ACK" \
   'grep -qF '\''ack_watcher_bg "$sid" "${_dispatch_id:-unknown}" 300'\'' "$COORDINATOR_SH"'
+echo ""
+
+# ── TC13: visible prompt residue gets a delayed standalone Enter rescue ──
+echo "TC13: coordinator rescues a visible-but-unsubmitted dispatch before clearing it"
+assert "residual prompt rescue precedes quarantine clearing" \
+  'python3 - "$COORDINATOR_SH" <<'\''PY'\''
+from pathlib import Path
+import sys
+
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+start = text.index("dispatch_to_pane()")
+end = text.index("# dispatch_with_gate", start)
+body = text[start:end]
+rescue = body.index("[dispatch] residual prompt rescue")
+clear = body.index("prompt_quarantine_send_fixkeys", rescue)
+snippet = body[rescue:clear]
+assert rescue < clear
+assert '\''tmux send-keys -t "$pane" Enter'\'' in snippet
+assert "sleep 3" in snippet
+PY'
+echo ""
+
+# ── TC14: active Claude work and queued input are never treated as idle ──
+echo "TC14: active Claude spinner and queued input block redispatch"
+CLAUDE_ACTIVE_SNAPSHOT=$'· Simmering… (2m 7s · ↓ 4.7k tokens)\n────────────────────\n❯  \n────────────────────\n  ⏵⏵ bypass permissions on'
+CLAUDE_QUEUED_SNAPSHOT=$'❯ /clear\n❯ /clear\n────────────────────\n❯ Press up to edit queued messages\n────────────────────\n  ⏵⏵ bypass permissions on'
+CLAUDE_COMPLETED_SNAPSHOT=$'✻ Worked for 16s\n────────────────────\n❯  \n────────────────────\n  ⏵⏵ bypass permissions on'
+assert "Simmering marker is processing" \
+  'pane_has_processing_snapshot "$CLAUDE_ACTIVE_SNAPSHOT"'
+assert "active Claude snapshot is not idle despite empty composer/footer" \
+  '! pane_is_idle_snapshot "$CLAUDE_ACTIVE_SNAPSHOT"'
+assert "queued Claude messages are not idle" \
+  '! pane_is_idle_snapshot "$CLAUDE_QUEUED_SNAPSHOT"'
+assert "completed Claude history with an empty composer is idle" \
+  'pane_is_idle_snapshot "$CLAUDE_COMPLETED_SNAPSHOT"'
 echo ""
 
 # ── Summary ──

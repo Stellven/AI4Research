@@ -25,7 +25,13 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from executable_node import dispatch_role as executable_dispatch_role
 from prerequisite_resolver import evaluate_prerequisite, iter_blocked
+
+try:  # Lane 3 gate ledger (R4); optional so a partial install never breaks scheduling
+    import gate_ledger as _gate_ledger
+except Exception:  # pragma: no cover
+    _gate_ledger = None
 
 HOME = Path.home()
 HARNESS_DIR = Path(
@@ -41,7 +47,23 @@ READY_STATUSES = {"pending", "queued", "blocked", "worker_blocked", "failed_revi
 PASS_STATUSES = {"passed"}
 CLOSED_NON_PASS_STATUSES = {"skipped", "cancelled", "skipped_parent_passed"}
 DEPENDENCY_BLOCK_STATUSES = {"failed", "cancelled", "skipped", "skipped_parent_passed", "needs_human_review"}
+HUMAN_REVIEW_STATUS = "needs_human_review"
+HUMAN_REVIEW_SCHEMA_VERSION = "solar.human_review.v1"
+HUMAN_REVIEW_HISTORY_LIMIT = 20
 SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR", HARNESS_DIR / "sprints"))
+REPAIR_ACTIVE_STATUSES = {
+    "failed_review",
+    "reviewing",
+    "assigned",
+    "dispatched",
+    "in_progress",
+    "running",
+    "pending",
+    "queued",
+    "blocked",
+    "worker_blocked",
+    "",
+}
 
 
 def _effective_graph_max_parallel(default: int | None = None) -> int | None:
@@ -367,6 +389,7 @@ def _save_graph_state(path: Path, state: dict[str, Any]) -> None:
 
 def _save_closure_projection(path: Path, graph: dict[str, Any], state: dict[str, Any]) -> None:
     parent = parent_ready_check(graph)
+    terminal_status = str(parent.get("terminal_status") or "")
     existing: dict[str, Any] = {}
     if path.exists():
         try:
@@ -380,16 +403,28 @@ def _save_closure_projection(path: Path, graph: dict[str, Any], state: dict[str,
     record["sprint_id"] = _sprint_id_for_graph(graph)
     record["graph_ref"] = f"{record['sprint_id']}.task_graph.json" if record["sprint_id"] else str(path)
     record["graph_state_ref"] = str(state.get("graph_ref") or f"{record['sprint_id']}.task_dag.state.json")
-    record["status"] = "closed" if parent.get("ready") else "pending"
+    if parent.get("ready"):
+        record["status"] = "closed"
+    elif terminal_status:
+        record["status"] = terminal_status
+    else:
+        record["status"] = "pending"
     record["all_nodes_passed"] = not parent.get("open_nodes") and not parent.get("failed_nodes")
     record["all_required_gates_passed"] = not parent.get("missing_gates")
-    record["acceptance_traceability_coverage"] = record.get("acceptance_traceability_coverage", 0)
+    # No coverage artifact means unknown, not zero.  requirement_coverage owns
+    # the numeric projection and refreshes this field after it writes the
+    # canonical coverage report.
+    record["acceptance_traceability_coverage"] = record.get("acceptance_traceability_coverage")
     record["open_nodes"] = list(parent.get("open_nodes") or [])
     record["failed_nodes"] = list(parent.get("failed_nodes") or [])
+    record["human_review_nodes"] = list(parent.get("human_review_nodes") or [])
+    record["terminal_status"] = terminal_status or None
     record["missing_gates"] = list(parent.get("missing_gates") or [])
     record["updated_at"] = _now()
     if parent.get("ready") and not record.get("closed_at"):
         record["closed_at"] = record["updated_at"]
+    if terminal_status == "failed" and not record.get("failed_at"):
+        record["failed_at"] = record["updated_at"]
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -413,6 +448,23 @@ def _status_path_for_graph(graph: dict[str, Any], graph_path: str | Path | None 
     if graph_path:
         return Path(graph_path).expanduser().parent / f"{sid}.status.json"
     return SPRINTS_DIR / f"{sid}.status.json"
+
+
+def _write_route_proof_for_sprint(sid: str) -> dict[str, Any]:
+    if not sid:
+        return {}
+    try:
+        import route_proof  # type: ignore
+
+        return route_proof.write_route_proof(HARNESS_DIR, sid, sprints_dir=SPRINTS_DIR)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "enforced": False,
+            "sprint_id": sid,
+            "error": str(exc),
+            "reason": "route_proof_write_failed",
+        }
 
 
 def _status_has_terminal_evidence(sid: str, status: dict[str, Any] | None = None, graph_path: str | Path | None = None) -> bool:
@@ -585,6 +637,8 @@ def sync_status_cache_from_graph(
         now = _now()
         open_nodes = parent.get("open_nodes") or []
         failed_nodes = parent.get("failed_nodes") or []
+        human_review_nodes = parent.get("human_review_nodes") or []
+        terminal_status = str(parent.get("terminal_status") or "")
         desired_active_node = open_nodes[0] if open_nodes else None
         history = current.get("history")
         if not isinstance(history, list):
@@ -629,10 +683,7 @@ def sync_status_cache_from_graph(
             )
             result.update({"updated": True, "status": current, "reason": "parent_reopened"})
             return result
-        failed_set = {str(item) for item in failed_nodes}
-        open_set = {str(item) for item in open_nodes}
-        terminal_failed_graph = bool(failed_set) and bool(open_set) and open_set.issubset(failed_set)
-        if terminal_failed_graph:
+        if terminal_status == "failed":
             current = _project_status_via_runtime(
                 status_path,
                 new_status="failed",
@@ -645,12 +696,88 @@ def sync_status_cache_from_graph(
                     "active_node": None,
                     "open_nodes": open_nodes,
                     "failed_nodes": failed_nodes,
+                    "human_review_nodes": human_review_nodes,
                     "graph_parent_ready": parent,
                     "task_graph_status": "failed",
                 },
                 extra={"note": "task_graph has terminal failed nodes and no runnable downstream nodes"},
             )
             result.update({"updated": True, "status": current, "reason": "parent_failed"})
+            return result
+        if terminal_status == HUMAN_REVIEW_STATUS:
+            current = _project_status_via_runtime(
+                status_path,
+                new_status=HUMAN_REVIEW_STATUS,
+                actor=actor,
+                event="graph_parent_needs_human_review",
+                graph_path=graph_path,
+                allow_reopen=True,
+                status_fields={
+                    "phase": "needs_human",
+                    "stage": HUMAN_REVIEW_STATUS,
+                    "active_node": None,
+                    "open_nodes": open_nodes,
+                    "failed_nodes": failed_nodes,
+                    "human_review_nodes": human_review_nodes,
+                    "graph_parent_ready": parent,
+                    "task_graph_status": HUMAN_REVIEW_STATUS,
+                },
+                extra={"note": "task_graph has only human-review blockers and no runnable nodes"},
+            )
+            result.update({
+                "updated": True,
+                "status": current,
+                "reason": "parent_needs_human_review",
+            })
+            return result
+        if str(current.get("status") or "").lower() == "failed" and open_nodes:
+            current = _project_status_via_runtime(
+                status_path,
+                new_status="active",
+                actor=actor,
+                event="graph_parent_failed_reopened_for_repair",
+                graph_path=graph_path,
+                allow_reopen=True,
+                status_fields={
+                    "phase": "graph_in_progress",
+                    "stage": "graph_in_progress",
+                    "active_node": desired_active_node,
+                    "open_nodes": open_nodes,
+                    "failed_nodes": failed_nodes,
+                    "graph_parent_ready": parent,
+                    "task_graph_status": "active",
+                    "completed_at": None,
+                },
+                extra={"note": "task_graph has active repair/re-eval work; revoking stale failed parent projection"},
+            )
+            result.update({"updated": True, "status": current, "reason": "parent_reopened_for_repair"})
+            return result
+        if str(current.get("status") or "").lower() == HUMAN_REVIEW_STATUS and open_nodes:
+            current = _project_status_via_runtime(
+                status_path,
+                new_status="active",
+                actor=actor,
+                event="graph_parent_reopened_after_human_resume",
+                graph_path=graph_path,
+                allow_reopen=True,
+                status_fields={
+                    "phase": "graph_in_progress",
+                    "stage": "graph_in_progress",
+                    "active_node": desired_active_node,
+                    "open_nodes": open_nodes,
+                    "failed_nodes": failed_nodes,
+                    "human_review_nodes": human_review_nodes,
+                    "graph_parent_ready": parent,
+                    "task_graph_status": "active",
+                    "completed_at": None,
+                },
+                extra={"note": "human resumed a graph node; reopening the parent projection"},
+            )
+            result.update({
+                "updated": True,
+                "status": current,
+                "reason": "parent_reopened_after_human_resume",
+            })
             return result
         projection_changed = any([
             current.get("active_node") != desired_active_node,
@@ -672,6 +799,7 @@ def sync_status_cache_from_graph(
                     "active_node": desired_active_node,
                     "open_nodes": open_nodes,
                     "failed_nodes": failed_nodes,
+                    "human_review_nodes": human_review_nodes,
                     "graph_parent_ready": parent,
                     "task_graph_status": "active",
                 },
@@ -681,6 +809,22 @@ def sync_status_cache_from_graph(
             return result
         result["reason"] = "parent_projection_refreshed" if result.get("created") else "parent_not_ready"
         return result
+
+    route_proof = _write_route_proof_for_sprint(sid)
+    if route_proof:
+        result["route_proof"] = {
+            "ok": route_proof.get("ok"),
+            "complete": route_proof.get("complete"),
+            "path": route_proof.get("path"),
+            "selected_runtime": route_proof.get("selected_runtime"),
+            "allowed_providers": route_proof.get("allowed_providers", []),
+            "violations": route_proof.get("violations", []),
+            "incomplete_stages": route_proof.get("incomplete_stages", []),
+        }
+        if route_proof.get("enforced") and not route_proof.get("ok"):
+            reason = "route_proof_incomplete" if route_proof.get("complete") is False else "route_proof_violation"
+            result.update({"ok": False, "reason": reason})
+            return result
 
     already_passed = str(current.get("status") or "").lower() == "passed"
     already_closed = not current.get("active_node") and str(current.get("stage") or "").lower() in {
@@ -822,6 +966,68 @@ def _parse_ts(value: Any) -> datetime.datetime | None:
         return None
 
 
+def _human_review_record(node: dict[str, Any], result: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return the most authoritative durable human-review record available."""
+    candidates = [
+        node.get("human_review"),
+        (result or {}).get("human_review") if isinstance(result, dict) else None,
+    ]
+    valid = [
+        item
+        for item in candidates
+        if isinstance(item, dict)
+        and str(item.get("schema_version") or "") == HUMAN_REVIEW_SCHEMA_VERSION
+    ]
+    if not valid:
+        return {}
+
+    def authority_rank(item: dict[str, Any]) -> tuple[int, int]:
+        try:
+            generation = max(0, int(item.get("generation") or 0))
+        except (TypeError, ValueError):
+            generation = 0
+        # A later generation supersedes an earlier one.  Within one
+        # generation, conflicting mirrors fail closed: an outstanding block
+        # is authoritative until both durable records agree it was resumed.
+        blocked = int(str(item.get("state") or "").strip().lower() == "blocked")
+        return generation, blocked
+
+    return max(valid, key=authority_rank)
+
+
+def _human_review_is_blocking(node: dict[str, Any], result: dict[str, Any] | None = None) -> bool:
+    """Human review is absorbing until the dedicated resume seam clears it.
+
+    The raw-status fallback deliberately protects legacy graphs created before
+    ``solar.human_review.v1`` existed.  A newer unrecorded ``pending`` mirror
+    must not erase an older inline escalation (the exact rc.9 loop class).
+    """
+    record = _human_review_record(node, result)
+    if str(record.get("state") or "").strip().lower() == "blocked":
+        return True
+    statuses = {
+        str(node.get("status") or "").strip().lower(),
+        str((result or {}).get("status") or "").strip().lower(),
+    }
+    return HUMAN_REVIEW_STATUS in statuses
+
+
+def human_review_generation(graph: dict[str, Any], node_id: str) -> int:
+    """Current block generation (legacy escalations are generation 1)."""
+    ids = _node_map(graph)
+    if node_id not in ids:
+        raise ValueError(f"unknown node: {node_id}")
+    result = _node_results(graph).get(node_id)
+    record = _human_review_record(ids[node_id], result)
+    try:
+        generation = max(0, int(record.get("generation") or 0))
+    except (TypeError, ValueError):
+        generation = 0
+    if generation:
+        return generation
+    return 1 if _human_review_is_blocking(ids[node_id], result) else 0
+
+
 def _status_rank(status: str) -> int:
     value = str(status or "pending").lower()
     if value in {"passed", "failed", "skipped", "cancelled"}:
@@ -835,6 +1041,22 @@ def _status_rank(status: str) -> int:
     if value in {"assigned", "queued"}:
         return 1
     return 0
+
+
+def _node_has_active_repair_context(node: dict[str, Any]) -> bool:
+    """Return true when a failed eval has opened a repair/re-eval generation.
+
+    During repair, stale `node_results` from the failed evaluator can briefly
+    disagree with the inline node state. The inline repair context is the
+    authoritative signal that the failure is not terminal yet.
+    """
+    repair_context = node.get("repair_context")
+    if not isinstance(repair_context, dict):
+        return False
+    inline_status = str(node.get("status", "") or "").strip().lower()
+    if inline_status not in REPAIR_ACTIVE_STATUSES:
+        return False
+    return bool(repair_context.get("attempt") or repair_context.get("created_at"))
 
 
 def _node_eval_json_candidates(graph: dict[str, Any], node_id: str) -> list[Path]:
@@ -1094,12 +1316,149 @@ def _passed_without_required_eval(graph: dict[str, Any], node_id: str) -> bool:
     return _node_eval_is_self_graded(graph, node_id)
 
 
-def _assert_pass_mark_allowed(graph: dict[str, Any], node_id: str, status: str) -> None:
+def _validate_contract_closeout_receipt(
+    graph: dict[str, Any],
+    node_id: str,
+    receipt: dict[str, Any] | None,
+) -> None:
+    """Validate the dispatcher-owned receipt required to commit contracted PASS.
+
+    The scheduler remains the low-level status writer, but it is no longer a
+    second verdict authority.  Only the dispatcher closeout transaction can
+    assemble this receipt after consuming evaluator evidence, persisting the
+    artifact manifest, checking proof/quality gates, and completing any
+    required workspace publication.
+    """
+    if not isinstance(receipt, dict):
+        raise ValueError(f"contracted_pass_requires_closeout_authority:{node_id}")
+    sid = _sprint_id_for_graph(graph)
+    required_scalars = {
+        "schema": "solar.node_closeout.v1",
+        "sid": sid,
+        "node_id": node_id,
+        "verdict": "passed",
+    }
+    for key, expected in required_scalars.items():
+        if str(receipt.get(key) or "") != str(expected or ""):
+            raise ValueError(f"contracted_pass_invalid_closeout_receipt:{node_id}:{key}")
+
+    eval_receipt = receipt.get("eval") if isinstance(receipt.get("eval"), dict) else {}
+    if (
+        eval_receipt.get("consumable") is not True
+        or not str(eval_receipt.get("record_id") or "").strip()
+        or not str(eval_receipt.get("path") or "").strip()
+    ):
+        raise ValueError(f"contracted_pass_invalid_closeout_receipt:{node_id}:eval")
+    eval_snapshot = (
+        eval_receipt.get("artifact_snapshot")
+        if isinstance(eval_receipt.get("artifact_snapshot"), dict)
+        else {}
+    )
+    snapshot_digest = str(eval_snapshot.get("snapshot_digest") or "")
+    try:
+        eval_generation = int(eval_receipt.get("generation"))
+        snapshot_generation = int(eval_snapshot.get("generation"))
+    except (TypeError, ValueError):
+        eval_generation = -1
+        snapshot_generation = -2
+    if (
+        eval_snapshot.get("required") is not True
+        or eval_snapshot.get("ok") is not True
+        or str(eval_snapshot.get("schema") or "") != "solar.eval_artifact_snapshot.v1"
+        or not str(eval_snapshot.get("path") or "").strip()
+        or len(snapshot_digest) != 64
+        or any(char not in "0123456789abcdef" for char in snapshot_digest)
+        or snapshot_generation != eval_generation
+    ):
+        raise ValueError(f"contracted_pass_invalid_closeout_receipt:{node_id}:eval_snapshot")
+
+    manifest = receipt.get("manifest") if isinstance(receipt.get("manifest"), dict) else {}
+    manifest_digest = str(manifest.get("content_digest") or "")
+    try:
+        manifest_generation = int(manifest.get("generation"))
+    except (TypeError, ValueError):
+        manifest_generation = -2
+    if (
+        manifest.get("ok") is not True
+        or str(manifest.get("schema") or "") != "solar.artifact_manifest.v1"
+        or not str(manifest.get("path") or "").strip()
+        or manifest.get("eval_snapshot_match") is not True
+        or len(manifest_digest) != 64
+        or any(char not in "0123456789abcdef" for char in manifest_digest)
+        or manifest_generation != eval_generation
+    ):
+        raise ValueError(f"contracted_pass_invalid_closeout_receipt:{node_id}:manifest")
+
+    for key in ("proof", "research_quality", "publication"):
+        gate = receipt.get(key) if isinstance(receipt.get(key), dict) else {}
+        if gate.get("ok") is not True:
+            raise ValueError(f"contracted_pass_invalid_closeout_receipt:{node_id}:{key}")
+    publication = receipt.get("publication") if isinstance(receipt.get("publication"), dict) else {}
+    if publication.get("required") is True:
+        published_digest = str(publication.get("published_digest") or "")
+        publication_manifest_digest = str(publication.get("manifest_digest") or "")
+        try:
+            published_count = int(publication.get("published_count") or 0)
+        except (TypeError, ValueError):
+            published_count = 0
+        if (
+            published_count < 1
+            or publication_manifest_digest != manifest_digest
+            or len(published_digest) != 64
+            or any(char not in "0123456789abcdef" for char in published_digest)
+        ):
+            raise ValueError(f"contracted_pass_invalid_closeout_receipt:{node_id}:publication_digest")
+
+
+def _assert_pass_mark_allowed(
+    graph: dict[str, Any],
+    node_id: str,
+    status: str,
+    *,
+    closeout_receipt: dict[str, Any] | None = None,
+) -> None:
     normalized = str(status or "").lower()
     if normalized != "passed":
         return
+    if bool(str((graph or {}).get("workflow_contract_id") or "").strip()):
+        _validate_contract_closeout_receipt(graph, node_id, closeout_receipt)
+        return
     if _passed_without_required_eval(graph, node_id):
         raise ValueError(f"passed_requires_eval_json:{node_id}")
+
+
+def _assert_human_review_status_write_allowed(
+    graph: dict[str, Any],
+    node_id: str,
+    status: str,
+) -> None:
+    ids = _node_map(graph)
+    if node_id not in ids:
+        raise ValueError(f"unknown node: {node_id}")
+    normalized = str(status or "").strip().lower()
+    result = _node_results(graph).get(node_id)
+    blocked = _human_review_is_blocking(ids[node_id], result)
+    if blocked and normalized != HUMAN_REVIEW_STATUS:
+        generation = human_review_generation(graph, node_id)
+        raise ValueError(
+            f"needs_human_review_requires_explicit_human_resume:{node_id}:generation={generation}"
+        )
+    if normalized == HUMAN_REVIEW_STATUS and not blocked:
+        raise ValueError(f"needs_human_review_requires_authoritative_entry:{node_id}")
+
+
+def assert_node_status_write_allowed(
+    graph: dict[str, Any],
+    node_id: str,
+    status: str,
+) -> None:
+    """Guard low-level status writers that cannot carry special authority.
+
+    Contracted PASS must use :func:`commit_verified_node_pass`, and human
+    escalation/resume must use their dedicated generation-bearing seams.
+    """
+    _assert_human_review_status_write_allowed(graph, node_id, status)
+    _assert_pass_mark_allowed(graph, node_id, status)
 
 
 def _ensure_required_gate_node_mapping(graph: dict[str, Any]) -> int:
@@ -1170,10 +1529,22 @@ def _ensure_required_gate_node_mapping(graph: dict[str, Any]) -> int:
     return assigned
 
 
-def node_status(graph: dict[str, Any], node_id: str) -> str:
+def node_recorded_status(graph: dict[str, Any], node_id: str) -> str:
+    """The node's RECORDED status — the inline/node_results/gate_results fold
+    WITHOUT node_status()'s fail-closed passed-without-required-eval downgrade.
+
+    This is the AC-R4.1 hold discriminator (round-4 G1): the real v5 shape
+    (handoff present, eval.json missing) is exactly the state that produces a
+    mechanical ``research_eval_json_missing`` FAIL, and the downgrade projects
+    it as effective "reviewing" while the writers recorded "passed". Policy
+    rules about "a passed node" must consult what was recorded, not the
+    downgraded view, or they self-bypass on the very shape they exist for."""
     _ensure_required_gate_node_mapping(graph)
     results = _node_results(graph)
     node = _node_map(graph)[node_id]
+    result = results.get(node_id) if isinstance(results.get(node_id), dict) else {}
+    if _human_review_is_blocking(node, result):
+        return HUMAN_REVIEW_STATUS
     gate = node.get("gate")
     gate_results = graph.get("gate_results") or {}
     gate_passed = bool(
@@ -1184,7 +1555,9 @@ def node_status(graph: dict[str, Any], node_id: str) -> str:
     if node_id in results and isinstance(results[node_id], dict):
         result_status = str(results[node_id].get("status", "") or "").lower()
         node_status_value = str(node.get("status", "pending") or "pending").lower()
-        if gate_passed and "failed" not in {result_status, node_status_value}:
+        if _node_has_active_repair_context(node) and result_status in (TERMINAL_STATUSES | {"needs_human_review"}):
+            status = node_status_value or "failed_review"
+        elif gate_passed and "failed" not in {result_status, node_status_value}:
             status = "passed"
         else:
             result_rank = _status_rank(result_status)
@@ -1202,7 +1575,11 @@ def node_status(graph: dict[str, Any], node_id: str) -> str:
         status = "passed"
     else:
         status = str(node.get("status", "pending") or "pending").lower()
+    return status
 
+
+def node_status(graph: dict[str, Any], node_id: str) -> str:
+    status = node_recorded_status(graph, node_id)
     if status == "passed" and _passed_without_required_eval(graph, node_id):
         return "reviewing"
     return status
@@ -1441,7 +1818,19 @@ def ready_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
         if status not in READY_STATUSES:
             continue
         deps = _internal_depends_on(ids[node_id])
-        if all(_is_passed(graph, dep) for dep in deps):
+        if all(
+            _is_passed(graph, dep)
+            or (
+                # warn_and_continue (design §2 change 2): a needs_human_review dep
+                # with the non-blocking contract policy does not gate readiness —
+                # without this half, the policy would trade the skip-cascade for a
+                # silent pending wedge (an R7 violation).
+                dep in ids
+                and node_status(graph, dep) == "needs_human_review"
+                and not _human_review_blocks_dependents(graph, ids.get(dep))
+            )
+            for dep in deps
+        ):
             ready.append(deepcopy(ids[node_id]))
     return ready
 
@@ -1630,9 +2019,18 @@ def _label_aliases(value: Any) -> set[str]:
         aliases.add("_".join(normalized_parts))
         if normalized_parts[-1] == "design":
             aliases.add("architecture")
-    for group in LABEL_ALIAS_GROUPS:
-        if aliases & group:
-            aliases.update(group)
+    # Alias groups are direct equivalence declarations, not a graph whose
+    # overlapping members should be transitively closed.  Expanding a group
+    # into all of its labels made matching order-dependent: algorithm_design
+    # reached api-design, the later API group then reached python, and a
+    # Python-only worker falsely satisfied an algorithm-design requirement.
+    # A stable group key preserves direct synonyms while preventing one group
+    # from using labels introduced by another group as a bridge.
+    direct_aliases = set(aliases)
+    for index, group in enumerate(LABEL_ALIAS_GROUPS):
+        normalized_group = {str(item).strip().lower() for item in group}
+        if direct_aliases & normalized_group:
+            aliases.add(f"alias-group:{index}")
     return aliases
 
 
@@ -1824,25 +2222,14 @@ def _worker_role(worker: dict[str, Any]) -> str:
     ).strip().lower()
 
 
-def _node_dispatch_role(node: dict[str, Any]) -> str:
-    logical_operator = str(node.get("logical_operator") or "").strip()
-    write_scope = [str(item) for item in (node.get("write_scope") or [])]
-    if logical_operator in _BUILDER_WORK_LOGICAL_OPERATORS and any(write_scope):
-        return "builder"
-    physical_plan = node.get("physical_plan_ir") if isinstance(node.get("physical_plan_ir"), dict) else {}
-    capsule_plan = node.get("capsule_plan_ir") if isinstance(node.get("capsule_plan_ir"), dict) else {}
-    for raw in (
-        physical_plan.get("role"),
-        capsule_plan.get("role"),
-        node.get("target_role"),
-        node.get("role"),
-    ):
-        role = str(raw or "").strip().lower()
-        if role:
-            return role
-    if logical_operator in {"DeepArchitect", "ResearchScout", "ResearchSynthesizer", "ArtifactCurator"}:
-        return "planner"
-    return "builder"
+def node_dispatch_role(node: dict[str, Any]) -> str:
+    """Return the logical execution role declared by a graph node.
+
+    Worker/host role is deliberately not an input.  A planner or evaluator may
+    execute on a compatible builder host, but that placement must never change
+    the role used for operator selection, persona, or execution evidence.
+    """
+    return executable_dispatch_role(node)
 
 
 def _role_penalty(node_role: str, worker_role: str) -> int | None:
@@ -1867,16 +2254,7 @@ def _role_penalty(node_role: str, worker_role: str) -> int | None:
 # binding/eval ever runs. The "resource."/"guard." prefixes are registry-safe (the capability-capsule
 # registry only declares resource/guard caps under those prefixes).
 _DISPATCH_PROVISIONED_CAP_PREFIXES = ("resource.", "guard.")
-_DISPATCH_PROVISIONED_CAPS = frozenset({"scope_compliance"})
-_BUILDER_WORK_LOGICAL_OPERATORS = frozenset({
-    "ImplementationWorker",
-    "PatchWorker",
-    "TestDesigner",
-    "TestRunner",
-    "BenchmarkRunner",
-})
-
-
+_DISPATCH_PROVISIONED_CAPS = frozenset({"scope_compliance", "repo-workspace"})
 def _is_dispatch_provisioned_capability(cap: Any) -> bool:
     c = str(cap or "")
     return c in _DISPATCH_PROVISIONED_CAPS or c.startswith(_DISPATCH_PROVISIONED_CAP_PREFIXES)
@@ -1903,7 +2281,7 @@ def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, An
         # Layer 0 (dispatch-provisioned): strip resource/guard capsule + eval-asserted caps that are
         # bound/asserted at dispatch, not advertised by a worker (see _is_dispatch_provisioned_capability).
         required_capabilities = [c for c in required_capabilities if not _is_dispatch_provisioned_capability(c)]
-        node_role = _node_dispatch_role(node)
+        node_role = node_dispatch_role(node)
         # Layer 1 (normalize): drop required_skills that are not in the operator-skill registry.
         # The planner emits unbounded free-form skill strings; unregistered ones are
         # unenforceable (no worker advertises them) and would falsely strand the node forever.
@@ -2186,6 +2564,385 @@ def _node_gate_verdict_ok(node: dict[str, Any]) -> tuple[bool, str]:
     return True, "verdict_ok"
 
 
+def _ledger_transition(graph: dict[str, Any], node_id: str, from_status: str, to_status: str,
+                       writer: str, *, applied: bool = True, author_type: str = "scheduler",
+                       note: str | None = None, **extra: Any) -> None:
+    """Report a node-status write to the gate ledger (Lane 3, R4).
+
+    No-op unless SOLAR_GATE_LEDGER=1; never raises into the scheduling hot path."""
+    if _gate_ledger is None:
+        return
+    try:
+        if not _gate_ledger.enabled():
+            return
+        sid = _sprint_id_for_graph(graph)
+        if not sid:
+            return
+        _gate_ledger.record_status_transition(
+            SPRINTS_DIR, sid, node_id,
+            from_status=from_status, to_status=to_status,
+            author_type=author_type, writer=writer, applied=applied, note=note,
+            **extra,
+        )
+    except Exception:
+        pass
+
+
+def enter_node_human_review(
+    graph: dict[str, Any],
+    node_id: str,
+    *,
+    reason: str,
+    next_action: str,
+    writer: str,
+    author_type: str = "policy",
+) -> dict[str, Any]:
+    """Enter one durable human-review generation through the sole authority.
+
+    Re-observing an already blocked node is idempotent: it preserves the same
+    generation and does not manufacture another transition.  A later genuine
+    re-escalation after an explicit resume increments the generation.
+    """
+    ids = _node_map(graph)
+    if node_id not in ids:
+        raise ValueError(f"unknown node: {node_id}")
+    reason = str(reason or "").strip()
+    next_action = str(next_action or "").strip()
+    writer = str(writer or "").strip()
+    if not reason:
+        raise ValueError("human_review_reason_required")
+    if not next_action:
+        raise ValueError("human_review_next_action_required")
+    if not writer:
+        raise ValueError("human_review_writer_required")
+
+    node = ids[node_id]
+    results = graph.setdefault("node_results", {})
+    result = results.get(node_id) if isinstance(results.get(node_id), dict) else {}
+    prior_status = node_recorded_status(graph, node_id)
+    prior_record = _human_review_record(node, result)
+    already_blocked = _human_review_is_blocking(node, result)
+    prior_generation = human_review_generation(graph, node_id)
+    generation = max(1, prior_generation if already_blocked else prior_generation + 1)
+    now = _now()
+
+    if already_blocked and str(prior_record.get("state") or "").lower() == "blocked":
+        record = deepcopy(prior_record)
+    else:
+        record = {
+            "schema_version": HUMAN_REVIEW_SCHEMA_VERSION,
+            "generation": generation,
+            "state": "blocked",
+            "reason": reason,
+            "next_action": next_action,
+            "blocked_at": now,
+            "writer": writer,
+        }
+        if prior_record:
+            history = node.get("human_review_history")
+            if not isinstance(history, list):
+                history = []
+            history = [deepcopy(item) for item in history if isinstance(item, dict)]
+            history.append(deepcopy(prior_record))
+            node["human_review_history"] = history[-HUMAN_REVIEW_HISTORY_LIMIT:]
+
+    node["human_review"] = deepcopy(record)
+    node["status"] = HUMAN_REVIEW_STATUS
+    node["updated_at"] = now
+    node["next_action"] = next_action
+    results[node_id] = {
+        "status": HUMAN_REVIEW_STATUS,
+        "updated_at": now,
+        "note": reason,
+        "next_action": next_action,
+        "human_review": deepcopy(record),
+    }
+    gate = str(node.get("gate") or "")
+    if gate and isinstance(graph.get("gate_results"), dict):
+        graph["gate_results"].pop(gate, None)
+    if prior_status != HUMAN_REVIEW_STATUS:
+        _ledger_transition(
+            graph,
+            node_id,
+            prior_status,
+            HUMAN_REVIEW_STATUS,
+            writer,
+            author_type=author_type,
+            note=reason,
+            human_review_generation=generation,
+        )
+    return deepcopy(record)
+
+
+def validate_human_review_resume(
+    graph: dict[str, Any],
+    node_id: str,
+    *,
+    expected_generation: int,
+    actor: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Validate the one-shot authority without mutating graph or evidence."""
+    ids = _node_map(graph)
+    if node_id not in ids:
+        raise ValueError(f"unknown node: {node_id}")
+    actor = str(actor or "").strip()
+    reason = str(reason or "").strip()
+    if not actor:
+        raise ValueError("human_resume_actor_required")
+    if not reason:
+        raise ValueError("human_resume_reason_required")
+    result = _node_results(graph).get(node_id)
+    if not _human_review_is_blocking(ids[node_id], result):
+        raise ValueError("node_not_waiting_for_human_review")
+    generation = human_review_generation(graph, node_id)
+    try:
+        requested_generation = int(expected_generation)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("human_resume_generation_invalid") from exc
+    if requested_generation != generation:
+        raise ValueError(
+            f"human_resume_generation_mismatch:expected={generation}:received={requested_generation}"
+        )
+    return {
+        "node": node_id,
+        "generation": generation,
+        "actor": actor,
+        "reason": reason,
+    }
+
+
+def commit_human_review_resume(
+    graph: dict[str, Any],
+    node_id: str,
+    *,
+    expected_generation: int,
+    actor: str,
+    reason: str,
+    archived_sidecars: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Commit a validated, one-shot human resume after evidence quarantine.
+
+    Callers must archive the old handoff/eval sidecars first.  The new repair
+    generation makes any late old evaluator output mechanically stale.
+    """
+    validated = validate_human_review_resume(
+        graph,
+        node_id,
+        expected_generation=expected_generation,
+        actor=actor,
+        reason=reason,
+    )
+    ids = _node_map(graph)
+    actor = str(validated["actor"])
+    reason = str(validated["reason"])
+    node = ids[node_id]
+    results = graph.setdefault("node_results", {})
+    result = results.get(node_id) if isinstance(results.get(node_id), dict) else {}
+    generation = int(validated["generation"])
+
+    prior_record = _human_review_record(node, result) or {
+        "schema_version": HUMAN_REVIEW_SCHEMA_VERSION,
+        "generation": generation,
+        "state": "blocked",
+        "reason": str(node.get("dispatch_blocked_reason") or node.get("eval_blocked_reason") or "legacy_human_review"),
+    }
+    now = _now()
+    resumed_record = deepcopy(prior_record)
+    resumed_record.update(
+        {
+            "schema_version": HUMAN_REVIEW_SCHEMA_VERSION,
+            "generation": generation,
+            "state": "resumed",
+            "resumed_at": now,
+            "resumed_by": actor,
+            "resume_reason": reason,
+        }
+    )
+    history = node.get("human_review_history")
+    if not isinstance(history, list):
+        history = []
+    history = [deepcopy(item) for item in history if isinstance(item, dict)]
+    history.append(deepcopy(prior_record))
+    node["human_review_history"] = history[-HUMAN_REVIEW_HISTORY_LIMIT:]
+
+    try:
+        prior_repair_attempt = max(0, int(node.get("repair_attempts") or 0))
+    except (TypeError, ValueError):
+        prior_repair_attempt = 0
+    repair_attempt = prior_repair_attempt + 1
+    try:
+        configured_max = max(0, int(node.get("max_repair_attempts") or repair_attempt))
+    except (TypeError, ValueError):
+        configured_max = repair_attempt
+    repair_context = {
+        "attempt": repair_attempt,
+        "max_attempts": configured_max,
+        "verdict": "HUMAN_RESUME",
+        "summary": reason[:2000],
+        "failed_conditions": [],
+        "errors": [],
+        "archived_sidecars": deepcopy(archived_sidecars or {}),
+        "created_at": now,
+        "trigger": "explicit_human_resume",
+        "human_review_generation": generation,
+        "actor": actor,
+    }
+
+    for key in (
+        "assigned_to",
+        "dispatch_id",
+        "eval_json",
+        "eval_assigned_to",
+        "eval_dispatch_id",
+        "eval_dispatched_at",
+        "eval_retry_reason",
+        "eval_assignments",
+        "eval_dispatch_group_id",
+        "last_eval_closeout_failure",
+        "last_eval_operator_cooldown_after_closeout",
+        "handoff_md",
+        "dispatch_retry_reason",
+        "last_operator_closeout_failure",
+        "dispatch_failure_streak",
+        "last_dispatch_failure_reason",
+        "last_dispatch_failure_at",
+        "eval_dispatch_failures",
+        "last_eval_dispatch_failure_reason",
+        "last_eval_dispatch_failure_at",
+        "dispatch_blocked_reason",
+        "eval_blocked_reason",
+        "next_action",
+    ):
+        node.pop(key, None)
+    artifacts = node.get("artifacts")
+    if isinstance(artifacts, dict):
+        artifacts.pop("eval_json", None)
+        artifacts.pop("handoff_md", None)
+
+    node["human_review"] = deepcopy(resumed_record)
+    node["repair_attempts"] = repair_attempt
+    node["repair_context"] = repair_context
+    repair_history = node.get("repair_history")
+    if not isinstance(repair_history, list):
+        repair_history = []
+    repair_history = [deepcopy(item) for item in repair_history if isinstance(item, dict)]
+    repair_history.append(deepcopy(repair_context))
+    node["repair_history"] = repair_history
+    node["status"] = "pending"
+    node["updated_at"] = now
+    results[node_id] = {
+        "status": "pending",
+        "updated_at": now,
+        "note": f"explicit_human_resume:{reason}",
+        "human_review": deepcopy(resumed_record),
+        "repair_context": deepcopy(repair_context),
+    }
+    gate = str(node.get("gate") or "")
+    if gate and isinstance(graph.get("gate_results"), dict):
+        graph["gate_results"].pop(gate, None)
+    _ledger_transition(
+        graph,
+        node_id,
+        HUMAN_REVIEW_STATUS,
+        "pending",
+        "resume_human_review",
+        author_type="human",
+        note=reason,
+        human_review_generation=generation,
+        repair_attempt=repair_attempt,
+        human_actor=actor,
+    )
+    return {
+        "ok": True,
+        "node": node_id,
+        "from_status": HUMAN_REVIEW_STATUS,
+        "status": "pending",
+        "generation": generation,
+        "repair_attempt": repair_attempt,
+        "actor": actor,
+        "reason": reason,
+        "archived_sidecars": deepcopy(archived_sidecars or {}),
+    }
+
+
+def _human_review_blocks_dependents(graph: dict[str, Any], dep_node: dict[str, Any]) -> bool:
+    """Per-node on_human_review policy consult (design §2 change 2 / review 7.2).
+
+    On the contracted path (SOLAR_GATE_LEDGER + workflow_contract_id) a dep in
+    needs_human_review blocks dependents per ITS OWN contract policy:
+    warn_and_continue lets dependents proceed; block_dependents (or an absent
+    policy) keeps the legacy behavior. Off the contracted path, needs_human_review
+    always blocks — the global DEPENDENCY_BLOCK_STATUSES set is untouched.
+    """
+    if _gate_ledger is None:
+        return True
+    try:
+        if not _gate_ledger.enabled() or not _gate_ledger.contracted(graph):
+            return True
+    except Exception:
+        return True
+    policy = str((dep_node or {}).get("on_human_review") or "").strip().lower()
+    return policy != "warn_and_continue"
+
+
+def _dependency_blocks(graph: dict[str, Any], ids: dict[str, Any], dep_id: str) -> bool:
+    """Whether a dependency's status blocks its dependents (skip-propagation rule)."""
+    dep_status = node_status(graph, dep_id)
+    if dep_status not in DEPENDENCY_BLOCK_STATUSES:
+        return False
+    if dep_status == "needs_human_review" and not _human_review_blocks_dependents(graph, ids.get(dep_id)):
+        return False
+    return True
+
+
+def _ledger_gate_verdict_block(graph: dict[str, Any], gate_node_ids: list[str]) -> tuple[str, str] | None:
+    """Ledger consult for gate aggregation (AC-R4.2, contracted path only).
+
+    A gate-consumable verdict record saying FAIL/block blocks the gate even when
+    the member node's *status* is passed — the 5fcff602 verdict-content semantics
+    locked structurally. Fail-open to legacy behavior off the contracted path."""
+    if _gate_ledger is None:
+        return None
+    try:
+        if not _gate_ledger.enabled() or not _gate_ledger.contracted(graph):
+            return None
+        sid = _sprint_id_for_graph(graph)
+        if not sid:
+            return None
+        ids = _node_map(graph)
+        for node_id in gate_node_ids:
+            node = ids.get(node_id)
+            generation = None
+            if isinstance(node, dict):
+                attempts = node.get("repair_attempts")
+                if attempts is not None:
+                    try:
+                        generation = int(attempts)
+                    except Exception:
+                        generation = None
+            latest = _gate_ledger.latest_consumable_verdict(
+                SPRINTS_DIR, sid, node_id, current_generation=generation
+            )
+            if latest is None:
+                continue
+            verdict = str(latest.get("verdict") or "").strip().lower()
+            if verdict not in {"fail", "failed", "block", "blocked"}:
+                continue
+            # Round-4 G2: gates consume verdict CONTENT (R4/AC-R4.1). A
+            # mechanical/infrastructure FAIL is evidence-machinery failure, not
+            # a content judgment, and never blocks; a human verdict always
+            # does; a kind-less record keeps the stricter content effect (D6).
+            verdict_kind = str(latest.get("verdict_kind") or "").strip().lower()
+            is_human = str(latest.get("kind") or "") == "human_verdict"
+            if not is_human and verdict_kind in {"mechanical", "infrastructure"}:
+                continue
+            return node_id, f"ledger_verdict_block:{verdict}"
+    except Exception:
+        return None
+    return None
+
+
 def _gate_verdicts_ok(graph: dict[str, Any], gate_node_ids: list[str]) -> tuple[bool, str, str]:
     """Aggregate verdict-consumption across a gate's member nodes.
 
@@ -2200,16 +2957,92 @@ def _gate_verdicts_ok(graph: dict[str, Any], gate_node_ids: list[str]) -> tuple[
         ok, detail = _node_gate_verdict_ok(node)
         if not ok:
             return False, node_id, detail
+    ledger_block = _ledger_gate_verdict_block(graph, gate_node_ids)
+    if ledger_block is not None:
+        return False, ledger_block[0], ledger_block[1]
     return True, "", "verdict_ok"
 
 
-def mark_node_result(graph: dict[str, Any], node_id: str, status: str,
-                     gate_status: str | None = None, note: str | None = None) -> dict[str, Any]:
+def _sprint_status_terminal(graph: dict[str, Any]) -> bool:
+    """True when the sprint's status.json shows a TERMINAL pair
+    (failed/failed or passed/completed|done) — the frozen states G3 runs
+    11/12 established as truthful terminals."""
+    sid = str(graph.get("sprint_id") or "").strip()
+    if not sid:
+        return False
+    try:
+        payload = json.loads((SPRINTS_DIR / f"{sid}.status.json").read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    status = str(payload.get("status") or "").strip().lower()
+    phase = str(payload.get("phase") or payload.get("stage") or "").strip().lower()
+    return (status == "failed" and phase == "failed") or (
+        status == "passed" and phase in {"completed", "done"}
+    )
+
+
+def mark_node_result(
+    graph: dict[str, Any],
+    node_id: str,
+    status: str,
+    gate_status: str | None = None,
+    note: str | None = None,
+    *,
+    _closeout_receipt: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     _ensure_required_gate_node_mapping(graph)
     ids = _node_map(graph)
     if node_id not in ids:
         raise ValueError(f"unknown node: {node_id}")
-    _assert_pass_mark_allowed(graph, node_id, status)
+    _assert_human_review_status_write_allowed(graph, node_id, status)
+    _assert_pass_mark_allowed(
+        graph,
+        node_id,
+        status,
+        closeout_receipt=_closeout_receipt,
+    )
+    _ledger_previous_status = node_status(graph, node_id)
+    # A PROGRESS mark must never regress a passed node. The generated worker
+    # runner marks `reviewing` AFTER the worker process exits, and the worker's
+    # own closing instruction marks `reviewing` mid-run — two late progress
+    # writers per node. With llm evals (minutes) the window between them and
+    # node close was unhittable; the deterministic gate closes nodes in
+    # seconds, so a late runner mark landed 4s after P3 run-3's D2 passed and
+    # reopened it (ledger reopen:true) — the graph never reached all-terminal.
+    # Repair reopens use their own path (failed_review -> assigned via
+    # set_node_status) and terminal flips (passed -> failed by a human/eval
+    # verdict) remain allowed — only forward-progress statuses are refused.
+    if _ledger_previous_status in PASS_STATUSES and str(status or "").lower() in {
+        "reviewing", "pending", "queued", "assigned", "dispatched", "in_progress", "running",
+    }:
+        refused = parent_ready_check(graph)
+        refused["refused_progress_regression"] = {
+            "node": node_id,
+            "kept_status": _ledger_previous_status,
+            "refused_status": status,
+            "note": note or "",
+        }
+        return refused
+    # G4-lite run 2 (drift evidence, p5-g4-lite-live-rung-20260710T133158Z):
+    # the sprint terminalized failed/failed at 13:40:18Z; the surviving repair
+    # builder ran its closing `graph-scheduler mark --status reviewing` at
+    # 13:42:48Z and the projection refresh propagated the reopen onto the
+    # TERMINAL sprint. A terminal sprint is frozen: late progress marks from
+    # any straggler writer are refused (terminal verdict flips stay with the
+    # generation-fenced verdict paths; this guards only progress statuses).
+    if str(status or "").lower() in {
+        "reviewing", "pending", "queued", "assigned", "dispatched", "in_progress", "running",
+    } and _sprint_status_terminal(graph):
+        refused = parent_ready_check(graph)
+        refused["refused_terminal_sprint_write"] = {
+            "node": node_id,
+            "kept_status": _ledger_previous_status,
+            "refused_status": status,
+            "note": note or "",
+        }
+        return refused
 
     updated_at = _now()
     graph.setdefault("node_results", {})
@@ -2221,6 +3054,11 @@ def mark_node_result(graph: dict[str, Any], node_id: str, status: str,
         graph["node_results"][node_id]["note"] = note
     ids[node_id]["status"] = status
     ids[node_id]["updated_at"] = updated_at
+    if _closeout_receipt is not None:
+        receipt_copy = deepcopy(_closeout_receipt)
+        ids[node_id]["closeout_receipt"] = receipt_copy
+        graph["node_results"][node_id]["closeout_receipt"] = deepcopy(receipt_copy)
+    _ledger_transition(graph, node_id, _ledger_previous_status, status, "mark_node_result", note=note)
 
     gate = ids[node_id].get("gate")
     if gate and status in {"failed", "cancelled"}:
@@ -2273,11 +3111,91 @@ def mark_node_result(graph: dict[str, Any], node_id: str, status: str,
     return parent_ready_check(graph)
 
 
+def commit_verified_node_pass(
+    graph: dict[str, Any],
+    node_id: str,
+    *,
+    closeout_receipt: dict[str, Any],
+    note: str | None = None,
+) -> dict[str, Any]:
+    """Commit PASS after the dispatcher has completed the closeout transaction.
+
+    This is intentionally narrower than ``mark_node_result``: it accepts only
+    PASS and requires the full contracted receipt.  Keeping the final status
+    mutation in the scheduler preserves its gate aggregation and parent-ready
+    behavior without exposing the old CLI/manual shortcut.
+    """
+    return mark_node_result(
+        graph,
+        node_id,
+        "passed",
+        gate_status="passed",
+        note=note,
+        _closeout_receipt=closeout_receipt,
+    )
+
+
+def reconcile_legacy_write_scope_artifacts(
+    graph: dict[str, Any],
+    harness_dir: str | Path,
+) -> dict[str, Any]:
+    """Preserve the coordinator's artifact-exists shortcut for legacy graphs.
+
+    Contracted graphs must wait for ``graph_node_dispatcher.node_verdict``;
+    mere file existence is never evaluation, proof, or publication evidence.
+    This helper replaces an untestable inline Python PASS writer in
+    ``coordinator.sh`` and makes the compatibility boundary explicit.
+    """
+    if bool(str((graph or {}).get("workflow_contract_id") or "").strip()):
+        return {
+            "ok": True,
+            "changed": [],
+            "reason": "contracted_graph_requires_node_verdict",
+        }
+
+    root = Path(harness_dir)
+
+    def artifact_exists(item: Any) -> bool:
+        path = Path(str(item))
+        if not path.is_absolute():
+            path = root / path
+        if path.is_file():
+            try:
+                return path.stat().st_size > 0
+            except OSError:
+                return False
+        if path.is_dir():
+            try:
+                return any(child.is_file() and child.stat().st_size > 0 for child in path.rglob("*"))
+            except OSError:
+                return False
+        return False
+
+    changed: list[str] = []
+    for node in graph.get("nodes") or []:
+        node_id = str(node.get("id") or "")
+        if not node_id or node_status(graph, node_id) in {"passed", "done", "completed"}:
+            continue
+        write_scope = node.get("write_scope") or []
+        if not write_scope or not all(artifact_exists(item) for item in write_scope):
+            continue
+        mark_node_result(
+            graph,
+            node_id,
+            "passed",
+            gate_status="passed" if node.get("gate") else None,
+            note="coordinator legacy auto-reconcile from complete write_scope artifacts",
+        )
+        changed.append(node_id)
+    return {"ok": True, "changed": changed, "reason": "legacy_write_scope_reconciled"}
+
+
 def set_node_status(graph: dict[str, Any], node_id: str, status: str,
                     pane: str | None = None, dispatch_id: str | None = None) -> None:
     ids = _node_map(graph)
     if node_id not in ids:
         raise ValueError(f"unknown node: {node_id}")
+    assert_node_status_write_allowed(graph, node_id, status)
     current = node_status(graph, node_id)
     reopening_from_pass = current in PASS_STATUSES and status in {
         "reviewing", "pending", "queued", "blocked", "worker_blocked", "assigned", "dispatched", "in_progress", "running",
@@ -2305,6 +3223,7 @@ def set_node_status(graph: dict[str, Any], node_id: str, status: str,
         gate_results = graph.get("gate_results")
         if isinstance(gate_results, dict) and gate in gate_results:
             gate_results.pop(gate, None)
+    _ledger_transition(graph, node_id, current, status, "set_node_status")
 
 
 def terminalize_dependency_blocked_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
@@ -2322,7 +3241,7 @@ def terminalize_dependency_blocked_nodes(graph: dict[str, Any]) -> list[dict[str
         blockers = [
             dep_id
             for dep_id in _internal_depends_on(node)
-            if dep_id in ids and node_status(graph, dep_id) in DEPENDENCY_BLOCK_STATUSES
+            if dep_id in ids and _dependency_blocks(graph, ids, dep_id)
         ]
         if not blockers:
             continue
@@ -2341,6 +3260,31 @@ def terminalize_dependency_blocked_nodes(graph: dict[str, Any]) -> list[dict[str
         )
         changed.append({"node": node_id, "status": "skipped", "reason": "blocked_by_failed_dependency", "blocked_by": blockers})
     return changed
+
+
+def _enforce_contract_capsule_authority(graph: dict[str, Any], node: dict[str, Any],
+                                        capsule_plan_ir: dict[str, Any]) -> None:
+    """On a contracted graph the workflow contract is the capsule authority.
+
+    The APO plan compiler re-classifies nodes from goal text at dispatch time
+    (P2 smoke-4: code.cli_smoke S2, a 'code' node, classified TestRunner ->
+    cap.requirement-compiler-verification). Letting that overwrite the
+    contract-assigned capsule fails capsule task_type admission at operator
+    submit AND trips _workflow_contract_guard on every subsequent dispatch
+    attempt — a permanent assigned->pending wedge. The compiler's pick is
+    preserved as apo_suggested_capsule_id for audit; uncontracted graphs keep
+    the legacy behavior untouched."""
+    if not str(graph.get("workflow_contract_id") or "").strip():
+        return
+    contract_capsule = str(node.get("capability_capsule_id") or "").strip()
+    if not contract_capsule:
+        return
+    suggested = str(capsule_plan_ir.get("capability_capsule_id") or "").strip()
+    if not suggested or suggested == contract_capsule:
+        return
+    capsule_plan_ir["apo_suggested_capsule_id"] = suggested
+    capsule_plan_ir["capsule_authority"] = "workflow_contract"
+    capsule_plan_ir["capability_capsule_id"] = contract_capsule
 
 
 def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str, Any]],
@@ -2384,6 +3328,7 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
                 operators_path=HARNESS_DIR / "config" / "physical-operators.json",
             )
             capsule_plan_ir = dict(compiled_plan.get("capsule_plan") or {})
+            _enforce_contract_capsule_authority(graph, node, capsule_plan_ir)
             physical_plan_ir = dict(compiled_plan.get("physical_plan") or {})
             plan_artifacts = materialize_execution_plan_artifacts(
                 sid,
@@ -2580,6 +3525,14 @@ def parent_ready_check(graph: dict[str, Any]) -> dict[str, Any]:
         if node_status(graph, node_id) not in (PASS_STATUSES | CLOSED_NON_PASS_STATUSES)
     ]
     failed_nodes = [node_id for node_id in ids if node_status(graph, node_id) == "failed"]
+    human_review_nodes = [
+        node_id for node_id in ids
+        if node_status(graph, node_id) == HUMAN_REVIEW_STATUS
+    ]
+    terminal_blocker_nodes = set(failed_nodes) | set(human_review_nodes)
+    terminal_status = ""
+    if open_nodes and all(node_id in terminal_blocker_nodes for node_id in open_nodes):
+        terminal_status = "failed" if failed_nodes else HUMAN_REVIEW_STATUS
 
     required_gates = graph.get("required_gates")
     if required_gates is None:
@@ -2624,6 +3577,8 @@ def parent_ready_check(graph: dict[str, Any]) -> dict[str, Any]:
         "node_count": len(ids),
         "open_nodes": open_nodes,
         "failed_nodes": failed_nodes,
+        "human_review_nodes": human_review_nodes,
+        "terminal_status": terminal_status or None,
         "required_gates": required_gates,
         "missing_gates": missing_gates,
     }
@@ -2795,6 +3750,36 @@ def doctor_graph(graph: dict[str, Any], repair: bool = False) -> dict[str, Any]:
     """
     issues: list[dict[str, Any]] = []
     repairs: list[dict[str, Any]] = []
+    suppressed: list[dict[str, Any]] = []
+    # Lane 3 (R4 / review 3.1): on the contracted path the doctor is neutralized
+    # independent of the feature-flag state. Its would-be writes are returned as
+    # suppressed records and, when the ledger is enabled, also recorded there as
+    # author.type=doctor / gate_consumable=false / applied=false.
+    doctor_neutralized = bool(
+        repair
+        and str((graph or {}).get("workflow_contract_id") or "").strip()
+    )
+
+    def _doctor_write_suppressed(
+        node_id: str,
+        from_status: str,
+        to_status: str,
+        repair_name: str,
+        *,
+        reason: str = "doctor_neutralized_on_contracted_path",
+    ) -> None:
+        _ledger_transition(
+            graph, node_id, from_status, to_status, "doctor_graph",
+            applied=False, author_type="doctor", note=repair_name,
+        )
+        suppressed.append({
+            "node": node_id,
+            "would_write": to_status,
+            "from": from_status,
+            "repair": repair_name,
+            "reason": reason,
+        })
+
     ids = _node_map(graph)
     results = _node_results(graph)
 
@@ -2805,6 +3790,27 @@ def doctor_graph(graph: dict[str, Any], repair: bool = False) -> dict[str, Any]:
         inline_status = str(node.get("status", "") or "").lower()
         result = results.get(node_id) if isinstance(results.get(node_id), dict) else {}
         result_status = str((result or {}).get("status", "") or "").lower()
+        if _human_review_is_blocking(node, result) and inline_status != result_status:
+            issue = {
+                "type": "human_review_status_drift",
+                "node": node_id,
+                "inline_status": inline_status,
+                "inline_updated_at": node.get("updated_at", ""),
+                "result_status": result_status,
+                "result_updated_at": result.get("updated_at", ""),
+                "effective_status": HUMAN_REVIEW_STATUS,
+            }
+            issues.append(issue)
+            if repair:
+                refused_status = result_status if result_status != HUMAN_REVIEW_STATUS else inline_status
+                _doctor_write_suppressed(
+                    node_id,
+                    HUMAN_REVIEW_STATUS,
+                    refused_status,
+                    "human_review_exit_refused",
+                    reason="needs_human_review_requires_explicit_resume",
+                )
+            continue
         if _passed_without_required_eval(graph, node_id) and ("passed" in {inline_status, result_status}):
             issue = {
                 "type": "passed_missing_eval",
@@ -2816,8 +3822,12 @@ def doctor_graph(graph: dict[str, Any], repair: bool = False) -> dict[str, Any]:
                 "effective_status": "reviewing",
             }
             issues.append(issue)
-            if repair:
+            if repair and doctor_neutralized:
+                _doctor_write_suppressed(node_id, node_status(graph, node_id), "reviewing", "reopened_passed_missing_eval")
+            elif repair:
                 now = _now()
+                _ledger_transition(graph, node_id, node_status(graph, node_id), "reviewing",
+                                   "doctor_graph", author_type="doctor", note="reopened_passed_missing_eval")
                 node["status"] = "reviewing"
                 node["updated_at"] = now
                 graph.setdefault("node_results", {})
@@ -2844,25 +3854,44 @@ def doctor_graph(graph: dict[str, Any], repair: bool = False) -> dict[str, Any]:
         if not repair:
             continue
 
+        if doctor_neutralized:
+            if inline_ts and result_ts and inline_ts > result_ts:
+                _doctor_write_suppressed(node_id, effective, inline_status, "node_results_updated_from_inline")
+            elif result_ts and inline_ts and result_ts > inline_ts:
+                _doctor_write_suppressed(node_id, effective, result_status, "inline_updated_from_node_results")
+            elif inline_status == "passed":
+                _doctor_write_suppressed(node_id, effective, inline_status, "node_results_updated_from_inline_passed")
+            elif result_status == "passed":
+                _doctor_write_suppressed(node_id, effective, result_status, "inline_updated_from_node_results_passed")
+            continue
+
         if inline_ts and result_ts and inline_ts > result_ts:
+            _ledger_transition(graph, node_id, effective, inline_status, "doctor_graph",
+                               author_type="doctor", note="node_results_updated_from_inline")
             result["status"] = inline_status
             result["updated_at"] = node.get("updated_at")
             repairs.append({**issue, "repair": "node_results_updated_from_inline"})
         elif result_ts and inline_ts and result_ts > inline_ts:
+            _ledger_transition(graph, node_id, effective, result_status, "doctor_graph",
+                               author_type="doctor", note="inline_updated_from_node_results")
             node["status"] = result_status
             node["updated_at"] = result.get("updated_at")
             repairs.append({**issue, "repair": "inline_updated_from_node_results"})
         elif inline_status == "passed":
+            _ledger_transition(graph, node_id, effective, inline_status, "doctor_graph",
+                               author_type="doctor", note="node_results_updated_from_inline_passed")
             result["status"] = inline_status
             result["updated_at"] = node.get("updated_at") or result.get("updated_at") or _now()
             repairs.append({**issue, "repair": "node_results_updated_from_inline_passed"})
         elif result_status == "passed":
+            _ledger_transition(graph, node_id, effective, result_status, "doctor_graph",
+                               author_type="doctor", note="inline_updated_from_node_results_passed")
             node["status"] = result_status
             node["updated_at"] = result.get("updated_at") or node.get("updated_at") or _now()
             repairs.append({**issue, "repair": "inline_updated_from_node_results_passed"})
 
     parent = parent_ready_check(graph)
-    return {
+    result_payload = {
         "ok": not issues,
         "sprint_id": graph.get("sprint_id"),
         "issues": issues,
@@ -2870,6 +3899,9 @@ def doctor_graph(graph: dict[str, Any], repair: bool = False) -> dict[str, Any]:
         "parent": parent,
         "repaired": bool(repairs),
     }
+    if suppressed:
+        result_payload["suppressed"] = suppressed
+    return result_payload
 
 
 def _workers_from_file(path: str | None) -> list[dict[str, Any]]:

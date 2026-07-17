@@ -14,24 +14,1432 @@ import fcntl
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
+from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 HOME = Path.home()
 
 
 def _harness_dir() -> Path:
-    raw = os.environ.get("HARNESS_DIR")
+    # HARNESS_DIR > SOLAR_HARNESS_DIR > source tree (round-4 G7: align with the
+    # graph_scheduler rule so a SOLAR_HARNESS_DIR-only run reads/writes the same
+    # sprints dir the gates and route writers use). The nothing-set fallback
+    # stays the SOURCE TREE, never ~/.solar — a dev checkout must not touch the
+    # live runtime (lane3-spec-mismatches.md D11).
+    raw = os.environ.get("HARNESS_DIR") or os.environ.get("SOLAR_HARNESS_DIR")
     return Path(raw) if raw else Path(__file__).resolve().parents[1]
 
 
 HARNESS_DIR = _harness_dir()
 if str(HARNESS_DIR / "lib") not in sys.path:
     sys.path.insert(0, str(HARNESS_DIR / "lib"))
-SPRINTS_DIR = HARNESS_DIR / "sprints"
+# HARNESS_SPRINTS_DIR override matches graph_scheduler:49 (round-4 G7).
+SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR") or (HARNESS_DIR / "sprints"))
+
+try:  # Lane 3 gate ledger (R4/R5); optional so a partial install never breaks dispatch
+    import gate_ledger as _gate_ledger
+except Exception:  # pragma: no cover
+    _gate_ledger = None
+
+
+def _ledger_enabled() -> bool:
+    return _gate_ledger is not None and _gate_ledger.enabled()
+
+
+def _graph_is_contracted(graph: dict[str, Any]) -> bool:
+    """Contract identity is the safety boundary, independent of flag state."""
+    return bool(str((graph or {}).get("workflow_contract_id") or "").strip())
+
+
+def _product_mode_enabled() -> bool:
+    return str(os.environ.get("SOLAR_PRODUCT_MODE") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _ledger_transition(sid: str, node_id: str, from_status: str, to_status: str, writer: str,
+                       *, author_type: str = "scheduler", operator_id: str | None = None,
+                       note: str | None = None, **extra: Any) -> None:
+    """Report a dispatcher-side node-status write to the gate ledger (Lane 3, R4).
+
+    No-op unless SOLAR_GATE_LEDGER=1; never raises into the dispatch hot path."""
+    if not _ledger_enabled():
+        return
+    try:
+        _gate_ledger.record_status_transition(
+            SPRINTS_DIR, sid, node_id,
+            from_status=from_status or "", to_status=to_status,
+            author_type=author_type, writer=writer, operator_id=operator_id,
+            note=note, **extra,
+        )
+    except Exception:
+        pass
+
+
+def _ledger_record(sid: str, **kwargs: Any) -> dict[str, Any] | None:
+    """Append an arbitrary gate-ledger record (eval_verdict/gate_check/repair_*)."""
+    if not _ledger_enabled():
+        return None
+    try:
+        return _gate_ledger.append_record(SPRINTS_DIR, sid, **kwargs)
+    except Exception:
+        return None
+
+
+try:  # Lane 3 artifact manifest (R6); optional like the ledger
+    import artifact_manifest as _artifact_manifest
+except Exception:  # pragma: no cover
+    _artifact_manifest = None
+
+try:  # rc.9 user-workspace authority; optional for partial/legacy installs
+    import workspace_binding as _workspace_binding
+except Exception:  # pragma: no cover
+    _workspace_binding = None
+
+
+def _workflow_contract_guard(graph: dict[str, Any]) -> dict[str, Any] | None:
+    """C1+C2 net-new dispatcher guard (design §1.2), Lane 3 serialized item.
+
+    A graph claiming a ``workflow_contract_id`` must correspond to a registered
+    contract: same version, and (for fixed-stage contracts) the same
+    contract-determined node structure. Planner-generated contracts are checked
+    for registration+version only — their stages are plan_validator's job.
+    Fail-closed under SOLAR_GATE_LEDGER; returns None when the guard passes,
+    is inapplicable, or the flag is off.
+    """
+    if not _ledger_enabled():
+        return None
+    contract_id = str((graph or {}).get("workflow_contract_id") or "").strip()
+    if not contract_id:
+        return None
+    errors: list[str] = []
+    try:
+        import workflow_contract as wc
+    except Exception:
+        return {
+            "ok": False,
+            "reason": "workflow_contract_guard_failed",
+            "workflow_contract_id": contract_id,
+            "errors": ["WORKFLOW_CONTRACT_MODULE_MISSING"],
+        }
+    try:
+        workflows_dir = globals().get("WORKFLOWS_DIR") or (HARNESS_DIR / "config" / "workflows")
+        contract = wc.find_contract(contract_id, workflows_dir)
+    except Exception:
+        contract = None
+    if contract is None:
+        errors.append(f"WORKFLOW_CONTRACT_UNREGISTERED:{contract_id}")
+    else:
+        graph_version = str(graph.get("workflow_contract_version") or "")
+        contract_version = str(contract.get("version") or "")
+        if graph_version != contract_version:
+            errors.append(
+                f"WORKFLOW_CONTRACT_VERSION_MISMATCH:{graph_version}!={contract_version}"
+            )
+        planner_generated = contract.get("stages_mode") == getattr(wc, "STAGES_MODE_PLANNER", "planner_generated")
+        if planner_generated and not errors:
+            # P5 G1: a planner-generated contract has no fixed structure to
+            # compare, so the guard demands PROOF the stages were validated —
+            # a plan_certificate whose hash still matches the governed graph
+            # content. Without this, claiming pm.generic.v1 was a free pass.
+            try:
+                import plan_validator as _plan_validator
+            except Exception:
+                errors.append("PLAN_CERTIFICATE_UNCHECKABLE:plan_validator_module_missing")
+            else:
+                for cert_error in _plan_validator.check_plan_certificate(graph):
+                    errors.append(
+                        f"{cert_error.get('code')}:{cert_error.get('node_id', '?')}"
+                    )
+        if not planner_generated and not errors:
+            stages = {str(s.get("id") or ""): s for s in contract.get("stages") or []}
+            nodes = {str(n.get("id") or ""): n for n in graph.get("nodes") or []}
+            if set(stages) != set(nodes):
+                errors.append(
+                    "WORKFLOW_CONTRACT_STRUCTURE_MISMATCH:node_ids:"
+                    f"{sorted(set(nodes) ^ set(stages))}"
+                )
+            for node_id in sorted(set(stages) & set(nodes)):
+                stage, node = stages[node_id], nodes[node_id]
+                if list(node.get("depends_on") or []) != list(stage.get("depends_on") or []):
+                    errors.append(f"WORKFLOW_CONTRACT_STRUCTURE_MISMATCH:{node_id}:depends_on")
+                if str(node.get("task_type") or "") != str(stage.get("task_type") or ""):
+                    errors.append(f"WORKFLOW_CONTRACT_STRUCTURE_MISMATCH:{node_id}:task_type")
+                allowed = [str(x) for x in (stage.get("allowed_capsules") or [])]
+                capsule = str(node.get("capability_capsule_id") or "")
+                if allowed and capsule and capsule not in allowed:
+                    errors.append(f"WORKFLOW_CONTRACT_STRUCTURE_MISMATCH:{node_id}:capability_capsule_id")
+                stage_gate = str((stage.get("evaluator_gate") or {}).get("kind") or "none")
+                node_gate = str((node.get("evaluator_gate") or {}).get("kind") or "none")
+                if node_gate != stage_gate:
+                    errors.append(f"WORKFLOW_CONTRACT_STRUCTURE_MISMATCH:{node_id}:evaluator_gate.kind")
+                # on_human_review is contract-determined (instantiate copies it
+                # verbatim from the stage's evaluator_gate, never substituted);
+                # a tamper flips readiness/skip semantics for dependents with no
+                # downstream re-check (round-4 G4). Raw compare — instantiate
+                # always copies a shipped policy, so absence on a policy-shipping
+                # contract is itself an edit.
+                stage_review = str((stage.get("evaluator_gate") or {}).get("on_human_review") or "")
+                node_review = str(node.get("on_human_review") or "")
+                if node_review != stage_review:
+                    errors.append(f"WORKFLOW_CONTRACT_STRUCTURE_MISMATCH:{node_id}:on_human_review")
+    if not errors:
+        return None
+    return {
+        "ok": False,
+        "reason": "workflow_contract_guard_failed",
+        "workflow_contract_id": contract_id,
+        "errors": errors,
+    }
+
+
+def _plan_validator_enabled() -> bool:
+    # G4 default-on: the validator is the runtime default; explicit 0 kills it.
+    return str(os.environ.get("SOLAR_PLAN_VALIDATOR", "") or "").strip().lower() not in {
+        "0", "false", "no", "off",
+    }
+
+
+def _plan_validator_dispatch_guard(graph: dict[str, Any]) -> dict[str, Any] | None:
+    """P5 G1b fix (review finding 1): certificate check at the launch path
+    itself, gated on SOLAR_PLAN_VALIDATOR — NOT on SOLAR_GATE_LEDGER, and NOT
+    skipped for graphs with no workflow_contract_id. _workflow_contract_guard
+    early-returns for uncontracted graphs, so before this guard an uncertified
+    generic graph enqueued even with the validator flag on.
+
+    check_planner_graph_dispatchable is env-gated internally and skips epic /
+    fixed-contract graphs, so with the flag off (or for non-generic graphs)
+    this is a no-op. Returns None when dispatch may proceed, a refusal dict
+    otherwise."""
+    if not _plan_validator_enabled():
+        return None
+    try:
+        import plan_validator as _plan_validator
+    except Exception:
+        return {
+            "ok": False,
+            "reason": "plan_validator_dispatch_refused",
+            "errors": ["PLAN_VALIDATOR_MODULE_MISSING"],
+        }
+    try:
+        verdict = _plan_validator.check_planner_graph_dispatchable(
+            graph or {},
+            sprints_dir=SPRINTS_DIR,
+            sid=str((graph or {}).get("sprint_id") or ""),
+        )
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": "plan_validator_dispatch_refused",
+            "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}"],
+        }
+    if verdict.get("ok"):
+        return None
+    try:
+        # G3 fix: a PASS-certified graph refused for hash mismatch is
+        # unrecoverable at dispatch time — terminalize the sprint truthfully
+        # instead of re-refusing every coordinator tick (uncertified refusals
+        # are left alone; the helper only acts on
+        # PLAN_CERTIFICATE_HASH_MISMATCH).
+        _plan_validator.record_certificate_mismatch_refusal(
+            SPRINTS_DIR, graph or {}, verdict.get("errors")
+        )
+    except Exception:
+        pass
+    return {
+        "ok": False,
+        "reason": "plan_validator_dispatch_refused",
+        "errors": verdict.get("errors") or [],
+    }
+
+
+def _manifest_presence(sid: str, node_id: str) -> dict[str, Any]:
+    """The node's manifest presence view (design §1.5), or {} off the contracted path.
+
+    Consulted only when SOLAR_GATE_LEDGER=1 AND a manifest exists — a manifest is
+    only ever written on the contracted path, so its existence is the signal."""
+    if _artifact_manifest is None or not _ledger_enabled():
+        return {}
+    try:
+        manifest = _artifact_manifest.read_manifest(SPRINTS_DIR, sid, node_id)
+        if not manifest:
+            return {}
+        return _artifact_manifest.presence_map(manifest)
+    except Exception:
+        return {}
+
+
+_GENERIC_WORKFLOW_CONTRACT_ID = "pm.generic.v1"
+_EVAL_ARTIFACT_SNAPSHOT_SCHEMA = "solar.eval_artifact_snapshot.v1"
+
+
+def _graph_is_certified_generic(graph: dict[str, Any]) -> bool:
+    """Graph-kind check, mirroring contract_gate_executor._sprint_is_certified_generic:
+    keyed on the GRAPH KIND (workflow_contract_id), never on the validator flag, so
+    fixed-contract and legacy uncontracted graphs keep byte-identical behavior."""
+    return str((graph or {}).get("workflow_contract_id") or "").strip() == _GENERIC_WORKFLOW_CONTRACT_ID
+
+
+def _manifest_anchor(
+    sid: str, graph: dict[str, Any], node: dict[str, Any]
+) -> tuple[Path, dict[str, Any], list[str] | None]:
+    """(base_dir, roots, write_scope) for the node artifact manifest.
+
+    G3 run 11 (F-CLASS-16 in the proof layer): certified-generic builders execute
+    with work_dir = sprints/<sid>/workdir and declare canonical-root outputs
+    (workspace/...) relative to it, but the manifest was written with
+    base_dir=HARNESS_DIR and roots={} (the planner graph carries no artifact_roots
+    map), so every declared output resolved to a nonexistent HARNESS_DIR path and
+    the proof gate failed real work on S1/S2/S3. Same principle as the run-5
+    gate-cwd fix (contract_gate_executor): certified-generic anchors at the sprint
+    workdir with the contract's canonical root, and the contract's alias
+    spellings (sprints/<sid>/workdir/X, workdir/X) normalize onto it. Fixed
+    contracts keep the HARNESS_DIR anchor and graph-carried roots (P2/P3 proven).
+    A returned write_scope of None means "use the node's own write_scope"."""
+    graph_roots = graph.get("artifact_roots") if isinstance(graph.get("artifact_roots"), dict) else {}
+    if not _graph_is_certified_generic(graph):
+        return HARNESS_DIR, graph_roots, None
+    workdir = SPRINTS_DIR / sid / "workdir"
+    if not workdir.is_dir():
+        return HARNESS_DIR, graph_roots, None
+    aliases = (f"sprints/{sid}/workdir/", "workdir/")
+    scope: list[str] = []
+    for declared in node.get("write_scope") or []:
+        text = str(declared or "").strip()
+        if not text:
+            continue
+        for alias in aliases:
+            if text.startswith(alias):
+                text = text[len(alias):]
+                break
+        scope.append(text)
+    return workdir, {"canonical": "workspace/"}, scope
+
+
+def _scope_values(raw: Any) -> list[str]:
+    if isinstance(raw, str):
+        return [raw] if raw.strip() else []
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    return []
+
+
+def _normalized_generic_scope(sid: str, declared: str) -> str:
+    text = str(declared or "").strip().replace("\\", "/")
+    for prefix in (f"sprints/{sid}/workdir/", "workdir/"):
+        if text.startswith(prefix):
+            return text[len(prefix):]
+    return text
+
+
+def _current_sprint_control_read(
+    sid: str,
+    declared: str,
+    graph: dict[str, Any],
+) -> Path | None:
+    """Resolve one contract-admitted control input for this exact sprint.
+
+    Generic control artifacts (compiled requirements, planner design/plan,
+    and the governed graph) live beside the sprint while product outputs live
+    below workdir/workspace.  The workflow contract owns the closed suffix
+    vocabulary; workflow_contract owns exact lexical resolution.  This keeps
+    plan compilation and evaluator byte authority on one policy instead of
+    adding filenames after each novel prompt.
+    """
+    if not _graph_is_certified_generic(graph):
+        return None
+    try:
+        import workflow_contract as wc
+
+        contract = wc.find_contract(
+            _GENERIC_WORKFLOW_CONTRACT_ID,
+            HARNESS_DIR / "config" / "workflows",
+        )
+    except Exception:
+        return None
+    if not isinstance(contract, dict):
+        return None
+    if str(graph.get("workflow_contract_version") or "") != str(contract.get("version") or ""):
+        return None
+    suffix = wc.resolve_current_sprint_control_read(
+        declared,
+        sid,
+        dict(contract.get("control_plane_read_policy") or {}),
+    )
+    if suffix is None:
+        return None
+    return SPRINTS_DIR / f"{sid}.{suffix}"
+
+
+def _workspace_relative_scope(sid: str, declared: str) -> Path | None:
+    normalized = _normalized_generic_scope(sid, declared).rstrip("/")
+    parts = normalized.split("/")
+    if len(parts) < 2 or parts[0] != "workspace":
+        return None
+    if any(part in {"", ".", ".."} for part in parts):
+        return None
+    return Path(*parts[1:])
+
+
+def _node_index(graph: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(node.get("id") or ""): node
+        for node in (graph.get("nodes") or [])
+        if isinstance(node, dict) and str(node.get("id") or "")
+    }
+
+
+def _transitive_dependency_ids(graph: dict[str, Any], node: dict[str, Any]) -> list[str]:
+    """Return ancestors nearest-first so the latest producer owns a read."""
+    index = _node_index(graph)
+    pending = [str(item) for item in (node.get("depends_on") or []) if str(item)]
+    seen: set[str] = set()
+    ordered: list[str] = []
+    while pending:
+        candidate = pending.pop(0)
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        ordered.append(candidate)
+        parent = index.get(candidate)
+        if parent is not None:
+            pending.extend(
+                str(item)
+                for item in (parent.get("depends_on") or [])
+                if str(item) and str(item) not in seen
+            )
+    return ordered
+
+
+def _scope_owner_for_read(
+    sid: str,
+    graph: dict[str, Any],
+    node: dict[str, Any],
+    declared: str,
+) -> dict[str, Any] | None:
+    target = _workspace_relative_scope(sid, declared)
+    if target is None:
+        return None
+    index = _node_index(graph)
+    for dependency_id in _transitive_dependency_ids(graph, node):
+        candidate = index.get(dependency_id)
+        if candidate is None:
+            continue
+        for raw in _scope_values(candidate.get("write_scope")):
+            owner_path = _workspace_relative_scope(sid, raw)
+            if owner_path is None:
+                continue
+            is_directory = str(raw).replace("\\", "/").endswith("/")
+            if target == owner_path or (is_directory and target.is_relative_to(owner_path)):
+                return candidate
+    return None
+
+
+def _snapshot_row_material(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: row.get(key)
+        for key in (
+            "scope",
+            "authority",
+            "declared",
+            "path",
+            "owner_node_id",
+            "publish_sidecar",
+            "expected_publish_sha256",
+            "exists",
+            "kind",
+            "size",
+            "sha256",
+            "entries",
+            "unsafe",
+            "error",
+        )
+    }
+
+
+def _eval_snapshot_digest(payload: dict[str, Any]) -> str:
+    if _artifact_manifest is None:
+        return ""
+    material = {
+        "schema": str(payload.get("schema") or ""),
+        "sid": str(payload.get("sid") or ""),
+        "node_id": str(payload.get("node_id") or ""),
+        "generation": payload.get("generation"),
+        "rows": [
+            _snapshot_row_material(row)
+            for row in sorted(
+                (item for item in (payload.get("rows") or []) if isinstance(item, dict)),
+                key=lambda item: (
+                    str(item.get("scope") or ""),
+                    str(item.get("declared") or ""),
+                    str(item.get("authority") or ""),
+                    str(item.get("path") or ""),
+                ),
+            )
+        ],
+        "violations": sorted(
+            (item for item in (payload.get("violations") or []) if isinstance(item, dict)),
+            key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=True),
+        ),
+    }
+    return _artifact_manifest.canonical_content_digest(material)
+
+
+def _published_read_snapshot(
+    sid: str,
+    owner: dict[str, Any],
+    declared: str,
+    workspace: Path,
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    violations: list[dict[str, Any]] = []
+    owner_id = str(owner.get("id") or "")
+    sidecar = SPRINTS_DIR / f"{sid}.{_safe_node_id(owner_id)}-publish.json"
+    try:
+        payload = json.loads(sidecar.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return None, [
+            {
+                "code": "PUBLISHED_READ_AUTHORITY_MISSING",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+        ]
+    if not (
+        isinstance(payload, dict)
+        and payload.get("schema") == "solar.workspace_publish.v1"
+        and payload.get("ok") is True
+        and payload.get("required") is True
+        and str(payload.get("sid") or "") == sid
+        and str(payload.get("node_id") or "") == owner_id
+    ):
+        return None, [
+            {
+                "code": "PUBLISHED_READ_AUTHORITY_INVALID",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "publish_sidecar": str(sidecar),
+            }
+        ]
+    try:
+        recorded_workspace = Path(str(payload.get("workspace_root") or "")).expanduser().resolve(strict=True)
+        if recorded_workspace != workspace.resolve(strict=True):
+            raise ValueError("publication workspace does not match the sprint binding")
+    except Exception as exc:
+        return None, [
+            {
+                "code": "PUBLISHED_READ_WORKSPACE_MISMATCH",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "publish_sidecar": str(sidecar),
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+        ]
+
+    published = [
+        item
+        for item in (payload.get("published") or [])
+        if isinstance(item, dict)
+    ]
+    sidecar_manifest_digest = str(payload.get("manifest_digest") or "")
+    sidecar_published_digest = str(payload.get("published_digest") or "")
+    actual_published_digest = _artifact_manifest.published_content_digest(published)
+    manifest = _artifact_manifest.read_manifest(SPRINTS_DIR, sid, owner_id)
+    recorded_manifest_digest = str(manifest.get("content_digest") or "")
+    actual_manifest_digest = _artifact_manifest.manifest_content_digest(manifest)
+    receipt = (
+        owner.get("closeout_receipt")
+        if isinstance(owner.get("closeout_receipt"), dict)
+        else {}
+    )
+    receipt_manifest = (
+        receipt.get("manifest")
+        if isinstance(receipt.get("manifest"), dict)
+        else {}
+    )
+    receipt_publication = (
+        receipt.get("publication")
+        if isinstance(receipt.get("publication"), dict)
+        else {}
+    )
+    receipt_manifest_digest = str(receipt_manifest.get("content_digest") or "")
+    receipt_publish_manifest_digest = str(
+        receipt_publication.get("manifest_digest") or ""
+    )
+    receipt_published_digest = str(receipt_publication.get("published_digest") or "")
+    digest_values = {
+        "sidecar_manifest_digest": sidecar_manifest_digest,
+        "sidecar_published_digest": sidecar_published_digest,
+        "actual_published_digest": actual_published_digest,
+        "recorded_manifest_digest": recorded_manifest_digest,
+        "actual_manifest_digest": actual_manifest_digest,
+        "receipt_manifest_digest": receipt_manifest_digest,
+        "receipt_publish_manifest_digest": receipt_publish_manifest_digest,
+        "receipt_published_digest": receipt_published_digest,
+    }
+    digests_well_formed = all(
+        re.fullmatch(r"[0-9a-f]{64}", value)
+        for value in digest_values.values()
+    )
+    receipt_valid = (
+        receipt.get("schema") == "solar.node_closeout.v1"
+        and str(receipt.get("sid") or "") == sid
+        and str(receipt.get("node_id") or "") == owner_id
+        and str(receipt.get("verdict") or "").lower() == "passed"
+        and receipt_publication.get("required") is True
+        and receipt_publication.get("ok") is True
+        and isinstance(receipt_publication.get("published_count"), int)
+        and not isinstance(receipt_publication.get("published_count"), bool)
+        and receipt_publication.get("published_count") == len(published)
+    )
+    digest_chain_valid = (
+        digests_well_formed
+        and receipt_valid
+        and recorded_manifest_digest == actual_manifest_digest
+        and sidecar_manifest_digest == actual_manifest_digest
+        and receipt_manifest_digest == actual_manifest_digest
+        and receipt_publish_manifest_digest == actual_manifest_digest
+        and sidecar_published_digest == actual_published_digest
+        and receipt_published_digest == actual_published_digest
+    )
+    if not digest_chain_valid:
+        return None, [
+            {
+                "code": "PUBLISHED_READ_AUTHORITY_DIGEST_MISMATCH",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "publish_sidecar": str(sidecar),
+                "digests_well_formed": digests_well_formed,
+                "receipt_valid": receipt_valid,
+            }
+        ]
+
+    relative = _workspace_relative_scope(sid, declared)
+    if relative is None:
+        return None, []
+    destination = (workspace / relative).resolve(strict=False)
+    manifest_rows = [
+        item
+        for item in (manifest.get("rows") or [])
+        if isinstance(item, dict)
+        and _workspace_relative_scope(sid, str(item.get("declared") or "")) == relative
+    ]
+    if len(manifest_rows) != 1:
+        return None, [
+            {
+                "code": "PUBLISHED_READ_AUTHORITY_MISSING",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "publish_sidecar": str(sidecar),
+            }
+        ]
+    manifest_row = manifest_rows[0]
+    expected_kind = str(manifest_row.get("kind") or "")
+    expected_sha = str(manifest_row.get("sha256") or "")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_sha):
+        return None, [
+            {
+                "code": "PUBLISHED_READ_AUTHORITY_DIGEST_MISMATCH",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "publish_sidecar": str(sidecar),
+            }
+        ]
+    published_by_destination = {
+        Path(str(item.get("to") or "")).expanduser().resolve(strict=False): item
+        for item in published
+        if str(item.get("to") or "").strip()
+    }
+    if expected_kind == "file":
+        publication = published_by_destination.get(destination)
+        if (
+            publication is None
+            or str(publication.get("sha256") or "") != expected_sha
+        ):
+            return None, [
+                {
+                    "code": "PUBLISHED_READ_AUTHORITY_MISSING",
+                    "declared": declared,
+                    "owner_node_id": owner_id,
+                    "publish_sidecar": str(sidecar),
+                }
+            ]
+    elif expected_kind == "directory":
+        expected_files = {
+            (destination / Path(str(item.get("rel_path") or ""))).resolve(strict=False): str(
+                item.get("sha256") or ""
+            )
+            for item in (manifest_row.get("entries") or [])
+            if isinstance(item, dict) and item.get("kind") == "file"
+        }
+        if any(
+            target not in published_by_destination
+            or str(published_by_destination[target].get("sha256") or "") != child_sha
+            for target, child_sha in expected_files.items()
+        ):
+            return None, [
+                {
+                    "code": "PUBLISHED_READ_AUTHORITY_MISSING",
+                    "declared": declared,
+                    "owner_node_id": owner_id,
+                    "publish_sidecar": str(sidecar),
+                }
+            ]
+    else:
+        return None, [
+            {
+                "code": "PUBLISHED_READ_AUTHORITY_INVALID",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "publish_sidecar": str(sidecar),
+            }
+        ]
+    row = {
+        "scope": "read",
+        "authority": "published",
+        "declared": declared,
+        "path": str(destination),
+        "owner_node_id": owner_id,
+        "publish_sidecar": str(sidecar),
+        "expected_publish_sha256": expected_sha,
+        **_artifact_manifest.snapshot_path(destination, root=workspace),
+    }
+    if row.get("unsafe") or not row.get("exists"):
+        violations.append(
+            {
+                "code": "PUBLISHED_READ_BYTES_UNAVAILABLE",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "path": str(destination),
+            }
+        )
+    elif str(row.get("sha256") or "") != str(row.get("expected_publish_sha256") or ""):
+        violations.append(
+            {
+                "code": "PUBLISHED_DESTINATION_CONTENT_MISMATCH",
+                "declared": declared,
+                "owner_node_id": owner_id,
+                "expected": str(row.get("expected_publish_sha256") or ""),
+                "actual": str(row.get("sha256") or ""),
+            }
+        )
+    return row, violations
+
+
+def _capture_eval_artifact_snapshot(
+    sid: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    *,
+    persist: bool = True,
+) -> dict[str, Any]:
+    """Freeze the exact declared bytes an evaluator is authorized to judge."""
+    node_id = str(node.get("id") or "")
+    if _artifact_manifest is None:
+        return {
+            "schema": _EVAL_ARTIFACT_SNAPSHOT_SCHEMA,
+            "ok": False,
+            "reason": "artifact_manifest_module_unavailable",
+            "rows": [],
+            "violations": [{"code": "SNAPSHOT_MODULE_UNAVAILABLE"}],
+        }
+    base_dir, roots, _write_scope = _manifest_anchor(sid, graph, node)
+    rows: list[dict[str, Any]] = []
+    violations: list[dict[str, Any]] = []
+
+    def add_staging(scope: str, declared: str) -> dict[str, Any]:
+        normalized = _normalized_generic_scope(sid, declared) if _graph_is_certified_generic(graph) else declared
+        row = {
+            "scope": scope,
+            "authority": "staging",
+            **_artifact_manifest.snapshot_declared_path(
+                normalized,
+                base_dir=base_dir,
+                roots=roots,
+            ),
+        }
+        row["declared"] = declared
+        rows.append(row)
+        if not str(row.get("resolved_root") or ""):
+            violations.append(
+                {
+                    "code": "DECLARED_EVAL_BYTES_OUTSIDE_ROOT",
+                    "scope": scope,
+                    "declared": declared,
+                    "path": str(row.get("path") or ""),
+                }
+            )
+        elif row.get("unsafe") or not row.get("exists"):
+            violations.append(
+                {
+                    "code": "DECLARED_EVAL_BYTES_UNAVAILABLE",
+                    "scope": scope,
+                    "declared": declared,
+                    "path": str(row.get("path") or ""),
+                }
+            )
+        return row
+
+    def add_sprint_sidecar_read(declared: str, path: Path) -> dict[str, Any]:
+        row = {
+            "scope": "read",
+            "authority": "sprint_sidecar",
+            "declared": declared,
+            "path": str(Path(os.path.abspath(path.expanduser()))),
+            "resolved_root": "sprint_sidecar",
+            **_artifact_manifest.snapshot_path(path, root=SPRINTS_DIR),
+        }
+        rows.append(row)
+        if row.get("unsafe") or not row.get("exists"):
+            violations.append(
+                {
+                    "code": "DECLARED_EVAL_BYTES_UNAVAILABLE",
+                    "scope": "read",
+                    "declared": declared,
+                    "path": str(row.get("path") or ""),
+                }
+            )
+        return row
+
+    def add_governed_graph_read(declared: str, path: Path) -> dict[str, Any]:
+        """Bind task_graph reads to its stable certificate projection.
+
+        The task graph's status, assignments, and lease metadata change as an
+        evaluator is dispatched.  Hashing the whole JSON file would therefore
+        invalidate every healthy verdict.  The plan certificate already hashes
+        the governed node fields; re-check it from the on-disk graph and use
+        that graph hash as the stable content authority.
+        """
+        physical = _artifact_manifest.snapshot_path(path, root=SPRINTS_DIR)
+        graph_hash = ""
+        error = str(physical.get("error") or "")
+        unsafe = bool(physical.get("unsafe"))
+        if physical.get("exists") and not unsafe and physical.get("kind") == "file":
+            try:
+                import plan_validator as _plan_validator
+
+                persisted_graph = json.loads(path.read_text(encoding="utf-8"))
+                certificate_errors = _plan_validator.check_plan_certificate(persisted_graph)
+                if certificate_errors:
+                    unsafe = True
+                    error = "plan_certificate_invalid:" + ",".join(
+                        str(item.get("code") or "unknown")
+                        for item in certificate_errors
+                    )
+                else:
+                    certificate = persisted_graph.get("plan_certificate") or {}
+                    graph_hash = str(certificate.get("graph_hash") or "")
+                    if not graph_hash:
+                        unsafe = True
+                        error = "plan_certificate_graph_hash_missing"
+            except Exception as exc:
+                unsafe = True
+                error = f"{type(exc).__name__}: {exc}"
+        elif not unsafe and physical.get("exists"):
+            unsafe = True
+            error = "governed_graph_is_not_a_regular_file"
+        row = {
+            "scope": "read",
+            "authority": "plan_certificate",
+            "declared": declared,
+            "path": str(Path(os.path.abspath(path.expanduser()))),
+            "resolved_root": "sprint_sidecar",
+            "exists": bool(physical.get("exists")),
+            "kind": "governed_graph" if graph_hash else str(physical.get("kind") or "missing"),
+            "size": None,
+            "sha256": graph_hash or None,
+            "entries": [],
+            "unsafe": unsafe,
+            "error": error,
+        }
+        rows.append(row)
+        if row.get("unsafe") or not row.get("exists") or not row.get("sha256"):
+            violations.append(
+                {
+                    "code": "DECLARED_EVAL_BYTES_UNAVAILABLE",
+                    "scope": "read",
+                    "declared": declared,
+                    "path": str(row.get("path") or ""),
+                    "authority": "plan_certificate",
+                }
+            )
+        return row
+
+    staging_reads: dict[str, dict[str, Any]] = {}
+    for declared in _scope_values(node.get("read_scope")):
+        sprint_sidecar = _current_sprint_control_read(sid, declared, graph)
+        if sprint_sidecar is not None:
+            if sprint_sidecar.name == f"{sid}.task_graph.json":
+                add_governed_graph_read(declared, sprint_sidecar)
+            else:
+                add_sprint_sidecar_read(declared, sprint_sidecar)
+        else:
+            staging_reads[declared] = add_staging("read", declared)
+    for declared in _scope_values(node.get("write_scope")):
+        add_staging("write", declared)
+
+    workspace: Path | None = None
+    if _workspace_binding is not None:
+        active = _workspace_binding.read_active_workspace(HARNESS_DIR)
+        if active is not None:
+            workspace = _workspace_binding.sprint_workspace_root(
+                SPRINTS_DIR,
+                sid,
+                harness_dir=HARNESS_DIR,
+            )
+            if workspace is None:
+                violations.append(
+                    {
+                        "code": "EVAL_SNAPSHOT_WORKSPACE_BINDING_MISMATCH",
+                        "active_workspace": str(active),
+                    }
+                )
+
+    if workspace is not None:
+        for declared, staging_row in staging_reads.items():
+            owner = _scope_owner_for_read(sid, graph, node, declared)
+            if owner is None:
+                continue
+            published_row, published_violations = _published_read_snapshot(
+                sid,
+                owner,
+                declared,
+                workspace,
+            )
+            violations.extend(published_violations)
+            if published_row is None:
+                continue
+            rows.append(published_row)
+            if (
+                staging_row.get("exists")
+                and published_row.get("exists")
+                and (
+                    str(staging_row.get("kind") or "") != str(published_row.get("kind") or "")
+                    or str(staging_row.get("sha256") or "") != str(published_row.get("sha256") or "")
+                )
+            ):
+                violations.append(
+                    {
+                        "code": "PUBLISHED_STAGING_CONTENT_MISMATCH",
+                        "declared": declared,
+                        "owner_node_id": str(owner.get("id") or ""),
+                        "published_sha256": str(published_row.get("sha256") or ""),
+                        "staging_sha256": str(staging_row.get("sha256") or ""),
+                    }
+                )
+
+    support_paths: list[tuple[str, Path | None]] = [
+        ("handoff", _existing_node_handoff(sid, node, graph)),
+        ("patch_diff", _existing_node_patch_diff(sid, node)),
+        ("guard_decision", _node_sidecar_file(sid, node_id, "guard_decision")),
+        ("resource_binding", _node_sidecar_file(sid, node_id, "resource_binding")),
+    ]
+    for declared, support in support_paths:
+        if support is None or not Path(support).is_file():
+            continue
+        rows.append(
+            {
+                "scope": "evidence",
+                "authority": "sprint_sidecar",
+                "declared": declared,
+                "path": str(Path(support).resolve()),
+                **_artifact_manifest.snapshot_path(Path(support), root=SPRINTS_DIR),
+            }
+        )
+
+    captured_at = _utc_now()
+    payload: dict[str, Any] = {
+        "schema": _EVAL_ARTIFACT_SNAPSHOT_SCHEMA,
+        "sid": sid,
+        "node_id": node_id,
+        "generation": _node_repair_attempts(node),
+        "captured_at": captured_at,
+        "rows": rows,
+        "violations": violations,
+    }
+    payload["snapshot_digest"] = _eval_snapshot_digest(payload)
+    payload["ok"] = bool(rows) and not violations and bool(payload["snapshot_digest"])
+    payload["reason"] = "" if payload["ok"] else "eval_artifact_snapshot_invalid"
+    sidecar = _eval_snapshot_file(sid, node_id)
+    payload["path"] = str(sidecar)
+    if not persist:
+        return payload
+    try:
+        sidecar.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary_name = tempfile.mkstemp(prefix=f".{sidecar.name}.", dir=sidecar.parent)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=False, indent=2)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary_name, sidecar)
+        finally:
+            Path(temporary_name).unlink(missing_ok=True)
+    except Exception as exc:
+        payload["ok"] = False
+        payload["reason"] = "eval_artifact_snapshot_write_failed"
+        payload.setdefault("violations", []).append(
+            {"code": "SNAPSHOT_WRITE_FAILED", "error": f"{type(exc).__name__}: {exc}"}
+        )
+        return payload
+    node["eval_artifact_snapshot"] = {
+        "schema": payload["schema"],
+        "path": str(sidecar),
+        "snapshot_digest": payload["snapshot_digest"],
+        "generation": payload["generation"],
+        "captured_at": captured_at,
+        "row_count": len(rows),
+    }
+    return payload
+
+
+def _validate_eval_artifact_snapshot(
+    sid: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    eval_payload: dict[str, Any],
+) -> dict[str, Any]:
+    expected = node.get("eval_artifact_snapshot")
+    if not isinstance(expected, dict):
+        return {"ok": False, "reason": "eval_artifact_snapshot_missing"}
+    expected_path = str(expected.get("path") or "")
+    expected_digest = str(expected.get("snapshot_digest") or "")
+    expected_schema = str(expected.get("schema") or "")
+    if expected_schema != _EVAL_ARTIFACT_SNAPSHOT_SCHEMA or not expected_path or not expected_digest:
+        return {"ok": False, "reason": "eval_artifact_snapshot_metadata_invalid"}
+    if Path(expected_path).expanduser() != _eval_snapshot_file(sid, str(node.get("id") or "")):
+        return {"ok": False, "reason": "eval_artifact_snapshot_path_invalid"}
+    if int(expected.get("generation") or 0) != _node_repair_attempts(node):
+        return {"ok": False, "reason": "eval_artifact_snapshot_generation_mismatch"}
+
+    context = eval_payload.get("eval_context") if isinstance(eval_payload.get("eval_context"), dict) else {}
+    echoed = {
+        "schema": str(eval_payload.get("artifact_snapshot_schema") or context.get("artifact_snapshot_schema") or ""),
+        "path": str(eval_payload.get("artifact_snapshot_path") or context.get("artifact_snapshot_path") or ""),
+        "digest": str(eval_payload.get("artifact_snapshot_digest") or context.get("artifact_snapshot_digest") or ""),
+    }
+    if (
+        echoed["schema"] != expected_schema
+        or echoed["path"] != expected_path
+        or echoed["digest"] != expected_digest
+    ):
+        return {
+            "ok": False,
+            "reason": "eval_artifact_snapshot_echo_mismatch",
+            "expected": expected,
+            "echoed": echoed,
+        }
+    try:
+        persisted = json.loads(Path(expected_path).read_text(encoding="utf-8"))
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": "eval_artifact_snapshot_unreadable",
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+    if not isinstance(persisted, dict) or persisted.get("ok") is not True:
+        return {"ok": False, "reason": "eval_artifact_snapshot_invalid"}
+    if str(persisted.get("snapshot_digest") or "") != _eval_snapshot_digest(persisted):
+        return {"ok": False, "reason": "eval_artifact_snapshot_sidecar_tampered"}
+    current = _capture_eval_artifact_snapshot(sid, node, graph, persist=False)
+    if current.get("ok") is not True:
+        return {
+            "ok": False,
+            "reason": "eval_artifact_snapshot_changed",
+            "current": current,
+        }
+    if str(current.get("snapshot_digest") or "") != expected_digest:
+        return {
+            "ok": False,
+            "reason": "eval_artifact_snapshot_changed",
+            "expected_digest": expected_digest,
+            "current_digest": str(current.get("snapshot_digest") or ""),
+        }
+    return {
+        "ok": True,
+        "schema": expected_schema,
+        "path": expected_path,
+        "snapshot_digest": expected_digest,
+        "generation": int(expected.get("generation") or 0),
+        "row_count": int(expected.get("row_count") or len(persisted.get("rows") or [])),
+        "snapshot": persisted,
+    }
+
+
+def _block_eval_snapshot_integrity(
+    sid: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    eval_payload: dict[str, Any],
+    validation: dict[str, Any],
+    *,
+    eval_json: str | Path,
+    writer: str,
+    dry_run: bool = False,
+    submitted_verdict: str = "",
+    submitted_verdict_kind: str = "",
+) -> dict[str, Any]:
+    """Make an unbound evaluator verdict non-consumable and stop automation.
+
+    A verdict over bytes other than the current declared snapshot is neither a
+    content PASS nor a content FAIL.  In particular, a stale FAIL must not
+    trigger a repair that rewrites product bytes the evaluator never judged.
+    Preserve the snapshot and verdict evidence for diagnosis, release live
+    claims, and use A4's generation-sticky human-review terminal.
+    """
+    node_id = str(node.get("id") or "")
+    reason = str(validation.get("reason") or "eval_artifact_snapshot_invalid")
+    raw_verdict = str(
+        submitted_verdict
+        or eval_payload.get("verdict")
+        or eval_payload.get("status")
+        or ""
+    ).strip().lower()
+    verdict = (
+        "PASS"
+        if raw_verdict in {"pass", "passed", "ok", "success", "succeeded"}
+        else "FAIL"
+        if raw_verdict in {"fail", "failed", "error", "errored"}
+        else None
+    )
+    verdict_kind = str(
+        submitted_verdict_kind or eval_payload.get("verdict_kind") or "content"
+    ).strip().lower()
+    if verdict_kind not in {"content", "mechanical", "infrastructure"}:
+        verdict_kind = "content"
+    generation = _node_repair_attempts(node)
+    pm_task_id = next(
+        (
+            str(item.get("pm_task_id") or "").strip()
+            for item in _node_eval_assignments(node)
+            if str(item.get("pm_task_id") or "").strip()
+        ),
+        None,
+    )
+    expected = (
+        node.get("eval_artifact_snapshot")
+        if isinstance(node.get("eval_artifact_snapshot"), dict)
+        else {}
+    )
+    _ledger_record(
+        sid,
+        node_id=node_id,
+        kind="eval_verdict",
+        author={"type": "evaluator"},
+        verdict=verdict,
+        verdict_kind=verdict_kind,
+        eval_generation=generation,
+        repair_attempt=generation,
+        pm_task_id=pm_task_id,
+        artifact_snapshot_digest=str(expected.get("snapshot_digest") or "") or None,
+        gate_consumable=False,
+        stale_reason=reason,
+        note="evaluator_verdict_not_bound_to_current_artifact_snapshot",
+    )
+    _ledger_record(
+        sid,
+        node_id=node_id,
+        kind="gate_check",
+        author={"type": "policy"},
+        verdict="block",
+        gate_consumable=False,
+        note=reason,
+    )
+
+    current_status = str(node_status(graph, node_id) or node.get("status") or "")
+    result = {
+        "ok": False,
+        "reason": reason,
+        "node": node_id,
+        "status": current_status,
+        "eval_json": str(eval_json or ""),
+        "eval_artifact_snapshot": validation,
+    }
+    if dry_run:
+        return result
+
+    worker_pane = str(node.get("assigned_to") or "").strip()
+    worker_dispatch_id = str(node.get("dispatch_id") or "").strip()
+    assignments = _node_eval_assignments(node)
+    human_review = enter_node_human_review(
+        graph,
+        node_id,
+        reason=f"eval_integrity_block:{reason}",
+        next_action=(
+            "inspect the recorded evaluation snapshot and authoritative bytes, "
+            "then explicitly resume this generation"
+        ),
+        writer=writer,
+    )
+    node["eval_blocked_reason"] = f"eval_integrity_block:{reason}"
+    node["eval_json"] = str(eval_json or "")
+    node["eval_integrity_block"] = {
+        "reason": reason,
+        "blocked_at": _utc_now(),
+        "eval_json": str(eval_json or ""),
+        "verdict": verdict,
+        "generation": generation,
+        "artifact_snapshot": deepcopy(expected),
+        "validation": deepcopy(validation),
+        "assignments": deepcopy(assignments),
+    }
+
+    # These fields represent live ownership, not durable provenance.  The
+    # immutable dispatch/snapshot sidecars and eval_integrity_block above keep
+    # the evidence while terminal human review releases capacity.
+    for key in (
+        "assigned_to",
+        "dispatch_id",
+        "eval_assignments",
+        "eval_assigned_to",
+        "eval_dispatch_id",
+        "eval_pm_task_id",
+        "eval_dispatched_at",
+        "eval_dispatch_group_id",
+    ):
+        node.pop(key, None)
+
+    if worker_pane and worker_dispatch_id:
+        try:
+            release_lease(worker_pane, worker_dispatch_id, "eval_snapshot_integrity_block")
+        except Exception:
+            pass
+    for assignment in assignments:
+        pane = str(assignment.get("pane") or "").strip()
+        dispatch_id = str(assignment.get("dispatch_id") or "").strip()
+        if not pane or not dispatch_id:
+            continue
+        try:
+            release_lease(pane, dispatch_id, "eval_snapshot_integrity_block")
+        except Exception:
+            pass
+
+    _record_node_runstate(
+        sid,
+        node_id,
+        {
+            "last_eval_result": "INTEGRITY_BLOCKED",
+            "last_eval_reason": reason,
+            "next_action": str(node.get("next_action") or "explicit_human_resume_required"),
+            "status": "needs_human_review",
+        },
+    )
+    _append_event(
+        sid,
+        {
+            "event": "graph_eval_integrity_escalated_to_human",
+            "by": "graph-dispatch",
+            "severity": "error",
+            "data": {
+                "node": node_id,
+                "reason": reason,
+                "human_review_generation": human_review.get("generation"),
+            },
+        },
+    )
+    result["status"] = "needs_human_review"
+    result["human_review"] = human_review
+    return result
+
+
+def _restore_eval_artifact_snapshot_metadata(sid: str, node: dict[str, Any]) -> bool:
+    """Recover dispatch authority after a crash between send and graph save."""
+    node_id = str(node.get("id") or "")
+    path = _eval_snapshot_file(sid, node_id)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    if not (
+        isinstance(payload, dict)
+        and payload.get("schema") == _EVAL_ARTIFACT_SNAPSHOT_SCHEMA
+        and payload.get("ok") is True
+        and str(payload.get("sid") or "") == sid
+        and str(payload.get("node_id") or "") == node_id
+        and int(payload.get("generation") or 0) == _node_repair_attempts(node)
+        and str(payload.get("snapshot_digest") or "") == _eval_snapshot_digest(payload)
+    ):
+        return False
+    node["eval_artifact_snapshot"] = {
+        "schema": payload["schema"],
+        "path": str(path),
+        "snapshot_digest": payload["snapshot_digest"],
+        "generation": int(payload.get("generation") or 0),
+        "captured_at": str(payload.get("captured_at") or ""),
+        "row_count": len(payload.get("rows") or []),
+    }
+    return True
+
+
+def _manifest_matches_eval_snapshot(
+    manifest: dict[str, Any],
+    snapshot_validation: dict[str, Any],
+) -> dict[str, Any]:
+    if _artifact_manifest is None:
+        return {"ok": False, "reason": "artifact_manifest_module_unavailable"}
+    recorded_digest = str(manifest.get("content_digest") or "")
+    actual_digest = _artifact_manifest.manifest_content_digest(manifest)
+    if not recorded_digest or recorded_digest != actual_digest:
+        return {
+            "ok": False,
+            "reason": "artifact_manifest_content_digest_invalid",
+            "recorded_digest": recorded_digest,
+            "actual_digest": actual_digest,
+        }
+    snapshot = (
+        snapshot_validation.get("snapshot")
+        if isinstance(snapshot_validation.get("snapshot"), dict)
+        else {}
+    )
+    snapshot_rows = {
+        str(Path(str(row.get("path") or "")).expanduser().resolve(strict=False)): row
+        for row in (snapshot.get("rows") or [])
+        if isinstance(row, dict)
+        and row.get("scope") == "write"
+        and row.get("authority") == "staging"
+        and str(row.get("path") or "")
+    }
+    manifest_rows = {
+        str(Path(str(row.get("path") or "")).expanduser().resolve(strict=False)): row
+        for row in (manifest.get("rows") or [])
+        if isinstance(row, dict) and str(row.get("path") or "")
+    }
+    if set(snapshot_rows) != set(manifest_rows):
+        return {
+            "ok": False,
+            "reason": "artifact_manifest_snapshot_path_mismatch",
+            "snapshot_paths": sorted(snapshot_rows),
+            "manifest_paths": sorted(manifest_rows),
+        }
+    mismatches: list[dict[str, Any]] = []
+    for path, snapshot_row in snapshot_rows.items():
+        manifest_row = manifest_rows[path]
+        for field in ("exists", "kind", "size", "sha256", "entries"):
+            if snapshot_row.get(field) != manifest_row.get(field):
+                mismatches.append(
+                    {
+                        "path": path,
+                        "field": field,
+                        "snapshot": snapshot_row.get(field),
+                        "manifest": manifest_row.get(field),
+                    }
+                )
+    if mismatches:
+        return {
+            "ok": False,
+            "reason": "artifact_manifest_snapshot_content_mismatch",
+            "mismatches": mismatches,
+        }
+    return {
+        "ok": True,
+        "manifest_digest": actual_digest,
+        "snapshot_digest": str(snapshot_validation.get("snapshot_digest") or ""),
+        "row_count": len(manifest_rows),
+    }
+
+
+def _publish_verified_node_outputs(
+    sid: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Publish a certified-generic node's verified outputs to its user project.
+
+    The active cockpit binding makes this behavior opt-in for new/freshly
+    started runtimes while leaving legacy fixture graphs byte-compatible.  Once
+    a binding exists, sprint-captured context must agree with it; disagreement
+    fails closed so an old or foreign sprint cannot write into the current
+    project.
+    """
+    if not _graph_is_certified_generic(graph):
+        return {"required": False, "ok": True, "skipped": "not_certified_generic"}
+    if _artifact_manifest is None or _workspace_binding is None:
+        return {
+            "required": True,
+            "ok": False,
+            "reason": "workspace_publish_modules_unavailable",
+        }
+    active = _workspace_binding.read_active_workspace(HARNESS_DIR)
+    if active is None:
+        return {"required": False, "ok": True, "skipped": "no_active_workspace_binding"}
+
+    node_id = str(node.get("id") or "").strip()
+    workspace = _workspace_binding.sprint_workspace_root(
+        SPRINTS_DIR,
+        sid,
+        harness_dir=HARNESS_DIR,
+    )
+    if workspace is None:
+        return {
+            "required": True,
+            "ok": False,
+            "reason": "workspace_binding_mismatch",
+            "active_workspace": str(active),
+        }
+    manifest = _artifact_manifest.read_manifest(SPRINTS_DIR, sid, node_id)
+    recorded_manifest_digest = str(manifest.get("content_digest") or "")
+    if (
+        not recorded_manifest_digest
+        or recorded_manifest_digest != _artifact_manifest.manifest_content_digest(manifest)
+    ):
+        return {
+            "required": True,
+            "ok": False,
+            "reason": "workspace_publish_manifest_digest_invalid",
+        }
+    rows = manifest.get("rows") if isinstance(manifest.get("rows"), list) else []
+    if not rows:
+        return {"required": False, "ok": True, "skipped": "no_declared_outputs"}
+    if dry_run:
+        return {
+            "required": True,
+            "ok": True,
+            "dry_run": True,
+            "workspace_root": str(workspace),
+            "published": [],
+        }
+
+    publish = _artifact_manifest.publish_workspace_outputs(manifest, workspace)
+    payload = {
+        "schema": "solar.workspace_publish.v1",
+        "sid": sid,
+        "node_id": node_id,
+        "published_at": _utc_now(),
+        "required": True,
+        **publish,
+    }
+    sidecar = SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-publish.json"
+    try:
+        sidecar.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary_name = tempfile.mkstemp(prefix=f".{sidecar.name}.", dir=sidecar.parent)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=False, indent=2)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary_name, sidecar)
+        finally:
+            try:
+                Path(temporary_name).unlink(missing_ok=True)
+            except OSError:
+                pass
+    except Exception as exc:
+        payload["ok"] = False
+        payload["reason"] = "workspace_publish_sidecar_write_failed"
+        payload.setdefault("errors", []).append(f"{type(exc).__name__}: {exc}")
+        return payload
+    payload["sidecar"] = str(sidecar)
+    return payload
+
+
 MULTI_TASK_RUN_DIR = HARNESS_DIR / "run" / "multi-task"
 SESSION = os.environ.get("SOLAR_HARNESS_SESSION", "solar-harness")
 NO_DISPATCH_FLAG = HARNESS_DIR / "run" / "no-dispatch.flag"
@@ -65,19 +1473,53 @@ PANE_QUOTA_EXHAUSTED_RE = re.compile(
 PANE_RATE_LIMIT_FALLBACK_SEC = int(os.environ.get("SOLAR_PANE_RATE_LIMIT_FALLBACK_SEC", "900"))
 OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC = int(os.environ.get("SOLAR_GRAPH_OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC", "900"))
 GRAPH_NODE_REPAIR_MAX_ATTEMPTS = int(os.environ.get("SOLAR_GRAPH_NODE_REPAIR_MAX_ATTEMPTS", "1"))
+# AC-R4.1: the gate runner's own vocabulary of mechanical/infrastructure failure
+# reasons. A FAIL verdict carrying one of these is evidence-machinery failure, not
+# a content judgment, and must never flip a policy-passed node on the contracted path.
+MECHANICAL_EVAL_REASONS = {
+    "research_eval_json_missing",
+    "eval_json_missing",
+    "eval_json_unreadable",
+    "evaluator_temporarily_busy",
+    "eval_dispatch_unavailable",
+    "eval_closeout_invalid",
+}
 # Bounded eval-dispatch failure escalation. A node whose evaluator dispatch keeps failing for a
 # capacity reason (e.g. no evaluator pane in the pool) would otherwise sit in `reviewing` forever
 # (Run D: 246x no_available_evaluator with no terminal state). After this many consecutive
 # capacity-class failures, the node is escalated to a durable needs_human_review with a reason +
 # next_action instead of retrying silently. 0 = unlimited (legacy infinite-retry behavior).
 GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES = int(os.environ.get("SOLAR_GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES", "8"))
-# Eval-dispatch skip reasons that mean "the node cannot be evaluated right now for a capacity reason"
-# (as opposed to a transient within-batch lease collision). Only these accrue toward escalation.
+# G4 UI-rung run 3 (p5-g4-ui-rung-20260710T204856Z): the BUILDER-dispatch sibling of
+# the eval cap. S2 ping-ponged assigned->pending (stale_submit_ack_without_live_lease)
+# 122 ledger rows / 632s with zero progress while the only builder operator sat in its
+# 900s contract-closeout cooldown — the dispatcher re-assigned every tick, the
+# reconcile reset every tick, and nobody counted. Consecutive dispatch-failure resets
+# past this cap escalate the node to a durable needs_human_review (never auto-pass /
+# auto-fail); real progress clears the streak. 0 = unlimited (legacy).
+GRAPH_NODE_DISPATCH_MAX_FAILURES = int(os.environ.get("SOLAR_GRAPH_NODE_DISPATCH_MAX_FAILURES", "8"))
+# Eval-dispatch skip reasons that mean no usable evaluation capacity exists.
+# Only these accrue toward escalation.  ``evaluator_temporarily_busy`` is
+# ordinary bounded-pool backpressure: a live evaluator already doing useful
+# work will eventually free, so coordinator poll frequency must never turn
+# that wait into repeated failures or a false human escalation.
 _EVAL_STUCK_REASONS = frozenset({
     "no_available_evaluator",
     "insufficient_evaluator_capacity",
     "insufficient_selected_evaluators",
     "multi_evaluator_quorum_not_implemented",
+})
+_EVAL_INTEGRITY_BLOCK_REASONS = frozenset({
+    "eval_artifact_snapshot_invalid",
+    "eval_artifact_snapshot_write_failed",
+    "eval_artifact_snapshot_missing",
+    "eval_artifact_snapshot_metadata_invalid",
+    "eval_artifact_snapshot_path_invalid",
+    "eval_artifact_snapshot_generation_mismatch",
+    "eval_artifact_snapshot_echo_mismatch",
+    "eval_artifact_snapshot_unreadable",
+    "eval_artifact_snapshot_sidecar_tampered",
+    "eval_artifact_snapshot_changed",
 })
 # Fix F: faster recovery from an eval input-submit jam (wall #5). Caps the EVAL
 # lease + the re-dispatch gate so a stuck eval re-dispatches before the full 900s
@@ -197,6 +1639,11 @@ PANE_SURVEY_PROMPT_RE = re.compile(
     r"How is Claude doing this session\?|1:\s*Bad\s+2:\s*Fine\s+3:\s*Good\s+0:\s*Dismiss",
     re.I,
 )
+PANE_REWIND_PROMPT_RE = re.compile(
+    r"\bRewind\b[\s\S]*?Restore the code and/or conversation[\s\S]*?"
+    r"Enter to continue\s*[·|]\s*Esc to exit",
+    re.I,
+)
 PANE_APPROVAL_PROMPT_RE = re.compile(
     r"Do you want to make this edit|"
     r"allow all edits during this session|"
@@ -216,6 +1663,7 @@ RECOVERABLE_DISPATCH_PROMPT_REASONS = {
     "queued_prompt_residue",
     "plan_mode_blocked",
     "survey_prompt_blocked",
+    "rewind_prompt_blocked",
 }
 RECOVERABLE_PANE_BLOCKER_FRAGMENTS = {
     "proceed_confirmation_prompt",
@@ -276,11 +1724,30 @@ from graph_scheduler import (  # noqa: E402
     enqueue_ready,
     set_node_status,
     node_status,
+    node_recorded_status,
     mark_node_result,
+    commit_verified_node_pass,
+    assert_node_status_write_allowed,
+    commit_human_review_resume,
+    enter_node_human_review,
+    validate_human_review_resume,
     parent_ready_check,
     ready_nodes,
     sync_status_cache_from_graph,
     terminalize_dependency_blocked_nodes,
+    node_dispatch_role,
+)
+from task_lifecycle import (  # noqa: E402
+    ACTIVE_TASK_STATUSES,
+    activate_execution_attempt,
+    converge_execution_attempt_result,
+    converge_execution_attempt_status,
+    correlated_terminal_result,
+    current_execution_attempt,
+    execution_attempt_validation_error,
+    record_execution_attempt_activation_error,
+    record_execution_attempt_closeout_failure,
+    retire_execution_attempt_for_human_resume,
 )
 from pane_lease import acquire as acquire_lease, release as release_lease, read_lease, list_leases  # noqa: E402
 from task_queue import enqueue  # noqa: E402
@@ -420,7 +1887,16 @@ DEEPRESEARCH_GATE_CAPABILITIES = {
     "factuality.evaluate",
 }
 DEEPRESEARCH_GATE_ARTIFACT_RE = re.compile(
-    r"research_eval|report_ast|final\.md|final_report|evidence\.jsonl|claims\.jsonl",
+    r"research_eval|report_ast|final\.md|final_report|sources\.jsonl|evidence\.jsonl|claims\.jsonl",
+    re.I,
+)
+# A retrieval node and a report node have different truthful completion
+# contracts. Detection is declaration-based: producing an undeclared report
+# cannot dodge the report gate, while a node that declares only a source pack
+# is never failed for report artifacts it did not promise.
+RETRIEVAL_PACK_ARTIFACT_RE = re.compile(r"sources\.jsonl|evidence\.jsonl", re.I)
+REPORT_ARTIFACT_RE = re.compile(
+    r"research_eval|report_ast|final\.md|final_report|claims\.jsonl",
     re.I,
 )
 
@@ -445,17 +1921,7 @@ def _node_requires_human_search(node: dict[str, Any]) -> bool:
     return bool(re.search(r"external[_ -]?search|web[_ -]?search|academic[_ -]?search|source[_ -]?search|contradiction[_ -]?search", haystack))
 
 
-def _node_requires_deepresearch_quality_gate(node: dict[str, Any]) -> bool:
-    explicit = node.get("research_quality_gate_required")
-    if explicit is False:
-        return False
-    if explicit is True:
-        return True
-    caps = _node_capabilities(node)
-    if caps & DEEPRESEARCH_GATE_CAPABILITIES:
-        return True
-    if any(DEEPRESEARCH_GATE_CAPABILITY_RE.match(cap) for cap in caps):
-        return True
+def _node_research_artifact_text(node: dict[str, Any]) -> str:
     artifact_values: list[str] = []
     artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
     artifact_values.extend(str(value) for value in artifacts.values())
@@ -474,17 +1940,38 @@ def _node_requires_deepresearch_quality_gate(node: dict[str, Any]) -> bool:
         artifact_values.append(raw_scope)
     elif isinstance(raw_scope, list):
         artifact_values.extend(str(item) for item in raw_scope)
-    artifact_text = " ".join(artifact_values).lower()
-    return bool(DEEPRESEARCH_GATE_ARTIFACT_RE.search(artifact_text))
+    return " ".join(artifact_values).lower()
+
+
+def _node_requires_deepresearch_quality_gate(node: dict[str, Any]) -> bool:
+    explicit = node.get("research_quality_gate_required")
+    if explicit is False:
+        return False
+    if explicit is True:
+        return True
+    caps = _node_capabilities(node)
+    if caps & DEEPRESEARCH_GATE_CAPABILITIES:
+        return True
+    if any(DEEPRESEARCH_GATE_CAPABILITY_RE.match(cap) for cap in caps):
+        return True
+    return bool(DEEPRESEARCH_GATE_ARTIFACT_RE.search(_node_research_artifact_text(node)))
+
+
+def _node_declares_retrieval_only(node: dict[str, Any]) -> bool:
+    artifact_text = _node_research_artifact_text(node)
+    return bool(RETRIEVAL_PACK_ARTIFACT_RE.search(artifact_text)) and not REPORT_ARTIFACT_RE.search(artifact_text)
 
 
 def _deepresearch_quality_gate_eval_instruction(node: dict[str, Any], eval_json: str | Path) -> str:
     if _node_requires_deepresearch_quality_gate(node):
-        return f"""- 本 node 明确涉及 DeepResearch artifacts / research evidence ledger / claim ledger / citation verification / research report compiler，必须先运行 deterministic artifact gate：
+        if _node_declares_retrieval_only(node):
+            return """- This is a retrieval-only node: it promises a source pack (`sources.jsonl`, `evidence.jsonl`, and `extracts/`), not a final report. Do not run `solar-harness research eval-artifacts`, and do not fail it for missing `research_eval.json`, `report_ast.json`, `claims.jsonl`, or `final.md`.
+  The dispatcher runs the deterministic retrieval closeout automatically. Leave `research_quality_gate` empty; closeout will verify source metadata, extract containment, hashes, evidence ids, and source spans."""
+        return f"""- This node declares DeepResearch claims or report artifacts and must first run the deterministic artifact gate:
   ```bash
   solar-harness research eval-artifacts --eval-json "<path-to-research_eval.json>" --json
   ```
-  并把返回 JSON 原样写入 `{eval_json}` 的 `research_quality_gate` 字段。没有 `research_quality_gate.ok=true` 不允许 PASS。"""
+  Write the returned JSON unchanged into the `research_quality_gate` field in `{eval_json}`. Do not PASS unless `research_quality_gate.ok=true`."""
     return """- DeepResearch deterministic artifact gate is **not required** for this node. Do not run `solar-harness research eval-artifacts`, and do not fail this node only because `research_eval.json`, `report_ast.json`, bibliography, source/evidence/claim counts, or citation-accuracy artifacts are absent.
   Local audit reports, packaging-readiness reports, documentation synthesis, and generic `report.compile` outputs are judged by this node's acceptance criteria, proof obligations, session log, write scope, and handoff evidence unless `research_quality_gate_required=true` or explicit `research.*` artifacts/capabilities are present. Leave `research_quality_gate` empty or mark it `{"required": false}`."""
 
@@ -921,14 +2408,78 @@ def _discover_deepresearch_artifacts(sid: str, node: dict[str, Any], eval_json: 
     return artifacts
 
 
+def _retrieval_pack_dir(sid: str, node: dict[str, Any], eval_json: str | Path) -> Path:
+    """Resolve a retrieval pack only inside the current sprint.
+
+    Relative declarations normally resolve from the sprint workdir. Absolute
+    declarations are accepted only when they remain inside this exact sprint.
+    Resolution follows symlinks before containment is checked, so a pack cannot
+    pass on pre-staged bytes from a foreign or sibling sprint.
+    """
+    del eval_json  # The evaluator sidecar's parent may be the shared sprints root.
+    sprint_root = SPRINTS_DIR / sid
+    workdir = sprint_root / "workdir"
+    resolution_bases = (workdir, sprint_root)
+
+    values: list[str] = []
+    artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
+    values.extend(str(value) for value in artifacts.values() if str(value))
+    raw_scope = node.get("write_scope", [])
+    if isinstance(raw_scope, str):
+        values.append(raw_scope)
+    elif isinstance(raw_scope, list):
+        values.extend(str(value) for value in raw_scope if str(value))
+
+    try:
+        sprint_resolved = sprint_root.resolve(strict=False)
+    except OSError:
+        sprint_resolved = sprint_root
+
+    def contained(candidate: Path) -> bool:
+        try:
+            return candidate.resolve(strict=False).is_relative_to(sprint_resolved)
+        except OSError:
+            return False
+
+    def as_pack_dir(value: str) -> Path:
+        path = Path(value).expanduser()
+        if path.name.lower() in {"sources.jsonl", "evidence.jsonl", "extracts"}:
+            return path.parent
+        return path
+
+    candidates: list[Path] = []
+    for value in values:
+        declared = as_pack_dir(value)
+        possible = (declared,) if declared.is_absolute() else tuple(base / declared for base in resolution_bases)
+        for candidate in possible:
+            if contained(candidate) and candidate not in candidates:
+                candidates.append(candidate)
+
+    for candidate in candidates:
+        if (candidate / "sources.jsonl").is_file() and (candidate / "evidence.jsonl").is_file():
+            return candidate
+    for candidate in candidates:
+        if (candidate / "sources.jsonl").is_file():
+            return candidate
+    if candidates:
+        return candidates[0]
+
+    # Fail closed on an entirely foreign/traversing declaration. Returning a
+    # deliberately absent current-sprint path makes the retrieval evaluator
+    # report a repairable missing pack instead of accepting unrelated bytes.
+    return workdir / ".invalid-retrieval-pack-declaration"
+
+
 def _deepresearch_quality_gate_auto_run(sid: str, node: dict[str, Any], eval_json: str | Path) -> dict[str, Any]:
     """Run deterministic DeepResearch gate during closeout when evaluator omitted it."""
     try:
-        from research.evaluator import evaluate_final_closeout
+        from research.evaluator import evaluate_final_closeout, evaluate_retrieval_closeout
     except ImportError:
         evaluate_final_closeout = None
+        evaluate_retrieval_closeout = None
 
-    if evaluate_final_closeout is None:
+    retrieval_only = _node_declares_retrieval_only(node)
+    if evaluate_final_closeout is None or (retrieval_only and evaluate_retrieval_closeout is None):
         return {
             "present": True,
             "ok": False,
@@ -938,6 +2489,26 @@ def _deepresearch_quality_gate_auto_run(sid: str, node: dict[str, Any], eval_jso
                 "verdict": "FAIL",
                 "errors": ["research_evaluator_unavailable"],
             },
+        }
+
+    if retrieval_only:
+        pack_dir = _retrieval_pack_dir(sid, node, eval_json)
+        closeout = evaluate_retrieval_closeout(pack_dir)
+        gate = {
+            "ok": bool(closeout.get("ok")),
+            "verdict": "PASS" if closeout.get("ok") else "FAIL",
+            "closeout_verdict": closeout.get("verdict", "hard_fail"),
+            "errors": closeout.get("issues") or [],
+            "warnings": closeout.get("warnings") or [],
+            "metrics": closeout.get("metrics") or {},
+            "retrieval_only": True,
+            "pack_dir": str(pack_dir),
+        }
+        return {
+            "present": True,
+            "ok": gate["ok"],
+            "auto_run": True,
+            "gate": gate,
         }
 
     artifacts = _discover_deepresearch_artifacts(sid, node, eval_json)
@@ -978,16 +2549,6 @@ def _deepresearch_quality_gate_auto_run(sid: str, node: dict[str, Any], eval_jso
         output_dir,
         strict=True,
     )
-
-    # Load the updated eval_json or survey_eval.json to get research_quality_gate
-    # because evaluate_final_closeout writes to it
-    eval_json_path = Path(eval_json).expanduser()
-    if eval_json_path.exists():
-        res = _deepresearch_quality_gate_from_eval(eval_json_path)
-        if res.get("present"):
-            res["auto_run"] = True
-            res["gate"]["discovered_artifacts"] = artifacts
-            return res
 
     gate = {
         "ok": closeout.get("ok", False),
@@ -1048,7 +2609,6 @@ def _prepare_human_search_handoff(sid: str, graph_path: str | Path, node: dict[s
             "results_md": str(results_md),
             "dry_run": True,
         }
-
     run_id = _ensure_research_run(db_path, topic, str(metadata.get("run_id") or ""))
     handoff_md.parent.mkdir(parents=True, exist_ok=True)
     handoff_md.write_text(
@@ -1058,6 +2618,10 @@ def _prepare_human_search_handoff(sid: str, graph_path: str | Path, node: dict[s
 
     graph = load_graph(graph_path)
     live = next((n for n in graph.get("nodes", []) if n.get("id") == node_id), node)
+    _ledger_transition(
+        str(graph.get("sprint_id") or Path(str(graph_path)).stem.replace(".task_graph", "")),
+        node_id, str(live.get("status") or ""), "waiting_human_search", "human_search_wait",
+    )
     live["status"] = "waiting_human_search"
     live["human_search"] = {
         "provider": "human-in-the-loop",
@@ -1120,6 +2684,14 @@ def _model_registry() -> dict[str, Any]:
 
 
 def _normalize_model_alias(alias: str) -> str:
+    # AC-R8.3 (Lane 3 serialized item): in product mode a bare "sonnet" resolves
+    # Anthropic — never the legacy GLM fallback below, and regardless of any
+    # machine-local registry remap. Flag-off keeps the table bit-identical.
+    if (
+        str(os.environ.get("SOLAR_PRODUCT_MODE") or "").strip() == "1"
+        and str(alias or "").strip().lower() == "sonnet"
+    ):
+        return "claude-sonnet"
     reg = _model_registry()
     if _normalize_model is not None:
         try:
@@ -1388,14 +2960,39 @@ def _canonical_output_paths_block(node: dict[str, Any]) -> str:
     if not rows:
         return (
             "## Canonical Output Paths\n\n"
-            "- No sprint artifact outputs declared. For source-code files, use the current repository/worktree path."
+            "- No separate sprint sidecar paths are declared here. Obey the active output root below; "
+            "never invent a second output location."
         )
     return (
         "## Canonical Output Paths\n\n"
-        "Builder panes may run from an isolated role worktree. For sprint artifacts, do not rely on "
-        "relative `harness/sprints/...` paths; write to the canonical absolute paths below so the "
-        "scheduler and evaluator can find them:\n\n"
+        "The paths below are governance sidecars stored beside the sprint. They do not create a "
+        "second root for source-code outputs. Write each listed sidecar to its exact absolute path:\n\n"
         + "\n".join(rows)
+    )
+
+
+def _generic_workdir_block(sid: str, graph: dict[str, Any]) -> str:
+    """Certified-generic builder teaching: STATE the workdir, name the trap.
+
+    G4-lite run 2 (codex-cli-output.log:1938): with cwd correctly set to
+    sprints/<sid>/workdir and the workdir never stated in the dispatch text,
+    the builder agent absolutized its output paths by analogy with the
+    sprint's dot-suffixed artifact files and invented sprints/<sid>.workdir.
+    The runtime now recovers that stray spelling, but the dispatch text must
+    stop inviting it."""
+    if not _graph_is_certified_generic(graph):
+        return ""
+    workdir = SPRINTS_DIR / sid / "workdir"
+    return (
+        "## Sprint Workdir\n\n"
+        f"The sole staging write root for declared product outputs is: `{workdir}`\n"
+        "(a DIRECTORY under the sprint id — `" + sid + "/workdir`).\n"
+        "Write every declared product output RELATIVE to it (for example, `workspace/<file>`).\n"
+        "Do not mirror product outputs into the pane's launch repository or any other workspace.\n"
+        "After independent gates pass, Solar publishes the verified `workspace/...` files once\n"
+        "into the user workspace. NEVER construct a `sprints/" + sid + ".workdir`\n"
+        "path: sprint FILES use dot-suffixed names (`" + sid + ".plan.md`),\n"
+        "but the workdir is the `" + sid + "/workdir` directory."
     )
 
 
@@ -1593,14 +3190,68 @@ def _archive_path_for_repair(path: Path, attempt: int) -> Path:
     return path.with_name(f"{path.stem}.repair{attempt}.{stamp}.{os.getpid()}{path.suffix}")
 
 
-def _archive_node_review_sidecars(sid: str, node_id: str, handoff_file: Path | None, eval_json_path: str | Path, attempt: int) -> dict[str, str]:
-    archived: dict[str, str] = {}
+def _attempt_archive_dir(sid: str, node_id: str, attempt: int) -> Path:
+    return SPRINTS_DIR / sid / "attempts" / _safe_node_id(node_id) / str(max(1, int(attempt or 1)))
+
+
+def _copy_attempt_archive(path: Path, sid: str, node_id: str, attempt: int, key: str) -> Path | None:
+    try:
+        src = path.expanduser()
+    except Exception:
+        return None
+    if not src.exists() or not src.is_file():
+        return None
+    archive_dir = _attempt_archive_dir(sid, node_id, attempt)
+    safe_key = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(key or "artifact")).strip("-") or "artifact"
+    suffix = src.suffix or ".artifact"
+    dest = archive_dir / f"{safe_key}{suffix}"
+    try:
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        if dest.exists():
+            stem = dest.stem
+            for index in range(2, 100):
+                candidate = dest.with_name(f"{stem}.{index}{dest.suffix}")
+                if not candidate.exists():
+                    dest = candidate
+                    break
+        shutil.copy2(src, dest)
+    except Exception:
+        return None
+    return dest
+
+
+def _review_sidecar_owned_by_sprint(path: Path, sid: str) -> bool:
+    """Constrain evidence quarantine to files owned by this sprint."""
+    try:
+        root = SPRINTS_DIR.resolve()
+        resolved = path.expanduser().resolve()
+    except (OSError, RuntimeError):
+        return False
+    sid = str(sid or "").strip()
+    if not sid or Path(sid).name != sid or sid in {".", ".."}:
+        return False
+    try:
+        sprint_dir = (root / sid).resolve()
+        if not sprint_dir.is_relative_to(root):
+            return False
+        if resolved.parent == root and resolved.name.startswith(f"{sid}."):
+            return True
+        return resolved.is_relative_to(sprint_dir)
+    except (OSError, RuntimeError):
+        return False
+
+
+def _archive_node_review_sidecars(sid: str, node_id: str, handoff_file: Path | None, eval_json_path: str | Path, attempt: int) -> dict[str, Any]:
+    archived: dict[str, Any] = {}
+    attempt_archived: dict[str, str] = {}
+    ignored_unsafe: dict[str, str] = {}
     candidates: list[tuple[str, Path]] = []
     if handoff_file is not None:
         candidates.append(("handoff_md", Path(handoff_file)))
     for key, path in (
         ("eval_json", Path(str(eval_json_path))) if str(eval_json_path or "").strip() else ("eval_json", Path()),
         ("eval_md", _eval_md_file(sid, node_id)),
+        ("eval_snapshot", _eval_snapshot_file(sid, node_id)),
     ):
         if str(path) not in {"", "."}:
             candidates.append((key, path))
@@ -1615,14 +3266,136 @@ def _archive_node_review_sidecars(sid: str, node_id: str, handoff_file: Path | N
             continue
         if resolved in seen or not resolved.exists():
             continue
+        if not _review_sidecar_owned_by_sprint(resolved, sid):
+            ignored_unsafe[key] = str(resolved)
+            continue
         seen.add(resolved)
+        attempt_copy = _copy_attempt_archive(resolved, sid, node_id, attempt, key)
+        if attempt_copy is not None:
+            attempt_archived[key] = str(attempt_copy)
         archive = _archive_path_for_repair(resolved, attempt)
         try:
             resolved.replace(archive)
         except Exception:
             continue
         archived[key] = str(archive)
+    if attempt_archived:
+        archived["_attempt_archive_dir"] = str(_attempt_archive_dir(sid, node_id, attempt))
+        archived["_attempt_sidecars"] = attempt_archived
+    if ignored_unsafe:
+        archived["_ignored_unsafe_sidecars"] = ignored_unsafe
     return archived
+
+
+def resume_human_review(
+    graph_path: str | Path,
+    node_id: str,
+    *,
+    expected_generation: int,
+    actor: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Explicitly resume one blocked node after quarantining old evidence.
+
+    This is intentionally the only product-facing exit from
+    ``needs_human_review``.  Validation happens before any sidecar is moved;
+    the scheduler then records the human-authored, generation-bearing status
+    transition and opens a fresh repair/evidence generation.
+    """
+    try:
+        graph = load_graph(graph_path)
+        node = _node_by_id(graph, node_id)
+        if node is None:
+            return {"ok": False, "reason": f"unknown node: {node_id}", "node": node_id}
+        validated = validate_human_review_resume(
+            graph,
+            node_id,
+            expected_generation=expected_generation,
+            actor=actor,
+            reason=reason,
+        )
+    except ValueError as exc:
+        return {"ok": False, "reason": str(exc), "node": node_id}
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": f"human_resume_validation_error:{type(exc).__name__}:{exc}",
+            "node": node_id,
+        }
+
+    sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
+    next_repair_attempt = _node_repair_attempts(node) + 1
+    handoff_file = _existing_node_handoff(sid, node, graph)
+    eval_json_path = str(node.get("eval_json") or _eval_json_file(sid, node_id))
+    archived = _archive_node_review_sidecars(
+        sid,
+        node_id,
+        handoff_file,
+        eval_json_path,
+        next_repair_attempt,
+    )
+    try:
+        retired_attempt = retire_execution_attempt_for_human_resume(
+            node,
+            human_review_generation=int(validated["generation"]),
+            actor=str(validated["actor"]),
+            reason=str(validated["reason"]),
+            now=_utc_now(),
+        )
+        result = commit_human_review_resume(
+            graph,
+            node_id,
+            expected_generation=int(validated["generation"]),
+            actor=str(validated["actor"]),
+            reason=str(validated["reason"]),
+            archived_sidecars=archived,
+        )
+        save_graph(graph_path, graph)
+    except ValueError as exc:
+        return {
+            "ok": False,
+            "reason": str(exc),
+            "node": node_id,
+            "archived_sidecars": archived,
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": f"human_resume_commit_error:{type(exc).__name__}:{exc}",
+            "node": node_id,
+            "archived_sidecars": archived,
+        }
+
+    result["retired_execution_attempt"] = retired_attempt or {}
+    _append_event(
+        sid,
+        {
+            "event": "graph_node_human_review_resumed",
+            "by": "human",
+            "severity": "info",
+            "data": {
+                "node": node_id,
+                "human_review_generation": result.get("generation"),
+                "repair_attempt": result.get("repair_attempt"),
+                "actor": result.get("actor"),
+                "reason": result.get("reason"),
+                "archived_sidecars": archived,
+            },
+        },
+    )
+    _record_node_runstate(
+        sid,
+        node_id,
+        {
+            "human_review_generation": result.get("generation"),
+            "repair_attempt": result.get("repair_attempt"),
+            "last_eval_result": "HUMAN_RESUME",
+            "last_eval_reason": result.get("reason"),
+            "next_action": "dispatch_fresh_execution",
+            "status": "pending",
+        },
+    )
+    return result
 
 
 def _archive_stale_repair_eval_sidecars(
@@ -1632,7 +3405,7 @@ def _archive_stale_repair_eval_sidecars(
     handoff_file: Path | None,
     eval_json_path: str | Path,
     status: str,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     if status in {"passed", "failed"}:
         return {}
     attempt = _node_repair_attempts(node)
@@ -1644,7 +3417,7 @@ def _archive_stale_repair_eval_sidecars(
     except Exception:
         return {}
 
-    archived: dict[str, str] = {}
+    archived: dict[str, Any] = {}
     candidates: list[tuple[str, Path]] = []
     if str(eval_json_path or "").strip():
         candidates.append(("eval_json", Path(str(eval_json_path))))
@@ -1687,6 +3460,165 @@ def _node_eval_dispatched_after(node: dict[str, Any], marker: datetime.datetime)
         if dispatched_at and dispatched_at > marker:
             return True
     return False
+
+
+def _eval_payload_generation(payload: dict[str, Any]) -> int | None:
+    """Best-effort repair/eval generation parsed from an evaluator JSON sidecar."""
+    raw_values: list[Any] = [
+        payload.get("eval_generation"),
+        payload.get("repair_attempt"),
+        payload.get("repair_generation"),
+    ]
+    context = payload.get("eval_context")
+    if isinstance(context, dict):
+        raw_values.extend([
+            context.get("eval_generation"),
+            context.get("repair_attempt"),
+            context.get("repair_generation"),
+        ])
+    for raw in raw_values:
+        try:
+            text = str(raw).strip()
+            if text:
+                return int(text)
+        except Exception:
+            continue
+    return None
+
+
+def _payload_time(payload: dict[str, Any], *keys: str) -> datetime.datetime | None:
+    for key in keys:
+        value = str(payload.get(key) or "").strip()
+        parsed = _parse_utc(value)
+        if parsed:
+            return parsed
+    context = payload.get("eval_context")
+    if isinstance(context, dict):
+        for key in keys:
+            value = str(context.get(key) or "").strip()
+            parsed = _parse_utc(value)
+            if parsed:
+                return parsed
+    return None
+
+
+def _eval_payload_stale_for_current_repair(node: dict[str, Any], payload: dict[str, Any]) -> str:
+    """Return a reason if an eval sidecar is not valid for this node's current repair generation.
+
+    A repaired node must not be decided by an evaluator/doctor output from an older evidence
+    snapshot. Normal first-pass evals are unaffected. For repaired nodes we accept either explicit
+    matching generation metadata or ordinary evaluator output whose timestamps do not predate the
+    repair marker. Scheduler/doctor backfills without generation are treated as stale because they
+    are exactly the artifact class that can repopulate canonical eval sidecars after repair.
+    """
+    attempt = _node_repair_attempts(node)
+    if attempt <= 0 or not payload:
+        return ""
+
+    generation = _eval_payload_generation(payload)
+    if generation is not None and generation != attempt:
+        return f"eval_generation_mismatch:{generation}!={attempt}"
+
+    assignment_dispatch_ids = {
+        str(item.get("dispatch_id") or "").strip()
+        for item in (node.get("eval_assignments") or [])
+        if isinstance(item, dict) and str(item.get("dispatch_id") or "").strip()
+    }
+    eval_context = payload.get("eval_context") if isinstance(payload.get("eval_context"), dict) else {}
+    payload_dispatch_id = str(
+        payload.get("eval_dispatch_id")
+        or eval_context.get("eval_dispatch_id")
+        or ""
+    ).strip()
+    if payload_dispatch_id and assignment_dispatch_ids and payload_dispatch_id not in assignment_dispatch_ids:
+        return "eval_dispatch_id_mismatch_after_repair"
+
+    assignment_pm_task_ids = {
+        str(item.get("pm_task_id") or "").strip()
+        for item in (node.get("eval_assignments") or [])
+        if isinstance(item, dict) and str(item.get("pm_task_id") or "").strip()
+    }
+    payload_pm_task_id = str(
+        payload.get("pm_task_id")
+        or payload.get("task_id")
+        or eval_context.get("pm_task_id")
+        or ""
+    ).strip()
+    if payload_pm_task_id and assignment_pm_task_ids and payload_pm_task_id not in assignment_pm_task_ids:
+        return "eval_pm_task_id_mismatch_after_repair"
+
+    repair_created_at = _repair_context_created_at(node)
+    payload_at = _payload_time(
+        payload,
+        "evidence_snapshot_at",
+        "eval_instruction_created_at",
+        "checked_at",
+        "created_at",
+        "finished_at",
+        "updated_at",
+    )
+    if repair_created_at and payload_at and payload_at < repair_created_at:
+        return "eval_evidence_snapshot_predates_repair"
+
+    if generation is None:
+        generated_by = str(payload.get("generated_by") or "").strip().lower()
+        generation_mode = str(payload.get("generation_mode") or "").strip().lower()
+        if generated_by == "graph_scheduler.doctor" or generation_mode in {"repair_backfill", "manual_node_eval"}:
+            return "eval_missing_repair_generation_after_repair"
+    return ""
+
+
+def _archive_current_repair_stale_eval_sidecars(
+    sid: str,
+    node: dict[str, Any],
+    node_id: str,
+    eval_json_path: str | Path,
+    reason: str,
+) -> dict[str, Any]:
+    if not reason:
+        return {}
+    candidates: list[tuple[str, Path]] = []
+    if str(eval_json_path or "").strip():
+        candidates.append(("eval_json", Path(str(eval_json_path))))
+    candidates.append(("eval_md", _eval_md_file(sid, node_id)))
+
+    archived: dict[str, Any] = {}
+    attempt_archived: dict[str, str] = {}
+    attempt = max(1, _node_repair_attempts(node))
+    seen: set[Path] = set()
+    for key, raw_path in candidates:
+        try:
+            path = raw_path.expanduser()
+            if path in seen or not path.exists():
+                continue
+            seen.add(path)
+            attempt_copy = _copy_attempt_archive(path, sid, node_id, attempt, key)
+            if attempt_copy is not None:
+                attempt_archived[key] = str(attempt_copy)
+            archive = _archive_path_for_repair(path, attempt)
+            path.replace(archive)
+        except Exception:
+            continue
+        archived[key] = str(archive)
+    if attempt_archived:
+        archived["_attempt_archive_dir"] = str(_attempt_archive_dir(sid, node_id, attempt))
+        archived["_attempt_sidecars"] = attempt_archived
+    if archived:
+        node["stale_eval_archived_at"] = _utc_now()
+        node["stale_eval_archive_reason"] = reason
+        _append_event(sid, {
+            "event": "graph_eval_sidecar_archived_after_repair",
+            "by": "graph-dispatch",
+            "severity": "warn",
+            "data": {"node": node_id, "reason": reason, "archived": archived},
+        })
+        _record_node_runstate(sid, node_id, {
+            "last_eval_result": "STALE_ARCHIVED",
+            "last_eval_reason": reason,
+            "next_action": "dispatch_fresh_eval",
+            "status": str(node.get("status") or ""),
+        })
+    return archived
 
 
 def _archive_late_pre_repair_eval_sidecars(
@@ -1781,6 +3713,9 @@ def _start_node_repair_from_eval_fail(
     if prior_attempts >= max_attempts:
         # Repair budget exhausted: the reconcile caller falls through and marks this node terminal
         # `failed`. Record the (otherwise silent) exhaustion so the terminal cause is provable from disk.
+        _ledger_record(sid, node_id=node_id, kind="repair_exhausted",
+                       author={"type": "policy"}, repair_attempt=prior_attempts,
+                       note="repair_budget_exhausted")
         _record_node_runstate(sid, node_id, {
             "repair_attempt": prior_attempts,
             "max_repair_attempts": max_attempts,
@@ -1828,6 +3763,11 @@ def _start_node_repair_from_eval_fail(
         artifacts.pop("eval_json", None)
         artifacts.pop("handoff_md", None)
 
+    _ledger_record(sid, node_id=node_id, kind="repair_start", author={"type": "policy"},
+                   repair_attempt=attempt, eval_generation=attempt,
+                   note=f"repair_requested_from_eval_sidecar:{Path(eval_json_path).name}")
+    _ledger_transition(sid, node_id, str(node.get("status") or ""), "failed_review",
+                       "_start_node_repair_from_eval_fail")
     node["status"] = "failed_review"
     node["repair_attempts"] = attempt
     node["repair_context"] = repair_context
@@ -1871,13 +3811,27 @@ def _ledger_dispatch_for(sid: str, instruction_file: Path) -> dict[str, Any]:
     return found
 
 
-def _active_multi_task_status_for(sid: str, node_id: str) -> dict[str, Any] | None:
+def _active_multi_task_status_for(
+    sid: str,
+    node_id: str,
+    node: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     """Return an active multi-task worker for this graph node, if one exists.
 
     Direct graph dispatch uses pane leases; multi-task dispatch owns its own
     process lifecycle under run/multi-task. Reconcile must not reset a node to
     pending while a multi-task worker for the same graph/node is still active.
     """
+    if execution_attempt_validation_error(node or {}):
+        return None
+    attempt = current_execution_attempt(node or {})
+    expected_task_id = ""
+    if attempt is not None:
+        source = str(attempt.get("source") or "").strip()
+        if not source.startswith("multi_task_"):
+            return None
+        expected_task_id = str(attempt.get("task_id") or "").strip()
+
     newest: tuple[str, dict[str, Any]] | None = None
     for status_path in MULTI_TASK_RUN_DIR.glob("*/status.json"):
         try:
@@ -1888,8 +3842,25 @@ def _active_multi_task_status_for(sid: str, node_id: str) -> dict[str, Any] | No
             continue
         if str(status.get("node_id") or "") != node_id:
             continue
-        task_status = str(status.get("status") or "").lower()
-        if task_status not in {"dispatched", "running", "in_progress"}:
+        row_task_id = str(status.get("id") or status.get("task_id") or "").strip()
+        if expected_task_id and row_task_id != expected_task_id:
+            continue
+        # A submitted status is no longer active once its exact durable result
+        # is terminal.  Never infer that from a neighboring task's result.
+        terminal_result = correlated_terminal_result(status)
+        if terminal_result is not None:
+            if node is not None:
+                converge_execution_attempt_result(
+                    node,
+                    terminal_result,
+                    result_path=str(status.get("result_path") or ""),
+                )
+            continue
+        terminal_status = converge_execution_attempt_status(node or {}, status)
+        if terminal_status.get("matched"):
+            continue
+        task_status = str(status.get("effective_status") or status.get("status") or "").lower()
+        if task_status not in ACTIVE_TASK_STATUSES:
             continue
         updated = str(status.get("updated_at") or status.get("created_at") or "")
         if newest is None or updated > newest[0]:
@@ -1897,7 +3868,12 @@ def _active_multi_task_status_for(sid: str, node_id: str) -> dict[str, Any] | No
     return newest[1] if newest else None
 
 
-def _latest_operator_result_for(sid: str, node_id: str, operator_id: str = "") -> dict[str, Any] | None:
+def _latest_operator_result_for(
+    sid: str,
+    node_id: str,
+    operator_id: str = "",
+    task_id: str = "",
+) -> dict[str, Any] | None:
     """Return the newest terminal PM/operator result for a graph node.
 
     Operator-pool dispatch is asynchronous: `pm_dispatch submit` can succeed
@@ -1917,6 +3893,8 @@ def _latest_operator_result_for(sid: str, node_id: str, operator_id: str = "") -
             continue
         if operator_id and str(data.get("operator_id") or "") != operator_id:
             continue
+        if task_id and str(data.get("task_id") or "") != task_id:
+            continue
         status = str(data.get("status") or "").strip().lower()
         if status not in {"completed", "failed", "failed_missing_handoff", "failed_stale_handoff", "cancelled", "error"}:
             continue
@@ -1928,7 +3906,86 @@ def _latest_operator_result_for(sid: str, node_id: str, operator_id: str = "") -
     return newest[1] if newest else None
 
 
-def _latest_pm_task_record_for(sid: str, node_id: str, operator_id: str = "") -> dict[str, Any] | None:
+def _builder_operator_result_gate(sid: str, node: dict[str, Any]) -> dict[str, Any]:
+    """Require the exact asynchronous builder task to finish before review.
+
+    A PM-dispatched worker can write its handoff and mark the graph node
+    ``reviewing`` before the surrounding Codex/Claude process exits.  Handoff
+    presence is therefore not a stable artifact boundary: evaluation or
+    publication at that point can consume bytes the same worker later changes.
+    The operator runtime's atomic ``result.json`` is the durable completion
+    boundary for that exact task.
+    """
+    attempt_error = execution_attempt_validation_error(node)
+    if attempt_error:
+        return {
+            "required": True,
+            "ok": False,
+            "complete": False,
+            "reason": "builder_execution_attempt_invalid",
+            "detail": attempt_error,
+        }
+    attempt = current_execution_attempt(node)
+    if attempt is not None:
+        if not bool(attempt.get("requires_operator_result")):
+            return {"required": False, "ok": True, "complete": True}
+        task_id = str(attempt.get("task_id") or "").strip()
+        operator_id = str(attempt.get("operator_id") or "").strip()
+    else:
+        # Backward compatibility for graphs created before node-attempt v1.
+        if str(node.get("dispatched_via") or "").strip() != "pm_dispatch":
+            return {"required": False, "ok": True, "complete": True}
+        task_id = str(node.get("pm_task_id") or "").strip()
+        operator_id = str(node.get("operator_id") or "").strip()
+    if not task_id:
+        return {"required": False, "ok": True, "complete": True}
+    node_id = str(node.get("id") or "").strip()
+    result = _latest_operator_result_for(
+        sid,
+        node_id,
+        operator_id=operator_id,
+        task_id=task_id,
+    )
+    if not result:
+        return {
+            "required": True,
+            "ok": False,
+            "complete": False,
+            "reason": "builder_operator_result_pending",
+            "task_id": task_id,
+            "operator_id": operator_id,
+        }
+    status = str(result.get("status") or "").strip().lower()
+    try:
+        exit_code = int(result.get("exit_code"))
+    except (TypeError, ValueError):
+        exit_code = None
+    if attempt is not None:
+        converge_execution_attempt_result(
+            node,
+            result,
+            result_path=str(result.get("_result_json") or ""),
+        )
+    ok = status == "completed" and exit_code == 0
+    return {
+        "required": True,
+        "ok": ok,
+        "complete": True,
+        "reason": "" if ok else f"builder_operator_result_{status or 'failed'}",
+        "task_id": task_id,
+        "operator_id": operator_id,
+        "status": status,
+        "exit_code": exit_code,
+        "result_json": str(result.get("_result_json") or ""),
+    }
+
+
+def _latest_pm_task_record_for(
+    sid: str,
+    node_id: str,
+    operator_id: str = "",
+    task_id: str = "",
+) -> dict[str, Any] | None:
     """Return the newest terminal PM task record for a graph node."""
     root = HARNESS_DIR / "run" / "pm-inbox"
     if not root.exists():
@@ -1941,6 +3998,8 @@ def _latest_pm_task_record_for(sid: str, node_id: str, operator_id: str = "") ->
         if str(data.get("node_id") or "") != node_id:
             continue
         if operator_id and str(data.get("operator_id") or "") != operator_id:
+            continue
+        if task_id and str(data.get("task_id") or "") != task_id:
             continue
         role = str(data.get("requested_role") or "").strip().lower()
         if role and role not in {"builder", "implementation", "implementer", "coder", "dev"}:
@@ -1968,25 +4027,57 @@ def _operator_terminal_result_closeout(
     node: dict[str, Any],
     graph: dict[str, Any],
 ) -> dict[str, Any] | None:
+    attempt_error = execution_attempt_validation_error(node)
+    if attempt_error:
+        return {
+            "reason": "execution_attempt_invalid",
+            "operator_status": "error",
+            "operator_id": str(node.get("operator_id") or ""),
+            "detail": attempt_error,
+        }
+    attempt = current_execution_attempt(node)
+    if attempt is not None and not bool(attempt.get("requires_operator_result")):
+        return None
     pane = str(node.get("assigned_to") or "").strip()
-    operator_id = ""
-    if pane.startswith("operator:"):
+    operator_id = str((attempt or {}).get("operator_id") or "").strip()
+    if not operator_id and pane.startswith("operator:"):
         operator_id = pane.split(":", 1)[1].strip()
-    elif pane:
+    elif not operator_id and pane:
         operator_id = pane
     if not operator_id:
         operator_id = str(node.get("operator_id") or "").strip()
     if not operator_id:
         return None
-    result = _latest_operator_result_for(sid, node_id, operator_id=operator_id)
+    task_id = str((attempt or {}).get("task_id") or node.get("pm_task_id") or "").strip()
+    result = _latest_operator_result_for(
+        sid,
+        node_id,
+        operator_id=operator_id,
+        task_id=task_id,
+    )
     if not result:
-        result = _latest_pm_task_record_for(sid, node_id, operator_id=operator_id)
+        result = _latest_pm_task_record_for(
+            sid,
+            node_id,
+            operator_id=operator_id,
+            task_id=task_id,
+        )
     if not result:
         return None
+    if attempt is not None and result.get("_result_json"):
+        converge_execution_attempt_result(
+            node,
+            result,
+            result_path=str(result.get("_result_json") or ""),
+        )
     status = str(result.get("status") or "").strip().lower()
-    if status == "completed" and _existing_node_handoff(sid, node, graph):
+    try:
+        exit_code = int(result.get("exit_code"))
+    except (TypeError, ValueError):
+        exit_code = None
+    if status == "completed" and exit_code == 0 and _existing_node_handoff(sid, node, graph):
         return None
-    if status == "completed":
+    if status == "completed" and exit_code == 0:
         return {
             "reason": "failed_contract_closeout",
             "operator_status": status,
@@ -2010,7 +4101,7 @@ def _operator_terminal_result_closeout(
         "result_json": str(result.get("_result_json") or ""),
         "pm_task_json": str(result.get("_pm_task_json") or ""),
         "operator_id": operator_id,
-        "exit_code": result.get("exit_code"),
+        "exit_code": exit_code,
         "detail": str(result.get("failure_reason") or "")[:500],
     }
 
@@ -2051,6 +4142,68 @@ def _cooldown_operator_after_contract_closeout(operator_id: str, closeout: dict[
         return {"ok": False, "reason": f"{type(exc).__name__}: {exc}", "operator_id": operator_id}
 
 
+def _requeue_node_after_operator_closeout(
+    sid: str,
+    node_id: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    status: str,
+    closeout: dict[str, Any],
+) -> dict[str, Any]:
+    """Apply the existing retry semantics for a terminal failed worker."""
+    if str(node_status(graph, node_id) or "").strip().lower() == "needs_human_review":
+        return {
+            "node": node_id,
+            "status": "needs_human_review",
+            "reason": "awaiting_explicit_human_resume",
+        }
+    record_execution_attempt_closeout_failure(node, closeout, now=_utc_now())
+    pane = str(node.get("assigned_to") or "").strip()
+    dispatch_id = str(node.get("dispatch_id") or "").strip()
+    operator_cooldown: dict[str, Any] = {}
+    if closeout.get("reason") == "failed_contract_closeout":
+        operator_cooldown = _cooldown_operator_after_contract_closeout(
+            str(closeout.get("operator_id") or ""),
+            closeout,
+        )
+    if pane and dispatch_id:
+        release_lease(pane, dispatch_id, f"graph_dispatch_reconcile_{closeout['reason']}")
+    node.pop("assigned_to", None)
+    node.pop("dispatch_id", None)
+    node["dispatch_retry_reason"] = closeout["reason"]
+    node["last_operator_closeout_failure"] = closeout
+    if operator_cooldown:
+        node["last_operator_cooldown_after_closeout"] = operator_cooldown
+    node["updated_at"] = _utc_now()
+    _ledger_transition(
+        sid,
+        node_id,
+        status,
+        "pending",
+        "_reconcile_existing_dispatches",
+        note=str(closeout["reason"]),
+    )
+    node["status"] = "pending"
+    graph.setdefault("node_results", {}).pop(node_id, None)
+    _append_dispatch_ledger(
+        "dispatch_reassigned_after_operator_closeout_failure",
+        sid,
+        pane,
+        dispatch_id,
+        {"node": node_id, **closeout, "operator_cooldown": operator_cooldown},
+    )
+    return {
+        "node": node_id,
+        "pane": pane,
+        "dispatch_id": dispatch_id,
+        "status": "pending",
+        "reason": closeout["reason"],
+        "operator_status": closeout.get("operator_status"),
+        "result_json": closeout.get("result_json"),
+        "operator_cooldown": operator_cooldown,
+    }
+
+
 def _sidecar_reconcile_dependency_blockers(graph: dict[str, Any], node: dict[str, Any]) -> list[str]:
     blockers: list[str] = []
     for dep in node.get("depends_on") or []:
@@ -2080,6 +4233,13 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
         if not node_id:
             continue
         status = node_status(graph, node_id)
+        if status == "needs_human_review":
+            # Human escalation is an automation terminal.  Do not inspect or
+            # consume old handoff/eval/operator sidecars here: rc.9 repeatedly
+            # observed the same failed result, reset this node to pending, and
+            # escalated it again (28 loops).  Only resume_human_review may
+            # quarantine that evidence and open the next generation.
+            continue
         handoff_file = _existing_node_handoff(sid, node, graph)
         dependency_blockers = _sidecar_reconcile_dependency_blockers(graph, node) if handoff_file else []
         eval_json_path = str(node.get("eval_json") or _eval_json_file(sid, node_id))
@@ -2091,6 +4251,13 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             str(status or "").strip().lower(),
         )
         if late_pre_repair_eval_archived:
+            _ledger_record(
+                sid, node_id=node_id, kind="eval_verdict",
+                author={"type": "evaluator"},
+                repair_attempt=_node_repair_attempts(node),
+                gate_consumable=False, archived=True,
+                stale_reason="late_pre_repair_eval_output_archived",
+            )
             repaired.append(
                 {
                     "node": node_id,
@@ -2108,6 +4275,13 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             str(status or "").strip().lower(),
         ) if not late_pre_repair_eval_archived else {}
         if stale_eval_archived:
+            _ledger_record(
+                sid, node_id=node_id, kind="eval_verdict",
+                author={"type": "evaluator"},
+                repair_attempt=_node_repair_attempts(node),
+                gate_consumable=False, archived=True,
+                stale_reason="repair_handoff_newer_than_eval_sidecar",
+            )
             repaired.append(
                 {
                     "node": node_id,
@@ -2122,6 +4296,38 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             if backfilled_eval is not None:
                 eval_json_path = str(backfilled_eval)
         eval_payload = {} if (late_pre_repair_eval_archived or stale_eval_archived) else (_read_json_file_safe(eval_json_path) if eval_json_path else {})
+        stale_eval_generation_reason = _eval_payload_stale_for_current_repair(node, eval_payload)
+        if stale_eval_generation_reason:
+            # AC-R4.4: stale-generation verdict evidence is archived, never applied —
+            # recorded in the gate ledger as a non-consumable eval_verdict.
+            _ledger_record(
+                sid, node_id=node_id, kind="eval_verdict",
+                author={"type": "evaluator"},
+                verdict=str(eval_payload.get("verdict") or eval_payload.get("status") or "") or None,
+                eval_generation=_eval_payload_generation(eval_payload),
+                repair_attempt=_node_repair_attempts(node),
+                generation_mode=str(eval_payload.get("generation_mode") or "") or None,
+                gate_consumable=False, archived=True,
+                stale_reason=stale_eval_generation_reason,
+            )
+            archived_generation_eval = _archive_current_repair_stale_eval_sidecars(
+                sid,
+                node,
+                node_id,
+                eval_json_path,
+                stale_eval_generation_reason,
+            )
+            if archived_generation_eval:
+                repaired.append(
+                    {
+                        "node": node_id,
+                        "status": status,
+                        "reason": "stale_eval_generation_archived",
+                        "stale_reason": stale_eval_generation_reason,
+                        "archived_sidecars": archived_generation_eval,
+                    }
+                )
+            eval_payload = {}
         raw_eval_verdict = str(eval_payload.get("verdict") or eval_payload.get("status") or "").strip().lower()
         if raw_eval_verdict in {"pass", "passed", "ok", "success", "succeeded"}:
             eval_verdict = "PASS"
@@ -2129,6 +4335,38 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             eval_verdict = "FAIL"
         else:
             eval_verdict = ""
+        builder_result_gate = _builder_operator_result_gate(sid, node)
+        if handoff_file and builder_result_gate.get("required") and not builder_result_gate.get("ok"):
+            if builder_result_gate.get("complete"):
+                closeout = _operator_terminal_result_closeout(sid, node_id, node, graph) or {
+                    "reason": str(builder_result_gate.get("reason") or "builder_operator_result_failed"),
+                    "operator_status": builder_result_gate.get("status"),
+                    "result_json": builder_result_gate.get("result_json"),
+                    "operator_id": builder_result_gate.get("operator_id"),
+                    "exit_code": builder_result_gate.get("exit_code"),
+                }
+                repaired.append(
+                    _requeue_node_after_operator_closeout(
+                        sid,
+                        node_id,
+                        node,
+                        graph,
+                        str(status or ""),
+                        closeout,
+                    )
+                )
+            else:
+                repaired.append(
+                    {
+                        "node": node_id,
+                        "status": status,
+                        "reason": "builder_operator_result_pending",
+                        "handoff": str(handoff_file),
+                        "task_id": builder_result_gate.get("task_id"),
+                        "operator_id": builder_result_gate.get("operator_id"),
+                    }
+                )
+            continue
         if handoff_file and eval_verdict in {"PASS", "FAIL"} and status in {"passed", "failed"}:
             stale_eval_keys = [
                 "eval_assigned_to",
@@ -2167,6 +4405,25 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             )
             continue
         if handoff_file and eval_verdict in {"PASS", "FAIL"} and status in {"pending", "queued", "blocked", "assigned", "dispatched", "in_progress", "running", "reviewing", "ready_for_review", "needs_human_review", "failed_review", ""}:
+            if _graph_is_contracted(graph):
+                snapshot_validation = _validate_eval_artifact_snapshot(
+                    sid,
+                    node,
+                    graph,
+                    eval_payload,
+                )
+                if not snapshot_validation.get("ok"):
+                    integrity_block = _block_eval_snapshot_integrity(
+                        sid,
+                        node,
+                        graph,
+                        eval_payload,
+                        snapshot_validation,
+                        eval_json=eval_json_path,
+                        writer="_reconcile_existing_dispatches",
+                    )
+                    repaired.append(integrity_block)
+                    continue
             pane = str(node.get("assigned_to") or "").strip()
             dispatch_id = str(node.get("dispatch_id") or "").strip()
             if pane and dispatch_id:
@@ -2217,6 +4474,146 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     }
                 )
                 continue
+            if eval_verdict == "PASS" and _graph_is_contracted(graph):
+                closeout = _finalize_node_pass(
+                    sid,
+                    node,
+                    graph,
+                    eval_json=eval_json_path,
+                    reason=f"reconciled_from_eval_sidecar:{Path(eval_json_path).name}",
+                )
+                if not closeout.get("ok"):
+                    closeout_reason = str(closeout.get("reason") or "contracted_closeout_failed")
+                    if closeout_reason in _EVAL_INTEGRITY_BLOCK_REASONS:
+                        integrity_validation = (
+                            closeout.get("eval_artifact_snapshot")
+                            if isinstance(closeout.get("eval_artifact_snapshot"), dict)
+                            else {"ok": False, "reason": closeout_reason}
+                        )
+                        integrity_block = _block_eval_snapshot_integrity(
+                            sid,
+                            node,
+                            graph,
+                            eval_payload,
+                            integrity_validation,
+                            eval_json=eval_json_path,
+                            writer="_reconcile_existing_dispatches",
+                        )
+                        repaired.append(integrity_block)
+                        continue
+                    proof_gate = closeout.get("proof_gate") if isinstance(closeout.get("proof_gate"), dict) else {}
+                    if closeout_reason == "proof_obligations_failed":
+                        missing = [
+                            f"{item.get('requirement')}:{item.get('field')}"
+                            for item in (proof_gate.get("missing") or [])
+                            if isinstance(item, dict)
+                        ]
+                        proof_fail_payload = {
+                            "verdict": "FAIL",
+                            "summary": "reconcile proof gate: proof_obligations_failed — "
+                                       + ", ".join(missing[:8]),
+                            "failed_conditions": missing[:20],
+                        }
+                        repair_context = _start_node_repair_from_eval_fail(
+                            graph,
+                            node,
+                            sid,
+                            node_id,
+                            handoff_file,
+                            eval_json_path,
+                            proof_fail_payload,
+                        )
+                        if repair_context is not None:
+                            repaired.append(
+                                {
+                                    "node": node_id,
+                                    "status": "failed_review",
+                                    "reason": "reconcile_proof_gate_failed_repair_requested",
+                                    "handoff": str(handoff_file),
+                                    "eval_json": eval_json_path,
+                                    "proof_gate": proof_gate,
+                                    "repair_attempt": repair_context.get("attempt"),
+                                    "max_repair_attempts": repair_context.get("max_attempts"),
+                                }
+                            )
+                            continue
+                        node.pop("assigned_to", None)
+                        node.pop("dispatch_id", None)
+                        mark_node_result(
+                            graph,
+                            node_id,
+                            "failed",
+                            gate_status="failed",
+                            note="reconcile_proof_gate_failed:proof_obligations_failed",
+                        )
+                        node["status"] = "failed"
+                        node["updated_at"] = _utc_now()
+                        node["eval_json"] = eval_json_path
+                        repaired.append(
+                            {
+                                "node": node_id,
+                                "status": "failed",
+                                "reason": "reconcile_proof_gate_failed_terminal",
+                                "handoff": str(handoff_file),
+                                "eval_json": eval_json_path,
+                                "proof_gate": proof_gate,
+                            }
+                        )
+                        continue
+                    if closeout_reason == "workspace_publish_failed":
+                        workspace_publish = closeout.get("workspace_publish") or {}
+                        blocked_reason = str(workspace_publish.get("reason") or "workspace_publish_failed")
+                        next_action = (
+                            "Restore the sprint-to-workspace binding or repair the unsafe manifest, "
+                            "then explicitly resume this node."
+                        )
+                        enter_node_human_review(
+                            graph,
+                            node_id,
+                            reason=blocked_reason,
+                            next_action=next_action,
+                            writer="_reconcile_existing_dispatches",
+                        )
+                        node["workspace_publish"] = workspace_publish
+                        node["updated_at"] = _utc_now()
+                        repaired.append(
+                            {
+                                "node": node_id,
+                                "status": "needs_human_review",
+                                "reason": "workspace_publish_failed",
+                                "workspace_publish": workspace_publish,
+                            }
+                        )
+                        continue
+                    repaired.append(
+                        {
+                            "node": node_id,
+                            "status": status,
+                            "reason": closeout_reason,
+                            "eval_json": eval_json_path,
+                            **{
+                                key: closeout[key]
+                                for key in ("proof_gate", "research_quality_gate")
+                                if key in closeout
+                            },
+                        }
+                    )
+                    continue
+                node.pop("assigned_to", None)
+                node.pop("dispatch_id", None)
+                repaired.append(
+                    {
+                        "node": node_id,
+                        "status": "passed",
+                        "reason": "eval_sidecar_exists",
+                        "handoff": str(handoff_file),
+                        "eval_json": eval_json_path,
+                        "verdict": eval_verdict,
+                        "closeout_receipt": closeout.get("closeout_receipt"),
+                    }
+                )
+                continue
+
             node.pop("assigned_to", None)
             node.pop("dispatch_id", None)
             verdict_status = "passed" if eval_verdict == "PASS" else "failed"
@@ -2281,7 +4678,7 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                         "handoff": str(handoff_file),
                     }
                 )
-        active_multi_task = _active_multi_task_status_for(sid, node_id)
+        active_multi_task = _active_multi_task_status_for(sid, node_id, node)
         if active_multi_task and status in {"pending", "queued", "blocked", "assigned", "dispatched", "in_progress", "running", ""}:
             dispatch_id = str(active_multi_task.get("id") or active_multi_task.get("dispatch_id") or "").strip()
             window = str(active_multi_task.get("window") or "").strip()
@@ -2301,43 +4698,15 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
         if status in {"assigned", "dispatched", "in_progress", "running"}:
             closeout = _operator_terminal_result_closeout(sid, node_id, node, graph)
             if closeout:
-                pane = str(node.get("assigned_to") or "").strip()
-                dispatch_id = str(node.get("dispatch_id") or "").strip()
-                operator_cooldown = {}
-                if closeout.get("reason") == "failed_contract_closeout":
-                    operator_cooldown = _cooldown_operator_after_contract_closeout(
-                        str(closeout.get("operator_id") or ""),
+                repaired.append(
+                    _requeue_node_after_operator_closeout(
+                        sid,
+                        node_id,
+                        node,
+                        graph,
+                        str(status or ""),
                         closeout,
                     )
-                if pane and dispatch_id:
-                    release_lease(pane, dispatch_id, f"graph_dispatch_reconcile_{closeout['reason']}")
-                node.pop("assigned_to", None)
-                node.pop("dispatch_id", None)
-                node["dispatch_retry_reason"] = closeout["reason"]
-                node["last_operator_closeout_failure"] = closeout
-                if operator_cooldown:
-                    node["last_operator_cooldown_after_closeout"] = operator_cooldown
-                node["updated_at"] = _utc_now()
-                node["status"] = "pending"
-                graph.setdefault("node_results", {}).pop(node_id, None)
-                _append_dispatch_ledger(
-                    "dispatch_reassigned_after_operator_closeout_failure",
-                    sid,
-                    pane,
-                    dispatch_id,
-                    {"node": node_id, **closeout, "operator_cooldown": operator_cooldown},
-                )
-                repaired.append(
-                    {
-                        "node": node_id,
-                        "pane": pane,
-                        "dispatch_id": dispatch_id,
-                        "status": "pending",
-                        "reason": closeout["reason"],
-                        "operator_status": closeout.get("operator_status"),
-                        "result_json": closeout.get("result_json"),
-                        "operator_cooldown": operator_cooldown,
-                    }
                 )
                 continue
         if status in {"assigned", "dispatched", "in_progress", "running"}:
@@ -2383,6 +4752,8 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     node.pop("dispatch_id", None)
                     node["dispatch_retry_reason"] = unavailable_reason
                     node["updated_at"] = _utc_now()
+                    _ledger_transition(sid, node_id, status, "pending", "_reconcile_existing_dispatches",
+                                       note=str(unavailable_reason))
                     node["status"] = "pending"
                     graph.setdefault("node_results", {}).pop(node_id, None)
                     _append_dispatch_ledger(
@@ -2411,6 +4782,8 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                         node.pop("dispatch_id", None)
                         node["dispatch_retry_reason"] = "submit_ack_idle_no_worker_activity"
                         node["updated_at"] = _utc_now()
+                        _ledger_transition(sid, node_id, status, "pending", "_reconcile_existing_dispatches",
+                                           note="submit_ack_idle_no_worker_activity")
                         node["status"] = "pending"
                         graph.setdefault("node_results", {}).pop(node_id, None)
                         repaired.append(
@@ -2438,6 +4811,8 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                         node.pop("dispatch_id", None)
                         node["dispatch_retry_reason"] = "live_lease_idle_without_submit_ack"
                         node["updated_at"] = _utc_now()
+                        _ledger_transition(sid, node_id, status, "pending", "_reconcile_existing_dispatches",
+                                           note="live_lease_idle_without_submit_ack")
                         node["status"] = "pending"
                         graph.setdefault("node_results", {}).pop(node_id, None)
                         repaired.append(
@@ -2460,6 +4835,8 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     node.pop("dispatch_id", None)
                     node["dispatch_retry_reason"] = dispatch_prompt_reason or unavailable_reason or "stale_submit_ack_without_live_lease"
                     node["updated_at"] = _utc_now()
+                    _ledger_transition(sid, node_id, status, "pending", "_reconcile_existing_dispatches",
+                                       note=str(node["dispatch_retry_reason"]))
                     node["status"] = "pending"
                     graph.setdefault("node_results", {}).pop(node_id, None)
                     repaired.append(
@@ -2479,6 +4856,8 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     node["dispatch_retry_reason"] = unavailable_reason
                     node["updated_at"] = _utc_now()
                     if _recoverable_pane_blocker(unavailable_reason):
+                        _ledger_transition(sid, node_id, status, "pending", "_reconcile_existing_dispatches",
+                                           note=str(unavailable_reason))
                         node["status"] = "pending"
                         graph.setdefault("node_results", {}).pop(node_id, None)
                         _append_dispatch_ledger(
@@ -2504,6 +4883,8 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                         "updated_at": node["updated_at"],
                         "blocking_reason": unavailable_reason,
                     }
+                    _ledger_transition(sid, node_id, status, "worker_blocked", "_reconcile_existing_dispatches",
+                                       note=str(unavailable_reason))
                     node["status"] = "worker_blocked"
                     repaired.append(
                         {
@@ -2523,11 +4904,17 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                 if not pane.startswith("operator:"):
                     continue
                 operator_id = pane.split(":", 1)[1].strip()
-                result = _latest_operator_result_for(sid, node_id, operator_id=operator_id)
+                result = _latest_operator_result_for(
+                    sid,
+                    node_id,
+                    operator_id=operator_id,
+                    task_id=str(assignment.get("pm_task_id") or ""),
+                )
                 if result and not Path(str(assignment.get("eval_json_path") or _eval_json_file(sid, node_id))).exists():
                     terminal_operator_assignment = {
                         "pane": pane,
                         "dispatch_id": str(assignment.get("dispatch_id") or "").strip(),
+                        "pm_task_id": str(assignment.get("pm_task_id") or "").strip(),
                         "reason": "eval_failed_contract_closeout",
                         "operator_status": str(result.get("status") or ""),
                         "result_json": str(result.get("_result_json") or ""),
@@ -2632,6 +5019,9 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             node.pop("dispatch_id", None)
             node["dispatch_retry_reason"] = unavailable_reason or "stale_submit_ack_without_live_lease"
             node["updated_at"] = _utc_now()
+            _ledger_transition(sid, node_id, str(node.get("status") or ""), "pending",
+                               "_reconcile_existing_dispatches",
+                               note=str(node["dispatch_retry_reason"]))
             node["status"] = "pending"
             graph.setdefault("node_results", {}).pop(node_id, None)
             repaired.append(
@@ -2671,7 +5061,83 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             event="graph_dependency_blocked_projection",
         )
         repaired.append({"reason": "parent_projection_after_dependency_block", "projection": parent_projection})
+    _account_dispatch_retry_failures(graph, sid, repaired)
     return repaired
+
+
+def _account_dispatch_retry_failures(
+    graph: dict[str, Any],
+    sid: str,
+    repaired: list[dict[str, Any]],
+) -> None:
+    """Builder-dispatch mirror of _account_eval_dispatch_failures (G4 UI-rung
+    run 3). Post-processes this reconcile pass: every node the pass RESET to
+    pending (a dispatch that did not stick — stale ack, idle lease, operator
+    closeout failure, pane unavailable, ...) increments its
+    dispatch_failure_streak; past GRAPH_NODE_DISPATCH_MAX_FAILURES the node
+    escalates to a durable needs_human_review with the reason and a
+    next_action, instead of feeding the assign/reset ping-pong forever.
+    Nodes observed making real progress (dispatched/reviewing/passed) get
+    their streak cleared, so slow-but-alive dispatch is never punished."""
+    max_fail = GRAPH_NODE_DISPATCH_MAX_FAILURES
+    node_index = {str(n.get("id") or ""): n for n in graph.get("nodes", [])}
+    escalations: list[dict[str, Any]] = []
+    for item in repaired:
+        node_id = str(item.get("node") or "")
+        node = node_index.get(node_id)
+        if node is None:
+            continue
+        if str(item.get("status") or "") != "pending" or not str(item.get("reason") or ""):
+            continue
+        if str(node_status(graph, node_id) or "").strip().lower() != "pending":
+            continue
+        reason = str(item.get("reason"))
+        failures = int(node.get("dispatch_failure_streak") or 0) + 1
+        node["dispatch_failure_streak"] = failures
+        node["last_dispatch_failure_reason"] = reason
+        node["last_dispatch_failure_at"] = _utc_now()
+        if max_fail <= 0 or failures < max_fail:
+            continue
+        now = _utc_now()
+        blocked_reason = f"dispatch_starvation:{reason}:{failures}_consecutive_failures"
+        next_action = "connect_builder_operator_or_clear_cooldown_then_explicitly_resume_dispatch"
+        human_review = enter_node_human_review(
+            graph,
+            node_id,
+            reason=blocked_reason,
+            next_action=next_action,
+            writer="_account_dispatch_retry_failures",
+        )
+        node["dispatch_blocked_reason"] = blocked_reason
+        node["updated_at"] = now
+        _append_event(sid, {
+            "event": "graph_dispatch_escalated_to_human",
+            "node": node_id,
+            "reason": blocked_reason,
+            "next_action": next_action,
+            "human_review_generation": human_review.get("generation"),
+        })
+        _record_node_runstate(sid, node_id, {
+            "dispatch_failure_streak": failures,
+            "last_dispatch_failure_reason": reason,
+            "next_action": next_action,
+            "status": "needs_human_review",
+        })
+        escalations.append({
+            "node": node_id,
+            "status": "needs_human_review",
+            "reason": blocked_reason,
+        })
+    # Progress clears the streak — checked by CURRENT status so both
+    # set-dispatched sites (with and without a repaired entry) are covered.
+    for node_id, node in node_index.items():
+        if not int(node.get("dispatch_failure_streak") or 0):
+            continue
+        current = str(node_status(graph, node_id) or "").strip().lower()
+        if current in {"dispatched", "reviewing", "passed"}:
+            node.pop("dispatch_failure_streak", None)
+            node.pop("last_dispatch_failure_reason", None)
+    repaired.extend(escalations)
 
 
 def _eval_dispatch_file(sid: str, node_id: str) -> Path:
@@ -2684,6 +5150,10 @@ def _eval_md_file(sid: str, node_id: str) -> Path:
 
 def _eval_json_file(sid: str, node_id: str) -> Path:
     return SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-eval.json"
+
+
+def _eval_snapshot_file(sid: str, node_id: str) -> Path:
+    return SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-eval-snapshot.json"
 
 
 def _eval_peer_md_file(sid: str, node_id: str, index: int) -> Path:
@@ -2792,9 +5262,13 @@ def _node_eval_assignments(node: dict[str, Any]) -> list[dict[str, Any]]:
                 {
                     "pane": pane,
                     "dispatch_id": dispatch_id,
+                    "pm_task_id": str(item.get("pm_task_id") or ""),
                     "role": str(item.get("role") or "secondary"),
                     "eval_md_path": str(item.get("eval_md_path") or ""),
                     "eval_json_path": str(item.get("eval_json_path") or ""),
+                    "artifact_snapshot_schema": str(item.get("artifact_snapshot_schema") or ""),
+                    "artifact_snapshot_path": str(item.get("artifact_snapshot_path") or ""),
+                    "artifact_snapshot_digest": str(item.get("artifact_snapshot_digest") or ""),
                 }
             )
         if normalized:
@@ -2806,9 +5280,25 @@ def _node_eval_assignments(node: dict[str, Any]) -> list[dict[str, Any]]:
             {
                 "pane": pane,
                 "dispatch_id": dispatch_id,
+                "pm_task_id": str(node.get("eval_pm_task_id") or ""),
                 "role": "primary",
                 "eval_md_path": str(node.get("eval_md_path") or ""),
                 "eval_json_path": str(node.get("eval_json") or ""),
+                "artifact_snapshot_schema": str(
+                    ((node.get("eval_artifact_snapshot") or {}).get("schema") or "")
+                    if isinstance(node.get("eval_artifact_snapshot"), dict)
+                    else ""
+                ),
+                "artifact_snapshot_path": str(
+                    ((node.get("eval_artifact_snapshot") or {}).get("path") or "")
+                    if isinstance(node.get("eval_artifact_snapshot"), dict)
+                    else ""
+                ),
+                "artifact_snapshot_digest": str(
+                    ((node.get("eval_artifact_snapshot") or {}).get("snapshot_digest") or "")
+                    if isinstance(node.get("eval_artifact_snapshot"), dict)
+                    else ""
+                ),
             }
         ]
     return []
@@ -2825,23 +5315,47 @@ def _read_json_file_safe(path: str | Path) -> dict[str, Any]:
         return {}
 
 
+def _append_proof_obligations(out: list[dict[str, Any]], payload: Any) -> None:
+    if isinstance(payload, dict) and isinstance(payload.get("proof_obligations"), list):
+        out.extend(item for item in payload.get("proof_obligations", []) if isinstance(item, dict))
+
+
+def _dedupe_proof_obligations(obligations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    deduped: list[dict[str, Any]] = []
+    for item in obligations:
+        try:
+            key = json.dumps(item, sort_keys=True, ensure_ascii=False)
+        except Exception:
+            key = repr(sorted(item.items()))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
+
+
 def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, Any]]:
-    obligations = node.get("proof_obligations")
-    if isinstance(obligations, list):
-        return [item for item in obligations if isinstance(item, dict)]
+    obligations: list[dict[str, Any]] = []
+    inline = node.get("proof_obligations")
+    if isinstance(inline, list):
+        obligations.extend(item for item in inline if isinstance(item, dict))
+
     for key in ("capsule_plan_ir", "physical_plan_ir"):
         payload = node.get(key)
-        if isinstance(payload, dict) and isinstance(payload.get("proof_obligations"), list):
-            return [item for item in payload.get("proof_obligations", []) if isinstance(item, dict)]
+        if isinstance(payload, dict):
+            _append_proof_obligations(obligations, payload)
+        elif isinstance(payload, str) and payload.strip():
+            _append_proof_obligations(obligations, _read_json_file_safe(_artifact_path(payload) or payload))
+
     artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
     for key in ("capsule_plan_ir", "physical_plan_ir"):
         path = artifacts.get(key)
         if not path:
             continue
-        data = _read_json_file_safe(path)
-        if isinstance(data.get("proof_obligations"), list):
-            return [item for item in data.get("proof_obligations", []) if isinstance(item, dict)]
-    return []
+        _append_proof_obligations(obligations, _read_json_file_safe(_artifact_path(path) or path))
+
+    return _dedupe_proof_obligations(obligations)
 
 
 # --- Deterministic secret-leak guard + resource binding (general builder/operator path) ---
@@ -2887,11 +5401,81 @@ def _expected_node_sidecar_file(sid: str, node_id: str, kind: str) -> Path:
     return SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-{kind}{suffix}"
 
 
-def _resolve_write_scope_paths(node: dict[str, Any]) -> list[Path]:
+def _artifact_path(value: Any) -> Path | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        candidate = SPRINTS_DIR / raw
+    return candidate
+
+
+def _node_patch_diff_candidates(sid: str, node: dict[str, Any]) -> list[Path]:
+    """Return patch/diff files that belong to this node.
+
+    Builders/repair workers write node-scoped patch files such as
+    `{sid}.S1-patch.diff` and `{sid}.S1-patch_diff.diff`.  The previous proof
+    path only knew the sprint-level `{sid}.patch.diff`, so a repair could create
+    a real node patch and still fail `output_present: patch_diff`.
+    """
+    node_id = str(node.get("id") or "")
+    nid = _safe_node_id(node_id)
+    artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
+    candidates: list[Path] = []
+    for key in ("patch_diff", "patch-diff", "patch_diff_path", "patch_path", "diff"):
+        candidate = _artifact_path(artifacts.get(key))
+        if candidate is not None:
+            candidates.append(candidate)
+    candidates.extend(
+        [
+            SPRINTS_DIR / f"{sid}.{nid}-patch.diff",
+            SPRINTS_DIR / f"{sid}.{nid}-patch_diff.diff",
+            SPRINTS_DIR / f"{sid}.{nid}-patch-diff.diff",
+            SPRINTS_DIR / f"{sid}.{nid}.patch.diff",
+            SPRINTS_DIR / f"{sid}.patch.diff",
+        ]
+    )
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(candidate)
+    return unique
+
+
+def _existing_node_patch_diff(sid: str, node: dict[str, Any]) -> Path | None:
+    for candidate in _node_patch_diff_candidates(sid, node):
+        try:
+            if candidate.exists() and candidate.is_file() and candidate.stat().st_size > 0:
+                return candidate
+        except Exception:
+            continue
+    return None
+
+
+def _resolve_write_scope_paths(node: dict[str, Any], sid: str = "") -> list[Path]:
     """Resolve a node's write_scope entries to existing filesystem paths, scoped to known roots."""
-    roots = [HARNESS_DIR, HARNESS_DIR.parent, SPRINTS_DIR, Path.cwd()]
+    roots: list[Path] = []
+    if sid:
+        roots.extend(
+            [
+                SPRINTS_DIR / sid / "workdir",
+                SPRINTS_DIR / sid,
+                HARNESS_DIR / "sprints" / sid / "workdir",
+                HARNESS_DIR / "sprints" / sid,
+            ]
+        )
+    roots.extend([HARNESS_DIR, HARNESS_DIR.parent, SPRINTS_DIR, Path.cwd()])
     resolved: list[Path] = []
-    for entry in (node.get("write_scope") or []):
+    entries: list[Any] = list(node.get("write_scope") or [])
+    for entry in (node.get("outputs") or []):
+        if entry not in entries:
+            entries.append(entry)
+    for entry in entries:
         rel = str(entry or "").strip()
         if not rel:
             continue
@@ -2918,10 +5502,10 @@ def _collect_guard_scan_targets(sid: str, node: dict[str, Any]) -> list[Path]:
     handoff = _existing_node_handoff(sid, node, {"nodes": [node]}) or _handoff_file(sid, node_id)
     if handoff and Path(handoff).exists():
         targets.append(Path(handoff))
-    patch = SPRINTS_DIR / f"{sid}.patch.diff"
-    if patch.exists():
-        targets.append(patch)
-    for path in _resolve_write_scope_paths(node):
+    for patch in _node_patch_diff_candidates(sid, node):
+        if patch.exists():
+            targets.append(patch)
+    for path in _resolve_write_scope_paths(node, sid):
         if path.is_dir():
             for sub in sorted(path.rglob("*")):
                 if sub.is_file():
@@ -2958,6 +5542,107 @@ def _scan_paths_for_secrets(paths: list[Path]) -> list[dict[str, Any]]:
     return matches
 
 
+def _patch_rel_path(path: Path) -> str:
+    for root in (HARNESS_DIR.parent, HARNESS_DIR, SPRINTS_DIR):
+        try:
+            return path.resolve(strict=False).relative_to(root.resolve(strict=False)).as_posix()
+        except Exception:
+            continue
+    return path.name
+
+
+def _new_file_patch_for_path(path: Path) -> str:
+    rel = _patch_rel_path(path)
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception as exc:
+        lines = [f"[unable to read {path}: {type(exc).__name__}]"]
+    out = [
+        f"diff --git a/{rel} b/{rel}",
+        "new file mode 100644",
+        "--- /dev/null",
+        f"+++ b/{rel}",
+        f"@@ -0,0 +1,{len(lines)} @@",
+    ]
+    out.extend(f"+{line}" for line in lines)
+    return "\n".join(out) + "\n"
+
+
+def _node_requires_patch_diff(sid: str, node: dict[str, Any]) -> bool:
+    return _proof_obligations_require_field(sid, node, "patch_diff")
+
+
+def _patch_diff_not_emitted_file(sid: str, node: dict[str, Any]) -> Path:
+    return SPRINTS_DIR / f"{sid}.{_safe_node_id(str(node.get('id') or ''))}-patch_diff_not_emitted.json"
+
+
+def _record_patch_diff_not_emitted(sid: str, node: dict[str, Any], reason: str) -> None:
+    payload = {
+        "node_id": str(node.get("id") or ""),
+        "reason": reason,
+        "write_scope": list(node.get("write_scope") or []),
+        "outputs": list(node.get("outputs") or []),
+        "checked_at": _utc_now(),
+    }
+    try:
+        path = _patch_diff_not_emitted_file(sid, node)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    except Exception:
+        pass
+
+
+def _emit_node_patch_diff_sidecar(sid: str, node: dict[str, Any]) -> Path | None:
+    if not _node_requires_patch_diff(sid, node):
+        return None
+    existing = _existing_node_patch_diff(sid, node)
+    if existing is not None:
+        return existing
+    targets = [path for path in _resolve_write_scope_paths(node, sid) if path.is_file()]
+    if not targets:
+        _record_patch_diff_not_emitted(sid, node, "patch_diff_not_emitted_no_write_scope_targets")
+        return None
+    patch_path = _node_patch_diff_candidates(sid, node)[0]
+    parts = [
+        f"# Deterministic patch proof for {sid} / {node.get('id', '')}",
+        "# Generated from existing write_scope files because no node patch_diff artifact was present.",
+        "",
+    ]
+    for target in sorted(targets, key=lambda item: str(item)):
+        parts.append(_new_file_patch_for_path(target))
+    try:
+        patch_path.write_text("\n".join(parts).rstrip() + "\n", encoding="utf-8")
+        return patch_path
+    except Exception:
+        return None
+
+
+def _write_semantically_stable_sidecar(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    """Write a timestamped sidecar only when its evidence meaning changes."""
+    existing = _read_json_file_safe(path)
+    existing_material = {
+        key: value
+        for key, value in existing.items()
+        if key != "checked_at"
+    }
+    if existing_material == payload and str(existing.get("checked_at") or ""):
+        return existing
+    persisted = {**payload, "checked_at": _utc_now()}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(persisted, handle, ensure_ascii=False, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, path)
+    finally:
+        Path(temporary_name).unlink(missing_ok=True)
+    return persisted
+
+
 def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, Any]:
     """Deterministic guard (secret scan) + resource binding for the general builder/operator path.
 
@@ -2965,37 +5650,50 @@ def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, A
     constant "allow"). Scans the node's own outputs for secrets and writes:
       {sid}.{node}-guard_decision.json  -> {decision: allow|block, matches, scanned_paths, detector}
       {sid}.{node}-resource_binding.json -> {write_scope, scanned_paths, in_scope, bound}
-    Returns the guard decision dict. Idempotent (re-scans + overwrites on each node-verdict).
+    Returns the guard decision dict. It always re-scans, but unchanged semantic
+    evidence keeps byte-identical sidecars so closeout cannot invalidate the
+    evaluator snapshot merely because ``checked_at`` advanced.
     """
     node_id = str(node.get("id") or "")
     nid = _safe_node_id(node_id)
     targets = _collect_guard_scan_targets(sid, node)
     scanned = [str(t) for t in targets]
     matches = _scan_paths_for_secrets(targets)
+    user_workspace = None
+    if _workspace_binding is not None:
+        try:
+            user_workspace = _workspace_binding.sprint_workspace_root(
+                SPRINTS_DIR,
+                sid,
+                harness_dir=HARNESS_DIR,
+            )
+        except Exception:
+            user_workspace = None
     guard = {
         "node_id": node_id,
         "decision": "block" if matches else "allow",
         "detector": "builtin_secret_patterns",
         "matches": matches,
         "scanned_paths": scanned,
-        "checked_at": _utc_now(),
     }
     resource = {
         "node_id": node_id,
         "resource": "resource.repo-workspace",
-        "workspace_root": str(HARNESS_DIR),
+        "workspace_root": str(user_workspace or ""),
+        "staging_root": str(SPRINTS_DIR / sid / "workdir"),
         "write_scope": [str(x) for x in (node.get("write_scope") or [])],
         "scanned_paths": scanned,
-        "in_scope": True,
-        "bound": True,
-        "checked_at": _utc_now(),
+        "in_scope": bool(user_workspace),
+        "bound": bool(user_workspace),
     }
     try:
-        (SPRINTS_DIR / f"{sid}.{nid}-guard_decision.json").write_text(
-            json.dumps(guard, ensure_ascii=False, indent=2), encoding="utf-8"
+        guard = _write_semantically_stable_sidecar(
+            SPRINTS_DIR / f"{sid}.{nid}-guard_decision.json",
+            guard,
         )
-        (SPRINTS_DIR / f"{sid}.{nid}-resource_binding.json").write_text(
-            json.dumps(resource, ensure_ascii=False, indent=2), encoding="utf-8"
+        _write_semantically_stable_sidecar(
+            SPRINTS_DIR / f"{sid}.{nid}-resource_binding.json",
+            resource,
         )
     except Exception:
         pass
@@ -3003,10 +5701,18 @@ def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, A
 
 
 def _proof_obligations_require_field(sid: str, node: dict[str, Any], field: str) -> bool:
+    field = str(field or "").strip()
     for obligation in _node_proof_obligations(sid, node):
-        if str(obligation.get("field") or "") == field:
+        obligation_field = str(obligation.get("field") or "").strip()
+        if obligation_field == field:
             return True
-        requirement = str(obligation.get("requirement") or "")
+        requirement = str(obligation.get("requirement") or "").strip().lower()
+        if field == "patch_diff" and (
+            "patch_diff" in requirement
+            or requirement == "patch diff exists"
+            or (requirement == "output_present" and obligation_field == "patch_diff")
+        ):
+            return True
         if field == "guard_decision" and requirement in {"check.guard_decision_written", "guard_decision exists"}:
             return True
         if field == "resource_binding" and requirement in {"check.resource_binding_written", "resource_binding exists"}:
@@ -3050,17 +5756,15 @@ def _emit_bridged_artifact_sidecar(sid: str, node: dict[str, Any]) -> Path | Non
     handoff = _existing_node_handoff(sid, node, {"nodes": [node]}) or _handoff_file(sid, node_id)
     candidate_files: list[tuple[str, Path]] = [
         ("handoff_md", Path(handoff)),
-        ("patch_diff", SPRINTS_DIR / f"{sid}.patch.diff"),
         ("guard_decision", _expected_node_sidecar_file(sid, node_id, "guard_decision")),
         ("resource_binding", _expected_node_sidecar_file(sid, node_id, "resource_binding")),
     ]
+    candidate_files.extend(("patch_diff", path) for path in _node_patch_diff_candidates(sid, node))
     artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
     for key in ("capsule_plan_ir", "physical_plan_ir", "patch_diff", "test_report", "test_log"):
         value = artifacts.get(key)
-        if isinstance(value, str) and value.strip():
-            candidate = Path(value).expanduser()
-            if not candidate.is_absolute():
-                candidate = SPRINTS_DIR / value
+        candidate = _artifact_path(value)
+        if candidate is not None:
             candidate_files.append((key, candidate))
 
     existing_files = "\n".join(
@@ -3107,6 +5811,9 @@ Source artifacts:
 
 def _emit_node_proof_sidecars(sid: str, node: dict[str, Any]) -> dict[str, str]:
     emitted: dict[str, str] = {}
+    patch_diff = _emit_node_patch_diff_sidecar(sid, node)
+    if patch_diff:
+        emitted["patch_diff"] = str(patch_diff)
     guard = _emit_guard_resource_sidecars(sid, node)
     if guard:
         emitted["guard_decision"] = str(_expected_node_sidecar_file(sid, str(node.get("id") or ""), "guard_decision"))
@@ -3124,6 +5831,9 @@ def _proof_support_artifacts_block(sid: str, node: dict[str, Any]) -> str:
         if _proof_obligations_require_field(sid, node, kind):
             existing = _node_sidecar_file(sid, node_id, kind)
             entries.append((kind, existing or _expected_node_sidecar_file(sid, node_id, kind)))
+    if _proof_obligations_require_field(sid, node, "patch_diff"):
+        patch_diff = _existing_node_patch_diff(sid, node)
+        entries.append(("patch_diff", patch_diff or _node_patch_diff_candidates(sid, node)[0]))
     if not entries:
         return "- `N/A`"
     lines = []
@@ -3141,13 +5851,13 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
     handoff = _existing_node_handoff(sid, node, {"nodes": [node]})
     eval_json_path = Path(eval_json).expanduser() if str(eval_json) else _eval_json_file(sid, node_id)
     eval_md_path = _eval_md_file(sid, node_id)
-    patch_path = Path(str(artifacts.get("patch_diff") or "")).expanduser() if artifacts.get("patch_diff") else Path("")
+    patch_path = _existing_node_patch_diff(sid, node)
     test_path = Path(str(artifacts.get("test_log") or artifacts.get("test_report") or "")).expanduser() if (artifacts.get("test_log") or artifacts.get("test_report")) else Path("")
     presence = {
         "handoff_md": bool(handoff and Path(handoff).exists()),
         "eval_json": bool(eval_json_path.exists()),
         "eval_md": bool(eval_md_path.exists()),
-        "patch_diff": bool(str(patch_path) not in {"", "."} and patch_path.exists()) or bool(handoff and node.get("write_scope")),
+        "patch_diff": bool(patch_path),
         "test_log": bool(str(test_path) not in {"", "."} and test_path.exists()),
     }
     # Deterministic guard/resource sidecars (lib/ previously had no lookup — tools/ did).
@@ -3156,8 +5866,26 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
     guard_sidecar = _node_sidecar_file(sid, node_id, "guard_decision")
     guard_payload = _read_json_file_safe(guard_sidecar) if guard_sidecar else {}
     presence["guard_decision"] = bool(guard_sidecar) and str(guard_payload.get("decision") or "").lower() == "allow"
-    presence["resource_binding"] = _node_sidecar_file(sid, node_id, "resource_binding") is not None
+    resource_sidecar = _node_sidecar_file(sid, node_id, "resource_binding")
+    resource_payload = _read_json_file_safe(resource_sidecar) if resource_sidecar else {}
+    presence["resource_binding"] = bool(
+        resource_sidecar
+        and resource_payload.get("bound") is True
+        and resource_payload.get("in_scope") is True
+        and str(resource_payload.get("workspace_root") or "").strip()
+    )
     presence["bridged_artifact"] = _node_sidecar_file(sid, node_id, "bridged_artifact") is not None
+    # Lane 3 (R6/AC-R6.2): on the contracted path the manifest is the discovery
+    # authority — its kind-keyed view overrides the filename-shape scan above.
+    # guard_decision and resource_binding keep their semantic allow/bound
+    # verdicts (presence alone is not proof), so the manifest never overrides
+    # either one.
+    manifest_presence = _manifest_presence(sid, node_id)
+    if manifest_presence:
+        for key, value in manifest_presence.items():
+            if key in {"guard_decision", "resource_binding"}:
+                continue
+            presence[key] = bool(value)
     for artifact_key, artifact_value in artifacts.items():
         if artifact_key in presence:
             continue
@@ -3212,16 +5940,91 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
     return presence
 
 
+def _proof_field_presence(presence: dict[str, Any], field: str) -> bool | None:
+    """Presence of a CONCRETE declared field: direct key, else the manifest's
+    output:-keyed rows matched by full relpath or basename suffix (the P2
+    smoke-4 rule). Capsule contracts use logical snake-case names whose final
+    token is the artifact type, so apply one generic convention when matching
+    concrete files: ``claims_jsonl`` -> ``claims.jsonl``, ``final_md`` ->
+    ``final.md``, and ``extracts_dir`` -> ``extracts``. None = the presence map
+    has no row for this field at all (caller falls back to its coarse heuristic)."""
+    if not field:
+        return None
+    if field in presence:
+        return bool(presence[field])
+    candidates = {field}
+    for suffix, extension in (
+        ("_jsonl", ".jsonl"),
+        ("_json", ".json"),
+        ("_md", ".md"),
+        ("_dir", ""),
+    ):
+        if field.endswith(suffix) and len(field) > len(suffix):
+            candidates.add(field[: -len(suffix)] + extension)
+            break
+    matches = [
+        bool(value) for key, value in presence.items()
+        if key.startswith("output:")
+        and any(
+            key[len("output:"):] == candidate
+            or key[len("output:"):].endswith("/" + candidate)
+            for candidate in candidates
+        )
+    ]
+    if matches:
+        return any(matches)
+    return None
+
+
 def _evaluate_proof_obligations(sid: str, node: dict[str, Any], eval_json: str | Path = "") -> dict[str, Any]:
     obligations = _node_proof_obligations(sid, node)
-    if not obligations:
+    presence = _proof_artifact_presence(sid, node, eval_json=eval_json)
+    # "all_outputs_present" reaches the presence map only from a written
+    # manifest, i.e. only on the contracted path — its presence is the signal
+    # that manifest-completeness gating applies (legacy uncontracted pinned).
+    manifest_gated = "all_outputs_present" in presence
+    if not obligations and not manifest_gated:
         return {"required": False, "ok": True, "checked": [], "missing": []}
 
     eval_data = _read_json_file_safe(eval_json or _eval_json_file(sid, str(node.get("id") or "")))
     proof_checks = eval_data.get("proof_checks") if isinstance(eval_data.get("proof_checks"), dict) else {}
-    presence = _proof_artifact_presence(sid, node, eval_json=eval_json)
     checked: list[dict[str, Any]] = []
     missing: list[dict[str, Any]] = []
+    if presence.get("artifact_root_violation"):
+        # AC-R6.3: an observed write outside the declared artifact roots blocks the
+        # gate regardless of which obligations the node declares.
+        entry = {
+            "kind": "artifact_root",
+            "requirement": "writes_within_declared_roots",
+            "field": None,
+            "reason": "ARTIFACT_ROOT_VIOLATION",
+        }
+        checked.append({**entry, "satisfied": False})
+        missing.append(entry)
+    if manifest_gated:
+        # Battery run-1 B12: the node's only proof obligations were
+        # capsule-injected (guard/resource), so a builder that never produced
+        # two of its DECLARED write-scope outputs still passed — the manifest
+        # recorded exists=false rows that no obligation named. A declared
+        # output is a claim; like AC-R6.3 this blocks regardless of which
+        # obligations the node declares, and the normal repair path gives the
+        # builder a bounded round to produce (or stop declaring) the files.
+        # The output: keys (not the writer's all_outputs_present) are the
+        # trigger — presence_map treats an existing directory as present.
+        missing_rows = sorted(
+            key[len("output:"):]
+            for key, value in presence.items()
+            if key.startswith("output:") and not value
+        )
+        if missing_rows:
+            entry = {
+                "kind": "artifact_manifest",
+                "requirement": "declared_outputs_exist",
+                "field": ",".join(missing_rows),
+                "reason": "MISSING_DECLARED_OUTPUT",
+            }
+            checked.append({**entry, "satisfied": False})
+            missing.append(entry)
 
     for obligation in obligations:
         kind = str(obligation.get("kind") or "")
@@ -3252,12 +6055,26 @@ def _evaluate_proof_obligations(sid: str, node: dict[str, Any], eval_json: str |
                 reason = "patch_diff_missing" if not satisfied else ""
             elif "test" in requirement or field in {"test_log", "test_report"}:
                 satisfied = presence["test_log"]
+                if not satisfied:
+                    # G3 run-12 replay: capsule obligations name a CONCRETE
+                    # evidence file (test_evidence_present +
+                    # field=workspace/test-report.md) — the declared field
+                    # wins over the coarse test_log heuristic when the
+                    # manifest/presence map has a row for it.
+                    field_present = _proof_field_presence(presence, field)
+                    if field_present is not None:
+                        satisfied = field_present
                 reason = "test_log_missing" if not satisfied else ""
             elif "eval" in requirement or field == "eval_json":
                 satisfied = presence["eval_json"]
                 reason = "eval_json_missing" if not satisfied else ""
             elif requirement == "output_present" and field:
-                satisfied = presence.get(field, False)
+                # Contract obligations name the bare output file (e.g.
+                # '<tool>.py' -> 'uniqwords.py') while the manifest presence
+                # map keys rows by the full declared relpath — matched by
+                # _proof_field_presence (P2 smoke-4 S1: proof_obligations_
+                # failed with every output present).
+                satisfied = bool(_proof_field_presence(presence, field))
                 reason = f"{field}_missing" if not satisfied else ""
                 if not satisfied and field == "guard_decision":
                     _gf = _node_sidecar_file(sid, str(node.get("id") or ""), "guard_decision")
@@ -3294,6 +6111,133 @@ def _evaluate_proof_obligations(sid: str, node: dict[str, Any], eval_json: str |
     }
 
 
+def _run_node_proof_seam(
+    sid: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    eval_json: str | Path,
+    observed_handoff: Path | str | None,
+) -> dict[str, Any]:
+    """The single proof authority for a node claiming PASS: emit deterministic
+    support sidecars (guard/resource/adapter bridge from real node outputs),
+    write the build-complete artifact manifest on the contracted path (Lane 3
+    R6 — the proof gate discovers artifacts via the manifest, not filenames),
+    then evaluate the node's proof obligations.
+
+    Extracted from node_verdict so the sidecar-reconcile path runs the SAME
+    seam. G3 run 12: S2 was reconcile-marked passed with node_verdict never
+    running — no manifest written, proof obligations never checked; G3 run 5
+    had the mirror image, a reconcile pass overwriting a recorded
+    proof_obligations_failed block (divided mark authority)."""
+    node_id = str(node.get("id") or "")
+    # G4-lite run 2: recover builder output written under the stray
+    # sprints/<sid>.workdir spelling BEFORE sidecar emission (the patch
+    # emitter scans write-scope targets) and manifest resolution.
+    if _graph_is_certified_generic(graph):
+        try:
+            import contract_gate_executor as _cge_recovery
+
+            recovered = _cge_recovery.recover_stray_workdir(SPRINTS_DIR, sid)
+            if recovered.get("recovered"):
+                _ledger_record(
+                    sid, node_id=node_id, kind="artifact_recovery",
+                    author={"type": "policy"},
+                    note="recovered_stray_workdir:" + ",".join(recovered["recovered"][:10]),
+                )
+        except Exception:
+            pass
+    _emit_node_proof_sidecars(sid, node)
+    manifest_summary: dict[str, Any] = {
+        "required": _graph_is_contracted(graph),
+        "ok": not _graph_is_contracted(graph),
+    }
+    if _graph_is_contracted(graph):
+        if _artifact_manifest is None:
+            return {
+                "required": True,
+                "ok": False,
+                "checked": [],
+                "missing": [],
+                "reason": "artifact_manifest_module_unavailable",
+                "manifest": {
+                    "required": True,
+                    "ok": False,
+                    "reason": "artifact_manifest_module_unavailable",
+                },
+            }
+        try:
+            _mf_base, _mf_roots, _mf_scope = _manifest_anchor(sid, graph, node)
+            written_manifest = _artifact_manifest.write_manifest(
+                SPRINTS_DIR, sid, node,
+                generation=_node_repair_attempts(node),
+                base_dir=_mf_base,
+                roots=_mf_roots,
+                write_scope=_mf_scope,
+                sidecars={
+                    "handoff_md": str(observed_handoff or ""),
+                    "patch_diff": str(_existing_node_patch_diff(sid, node) or ""),
+                    "eval": [str(eval_json or "")],
+                    "guard_decision": str(_node_sidecar_file(sid, node_id, "guard_decision") or ""),
+                    "resource_binding": str(_node_sidecar_file(sid, node_id, "resource_binding") or ""),
+                },
+            )
+        except Exception as exc:
+            written_manifest = None
+            manifest_error = f"{type(exc).__name__}: {exc}"
+        else:
+            manifest_error = ""
+        if not isinstance(written_manifest, dict):
+            return {
+                "required": True,
+                "ok": False,
+                "checked": [],
+                "missing": [],
+                "reason": "artifact_manifest_write_failed",
+                "manifest": {
+                    "required": True,
+                    "ok": False,
+                    "reason": "artifact_manifest_write_failed",
+                    "error": manifest_error,
+                },
+            }
+        persisted_manifest = _artifact_manifest.read_manifest(SPRINTS_DIR, sid, node_id)
+        expected_generation = _node_repair_attempts(node)
+        manifest_path = _artifact_manifest.manifest_path(SPRINTS_DIR, sid, node_id)
+        manifest_content_digest = str(persisted_manifest.get("content_digest") or "")
+        manifest_valid = bool(
+            persisted_manifest.get("schema") == "solar.artifact_manifest.v1"
+            and str(persisted_manifest.get("sid") or "") == sid
+            and str(persisted_manifest.get("node_id") or "") == node_id
+            and persisted_manifest.get("generation") == expected_generation
+            and manifest_content_digest
+            and manifest_content_digest == _artifact_manifest.manifest_content_digest(persisted_manifest)
+            and manifest_path.is_file()
+        )
+        manifest_summary = {
+            "required": True,
+            "ok": manifest_valid,
+            "schema": str(persisted_manifest.get("schema") or ""),
+            "path": str(manifest_path),
+            "generation": persisted_manifest.get("generation"),
+            "row_count": len(persisted_manifest.get("rows") or []),
+            "violation_count": len(persisted_manifest.get("violations") or []),
+            "content_digest": manifest_content_digest,
+        }
+        if not manifest_valid:
+            manifest_summary["reason"] = "artifact_manifest_invalid"
+            return {
+                "required": True,
+                "ok": False,
+                "checked": [],
+                "missing": [],
+                "reason": "artifact_manifest_invalid",
+                "manifest": manifest_summary,
+            }
+    proof = _evaluate_proof_obligations(sid, node, eval_json=eval_json)
+    proof["manifest"] = manifest_summary
+    return proof
+
+
 def _proof_checks_template(obligations: list[dict[str, Any]]) -> dict[str, Any]:
     template: dict[str, Any] = {}
     for obligation in obligations:
@@ -3319,13 +6263,27 @@ def _proof_obligations_block(obligations: list[dict[str, Any]]) -> str:
 
 
 def _store_eval_assignments(node: dict[str, Any], assignments: list[dict[str, Any]], dispatched_at: str) -> None:
+    snapshot = node.get("eval_artifact_snapshot") if isinstance(node.get("eval_artifact_snapshot"), dict) else {}
     normalized = [
         {
             "pane": str(item.get("pane") or ""),
             "dispatch_id": str(item.get("dispatch_id") or ""),
+            "pm_task_id": str(item.get("pm_task_id") or ""),
             "role": str(item.get("role") or "secondary"),
             "eval_md_path": str(item.get("eval_md_path") or ""),
             "eval_json_path": str(item.get("eval_json_path") or ""),
+            "eval_generation": int(item.get("eval_generation") or _node_repair_attempts(node)),
+            "repair_context_created_at": str(item.get("repair_context_created_at") or ""),
+            "artifact_snapshot_schema": str(
+                item.get("artifact_snapshot_schema") or snapshot.get("schema") or ""
+            ),
+            "artifact_snapshot_path": str(
+                item.get("artifact_snapshot_path") or snapshot.get("path") or ""
+            ),
+            "artifact_snapshot_digest": str(
+                item.get("artifact_snapshot_digest") or snapshot.get("snapshot_digest") or ""
+            ),
+            "dispatched_at": dispatched_at,
         }
         for item in assignments
         if str(item.get("pane") or "") and str(item.get("dispatch_id") or "")
@@ -3334,6 +6292,7 @@ def _store_eval_assignments(node: dict[str, Any], assignments: list[dict[str, An
     primary = next((item for item in normalized if item.get("role") == "primary"), normalized[0] if normalized else {})
     node["eval_assigned_to"] = str(primary.get("pane") or "")
     node["eval_dispatch_id"] = str(primary.get("dispatch_id") or "")
+    node["eval_pm_task_id"] = str(primary.get("pm_task_id") or "")
     node["eval_dispatched_at"] = dispatched_at
 
 
@@ -3341,7 +6300,9 @@ def _clear_eval_assignments(node: dict[str, Any]) -> None:
     node.pop("eval_assignments", None)
     node.pop("eval_assigned_to", None)
     node.pop("eval_dispatch_id", None)
+    node.pop("eval_pm_task_id", None)
     node.pop("eval_dispatched_at", None)
+    node.pop("eval_artifact_snapshot", None)
 
 
 def _queue_file(sprint_id: str) -> Path:
@@ -3430,10 +6391,15 @@ def _mark_graph_node(graph_path: str, node_id: str, status: str,
                      clear_assignment: bool = False) -> bool:
     try:
         graph = load_graph(graph_path)
+        assert_node_status_write_allowed(graph, node_id, status)
         for node in graph.get("nodes", []):
             if node.get("id") != node_id:
                 continue
             updated_at = _utc_now()
+            _ledger_transition(
+                str(graph.get("sprint_id") or Path(str(graph_path)).stem.replace(".task_graph", "")),
+                node_id, str(node.get("status") or ""), status, "_mark_graph_node",
+            )
             node["status"] = status
             node["updated_at"] = updated_at
             results = graph.setdefault("node_results", {})
@@ -3490,6 +6456,41 @@ def _mark_graph_node_compat(
             clear_assignment=clear_assignment,
         )
 
+
+def _activate_direct_pane_attempt(
+    graph_path: str,
+    node_id: str,
+    *,
+    sid: str,
+    pane: str,
+    dispatch_id: str,
+    logical_role: str = "builder",
+) -> bool:
+    """Persist the canonical attempt after a pane accepted the dispatch."""
+    try:
+        graph = load_graph(graph_path)
+        node = _node_by_id(graph, node_id)
+        if node is None:
+            return False
+        activate_execution_attempt(
+            node,
+            task_id=dispatch_id,
+            dispatch_id=dispatch_id,
+            operator_id="",
+            source="direct_pane",
+            logical_role=str(logical_role or "builder"),
+            status="dispatched",
+            requires_operator_result=False,
+            sprint_id=sid,
+            node_id=node_id,
+            now=_utc_now(),
+        )
+        set_node_status(graph, node_id, "dispatched", pane=pane, dispatch_id=dispatch_id)
+        save_graph(graph_path, graph)
+        return True
+    except Exception:
+        return False
+
 def _save_graph_preserving_runtime_progress(graph_path: str, graph: dict[str, Any]) -> None:
     """Avoid stale dispatcher saves downgrading nodes updated by another loop."""
     try:
@@ -3510,6 +6511,7 @@ def _save_graph_preserving_runtime_progress(graph_path: str, graph: dict[str, An
             "running",
             "reviewing",
             "failed_review",
+            "needs_human_review",
             "passed",
             "failed",
             "skipped",
@@ -3529,6 +6531,7 @@ def _save_graph_preserving_runtime_progress(graph_path: str, graph: dict[str, An
             closeout_is_authoritative = (
                 stale_status == "pending"
                 and current_status in protected_statuses
+                and current_status != "needs_human_review"
                 and closeout_retry in {"failed_contract_closeout", "operator_result_failed", "operator_result_error"}
                 and isinstance(closeout_failure, dict)
             )
@@ -3537,6 +6540,13 @@ def _save_graph_preserving_runtime_progress(graph_path: str, graph: dict[str, An
             if current_status not in protected_statuses or stale_status not in overwriteable_statuses:
                 continue
             current_result = current_results.get(node_id) if isinstance(current_results.get(node_id), dict) else {}
+            if current_status == "needs_human_review":
+                # Preserve the complete generation-bearing block.  Recreating
+                # only the status string would discard its resume authority.
+                stale_node.clear()
+                stale_node.update(deepcopy(current_node))
+                graph.setdefault("node_results", {})[node_id] = deepcopy(current_result)
+                continue
             set_node_status(
                 graph,
                 node_id,
@@ -3556,6 +6566,11 @@ def _ensure_execution_plan_payload(
     sid: str,
     node: dict[str, Any],
 ) -> dict[str, Any]:
+    from executable_node import canonical_executable_node  # noqa: WPS433
+
+    # One immutable identity accompanies every dispatch. Capsule and physical
+    # plans are derived views; neither is allowed to redefine node semantics.
+    payload["executable_node"] = canonical_executable_node(node)
     if payload.get("capsule_plan_ir") and payload.get("physical_plan_ir"):
         return payload
     try:
@@ -3570,6 +6585,7 @@ def _ensure_execution_plan_payload(
         )
         capsule_plan_ir = dict(compiled.get("capsule_plan") or {})
         physical_plan_ir = dict(compiled.get("physical_plan") or {})
+        payload["executable_node"] = dict(compiled.get("executable_node") or payload["executable_node"])
         payload["logical_plan_node"] = dict(compiled.get("logical_plan_node") or {})
         payload["capsule_plan_ir"] = capsule_plan_ir
         payload["physical_plan_ir"] = physical_plan_ir
@@ -3672,6 +6688,11 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
         or node.get("logical_operator")
         or "N/A"
     )
+    logical_role = str(payload.get("dispatch_role") or node_dispatch_role(node) or "builder")
+    physical_host_role = str(
+        payload.get("physical_host_role")
+        or (_dispatch_role_for_pane(pane) if pane else "unknown")
+    )
     capsule_id = str(
         capsule_plan_ir.get("capability_capsule_id")
         or payload.get("capability_capsule_id")
@@ -3693,6 +6714,7 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
     )
     write_scope_preflight = _write_scope_preflight_block(str(sid), node)
     canonical_output_paths = _canonical_output_paths_block(node)
+    generic_workdir_block = _generic_workdir_block(str(sid), graph_for_policy)
     repair_context_block = _node_repair_context_block(node)
 
     return f"""{STATE_READ_PREFLIGHT}
@@ -3709,6 +6731,8 @@ Graph: `{graph_path}`
 ## Execution Plan
 
 - Logical Operator: `{logical_operator}`
+- Logical Role: `{logical_role}`
+- Physical Host Role: `{physical_host_role}`
 - Capability Capsule: `{capsule_id}`
 - Selected Physical Operator: `{physical_selected}`
 
@@ -3741,6 +6765,8 @@ Graph: `{graph_path}`
 {_scope_lines(node.get("write_scope"))}
 
 {canonical_output_paths}
+
+{generic_workdir_block}
 
 {write_scope_preflight}
 
@@ -3832,6 +6858,20 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
     peer_eval_json_paths = peer_eval_json_paths or []
     canonical_eval_json_path = canonical_eval_json_path or str(_eval_json_file(sid, node_id))
     canonical_eval_md_path = canonical_eval_md_path or str(_eval_md_file(sid, node_id))
+    eval_generation = _node_repair_attempts(node)
+    artifact_snapshot = (
+        node.get("eval_artifact_snapshot")
+        if isinstance(node.get("eval_artifact_snapshot"), dict)
+        else {}
+    )
+    artifact_snapshot_schema = str(artifact_snapshot.get("schema") or "")
+    artifact_snapshot_path = str(artifact_snapshot.get("path") or "")
+    artifact_snapshot_digest = str(artifact_snapshot.get("snapshot_digest") or "")
+    repair_context_created = ""
+    repair_context_created_at = _repair_context_created_at(node)
+    if repair_context_created_at is not None:
+        repair_context_created = repair_context_created_at.isoformat().replace("+00:00", "Z")
+    eval_instruction_created_at = _utc_now()
     peer_block = "\n".join(f"- `{path}`" for path in peer_eval_json_paths) if peer_eval_json_paths else "- `N/A`"
     verdict_step = f"""3. 提交节点 verdict。通过时会自动释放下游 ready node；失败时只阻塞依赖它的下游：
    ```bash
@@ -3866,6 +6906,26 @@ Evaluator Role: `{evaluator_role}`
 Evaluator Index: `{evaluator_index}/{evaluator_total}`
 Graph: `{graph_path}`
 Handoff: `{handoff}`
+
+## Eval Generation Contract
+
+- Eval Generation: `{eval_generation}`
+- Repair Context Created At: `{repair_context_created or "N/A"}`
+- Eval Instruction Created At: `{eval_instruction_created_at}`
+- The machine-readable JSON MUST copy `eval_generation`, `repair_attempt`, `eval_dispatch_id`,
+  `repair_context_created_at`, and `eval_instruction_created_at` exactly. Solar ignores stale
+  repaired-node eval sidecars whose generation predates or cannot be tied to the current repair.
+
+## Evaluated-Byte Contract
+
+- Snapshot Schema: `{artifact_snapshot_schema or "N/A"}`
+- Snapshot Path: `{artifact_snapshot_path or "N/A"}`
+- Snapshot Digest: `{artifact_snapshot_digest or "N/A"}`
+- Read the snapshot sidecar and inspect the exact paths listed there. For a row whose authority is
+  `published`, those destination bytes are authoritative; do not substitute a mutable staging copy.
+- The machine-readable JSON MUST copy `artifact_snapshot_schema`, `artifact_snapshot_path`, and
+  `artifact_snapshot_digest` exactly. Any byte change after dispatch invalidates PASS and requires a
+  fresh evaluation generation.
 
 ## Handoff Candidates
 
@@ -3916,6 +6976,7 @@ cat "{graph_path}"
 cat "{contract}"
 cat "{node_dispatch}"
 test -f "{handoff}" && cat "{handoff}"
+test -n "{artifact_snapshot_path}" && cat "{artifact_snapshot_path}"
 solar-harness session evaluate "{sid}" --json
 ```
 
@@ -3924,8 +6985,8 @@ solar-harness session evaluate "{sid}" --json
 - 评审必须消费 append-only session log，不得只看最终 handoff 文件。
 - 在 eval.md 的 `Evidence Checked` 中写入 `Session Log: solar-harness session evaluate used`。
 - 如果 `session evaluate` 返回 errors/warnings，必须逐项解释是否阻塞本 node verdict。
-- 必须检查 `Architecture Guard`：新能力是否为 package/plugin/skill/connector；如触碰 protected core，必须有 `core_patch_allowed=true`、rollback 和 P0 bugfix 证据，否则 FAIL。
-- 涉及 online exploration 的 node 必须验证 >=2 个候选方向和 kill_criteria；否则 FAIL。
+- Enforce package/plugin/skill/connector boundaries ONLY when Architecture Guard says `feature_node: true`; executing an existing capability is not feature implementation. Protected-core writes still require `core_patch_allowed=true`, rollback, and P0-bugfix evidence.
+- Enforce >=2 architecture alternatives and kill_criteria ONLY when Architecture Guard says `exploration_node: true`; retrieval/search/network activity alone is not architecture exploration, and `false` must not fail this obligation.
 - 必须把 proof obligations 逐项回填到 eval artifact：
   - `proof_obligations`: 原样记录本 node 的 obligation 列表
   - `proof_checks`: 对 `self_check` 逐项填 `true/false`
@@ -3973,6 +7034,14 @@ solar-harness session evaluate "{sid}" --json
      "node_id": "{node_id}",
      "verdict": "PASS",
      "summary": "",
+     "eval_generation": {eval_generation},
+     "repair_attempt": {eval_generation},
+     "eval_dispatch_id": "{dispatch_id}",
+     "repair_context_created_at": "{repair_context_created}",
+     "eval_instruction_created_at": "{eval_instruction_created_at}",
+     "artifact_snapshot_schema": "{artifact_snapshot_schema}",
+     "artifact_snapshot_path": "{artifact_snapshot_path}",
+     "artifact_snapshot_digest": "{artifact_snapshot_digest}",
      "evaluation_plan": {json.dumps(evaluation_plan, ensure_ascii=False, indent=2)},
      "proof_obligations": {json.dumps(proof_obligations, ensure_ascii=False, indent=2)},
      "proof_checks": {json.dumps(proof_checks_template, ensure_ascii=False, indent=2)},
@@ -4857,6 +7926,10 @@ def _pane_dispatch_prompt_reason(tail: str) -> str:
     confirmation_match = re.search(r"Do you want to proceed\?|Would you like to proceed\?|Tab to amend", bottom)
     if confirmation_match and not _prompt_match_followed_by_idle_default_prompt(bottom, confirmation_match):
         return "proceed_confirmation_prompt"
+    if PANE_SURVEY_PROMPT_RE.search(bottom):
+        return "survey_prompt_blocked"
+    if PANE_REWIND_PROMPT_RE.search(bottom):
+        return "rewind_prompt_blocked"
     # `accept edits on` and `bypass permissions on` are Claude Code footer/mode
     # indicators on healthy idle panes. Treat only actual confirmation/edit
     # prompts as blockers; otherwise clean panes get stranded as unavailable.
@@ -4904,6 +7977,11 @@ def _dismiss_dispatch_prompt(pane: str, reason: str) -> bool:
                 if not PANE_SURVEY_PROMPT_RE.search(after):
                     return True
             return False
+        if reason == "rewind_prompt_blocked":
+            subprocess.run(["tmux", "send-keys", "-t", pane, "Escape"], timeout=2)
+            time.sleep(0.4)
+            after = "\n".join(_pane_tail(pane).splitlines()[-40:])
+            return not PANE_REWIND_PROMPT_RE.search(after)
     except Exception:
         return False
     return False
@@ -5676,6 +8754,47 @@ def _record_node_attribution(sid: str, node_id: str, fields: dict[str, Any]) -> 
         pass
 
 
+def _record_direct_pane_attribution(
+    sid: str,
+    node_id: str,
+    *,
+    pane: str,
+    dispatch_id: str,
+    instruction_file: Path,
+    role: str,
+) -> None:
+    """Persist actual direct-pane runtime attribution after a verified submit."""
+    metadata: dict[str, Any] = {}
+    try:
+        import model_call_runtime
+
+        metadata = model_call_runtime.pane_runtime_metadata(pane)
+    except Exception:
+        metadata = {}
+    runtime = str(metadata.get("pane_runtime") or "").strip().lower()
+    _record_node_attribution(
+        sid,
+        node_id,
+        {
+            "phase": "dispatched",
+            "role": role,
+            "physical_host_role": _dispatch_role_for_pane(pane),
+            "dispatch_id": dispatch_id,
+            "dispatch_mode": "direct_pane_eval" if role == "evaluator" else "direct_pane",
+            "pane": pane,
+            "profile": metadata.get("persona") or role,
+            "backend": f"{runtime}-tui" if runtime else None,
+            "provider": metadata.get("provider"),
+            "model": metadata.get("model"),
+            "runtime": runtime or None,
+            "runtime_bin": metadata.get("runtime_bin"),
+            "runtime_metadata_source": metadata.get("metadata_source"),
+            "instruction_file": str(instruction_file),
+            "exit_code": None,
+        },
+    )
+
+
 def _physical_operator_spec(operator_id: str) -> dict[str, Any]:
     try:
         registry = json.loads((HARNESS_DIR / "config" / "physical-operators.json").read_text(encoding="utf-8"))
@@ -5694,12 +8813,16 @@ def _operator_runstate_fields(
     parsed: dict[str, Any],
     instruction_file: Path,
     dispatch_mode: str,
+    physical_host_role: str = "",
 ) -> dict[str, Any]:
     spec = _physical_operator_spec(operator_id)
     provider = spec.get("provider") or spec.get("vendor")
     return {
         "phase": "dispatched",
         "role": role,
+        "physical_host_role": str(physical_host_role or ""),
+        "operator_role": spec.get("role"),
+        "operator_persona": spec.get("persona"),
         "dispatch_id": dispatch_id,
         "dispatch_mode": dispatch_mode,
         "pm_task_id": parsed.get("pm_task_id") or parsed.get("task_id"),
@@ -5738,6 +8861,26 @@ def _append_event(sid: str, event: dict[str, Any]) -> None:
             pass
 
 
+def _write_route_proof_for_sprint(sid: str) -> dict[str, Any]:
+    if not sid:
+        return {}
+    try:
+        lib_dir = HARNESS_DIR / "lib"
+        if str(lib_dir) not in sys.path:
+            sys.path.insert(0, str(lib_dir))
+        import route_proof  # type: ignore
+
+        return route_proof.write_route_proof(HARNESS_DIR, sid, sprints_dir=SPRINTS_DIR)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "enforced": False,
+            "sprint_id": sid,
+            "error": str(exc),
+            "reason": "route_proof_write_failed",
+        }
+
+
 def _mark_parent_sprint_passed_if_ready(sid: str, parent: dict[str, Any], dry_run: bool) -> bool:
     if dry_run or not parent.get("ready"):
         return False
@@ -5747,6 +8890,22 @@ def _mark_parent_sprint_passed_if_ready(sid: str, parent: dict[str, Any], dry_ru
     try:
         data = json.loads(status_file.read_text(encoding="utf-8"))
     except Exception:
+        return False
+
+    route = _write_route_proof_for_sprint(sid)
+    if route.get("enforced") and not route.get("ok"):
+        _append_event(sid, {
+            "event": "graph_parent_ready_route_proof_blocked",
+            "by": "graph-dispatch",
+            "data": {
+                "path": route.get("path"),
+                "complete": route.get("complete"),
+                "selected_runtime": route.get("selected_runtime"),
+                "allowed_providers": route.get("allowed_providers", []),
+                "violations": route.get("violations", []),
+                "incomplete_stages": route.get("incomplete_stages", []),
+            },
+        })
         return False
 
     now = _utc_now()
@@ -5805,7 +8964,10 @@ def _ensure_lease(pane: str, sid: str, dispatch_id: str, ttl: int, dry_run: bool
 
 
 def _builder_operator_pool_enabled() -> bool:
-    return str(os.environ.get("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", "0")).strip().lower() not in {
+    configured = str(os.environ.get("SOLAR_GRAPH_BUILDER_OPERATOR_POOL") or "").strip().lower()
+    if not configured:
+        return _product_mode_enabled()
+    return configured not in {
         "0",
         "false",
         "off",
@@ -5852,11 +9014,16 @@ def _builder_operator_pool_available_count() -> int:
         data = json.loads(completed.stdout)
     except Exception:
         return 0
+    policy_count_present = "total_policy_available" in data
+    capacity_key = "total_policy_available" if policy_count_present else "total_available"
     try:
-        available = int(data.get("total_available") or 0)
+        available = int(data.get(capacity_key) or 0)
     except Exception:
         available = 0
-    if available <= 0:
+    # Older pm_dispatch payloads have no policy-aware total, so retain their
+    # group fallback.  A present policy-aware zero is authoritative: falling
+    # back to all-provider groups would recreate phantom product capacity.
+    if available <= 0 and not policy_count_present:
         groups = data.get("groups") if isinstance(data.get("groups"), dict) else {}
         for group in groups.values():
             if not isinstance(group, dict):
@@ -5893,6 +9060,59 @@ def _operator_pool_role_available(role: str) -> bool:
 def _provider_policy_values_from_env(env: dict[str, str]) -> set[str]:
     raw = env.get("SOLAR_PM_DEFAULT_PROVIDERS") or env.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS") or ""
     return {item.strip().lower() for item in str(raw).split(",") if item.strip()}
+
+
+def _provider_aliases(values: Iterable[Any]) -> set[str]:
+    aliases: set[str] = set()
+    for value in values:
+        text = str(value or "").strip().lower()
+        if not text:
+            continue
+        aliases.add(text)
+        if any(marker in text for marker in ("openai", "codex", "gpt")):
+            aliases.update({"openai", "codex", "gpt"})
+        if any(marker in text for marker in ("anthropic", "claude", "sonnet", "opus")):
+            aliases.update({"anthropic", "claude", "claude-code"})
+        if any(marker in text for marker in ("google", "gemini")):
+            aliases.update({"google", "gemini"})
+    return aliases
+
+
+def _provider_policy_values_from_graph(graph: dict[str, Any]) -> set[str]:
+    policy = graph.get("provider_policy") if isinstance(graph.get("provider_policy"), dict) else {}
+    return _provider_aliases((policy or {}).get("allowed_providers") or [])
+
+
+def _worker_provider_aliases(worker: dict[str, Any]) -> set[str]:
+    values: list[Any] = []
+    for key in ("provider", "vendor", "effective_provider", "backend", "operator_id", "actor_id", "pane", "title"):
+        values.append(worker.get(key))
+    models = worker.get("models")
+    if isinstance(models, list):
+        values.extend(models)
+    else:
+        values.append(models)
+    return _provider_aliases(values)
+
+
+def _worker_matches_graph_provider_policy(worker: dict[str, Any], providers: set[str]) -> bool:
+    if not providers:
+        return True
+    return bool(_worker_provider_aliases(worker) & providers)
+
+
+def _filter_workers_for_graph_provider_policy(
+    graph: dict[str, Any],
+    workers: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not (_ledger_enabled() or _product_mode_enabled()):
+        return workers
+    if not str((graph or {}).get("workflow_contract_id") or "").strip():
+        return workers
+    providers = _provider_policy_values_from_graph(graph)
+    if not providers:
+        return workers
+    return [worker for worker in workers if _worker_matches_graph_provider_policy(worker, providers)]
 
 
 def _operator_matches_provider_policy_for_graph(op: dict[str, Any], providers: set[str]) -> bool:
@@ -6123,17 +9343,31 @@ def _evaluator_operator_pool_workers() -> list[dict[str, Any]]:
 
 
 def _graph_queue_dispatch_role(payload: dict[str, Any], node: dict[str, Any], assignment: dict[str, Any]) -> str:
-    pane = str(assignment.get("pane") or payload.get("pane") or "").strip()
-    if pane.startswith("operator-pool:builder"):
-        return "builder"
     raw = (
         assignment.get("dispatch_role")
         or payload.get("dispatch_role")
         or node.get("dispatch_role")
-        or node.get("role")
-        or "builder"
     )
-    return str(raw or "builder").strip().lower()
+    if str(raw or "").strip():
+        return str(raw).strip().lower()
+    return node_dispatch_role(node)
+
+
+def _graph_queue_physical_host_role(payload: dict[str, Any], assignment: dict[str, Any]) -> str:
+    raw = (
+        assignment.get("worker_role")
+        or assignment.get("host_role")
+        or payload.get("worker_role")
+        or payload.get("host_role")
+    )
+    if str(raw or "").strip() and str(raw).strip().lower() != "operator_pool":
+        return str(raw).strip().lower()
+    pane = str(assignment.get("pane") or payload.get("pane") or "").strip()
+    if pane.startswith("operator-pool:builder"):
+        return "builder"
+    if pane.startswith("operator-pool:evaluator"):
+        return "evaluator"
+    return _dispatch_role_for_pane(pane) if pane else "unknown"
 
 
 def _graph_node_task_type(node: dict[str, Any]) -> str:
@@ -6222,17 +9456,35 @@ def _submit_builder_to_operator_pool(
     dispatch_id: str,
     dry_run: bool,
 ) -> dict[str, Any]:
+    """Submit a graph node through a builder-hosted operator-pool slot.
+
+    The historical function name describes the physical slot, not the logical
+    task.  Compatible planner/evaluator work must retain its scheduler-owned
+    role through operator selection and evidence.
+    """
     if not _builder_operator_pool_enabled():
         return {"ok": False, "reason": "operator_pool_disabled"}
 
     assignment = payload.get("assignment") or {}
-    if _graph_queue_dispatch_role(payload, node, assignment) != "builder":
-        return {"ok": False, "reason": "not_builder_role"}
+    logical_role = _graph_queue_dispatch_role(payload, node, assignment)
+    if logical_role not in {"builder", "planner", "architect", "evaluator"}:
+        return {
+            "ok": False,
+            "reason": "unsupported_logical_role",
+            "logical_role": logical_role,
+        }
+    physical_host_role = _graph_queue_physical_host_role(payload, assignment)
     if pane and not _builder_operator_pool_allowed_for_pane(pane):
         return {"ok": False, "reason": "operator_pool_not_enabled_for_pane"}
 
     instruction_file = _dispatch_file(sid, node_id)
-    text_payload = dict(payload, dispatch_id=dispatch_id, sprint_id=sid)
+    text_payload = dict(
+        payload,
+        dispatch_id=dispatch_id,
+        sprint_id=sid,
+        dispatch_role=logical_role,
+        physical_host_role=physical_host_role,
+    )
     text_payload = _ensure_execution_plan_payload(text_payload, graph_path=graph_path, sid=sid, node=node)
     if node_id.startswith("R"):
         text_payload["research_node"] = True
@@ -6240,9 +9492,10 @@ def _submit_builder_to_operator_pool(
             text_payload["section_isolation"] = True
             text_payload["section_id"] = node.get("section_id", "")
     instruction_file.parent.mkdir(parents=True, exist_ok=True)
-    instruction_file.write_text(build_dispatch_text(text_payload, "operator-pool:builder"), encoding="utf-8")
+    physical_pane = pane or "operator-pool:builder"
+    instruction_file.write_text(build_dispatch_text(text_payload, physical_pane), encoding="utf-8")
     if not dry_run:
-        _inject_dispatch_context(instruction_file, sid=sid, pane="operator-pool:builder", dispatch_id=dispatch_id)
+        _inject_dispatch_context(instruction_file, sid=sid, pane=physical_pane, dispatch_id=dispatch_id)
 
     dispatch_preview = instruction_file.read_text(encoding="utf-8")
     if len(dispatch_preview) > 60000:
@@ -6251,7 +9504,7 @@ def _submit_builder_to_operator_pool(
             + "\n\n[TRUNCATED] Full graph dispatch instructions are in the file path above; read the file before acting."
         )
     objective = (
-        "你是 graph-dispatch builder。请严格执行下面这个 DAG 节点分发文件；"
+        f"你是 graph-dispatch {logical_role}。请严格执行下面这个 DAG 节点分发文件；"
         "不要只总结，必须完成节点要求并按文件内的 graph node verdict/closeout 规则回写。\n\n"
         f"Graph dispatch file: {instruction_file}\n"
         f"Sprint: {sid}\n"
@@ -6267,6 +9520,8 @@ def _submit_builder_to_operator_pool(
             "graph": graph_path,
             "dispatch_id": dispatch_id,
             "original_assigned_pane": pane,
+            "logical_role": logical_role,
+            "physical_host_role": physical_host_role,
             "queue_item_id": item.get("id", ""),
         },
         ensure_ascii=False,
@@ -6276,13 +9531,15 @@ def _submit_builder_to_operator_pool(
         str(HARNESS_DIR / "tools" / "pm_dispatch.py"),
         "submit",
         "--role",
-        "builder",
+        logical_role,
         "--sprint",
         sid,
         "--node",
         node_id,
         "--task-type",
         _graph_node_task_type(node),
+        "--closeout-kind",
+        "graph_node_execution",
         "--objective",
         objective,
         "--context",
@@ -6315,6 +9572,85 @@ def _submit_builder_to_operator_pool(
 
     parsed = _parse_pm_submit_output(completed.stdout)
     operator_id = parsed.get("operator_id") or "unknown"
+    if not str(parsed.get("pm_task_id") or "").strip():
+        reason = "operator_pool_task_id_missing"
+        graph_updated = False
+        graph_error = ""
+        if not dry_run:
+            if pane:
+                release_lease(pane, dispatch_id, "graph_dispatch_operator_identity_missing")
+            try:
+                graph = load_graph(graph_path)
+                graph_node = _node_by_id(graph, node_id)
+                if graph_node is None:
+                    raise ValueError(f"graph node not found: {node_id}")
+                record_execution_attempt_activation_error(
+                    graph_node,
+                    reason=reason,
+                    dispatch_id=dispatch_id,
+                    source="pm_dispatch",
+                    operator_id=operator_id,
+                    sprint_id=sid,
+                    node_id=node_id,
+                    now=_utc_now(),
+                )
+                blocked_reason = f"operator_pool_identity_missing:{dispatch_id}"
+                next_action = "inspect_operator_pool_submission_and_dispatch_identified_replacement"
+                enter_node_human_review(
+                    graph,
+                    node_id,
+                    reason=blocked_reason,
+                    next_action=next_action,
+                    writer="_submit_builder_to_operator_pool",
+                )
+                graph_node["dispatch_blocked_reason"] = blocked_reason
+                save_graph(graph_path, graph)
+                graph_updated = True
+            except Exception as exc:
+                graph_error = f"{type(exc).__name__}: {exc}"
+        _append_dispatch_ledger(
+            "operator_pool_identity_missing",
+            sid,
+            pane or "operator-pool:builder",
+            dispatch_id,
+            {
+                "node": node_id,
+                "graph": graph_path,
+                "pm_dispatch": parsed,
+                "instruction_file": str(instruction_file),
+                "graph_error": graph_error,
+            },
+        )
+        _append_event(
+            sid,
+            {
+                "event": "graph_builder_operator_pool_identity_missing",
+                "by": "graph-dispatch",
+                "severity": "error",
+                "data": {
+                    "node": node_id,
+                    "operator_id": operator_id,
+                    "dispatch_id": dispatch_id,
+                    "reason": reason,
+                    "graph_updated": graph_updated,
+                    "graph_error": graph_error,
+                },
+            },
+        )
+        return {
+            "ok": False,
+            "reason": "operator_pool_identity_missing",
+            "suppress_fallback": not dry_run,
+            "node": node_id,
+            "pane": f"operator:{operator_id}",
+            "dispatch_id": dispatch_id,
+            "instruction_file": str(instruction_file),
+            "dispatch_mode": "operator_pool",
+            "pm_dispatch": parsed,
+            "dry_run": dry_run,
+            "graph_updated": graph_updated,
+            "graph_error": graph_error,
+        }
     operator_pane = f"operator:{operator_id}"
     actorhost = _actorhost_bridge(
         actor_id=operator_id,
@@ -6349,9 +9685,20 @@ def _submit_builder_to_operator_pool(
         graph = load_graph(graph_path)
         graph_node = _node_by_id(graph, node_id)
         if graph_node is not None:
-            graph_node["operator_id"] = operator_id
-            graph_node["pm_task_id"] = parsed.get("pm_task_id", "")
-            graph_node["dispatched_via"] = "pm_dispatch"
+            activate_execution_attempt(
+                graph_node,
+                task_id=str(parsed.get("pm_task_id") or ""),
+                dispatch_id=dispatch_id,
+                operator_id=operator_id,
+                source="pm_dispatch",
+                logical_role=logical_role,
+                status="submitted",
+                requires_operator_result=True,
+                sprint_id=sid,
+                node_id=node_id,
+                result_path=str(parsed.get("pm_result_path") or ""),
+                now=_utc_now(),
+            )
             graph_node["updated_at"] = _utc_now()
             save_graph(graph_path, graph)
             graph_updated = True
@@ -6376,17 +9723,18 @@ def _submit_builder_to_operator_pool(
         node_id,
         _operator_runstate_fields(
             operator_id=operator_id,
-            role="builder",
+            role=logical_role,
             dispatch_id=dispatch_id,
             parsed=parsed,
             instruction_file=instruction_file,
             dispatch_mode="operator_pool",
+            physical_host_role=physical_host_role,
         ),
     )
     _append_event(
         sid,
         {
-            "event": "graph_builder_operator_pool_dispatched",
+            "event": f"graph_{logical_role}_operator_pool_dispatched",
             "by": "graph-dispatch",
             "data": {
                 "node": node_id,
@@ -6398,6 +9746,8 @@ def _submit_builder_to_operator_pool(
                 "pm_task_id": parsed.get("pm_task_id", ""),
                 "fallback_pane": pane,
                 "dispatch_id": dispatch_id,
+                "logical_role": logical_role,
+                "physical_host_role": physical_host_role,
             },
         },
     )
@@ -6411,6 +9761,8 @@ def _submit_builder_to_operator_pool(
         "pm_dispatch": parsed,
         "dry_run": False,
         "graph_updated": graph_updated,
+        "logical_role": logical_role,
+        "physical_host_role": physical_host_role,
     }, actorhost)
 
 
@@ -6423,6 +9775,8 @@ def _submit_eval_to_operator_pool(
     dispatch_id: str,
     instruction_file: Path,
     dry_run: bool,
+    eval_md_path: str = "",
+    eval_json_path: str = "",
 ) -> dict[str, Any]:
     dispatch_preview = instruction_file.read_text(encoding="utf-8")
     if len(dispatch_preview) > 60000:
@@ -6454,6 +9808,8 @@ def _submit_eval_to_operator_pool(
         },
         ensure_ascii=False,
     )
+    expected_eval_md = eval_md_path or str(_eval_md_file(sid, node_id))
+    expected_eval_json = eval_json_path or str(_eval_json_file(sid, node_id))
     cmd = [
         sys.executable,
         str(HARNESS_DIR / "tools" / "pm_dispatch.py"),
@@ -6466,6 +9822,12 @@ def _submit_eval_to_operator_pool(
         node_id,
         "--task-type",
         "graph_eval",
+        "--closeout-kind",
+        "graph_eval",
+        "--expected-artifact",
+        expected_eval_md,
+        "--expected-artifact",
+        expected_eval_json,
         "--objective",
         objective,
         "--context",
@@ -6830,6 +10192,7 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
     node_id = node.get("id") or _node_id_from_intent(item.get("intent", ""))
     assignment = payload.get("assignment") or {}
     pane = assignment.get("pane") or payload.get("pane") or ""
+    logical_role = _graph_queue_dispatch_role(payload, node, assignment)
     graph_path = payload.get("graph") or str(SPRINTS_DIR / f"{sid}.task_graph.json")
     dispatch_id = payload.get("dispatch_id") or f"graph-{sid}-{node_id}"
 
@@ -6841,6 +10204,28 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
     human_handoff = _prepare_human_search_handoff(sid, graph_path, node, dry_run=dry_run)
     if human_handoff is not None:
         return human_handoff
+    # P5 G2b review finding 1: drain_queue dispatches items through here
+    # without re-checking the certificate — an item enqueued before a
+    # post-PASS graph edit (or a direct dispatch_queue_item call) wrote an
+    # instruction file for an uncertified graph. Same guard as dispatch_ready;
+    # an unreadable graph falls back to {} (non-generic → guard skips), which
+    # preserves the legacy no-graph-file behavior.
+    if _plan_validator_enabled():
+        try:
+            guard_graph = load_graph(graph_path)
+        except Exception:
+            guard_graph = {}
+        validator_refusal = _plan_validator_dispatch_guard(guard_graph)
+        if validator_refusal is not None:
+            _append_event(sid, {
+                "event": "plan_validator_dispatch_refused",
+                "by": "graph-dispatch",
+                "severity": "error",
+                "data": {"graph": str(graph_path), "node": node_id, **validator_refusal},
+            })
+            if not dry_run:
+                _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
+            return {**validator_refusal, "node": node_id, "dispatch_id": dispatch_id, "requeued": False}
     use_operator_pool = (
         current_status in {"assigned", "pending", "queued"}
         and (not current_dispatch_id or current_dispatch_id == dispatch_id)
@@ -6859,6 +10244,8 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
             dry_run=dry_run,
         )
         if pool_result.get("ok"):
+            return pool_result
+        if pool_result.get("suppress_fallback"):
             return pool_result
         if pool_result.get("reason") not in {
             "operator_pool_disabled",
@@ -6905,6 +10292,24 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
                 if sent:
                     if not dry_run:
                         _write_submit_ack(sid, node_id, pane, dispatch_id)
+                        _record_direct_pane_attribution(
+                            sid,
+                            node_id,
+                            pane=pane,
+                            dispatch_id=dispatch_id,
+                            instruction_file=instruction_file,
+                            role=logical_role,
+                        )
+                        graph_updated = _activate_direct_pane_attempt(
+                            graph_path,
+                            node_id,
+                            sid=sid,
+                            pane=pane,
+                            dispatch_id=dispatch_id,
+                            logical_role=logical_role,
+                        )
+                    else:
+                        graph_updated = False
                     return {
                         "ok": True,
                         "reason": "matching_queued_prompt_submitted",
@@ -6912,6 +10317,7 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
                         "pane": pane,
                         "dispatch_id": dispatch_id,
                         "instruction_file": str(instruction_file),
+                        "graph_updated": graph_updated,
                     }
             if dry_run:
                 return {
@@ -7008,7 +10414,13 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
             "requeued": True,
         }
 
-    text_payload = dict(payload, dispatch_id=dispatch_id, sprint_id=sid)
+    text_payload = dict(
+        payload,
+        dispatch_id=dispatch_id,
+        sprint_id=sid,
+        dispatch_role=logical_role,
+        physical_host_role=_graph_queue_physical_host_role(payload, assignment),
+    )
     text_payload = _ensure_execution_plan_payload(text_payload, graph_path=graph_path, sid=sid, node=node)
     actorhost = _actorhost_bridge(
         pane=pane,
@@ -7046,13 +10458,22 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
     if sent:
         if not dry_run:
             _write_submit_ack(sid, node_id, pane, dispatch_id)
-            try:
-                graph = load_graph(graph_path)
-                set_node_status(graph, node_id, "dispatched", pane=pane, dispatch_id=dispatch_id)
-                save_graph(graph_path, graph)
-                graph_updated = True
-            except Exception:
-                graph_updated = False
+            _record_direct_pane_attribution(
+                sid,
+                node_id,
+                pane=pane,
+                dispatch_id=dispatch_id,
+                instruction_file=instruction_file,
+                role=logical_role,
+            )
+            graph_updated = _activate_direct_pane_attempt(
+                graph_path,
+                node_id,
+                sid=sid,
+                pane=pane,
+                dispatch_id=dispatch_id,
+                logical_role=logical_role,
+            )
         return _flatten_actorhost_bridge({
             "ok": True,
             "node": node_id,
@@ -7238,6 +10659,13 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         pane_rows = [p.rstrip("\n").split("\t", 1) for p in out.splitlines() if p.strip()]
     except Exception:
         pane_rows = []
+    # Product-mode cockpit panes are viewers, not execution hosts.  Returning
+    # them here lets the scheduler consume a node into an idle bash shell and
+    # starves the local operatord pool (fresh-install RC9 proof, 2026-07-13).
+    # An unavailable pool must fail closed as no capacity, never fall back to a
+    # pane the product intentionally did not launch an agent into.
+    if _product_mode_enabled():
+        pane_rows = []
     workers = []
     pane_rows.sort(key=lambda row: _pane_execution_priority((row[0].strip() if row else "")))
     for row in pane_rows:
@@ -7314,7 +10742,8 @@ def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
     # runtime to one pane. Planning still decides whether a node may use a
     # single evaluator or require quorum semantics.
     restrict_to_session = os.environ.get("SOLAR_GRAPH_DISPATCH_RESTRICT_SESSION") == "1"
-    candidates = [f"{_current_harness_session()}:0.3"]
+    product_mode = _product_mode_enabled()
+    candidates = [] if product_mode else [f"{_current_harness_session()}:0.3"]
     try:
         out = subprocess.check_output(
             ["tmux", "list-panes", "-a", "-F", "#{session_name}:#{window_index}.#{pane_index}\t#{pane_title}"],
@@ -7325,6 +10754,8 @@ def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
     except Exception:
         pane_rows = []
     for row in pane_rows:
+        if product_mode:
+            continue
         pane = row[0].strip()
         if not pane or pane in candidates:
             continue
@@ -7380,6 +10811,39 @@ def _discover_evaluators(dry_run: bool = False) -> list[dict[str, Any]]:
         evaluators.extend(_evaluator_operator_pool_workers())
     evaluators.sort(key=lambda item: _pane_evaluator_priority(str(item.get("pane") or ""), str(item.get("title") or "")))
     return evaluators
+
+
+def _order_evaluators_for_graph(graph: dict[str, Any], evaluators: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Contracted-path evaluator ordering: dispatchable pool evaluators first.
+
+    _discover_evaluators sorts pane-first (cockpit :0.3 = priority 0, the
+    operator-pool virtual worker last) and _evaluation_capacity_snapshot
+    selects available[:required] — pure list order. That is the interactive
+    cockpit rule. On the contracted path it wedged the first live Claude
+    smoke: claude TUI panes accept direct dispatch and match the evaluator
+    role, so the live pane outranked the pool, the injected eval sat
+    unexecuted in the TUI, and the in-flight sidecar suppressed every later
+    dispatch tick (S1 reviewing for the whole budget, dispatched=[]). A pane
+    eval is also evidence-free — no operatord lease, no result.json, no route
+    records — while the pool is the evidence-generating seam the gate ledger
+    audits. So on contracted graphs (SOLAR_GATE_LEDGER + workflow_contract_id)
+    non-busy pool evaluators outrank panes; panes stay as fallback when the
+    pool has none. Uncontracted graphs keep pane-first ordering unchanged."""
+    if not evaluators:
+        return evaluators
+    if not (_ledger_enabled() and _gate_ledger is not None and _gate_ledger.contracted(graph)):
+        return evaluators
+    if not _eval_operator_pool_enabled():
+        return evaluators
+    pool = [
+        item for item in evaluators
+        if str(item.get("pane") or "").startswith("operator-pool:evaluator")
+    ]
+    if not any(not item.get("busy") for item in pool):
+        return evaluators
+    pool_ids = {id(item) for item in pool}
+    rest = [item for item in evaluators if id(item) not in pool_ids]
+    return pool + rest
 
 
 def _node_eval_self_graded(sid: str, node_id: str) -> bool:
@@ -7447,6 +10911,8 @@ def _node_eval_needed(graph: dict[str, Any], sid: str, node: dict[str, Any], for
         if recovered:
             if recovered:
                 recovered[0]["role"] = "primary"
+            if not isinstance(node.get("eval_artifact_snapshot"), dict):
+                _restore_eval_artifact_snapshot_metadata(sid, node)
             _store_eval_assignments(node, recovered, recovered_at or _utc_now())
             node["eval_recovered_from_lease"] = True
             return False
@@ -7739,14 +11205,121 @@ def _submit_eval_to_autosci_adapter(
     }
 
 
+def _maybe_execute_contract_gate(graph: dict[str, Any], sid: str, node: dict[str, Any],
+                                 *, dry_run: bool = False) -> dict[str, Any] | None:
+    """Execute a contracted stage's none/deterministic_command evaluator gate.
+
+    Returns a dispatched-entry dict when this node's gate was executed (or
+    planned, under dry_run), None to fall through to the llm_eval path. The
+    executor writes the same eval.json/eval.md sidecar pair a live evaluator
+    writes, so the proven sidecar-reconcile -> mark -> ledger-verdict ->
+    repair machinery consumes the result unchanged (P3 rehearsal: nothing
+    executed non-llm gate kinds; contracted non-llm stages wedged in
+    reviewing). Contracted-path only — uncontracted graphs and llm_eval
+    stages keep legacy behavior byte-identically."""
+    if not (_ledger_enabled() and _gate_ledger is not None and _gate_ledger.contracted(graph)):
+        return None
+    gate = node.get("evaluator_gate") if isinstance(node.get("evaluator_gate"), dict) else {}
+    kind = str((gate or {}).get("kind") or "none")
+    try:
+        import contract_gate_executor as _cge
+    except Exception:
+        return None
+    if kind not in _cge.EXECUTABLE_GATE_KINDS:
+        return None
+    node_id = str(node.get("id") or "")
+    # Deterministic gates evaluate COMPLETED stage outputs. On the pool path
+    # the handoff appears while the builder is still in flight, and
+    # _node_eval_needed accepts dispatched/in_progress — fine for slow llm
+    # evals, fatal for a gate that runs in seconds (P3 live run 1: D1
+    # evaluated at status=dispatched -> premature pass -> the builder-complete
+    # mark downgraded it back to reviewing where its now-stale sidecar was
+    # never re-consumed; D3 evaluated half-written artifacts ->
+    # research_eval_json_missing FAIL -> repair archived the handoff -> both
+    # in-flight builders failed contract closeout exit 67. D2, whose gate
+    # happened to run after the reviewing mark, passed cleanly in the same
+    # run). Wait for the builder-complete `reviewing` mark.
+    if str(node_status(graph, node_id) or "").strip().lower() != "reviewing":
+        return {
+            "node": node_id,
+            "dispatch_mode": "deterministic_gate",
+            "gate_kind": kind,
+            "skip_reason": "deterministic_gate_waiting_for_builder",
+        }
+    if dry_run:
+        return {
+            "node": node_id,
+            "dispatch_mode": "deterministic_gate",
+            "gate_kind": kind,
+            "dry_run": True,
+        }
+    snapshot = _capture_eval_artifact_snapshot(sid, node, graph)
+    if not snapshot.get("ok"):
+        _ledger_record(
+            sid,
+            node_id=node_id,
+            kind="gate_check",
+            author={"type": "policy"},
+            verdict="block",
+            note=str(snapshot.get("reason") or "eval_artifact_snapshot_invalid"),
+        )
+        return {
+            "node": node_id,
+            "dispatch_mode": "deterministic_gate",
+            "gate_kind": kind,
+            "skip_reason": str(snapshot.get("reason") or "eval_artifact_snapshot_invalid"),
+            "eval_artifact_snapshot": snapshot,
+        }
+    # The staleness classifiers (_archive_late_pre_repair_eval_sidecars and
+    # friends) accept a verdict only when the node's eval dispatch is NEWER
+    # than the repair marker — a field only the llm dispatch path stamped.
+    # Without it every post-repair executor FAIL was archived as
+    # late_pre_repair_eval_output and the gate re-fired forever (P3 live run
+    # 2: D3 looped every ~11s after repair exhaustion).
+    node["eval_dispatched_at"] = _utc_now()
+    result = _cge.execute_gate(
+        SPRINTS_DIR,
+        sid,
+        node,
+        gate or {},
+        harness_dir=HARNESS_DIR,
+        artifact_snapshot=snapshot,
+    )
+    _ledger_record(
+        sid, node_id=node_id, kind="gate_check", author={"type": "policy"},
+        verdict="pass" if result.get("ok") else "fail",
+        verdict_kind=str(result.get("verdict_kind") or "") or None,
+        note=f"deterministic_gate_executed:{kind}",
+        exit_code=result.get("exit_code"),
+    )
+    return {
+        "node": node_id,
+        "dispatch_mode": "deterministic_gate",
+        "gate_kind": kind,
+        "verdict": result.get("verdict"),
+        "verdict_kind": result.get("verdict_kind"),
+        "eval_json": result.get("eval_json"),
+        "exit_code": result.get("exit_code"),
+    }
+
+
 def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                         force: bool = False, max_items: int = 0) -> dict[str, Any]:
     graph = load_graph(graph_path)
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
+    validator_refusal = _plan_validator_dispatch_guard(graph)
+    if validator_refusal is not None:
+        _append_event(sid, {
+            "event": "plan_validator_dispatch_refused",
+            "by": "graph-dispatch",
+            "severity": "error",
+            "data": {"graph": str(graph_path), **validator_refusal},
+        })
+        return {**validator_refusal, "sprint_id": sid, "dispatched": [], "skipped": []}
     dispatched: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     used_evaluator_panes: set[str] = set()
-    evaluators = _discover_evaluators(dry_run)
+    evaluators = _order_evaluators_for_graph(graph, _discover_evaluators(dry_run))
 
     for node in graph.get("nodes", []):
         if max_items and len(dispatched) >= max_items:
@@ -7910,6 +11483,35 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 })
             graph = load_graph(graph_path)
             break
+        builder_result_gate = _builder_operator_result_gate(sid, node)
+        if builder_result_gate.get("required") and not builder_result_gate.get("ok"):
+            skipped.append(
+                {
+                    "node": node_id,
+                    "reason": str(
+                        builder_result_gate.get("reason")
+                        or "builder_operator_result_pending"
+                    ),
+                    "task_id": builder_result_gate.get("task_id"),
+                    "operator_id": builder_result_gate.get("operator_id"),
+                    "complete": builder_result_gate.get("complete"),
+                    "result_json": builder_result_gate.get("result_json"),
+                }
+            )
+            continue
+        if not dry_run:
+            _emit_node_proof_sidecars(sid, node)
+        gate_result = _maybe_execute_contract_gate(graph, sid, node, dry_run=dry_run)
+        if gate_result is not None:
+            if gate_result.get("skip_reason"):
+                skipped.append({
+                    "node": gate_result.get("node"),
+                    "reason": gate_result["skip_reason"],
+                    "gate_kind": gate_result.get("gate_kind"),
+                })
+            else:
+                dispatched.append(gate_result)
+            continue
         requested_plan = _plan_node_evaluation(graph, node)
         loop_evaluators = [
             {**item, "busy": bool(item.get("busy")) or str(item.get("pane") or "") in used_evaluator_panes}
@@ -7971,8 +11573,28 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
             })
             break
         total_evaluators = int(runtime_plan.get("required_evaluators") or 1)
+        artifact_snapshot: dict[str, Any] = {}
+        if not dry_run:
+            artifact_snapshot = _capture_eval_artifact_snapshot(sid, node, graph)
+            if not artifact_snapshot.get("ok"):
+                skipped.append(
+                    {
+                        "node": node_id,
+                        "reason": str(
+                            artifact_snapshot.get("reason")
+                            or "eval_artifact_snapshot_invalid"
+                        ),
+                        "eval_artifact_snapshot": artifact_snapshot,
+                    }
+                )
+                continue
         dispatch_group_id = f"graph-eval-{sid}-{node_id}-{_utc_now().replace(':', '').replace('-', '')}"
         planned_assignments: list[dict[str, Any]] = []
+        eval_generation = _node_repair_attempts(node)
+        repair_context_created = ""
+        repair_context_created_at = _repair_context_created_at(node)
+        if repair_context_created_at is not None:
+            repair_context_created = repair_context_created_at.isoformat().replace("+00:00", "Z")
         for idx, evaluator in enumerate(selected_evaluators[:total_evaluators], start=1):
             pane = str(evaluator.get("pane") or "")
             if pane in used_evaluator_panes:
@@ -7995,6 +11617,11 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                     "index": idx,
                     "eval_md_path": str(eval_md_path),
                     "eval_json_path": str(eval_json_path),
+                    "eval_generation": eval_generation,
+                    "repair_context_created_at": repair_context_created,
+                    "artifact_snapshot_schema": str(artifact_snapshot.get("schema") or ""),
+                    "artifact_snapshot_path": str(artifact_snapshot.get("path") or ""),
+                    "artifact_snapshot_digest": str(artifact_snapshot.get("snapshot_digest") or ""),
                 }
             )
         if not planned_assignments:
@@ -8030,9 +11657,6 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 "evaluation_plan": runtime_plan,
             })
             continue
-
-        if not dry_run:
-            _emit_node_proof_sidecars(sid, node)
 
         canonical_eval_md = str(_eval_md_file(sid, node_id))
         canonical_eval_json = str(_eval_json_file(sid, node_id))
@@ -8088,11 +11712,18 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                     dispatch_id=str(assignment["dispatch_id"]),
                     instruction_file=instruction_file,
                     dry_run=dry_run,
+                    eval_md_path=str(assignment["eval_md_path"]),
+                    eval_json_path=str(assignment["eval_json_path"]),
                 )
                 sent = bool(submit_result.get("ok"))
                 if sent:
                     pane = str(submit_result.get("pane") or pane)
                     assignment["pane"] = pane
+                    pm_dispatch = submit_result.get("pm_dispatch")
+                    if isinstance(pm_dispatch, dict):
+                        pm_task_id = str(pm_dispatch.get("pm_task_id") or pm_dispatch.get("task_id") or "")
+                        if pm_task_id:
+                            assignment["pm_task_id"] = pm_task_id
             else:
                 submit_result = {}
                 sent = _send_to_pane(pane, instruction_file, dry_run, sid=sid, dispatch_id=str(assignment["dispatch_id"]))
@@ -8105,6 +11736,15 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 used_evaluator_panes.add(assigned_pane)
                 break
             _write_submit_ack(sid, node_id, pane, str(assignment["dispatch_id"]))
+            if not assigned_pane.startswith("operator-pool:"):
+                _record_direct_pane_attribution(
+                    sid,
+                    node_id,
+                    pane=pane,
+                    dispatch_id=str(assignment["dispatch_id"]),
+                    instruction_file=instruction_file,
+                    role="evaluator",
+                )
             used_evaluator_panes.add(assigned_pane)
             used_evaluator_panes.add(pane)
             sent_records.append({
@@ -8128,6 +11768,7 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
             })
             continue
 
+        _ledger_transition(sid, node_id, node_status(graph, node_id), "reviewing", "dispatch_node_evals")
         node["status"] = "reviewing"
         node["eval_dispatch_group_id"] = dispatch_group_id
         # A successful dispatch clears the consecutive-failure streak so a later transient
@@ -8180,7 +11821,49 @@ def _account_eval_dispatch_failures(
         reason = str(item.get("reason") or "")
         node_id = str(item.get("node") or "")
         node = node_index.get(node_id)
-        if node is None or reason not in _EVAL_STUCK_REASONS:
+        if node is None:
+            continue
+        if reason in _EVAL_INTEGRITY_BLOCK_REASONS:
+            blocked_reason = f"eval_integrity_block:{reason}"
+            human_review = enter_node_human_review(
+                graph,
+                node_id,
+                reason=blocked_reason,
+                next_action=(
+                    "inspect the recorded evaluation snapshot, restore or republish authoritative "
+                    "bytes, then explicitly resume this generation"
+                ),
+                writer="_account_eval_dispatch_failures",
+            )
+            node["eval_blocked_reason"] = blocked_reason
+            _append_event(
+                sid,
+                {
+                    "event": "graph_eval_integrity_escalated_to_human",
+                    "by": "graph-dispatch",
+                    "severity": "error",
+                    "data": {
+                        "node": node_id,
+                        "reason": reason,
+                        "human_review_generation": human_review.get("generation"),
+                    },
+                },
+            )
+            terminalized.append(
+                {"node": node_id, "status": "needs_human_review", "reason": blocked_reason}
+            )
+            _record_node_runstate(
+                sid,
+                node_id,
+                {
+                    "last_eval_result": "INTEGRITY_BLOCKED",
+                    "last_eval_reason": reason,
+                    "next_action": str(node.get("next_action") or "explicit_human_resume_required"),
+                    "status": "needs_human_review",
+                },
+            )
+            continue
+        if reason not in _EVAL_STUCK_REASONS:
             continue
         failures = int(node.get("eval_dispatch_failures") or 0) + 1
         node["eval_dispatch_failures"] = failures
@@ -8194,22 +11877,17 @@ def _account_eval_dispatch_failures(
             and current not in {"passed", "failed", "skipped", "cancelled", "needs_human_review"}
         ):
             now = _utc_now()
-            next_action = "connect_evaluator_or_submit_human_verdict"
+            next_action = "connect_evaluator_then_explicitly_resume_or_submit_a_human_verdict"
             blocked_reason = f"eval_dispatch_unavailable:{reason}:{failures}_consecutive_failures"
-            # Set node + node_results directly: graph_scheduler._status_rank ranks reviewing(4) above
-            # needs_human_review(0), so set_node_status would refuse this transition. This mirrors the
-            # direct-write pattern already used by _start_node_repair_from_eval_fail.
-            node["status"] = "needs_human_review"
+            human_review = enter_node_human_review(
+                graph,
+                node_id,
+                reason=blocked_reason,
+                next_action=next_action,
+                writer="_account_eval_dispatch_failures",
+            )
             node["eval_blocked_reason"] = blocked_reason
-            node["next_action"] = next_action
             node["updated_at"] = now
-            graph.setdefault("node_results", {})
-            graph["node_results"][node_id] = {
-                "status": "needs_human_review",
-                "updated_at": now,
-                "note": blocked_reason,
-                "next_action": next_action,
-            }
             _append_event(sid, {
                 "event": "graph_eval_dispatch_escalated_to_human",
                 "by": "graph-dispatch",
@@ -8220,6 +11898,7 @@ def _account_eval_dispatch_failures(
                     "consecutive_failures": failures,
                     "max_failures": max_fail,
                     "next_action": next_action,
+                    "human_review_generation": human_review.get("generation"),
                 },
             })
             terminalized.append({"node": node_id, "status": "needs_human_review", "reason": blocked_reason})
@@ -8240,6 +11919,24 @@ def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
         return {"ok": False, "reason": "no_dispatch_flag", "graph": graph_path, "enqueue": {}, "drain": {}}
     graph = load_graph(graph_path)
     sid = graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", "")
+    guard = _workflow_contract_guard(graph)
+    if guard is not None:
+        _append_event(str(sid), {
+            "event": "workflow_contract_guard_failed",
+            "by": "graph-dispatch",
+            "severity": "error",
+            "data": {"graph": str(graph_path), **guard},
+        })
+        return {**guard, "graph": graph_path, "enqueue": {}, "drain": {}}
+    validator_refusal = _plan_validator_dispatch_guard(graph)
+    if validator_refusal is not None:
+        _append_event(str(sid), {
+            "event": "plan_validator_dispatch_refused",
+            "by": "graph-dispatch",
+            "severity": "error",
+            "data": {"graph": str(graph_path), **validator_refusal},
+        })
+        return {**validator_refusal, "graph": graph_path, "enqueue": {}, "drain": {}}
     effective_max_parallel = int(max_parallel) if max_parallel is not None else _effective_graph_max_parallel(8)
     reconciled: list[dict[str, Any]] = []
     if not dry_run:
@@ -8252,6 +11949,28 @@ def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
         pass
     workers = _discover_workers(dry_run)
     workers.extend(_autosci_contract_operator_workers(graph))
+    active_panes: set[str] = set()
+    results = graph.get("node_results") if isinstance(graph.get("node_results"), dict) else {}
+    for node in graph.get("nodes") or []:
+        node_id = str(node.get("id") or "")
+        if node_status(graph, node_id) not in {"assigned", "dispatched", "in_progress", "running"}:
+            continue
+        result = results.get(node_id) if isinstance(results.get(node_id), dict) else {}
+        pane = str(node.get("assigned_to") or result.get("assigned_to") or "").strip()
+        if pane:
+            active_panes.add(pane)
+    if active_panes:
+        marked_workers: list[dict[str, Any]] = []
+        for worker in workers:
+            if str(worker.get("pane") or "") not in active_panes:
+                marked_workers.append(worker)
+                continue
+            marked = dict(worker)
+            marked["busy"] = True
+            marked["unavailable_reason"] = str(marked.get("unavailable_reason") or "graph_active_assignment")
+            marked_workers.append(marked)
+        workers = marked_workers
+    workers = _filter_workers_for_graph_provider_policy(graph, workers)
     enqueue_result = enqueue_ready(
         graph,
         graph_path,
@@ -8278,18 +11997,517 @@ def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
         drain_result = {"ok": all(r.get("ok", False) for r in results), "processed": len(results), "results": results}
     else:
         drain_result = drain_queue(str(sid), dry_run=dry_run, max_items=len(enqueue_result.get("enqueued", [])), ttl=ttl)
+    status_sync: dict[str, Any] = {}
+    if not dry_run:
+        # Converge the legacy parent projection EVERY tick, regardless of
+        # which loop consumed the final node's eval. Two reconcile loops race
+        # (this dispatcher tick and the multi-task auto-advance loop); only
+        # the latter synced, and only when ITS reconcile was non-empty — so
+        # when this tick consumed the final sidecar (P3 run 4: D6 passed
+        # 15:08:24, status.json last write 15:08:21), no sync ever ran and
+        # the sprint projection froze at active/open_nodes=["D6"] until the
+        # wrapper timed out with the graph fully closed underneath. The sync
+        # is idempotent and cheap (already_synced / parent_not_ready
+        # short-circuit) and must never break the dispatch hot path.
+        try:
+            status_sync = sync_status_cache_from_graph(
+                graph,
+                graph_path,
+                actor="graph_node_dispatcher",
+                event="dispatch_tick_projection",
+            )
+        except Exception as exc:
+            status_sync = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
     return {
         "ok": enqueue_result.get("ok") and drain_result.get("ok"),
         "reconciled": reconciled,
         "concurrency": {"graph_max_parallel": effective_max_parallel},
         "enqueue": enqueue_result,
         "drain": drain_result,
+        "status_sync": {k: status_sync.get(k) for k in ("ok", "updated", "reason", "error") if k in status_sync},
+    }
+
+
+def _node_policy_passed(graph: dict[str, Any], sid: str, node_id: str) -> bool:
+    """AC-R4.1 hold discriminator (round-4 G1): was the node RECORDED passed?
+
+    node_status() fail-closed-downgrades a passed-without-required-eval node to
+    "reviewing" — and the real v5 shape (handoff present, eval.json missing) is
+    exactly the state that produces the mechanical FAIL the hold exists for, so
+    gating the hold on the effective status bypassed it. Consult the recorded
+    fold first, then the ledger projection (an applied audited pass survives
+    even a graph-side clobber)."""
+    try:
+        if node_recorded_status(graph, node_id) == "passed":
+            return True
+    except Exception:
+        pass
+    try:
+        if (
+            _gate_ledger is not None
+            and _gate_ledger.project_node_status(SPRINTS_DIR, sid, node_id) == "passed"
+        ):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _finalize_node_pass(
+    sid: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    *,
+    eval_json: str | Path = "",
+    reason: str = "",
+    verdict_kind: str = "content",
+    pm_task_id: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """The only authority that may commit PASS for a contracted graph node.
+
+    Ordering is deliberate: validate a current evaluator verdict candidate,
+    persist and validate the manifest, satisfy proof and research-quality
+    gates, publish required user outputs, and only then expose the evaluator
+    PASS as gate-consumable and atomically attach its closeout receipt while
+    the scheduler writes PASS.  Every earlier failure returns without either a
+    consumable PASS record or a PASS status write.
+    """
+    node_id = str(node.get("id") or "")
+    contracted = _graph_is_contracted(graph)
+    resolved_eval_json: Path = (
+        Path(str(eval_json)).expanduser()
+        if str(eval_json or "").strip()
+        else _eval_json_file(sid, node_id)
+    )
+    if not resolved_eval_json.exists():
+        backfilled_eval = _maybe_backfill_eval_json_from_md(sid, node_id)
+        if backfilled_eval is not None:
+            resolved_eval_json = backfilled_eval
+    observed_handoff = _existing_node_handoff(sid, node, graph) or _handoff_file(sid, node_id)
+    handoff_exists = bool(observed_handoff and Path(observed_handoff).exists())
+
+    if (contracted or handoff_exists or bool(str(eval_json or "").strip())) and not resolved_eval_json.is_file():
+        _ledger_record(
+            sid,
+            node_id=node_id,
+            kind="gate_check",
+            author={"type": "policy"},
+            verdict="block",
+            note="missing_eval_json_for_pass",
+        )
+        return {
+            "ok": False,
+            "reason": "missing_eval_json_for_pass",
+            "node": node_id,
+            "status": "blocked",
+            "eval_json": str(resolved_eval_json),
+            "handoff_md": str(observed_handoff or ""),
+        }
+
+    eval_payload = _read_json_file_safe(resolved_eval_json)
+    payload_verdict = str(eval_payload.get("verdict") or eval_payload.get("status") or "").strip().lower()
+    if contracted and payload_verdict not in {"pass", "passed", "ok", "success", "succeeded"}:
+        return {
+            "ok": False,
+            "reason": "eval_json_does_not_pass",
+            "node": node_id,
+            "status": "blocked",
+            "eval_json": str(resolved_eval_json),
+            "eval_verdict": payload_verdict,
+        }
+
+    eval_snapshot: dict[str, Any] = {"required": contracted, "ok": not contracted}
+    expected_snapshot = (
+        node.get("eval_artifact_snapshot")
+        if isinstance(node.get("eval_artifact_snapshot"), dict)
+        else {}
+    )
+
+    self_graded = bool(handoff_exists and _node_eval_self_graded(sid, node_id))
+    generation = _node_repair_attempts(node)
+    generation_mode = str(eval_payload.get("generation_mode") or "").strip().lower()
+    eval_record_fields = {
+        "node_id": node_id,
+        "kind": "eval_verdict",
+        "author": {"type": "evaluator"},
+        "verdict": "PASS",
+        "verdict_kind": verdict_kind,
+        "eval_generation": generation,
+        "repair_attempt": generation,
+        "pm_task_id": pm_task_id,
+        "evidence_snapshot_at": str(eval_payload.get("evidence_snapshot_at") or "") or None,
+        "artifact_snapshot_digest": str(expected_snapshot.get("snapshot_digest") or "") or None,
+        "generation_mode": generation_mode or None,
+        "self_graded": True if self_graded else None,
+        "gate_consumable": False if self_graded else None,
+        "note": reason or None,
+    }
+    eval_record: dict[str, Any] | None = None
+    eval_consumable = False
+    if contracted:
+        if not _ledger_enabled() or _gate_ledger is None:
+            return {
+                "ok": False,
+                "reason": "gate_ledger_unavailable_for_pass",
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+            }
+        eval_consumable = _gate_ledger.is_gate_consumable(
+            eval_record_fields,
+            current_generation=generation,
+        )
+        if not eval_consumable and not self_graded:
+            _ledger_record(
+                sid,
+                node_id=node_id,
+                kind="gate_check",
+                author={"type": "policy"},
+                verdict="block",
+                note="eval_verdict_not_consumable",
+            )
+            return {
+                "ok": False,
+                "reason": "eval_verdict_not_consumable",
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+                "generation_mode": generation_mode,
+            }
+
+    if contracted:
+        eval_snapshot = {
+            "required": True,
+            **_validate_eval_artifact_snapshot(sid, node, graph, eval_payload),
+        }
+        if not eval_snapshot.get("ok"):
+            snapshot_reason = str(
+                eval_snapshot.get("reason") or "eval_artifact_snapshot_invalid"
+            )
+            _ledger_record(
+                sid,
+                node_id=node_id,
+                kind="gate_check",
+                author={"type": "policy"},
+                verdict="block",
+                note=snapshot_reason,
+            )
+            return {
+                "ok": False,
+                "reason": snapshot_reason,
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+                "eval_artifact_snapshot": eval_snapshot,
+            }
+
+    proof_gate = _run_node_proof_seam(
+        sid,
+        node,
+        graph,
+        resolved_eval_json,
+        observed_handoff,
+    )
+    if proof_gate.get("required") and not proof_gate.get("ok"):
+        block_reason = str(proof_gate.get("reason") or "proof_obligations_failed")
+        _ledger_record(
+            sid,
+            node_id=node_id,
+            kind="gate_check",
+            author={"type": "policy"},
+            verdict="block",
+            note=block_reason,
+        )
+        return {
+            "ok": False,
+            "reason": block_reason,
+            "node": node_id,
+            "status": "blocked",
+            "eval_json": str(resolved_eval_json),
+            "proof_gate": proof_gate,
+        }
+
+    if contracted:
+        post_proof_snapshot = _validate_eval_artifact_snapshot(
+            sid,
+            node,
+            graph,
+            eval_payload,
+        )
+        if not post_proof_snapshot.get("ok"):
+            post_proof_reason = str(
+                post_proof_snapshot.get("reason")
+                or "eval_artifact_snapshot_changed"
+            )
+            _ledger_record(
+                sid,
+                node_id=node_id,
+                kind="gate_check",
+                author={"type": "policy"},
+                verdict="block",
+                note=f"post_proof:{post_proof_reason}",
+            )
+            return {
+                "ok": False,
+                "reason": post_proof_reason,
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+                "eval_artifact_snapshot": post_proof_snapshot,
+                "proof_gate": proof_gate,
+            }
+        eval_snapshot = {"required": True, **post_proof_snapshot}
+
+    manifest_binding: dict[str, Any] = {"required": contracted, "ok": not contracted}
+    if contracted:
+        persisted_manifest = _artifact_manifest.read_manifest(SPRINTS_DIR, sid, node_id)
+        manifest_binding = {
+            "required": True,
+            **_manifest_matches_eval_snapshot(persisted_manifest, eval_snapshot),
+        }
+        if not manifest_binding.get("ok"):
+            binding_reason = str(
+                manifest_binding.get("reason")
+                or "artifact_manifest_snapshot_content_mismatch"
+            )
+            _ledger_record(
+                sid,
+                node_id=node_id,
+                kind="gate_check",
+                author={"type": "policy"},
+                verdict="block",
+                note=binding_reason,
+            )
+            return {
+                "ok": False,
+                "reason": binding_reason,
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+                "eval_artifact_snapshot": eval_snapshot,
+                "manifest_binding": manifest_binding,
+                "proof_gate": proof_gate,
+            }
+
+    if self_graded:
+        _ledger_record(
+            sid,
+            node_id=node_id,
+            kind="gate_check",
+            author={"type": "policy"},
+            verdict="block",
+            self_graded=True,
+            note="self_graded_eval_requires_independent_report",
+        )
+        return {
+            "ok": False,
+            "reason": "self_graded_eval_requires_independent_report",
+            "node": node_id,
+            "status": "blocked",
+            "eval_json": str(resolved_eval_json),
+            "handoff_md": str(observed_handoff or ""),
+        }
+
+    research_quality_gate: dict[str, Any] = {"required": False, "ok": True}
+    if _node_requires_deepresearch_quality_gate(node):
+        research_quality_gate = {
+            "required": True,
+            **_deepresearch_quality_gate_from_eval(resolved_eval_json),
+        }
+        if not research_quality_gate.get("present"):
+            research_quality_gate = {
+                "required": True,
+                **_deepresearch_quality_gate_auto_run(sid, node, resolved_eval_json),
+            }
+        if not research_quality_gate.get("present"):
+            _ledger_record(
+                sid,
+                node_id=node_id,
+                kind="gate_check",
+                author={"type": "policy"},
+                verdict="block",
+                note="missing_deepresearch_quality_gate",
+            )
+            return {
+                "ok": False,
+                "reason": "missing_deepresearch_quality_gate",
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+                "required_field": "research_quality_gate",
+                "research_quality_gate": research_quality_gate,
+            }
+        if not research_quality_gate.get("ok"):
+            _ledger_record(
+                sid,
+                node_id=node_id,
+                kind="gate_check",
+                author={"type": "policy"},
+                verdict="block",
+                note="deepresearch_quality_gate_failed",
+            )
+            return {
+                "ok": False,
+                "reason": "deepresearch_quality_gate_failed",
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+                "research_quality_gate": research_quality_gate,
+            }
+
+    workspace_publish = _publish_verified_node_outputs(
+        sid,
+        node,
+        graph,
+        dry_run=dry_run,
+    )
+    if workspace_publish.get("required") and not workspace_publish.get("ok"):
+        _ledger_record(
+            sid,
+            node_id=node_id,
+            kind="gate_check",
+            author={"type": "policy"},
+            verdict="block",
+            note="workspace_publish_failed",
+        )
+        return {
+            "ok": False,
+            "reason": "workspace_publish_failed",
+            "node": node_id,
+            "status": "blocked",
+            "workspace_publish": workspace_publish,
+        }
+
+    # Do not append a gate-consumable PASS until every byte/proof/publication
+    # precondition above has succeeded.  The ledger is append-only, so writing
+    # the record earlier would permanently leak a consumable PASS even when a
+    # later snapshot or publication check correctly rejected closeout.
+    eval_record = _ledger_record(sid, **eval_record_fields)
+    if contracted:
+        if not isinstance(eval_record, dict):
+            return {
+                "ok": False,
+                "reason": "gate_ledger_unavailable_for_pass",
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+                "workspace_publish": workspace_publish,
+            }
+        eval_consumable = _gate_ledger.is_gate_consumable(
+            eval_record,
+            current_generation=generation,
+        )
+        if not eval_consumable:
+            return {
+                "ok": False,
+                "reason": "eval_verdict_not_consumable",
+                "node": node_id,
+                "status": "blocked",
+                "eval_json": str(resolved_eval_json),
+                "generation_mode": generation_mode,
+                "workspace_publish": workspace_publish,
+            }
+
+    manifest = proof_gate.get("manifest") if isinstance(proof_gate.get("manifest"), dict) else {}
+    receipt = {
+        "schema": "solar.node_closeout.v1",
+        "sid": sid,
+        "node_id": node_id,
+        "verdict": "passed",
+        "committed_at": _utc_now(),
+        "eval": {
+            "path": str(resolved_eval_json),
+            "generation": generation,
+            "record_id": str((eval_record or {}).get("record_id") or ""),
+            "consumable": bool(
+                not contracted
+                or eval_consumable
+            ),
+            "artifact_snapshot": {
+                "required": bool(eval_snapshot.get("required")),
+                "ok": bool(eval_snapshot.get("ok")),
+                "schema": str(eval_snapshot.get("schema") or ""),
+                "path": str(eval_snapshot.get("path") or ""),
+                "snapshot_digest": str(eval_snapshot.get("snapshot_digest") or ""),
+                "generation": eval_snapshot.get("generation"),
+                "row_count": int(eval_snapshot.get("row_count") or 0),
+            },
+        },
+        "manifest": {
+            "required": bool(manifest.get("required")),
+            "ok": bool(manifest.get("ok")),
+            "schema": str(manifest.get("schema") or ""),
+            "path": str(manifest.get("path") or ""),
+            "generation": manifest.get("generation"),
+            "row_count": int(manifest.get("row_count") or 0),
+            "violation_count": int(manifest.get("violation_count") or 0),
+            "content_digest": str(manifest.get("content_digest") or ""),
+            "eval_snapshot_match": bool(manifest_binding.get("ok")),
+        },
+        "proof": {
+            "required": bool(proof_gate.get("required")),
+            "ok": bool(proof_gate.get("ok")),
+        },
+        "research_quality": {
+            "required": bool(research_quality_gate.get("required")),
+            "ok": bool(research_quality_gate.get("ok")),
+        },
+        "publication": {
+            "required": bool(workspace_publish.get("required")),
+            "ok": bool(workspace_publish.get("ok")),
+            "sidecar": str(workspace_publish.get("sidecar") or ""),
+            "published_count": len(workspace_publish.get("published") or []),
+            "manifest_digest": str(workspace_publish.get("manifest_digest") or ""),
+            "published_digest": str(workspace_publish.get("published_digest") or ""),
+        },
+    }
+
+    note_parts = [part for part in (reason, f"eval_json={resolved_eval_json}") if part]
+    if contracted:
+        parent = commit_verified_node_pass(
+            graph,
+            node_id,
+            closeout_receipt=receipt,
+            note="; ".join(note_parts) or None,
+        )
+    else:
+        parent = mark_node_result(
+            graph,
+            node_id,
+            "passed",
+            gate_status="passed",
+            note="; ".join(note_parts) or None,
+        )
+        node["closeout_receipt"] = receipt
+        graph.setdefault("node_results", {}).setdefault(node_id, {})["closeout_receipt"] = receipt
+
+    node["updated_at"] = _utc_now()
+    node["eval_json"] = str(resolved_eval_json)
+    if proof_gate.get("required"):
+        node["proof_gate"] = proof_gate
+    if research_quality_gate.get("required"):
+        node["research_quality_gate"] = research_quality_gate.get("gate") or research_quality_gate
+    if workspace_publish.get("required"):
+        node["workspace_publish"] = workspace_publish
+    return {
+        "ok": True,
+        "node": node_id,
+        "status": "passed",
+        "parent": parent,
+        "eval_json": str(resolved_eval_json),
+        "eval_artifact_snapshot": eval_snapshot,
+        "manifest_binding": manifest_binding,
+        "proof_gate": proof_gate,
+        "research_quality_gate": research_quality_gate,
+        "workspace_publish": workspace_publish,
+        "closeout_receipt": receipt,
     }
 
 
 def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
                  eval_json: str = "", dry_run: bool = False, ttl: int = 900,
-                 dispatch_downstream: bool = True) -> dict[str, Any]:
+                 dispatch_downstream: bool = True, verdict_kind: str = "") -> dict[str, Any]:
     graph = load_graph(graph_path)
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     node = _node_by_id(graph, node_id)
@@ -8304,69 +12522,206 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
     else:
         return {"ok": False, "reason": "invalid_verdict", "verdict": verdict}
 
-    proof_gate: dict[str, Any] = {"required": False}
-    if status == "passed":
-        resolved_eval_json = eval_json or _eval_json_file(sid, node_id)
-        if not Path(str(resolved_eval_json)).expanduser().exists():
-            backfilled_eval = _maybe_backfill_eval_json_from_md(sid, node_id)
-            if backfilled_eval is not None:
-                resolved_eval_json = backfilled_eval
-        observed_handoff = _existing_node_handoff(sid, node, graph) or _handoff_file(sid, node_id)
-        if observed_handoff and not Path(str(resolved_eval_json)).expanduser().exists():
-            return {
-                "ok": False,
-                "reason": "missing_eval_json_for_pass",
-                "node": node_id,
-                "status": "blocked",
-                "eval_json": str(resolved_eval_json),
-                "handoff_md": str(observed_handoff),
-            }
-        # Deterministic support sidecars before the proof gate. This emits
-        # guard/resource/adapter bridge artifacts from real node outputs, so the
-        # proof gate checks files rather than narrative claims.
-        _emit_node_proof_sidecars(sid, node)
-        proof_gate = _evaluate_proof_obligations(sid, node, eval_json=resolved_eval_json)
-        if proof_gate.get("required") and not proof_gate.get("ok"):
-            return {
-                "ok": False,
-                "reason": "proof_obligations_failed",
-                "node": node_id,
-                "status": "blocked",
-                "eval_json": str(resolved_eval_json),
-                "proof_gate": proof_gate,
-            }
-
-    research_quality_gate: dict[str, Any] = {"required": False}
-    if status == "passed" and _node_requires_deepresearch_quality_gate(node):
-        resolved_eval_json = eval_json or _eval_json_file(sid, node_id)
-        research_quality_gate = {
-            "required": True,
-            **_deepresearch_quality_gate_from_eval(resolved_eval_json),
+    builder_result_gate = _builder_operator_result_gate(sid, node)
+    if builder_result_gate.get("required") and not builder_result_gate.get("ok"):
+        return {
+            "ok": False,
+            "reason": str(
+                builder_result_gate.get("reason")
+                or "builder_operator_result_pending"
+            ),
+            "node": node_id,
+            "status": str(node_status(graph, node_id) or node.get("status") or ""),
+            "builder_result_gate": builder_result_gate,
         }
-        if not research_quality_gate.get("present"):
-            research_quality_gate = {
-                "required": True,
-                **_deepresearch_quality_gate_auto_run(sid, node, resolved_eval_json),
-            }
-            if not research_quality_gate.get("present"):
-                return {
-                    "ok": False,
-                    "reason": "missing_deepresearch_quality_gate",
-                    "node": node_id,
-                    "status": "blocked",
-                    "eval_json": str(resolved_eval_json),
-                    "required_field": "research_quality_gate",
-                    "research_quality_gate": research_quality_gate,
-                }
-        if not research_quality_gate.get("ok"):
-            return {
-                "ok": False,
-                "reason": "deepresearch_quality_gate_failed",
-                "node": node_id,
-                "status": "blocked",
-                "eval_json": str(resolved_eval_json),
-                "research_quality_gate": research_quality_gate,
-            }
+
+    # AC-R4.1: the gate runner (this function) sets verdict_kind explicitly; when a
+    # caller does not, classification uses the runner-owned mechanical vocabulary,
+    # never free-text inference.
+    effective_verdict_kind = str(verdict_kind or "").strip().lower()
+    if effective_verdict_kind not in {"content", "mechanical", "infrastructure"}:
+        effective_verdict_kind = (
+            "mechanical" if str(reason or "").strip().lower() in MECHANICAL_EVAL_REASONS else "content"
+        )
+    _eval_generation = _node_repair_attempts(node)
+    _assignment_pm_task_id = next(
+        (str(item.get("pm_task_id") or "").strip()
+         for item in (node.get("eval_assignments") or [])
+         if isinstance(item, dict) and str(item.get("pm_task_id") or "").strip()),
+        None,
+    )
+    # AC-R4.4 generation fence on the LIVE verdict path (G4-lite run 2): a
+    # repair had just archived the gen-0 sidecars and dispatched the repair
+    # builder when the ORIGINAL FAIL arrived here — this function stamps
+    # eval_generation from the node's CURRENT repair_attempts, so the stale
+    # verdict masqueraded as the repair generation, burned the just-granted
+    # budget, and terminalized the node while its repair builder was still
+    # running. The reconcile path already ran this fence; the evaluator-CLI
+    # path must too. Archived non-consumable, never applied.
+    _fence_payload = _read_json_file_safe(eval_json or _eval_json_file(sid, node_id))
+    _stale_reason = _eval_payload_stale_for_current_repair(node, _fence_payload)
+    if _stale_reason:
+        _ledger_record(sid, node_id=node_id, kind="eval_verdict",
+                       author={"type": "evaluator"},
+                       verdict="PASS" if status == "passed" else "FAIL",
+                       eval_generation=_eval_payload_generation(_fence_payload),
+                       repair_attempt=_eval_generation,
+                       gate_consumable=False, archived=True,
+                       stale_reason=_stale_reason, note=reason or None)
+        return {
+            "ok": False,
+            "reason": "stale_eval_generation",
+            "node": node_id,
+            "status": str(node.get("status") or ""),
+            "stale_reason": _stale_reason,
+        }
+    _declared_generation_mode = str(
+        _fence_payload.get("generation_mode") or ""
+    ).strip().lower()
+    _nonconsumable_modes = (
+        getattr(_gate_ledger, "NON_CONSUMABLE_GENERATION_MODES", set())
+        if _gate_ledger is not None
+        else set()
+    )
+    if (
+        _graph_is_contracted(graph)
+        and _declared_generation_mode in _nonconsumable_modes
+    ):
+        _ledger_record(
+            sid,
+            node_id=node_id,
+            kind="eval_verdict",
+            author={"type": "evaluator"},
+            verdict="PASS" if status == "passed" else "FAIL",
+            verdict_kind=effective_verdict_kind,
+            eval_generation=_eval_generation,
+            repair_attempt=_eval_generation,
+            pm_task_id=_assignment_pm_task_id,
+            generation_mode=_declared_generation_mode,
+            gate_consumable=False,
+            note=reason or None,
+        )
+        _ledger_record(
+            sid,
+            node_id=node_id,
+            kind="gate_check",
+            author={"type": "policy"},
+            verdict="block",
+            note="eval_verdict_not_consumable",
+        )
+        return {
+            "ok": False,
+            "reason": "eval_verdict_not_consumable",
+            "node": node_id,
+            "status": str(node.get("status") or ""),
+            "generation_mode": _declared_generation_mode,
+        }
+    if (
+        status == "failed"
+        and effective_verdict_kind in {"mechanical", "infrastructure"}
+        and _ledger_enabled()
+        and _gate_ledger.contracted(graph)
+        and _node_policy_passed(graph, sid, node_id)
+    ):
+        # v5 replay (AC-R4.1): a mechanical/infrastructure FAIL must not flip a
+        # policy-passed node — archive the verdict, never apply it. Gated on the
+        # RECORDED pass, not node_status(): the fail-closed passed-without-eval
+        # downgrade projects the real v5 shape as "reviewing" (round-4 G1).
+        _ledger_record(sid, node_id=node_id, kind="eval_verdict",
+                       author={"type": "evaluator"}, verdict="FAIL",
+                       verdict_kind=effective_verdict_kind,
+                       eval_generation=_eval_generation, repair_attempt=_eval_generation,
+                       pm_task_id=_assignment_pm_task_id,
+                       gate_consumable=False, archived=True, note=reason or None)
+        _ledger_record(sid, node_id=node_id, kind="gate_check", author={"type": "policy"},
+                       verdict="hold", verdict_kind=effective_verdict_kind,
+                       note="mechanical_fail_cannot_flip_passed_node")
+        return {
+            "ok": False,
+            "reason": "mechanical_fail_cannot_flip_passed_node",
+            "node": node_id,
+            "status": "passed",
+            "verdict_kind": effective_verdict_kind,
+        }
+    if _graph_is_contracted(graph):
+        snapshot_validation = _validate_eval_artifact_snapshot(
+            sid,
+            node,
+            graph,
+            _fence_payload,
+        )
+        if not snapshot_validation.get("ok"):
+            integrity_block = _block_eval_snapshot_integrity(
+                sid,
+                node,
+                graph,
+                _fence_payload,
+                snapshot_validation,
+                eval_json=eval_json or _eval_json_file(sid, node_id),
+                writer="node_verdict",
+                dry_run=dry_run,
+                submitted_verdict="PASS" if status == "passed" else "FAIL",
+                submitted_verdict_kind=effective_verdict_kind,
+            )
+            if not dry_run:
+                save_graph(graph_path, graph)
+            return integrity_block
+    proof_gate: dict[str, Any] = {"required": False}
+    research_quality_gate: dict[str, Any] = {"required": False, "ok": True}
+    workspace_publish: dict[str, Any] = {"required": False, "ok": True}
+    parent: dict[str, Any] = {}
+    if status == "passed":
+        closeout = _finalize_node_pass(
+            sid,
+            node,
+            graph,
+            eval_json=eval_json,
+            reason=reason,
+            verdict_kind=effective_verdict_kind,
+            pm_task_id=_assignment_pm_task_id,
+            dry_run=dry_run,
+        )
+        if not closeout.get("ok"):
+            closeout_reason = str(closeout.get("reason") or "")
+            if closeout_reason in _EVAL_INTEGRITY_BLOCK_REASONS:
+                integrity_validation = (
+                    closeout.get("eval_artifact_snapshot")
+                    if isinstance(closeout.get("eval_artifact_snapshot"), dict)
+                    else {"ok": False, "reason": closeout_reason}
+                )
+                closeout = _block_eval_snapshot_integrity(
+                    sid,
+                    node,
+                    graph,
+                    _fence_payload,
+                    integrity_validation,
+                    eval_json=eval_json or _eval_json_file(sid, node_id),
+                    writer="node_verdict",
+                    dry_run=dry_run,
+                    submitted_verdict="PASS",
+                    submitted_verdict_kind=effective_verdict_kind,
+                )
+                if not dry_run:
+                    save_graph(graph_path, graph)
+            return closeout
+        parent = closeout["parent"]
+        proof_gate = closeout["proof_gate"]
+        research_quality_gate = closeout["research_quality_gate"]
+        workspace_publish = closeout["workspace_publish"]
+        eval_json = str(closeout.get("eval_json") or eval_json)
+    else:
+        _ledger_record(
+            sid,
+            node_id=node_id,
+            kind="eval_verdict",
+            author={"type": "evaluator"},
+            verdict="FAIL",
+            verdict_kind=effective_verdict_kind,
+            eval_generation=_eval_generation,
+            repair_attempt=_eval_generation,
+            pm_task_id=_assignment_pm_task_id,
+            note=reason or None,
+        )
 
     note_parts = []
     if reason:
@@ -8429,25 +12784,14 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
                     "research_quality_gate": research_quality_gate,
                     "coverage_refresh": coverage_refresh,
                 }
-    # Self-graded guard (final gate before marking passed): an EXECUTOR node (real handoff present)
-    # whose verdict (eval.json) has NO independent evaluator report -- no non-empty {node}-eval.md and
-    # no {node}-eval-dispatch sidecar -- must never certify PASS. Block it gracefully as unverified
-    # rather than letting mark_node_result raise passed_requires_eval_json uncaught (which would wedge
-    # the coordinator). Runs AFTER the proof/research gates so their more specific block reasons win;
-    # mirrors the scheduler's mark_node_result backstop (in-runtime gnd.SPRINTS_DIR == gs.SPRINTS_DIR).
-    # Gate/verifier nodes produce no handoff -> exempt (they verify via their decision artifact, not a
-    # per-node eval). Closes the eval-backfill false-positive vector at the node_verdict entry point.
-    self_graded_handoff = _existing_node_handoff(sid, node, graph)
-    if status == "passed" and self_graded_handoff and _node_eval_self_graded(sid, node_id):
-        return {
-            "ok": False,
-            "reason": "self_graded_eval_requires_independent_report",
-            "node": node_id,
-            "status": "blocked",
-            "eval_json": str(eval_json or _eval_json_file(sid, node_id)),
-            "handoff_md": str(self_graded_handoff),
-        }
-    parent = mark_node_result(graph, node_id, status, gate_status=status, note="; ".join(note_parts) or None)
+    if status == "failed":
+        parent = mark_node_result(
+            graph,
+            node_id,
+            status,
+            gate_status=status,
+            note="; ".join(note_parts) or None,
+        )
     node["status"] = status
     node["updated_at"] = _utc_now()
     if eval_json:
@@ -8456,6 +12800,8 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
         node["proof_gate"] = proof_gate
     if research_quality_gate.get("required"):
         node["research_quality_gate"] = research_quality_gate.get("gate") or research_quality_gate
+    if workspace_publish.get("required"):
+        node["workspace_publish"] = workspace_publish
     worker_pane = str(node.get("assigned_to") or "")
     worker_dispatch_id = str(node.get("dispatch_id") or "")
     effect_result: dict[str, Any] = {}
@@ -8519,6 +12865,7 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
         "capability_effect": effect_result,
         "proof_gate": proof_gate,
         "research_quality_gate": research_quality_gate,
+        "workspace_publish": workspace_publish,
         "coverage_refresh": coverage_refresh,
     }
 
@@ -8556,6 +12903,13 @@ def main() -> int:
     p.add_argument("--ttl", type=int, default=900)
     p.add_argument("--no-dispatch-downstream", action="store_true")
 
+    p = sub.add_parser("resume-human-review")
+    p.add_argument("--graph", required=True)
+    p.add_argument("--node", required=True)
+    p.add_argument("--generation", required=True, type=int)
+    p.add_argument("--actor", required=True)
+    p.add_argument("--reason", required=True)
+
     args = ap.parse_args()
     if args.cmd == "drain-queue":
         result = drain_queue(args.sprint, args.dry_run, args.max_items, args.ttl)
@@ -8573,6 +12927,14 @@ def main() -> int:
             dry_run=args.dry_run,
             ttl=args.ttl,
             dispatch_downstream=not args.no_dispatch_downstream,
+        )
+    elif args.cmd == "resume-human-review":
+        result = resume_human_review(
+            args.graph,
+            args.node,
+            expected_generation=args.generation,
+            actor=args.actor,
+            reason=args.reason,
         )
     else:
         ap.print_help()

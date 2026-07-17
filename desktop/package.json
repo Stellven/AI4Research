@@ -1,6 +1,7 @@
 {
   "name": "solar-desktop",
-  "version": "1.0.0-rc.8",
+  "desktopName": "solar-desktop.desktop",
+  "version": "1.0.0-rc.9",
   "private": true,
   "description": "Solar desktop app — native shell that spawns the status-server backend and renders the bundled dashboard frontend. One codebase for macOS + Windows + Linux.",
   "author": "OpenSolar",
@@ -16,7 +17,7 @@
     "build:linux": "bash build-renderer.sh && node prepackage-check.js && electron-builder --linux AppImage"
   },
   "devDependencies": {
-    "electron": "^33.2.1",
+    "electron": "^42.6.1",
     "electron-builder": "^26.15.3",
     "playwright": "^1.61.1"
   },
@@ -111,6 +112,7 @@
     },
     "linux": {
       "target": "AppImage",
+      "syncDesktopName": true,
       "icon": "build/icon.png",
       "category": "Development",
       "extraResources": [

@@ -86,7 +86,7 @@ verification:
     - Unsupported analysis is represented as a limitation.
 operator_compatibility:
   preferred:
-    - ScientificPaperAnalyzer
+    - autosci-paper-analyze-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

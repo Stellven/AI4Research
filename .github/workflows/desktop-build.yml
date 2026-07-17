@@ -33,6 +33,7 @@ concurrency:
 
 jobs:
   build:
+    needs: gate
     name: Build ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -77,6 +78,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run ${{ matrix.script }}
 
+      - name: Verify Linux packaged Electron selftest
+        if: matrix.script == 'build:linux'
+        working-directory: desktop
+        shell: bash
+        env:
+          SOLAR_ELECTRON_EXECUTABLE_PATH: ${{ github.workspace }}/desktop/dist/linux-unpacked/solar-desktop
+        run: xvfb-run -a node selftest-electron.test.js
+
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
@@ -91,6 +100,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Check release/package coherence
+        run: bash scripts/check-release-coherence.sh
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -117,11 +129,14 @@ jobs:
       # autotest.sh runs all deterministic desktop gates: WSL/runtime-detection logic
       # (runtime-detect.test.js), the backend HTTP contract (contract.js — CORS/OPTIONS/HEAD/auth,
       # no token leak), the dashboard render (verify.js — spawns the real status-server, renders in
-      # headless chromium, asserts the UI), and the first-run/recovery screens (screens.test.js).
+      # headless chromium, asserts the UI), the source Electron shell against a real local
+      # status-server (selftest-electron.test.js), and the first-run/recovery screens
+      # (screens.test.js).
       # autotest.sh self-manages xvfb for the Electron screen gate, so we don't wrap it here (no
-      # nested xvfb). Deterministic, no live runtime. (The real Windows .exe / WSL2 provisioning +
-      # packaged-artifact launch remain owner-Phase-F — see docs/WINDOWS.md.)
-      - name: Run desktop autotest (bootstrap + contract + render + screens)
+      # nested xvfb). Deterministic and isolated; it starts a local runtime fixture but makes no
+      # live model call. Real Windows .exe / WSL2 provisioning and packaged-artifact launch remain
+      # owner-Phase-F — see docs/WINDOWS.md.
+      - name: Run desktop autotest (bootstrap + contract + render + selftest + screens)
         working-directory: desktop
         run: bash autotest.sh
 

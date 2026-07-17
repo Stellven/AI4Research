@@ -156,12 +156,33 @@ def enrich_graph(graph: dict[str, Any], source_text: str = "",
                  overwrite: bool = False) -> dict[str, Any]:
     """Add missing `required_capabilities` to graph nodes.
 
-    Existing planner-declared capabilities are preserved by default and unioned
-    with inferred capabilities. Set `overwrite=True` only for controlled tests.
+    Planner-declared capabilities are authoritative. Broad contract text can
+    mention browser, research, or document capabilities that are irrelevant to
+    an individual node; unioning those inferred requirements into an explicit
+    declaration can make a valid node unschedulable. Infer only when the field
+    is missing, unless ``overwrite=True`` is explicitly requested.
     """
     nodes = graph.get("nodes")
     if not isinstance(nodes, list):
         raise ValueError("task_graph.nodes must be a list")
+
+    if isinstance(graph.get("plan_certificate"), dict) and graph.get("plan_certificate"):
+        # G3 live rung (p5-g3-live-rung-20260709T161420Z): the dispatch path
+        # ran this enrichment on a CERTIFIED graph and injected
+        # required_capabilities=[] into every node whose planner omitted the
+        # field. required_capabilities is certificate-governed, so the write
+        # changed the governed hash and the dispatch guard refused the graph
+        # it had just admitted (PLAN_CERTIFICATE_HASH_MISMATCH). A
+        # PASS-stamped graph's governed content is frozen: inference may run
+        # before stamping, never after.
+        graph.setdefault("capability_inference", {})
+        graph["capability_inference"].update({
+            "ok": True,
+            "generated_at": _now(),
+            "changed_nodes": [],
+            "skipped_reason": "plan_certificate_present",
+        })
+        return graph
 
     changed_nodes: list[str] = []
     for node in nodes:
@@ -178,7 +199,12 @@ def enrich_graph(graph: dict[str, Any], source_text: str = "",
         else:
             existing_caps = []
 
-        final_caps = inferred_caps if overwrite else _dedupe(existing_caps + inferred_caps)
+        if overwrite:
+            final_caps = inferred_caps
+        elif had_required_capabilities:
+            final_caps = existing_caps
+        else:
+            final_caps = inferred_caps
         if final_caps != existing_caps or not had_required_capabilities:
             node["required_capabilities"] = final_caps
             changed_nodes.append(str(node.get("id", "")))

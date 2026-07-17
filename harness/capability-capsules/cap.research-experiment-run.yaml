@@ -91,7 +91,7 @@ verification:
     - Failed execution emits failed status with artifacts and limitations.
 operator_compatibility:
   preferred:
-    - ScientificExperimentRunner
+    - autosci-experiment-run-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

@@ -14,7 +14,7 @@ capsules:
     - performance
     - debug
     owner: opensolar
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-claude-sonnet-builder-2
   - capability_capsule_id: cap.requirement-compiler-implementation
     version: 0.1.0
     capsule_kind: capability
@@ -26,7 +26,7 @@ capsules:
     - implementation
     - builder
     owner: opensolar
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-claude-sonnet-builder-2
   - capability_capsule_id: cap.requirement-compiler-audit
     version: 0.1.0
     capsule_kind: capability
@@ -52,7 +52,7 @@ capsules:
     - prd
     - task-graph
     owner: opensolar
-    default_operator_profile: mini-claude-opus-planner
+    default_operator_profile: mini-claude-opus-planner-print
   - capability_capsule_id: cap.requirement-compiler-verification
     version: 0.1.0
     capsule_kind: capability
@@ -65,7 +65,7 @@ capsules:
     - review
     - acceptance
     owner: opensolar
-    default_operator_profile: mini-claude-opus-evaluator
+    default_operator_profile: mini-claude-sonnet-evaluator-print
   - capability_capsule_id: cap.requirement-research-scout
     version: 0.1.0
     capsule_kind: capability
@@ -77,9 +77,9 @@ capsules:
     - research
     - scout
     owner: opensolar
-    default_operator_profile: mini-thunderomlx-qwen36-knowledge
+    default_operator_profile: mini-codex-gpt55-medium-builder-1
   - capability_capsule_id: cap.requirement-research-synthesizer
-    version: 0.1.0
+    version: 0.3.0
     capsule_kind: capability
     status: stable
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
@@ -89,7 +89,20 @@ capsules:
     - research
     - synthesis
     owner: opensolar
-    default_operator_profile: mini-claude-opus-planner
+    default_operator_profile: mini-codex-gpt55-medium-builder-1
+  - capability_capsule_id: cap.research-retrieval
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-retrieval.yaml
+    tags:
+    - research
+    - retrieval
+    - sources
+    - evidence
+    owner: opensolar
+    default_operator_profile: mini-codex-gpt55-medium-builder-1
   - capability_capsule_id: cap.understand-anything-chat-builder
     version: 0.1.0
     capsule_kind: capability
@@ -117,7 +130,7 @@ capsules:
   - capability_capsule_id: cap.understand-anything-indexer
     version: 0.1.0
     capsule_kind: capability
-    status: stable
+    status: draft
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
     manifest_path: capability-capsules/cap.understand-anything-indexer.yaml
     tags:
@@ -410,7 +423,7 @@ capsules:
     - secrets
     - guard
     owner: opensolar
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-claude-sonnet-builder-2
   resource:
   - capability_capsule_id: resource.repo-workspace
     version: 0.1.0
@@ -423,7 +436,7 @@ capsules:
     - repo
     - worktree
     owner: opensolar
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-claude-sonnet-builder-2
   - capability_capsule_id: resource.github-readonly
     version: 0.1.0
     capsule_kind: resource
@@ -435,4 +448,4 @@ capsules:
     - github
     - readonly
     owner: opensolar
-    default_operator_profile: mini-claude-sonnet-builder
+    default_operator_profile: mini-claude-sonnet-builder-2

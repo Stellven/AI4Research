@@ -11,7 +11,7 @@ Chinese labels because the v1.0 persona is Chinese-first.
 Command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.6/get-solar.sh | bash -s -- --yes --components kernel,harness
+curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.9/get-solar.sh | bash -s -- --yes --components kernel,harness
 export PATH="$HOME/.solar/bin:$PATH"
 solar doctor
 solar status
@@ -37,8 +37,8 @@ Expected `solar status` output:
 OpenSolar status
 Install
   health: ok
-  version: 1.0.0-rc.6
-  channel: v1.0.0-rc.6
+  version: 1.0.0-rc.9
+  channel: v1.0.0-rc.9
   components: kernel,harness
 Runtime
   harness: installed

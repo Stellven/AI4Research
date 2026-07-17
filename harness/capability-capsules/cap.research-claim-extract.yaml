@@ -88,7 +88,7 @@ verification:
     - Unsupported claims are skipped or marked inconclusive with limitations.
 operator_compatibility:
   preferred:
-    - ScientificClaimExtractor
+    - autosci-claim-extract-worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:

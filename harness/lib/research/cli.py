@@ -37,6 +37,7 @@ if _HARNESS_LIB not in sys.path:
     sys.path.insert(0, _HARNESS_LIB)
 
 from research import hashing, ids, schemas, storage
+from research.grounded_synthesis import GroundedSynthesisError, compile_grounded_report
 from research.report_metrics import (
     append_execution_metrics_section,
     append_model_usage_event,
@@ -1279,21 +1280,8 @@ def _claim_line(row: sqlite3.Row) -> str:
     return f"- {row['claim_text']} [cite:{row['evidence_id'] or 'missing'}]"
 
 
-def _pick_claims(rows: list[sqlite3.Row], keywords: tuple[str, ...], limit: int = 4) -> list[sqlite3.Row]:
-    picked: list[sqlite3.Row] = []
-    seen: set[str] = set()
-    for row in rows:
-        text = str(row["claim_text"] or "").lower()
-        if any(k in text for k in keywords) and row["claim_id"] not in seen:
-            picked.append(row)
-            seen.add(row["claim_id"])
-        if len(picked) >= limit:
-            break
-    return picked
-
-
-def _format_claims(rows: list[sqlite3.Row], fallback: list[sqlite3.Row] | None = None, limit: int = 5) -> str:
-    selected = rows[:limit] or (fallback or [])[:limit]
+def _format_claims(rows: list[sqlite3.Row], limit: int = 5) -> str:
+    selected = rows[:limit]
     return "\n".join(_claim_line(row) for row in selected) if selected else "- No supported claims available."
 
 
@@ -1307,99 +1295,46 @@ def _source_strength_summary(conn: sqlite3.Connection, run_id: str) -> tuple[lis
     for row in rows:
         stype = str(row["source_type"] or "unknown").lower()
         counts[stype] = counts.get(stype, 0) + 1
-        strength = "high" if stype in {"paper", "official", "standard"} else "medium" if stype in {"repo", "blog"} else "unknown"
+        strength = (
+            "high"
+            if stype in {"paper", "official", "official_doc", "standard"}
+            else "medium"
+            if stype in {"repo", "code", "benchmark", "dataset", "company", "news", "web", "blog"}
+            else "unknown"
+        )
         lines.append(f"- {strength}: {row['title']} ({stype}) {row['url'] or ''}".strip())
     return lines, counts
 
 
-def _architecture_analysis_block(section_kind: str) -> str:
-    """Return a compact architecture-analysis scaffold for section quality gates.
-
-    This is deterministic and evidence-agnostic by design: claims and citations
-    remain the factual layer, while this block forces each section to contain
-    actual design/evaluation judgement instead of only restating sources.
-    """
-    base = [
-        "",
-        "## Architecture Analysis",
-        "",
-        f"- **Design role:** This section should translate evidence into runtime architecture decisions for `{section_kind}` rather than only summarize papers.",
-        "- **Runtime implication:** latent reasoning changes the boundary between model compute, context projection, session replay, evaluator gates, and tool orchestration.",
-        "- **Engineering tradeoff:** soft adapters optimize deployability; recurrent-depth architectures optimize native test-time compute; multimodal latent state optimizes perception-heavy workflows.",
-        "- **Evaluation risk:** every latent mechanism must be evaluated for pass rate, token cost, wall time, retry behavior, citation support, and audit projection faithfulness.",
-        "- **Deployment boundary:** no latent state should become hidden source of truth; production systems need evidence, claims, provenance, and replayable session events.",
-    ]
-    return "\n".join(base) + "\n"
-
-
-def _technical_architecture_template(section_kind: str) -> str:
-    """Dense technical-architecture section scaffold.
-
-    The evaluator measures architecture terms per token, so long prose with a
-    few design words still fails. Keep this compact and explicit: it should add
-    architectural judgement without drowning the section in boilerplate.
-    """
-    rows = [
-        ("Architecture", "map latent compute to runtime state, projection, audit, and replay boundaries"),
-        ("Design", "separate soft adapters, recurrent depth, multimodal state, and superposition paths"),
-        ("Runtime", "store evidence, claims, provenance, session events, and evaluator gates outside the context window"),
-        ("Evaluation", "measure pass rate, token cost, wall time, retries, citation accuracy, and projection faithfulness"),
-        ("Risk", "treat hidden latent state as non-authoritative until projected into evidence and audit logs"),
-        ("Deployment", "ship adapter path first, reserve recurrent-depth path for model-family changes"),
-    ]
-    lines = [
-        "",
-        "## Technical Architecture Matrix",
-        "",
-        "| Dimension | Design Decision |",
-        "|---|---|",
-    ]
-    for dimension, decision in rows:
-        lines.append(f"| {dimension} | {decision} for `{section_kind}`. |")
-    lines.extend([
-        "",
-        "## Runtime Decision Rules",
-        "",
-        "- **Architecture gate:** require every latent mechanism to expose a projection boundary before deployment.",
-        "- **Design gate:** prefer the smallest integration path that preserves auditability and evaluator replay.",
-        "- **Runtime gate:** reject outputs that cannot map claims to evidence, citations, and session events.",
-        "- **Evaluation gate:** compare latent compute with visible-token CoT under equal compute and risk budgets.",
-        "- **Risk gate:** quarantine unprojected latent state; never treat it as durable memory or source of truth.",
-        "",
-        "## Architecture Gate Ledger",
-        "",
-        "| Gate | Decision check |",
-        "|---|---|",
-        "| G1 | architecture design runtime projection audit gate |",
-        "| G2 | implementation deployment evaluation risk tradeoff policy |",
-        "| G3 | boundary failure integration orchestration pipeline runtime |",
-        "| G4 | architecture design evaluation gate risk policy |",
-        "| G5 | projection audit deployment tradeoff integration pipeline |",
-        "| G6 | runtime architecture implementation evaluation boundary failure |",
-        "| G7 | design policy orchestration gate projection audit |",
-        "| G8 | deployment integration pipeline risk tradeoff evaluation |",
-    ])
-    return "\n".join(lines) + "\n"
-
-
 def write_sections_from_claims(conn: sqlite3.Connection, run_id: str) -> int:
+    """Render topic-general sections from evidence-linked claims."""
     ensure_outline(conn, run_id)
     run = conn.execute("SELECT topic FROM research_runs WHERE id = ?", (run_id,)).fetchone()
     topic = run["topic"] if run else "Research run"
-    claims = conn.execute(
+    raw_claims = conn.execute(
         "SELECT c.id AS claim_id, c.claim_text, ce.evidence_id "
         "FROM claims c LEFT JOIN claim_evidence ce ON ce.claim_id = c.id "
         "WHERE c.run_id = ? ORDER BY c.created_at, c.id",
         (run_id,),
     ).fetchall()
-    claim_lines = [_claim_line(row) for row in claims[:40]]
-    if not claim_lines:
-        claim_lines = ["- No supported claims were mined; add sources or run extraction before writing."]
-    evidence_anchor = claim_lines[0] if "[cite:" in claim_lines[0] else ""
-    architecture = _pick_claims(claims, ("hidden state", "recurrent", "soft thought", "continuous", "projection", "multimodal", "superposition"), 8)
-    deployment = _pick_claims(claims, ("existing", "practical", "test-time", "compute", "context", "window", "train", "architecture"), 6)
-    evaluation = _pick_claims(claims, ("evaluation", "faithful", "surface", "disentangle", "interpretability", "safety", "diversity", "uncertainty"), 6)
-    multimodal = _pick_claims(claims, ("multimodal", "vision", "audio", "spatial", "cross-modal", "joint latent"), 4)
+    claims: list[sqlite3.Row] = []
+    seen_claims: set[str] = set()
+    for row in raw_claims:
+        claim_id = str(row["claim_id"] or "")
+        if claim_id in seen_claims:
+            continue
+        seen_claims.add(claim_id)
+        claims.append(row)
+    supported = [row for row in claims if row["evidence_id"]]
+    claim_block = _format_claims(supported, limit=30)
+    source_rows = conn.execute(
+        "SELECT title, url, source_type FROM research_sources WHERE run_id = ? ORDER BY fetched_at, id",
+        (run_id,),
+    ).fetchall()
+    source_block = "\n".join(
+        f"- {row['title']} ({row['source_type']}) {row['url'] or ''}".strip()
+        for row in source_rows
+    ) or "- No sources available."
     sections = conn.execute(
         "SELECT id, section_type, title FROM report_sections WHERE run_id = ? ORDER BY section_order",
         (run_id,),
@@ -1409,67 +1344,43 @@ def write_sections_from_claims(conn: sqlite3.Connection, run_id: str) -> int:
             body = (
                 f"# {sec['title']}\n\n"
                 f"Topic: {topic}\n\n"
-                "Bottom line: latent-space reasoning is not one technique; it is an architectural shift that moves intermediate reasoning state from visible token chains into continuous states, soft thought vectors, recurrent compute, or constrained latent superpositions. The evidence supports three near-term product paths: soft-thought adapters for existing models, recurrent-depth models for native test-time compute, and multimodal latent reasoning for perception-heavy agents.\n\n"
-                "Key technical claims:\n"
-                + _format_claims((architecture + deployment + evaluation)[:8], claims)
-                + _architecture_analysis_block(sec["section_type"])
-                + _technical_architecture_template(sec["section_type"])
+                "This summary contains only claims linked to the run's evidence ledger.\n\n"
+                + claim_block
                 + "\n"
             )
         elif sec["section_type"] == "source_landscape":
-            srcs = conn.execute(
-                "SELECT title, url, source_type FROM research_sources WHERE run_id = ? ORDER BY fetched_at LIMIT 20",
-                (run_id,),
-            ).fetchall()
-            body = f"# {sec['title']}\n\nThe source set clusters into native latent-state training, recurrent test-time compute, adapter/projection-based soft thoughts, superposition-constrained latent SFT, and multimodal latent reasoning.\n\n" + "\n".join(
-                f"- {s['title']} ({s['source_type']}) {s['url'] or ''}".strip() for s in srcs
-            ) + ("\n\nEvidence anchor:\n" + evidence_anchor + "\n" if evidence_anchor else "\n")
-            body += _technical_architecture_template(sec["section_type"])
+            body = (
+                f"# {sec['title']}\n\n"
+                "The following inventory is the complete source set available to this run.\n\n"
+                + source_block
+                + "\n\nEvidence-linked anchor:\n"
+                + _format_claims(supported, limit=3)
+                + "\n"
+            )
         elif sec["section_type"] == "evidence_synthesis":
             body = (
                 f"# {sec['title']}\n\n"
-                "## Architecture Taxonomy\n\n"
-                "1. Hidden-state recurrence: feed the model's internal state back as the next reasoning input, reducing lossy decode/re-encode cycles.\n"
-                + _format_claims(_pick_claims(claims, ("hidden state", "continuous thought", "coconut"), 3), claims, 3)
-                + "\n\n2. Recurrent depth: allocate test-time compute by iterating model blocks instead of producing longer text traces.\n"
-                + _format_claims(_pick_claims(claims, ("recurrent", "test-time", "block", "depth"), 3), claims, 3)
-                + "\n\n3. Soft thought adapters: generate continuous thought vectors through assistant/projection modules so existing LLMs can use latent reasoning without full retraining.\n"
-                + _format_claims(_pick_claims(claims, ("soft thought", "projection", "assistant", "existing"), 3), claims, 3)
-                + "\n\n4. Superposition and diversity: represent multiple candidate reasoning paths in latent form and add diversity mechanisms for search.\n"
-                + _format_claims(_pick_claims(claims, ("superposition", "diversity", "multiple", "path"), 3), claims, 3)
-                + "\n\n5. Multimodal latent reasoning: move beyond language-only traces into joint latent spaces for vision-language or perception-heavy reasoning.\n"
-                + _format_claims(multimodal, claims, 3)
-                + _architecture_analysis_block(sec["section_type"])
-                + _technical_architecture_template(sec["section_type"])
+                "## Supported Claims\n\n"
+                + claim_block
+                + "\n\nThe deterministic compiler preserves the evidence links and does not add a domain conclusion."
                 + "\n"
             )
         elif sec["section_type"] == "claims_and_implications":
             body = (
                 f"# {sec['title']}\n\n"
-                "## Engineering Implications\n\n"
-                "- For existing LLM products, soft-thought adapters are the lowest-friction route because they avoid replacing the base model.\n"
-                "- For new model families, recurrent-depth architectures are more fundamental because they make latent compute a native scaling axis.\n"
-                "- For agent systems, the key missing layer is not only latent computation; it is a verifiable projection from latent state back to evidence, claims, and audit logs.\n"
-                "- For multimodal agents, natural-language CoT is structurally lossy; latent state exchange or joint latent attention becomes more important as inputs become visual, spatial, or embodied.\n\n"
-                "Supporting evidence:\n"
-                + _format_claims((deployment + evaluation + multimodal), claims, 10)
-                + _architecture_analysis_block(sec["section_type"])
-                + _technical_architecture_template(sec["section_type"])
+                "## Claims Available for Interpretation\n\n"
+                + claim_block
+                + "\n\nAny recommendation or implication beyond these claims requires an explicit synthesis step with its own evidence links."
                 + "\n"
             )
         else:
             body = (
                 f"# {sec['title']}\n\n"
-                "Open verification tasks:\n"
-                "- Add contradiction-hunt sources from mechanistic interpretability and CoT faithfulness work.\n"
-                "- Compare latent reasoning efficiency against visible-token CoT under equal compute budgets.\n"
-                "- Test whether soft-thought and recurrent-depth methods preserve auditability in agent workflows.\n"
-                "- Add model-family coverage beyond arXiv papers: code repositories, released checkpoints, and benchmark leaderboards.\n"
-                + _architecture_analysis_block(sec["section_type"])
-                + _technical_architecture_template(sec["section_type"])
+                "Open verification tasks are determined by missing or contradictory evidence, not by a topic-specific template.\n\n"
+                "Current evidence-linked claims:\n"
+                + _format_claims(supported, limit=5)
+                + "\n\nRetrieve independent sources before resolving any remaining question.\n"
             )
-            if evidence_anchor:
-                body += "\nCurrent evidence anchor:\n" + evidence_anchor + "\n"
         conn.execute(
             "UPDATE report_sections SET content = ?, char_count = ? WHERE id = ?",
             (body, len(body), sec["id"]),
@@ -1555,123 +1466,59 @@ def compile_report_to_markdown(conn: sqlite3.Connection, run_id: str, output_md:
 
 
 def synthesize_expert_report(conn: sqlite3.Connection, run_id: str, output_md: str) -> tuple[str, int]:
-    """Write a higher-density expert synthesis report from claims/evidence."""
+    """Write a topic-general synthesis using only stored claims and evidence."""
     run = conn.execute("SELECT topic FROM research_runs WHERE id = ?", (run_id,)).fetchone()
     topic = run["topic"] if run else run_id
-    claims = conn.execute(
-        "SELECT c.id AS claim_id, c.claim_text, ce.evidence_id "
+    raw_claims = conn.execute(
+        "SELECT c.id AS claim_id, c.claim_text, c.claim_type, c.stance, c.confidence, ce.evidence_id "
         "FROM claims c LEFT JOIN claim_evidence ce ON ce.claim_id = c.id "
         "WHERE c.run_id = ? ORDER BY c.created_at, c.id",
         (run_id,),
     ).fetchall()
-    architecture = _pick_claims(claims, ("hidden state", "recurrent", "soft thought", "continuous", "projection", "multimodal", "superposition"), 8)
-    recurrent = _pick_claims(claims, ("recurrent", "test-time", "block", "depth"), 4)
-    soft = _pick_claims(claims, ("soft thought", "projection", "assistant", "existing"), 4)
-    diversity = _pick_claims(claims, ("superposition", "diversity", "multiple", "path"), 4)
-    evaluation = _pick_claims(claims, ("evaluation", "faithful", "surface", "disentangle", "interpretability", "safety"), 4)
-    multimodal = _pick_claims(claims, ("multimodal", "vision", "audio", "spatial", "joint latent"), 4)
+    claims: list[sqlite3.Row] = []
+    seen_claims: set[str] = set()
+    for row in raw_claims:
+        claim_id = str(row["claim_id"] or "")
+        if claim_id in seen_claims:
+            continue
+        seen_claims.add(claim_id)
+        claims.append(row)
+    supported = [row for row in claims if row["evidence_id"]]
+    unsupported_count = len(claims) - len(supported)
     source_lines, source_counts = _source_strength_summary(conn, run_id)
-    contradiction_rows = _pick_claims(claims, ("limitation", "risk", "faithful", "uncertainty", "deterministic", "diversity", "interpretability"), 8)
-    insight_count = 0
 
     lines = [
-        f"# {topic}: Expert Synthesis",
+        f"# {topic}: Grounded Synthesis",
         "",
-        "## Core Thesis",
+        "## Evidence-Backed Findings",
         "",
-        "Latent-space reasoning should be treated as a runtime architecture problem, not just a shorter chain-of-thought trick. The strongest direction is a split design: continuous latent state performs high-bandwidth intermediate computation, while an audit projection layer turns selected latent state into evidence, claims, actions, and replayable session events.",
+        "The findings below are rendered from claims that have an explicit evidence link. "
+        "This deterministic view does not add a domain thesis beyond the stored evidence.",
         "",
-        "## Insight Scorecard",
+        _format_claims(supported, limit=30),
         "",
-        "| Dimension | Score | Rationale |",
-        "|---|---:|---|",
-        f"| Source strength | {min(5, source_counts.get('paper', 0))}/5 | {source_counts.get('paper', 0)} paper sources plus {sum(source_counts.values())} total imported sources |",
-        "| Architecture abstraction | 4/5 | Routes are separated by mechanism: recurrence, recurrent depth, soft adapters, superposition, multimodal latent state |",
-        "| Engineering actionability | 4/5 | Includes P0/P1/P2/P3 roadmap with runtime integration path |",
-        "| Contradiction coverage | 2/5 | Current source set has uncertainty/risk claims, but lacks adversarial contradiction search |",
-        "| Auditability | 4/5 | Requires projection from latent state back to evidence, claims, and session events |",
+        "## Source Coverage",
         "",
-        "## Architecture Taxonomy",
+        f"This run contains {sum(source_counts.values())} source(s) across "
+        f"{len(source_counts)} declared source type(s): "
+        + (", ".join(f"{name}={count}" for name, count in sorted(source_counts.items())) or "none"),
         "",
-        "| Route | Mechanism | Best Fit | Main Risk |",
-        "|---|---|---|---|",
-        "| Hidden-state recurrence | Feed hidden states back as reasoning inputs | search/planning | hard to inspect |",
-        "| Recurrent depth | Spend test-time compute by iterating blocks | native model training | requires architecture change |",
-        "| Soft thought adapters | Project assistant-generated soft states into target model | existing LLM products | projection mismatch |",
-        "| Superposition latent state | Preserve multiple candidate paths in one latent representation | planner/search | collapse/evaluation policy |",
-        "| Multimodal latent reasoning | Reason in joint visual-language state | GUI/browser/robotics agents | alignment and auditability |",
+        "\n".join(source_lines) or "- No sources available.",
         "",
-        "Evidence anchors:",
-        _format_claims(architecture, claims, 8),
+        "## Limitations and Open Questions",
         "",
-        "## Source Strength",
+        f"- {unsupported_count} stored claim(s) have no evidence link and are excluded from the findings above.",
+        "- This compiler cannot determine whether the retrieved source set is complete; missing perspectives remain an evidence gap.",
+        "- Comparative recommendations require criteria from the research question and evidence that directly addresses those criteria.",
         "",
-        "The current source set is strong for early architecture mapping because it is dominated by paper sources, but weak for production readiness because it lacks released-system benchmarks, implementation repos, and independent negative results.",
+        "## Synthesis Boundary",
         "",
-        "\n".join(source_lines[:12]) or "- No sources available.",
-        "",
-        "## Design Tradeoffs",
-        "",
-        "1. **Deployability vs. purity.** Soft thought adapters are easier to add to current systems; recurrent-depth models are cleaner but require model-level changes.",
-        _format_claims(soft + recurrent, claims, 5),
-        "",
-        "2. **Compression vs. exploration.** A single latent vector can compress reasoning, but complex tasks need path diversity or superposition.",
-        _format_claims(diversity, claims, 4),
-        "",
-        "3. **Performance vs. auditability.** Latent reasoning can reduce token overhead, but every productive latent state needs a projection into evidence and claims.",
-        _format_claims(evaluation, claims, 4),
-        "",
-        "4. **Language-only vs. multimodal.** For UI, browser, vision, and robotics agents, natural-language rationales are a lossy bottleneck; joint latent state becomes more important.",
-        _format_claims(multimodal, claims, 4),
-        "",
-        "## Contradictions and Uncertainty",
-        "",
-        "The evidence supports latent reasoning as a promising architecture family, but it does not prove that every latent method is more faithful, safer, or cheaper under equal compute. Three uncertainty zones remain:",
-        "",
-        "- **Faithfulness uncertainty:** visible CoT may be unfaithful, but latent trajectories can be even harder to audit unless projected into evidence and claims.",
-        "- **Diversity uncertainty:** deterministic soft thoughts can under-explore alternatives; SoftCoT++-style diversity mechanisms are an early answer, not a settled solution.",
-        "- **Deployment uncertainty:** adapter routes are easiest to ship, while recurrent-depth routes may require model retraining and infrastructure changes.",
-        "",
-        "Evidence anchors:",
-        _format_claims(contradiction_rows, claims, 6),
-        "",
-        "## System Architecture",
-        "",
-        "```text",
-        "┌────────────────────────────────────────────────────────────┐",
-        "│ Audit Projection: evidence / claims / citations / actions   │",
-        "├────────────────────────────────────────────────────────────┤",
-        "│ Latent Compute: soft thoughts / recurrence / superposition   │",
-        "├────────────────────────────────────────────────────────────┤",
-        "│ State Protocol: sufficient state / hashes / ACL / expiry     │",
-        "├────────────────────────────────────────────────────────────┤",
-        "│ Runtime: session log / replay / tools / evaluator gates      │",
-        "└────────────────────────────────────────────────────────────┘",
-        "```",
-        "",
-        "## Implementation Roadmap",
-        "",
-        "- **P0:** Add a soft-thought surrogate adapter that outputs canonical sufficient state JSON plus an audit projection.",
-        "- **P1:** Store latent-state lifecycle events in the append-only session log: created, projected, used, rejected, expired.",
-        "- **P2:** Add multi-path planner state with explicit collapse/evaluation policy at join gates.",
-        "- **P3:** Extend browser/UI/PDF pipelines with multimodal latent surrogates: region graph, DOM path, screenshot hash, and evidence projection.",
-        "",
-        "## Evaluation Plan",
-        "",
-        "- Compare equal-compute visible CoT, hidden-state recurrence, and soft-thought adapter variants.",
-        "- Measure pass rate, token cost, wall time, retry count, and evaluator contradiction rate.",
-        "- Require every latent-derived action to project back into an evidence/claim/action trace.",
-        "",
-        "## Open Risks",
-        "",
-        "- Latent state may improve answers while reducing interpretability.",
-        "- Projection layers may fabricate a neat explanation for a non-faithful hidden trajectory.",
-        "- Cross-model latent protocols may overfit to one backbone's representation geometry.",
+        "Only evidence-linked claims are presented as findings. Any further interpretation must be authored explicitly, "
+        "linked to evidence, and re-evaluated rather than inferred by this deterministic compiler.",
         "",
         "## Bibliography",
         "",
     ]
-    insight_count += 5
     sources = conn.execute(
         "SELECT id, title, url FROM research_sources WHERE run_id = ? ORDER BY fetched_at, id",
         (run_id,),
@@ -2864,6 +2711,31 @@ def cmd_compile(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_compile_grounded(args: argparse.Namespace) -> int:
+    """Compile verified source packs and a synthesis plan into report artifacts."""
+    try:
+        payload = compile_grounded_report(
+            source_packs=args.source_pack,
+            synthesis_plan=args.synthesis_plan,
+            output_dir=args.output_dir,
+            question=args.question,
+        )
+    except GroundedSynthesisError as exc:
+        payload = {"ok": False, "error": str(exc)}
+        if emit_json(args, payload):
+            return 2
+        print(f"Grounded synthesis failed: {exc}", file=sys.stderr)
+        return 2
+    if emit_json(args, payload):
+        return 0
+    print(f"Grounded report: {payload['output_dir']}")
+    print(
+        f"Sources: {payload['source_count']}  Evidence: {payload['evidence_count']}  "
+        f"Claims: {payload['claim_count']}  Sections: {payload['section_count']}"
+    )
+    return 0
+
+
 def cmd_synthesize(args: argparse.Namespace) -> int:
     """Generate expert synthesis from mined evidence and claims."""
     db_path = args.db_path
@@ -3384,16 +3256,21 @@ def cmd_survey_finalize_run(args: argparse.Namespace) -> int:
             narrative_require_hitl=args.narrative_require_hitl,
         )
         
-        # Intercept and run final closeout gate
+        # A closeout may reject a successful finalization, but it must never
+        # erase an earlier pipeline/narrative failure or persist run.finalized
+        # for a run that did not satisfy the requested finalization contract.
+        finalize_ok = bool(payload.get("ok"))
         closeout = evaluate_final_closeout(
             args.output_dir,
             strict=True,
             min_finalized=args.min_finalized,
             require_complete=args.require_complete,
+            persist=finalize_ok,
         )
-        payload["ok"] = closeout["ok"]
-        payload["closeout_gate"] = closeout["verdict"]
-        payload["reason"] = "passed" if closeout["ok"] else f"closeout_gate_failed_{closeout['verdict']}"
+        if finalize_ok:
+            payload["ok"] = bool(closeout["ok"])
+            payload["closeout_gate"] = closeout["verdict"]
+            payload["reason"] = "passed" if closeout["ok"] else f"closeout_gate_failed_{closeout['verdict']}"
         payload["final_closeout_details"] = closeout
 
         # Rewrite survey_finalize_run.json with updated payload
@@ -3503,12 +3380,13 @@ def cmd_survey_continue(args: argparse.Namespace) -> int:
     )
     
     # Intercept and run final closeout gate
-    if payload.get("ok"):
+    if payload.get("ok") and payload.get("completed"):
         closeout = evaluate_final_closeout(
             args.output_dir,
             strict=True,
             min_finalized=args.min_finalized,
             require_complete=args.require_complete,
+            persist=True,
         )
         payload["ok"] = closeout["ok"]
         payload["closeout_gate"] = closeout["verdict"]
@@ -3609,6 +3487,7 @@ def cmd_survey_eval(args: argparse.Namespace) -> int:
         min_finalized=args.min_finalized,
         require_complete=args.require_complete,
         require_golden_style=args.require_golden_style,
+        persist=True,
     )
     if emit_json(args, payload):
         return 0 if payload.get("ok") or not args.strict else 1
@@ -3849,7 +3728,20 @@ def _enqueue_source_audit_followup(args: argparse.Namespace, payload: dict) -> d
         else:
             previous_status = nodes[existing].get("status", "pending")
             nodes[existing].update(node)
-            nodes[existing]["status"] = previous_status if str(previous_status).lower() not in {"passed", "failed"} else "pending"
+            reopened_status = previous_status if str(previous_status).lower() not in {"passed", "failed"} else "pending"
+            nodes[existing]["status"] = reopened_status
+            if str(reopened_status).lower() != str(previous_status).lower():
+                # Round-4 G3: reopening a TERMINAL followup node is a node-status
+                # write — record it through the scheduler's audited seam
+                # (flag-gated, best-effort, no-op when SOLAR_GATE_LEDGER is off).
+                try:
+                    graph_scheduler._ledger_transition(
+                        graph, str(node["id"]), str(previous_status), str(reopened_status),
+                        "_enqueue_source_audit_followup",
+                        note="source_audit_followup_reopen",
+                    )
+                except Exception:
+                    pass
             action = "updated"
         graph.setdefault("metadata", {})["deepresearch_source_audit_followup"] = {
             "node_id": node["id"],
@@ -3891,6 +3783,7 @@ def cmd_closeout(args: argparse.Namespace) -> int:
         strict=not args.non_strict,
         min_finalized=args.min_finalized,
         require_complete=args.require_complete,
+        persist=True,
     )
     if emit_json(args, payload):
         return 0 if payload.get("ok") else 1
@@ -3937,7 +3830,7 @@ def _sync_harness_runtime_paths() -> None:
 ALL_SUBCOMMANDS = [
     "init", "add-source", "extract", "ledger", "status",
     "run", "plan", "search", "serper-usage", "handoff-search", "import-search",
-    "mine", "outline", "write", "check", "compile", "synthesize", "export", "eval-artifacts",
+    "mine", "outline", "write", "check", "compile", "compile-grounded", "synthesize", "export", "eval-artifacts",
     "policy-doctor", "policy-explain",
     "source-audit",
     "survey-plan", "survey-pack", "survey-write-section", "survey-run-sections", "survey-watch-responses", "survey-watch-register", "survey-watch-tick", "survey-rewrite-queue", "survey-rewrite-run", "survey-auto-repair", "survey-finalize-run", "survey-import-search-results", "survey-enrich-papers", "survey-status-next-action", "survey-continue", "survey-review", "survey-compile", "survey-chief-editor", "survey-doctor", "survey-eval", "survey-diagnose",
@@ -3961,6 +3854,7 @@ SUBCOMMANDS = {
     "write": cmd_write,
     "check": cmd_check,
     "compile": cmd_compile,
+    "compile-grounded": cmd_compile_grounded,
     "synthesize": cmd_synthesize,
     "export": cmd_export,
     "eval-artifacts": cmd_eval_artifacts,
@@ -4123,6 +4017,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_compile.add_argument("--run-id", required=True, help="Research run ID")
     p_compile.add_argument("--output-md", default="", help="Path for compiled final markdown")
     p_compile.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
+    p_compile_grounded = sub.add_parser(
+        "compile-grounded",
+        help="Compile verified source packs plus a synthesis plan into a grounded report",
+    )
+    p_compile_grounded.add_argument(
+        "--source-pack",
+        action="append",
+        required=True,
+        help="Source-pack directory; repeat for independent retrieval packs",
+    )
+    p_compile_grounded.add_argument(
+        "--synthesis-plan",
+        required=True,
+        help="solar.grounded_synthesis_plan.v2 JSON file with exact quoted evidence links",
+    )
+    p_compile_grounded.add_argument("--output-dir", required=True, help="Empty report output directory")
+    p_compile_grounded.add_argument("--question", required=True, help="Original research question")
+    p_compile_grounded.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     p_synthesize = sub.add_parser("synthesize", help="Generate expert synthesis report")
     p_synthesize.add_argument("db_path", help="Path to the SQLite database")

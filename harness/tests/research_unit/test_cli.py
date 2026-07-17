@@ -24,7 +24,7 @@ if _HARNESS_LIB not in sys.path:
 
 from research import cli as research_cli
 from research.cli import build_parser, main
-from research.evaluator import ANALYSIS_TERMS_RE, TOKEN_RE, evaluate_artifacts
+from research.evaluator import evaluate_artifacts
 
 
 @pytest.fixture
@@ -444,7 +444,7 @@ Relevant Quotes:
 
 
 class TestTechnicalArchitectureProfile:
-    def test_continue_pipeline_produces_profile_dense_sections(self, db_path, tmp_path):
+    def test_legacy_pipeline_does_not_fake_technical_profile_analysis(self, db_path, tmp_path):
         assert main(["init", db_path, "--topic", "latent reasoning technical architecture"]) == 0
 
         import sqlite3
@@ -507,15 +507,12 @@ class TestTechnicalArchitectureProfile:
         )
 
         assert payload["claims"] >= 4
-        assert result["ok"] is True
-        assert not any(str(w).startswith("section_coverage_low_analysis_density") for w in result["warnings"])
+        assert result["ok"] is False
+        assert "expert_synthesis_missing_taxonomy" in result["errors"]
+        assert "expert_synthesis_missing_p0_p1_p2_roadmap:0<3" in result["errors"]
         for raw in (out / "sections.jsonl").read_text(encoding="utf-8").splitlines():
             row = json.loads(raw)
-            if row["section_type"] == "source_landscape":
-                continue
-            content = row["content"]
-            density = len(ANALYSIS_TERMS_RE.findall(content)) / max(len(TOKEN_RE.findall(content)), 1)
-            assert density >= 0.12, row["section_type"]
+            assert "Architecture Gate Ledger" not in row["content"]
 
     def test_continue_pipeline_rewrites_sections_when_claims_already_exist(self, db_path, tmp_path):
         assert main(["init", db_path, "--topic", "latent reasoning rewrite regression"]) == 0
@@ -553,7 +550,9 @@ class TestTechnicalArchitectureProfile:
 
         sections = [json.loads(line) for line in (second_out / "sections.jsonl").read_text(encoding="utf-8").splitlines()]
         executive = next(row for row in sections if row["section_type"] == "executive_summary")
-        assert "Architecture Gate Ledger" in executive["content"]
+        assert "No architecture gate ledger" not in executive["content"]
+        assert "Architecture Gate Ledger" not in executive["content"]
+        assert "[cite:ev_" in executive["content"]
 
 
 class TestDoctorUnaffected:

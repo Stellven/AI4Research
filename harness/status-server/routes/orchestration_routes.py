@@ -58,7 +58,7 @@ HARNESS_DIR = Path(
     or str(Path.home() / ".solar" / "harness")
 ).expanduser()
 SCRIPT_HARNESS_DIR = Path(__file__).resolve().parents[2]
-SPRINTS_DIR = HARNESS_DIR / "sprints"
+SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR") or (HARNESS_DIR / "sprints"))
 SESSIONS_DIR = HARNESS_DIR / "sessions"
 STATE_DIR = HARNESS_DIR / "state"
 EVENTS_JSONL = HARNESS_DIR / "events.jsonl"
@@ -371,15 +371,29 @@ def _normalize_status(status: str | None) -> str:
     return value or "pending"
 
 
-def _node_status(node: dict, status_state: dict | None = None) -> str:
+def _node_workflow_status(node: dict, status_state: dict | None = None) -> str:
+    """Return the effective node state without collapsing workflow transitions.
+
+    The dashboard still needs a normalized status for progress/tone, but
+    `dispatched` and `reviewing` identify different active operators.  Preserve
+    that distinction at the serialization boundary instead of asking the
+    frontend to reverse-engineer it after normalization.
+    """
     state_nodes = (status_state or {}).get("nodes") or {}
     nid = node.get("id", "")
     if isinstance(state_nodes, dict) and nid in state_nodes:
         nstate = state_nodes[nid]
         if isinstance(nstate, dict):
-            return _normalize_status(nstate.get("status"))
-        return _normalize_status(str(nstate))
-    return _normalize_status(node.get("status"))
+            raw = nstate.get("status")
+        else:
+            raw = nstate
+    else:
+        raw = node.get("status")
+    return str(raw or "pending").strip().lower() or "pending"
+
+
+def _node_status(node: dict, status_state: dict | None = None) -> str:
+    return _normalize_status(_node_workflow_status(node, status_state))
 
 
 def _load_routing_decisions() -> list[dict]:
@@ -397,7 +411,9 @@ def _load_routing_decisions() -> list[dict]:
 def _capability_counts(nodes: list[dict]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for node in nodes:
-        for cap in node.get("required_capabilities") or []:
+        executable_node = node.get("executable_node") if isinstance(node.get("executable_node"), dict) else {}
+        identity = executable_node or node
+        for cap in identity.get("required_capabilities") or []:
             if isinstance(cap, str):
                 counts[cap] = counts.get(cap, 0) + 1
     return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
@@ -406,7 +422,15 @@ def _capability_counts(nodes: list[dict]) -> dict[str, int]:
 def _role_counts(nodes: list[dict]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for node in nodes:
-        role = node.get("target_role") or node.get("preferred_role") or node.get("logical_operator") or "unspecified"
+        executable_node = node.get("executable_node") if isinstance(node.get("executable_node"), dict) else {}
+        role = (
+            executable_node.get("dispatch_role")
+            or executable_node.get("logical_operator")
+            or node.get("target_role")
+            or node.get("preferred_role")
+            or node.get("logical_operator")
+            or "unspecified"
+        )
         if not isinstance(role, str) or not role:
             role = "unspecified"
         counts[role] = counts.get(role, 0) + 1
@@ -561,8 +585,14 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
     for index, node in enumerate(nodes):
         nid = str(node.get("id") or f"N{index + 1}")
         decision = by_node.get(nid, {})
-        required = [c for c in (node.get("required_capabilities") or []) if isinstance(c, str)]
-        required_skills = [s for s in (node.get("required_skills") or []) if isinstance(s, str)]
+        executable_node = (
+            node.get("executable_node")
+            if isinstance(node.get("executable_node"), dict)
+            else {}
+        )
+        identity = executable_node or node
+        required = [c for c in (identity.get("required_capabilities") or []) if isinstance(c, str)]
+        required_skills = [s for s in (identity.get("required_skills") or []) if isinstance(s, str)]
         provided = decision.get("provided_capabilities") or []
         missing = [cap for cap in required if cap not in _provided_capability_names(provided)]
         target_pane = str(decision.get("target_pane") or "")
@@ -571,13 +601,17 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
         physical_plan_ir = node.get("physical_plan_ir") if isinstance(node.get("physical_plan_ir"), dict) else {}
         capsule_plan_ir = node.get("capsule_plan_ir") if isinstance(node.get("capsule_plan_ir"), dict) else {}
         selected_operator = (
-            physical_plan.get("selected_operator_id")
+            physical_plan.get("suggested_operator_id")
+            or physical_plan.get("selected_operator_id")
+            or physical_plan_ir.get("suggested_operator_id")
             or physical_plan_ir.get("selected_operator_id")
+            or node.get("suggested_operator_id")
             or node.get("selected_operator_id")
             or ""
         )
         requested_role = (
-            decision.get("required_role")
+            executable_node.get("dispatch_role")
+            or decision.get("required_role")
             or node.get("target_role")
             or node.get("preferred_role")
             or node.get("role")
@@ -587,20 +621,29 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
         )
         cards.append({
             "id": nid,
-            "goal": node.get("goal") or "",
+            "executable_node": dict(executable_node),
+            "goal": identity.get("goal") or "",
             "status": _node_status(node, status_state),
-            "depends_on": node.get("depends_on") or [],
-            "gate": node.get("gate") or "",
+            "workflow_status": _node_workflow_status(node, status_state),
+            # Preserve the compiler-owned execution-role evidence end-to-end.
+            # The React shell must not guess from opaque ids (S1/S2) after the
+            # dashboard serializer has discarded the graph fields that already
+            # answer which logical role owns the node.
+            "owner": node.get("owner") or "",
+            "task_type": identity.get("task_type") or identity.get("node_type") or "",
+            "dispatch_task_type": identity.get("dispatch_task_type") or "",
+            "depends_on": identity.get("depends_on") or [],
+            "gate": identity.get("gate") or "",
             "estimated_cost": node.get("estimated_cost") or 0,
             "required_capabilities": required,
             "required_skills": required_skills,
             "missing_capabilities": missing,
             "missing_skills": [s for s in (decision.get("missing_skills") or node.get("missing_skills") or []) if isinstance(s, str)],
             "requested_role": requested_role,
-            "logical_operator": node.get("logical_operator") or physical_plan_ir.get("logical_operator") or "",
+            "logical_operator": executable_node.get("logical_operator") or node.get("logical_operator") or physical_plan_ir.get("logical_operator") or "",
             "preferred_model": node.get("preferred_model") or "",
             "selected_operator_id": selected_operator,
-            "capability_capsule_id": physical_plan_ir.get("capability_capsule_id") or capsule_plan_ir.get("capability_capsule_id") or "",
+            "capability_capsule_id": executable_node.get("capability_capsule_id") or physical_plan_ir.get("capability_capsule_id") or capsule_plan_ir.get("capability_capsule_id") or "",
             "candidate_workers_seen": bool(decision.get("any_worker_seen") or decision.get("candidate_workers_seen")),
             "role_candidates_seen": bool(decision.get("role_candidates_seen")),
             "target_pane": target_pane,
@@ -613,8 +656,8 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
             "route_decision": decision.get("decision") or "no_routing_record",
             "blocked_reason": decision.get("blocked_reason") or "",
             "decision": decision.get("decision") or "no_routing_record",
-            "write_scope": node.get("write_scope") or [],
-            "read_scope": node.get("read_scope") or [],
+            "write_scope": identity.get("write_scope") or [],
+            "read_scope": identity.get("read_scope") or [],
         })
     return cards
 
@@ -759,12 +802,18 @@ def _stall_human_reason(reasons: list[str]) -> str:
     return "Repeated retries with no forward progress."
 
 
-def _build_stall_summary(status: dict, node_cards: list[dict], diagnostics: list[dict], tg_ok: bool, events: list[dict] | None = None) -> dict:
+def _build_stall_summary(
+    status: dict,
+    node_cards: list[dict],
+    diagnostics: list[dict],
+    tg_ok: bool,
+    events: list[dict] | None = None,
+    plan_governance: dict | None = None,
+) -> dict:
     sprint_status = str(status.get("status") or "").strip().lower()
     phase = str(status.get("phase") or "").strip().lower()
     blocked = [card for card in node_cards if str(card.get("status") or "").lower() in {"blocked", "gate_blocked", "failed"} or card.get("blocked_reason")]
     active = [card for card in node_cards if str(card.get("status") or "").lower() in {"active", "running", "dispatched", "in_progress"}]
-    pending = [card for card in node_cards if str(card.get("status") or "").lower() in {"pending", "queued", "planned"}]
     reasons = sorted({str(card.get("blocked_reason") or card.get("decision") or "").strip() for card in blocked if str(card.get("blocked_reason") or card.get("decision") or "").strip()})
 
     if not tg_ok:
@@ -785,14 +834,20 @@ def _build_stall_summary(status: dict, node_cards: list[dict], diagnostics: list
             "detail": "Solar reported a blocked gate. The dashboard is showing the stall rather than treating the sprint as complete.",
             "reasons": reasons,
         }
-    if "planning_complete" in phase and not active and (blocked or pending):
+    governance_state = str((plan_governance or {}).get("state") or "").strip().lower()
+    if (
+        "planning_complete" in phase
+        and not active
+        and blocked
+        and governance_state != "compiling"
+    ):
         state = "no_matching_worker" if any("no_matching_worker" in reason for reason in reasons) else "planning_complete_stalled"
         return {
             "is_stalled": True,
             "state": state,
             "severity": "warn",
             "title": "Planning is complete, dispatch is stalled",
-            "detail": "The DAG exists, but no node is actively running. This often means capability labels or worker matching blocked dispatch.",
+            "detail": "The DAG has an explicit blocked node or routing decision, and no node is actively running.",
             "reasons": reasons,
         }
     if blocked:
@@ -1245,7 +1300,7 @@ def _capability_mismatch_projection(dashboard: dict) -> dict:
             "missing_capabilities": missing or required,
             "logical_operator": node.get("logical_operator") or "",
             "preferred_model": node.get("preferred_model") or "",
-            "selected_operator_id": node.get("selected_operator_id") or "",
+            "selected_operator_id": node.get("suggested_operator_id") or node.get("selected_operator_id") or "",
             "capability_capsule_id": node.get("capability_capsule_id") or "",
             "candidate_workers_seen": bool(node.get("candidate_workers_seen")),
             "role_candidates_seen": bool(node.get("role_candidates_seen")),
@@ -1283,7 +1338,29 @@ def _human_action_required(status: dict, dashboard: dict, artifacts: list[dict],
             "detail": f"No worker advertises {missing}.",
             "primary_artifact": _first_artifact(artifacts, "task_graph"),
         }
-    if plan_ready and (sprint_status in {"active", "planning"} or phase in {"planning", "planning_complete"}):
+    # plan_review is only a real decision while the runtime is actually waiting
+    # on it: a contracted graph's gates come from the contract (no human plan
+    # gate — contracted runs self-advance), and once any node has left
+    # "pending" the runtime has already consumed the plan. Without these two
+    # guards the artifact heuristic below kept the card up for entire
+    # contracted runs (P4 finding: 39 sightings, zero plan verdicts).
+    contracted = bool(dashboard.get("workflow_contract_id"))
+    # G4 UI-rung run 6: the card resurfaced on the GENERIC path during "Plan
+    # compiling…" (6 sightings, zero plan verdicts in the ledger) — the
+    # pre-planner template carries no workflow_contract_id yet. The governed
+    # generic path never waits on a human plan review: autopilot advances
+    # pm->planner->builder and the CERTIFICATE is the plan gate.
+    governance = dashboard.get("plan_governance") if isinstance(dashboard.get("plan_governance"), dict) else {}
+    governed_generic = str(governance.get("state") or "") in {
+        "compiling", "certified", "plan_compile_failed", "plan_certificate_invalid",
+    }
+    dag = dashboard.get("dag") if isinstance(dashboard.get("dag"), dict) else {}
+    build_started = any(
+        _normalize_status(str(node.get("status") or "")) != "pending"
+        for node in (dag.get("nodes") or [])
+        if isinstance(node, dict)
+    )
+    if plan_ready and not contracted and not governed_generic and not build_started and (sprint_status in {"active", "planning"} or phase in {"planning", "planning_complete"}):
         return {
             "type": "plan_review",
             "severity": "decision",
@@ -1939,6 +2016,7 @@ def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -
             "phase": status.get("phase") or dashboard.get("phase") or "",
             "raw_status": status,
         },
+        "plan_governance": dashboard.get("plan_governance") or {},
         "requirements": requirements,
         "plan": plan,
         "task_graph": task_graph,
@@ -1993,7 +2071,15 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
     registry = _capability_registry()
     node_cards = _build_node_cards(sid, nodes, tg.get("runtime_state") or {}, routing)
     diagnostics = _build_blocker_diagnostics(sid, status, nodes, node_cards, tg_ok)
-    stall = _build_stall_summary(status, node_cards, diagnostics, tg_ok, events=_recent_sprint_events(sid))
+    plan_governance = _build_plan_governance(sid, status, tg)
+    stall = _build_stall_summary(
+        status,
+        node_cards,
+        diagnostics,
+        tg_ok,
+        events=_recent_sprint_events(sid),
+        plan_governance=plan_governance,
+    )
 
     status_counts: dict[str, int] = {}
     cost_by_status: dict[str, float] = {}
@@ -2012,6 +2098,8 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
         "title": status.get("title", ""),
         "sprint_status": status.get("status", ""),
         "phase": status.get("phase", ""),
+        "workflow_contract_id": str(tg.get("workflow_contract_id") or ""),
+        "plan_governance": plan_governance,
         "generated_from": {
             "status_json": _display_path(SPRINTS_DIR / f"{sid}.status.json") if sid else "",
             "task_graph_json": _display_path(_existing_task_graph_path(sid)) if sid else "",
@@ -2049,6 +2137,78 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
         "blocker_diagnostics": diagnostics,
         "stall": stall,
     }, degraded
+
+
+def _build_plan_governance(sid: str, status: dict, tg: dict) -> dict:
+    """G4 spec §3: the generic path's governance facts, surfaced truthfully.
+
+    Everything derives from files the runtime actually writes (status.json,
+    task_graph.json, <sid>.plan-compile-errors.json) — never heuristics
+    (failure class 14). States:
+      certified                -> stamped pm.generic.v1 + certificate PASS
+      compiling                -> intake-born graph, not yet stamped (NEUTRAL:
+                                  planner in flight / bounce loop teaching)
+      plan_compile_failed      -> truthful terminal (bounces exhausted)
+      plan_certificate_invalid -> truthful terminal (post-PASS mutation)
+      contracted               -> fixed workflow contract (its own gates)
+      epic                     -> epic decomposition graph
+      legacy                   -> unmarked uncontracted (grandfathered)
+    """
+    contract_id = str(tg.get("workflow_contract_id") or "").strip()
+    cert = tg.get("plan_certificate") if isinstance(tg.get("plan_certificate"), dict) else {}
+    # The requirement compiler owns this provenance.  Planner output may
+    # replace task_graph.json wholesale, so status.json is the durable source;
+    # the graph copy remains supported for older/in-flight records.
+    birth_marker = bool(
+        tg.get("plan_compile_required") or status.get("plan_compile_required")
+    )
+    schema = str(tg.get("schema_version") or "")
+    sprint_status = str(status.get("status") or "").strip().lower()
+    phase = str(status.get("phase") or "").strip().lower()
+    try:
+        bounces = int(status.get("plan_compile_bounces") or 0)
+    except (TypeError, ValueError):
+        bounces = 0
+    error_codes: list[str] = []
+    if sid:
+        try:
+            payload = json.loads(
+                (SPRINTS_DIR / f"{sid}.plan-compile-errors.json").read_text(encoding="utf-8")
+            )
+            for error in payload.get("errors") or []:
+                if isinstance(error, dict) and str(error.get("code") or "").strip():
+                    error_codes.append(str(error["code"]))
+        except (OSError, ValueError):
+            pass
+    certified = contract_id == "pm.generic.v1" and str(cert.get("verdict") or "").upper() == "PASS"
+    if sprint_status == "failed" and phase == "plan_compile_failed":
+        state = "plan_compile_failed"
+    elif sprint_status == "failed" and phase == "plan_certificate_invalid":
+        state = "plan_certificate_invalid"
+    elif schema.startswith("solar.epic."):
+        state = "epic"
+    elif contract_id and contract_id != "pm.generic.v1":
+        state = "contracted"
+    elif certified:
+        state = "certified"
+    elif contract_id == "pm.generic.v1" or birth_marker:
+        state = "compiling"
+    else:
+        state = "legacy"
+    return {
+        "state": state,
+        "certified": certified,
+        "certificate": {
+            "present": bool(cert),
+            "verdict": str(cert.get("verdict") or ""),
+            "validated_at": str(cert.get("validated_at") or ""),
+            "graph_hash": str(cert.get("graph_hash") or "")[:12],
+        },
+        "plan_compile_bounces": bounces,
+        "compile_error_codes": error_codes[:6],
+        "birth_marker": birth_marker,
+        "workflow_contract_id": contract_id,
+    }
 
 
 def build_sprint_index_payload(limit: int = 80) -> tuple[dict, list[str]]:

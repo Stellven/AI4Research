@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # get-solar.sh — curl|bash bootstrap for Solar.
 #
-#   curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.8/get-solar.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.9/get-solar.sh | bash
 #   curl -fsSL <url> | bash -s -- --yes --components kernel,harness
 #
 # Clones the published Solar channel and runs install.sh, forwarding every
@@ -13,11 +13,14 @@
 set -eu
 
 # NOTE: SOLAR_CHANNEL must default to a published tag because this script is
-# also bundled into desktop artifacts as a network fallback. rc.8 artifacts
-# install from their bundled Resources/harness first; until v1.0.0-rc.8 is
-# tagged, the fallback channel stays on the latest published release.
+# also bundled into desktop artifacts as a network fallback. Desktop artifacts
+# install from their version-matched Resources/harness first; their network
+# fallback must point at the same published release as the artifact.
+# Kept in lockstep with VERSION by scripts/check-release-coherence.sh (a
+# release-cut gate) — a prior mismatch made update silently downgrade fresh
+# installs (P6 corpus PKG-001).
 SOLAR_REPO="${SOLAR_REPO:-https://github.com/suraj-subrahmanyan/OpenSolar.git}"
-SOLAR_CHANNEL="${SOLAR_CHANNEL:-v1.0.0-rc.6}"
+SOLAR_CHANNEL="${SOLAR_CHANNEL:-v1.0.0-rc.9}"
 SOLAR_SRC="${SOLAR_SRC:-$HOME/.solar-src/OpenSolar}"
 
 log() { printf '[get-solar] %s\n' "$*" >&2; }
