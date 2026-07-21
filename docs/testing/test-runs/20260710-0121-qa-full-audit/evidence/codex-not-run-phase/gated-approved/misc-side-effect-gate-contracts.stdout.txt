@@ -1,0 +1,36 @@
+FFFF.                                                                    [100%]
+=================================== FAILURES ===================================
+________ test_office_skill_external_mutations_require_explicit_approval ________
+evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py:25: in test_office_skill_external_mutations_require_explicit_approval
+    _assert_explicit_approval_policy(_text("skills/office/SKILL.md"))
+evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py:20: in _assert_explicit_approval_policy
+    assert any(token in text for token in ("approval", "approved", "explicit confirmation", "always ask", "确认", "批准"))
+E   assert False
+E    +  where False = any(<generator object _assert_explicit_approval_policy.<locals>.<genexpr> at 0x107c335a0>)
+___________ test_obsidian_direct_mutations_require_explicit_approval ___________
+evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py:29: in test_obsidian_direct_mutations_require_explicit_approval
+    _assert_explicit_approval_policy(_text("skills/obsidian-direct/SKILL.md"))
+evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py:20: in _assert_explicit_approval_policy
+    assert any(token in text for token in ("approval", "approved", "explicit confirmation", "always ask", "确认", "批准"))
+E   assert False
+E    +  where False = any(<generator object _assert_explicit_approval_policy.<locals>.<genexpr> at 0x107c33840>)
+___________ test_apple_calendar_mutations_require_explicit_approval ____________
+evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py:33: in test_apple_calendar_mutations_require_explicit_approval
+    _assert_explicit_approval_policy(_text("skills/apple-calendar/SKILL.md"))
+evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py:20: in _assert_explicit_approval_policy
+    assert any(token in text for token in ("approval", "approved", "explicit confirmation", "always ask", "确认", "批准"))
+E   assert False
+E    +  where False = any(<generator object _assert_explicit_approval_policy.<locals>.<genexpr> at 0x107c33920>)
+________ test_browser_external_action_requires_explicit_human_approval _________
+evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py:43: in test_browser_external_action_requires_explicit_human_approval
+    assert decision["status"] == "blocked"
+E   AssertionError: assert 'ready' == 'blocked'
+E     
+E     - blocked
+E     + ready
+=========================== short test summary info ============================
+FAILED evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py::test_office_skill_external_mutations_require_explicit_approval
+FAILED evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py::test_obsidian_direct_mutations_require_explicit_approval
+FAILED evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py::test_apple_calendar_mutations_require_explicit_approval
+FAILED evidence/codex-not-run-phase/audit-tests/test_misc_side_effect_gate_contracts.py::test_browser_external_action_requires_explicit_human_approval
+4 failed, 1 passed in 0.11s

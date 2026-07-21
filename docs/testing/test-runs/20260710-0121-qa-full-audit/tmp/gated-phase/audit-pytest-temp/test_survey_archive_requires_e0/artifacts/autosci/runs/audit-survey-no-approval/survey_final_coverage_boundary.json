@@ -1,0 +1,16 @@
+{
+  "blocking_reasons": [],
+  "citation_count": 1,
+  "citation_ids": [
+    "local:audit-source"
+  ],
+  "coverage_scope": "bounded_source_backed",
+  "exhaustive_coverage_verified": false,
+  "final_coverage_ready": true,
+  "limitations": [
+    "Survey coverage is bounded to supplied source/citation evidence and does not claim exhaustive live literature coverage."
+  ],
+  "schema": "autosci_survey_final_coverage_boundary.v1",
+  "source_evidence_supplied": true,
+  "status": "final_coverage_ready"
+}

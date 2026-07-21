@@ -1,0 +1,86 @@
+{
+  "ok": true,
+  "complete_context": false,
+  "finalized_sections": 3,
+  "total_sections": 32,
+  "chapter_final_coverage": 0.125,
+  "section_duplicate_rate": 0.0,
+  "terminology_profile": "agentic_runtime",
+  "terminology_counts": {
+    "runtime_orchestration": 0,
+    "tool_execution": 0,
+    "memory_state": 64,
+    "multi_agent_handoff": 0,
+    "evaluation_benchmark": 91,
+    "safety_governance": 3,
+    "observability_trace": 30
+  },
+  "terminology_variants": [
+    "memory_state",
+    "evaluation_benchmark",
+    "safety_governance",
+    "observability_trace"
+  ],
+  "chapters": [
+    {
+      "chapter_id": "ch01",
+      "title": "General Notes",
+      "section_count": 4,
+      "finalized_sections": 3,
+      "ready_for_chief_edit": false
+    },
+    {
+      "chapter_id": "ch02",
+      "title": "General Notes",
+      "section_count": 4,
+      "finalized_sections": 0,
+      "ready_for_chief_edit": false
+    },
+    {
+      "chapter_id": "ch03",
+      "title": "General Notes",
+      "section_count": 4,
+      "finalized_sections": 0,
+      "ready_for_chief_edit": false
+    },
+    {
+      "chapter_id": "ch04",
+      "title": "General Notes",
+      "section_count": 4,
+      "finalized_sections": 0,
+      "ready_for_chief_edit": false
+    },
+    {
+      "chapter_id": "ch05",
+      "title": "General Notes",
+      "section_count": 4,
+      "finalized_sections": 0,
+      "ready_for_chief_edit": false
+    },
+    {
+      "chapter_id": "ch06",
+      "title": "General Notes",
+      "section_count": 4,
+      "finalized_sections": 0,
+      "ready_for_chief_edit": false
+    },
+    {
+      "chapter_id": "ch07",
+      "title": "General Notes",
+      "section_count": 4,
+      "finalized_sections": 0,
+      "ready_for_chief_edit": false
+    },
+    {
+      "chapter_id": "ch08",
+      "title": "General Notes",
+      "section_count": 4,
+      "finalized_sections": 0,
+      "ready_for_chief_edit": false
+    }
+  ],
+  "warnings": [
+    "chief_editor_partial_review:3/32"
+  ],
+  "issues": []
+}

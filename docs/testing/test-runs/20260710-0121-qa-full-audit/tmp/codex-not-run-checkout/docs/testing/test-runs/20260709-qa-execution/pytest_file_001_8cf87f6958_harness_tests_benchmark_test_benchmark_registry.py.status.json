@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_001_8cf87f6958_harness_tests_benchmark_test_benchmark_registry.py",
+  "source": "harness/tests/benchmark/test_benchmark_registry.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/benchmark/test_benchmark_registry.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.256,
+  "timeout": false
+}

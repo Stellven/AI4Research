@@ -1,0 +1,62 @@
+{
+  "citation_count": 5,
+  "citations": [
+    {
+      "citation_id": "arxiv:2601.00003",
+      "evidence_id": "lit-paper-draft",
+      "source": "literature_discovery",
+      "source_channels": [
+        "search_s2"
+      ],
+      "source_ref": "https://arxiv.org/abs/2601.00003",
+      "title": "SkillGen Draft Evidence"
+    },
+    {
+      "citation_id": "wiki:artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+      "evidence_id": "artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+      "path": "artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+      "source": "wiki_paper",
+      "source_channels": [
+        "wiki"
+      ],
+      "source_ref": "artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+      "title": "Registered SkillGen Source"
+    },
+    {
+      "citation_id": "wiki:artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+      "evidence_id": "artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+      "path": "artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+      "source": "wiki_paper",
+      "source_channels": [
+        "wiki"
+      ],
+      "source_ref": "artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+      "title": "AutoSci Adapter Fixture Paper"
+    },
+    {
+      "citation_id": "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+      "evidence_id": "artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+      "path": "artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+      "source": "wiki_paper",
+      "source_channels": [
+        "wiki"
+      ],
+      "source_ref": "artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+      "title": "SKILLGEN: Verified Inference-Time Agent Skill Synthesis"
+    },
+    {
+      "citation_id": "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen.md",
+      "evidence_id": "artifacts/autosci/workspace/wiki/papers/paper-skillgen.md",
+      "path": "artifacts/autosci/workspace/wiki/papers/paper-skillgen.md",
+      "source": "wiki_paper",
+      "source_channels": [
+        "wiki"
+      ],
+      "source_ref": "https://arxiv.org/abs/2601.00001",
+      "title": "SKILLGEN: Verified Inference-Time Agent Skill Synthesis"
+    }
+  ],
+  "limitations": [],
+  "schema": "autosci_publication_citation_map.v1",
+  "status": "completed"
+}

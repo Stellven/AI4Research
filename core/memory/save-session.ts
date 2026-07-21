@@ -8,7 +8,7 @@ import { Database } from "bun:sqlite";
 import { writeFileSync, existsSync, mkdirSync } from "fs";
 import { homedir } from "os";
 
-const DB_PATH = `${homedir()}/.solar/solar.db`;
+const DB_PATH = process.env.SOLAR_DB_PATH || `${homedir()}/.solar/db/solar.db`;
 const SESSION_DIR = `${process.cwd()}/.solar`;
 
 interface SessionState {

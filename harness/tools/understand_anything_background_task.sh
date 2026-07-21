@@ -4,7 +4,7 @@ set -euo pipefail
 HOME_DIR="${HOME}"
 HARNESS_DIR="${HARNESS_DIR:-$HOME_DIR/.solar/harness}"
 SPRINT_ID="${SPRINT_ID:-sprint-20260527-understand-anything-background-knowledge-graph}"
-TARGET_REPO="${1:-/Users/lisihao/Solar}"
+TARGET_REPO="${1:-${HOME}/Solar}"
 OUTPUT_DIR="$TARGET_REPO/.understand-anything"
 RUN_ROOT="$HARNESS_DIR/run/understand-anything-background/$SPRINT_ID"
 STATUS_JSON="$RUN_ROOT/status.json"

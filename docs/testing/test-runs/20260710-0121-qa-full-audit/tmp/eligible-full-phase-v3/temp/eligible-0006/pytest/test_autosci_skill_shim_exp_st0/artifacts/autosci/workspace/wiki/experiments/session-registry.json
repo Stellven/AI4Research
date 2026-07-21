@@ -1,0 +1,15 @@
+{
+  "schema": "autosci_experiment_session_registry.v1",
+  "sessions": [
+    {
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_st0/fake_launch.py",
+      "experiment_id": "exp-session",
+      "remote_cli_status": "inconclusive",
+      "result_collected": false,
+      "run_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_st0/session-run",
+      "runtime_evidence_path": "",
+      "state": "running",
+      "updated_at": "2026-07-10T14:12:53Z"
+    }
+  ]
+}

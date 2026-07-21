@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-runtime-artifact-knowledge-export.sh",
+  "source": "harness/tests/test-runtime-artifact-knowledge-export.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-runtime-artifact-knowledge-export.sh"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.09,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-o8zy76t4"
+}

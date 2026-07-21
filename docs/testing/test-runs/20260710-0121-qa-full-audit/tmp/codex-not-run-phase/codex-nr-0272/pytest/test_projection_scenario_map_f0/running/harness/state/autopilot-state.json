@@ -1,0 +1,11 @@
+{
+  "routing_decisions": [
+    {
+      "node_id": "N1",
+      "decision": "dispatched",
+      "target_pane": "pane-builder",
+      "provided_capabilities": [],
+      "sprint_id": "sprint-running"
+    }
+  ]
+}

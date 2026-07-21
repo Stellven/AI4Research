@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""cmux-monitor-down: close the named cmux workspace without killing unrelated sessions."""
+
+import sys
+import json
+import subprocess
+import argparse
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("ERROR: PyYAML not installed. Run: pip3 install pyyaml", file=sys.stderr)
+    sys.exit(1)
+
+SCRIPTS_DIR = Path(__file__).parent
+CMUX_BIN_CANDIDATES = [
+    "/Applications/cmux.app/Contents/Resources/bin/cmux",
+    "/usr/local/bin/cmux",
+    "/opt/homebrew/bin/cmux",
+]
+
+
+def find_cmux():
+    for p in CMUX_BIN_CANDIDATES:
+        if Path(p).exists():
+            return p
+    return None
+
+
+def get_workspace_name(config_path: Path) -> str:
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
+    return cfg.get("workspace_name", "cmux-workspace")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Stop a cmux monitoring workspace")
+    parser.add_argument("config", nargs="?", help="Path to workspace.yaml (to resolve name)")
+    parser.add_argument("--name", help="Workspace name (alternative to config file)")
+    parser.add_argument("--dry-run", action="store_true", help="Print what would be done")
+    args = parser.parse_args()
+
+    if not args.config and not args.name:
+        print("ERROR: provide either <config> or --name", file=sys.stderr)
+        sys.exit(1)
+
+    if args.name:
+        workspace_name = args.name
+    else:
+        config_path = Path(args.config).expanduser()
+        if not config_path.exists():
+            print(f"ERROR: config not found: {config_path}", file=sys.stderr)
+            sys.exit(1)
+        workspace_name = get_workspace_name(config_path)
+
+    if args.dry_run:
+        print(f"DRY-RUN: would close workspace '{workspace_name}'")
+        return
+
+    cmux_bin = find_cmux()
+    if not cmux_bin:
+        print("ERROR: cmux binary not found.", file=sys.stderr)
+        sys.exit(1)
+
+    # List workspaces, find matching one, close it
+    result = subprocess.run([cmux_bin, "list-workspaces", "--json"],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"ERROR: could not list workspaces:\n{result.stderr}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        workspaces = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        # cmux may not support --json; fall back to close by name directly
+        workspaces = []
+
+    matched = [w for w in workspaces if w.get("name") == workspace_name]
+    if workspaces and not matched:
+        print(f"WARN: workspace '{workspace_name}' not found in active workspaces")
+        print(f"      Active: {[w.get('name') for w in workspaces]}")
+        sys.exit(1)
+
+    subprocess.run([cmux_bin, "close-workspace", "--name", workspace_name], check=True)
+    print(f"OK: workspace '{workspace_name}' closed")
+
+
+if __name__ == "__main__":
+    main()

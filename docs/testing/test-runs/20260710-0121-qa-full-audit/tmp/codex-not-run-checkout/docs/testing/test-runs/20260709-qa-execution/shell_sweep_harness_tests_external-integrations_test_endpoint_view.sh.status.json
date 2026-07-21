@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_external-integrations_test_endpoint_view.sh",
+  "source": "harness/tests/external-integrations/test_endpoint_view.sh",
+  "command": [
+    "bash",
+    "harness/tests/external-integrations/test_endpoint_view.sh"
+  ],
+  "exit_code": 7,
+  "runtime_seconds": 0.135,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-foywxatf"
+}

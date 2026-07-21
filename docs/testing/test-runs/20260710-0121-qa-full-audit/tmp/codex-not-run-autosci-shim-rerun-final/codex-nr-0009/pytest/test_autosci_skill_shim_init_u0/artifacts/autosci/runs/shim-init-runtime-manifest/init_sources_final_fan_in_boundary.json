@@ -1,0 +1,23 @@
+{
+  "approval_contract_verified": true,
+  "approval_state": "verified",
+  "candidate_count": 1,
+  "edge_paths": [],
+  "fan_in_completed": false,
+  "final_fan_in_ready": false,
+  "graph_log_rebuild_ready": false,
+  "limitations": [
+    "Init source finality requires approved wiki fan-in writeback.",
+    "Init source finality requires wiki log, graph edge, index, and context rebuild evidence."
+  ],
+  "log_path": "",
+  "provider_boundary_completed": true,
+  "provider_boundary_status": "completed",
+  "rebuilt_paths": [],
+  "schema": "autosci_init_sources_final_fan_in_boundary.v1",
+  "semantic_runtime_status": "verified",
+  "semantic_runtime_verified": true,
+  "stage_provider_ready": true,
+  "status": "init_sources_provider_ready",
+  "written_count": 0
+}

@@ -1,0 +1,1 @@
+python3: can't open file '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/runtime_write_path_audit.py': [Errno 2] No such file or directory

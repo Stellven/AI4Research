@@ -1,0 +1,107 @@
+{
+  "generated_at": "2026-07-10T19:26:21+00:00",
+  "mode": "inform",
+  "recommendation_enabled": true,
+  "auto_ingest_enabled": false,
+  "llm_decision_required": true,
+  "config": {
+    "mode": "inform",
+    "hours": 24,
+    "categories": [
+      "cs.LG",
+      "cs.CV",
+      "cs.CL",
+      "cs.AI",
+      "stat.ML"
+    ],
+    "max_recommendations": 10,
+    "max_auto_ingest": 1,
+    "email": {
+      "enabled": true
+    },
+    "schedule": {
+      "enabled": true,
+      "cron": "17 0 * * *"
+    },
+    "profile": {
+      "derive_from_wiki": true,
+      "positive_topics": [],
+      "negative_topics": [],
+      "positive_papers": [],
+      "negative_papers": []
+    },
+    "enrichment": {
+      "semantic_scholar": true,
+      "deepxiv": true,
+      "s2_anchor_limit": 5,
+      "s2_candidate_limit": 12,
+      "s2_recommendation_limit": 50,
+      "deepxiv_brief_limit": 8,
+      "deepxiv_trending_days": 7,
+      "deepxiv_trending_limit": 50
+    }
+  },
+  "config_path": "config/daily-arxiv.yml",
+  "config_found": false,
+  "feed_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_daily_1/daily-feed.json",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_daily_1/wiki",
+  "wiki_profile": {
+    "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_daily_1/wiki",
+    "is_sparse": true,
+    "anchors": [],
+    "keywords": [],
+    "positive_preferences": [],
+    "negative_preferences": [],
+    "papers": [],
+    "topics": [],
+    "concepts": [],
+    "methods": [],
+    "ideas": [],
+    "open_questions": [],
+    "recent_log": ""
+  },
+  "counts": {
+    "feed_total": 1,
+    "already_in_wiki": 0,
+    "new_candidates": 1,
+    "listed": 1
+  },
+  "category_counts": {
+    "cs.AI": 1
+  },
+  "candidates": [
+    {
+      "arxiv_id": "2607.00001",
+      "title": "Native Local Daily AutoSci",
+      "authors": [],
+      "arxiv_url": "https://arxiv.org/abs/2607.00001",
+      "category": "cs.AI",
+      "published": "2026-07-03T00:00:00Z",
+      "abstract": "A local-feed paper for daily arXiv parity.",
+      "abstract_preview": "A local-feed paper for daily arXiv parity.",
+      "is_known": false,
+      "decision": "unjudged",
+      "confidence": null,
+      "score": null,
+      "rationale": "",
+      "wiki_connections": [],
+      "signals_used": [
+        "arxiv"
+      ],
+      "tool_rank_score": 0.23,
+      "signals": {
+        "arxiv_rss": true,
+        "semantic_scholar": null,
+        "deepxiv": null,
+        "llm": null
+      }
+    }
+  ],
+  "candidate_order": [
+    "2607.00001"
+  ],
+  "notes": [
+    "No config found at config/daily-arxiv.yml; using inferred defaults.",
+    "External enrichment skipped by command-line option."
+  ]
+}

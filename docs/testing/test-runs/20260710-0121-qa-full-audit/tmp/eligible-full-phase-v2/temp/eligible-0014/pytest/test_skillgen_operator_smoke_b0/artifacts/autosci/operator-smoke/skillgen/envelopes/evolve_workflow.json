@@ -1,0 +1,48 @@
+{
+  "inputs": {
+    "failed_run": {
+      "ambiguous_manuals_or_prompts": [
+        {
+          "description": "The review path must state how to report unavailable Review LLM evidence.",
+          "id": "manual-review-llm-availability"
+        }
+      ],
+      "failed_nodes": [
+        {
+          "gate": "claim_verdict_gate",
+          "logical_operator": "ScientificClaimVerifier",
+          "node_id": "node-review-llm",
+          "status": "inconclusive"
+        }
+      ],
+      "gate_rejection_reasons": [
+        {
+          "gate_id": "claim_verdict_gate",
+          "reasons": [
+            "Review LLM is not available in fixture smoke."
+          ],
+          "status": "inconclusive"
+        }
+      ],
+      "poor_operator_bindings": [
+        {
+          "description": "Live feed, email, and auto-ingest require explicit approval.",
+          "id": "daily-arxiv-live"
+        }
+      ],
+      "workflow_id": "skillgen-operator-smoke"
+    }
+  },
+  "mode": "fixture",
+  "node_id": "node-evolve-workflow",
+  "output_dir": "artifacts/autosci/operator-smoke/skillgen",
+  "outputs": {
+    "evidence_jsonl": "artifacts/autosci/operator-smoke/skillgen/evidence.jsonl",
+    "evidence_payload_path": "artifacts/autosci/operator-smoke/skillgen/workflow_evolution.json",
+    "patch_candidates_path": "artifacts/autosci/operator-smoke/skillgen/patch_candidates",
+    "recommended_changes_path": "artifacts/autosci/operator-smoke/skillgen/recommended_changes.md",
+    "result_path": "artifacts/autosci/operator-smoke/skillgen/evolve_workflow.result.json"
+  },
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "task_id": "task-autosci-skillgen-evolve_workflow"
+}

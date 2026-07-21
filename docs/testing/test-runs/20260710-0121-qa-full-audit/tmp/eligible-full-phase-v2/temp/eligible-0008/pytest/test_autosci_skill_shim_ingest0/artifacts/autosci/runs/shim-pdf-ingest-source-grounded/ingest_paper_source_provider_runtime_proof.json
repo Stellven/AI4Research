@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-07-10T14:02:48Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed paper source preparation evidence for AutoSci `ingest` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-pdf-ingest-source-grounded/research_paper.json",
+        "artifacts/autosci/runs/shim-pdf-ingest-source-grounded/ingest_final_source_registration_boundary.json",
+        "artifacts/autosci/runs/shim-pdf-ingest-source-grounded/research_memory_update.json",
+        "artifacts/autosci/runs/shim-pdf-ingest-source-grounded/research_graph_update.json",
+        "raw/papers/SkillGen.pdf",
+        "artifacts/autosci/workspace/raw/tmp/papers/skillgen.tex",
+        "artifacts/autosci/workspace/raw/tmp/papers/skillgen.txt"
+      ],
+      "native_skill": "ingest",
+      "production_ready": true,
+      "proof_id": "runtime:ingest:pdf:20260710T140248Z",
+      "provenance": {
+        "artifact_kind": "paper_source_preparation",
+        "captured_at": "2026-07-10T14:02:48Z",
+        "command": "ingest_paper:source_registration_boundary",
+        "paper_id": "paper-SkillGen",
+        "source": "pdf"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

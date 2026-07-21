@@ -1,0 +1,14 @@
+........                                                                 [100%]
+=============================== warnings summary ===============================
+harness/tests/orchestration/test_orchestration_routes.py::TestListEpics::test_lists_epic_ids
+harness/tests/orchestration/test_orchestration_routes.py::TestDashboard::test_dashboard_payload_reports_missing_task_graph_guidance
+harness/tests/orchestration/test_orchestration_routes.py::TestGetEpic::test_degraded_sources_when_no_task_graph
+harness/tests/orchestration/test_orchestration_routes.py::TestGetSprint::test_sprint_degraded_when_no_task_graph
+harness/tests/orchestration/test_orchestration_routes.py::TestGetPanes::test_returns_panes_list
+harness/tests/orchestration/test_orchestration_routes.py::TestGetPanes::test_pane_has_required_fields
+harness/tests/orchestration/test_orchestration_routes.py::TestGetEvents::test_returns_capability_events
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/status-server/routes/orchestration_routes.py:77: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+8 passed, 15 deselected, 7 warnings in 0.12s

@@ -1,0 +1,17 @@
+........F............
+=================================== FAILURES ===================================
+_ test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leakage _
+harness/plugins/autosci/tests/test_autosci_skill_shim.py:456: in test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leakage
+    assert boundary["status"] == "ingest_source_registration_ready"
+E   AssertionError: assert 'ingest_sourc...on_incomplete' == 'ingest_sourc...tration_ready'
+E     
+E     - ingest_source_registration_ready
+E     ?                            ^ ^^^
+E     + ingest_source_registration_incomplete
+E     ?                            ^^^^^^^ ^^
+=========================== short test summary info ============================
+FAILED harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leakage
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/selectors.py:398: KeyboardInterrupt
+(to show a full traceback on KeyboardInterrupt use --full-trace)
+1 failed, 20 passed, 45 deselected in 49.49s

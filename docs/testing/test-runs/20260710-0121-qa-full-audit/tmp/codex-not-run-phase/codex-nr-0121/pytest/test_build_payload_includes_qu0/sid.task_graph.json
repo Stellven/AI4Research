@@ -1,0 +1,1 @@
+{"sprint_id": "sid", "nodes": [{"id": "R8", "goal": "DeepResearch factuality gate", "required_capabilities": ["research.factuality_evaluator"], "research_quality_gate": {"ok": true, "verdict": "PASS", "auto_run": true}}]}

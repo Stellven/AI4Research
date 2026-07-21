@@ -7,20 +7,40 @@
  */
 
 import Database from "bun:sqlite";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { ReplySender } from "../reply/reply-sender";
 
-const STATE_FILE = import.meta.dir + "/state.json";
-const DASHBOARD_FILE = Bun.file(import.meta.dir + "/../../demos/solar-dashboard.html");
+const SOLAR_HOME =
+  process.env.SOLAR_HOME ||
+  (process.env.HOME ? `${process.env.HOME}/.solar` : "/tmp/solar");
+const STATE_FILE =
+  process.env.SOLAR_DASHBOARD_STATE_PATH ||
+  `${SOLAR_HOME}/dashboard/state.json`;
 const ORCH_DASHBOARD_FILE = Bun.file(
-  import.meta.dir + "/../../demos/orchestrator-dashboard.html",
+  import.meta.dir + "/assets/orchestrator-dashboard.html",
 );
 const PORT = 3721;
 const DAEMON_SOCKET = "/tmp/solar.sock";
-const SOLAR_DB_PATH = `${process.env.HOME || ""}/.solar/solar.db`;
+const SOLAR_DB_PATH =
+  process.env.SOLAR_DB_PATH || `${process.env.HOME || ""}/.solar/db/solar.db`;
 const HEALTH_CONFIG_ID = 1;
 const HEALTH_ALERT_COOLDOWN_MINUTES_DEFAULT = 15;
 const HEALTH_MONITOR_INTERVAL_SECONDS_DEFAULT = 60;
+const DEFAULT_STATE = {
+  lastUpdate: null,
+  status: {
+    phase: "idle",
+    phaseName: "Idle",
+    activeAgent: null,
+    rateLimit: null,
+    rateLimitStatus: "unknown",
+  },
+  tasks: [],
+  conversations: [],
+  agents: [],
+  activity: [],
+};
 
 type HealthThresholdBand = { warn: number; bad: number };
 type HealthThresholdConfig = {
@@ -93,44 +113,98 @@ function openSolarDbRW(): Database | null {
   }
 }
 
-function clampBand(b: Partial<HealthThresholdBand>, fallback: HealthThresholdBand): HealthThresholdBand {
+function clampBand(
+  b: Partial<HealthThresholdBand>,
+  fallback: HealthThresholdBand,
+): HealthThresholdBand {
   const warn = Number.isFinite(Number(b.warn)) ? Number(b.warn) : fallback.warn;
   const badRaw = Number.isFinite(Number(b.bad)) ? Number(b.bad) : fallback.bad;
   const bad = badRaw < warn ? warn : badRaw;
   return { warn, bad };
 }
 
-function normalizeHealthConfig(raw: Partial<HealthConfig> | null | undefined): HealthConfig {
+function normalizeHealthConfig(
+  raw: Partial<HealthConfig> | null | undefined,
+): HealthConfig {
   const t = raw?.thresholds || {};
   const m = raw?.monitor || {};
   return {
     thresholds: {
-      queueSize: clampBand(t.queueSize || {}, DEFAULT_HEALTH_CONFIG.thresholds.queueSize),
-      failureRate24h: clampBand(t.failureRate24h || {}, DEFAULT_HEALTH_CONFIG.thresholds.failureRate24h),
-      failureRate1h: clampBand(t.failureRate1h || {}, DEFAULT_HEALTH_CONFIG.thresholds.failureRate1h),
-      retryingNodes: clampBand(t.retryingNodes || {}, DEFAULT_HEALTH_CONFIG.thresholds.retryingNodes),
-      repairTasksActive: clampBand(t.repairTasksActive || {}, DEFAULT_HEALTH_CONFIG.thresholds.repairTasksActive),
-      queueOldestAgeMinutes: clampBand(t.queueOldestAgeMinutes || {}, DEFAULT_HEALTH_CONFIG.thresholds.queueOldestAgeMinutes),
-      repairTasks24h: clampBand(t.repairTasks24h || {}, DEFAULT_HEALTH_CONFIG.thresholds.repairTasks24h),
+      queueSize: clampBand(
+        t.queueSize || {},
+        DEFAULT_HEALTH_CONFIG.thresholds.queueSize,
+      ),
+      failureRate24h: clampBand(
+        t.failureRate24h || {},
+        DEFAULT_HEALTH_CONFIG.thresholds.failureRate24h,
+      ),
+      failureRate1h: clampBand(
+        t.failureRate1h || {},
+        DEFAULT_HEALTH_CONFIG.thresholds.failureRate1h,
+      ),
+      retryingNodes: clampBand(
+        t.retryingNodes || {},
+        DEFAULT_HEALTH_CONFIG.thresholds.retryingNodes,
+      ),
+      repairTasksActive: clampBand(
+        t.repairTasksActive || {},
+        DEFAULT_HEALTH_CONFIG.thresholds.repairTasksActive,
+      ),
+      queueOldestAgeMinutes: clampBand(
+        t.queueOldestAgeMinutes || {},
+        DEFAULT_HEALTH_CONFIG.thresholds.queueOldestAgeMinutes,
+      ),
+      repairTasks24h: clampBand(
+        t.repairTasks24h || {},
+        DEFAULT_HEALTH_CONFIG.thresholds.repairTasks24h,
+      ),
     },
     monitor: {
-      intervalSeconds: Math.max(10, Math.floor(Number(m.intervalSeconds ?? DEFAULT_HEALTH_CONFIG.monitor.intervalSeconds))),
-      alertCooldownMinutes: Math.max(1, Math.floor(Number(m.alertCooldownMinutes ?? DEFAULT_HEALTH_CONFIG.monitor.alertCooldownMinutes))),
-      enableSystemMessageTask: typeof m.enableSystemMessageTask === "boolean"
-        ? m.enableSystemMessageTask
-        : DEFAULT_HEALTH_CONFIG.monitor.enableSystemMessageTask,
+      intervalSeconds: Math.max(
+        10,
+        Math.floor(
+          Number(
+            m.intervalSeconds ?? DEFAULT_HEALTH_CONFIG.monitor.intervalSeconds,
+          ),
+        ),
+      ),
+      alertCooldownMinutes: Math.max(
+        1,
+        Math.floor(
+          Number(
+            m.alertCooldownMinutes ??
+              DEFAULT_HEALTH_CONFIG.monitor.alertCooldownMinutes,
+          ),
+        ),
+      ),
+      enableSystemMessageTask:
+        typeof m.enableSystemMessageTask === "boolean"
+          ? m.enableSystemMessageTask
+          : DEFAULT_HEALTH_CONFIG.monitor.enableSystemMessageTask,
       snapshotRetentionDays: Math.max(
         1,
-        Math.floor(Number(m.snapshotRetentionDays ?? DEFAULT_HEALTH_CONFIG.monitor.snapshotRetentionDays)),
+        Math.floor(
+          Number(
+            m.snapshotRetentionDays ??
+              DEFAULT_HEALTH_CONFIG.monitor.snapshotRetentionDays,
+          ),
+        ),
       ),
-      notifyTelegramEnabled: typeof m.notifyTelegramEnabled === "boolean"
-        ? m.notifyTelegramEnabled
-        : DEFAULT_HEALTH_CONFIG.monitor.notifyTelegramEnabled,
-      notifyTelegramChatId: String(m.notifyTelegramChatId ?? DEFAULT_HEALTH_CONFIG.monitor.notifyTelegramChatId),
-      notifyEmailEnabled: typeof m.notifyEmailEnabled === "boolean"
-        ? m.notifyEmailEnabled
-        : DEFAULT_HEALTH_CONFIG.monitor.notifyEmailEnabled,
-      notifyEmailTo: String(m.notifyEmailTo ?? DEFAULT_HEALTH_CONFIG.monitor.notifyEmailTo),
+      notifyTelegramEnabled:
+        typeof m.notifyTelegramEnabled === "boolean"
+          ? m.notifyTelegramEnabled
+          : DEFAULT_HEALTH_CONFIG.monitor.notifyTelegramEnabled,
+      notifyTelegramChatId: String(
+        m.notifyTelegramChatId ??
+          DEFAULT_HEALTH_CONFIG.monitor.notifyTelegramChatId,
+      ),
+      notifyEmailEnabled:
+        typeof m.notifyEmailEnabled === "boolean"
+          ? m.notifyEmailEnabled
+          : DEFAULT_HEALTH_CONFIG.monitor.notifyEmailEnabled,
+      notifyEmailTo: String(
+        m.notifyEmailTo ?? DEFAULT_HEALTH_CONFIG.monitor.notifyEmailTo,
+      ),
     },
   };
 }
@@ -175,10 +249,16 @@ function initHealthInfra(): void {
       CREATE INDEX IF NOT EXISTS idx_orch_health_alerts_rule_created
       ON bl_orchestrator_health_alerts(rule_key, created_at)
     `);
-    db.prepare(`
+    db.prepare(
+      `
       INSERT OR IGNORE INTO bl_orchestrator_health_config (id, config_json, updated_at)
       VALUES (?, ?, ?)
-    `).run(HEALTH_CONFIG_ID, JSON.stringify(DEFAULT_HEALTH_CONFIG), new Date().toISOString());
+    `,
+    ).run(
+      HEALTH_CONFIG_ID,
+      JSON.stringify(DEFAULT_HEALTH_CONFIG),
+      new Date().toISOString(),
+    );
   } finally {
     db.close();
   }
@@ -188,12 +268,16 @@ function getHealthConfig(): HealthConfig {
   const db = openSolarDbRW();
   if (!db) return DEFAULT_HEALTH_CONFIG;
   try {
-    const row = db.prepare(`
+    const row = db
+      .prepare(
+        `
       SELECT config_json
       FROM bl_orchestrator_health_config
       WHERE id = ?
       LIMIT 1
-    `).get(HEALTH_CONFIG_ID) as { config_json?: string } | null;
+    `,
+      )
+      .get(HEALTH_CONFIG_ID) as { config_json?: string } | null;
     if (!row?.config_json) return DEFAULT_HEALTH_CONFIG;
     try {
       return normalizeHealthConfig(JSON.parse(row.config_json));
@@ -214,20 +298,25 @@ function updateHealthConfig(patch: Partial<HealthConfig>): HealthConfig {
       thresholds: { ...base.thresholds, ...(patch.thresholds || {}) },
       monitor: { ...base.monitor, ...(patch.monitor || {}) },
     });
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO bl_orchestrator_health_config (id, config_json, updated_at)
       VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         config_json = excluded.config_json,
         updated_at = excluded.updated_at
-    `).run(HEALTH_CONFIG_ID, JSON.stringify(merged), new Date().toISOString());
+    `,
+    ).run(HEALTH_CONFIG_ID, JSON.stringify(merged), new Date().toISOString());
     return merged;
   } finally {
     db.close();
   }
 }
 
-function severityByBand(value: number, band: HealthThresholdBand): "good" | "warn" | "bad" {
+function severityByBand(
+  value: number,
+  band: HealthThresholdBand,
+): "good" | "warn" | "bad" {
   if (value >= band.bad) return "bad";
   if (value >= band.warn) return "warn";
   return "good";
@@ -261,20 +350,28 @@ function getHealthSummary() {
   if (!db) return out;
 
   try {
-    const queueRow = db.prepare(`
+    const queueRow = db
+      .prepare(
+        `
       SELECT COUNT(*) AS count
       FROM bl_message_tasks
       WHERE status IN ('pending', 'deferred', 'queued')
-    `).get() as { count: number } | null;
+    `,
+      )
+      .get() as { count: number } | null;
     out.queueSize = queueRow?.count || 0;
 
-    const oldestQueueRow = db.prepare(`
+    const oldestQueueRow = db
+      .prepare(
+        `
       SELECT created_at AS createdAt
       FROM bl_message_tasks
       WHERE status IN ('pending', 'deferred', 'queued')
       ORDER BY datetime(created_at) ASC
       LIMIT 1
-    `).get() as { createdAt?: string | null } | null;
+    `,
+      )
+      .get() as { createdAt?: string | null } | null;
     if (oldestQueueRow?.createdAt) {
       const ms = Date.now() - new Date(oldestQueueRow.createdAt).getTime();
       out.queueOldestAgeMinutes = Math.max(0, Math.floor(ms / 60000));
@@ -283,16 +380,24 @@ function getHealthSummary() {
 
   try {
     const sinceIso = toIsoHoursAgo(out.windowHours);
-    const failedRow = db.prepare(`
+    const failedRow = db
+      .prepare(
+        `
       SELECT COUNT(*) AS count
       FROM bl_orchestration_events
       WHERE event_type = 'node_failed' AND created_at >= ?
-    `).get(sinceIso) as { count: number } | null;
-    const completedRow = db.prepare(`
+    `,
+      )
+      .get(sinceIso) as { count: number } | null;
+    const completedRow = db
+      .prepare(
+        `
       SELECT COUNT(*) AS count
       FROM bl_orchestration_events
       WHERE event_type = 'node_completed' AND created_at >= ?
-    `).get(sinceIso) as { count: number } | null;
+    `,
+      )
+      .get(sinceIso) as { count: number } | null;
     const failed = failedRow?.count || 0;
     const completed = completedRow?.count || 0;
     const total = failed + completed;
@@ -301,16 +406,24 @@ function getHealthSummary() {
     out.failureRate.ratio = total > 0 ? failed / total : 0;
 
     const since1h = toIsoHoursAgo(1);
-    const failed1hRow = db.prepare(`
+    const failed1hRow = db
+      .prepare(
+        `
       SELECT COUNT(*) AS count
       FROM bl_orchestration_events
       WHERE event_type = 'node_failed' AND created_at >= ?
-    `).get(since1h) as { count: number } | null;
-    const completed1hRow = db.prepare(`
+    `,
+      )
+      .get(since1h) as { count: number } | null;
+    const completed1hRow = db
+      .prepare(
+        `
       SELECT COUNT(*) AS count
       FROM bl_orchestration_events
       WHERE event_type = 'node_completed' AND created_at >= ?
-    `).get(since1h) as { count: number } | null;
+    `,
+      )
+      .get(since1h) as { count: number } | null;
     const failed1h = failed1hRow?.count || 0;
     const completed1h = completed1hRow?.count || 0;
     const total1h = failed1h + completed1h;
@@ -320,29 +433,41 @@ function getHealthSummary() {
   } catch {}
 
   try {
-    const retryRow = db.prepare(`
+    const retryRow = db
+      .prepare(
+        `
       SELECT COUNT(*) AS count
       FROM bl_orchestration_retries
       WHERE retry_status IN ('pending_retry', 'retrying')
-    `).get() as { count: number } | null;
+    `,
+      )
+      .get() as { count: number } | null;
     out.retryingNodes = retryRow?.count || 0;
   } catch {}
 
   try {
-    const repairRow = db.prepare(`
+    const repairRow = db
+      .prepare(
+        `
       SELECT COUNT(*) AS count
       FROM bl_message_tasks
       WHERE metadata LIKE '%"created_by":"orchestrator_repair_flow"%'
         AND status IN ('pending', 'deferred', 'queued', 'running', 'processing')
-    `).get() as { count: number } | null;
+    `,
+      )
+      .get() as { count: number } | null;
     out.repairBranchTasks = repairRow?.count || 0;
 
-    const repair24hRow = db.prepare(`
+    const repair24hRow = db
+      .prepare(
+        `
       SELECT COUNT(*) AS count
       FROM bl_message_tasks
       WHERE metadata LIKE '%"created_by":"orchestrator_repair_flow"%'
         AND created_at >= ?
-    `).get(toIsoHoursAgo(24)) as { count: number } | null;
+    `,
+      )
+      .get(toIsoHoursAgo(24)) as { count: number } | null;
     out.repairBranchTasks24h = repair24hRow?.count || 0;
   } catch {}
 
@@ -350,9 +475,18 @@ function getHealthSummary() {
   return out;
 }
 
-function calcHealthStatus(summary: ReturnType<typeof getHealthSummary>, cfg: HealthConfig): {
+function calcHealthStatus(
+  summary: ReturnType<typeof getHealthSummary>,
+  cfg: HealthConfig,
+): {
   status: "good" | "warn" | "bad";
-  metrics: Array<{ key: string; value: number; severity: "good" | "warn" | "bad"; warn: number; bad: number }>;
+  metrics: Array<{
+    key: string;
+    value: number;
+    severity: "good" | "warn" | "bad";
+    warn: number;
+    bad: number;
+  }>;
 } {
   const metrics = [
     {
@@ -411,24 +545,31 @@ function maybeCreateAlertAndTask(
   message: string,
   payload: Record<string, unknown>,
 ) {
-  const cooldownMin = cfg.monitor.alertCooldownMinutes || HEALTH_ALERT_COOLDOWN_MINUTES_DEFAULT;
-  const last = db.prepare(`
+  const cooldownMin =
+    cfg.monitor.alertCooldownMinutes || HEALTH_ALERT_COOLDOWN_MINUTES_DEFAULT;
+  const last = db
+    .prepare(
+      `
     SELECT created_at
     FROM bl_orchestrator_health_alerts
     WHERE rule_key = ? AND resolved = 0
     ORDER BY id DESC
     LIMIT 1
-  `).get(ruleKey) as { created_at?: string } | null;
+  `,
+    )
+    .get(ruleKey) as { created_at?: string } | null;
   if (last?.created_at) {
     const deltaMin = (Date.now() - new Date(last.created_at).getTime()) / 60000;
     if (Number.isFinite(deltaMin) && deltaMin < cooldownMin) return;
   }
 
   const createdAt = new Date().toISOString();
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO bl_orchestrator_health_alerts (rule_key, level, message, payload_json, created_at, resolved)
     VALUES (?, ?, ?, ?, ?, 0)
-  `).run(ruleKey, level, message, JSON.stringify(payload), createdAt);
+  `,
+  ).run(ruleKey, level, message, JSON.stringify(payload), createdAt);
 
   void notifyHealthAlert(cfg, level, message, payload);
 
@@ -444,12 +585,14 @@ function maybeCreateAlertAndTask(
       health_alert: true,
       payload,
     });
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO bl_message_tasks (
         task_id, source, source_id, sender, content, parsed_intent, priority, status, estimated_tokens, metadata
       )
       VALUES (?, 'system', ?, 'system', ?, '/review', 95, 'pending', 200, ?)
-    `).run(taskId, sourceId, content, metadata);
+    `,
+    ).run(taskId, sourceId, content, metadata);
   } catch {
     // Best-effort bridge to task queue.
   }
@@ -465,7 +608,10 @@ async function notifyHealthAlert(
   const content = `${header}\n${message}\n${JSON.stringify(payload, null, 2)}`;
 
   try {
-    if (cfg.monitor.notifyTelegramEnabled && cfg.monitor.notifyTelegramChatId.trim()) {
+    if (
+      cfg.monitor.notifyTelegramEnabled &&
+      cfg.monitor.notifyTelegramChatId.trim()
+    ) {
       await notifier.send({
         channel: "telegram",
         recipient: cfg.monitor.notifyTelegramChatId.trim(),
@@ -492,16 +638,23 @@ async function notifyHealthAlert(
   }
 }
 
-function cleanupHealthSnapshotsAndAlerts(db: Database, retentionDays: number): void {
+function cleanupHealthSnapshotsAndAlerts(
+  db: Database,
+  retentionDays: number,
+): void {
   const days = Math.max(1, Math.floor(retentionDays || 30));
-  db.prepare(`
+  db.prepare(
+    `
     DELETE FROM bl_orchestrator_health_snapshots
     WHERE sampled_at < datetime('now', ?)
-  `).run(`-${days} days`);
-  db.prepare(`
+  `,
+  ).run(`-${days} days`);
+  db.prepare(
+    `
     DELETE FROM bl_orchestrator_health_alerts
     WHERE resolved = 1 AND created_at < datetime('now', ?)
-  `).run(`-${days} days`);
+  `,
+  ).run(`-${days} days`);
 }
 
 function getHealthAlerts(limit: number = 50, includeResolved: boolean = false) {
@@ -509,13 +662,17 @@ function getHealthAlerts(limit: number = 50, includeResolved: boolean = false) {
   if (!db) return [];
   const n = Math.max(1, Math.min(500, Math.floor(limit || 50)));
   try {
-    const rows = db.prepare(`
+    const rows = db
+      .prepare(
+        `
       SELECT id, rule_key, level, message, payload_json, created_at, resolved
       FROM bl_orchestrator_health_alerts
       WHERE (? = 1 OR resolved = 0)
       ORDER BY id DESC
       LIMIT ?
-    `).all(includeResolved ? 1 : 0, n) as Array<{
+    `,
+      )
+      .all(includeResolved ? 1 : 0, n) as Array<{
       id: number;
       rule_key: string;
       level: "warn" | "bad";
@@ -546,7 +703,10 @@ function getHealthAlerts(limit: number = 50, includeResolved: boolean = false) {
   }
 }
 
-function persistHealthSnapshot(summary: ReturnType<typeof getHealthSummary>, source: string = "api"): {
+function persistHealthSnapshot(
+  summary: ReturnType<typeof getHealthSummary>,
+  source: string = "api",
+): {
   status: "good" | "warn" | "bad";
   config: HealthConfig;
 } {
@@ -557,10 +717,12 @@ function persistHealthSnapshot(summary: ReturnType<typeof getHealthSummary>, sou
   try {
     cleanupHealthSnapshotsAndAlerts(db, cfg.monitor.snapshotRetentionDays);
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO bl_orchestrator_health_snapshots (sampled_at, source, status, summary_json, created_at)
       VALUES (?, ?, ?, ?, ?)
-    `).run(
+    `,
+    ).run(
       summary.generatedAt,
       source,
       statusInfo.status,
@@ -606,19 +768,26 @@ function getHealthHistory(hours: number = 24) {
   if (!db) return out;
 
   try {
-    const map = new Map<string, { failed: number; completed: number; retries: number; repairs: number }>();
+    const map = new Map<
+      string,
+      { failed: number; completed: number; retries: number; repairs: number }
+    >();
     for (let i = h - 1; i >= 0; i--) {
       const d = new Date(Date.now() - i * 3600000);
       const hour = d.toISOString().slice(0, 13) + ":00";
       map.set(hour, { failed: 0, completed: 0, retries: 0, repairs: 0 });
     }
 
-    const snapshotRows = db.prepare(`
+    const snapshotRows = db
+      .prepare(
+        `
       SELECT sampled_at, summary_json
       FROM bl_orchestrator_health_snapshots
       WHERE sampled_at >= ?
       ORDER BY sampled_at ASC
-    `).all(sinceIso) as Array<{ sampled_at: string; summary_json: string }>;
+    `,
+      )
+      .all(sinceIso) as Array<{ sampled_at: string; summary_json: string }>;
 
     if (snapshotRows.length > 0) {
       for (const row of snapshotRows) {
@@ -627,23 +796,39 @@ function getHealthHistory(hours: number = 24) {
         if (!bucket) continue;
         try {
           const summary = JSON.parse(row.summary_json || "{}");
-          bucket.failed = Math.max(bucket.failed, Number(summary.failureRate?.failed || 0));
-          bucket.completed = Math.max(bucket.completed, Number(summary.failureRate?.completed || 0));
-          bucket.retries = Math.max(bucket.retries, Number(summary.retryingNodes || 0));
-          bucket.repairs = Math.max(bucket.repairs, Number(summary.repairBranchTasks || 0));
+          bucket.failed = Math.max(
+            bucket.failed,
+            Number(summary.failureRate?.failed || 0),
+          );
+          bucket.completed = Math.max(
+            bucket.completed,
+            Number(summary.failureRate?.completed || 0),
+          );
+          bucket.retries = Math.max(
+            bucket.retries,
+            Number(summary.retryingNodes || 0),
+          );
+          bucket.repairs = Math.max(
+            bucket.repairs,
+            Number(summary.repairBranchTasks || 0),
+          );
         } catch {
           // ignore malformed row
         }
       }
     } else {
-      const eventRows = db.prepare(`
+      const eventRows = db
+        .prepare(
+          `
         SELECT strftime('%Y-%m-%dT%H:00', created_at) AS hour, event_type AS type, COUNT(*) AS count
         FROM bl_orchestration_events
         WHERE created_at >= ?
           AND event_type IN ('node_failed', 'node_completed', 'retry_scheduled', 'repair_branch_queued')
         GROUP BY hour, type
         ORDER BY hour ASC
-      `).all(sinceIso) as Array<{ hour: string; type: string; count: number }>;
+      `,
+        )
+        .all(sinceIso) as Array<{ hour: string; type: string; count: number }>;
 
       for (const row of eventRows) {
         const bucket = map.get(row.hour);
@@ -651,12 +836,19 @@ function getHealthHistory(hours: number = 24) {
         if (row.type === "node_failed") bucket.failed = row.count;
         else if (row.type === "node_completed") bucket.completed = row.count;
         else if (row.type === "retry_scheduled") bucket.retries = row.count;
-        else if (row.type === "repair_branch_queued") bucket.repairs = row.count;
+        else if (row.type === "repair_branch_queued")
+          bucket.repairs = row.count;
       }
     }
 
     for (const [hour, v] of map.entries()) {
-      out.push({ hour, failed: v.failed, completed: v.completed, retries: v.retries, repairs: v.repairs });
+      out.push({
+        hour,
+        failed: v.failed,
+        completed: v.completed,
+        retries: v.retries,
+        repairs: v.repairs,
+      });
     }
   } catch {
     // ignore and return partial/empty history
@@ -672,16 +864,27 @@ function getHealthDrilldown(type: "failures" | "repairs", limit: number = 20) {
   const n = Math.max(1, Math.min(200, Math.floor(limit || 20)));
   try {
     if (type === "failures") {
-      const rows = db.prepare(`
+      const rows = db
+        .prepare(
+          `
         SELECT task_id, node_id, payload_json, created_at
         FROM bl_orchestration_events
         WHERE event_type = 'node_failed'
         ORDER BY id DESC
         LIMIT ?
-      `).all(n) as Array<{ task_id: string; node_id: string | null; payload_json: string | null; created_at: string }>;
+      `,
+        )
+        .all(n) as Array<{
+        task_id: string;
+        node_id: string | null;
+        payload_json: string | null;
+        created_at: string;
+      }>;
       return rows.map((r) => {
         let payload: any = {};
-        try { payload = r.payload_json ? JSON.parse(r.payload_json) : {}; } catch {}
+        try {
+          payload = r.payload_json ? JSON.parse(r.payload_json) : {};
+        } catch {}
         return {
           taskId: r.task_id,
           nodeId: r.node_id || "",
@@ -693,13 +896,17 @@ function getHealthDrilldown(type: "failures" | "repairs", limit: number = 20) {
       });
     }
 
-    const rows = db.prepare(`
+    const rows = db
+      .prepare(
+        `
       SELECT task_id, source_id, metadata, status, created_at
       FROM bl_message_tasks
       WHERE metadata LIKE '%"created_by":"orchestrator_repair_flow"%'
       ORDER BY datetime(created_at) DESC
       LIMIT ?
-    `).all(n) as Array<{
+    `,
+      )
+      .all(n) as Array<{
       task_id: string;
       source_id: string | null;
       metadata: string | null;
@@ -708,7 +915,9 @@ function getHealthDrilldown(type: "failures" | "repairs", limit: number = 20) {
     }>;
     return rows.map((r) => {
       let meta: any = {};
-      try { meta = r.metadata ? JSON.parse(r.metadata) : {}; } catch {}
+      try {
+        meta = r.metadata ? JSON.parse(r.metadata) : {};
+      } catch {}
       return {
         repairTaskId: r.task_id,
         sourceId: r.source_id,
@@ -730,40 +939,60 @@ async function getState() {
   if (await file.exists()) {
     return await file.json();
   }
-  return { error: 'State file not found' };
+  return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+
+async function writeState(state: any) {
+  mkdirSync(dirname(STATE_FILE), { recursive: true });
+  await Bun.write(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
 // 更新状态
 async function updateState(updates: any) {
   const state = await getState();
-  const newState = { ...state, ...updates, lastUpdate: new Date().toISOString() };
-  await Bun.write(STATE_FILE, JSON.stringify(newState, null, 2));
+  const newState = {
+    ...state,
+    ...updates,
+    lastUpdate: new Date().toISOString(),
+  };
+  await writeState(newState);
   return newState;
 }
 
 // 添加对话
 async function addConversation(role: string, content: string) {
   const state = await getState();
-  const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const time = new Date().toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const conversations = Array.isArray(state.conversations)
+    ? state.conversations
+    : [];
 
   state.conversations = [
-    { role, content: content.slice(0, 100) + (content.length > 100 ? '...' : ''), time },
-    ...(state.conversations || []).slice(0, 19)
+    {
+      role,
+      content: content.slice(0, 100) + (content.length > 100 ? "..." : ""),
+      time,
+    },
+    ...conversations.slice(0, 19),
   ];
 
-  await Bun.write(STATE_FILE, JSON.stringify(state, null, 2));
+  await writeState(state);
   return state;
 }
 
 // 添加/更新任务
 async function updateTask(task: any) {
   const state = await getState();
+  const tasks = Array.isArray(state.tasks) ? state.tasks : [];
 
   // 将其他 in_progress 任务标记为 completed
-  state.tasks = state.tasks.map((t: any) =>
-    t.status === 'in_progress' && t.id !== task.id
-      ? { ...t, status: 'completed' }
-      : t
+  state.tasks = tasks.map((t: any) =>
+    t.status === "in_progress" && t.id !== task.id
+      ? { ...t, status: "completed" }
+      : t,
   );
 
   // 添加或更新任务
@@ -775,13 +1004,20 @@ async function updateTask(task: any) {
   }
 
   state.lastUpdate = new Date().toISOString();
-  await Bun.write(STATE_FILE, JSON.stringify(state, null, 2));
+  await writeState(state);
   return state;
 }
 
 async function daemonGet(path: string) {
   const proc = Bun.spawn(
-    ["curl", "--silent", "--show-error", "--unix-socket", DAEMON_SOCKET, `http://localhost${path}`],
+    [
+      "curl",
+      "--silent",
+      "--show-error",
+      "--unix-socket",
+      DAEMON_SOCKET,
+      `http://localhost${path}`,
+    ],
     { stdout: "pipe", stderr: "pipe" },
   );
   const [stdout, stderr, exit] = await Promise.all([
@@ -833,37 +1069,37 @@ const server = Bun.serve({
 
     // CORS headers
     const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
     };
 
-    if (req.method === 'OPTIONS') {
+    if (req.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
     // API: 获取状态
-    if (url.pathname === '/api/state') {
+    if (url.pathname === "/api/state") {
       const state = await getState();
       return Response.json(state, { headers: corsHeaders });
     }
 
     // API: 更新状态
-    if (url.pathname === '/api/update' && req.method === 'POST') {
+    if (url.pathname === "/api/update" && req.method === "POST") {
       const updates = await req.json();
       const state = await updateState(updates);
       return Response.json(state, { headers: corsHeaders });
     }
 
     // API: 添加对话
-    if (url.pathname === '/api/conversation' && req.method === 'POST') {
+    if (url.pathname === "/api/conversation" && req.method === "POST") {
       const { role, content } = await req.json();
       const state = await addConversation(role, content);
       return Response.json(state, { headers: corsHeaders });
     }
 
     // API: 更新任务
-    if (url.pathname === '/api/task' && req.method === 'POST') {
+    if (url.pathname === "/api/task" && req.method === "POST") {
       const task = await req.json();
       const state = await updateTask(task);
       return Response.json(state, { headers: corsHeaders });
@@ -881,11 +1117,16 @@ const server = Bun.serve({
       if (type) query.set("type", type);
       if (since) query.set("since", since);
       try {
-        const data = await daemonGet(`/orchestrator/events?${query.toString()}`);
+        const data = await daemonGet(
+          `/orchestrator/events?${query.toString()}`,
+        );
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
@@ -898,7 +1139,10 @@ const server = Bun.serve({
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
@@ -912,14 +1156,20 @@ const server = Bun.serve({
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
     }
 
     // Orchestrator API: health summary
-    if (url.pathname === "/api/orchestrator/health-summary" && req.method === "GET") {
+    if (
+      url.pathname === "/api/orchestrator/health-summary" &&
+      req.method === "GET"
+    ) {
       try {
         const data = getHealthSummary();
         const persisted = persistHealthSnapshot(data, "api");
@@ -928,54 +1178,78 @@ const server = Bun.serve({
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 500 },
         );
       }
     }
 
     // Orchestrator API: health config
-    if (url.pathname === "/api/orchestrator/health-config" && req.method === "GET") {
+    if (
+      url.pathname === "/api/orchestrator/health-config" &&
+      req.method === "GET"
+    ) {
       try {
         const data = getHealthConfig();
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 500 },
         );
       }
     }
 
-    if (url.pathname === "/api/orchestrator/health-config" && req.method === "POST") {
+    if (
+      url.pathname === "/api/orchestrator/health-config" &&
+      req.method === "POST"
+    ) {
       try {
-        const payload = await req.json() as Partial<HealthConfig>;
+        const payload = (await req.json()) as Partial<HealthConfig>;
         const data = updateHealthConfig(payload);
         startHealthMonitor();
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 500 },
         );
       }
     }
 
     // Orchestrator API: health history
-    if (url.pathname === "/api/orchestrator/health-history" && req.method === "GET") {
+    if (
+      url.pathname === "/api/orchestrator/health-history" &&
+      req.method === "GET"
+    ) {
       try {
         const hours = parseInt(url.searchParams.get("hours") || "24");
         const data = getHealthHistory(hours);
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 500 },
         );
       }
     }
 
-    if (url.pathname === "/api/orchestrator/health-drilldown" && req.method === "GET") {
+    if (
+      url.pathname === "/api/orchestrator/health-drilldown" &&
+      req.method === "GET"
+    ) {
       try {
         const t = (url.searchParams.get("type") || "failures").toLowerCase();
         const type = t === "repairs" ? "repairs" : "failures";
@@ -984,13 +1258,19 @@ const server = Bun.serve({
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 500 },
         );
       }
     }
 
-    if (url.pathname === "/api/orchestrator/health-alerts" && req.method === "GET") {
+    if (
+      url.pathname === "/api/orchestrator/health-alerts" &&
+      req.method === "GET"
+    ) {
       try {
         const limit = parseInt(url.searchParams.get("limit") || "50");
         const includeResolved = url.searchParams.get("includeResolved") === "1";
@@ -998,15 +1278,21 @@ const server = Bun.serve({
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 500 },
         );
       }
     }
 
-    if (url.pathname === "/api/orchestrator/health-actions/retry" && req.method === "POST") {
+    if (
+      url.pathname === "/api/orchestrator/health-actions/retry" &&
+      req.method === "POST"
+    ) {
       try {
-        const body = await req.json() as { taskId?: string; nodeId?: string };
+        const body = (await req.json()) as { taskId?: string; nodeId?: string };
         if (!body.taskId || !body.nodeId) {
           return Response.json(
             { ok: false, error: "taskId and nodeId are required" },
@@ -1021,15 +1307,26 @@ const server = Bun.serve({
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
     }
 
-    if (url.pathname === "/api/orchestrator/health-actions/repair" && req.method === "POST") {
+    if (
+      url.pathname === "/api/orchestrator/health-actions/repair" &&
+      req.method === "POST"
+    ) {
       try {
-        const body = await req.json() as { taskId?: string; nodeId?: string; error?: string; branchSuggestion?: string };
+        const body = (await req.json()) as {
+          taskId?: string;
+          nodeId?: string;
+          error?: string;
+          branchSuggestion?: string;
+        };
         if (!body.taskId || !body.nodeId) {
           return Response.json(
             { ok: false, error: "taskId and nodeId are required" },
@@ -1046,7 +1343,10 @@ const server = Bun.serve({
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
@@ -1062,18 +1362,26 @@ const server = Bun.serve({
         );
       }
       try {
-        const data = await daemonGet(`/orchestrator/graph?taskId=${encodeURIComponent(taskId)}`);
+        const data = await daemonGet(
+          `/orchestrator/graph?taskId=${encodeURIComponent(taskId)}`,
+        );
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
     }
 
     // Orchestrator API: diagnostics by taskId
-    if (url.pathname === "/api/orchestrator/diagnostics" && req.method === "GET") {
+    if (
+      url.pathname === "/api/orchestrator/diagnostics" &&
+      req.method === "GET"
+    ) {
       const taskId = url.searchParams.get("taskId") || "";
       if (!taskId) {
         return Response.json(
@@ -1082,37 +1390,54 @@ const server = Bun.serve({
         );
       }
       try {
-        const data = await daemonGet(`/orchestrator/diagnostics?taskId=${encodeURIComponent(taskId)}`);
+        const data = await daemonGet(
+          `/orchestrator/diagnostics?taskId=${encodeURIComponent(taskId)}`,
+        );
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
     }
 
     // Orchestrator API: retry policy
-    if (url.pathname === "/api/orchestrator/retry-policy" && req.method === "GET") {
+    if (
+      url.pathname === "/api/orchestrator/retry-policy" &&
+      req.method === "GET"
+    ) {
       try {
         const data = await daemonGet("/orchestrator/retry-policy");
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
     }
 
-    if (url.pathname === "/api/orchestrator/retry-policy" && req.method === "POST") {
+    if (
+      url.pathname === "/api/orchestrator/retry-policy" &&
+      req.method === "POST"
+    ) {
       try {
         const payload = await req.json();
         const data = await daemonPost("/orchestrator/retry-policy", payload);
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
@@ -1126,7 +1451,10 @@ const server = Bun.serve({
         return Response.json({ ok: true, data }, { headers: corsHeaders });
       } catch (error) {
         return Response.json(
-          { ok: false, error: error instanceof Error ? error.message : String(error) },
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
           { headers: corsHeaders, status: 502 },
         );
       }
@@ -1139,35 +1467,46 @@ const server = Bun.serve({
       const statusServerPort = Number(process.env.STATUS_SERVER_PORT || 8765);
       const upstreamUrl = `http://127.0.0.1:${statusServerPort}/research/${encodeURIComponent(sid)}`;
       try {
-        const upstream = await fetch(upstreamUrl, { signal: AbortSignal.timeout(10000) });
+        const upstream = await fetch(upstreamUrl, {
+          signal: AbortSignal.timeout(10000),
+        });
         const body = await upstream.text();
         return new Response(body, {
           status: upstream.status,
-          headers: { ...corsHeaders, "Content-Type": upstream.headers.get("Content-Type") || "application/json" },
+          headers: {
+            ...corsHeaders,
+            "Content-Type":
+              upstream.headers.get("Content-Type") || "application/json",
+          },
         });
       } catch (err) {
         return Response.json(
-          { ok: false, error: "status-server unavailable", detail: err instanceof Error ? err.message : String(err) },
+          {
+            ok: false,
+            error: "status-server unavailable",
+            detail: err instanceof Error ? err.message : String(err),
+          },
           { headers: corsHeaders, status: 503 },
         );
       }
     }
 
-    // 主页面（旧）
-    if (url.pathname === "/" || url.pathname === "/dashboard") {
-      return new Response(DASHBOARD_FILE, {
-        headers: { "Content-Type": "text/html" },
-      });
-    }
-
-    // 新 Orchestrator 页面
-    if (url.pathname === "/orchestrator") {
+    // Root, legacy /dashboard, and /orchestrator all serve the real,
+    // data-bound orchestrator page. The old "/" page (solar-dashboard.html)
+    // shipped hardcoded demo metrics (-91% token usage, "13 Agents", a
+    // competitor table) over otherwise-empty state; it was a placeholder, not
+    // a real surface, so it has been removed rather than fronted as live.
+    if (
+      url.pathname === "/" ||
+      url.pathname === "/dashboard" ||
+      url.pathname === "/orchestrator"
+    ) {
       return new Response(ORCH_DASHBOARD_FILE, {
         headers: { "Content-Type": "text/html" },
       });
     }
 
-    return new Response('Not Found', { status: 404 });
+    return new Response("Not Found", { status: 404 });
   },
 });
 

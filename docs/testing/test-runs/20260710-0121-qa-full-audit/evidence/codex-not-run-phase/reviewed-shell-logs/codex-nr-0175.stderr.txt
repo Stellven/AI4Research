@@ -1,0 +1,4 @@
+usage: knowledge_qmd_indexer.py mark-indexed [-h] --layer {raw,vault,semantic}
+                                             [--batch-id BATCH_ID]
+                                             [--doc-id DOC_ID]
+knowledge_qmd_indexer.py mark-indexed: error: argument --layer: invalid choice: 'extracted' (choose from raw, vault, semantic)

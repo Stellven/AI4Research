@@ -1,0 +1,15 @@
+--- sample 1: Claude Code proceed prompt ---
+█ claude-code v4.6
+> analyze this codebase and give me a summary
+
+Based on my analysis, here's the summary...
+
+Do you want to proceed with the full analysis? [y/n]
+--- sample 2: Claude proceed confirmation ---
+Some output from previous command
+More output lines here
+
+Do you want to continue? [Y/n]
+--- sample 3: proceed with uppercase ---
+The tool execution requires confirmation.
+Do you want to PROCEED? (yes/no)

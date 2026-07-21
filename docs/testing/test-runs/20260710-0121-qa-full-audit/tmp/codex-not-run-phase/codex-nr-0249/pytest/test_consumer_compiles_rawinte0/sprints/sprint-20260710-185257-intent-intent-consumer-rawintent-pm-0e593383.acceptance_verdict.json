@@ -1,0 +1,19 @@
+{
+  "schema_version": "solar.acceptance_verdict.v1",
+  "sprint_id": "sprint-20260710-185257-intent-intent-consumer-rawintent-pm-0e593383",
+  "requirement_ir_id": "req-d968c214cdbc",
+  "requested_verdict": "PASS",
+  "coverage_summary": {
+    "total": 4,
+    "done": 0,
+    "partial": 0,
+    "missing": 4,
+    "coverage_ratio": 0.0,
+    "graph_complete": false
+  },
+  "verdict": "IN_PROGRESS",
+  "reasons": [
+    "task_graph_incomplete",
+    "requirement_missing"
+  ]
+}

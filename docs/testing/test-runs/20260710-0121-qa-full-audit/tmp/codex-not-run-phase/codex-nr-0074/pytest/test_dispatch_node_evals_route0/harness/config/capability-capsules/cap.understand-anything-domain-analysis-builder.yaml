@@ -1,0 +1,109 @@
+capability_capsule_id: cap.understand-anything-domain-analysis-builder
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: DomainAnalysisBuilder
+  description: Auto-compiled capability capsule for understand-anything:understand-anything.domain_analysis.
+applicability:
+  task_types:
+  - knowledge-extraction
+  - analysis
+  positive_signals:
+  - domain analysis
+  - codebase understanding
+  - understand-anything
+  negative_signals:
+  - browser
+  - finance
+contract:
+  inputs:
+    required:
+    - name: repo_path
+      type: path
+    optional:
+    - name: language
+      type: string
+  outputs:
+    required:
+    - name: knowledge_graph_path
+      type: path
+    optional:
+    - name: actual_backend_used
+      type: string
+  preconditions:
+  - check: task_type_in
+    values:
+    - knowledge-extraction
+    - analysis
+  - check: input_present
+    field: repo_path
+  postconditions:
+  - check: output_present
+    field: knowledge_graph_path
+  invariants:
+  - Deterministic scan/parse stages remain separate from the semantic analysis stage.
+  - semantic_backend must remain ThunderOMLX for semantic analysis.
+composition:
+  consumes:
+  - type: artifact.repo_workspace
+  produces:
+  - type: artifact.knowledge_graph
+  compatible_with:
+  - resource.repo-workspace
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+  - workspace.repo
+  write:
+  - artifacts.knowledge_graph
+  - artifacts.operator_bridge_contract
+  execute:
+  - tmux_send_keys
+  - /understand-domain
+  network: []
+  cost:
+  - local_runtime
+  - thunderomlx_local
+  risk:
+  - pane_target_mismatch
+bindings:
+  skills:
+    required:
+    - skill.understand-anything
+    optional: []
+  mcp_capabilities: {}
+  data_refs:
+  - data.repo_path
+  secret_refs: []
+  required_guard_capsules: []
+  required_resource_capsules:
+  - resource.repo-workspace
+runtime_preferences:
+  execution_surface: deterministic_scan_and_thunderomlx_semantic
+  skill_command_template: /understand-domain {repo_path}
+  pane_target: best_effort
+  semantic_backend: ThunderOMLX
+  semantic_phase_enforced: true
+  success_artifact: .understand-anything/domain-analysis.json
+verification:
+  self_check:
+  - kind: artifact_present
+    path: .understand-anything/domain-analysis.json
+  - kind: pattern_match
+    pattern: actual_backend_used=ThunderOMLX
+  external_verifier:
+    required: false
+  pass_conditions:
+  - kind: artifact_present
+    path: .understand-anything/domain-analysis.json
+  - kind: pattern_match
+    pattern: actual_backend_used=ThunderOMLX
+operator_compatibility:
+  preferred:
+  - mini-understand-anything-pane-bridge
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: '2026-05-29T02:28:08Z'
+  compiler: skill_to_capsule_compiler

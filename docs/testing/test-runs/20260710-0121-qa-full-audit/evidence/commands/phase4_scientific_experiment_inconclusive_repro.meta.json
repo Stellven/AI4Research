@@ -1,0 +1,13 @@
+{
+  "command_id": "phase4_scientific_experiment_inconclusive_repro",
+  "phase": "deterministic",
+  "linked_feature_ids": "AUTOSCI_EXPERIMENT_RUN_STATUS",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "\"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python\" -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_executes_approved_experiment_command -q --tb=short -o \"cache_dir=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-cache/scientific-repro\" \"--junitxml=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/pytest/scientific-experiment-repro.xml\"",
+  "start_time": "2026-07-10T02:02:08-04:00",
+  "end_time": "2026-07-10T02:02:16-04:00",
+  "duration_seconds": "7.427",
+  "exit_code": 1,
+  "stdout_path": "evidence/commands/phase4_scientific_experiment_inconclusive_repro.stdout.txt",
+  "stderr_path": "evidence/commands/phase4_scientific_experiment_inconclusive_repro.stderr.txt"
+}

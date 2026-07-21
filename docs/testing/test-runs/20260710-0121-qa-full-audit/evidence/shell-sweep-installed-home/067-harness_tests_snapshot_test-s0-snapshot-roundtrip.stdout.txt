@@ -1,0 +1,5 @@
+T1: py_compile
+  PASS: py_compile passes
+T2: bash -n solar-harness.sh
+  PASS: solar-harness.sh syntax ok
+T3: snapshot --dry-run

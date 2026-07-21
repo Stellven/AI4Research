@@ -31,7 +31,7 @@ export class SolarEvolver {
   private db: Database;
 
   constructor(dbPath?: string) {
-    this.db = new Database(dbPath ?? `${process.env.HOME}/.solar/solar.db`);
+    this.db = new Database(dbPath ?? process.env.SOLAR_DB_PATH ?? `${process.env.HOME}/.solar/db/solar.db`);
   }
 
   /**

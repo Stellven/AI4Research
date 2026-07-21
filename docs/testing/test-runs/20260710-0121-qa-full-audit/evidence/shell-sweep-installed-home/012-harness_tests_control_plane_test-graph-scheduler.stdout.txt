@@ -1,0 +1,73 @@
+T1: py_compile
+  PASS: graph_scheduler.py compiles
+  PASS: capability_inference.py compiles
+  PASS: task-graph.schema.json valid
+T2: validate + topo + critical path
+  PASS: validate ok
+  PASS: validate node_count
+  PASS: topo starts S0
+  PASS: critical path includes S3
+T3: cycle detection
+  PASS: cycle detected as validation error
+T4: ready nodes and join gate
+  PASS: S1 ready
+  PASS: S2 ready
+  PASS: S6 ready
+  PASS: S3 blocked until S1/S2/S6 pass
+  PASS: external prerequisite blocks ready nodes
+  PASS: external prerequisite pass releases ready node
+  PASS: terminal upstream satisfies earlier planning_complete prerequisite
+T5: write_scope conflict split
+  PASS: conflict batches ok
+  PASS: conflict split into 3 batches
+T6: batches output file
+  PASS: dispatch_batches.json written
+  PASS: first batch has three nodes
+T7: worker matching with GLM quota fallback
+  PASS: assign ok
+  PASS: S1 assigned despite GLM exhausted
+  PASS: fallback model recorded
+  PASS: S6 assigned deepseek
+T8: parent_ready_check blocks premature parent pass
+  PASS: parent not ready
+  PASS: open nodes present
+T9: runtime-aware capability worker ranking
+  PASS: capability assign ok
+  PASS: Ruflo worker selected
+  PASS: capability score emitted
+T10: capability enrichment from contract/node text
+  PASS: enrich-capabilities ok
+  PASS: enrich changed R1
+  PASS: Ruflo swarm inferred
+  PASS: Ruflo MCP inferred
+  PASS: inferred capability selects Ruflo worker
+T11: backlog enrichment migrates existing graphs
+  PASS: enrich-backlog ok
+  PASS: enrich-backlog changed one graph
+  PASS: backlog graph has Ruflo capability
+  PASS: enrich-backlog idempotent
+T12: enqueue-ready writes graph node payloads only for ready batch
+  PASS: enqueue-ready ok
+  PASS: enqueue-ready S1
+  PASS: enqueue-ready S2
+  PASS: enqueue-ready S6
+  PASS: enqueue-ready did not enqueue blocked S3
+  PASS: queue depth 3
+  PASS: in-place dispatched nodes no longer ready
+T13: mark results and release next layer
+  PASS: S3 ready after join
+  PASS: S4 still blocked
+T14: failure blocks descendants only
+  PASS: S3 failure blocks S4/S5/S7
+T15: queue can store graph node payload
+  PASS: enqueue-node ok
+  PASS: pop graph node intent
+  PASS: pop graph node payload
+T16: solar-harness subcommand routing
+  PASS: graph-scheduler help
+  PASS: graph-scheduler help has enrichment
+  PASS: graph-scheduler validate route
+  PASS: graph-scheduler enrich route
+  PASS: graph-scheduler enrich-backlog route
+
+=== Graph Scheduler: PASS=55 FAIL=0 ===

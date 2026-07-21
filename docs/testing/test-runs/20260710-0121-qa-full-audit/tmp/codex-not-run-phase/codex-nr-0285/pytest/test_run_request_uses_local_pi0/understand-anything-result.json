@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "repo_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo",
+  "pane_target": "N/A",
+  "skill_command": "N/A",
+  "skill_command_template": "/understand --language {language} {repo_path}",
+  "execution_surface": "deterministic_scan_and_thunderomlx_semantic",
+  "semantic_backend": "ThunderOMLX",
+  "semantic_operator_id": "mini-thunderomlx-qwen36-knowledge",
+  "pane_resolution": {
+    "strategy": "explicit_legacy_target"
+  },
+  "knowledge_graph_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything/knowledge-graph.json",
+  "knowledge_output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything",
+  "chunk_manifest_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything/chunk-manifest.json",
+  "resume_state_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything/resume-state.json",
+  "dispatch_result": {
+    "mode": "local_pipeline",
+    "scan_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything/repo-scan.json",
+    "summary_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything/semantic-summary.md",
+    "meta_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything/meta.json",
+    "manifest_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything/chunk-manifest.json",
+    "resume_state_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo/.understand-anything/resume-state.json",
+    "chunks_total": 3,
+    "chunks_completed": 3,
+    "resumed": false,
+    "usage": {
+      "prompt_tokens": 12
+    }
+  },
+  "proof_artifact": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/understand-anything-semantic-proof.json",
+  "semantic_phase_request_artifact": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/understand-anything-semantic-phase-request.json",
+  "semantic_phase_prompt_artifact": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/understand-anything-semantic-phase-prompt.md"
+}

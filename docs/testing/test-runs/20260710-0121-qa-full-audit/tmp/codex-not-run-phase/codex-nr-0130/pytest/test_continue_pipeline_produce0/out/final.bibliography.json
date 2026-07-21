@@ -1,0 +1,34 @@
+[
+  {
+    "id": "398d99fe63376c33e74c0949c597c624",
+    "title": "Coconut code",
+    "url": "https://github.com/facebookresearch/coconut",
+    "source_type": "code",
+    "fetched_at": "2026-07-10 18:50:40",
+    "content_hash": "f73102bcbd3bca66a37f05894ea3f9beaf7a0f35bb14dde747c94d8ab4c1d7cb"
+  },
+  {
+    "id": "495879635d6f2bd9107e0fecf10acc06",
+    "title": "Coconut paper",
+    "url": "https://arxiv.org/abs/2412.06769",
+    "source_type": "paper",
+    "fetched_at": "2026-07-10 18:50:40",
+    "content_hash": "8c0b65f5f769f761c22b1a08a3739b74610b0166d8abf78edb0aca7e9b8d05fa"
+  },
+  {
+    "id": "b49d96c86225d11ad98a3e8cca98a046",
+    "title": "OpenReview submission",
+    "url": "https://docs.example.edu/latent-reasoning",
+    "source_type": "official_doc",
+    "fetched_at": "2026-07-10 18:50:40",
+    "content_hash": "7a803574771f4d59752187da578af93b993318ae356ca4df6fc20108cc14889b"
+  },
+  {
+    "id": "da6b3a06c9c6a52020fa97fc7854b181",
+    "title": "SoftCoT benchmark",
+    "url": "https://paperswithcode.com/paper/softcot-soft-chain-of-thought-for-efficient",
+    "source_type": "benchmark",
+    "fetched_at": "2026-07-10 18:50:40",
+    "content_hash": "ef3ccfa173babe0879411daa79aa3c93cca17b4372f7541c95f574445bf5843b"
+  }
+]

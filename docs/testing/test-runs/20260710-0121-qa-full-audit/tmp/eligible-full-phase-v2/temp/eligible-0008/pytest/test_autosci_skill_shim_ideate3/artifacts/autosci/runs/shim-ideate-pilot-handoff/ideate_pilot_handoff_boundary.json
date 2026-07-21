@@ -1,0 +1,17 @@
+{
+  "blocking_reasons": [],
+  "evidence_ids": [
+    "pilot-handoff:ideate"
+  ],
+  "evidence_refs": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate3/ideate-pilot-handoff.json"
+  ],
+  "handoff_evidence_count": 1,
+  "handoff_ready": true,
+  "limitations": [],
+  "pilot_handoff_ready": true,
+  "runtime_evidence_count": 0,
+  "runtime_ready": false,
+  "schema": "autosci_ideate_pilot_handoff_boundary.v1",
+  "status": "pilot_handoff_ready"
+}

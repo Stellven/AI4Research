@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/executable-node.v1.json",
+  "title": "Solar Certified Executable Node v1",
+  "description": "Immutable, certificate-covered node identity shared by validation, scheduling, physical planning, dispatch, evidence, and presentation. Runtime state and selected physical operators are intentionally excluded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "declared_fields",
+    "node_id",
+    "goal",
+    "description",
+    "depends_on",
+    "logical_operator",
+    "logical_role",
+    "dispatch_role",
+    "physical_role",
+    "node_kind",
+    "allowed_operators",
+    "allowed_capsules",
+    "capability_capsule_id",
+    "dispatch_task_type",
+    "task_type",
+    "node_type",
+    "read_scope",
+    "write_scope",
+    "outputs",
+    "acceptance",
+    "required_skills",
+    "required_capabilities",
+    "proof_obligations",
+    "evaluator_gate",
+    "gate",
+    "max_repair_attempts",
+    "on_human_review",
+    "requirement_ids",
+    "acceptance_ids"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "solar.executable_node.v1"
+    },
+    "declared_fields": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "node_id": {"type": "string"},
+    "goal": {"type": "string"},
+    "description": {"type": "string"},
+    "depends_on": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "logical_operator": {"type": "string"},
+    "logical_role": {"type": "string"},
+    "dispatch_role": {"type": "string", "minLength": 1},
+    "physical_role": {"type": "string", "minLength": 1},
+    "node_kind": {"type": "string"},
+    "allowed_operators": {"type": "object"},
+    "allowed_capsules": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "capability_capsule_id": {"type": "string"},
+    "dispatch_task_type": {"type": "string"},
+    "task_type": {"type": "string"},
+    "node_type": {"type": "string"},
+    "read_scope": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "write_scope": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "outputs": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "acceptance": {"type": "array"},
+    "required_skills": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "required_capabilities": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "proof_obligations": {"type": "array"},
+    "evaluator_gate": {"type": "object"},
+    "gate": {"type": "string"},
+    "max_repair_attempts": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "on_human_review": {},
+    "requirement_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "acceptance_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

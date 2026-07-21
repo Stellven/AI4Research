@@ -1,6 +1,6 @@
 #!/bin/bash
 # Solar Mail Agent - 后台邮件监听与自动执行
-# 方案A: cron + himalaya + Solar Harness intake
+# 方案A: cron + himalaya + claude CLI
 
 set -euo pipefail
 
@@ -11,19 +11,6 @@ LOG_FILE="$HOME/.solar/agent-daemon.log"
 LOCK_FILE="/tmp/solar-mail-agent.lock"
 IMESSAGE_ADDR="${SOLAR_GUARDIAN_IMESSAGE:-guardian-imessage@example.com}"
 MAIL_RECIPIENT="${SOLAR_ALERT_EMAIL:-${SOLAR_GUARDIAN_EMAIL:-${GUARDIAN_EMAILS[0]:-guardian@example.com}}}"
-SOLAR_REPO_DIR="${SOLAR_REPO_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
-SOLAR_REPO_HARNESS_DIR="$SOLAR_REPO_DIR/harness"
-SOLAR_INSTALLED_HARNESS_DIR="$HOME/.solar/harness"
-if [[ -n "${SOLAR_HARNESS_DIR:-}" ]]; then
-    SOLAR_ACTIVE_HARNESS_DIR="$SOLAR_HARNESS_DIR"
-elif [[ -n "${HARNESS_DIR:-}" ]]; then
-    SOLAR_ACTIVE_HARNESS_DIR="$HARNESS_DIR"
-elif [[ -f "$SOLAR_INSTALLED_HARNESS_DIR/solar-harness.sh" ]]; then
-    SOLAR_ACTIVE_HARNESS_DIR="$SOLAR_INSTALLED_HARNESS_DIR"
-else
-    SOLAR_ACTIVE_HARNESS_DIR="$SOLAR_REPO_HARNESS_DIR"
-fi
-SOLAR_HARNESS_BIN="${SOLAR_HARNESS_BIN:-$SOLAR_ACTIVE_HARNESS_DIR/solar-harness.sh}"
 
 # ==================== 初始化 ====================
 mkdir -p "$HOME/.solar"
@@ -148,12 +135,12 @@ execute_task() {
         return 0
     fi
 
-    # 其他任务 - 进入 Solar Harness RawIntent 链路
-    log "调用 Solar Harness 处理复杂任务..."
-    TASK_RESULT=$(cd "$SOLAR_REPO_DIR" && HARNESS_DIR="$SOLAR_ACTIVE_HARNESS_DIR" bash "$SOLAR_HARNESS_BIN" intake "$task" 2>&1 | head -100)
+    # 其他任务 - 调用 Claude CLI (非交互模式)
+    log "调用 Claude 处理复杂任务..."
+    TASK_RESULT=$(cd ~/Solar && claude -p "$task" 2>&1 | head -100)
     local exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
-        log "Solar Harness 执行失败，退出码: $exit_code"
+        log "Claude 执行失败，退出码: $exit_code"
         TASK_RESULT="执行出错 (exit $exit_code): $TASK_RESULT"
     fi
 

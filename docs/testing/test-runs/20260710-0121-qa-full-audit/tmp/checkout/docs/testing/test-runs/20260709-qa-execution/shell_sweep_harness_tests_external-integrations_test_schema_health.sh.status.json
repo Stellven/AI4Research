@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_external-integrations_test_schema_health.sh",
+  "source": "harness/tests/external-integrations/test_schema_health.sh",
+  "command": [
+    "bash",
+    "harness/tests/external-integrations/test_schema_health.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.045,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-plxknble"
+}

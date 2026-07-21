@@ -1,0 +1,6 @@
+enabled: false
+hypothesis: 新增 intent consumer，把 RawIntent 自动编译成 PM/Planner sprint package。
+source_papers: []
+experiments: []
+adoption_threshold: {}
+rejection_criteria: []

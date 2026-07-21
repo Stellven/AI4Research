@@ -62,7 +62,7 @@ def handoff_with_artifact_path(tmp_path):
     f = tmp_path / "handoff.md"
     f.write_text(
         "# Handoff\n\n## Summary\n\n"
-        "Output written to `/Users/sihaoli/.solar/harness/sprints/sprint-foo.handoff.md`.\n"
+        "Output written to `~/.solar/harness/sprints/sprint-foo.handoff.md`.\n"
     )
     return f
 
@@ -308,7 +308,7 @@ class TestExtractRefs:
         assert REAL_EVENT_ID in refs["event_ids"]
 
     def test_extracts_absolute_path(self):
-        text = "Output at `/Users/sihaoli/.solar/harness/sprints/foo.md`."
+        text = "Output at `~/.solar/harness/sprints/foo.md`."
         refs = _extract_refs(text)
         assert len(refs["artifact_paths"]) >= 1
 

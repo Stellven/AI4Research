@@ -1,0 +1,13 @@
+{
+  "edges": [],
+  "nodes": [
+    {
+      "group": "ideas",
+      "id": "ideas/skillgen.md",
+      "label": "SkillGen",
+      "path": "ideas/skillgen.md"
+    }
+  ],
+  "schema": "autosci_web_graph.v1",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_visual1/artifacts/autosci/workspace/wiki"
+}

@@ -1,0 +1,14 @@
+=== test-role-dispatch-fallback.sh ===
+  ✅ dispatch_to_role returns success after fallback candidate
+  ✅ first failed candidate and second fallback were both tried
+  ✅ queue not used when fallback succeeds
+  ✅ terminal passed_notify hook abort is treated as non-blocking
+  ✅ terminal passed_notify is not queued after hook abort
+  ✅ terminal passed_notify stops after first hook abort
+  ✅ terminal notify suppression emits event
+  ✅ terminal failed_max_rounds hook abort is treated as non-blocking
+  ✅ terminal failed_max_rounds is not queued after hook abort
+  ✅ terminal failed_max_rounds stops after first hook abort
+  ✅ terminal failed_max_rounds suppression emits event
+
+=== RESULT: PASS=11 FAIL=0 ===

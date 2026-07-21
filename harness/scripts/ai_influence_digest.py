@@ -532,7 +532,7 @@ def write_markdown(
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="AI Influence Daily Digest collector")
-    parser.add_argument("--config", default="/Users/lisihao/Solar/harness/config/ai-influence-daily-digest.yaml")
+    parser.add_argument("--config", default="~/Solar/harness/config/ai-influence-daily-digest.yaml")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force-host", action="store_true", help="bypass Mac mini hostname guard")
     parser.add_argument("--limit-accounts", type=int, default=0)
@@ -552,7 +552,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.limit_accounts:
         selected_accounts = selected_accounts[: args.limit_accounts]
     out_cfg = config.get("output", {})
-    state_dir = Path(out_cfg.get("state_dir", "/Users/lisihao/.solar/harness/state/ai-influence-daily-digest")).expanduser()
+    state_dir = Path(out_cfg.get("state_dir", "~/.solar/harness/state/ai-influence-daily-digest")).expanduser()
     seen = load_seen(state_dir, int(out_cfg.get("keep_seen_days", 21)))
     fetched_at = iso_z()
     all_items: list[Item] = []

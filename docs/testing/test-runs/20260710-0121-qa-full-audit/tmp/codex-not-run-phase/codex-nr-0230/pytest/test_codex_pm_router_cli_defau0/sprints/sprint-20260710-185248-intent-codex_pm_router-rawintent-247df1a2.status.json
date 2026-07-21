@@ -1,0 +1,19 @@
+{
+  "id": "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2",
+  "title": "把 codex_pm_router 入口接到 RawIntent 主链。",
+  "summary": "把 codex_pm_router 入口接到 RawIntent 主链。",
+  "created_at": "2026-07-10T18:52:49Z",
+  "round": 0,
+  "history": [
+    {
+      "ts": "2026-07-10T18:52:49Z",
+      "event": "compiled_requirement_package_created",
+      "by": "codex-pm-router"
+    }
+  ],
+  "status": "drafting",
+  "phase": "prd_ready",
+  "handoff_to": "planner",
+  "target_role": "planner",
+  "updated_at": "2026-07-10T18:52:49Z"
+}

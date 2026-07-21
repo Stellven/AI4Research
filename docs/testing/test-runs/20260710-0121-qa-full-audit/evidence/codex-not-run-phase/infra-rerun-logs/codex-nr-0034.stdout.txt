@@ -1,0 +1,32 @@
+=== test-recursive-refine.sh ===
+Fixture SID: test-refine-fixture-62367
+
+--- T1: Create sprint fixture ---
+  PASS: T1a: fixture files created
+
+--- T2: Write handoff round 1 ---
+  PASS: T2a: handoff round 1 created
+
+--- T3: Write eval FAIL with next_round_capsule_diff ---
+  PASS: T3a: eval.md contains next_round_capsule_diff section
+  PASS: T3b: capsule_diff has all 3 sub-sections
+
+--- T4: Verify round 2 dispatch includes capsule_diff ---
+  PASS: T4a: capsule_diff extractable from eval.md
+  PASS: T4b: dispatch fragment contains capsule_diff reference
+  PASS: T4c: dispatch instructs not to rewrite plan.md
+
+--- T5: Verify plan.md mtime can be checked ---
+  PASS: T5a: plan.md mtime unchanged after round 2 (as expected)
+
+--- T6: Verify coordinator.sh has recursive refine code ---
+  PASS: T6a: coordinator.sh contains next_round_capsule_diff
+  PASS: T6b: coordinator.sh contains 增量修复指引 section
+  PASS: T6c: coordinator.sh instructs not to rewrite plan.md
+
+--- T7: Verify evaluator dispatch requires capsule_diff on FAIL ---
+  PASS: T7a: coordinator.sh has evaluator capsule_diff requirement
+  PASS: T7b: evaluator dispatch template has all 3 capsule_diff fields
+
+=== Results: 13 PASS / 0 FAIL ===
+ALL_TESTS_PASS

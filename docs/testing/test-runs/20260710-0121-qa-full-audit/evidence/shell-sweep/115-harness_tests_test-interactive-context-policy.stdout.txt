@@ -1,0 +1,18 @@
+PASS: persona-config syntax
+PASS: pane-launcher syntax
+PASS: policy includes context inject command
+PASS: policy names Mirage
+PASS: policy names QMD
+PASS: policy forbids sqlite-first
+PASS: policy requires visibility line
+PASS: policy includes Definition of Done gate
+PASS: policy requires evidence before success
+PASS: policy requires structured closeout
+PASS: pane-launcher prepends runtime policy in append-system-prompt
+PASS: pane-launcher passes Claude settings path as one argv
+PASS: Codex panes disable startup update prompts by default
+PASS: start-incarnation prepends runtime policy in append-system-prompt
+PASS: start-incarnation passes Claude settings path as one argv
+PASS: PM persona has zero-law context rule
+PASS: Planner persona has zero-law context rule
+PROBES_PASSED=17 PROBES_FAILED=0

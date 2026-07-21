@@ -1,0 +1,7 @@
+# Python dependencies for the optional MemPalace component.
+# Derived from import audit of mempalace/*.py.
+chromadb
+langdetect
+mcp
+PyYAML>=6.0
+sentence-transformers

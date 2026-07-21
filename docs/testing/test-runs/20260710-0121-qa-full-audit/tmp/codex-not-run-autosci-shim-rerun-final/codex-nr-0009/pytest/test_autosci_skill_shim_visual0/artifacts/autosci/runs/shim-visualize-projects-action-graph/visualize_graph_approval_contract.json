@@ -1,0 +1,84 @@
+{
+  "action": "visualize_graph",
+  "after_artifacts": [],
+  "after_ready": false,
+  "allowlist_evidence": [],
+  "allowlist_ready": false,
+  "approval_ref": "",
+  "approval_state": "approval_required",
+  "approved": false,
+  "authorization_request": {
+    "action": "visualize_graph",
+    "approval_state": "approval_required",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [
+          "<after-artifact>"
+        ],
+        "allowlist_evidence": [
+          "<allowlist-evidence.json>"
+        ],
+        "approval_ref": "<approval-ref>",
+        "before_artifacts": [
+          "<before-artifact>"
+        ],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": [
+          "<runtime-evidence.json>"
+        ]
+      },
+      "request_fingerprint": "2cf5bb9772178443541dce698bbdfb3cba3892bbb1b716e24101c82dc2b97898",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": true,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "awaiting_authorization"
+    },
+    "missing": [
+      "approval_ref",
+      "allowlist_evidence",
+      "before_artifacts",
+      "runtime_evidence",
+      "after_artifacts"
+    ],
+    "non_error_contract": {
+      "approval_state": "approval_required",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": true,
+      "allowlist_evidence": true,
+      "approval_ref": true,
+      "before_artifacts": true,
+      "runtime_evidence": true
+    },
+    "requested_side_effects": [
+      "obsidian_canvas_write",
+      "local_web_server",
+      "graph_read"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "awaiting_authorization"
+  },
+  "before_artifacts": [],
+  "before_ready": false,
+  "execution_verified": false,
+  "missing": [
+    "approval_ref",
+    "allowlist_evidence",
+    "before_artifacts",
+    "runtime_evidence",
+    "after_artifacts"
+  ],
+  "ready_for_execution": false,
+  "runtime_evidence": [],
+  "runtime_ready": false,
+  "schema": "autosci_approval_contract.v1",
+  "side_effects": [
+    "obsidian_canvas_write",
+    "local_web_server",
+    "graph_read"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "sprint-ac3-pass",
+  "graph_ref": "sprint-ac3-pass.task_graph.json",
+  "node_results": {
+    "N1": {
+      "status": "passed",
+      "updated_at": "2026-07-10T14:06:35Z",
+      "note": "eval_json=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0046/pytest/test_verdict_pass_with_eval_js0/sprints/sprint-ac3-pass.N1-eval.json",
+      "artifacts": {
+        "handoff_md": "sprint-ac3-pass.N1-handoff.md",
+        "eval_json": "sprint-ac3-pass.N1-eval.json"
+      },
+      "eval_json": "sprint-ac3-pass.N1-eval.json"
+    }
+  },
+  "gate_results": {},
+  "leases": {},
+  "dispatch_ids": {},
+  "updated_at": "2026-07-10T14:06:35Z",
+  "events": []
+}

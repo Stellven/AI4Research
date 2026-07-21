@@ -89,7 +89,7 @@ export class MessageExecutor {
         console.log(`[Orchestrator] ${event.type} task=${event.taskId}${nodePart}`);
       },
     });
-    this.db = new Database(`${process.env.HOME}/.solar/solar.db`);
+    this.db = new Database(process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`);
     this.ensureMessageTaskIdIntegrity();
     this.ensureOrchestrationSchema();
     this.retryPolicy = this.loadRetryPolicy();

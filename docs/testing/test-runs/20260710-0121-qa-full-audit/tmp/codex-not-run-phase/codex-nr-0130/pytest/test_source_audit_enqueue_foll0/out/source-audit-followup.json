@@ -1,0 +1,264 @@
+{
+  "ok": true,
+  "action": "appended",
+  "graph": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/sprint-test.task_graph.json",
+  "node_id": "DR_SOURCE_GAP_TEST",
+  "handoff_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/source-gap-handoff.md",
+  "enqueue": {
+    "ok": true,
+    "sprint_id": "sprint-test",
+    "batch": [
+      "DR_SOURCE_GAP_TEST"
+    ],
+    "blocked_prerequisites": [],
+    "capability_enrichment": {
+      "changed_nodes": [],
+      "auto": true
+    },
+    "enqueued": [
+      {
+        "node": "DR_SOURCE_GAP_TEST",
+        "pane": "dry-run:0.0",
+        "queue": {
+          "ok": true,
+          "result": "dry_run",
+          "id": ""
+        },
+        "dispatch_id": "graph-sprint-test-DR_SOURCE_GAP_TEST-20260710T185040Z",
+        "payload": {
+          "type": "graph_node",
+          "graph": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/sprint-test.task_graph.json",
+          "graph_state": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/sprint-test.task_dag.state.json",
+          "closure_record": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/sprint-test.closure.json",
+          "sprint_id": "sprint-test",
+          "node": {
+            "id": "DR_SOURCE_GAP_TEST",
+            "goal": "Acquire missing DeepResearch sources and re-import them. Missing source types: benchmark, code, official_doc. Use handoff: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/source-gap-handoff.md",
+            "depends_on": [],
+            "write_scope": [
+              "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/source-gap-handoff.md",
+              "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/sources.jsonl",
+              "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/evidence.jsonl",
+              "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/claims.jsonl",
+              "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/source-audit-followup.json"
+            ],
+            "required_skills": [
+              "multi_agent.research",
+              "browser.browse",
+              "documentation"
+            ],
+            "required_capabilities": [
+              "research.source_matrix",
+              "research.evidence.extract",
+              "browser.browse",
+              "browser.qa",
+              "code.review",
+              "browser.mcp",
+              "browser.automation",
+              "browser.screenshot",
+              "browser.localhost_test"
+            ],
+            "acceptance": [
+              "Read the source-gap handoff Markdown before searching.",
+              "Add at least one canonical source for each missing source type when available.",
+              "Run import-search --continue to regenerate evidence, claims, sections, and final report artifacts.",
+              "Run source-audit with the same research profile and record the result."
+            ],
+            "status": "pending",
+            "gate": "dr_source_gap_test_passed",
+            "metadata": {
+              "type": "deepresearch_source_gap_followup",
+              "research_profile": "technical_architecture",
+              "missing_required_source_types": [],
+              "missing_recommended_source_types": [
+                "benchmark",
+                "code",
+                "official_doc"
+              ],
+              "handoff_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/source-gap-handoff.md",
+              "created_at": "2026-07-10T18:50:40Z"
+            },
+            "capability_inference": {
+              "source": "solar-capability-rules",
+              "generated_at": "2026-07-10T18:50:40Z",
+              "providers": [
+                "gstack",
+                "Browser-use MCP"
+              ],
+              "capabilities": [
+                "browser.browse",
+                "browser.qa",
+                "code.review",
+                "browser.mcp",
+                "browser.automation",
+                "browser.screenshot",
+                "browser.localhost_test"
+              ]
+            },
+            "logical_plan_node": {
+              "node_id": "DR_SOURCE_GAP_TEST",
+              "logical_operator": null,
+              "goal": "Acquire missing DeepResearch sources and re-import them. Missing source types: benchmark, code, official_doc. Use handoff: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/source-gap-handoff.md",
+              "depends_on": []
+            },
+            "capsule_plan_ir": {
+              "schema_version": "solar.capsule_plan_node.v1",
+              "node_id": "DR_SOURCE_GAP_TEST",
+              "logical_operator": "",
+              "request_type": "",
+              "lane_hint": "",
+              "selected": false,
+              "stages": []
+            },
+            "physical_plan_ir": {
+              "schema_version": "solar.physical_plan_node.v1",
+              "node_id": "DR_SOURCE_GAP_TEST",
+              "logical_operator": "",
+              "capability_capsule_id": null,
+              "dispatch_task_type": null,
+              "artifact_types": {},
+              "effect_union": {},
+              "proof_obligations": [],
+              "selected_operator_id": "",
+              "execution_candidates": [],
+              "attached_capsules": [],
+              "verifier_plans": []
+            },
+            "artifacts": {
+              "capsule_plan_ir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/sprints/sprint-test.DR_SOURCE_GAP_TEST-capsule-plan.json",
+              "physical_plan_ir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/sprints/sprint-test.DR_SOURCE_GAP_TEST-physical-plan.json"
+            }
+          },
+          "assignment": {
+            "node": "DR_SOURCE_GAP_TEST",
+            "pane": "dry-run:0.0",
+            "dispatch_role": "builder",
+            "worker_role": "builder",
+            "preferred_model": null,
+            "selected_models": [],
+            "fallback_model": false,
+            "required_capabilities": [
+              "research.source_matrix",
+              "research.evidence.extract",
+              "browser.browse",
+              "browser.qa",
+              "code.review",
+              "browser.mcp",
+              "browser.automation",
+              "browser.screenshot",
+              "browser.localhost_test"
+            ],
+            "role_penalty": 0,
+            "capability_score": 0.0,
+            "skill_match_count": 2
+          },
+          "dispatch_id": "graph-sprint-test-DR_SOURCE_GAP_TEST-20260710T185040Z",
+          "lease": {
+            "acquired": true,
+            "reason": "lease_disabled"
+          },
+          "logical_plan_node": {
+            "node_id": "DR_SOURCE_GAP_TEST",
+            "logical_operator": null,
+            "goal": "Acquire missing DeepResearch sources and re-import them. Missing source types: benchmark, code, official_doc. Use handoff: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_source_audit_enqueue_foll0/out/source-gap-handoff.md",
+            "depends_on": []
+          },
+          "capsule_plan_ir": {
+            "schema_version": "solar.capsule_plan_node.v1",
+            "node_id": "DR_SOURCE_GAP_TEST",
+            "logical_operator": "",
+            "request_type": "",
+            "lane_hint": "",
+            "selected": false,
+            "stages": []
+          },
+          "physical_plan_ir": {
+            "schema_version": "solar.physical_plan_node.v1",
+            "node_id": "DR_SOURCE_GAP_TEST",
+            "logical_operator": "",
+            "capability_capsule_id": null,
+            "dispatch_task_type": null,
+            "artifact_types": {},
+            "effect_union": {},
+            "proof_obligations": [],
+            "selected_operator_id": "",
+            "execution_candidates": [],
+            "attached_capsules": [],
+            "verifier_plans": []
+          },
+          "plan_artifacts": {
+            "capsule_plan_ir_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/sprints/sprint-test.DR_SOURCE_GAP_TEST-capsule-plan.json",
+            "physical_plan_ir_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/sprints/sprint-test.DR_SOURCE_GAP_TEST-physical-plan.json",
+            "task_classification": {
+              "selected_classes": [],
+              "primary_class": null,
+              "confidence": "low",
+              "signal_score": 0,
+              "signals_detected": [],
+              "rejected_classes": [
+                {
+                  "class_id": "PERFORMANCE_REGRESSION",
+                  "score": 1.0,
+                  "reason": "below_min_signal_score"
+                },
+                {
+                  "class_id": "PERFORMANCE_KERNEL_DEBUG",
+                  "score": 1.0,
+                  "reason": "below_min_signal_score"
+                },
+                {
+                  "class_id": "SOFT_HW_OPT",
+                  "score": 0.0,
+                  "reason": "below_min_signal_score"
+                },
+                {
+                  "class_id": "FAST_PROTOTYPE",
+                  "score": 0.0,
+                  "reason": "below_min_signal_score"
+                },
+                {
+                  "class_id": "CODE_IMPL_REQUIRED",
+                  "score": -3.0,
+                  "reason": "below_min_signal_score"
+                }
+              ],
+              "classifier_version": "v1"
+            },
+            "logical_workflow": {
+              "template": "none",
+              "stages": [],
+              "rationale": "No task class detected; no workflow expanded."
+            },
+            "skill_plan": {},
+            "mcp_plan": {
+              "required_mcp": [],
+              "optional_mcp": []
+            },
+            "capsule_plan_artifact": {
+              "selected_capsule_id": null,
+              "fallback_used": false,
+              "fallback_reason": null,
+              "candidates": [],
+              "rationale": "Selected via goal-driven classifier (class=None, confidence=low)"
+            },
+            "selection_rationale": {
+              "classification_confidence": "low",
+              "primary_class": null,
+              "capsule_selected": null,
+              "fallback_used": false,
+              "fallback_reason": null
+            },
+            "evidence_policy": {
+              "proof_obligations": [],
+              "ledger_event_names": [],
+              "verification_commands": []
+            }
+          }
+        }
+      }
+    ],
+    "queued": [],
+    "worker_blocked": [],
+    "dry_run": true
+  }
+}

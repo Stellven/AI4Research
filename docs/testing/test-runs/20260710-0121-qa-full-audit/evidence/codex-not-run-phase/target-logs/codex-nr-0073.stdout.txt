@@ -1,0 +1,14 @@
+=== test_schema_health ===
+  ✓ probe outputs valid JSON
+  ✓ generated_at present
+  ✓ summary present
+  ✓ integrations array present
+  ✓ required integrations present
+  ✓ all integrations have 6-state fields
+  ✓ status values are ok/warn/error/missing
+  ✓ all integrations have detailed health dimensions
+  ✓ summary counts match integrations
+  ✓ schema file exists
+  ✓ schema is valid JSON
+
+RESULT: 11 passed, 0 failed

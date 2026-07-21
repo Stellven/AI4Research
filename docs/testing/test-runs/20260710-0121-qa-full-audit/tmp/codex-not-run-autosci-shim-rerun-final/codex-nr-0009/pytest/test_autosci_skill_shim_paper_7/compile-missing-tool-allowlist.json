@@ -1,0 +1,1 @@
+{"executables": ["latexmk", "pdflatex", "xelatex", "lualatex"]}

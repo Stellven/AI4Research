@@ -1,0 +1,72 @@
+{
+  "catalog": {
+    "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.agents/skills/prefill/foundations-catalog.yaml",
+    "status": "completed"
+  },
+  "catalog_domain_count": 5,
+  "dedup": [
+    {
+      "domain": "NLP",
+      "exists": false,
+      "foundation_id": "foundation-lora",
+      "path": "artifacts/autosci/workspace/wiki/foundations/foundation-lora.md",
+      "seed_slug": "lora",
+      "source_evidence_path": "lora-source.json",
+      "source_status": "completed",
+      "source_url": "https://en.wikipedia.org/wiki/Low-rank_adaptation",
+      "title": "LoRA"
+    }
+  ],
+  "domain": "NLP",
+  "domain_resolution": {
+    "domain": "NLP",
+    "source": "input.domain",
+    "status": "explicit"
+  },
+  "fetch_attempts": [],
+  "limitations": [],
+  "mode": "add",
+  "schema": "autosci_prefill_plan.v1",
+  "seed_count": 1,
+  "selected_count": 1,
+  "selected_seeds": [
+    {
+      "domain": "NLP",
+      "exists": false,
+      "foundation_id": "foundation-lora",
+      "path": "artifacts/autosci/workspace/wiki/foundations/foundation-lora.md",
+      "seed_slug": "lora",
+      "slug": "lora",
+      "source": "add",
+      "source_evidence": {
+        "path": "lora-source.json",
+        "schema": "autosci_prefill_source_evidence.v1",
+        "sections": [
+          {
+            "content": "- Low-rank adapters are inserted into model layers.",
+            "title": "Architecture"
+          },
+          {
+            "content": "- Rank selection changes quality and memory tradeoffs.",
+            "title": "Limitations"
+          }
+        ],
+        "source_url": "https://en.wikipedia.org/wiki/Low-rank_adaptation",
+        "status": "completed",
+        "summary": "LoRA is a parameter-efficient adaptation method using low-rank update matrices.",
+        "title": "LoRA"
+      },
+      "source_evidence_path": "lora-source.json",
+      "source_status": "completed",
+      "source_url": "https://en.wikipedia.org/wiki/Low-rank_adaptation",
+      "summary": "",
+      "title": "LoRA"
+    }
+  ],
+  "skipped_existing_count": 0,
+  "source_evidence_count": 1,
+  "source_evidence_refs": [
+    "lora-source.json"
+  ],
+  "status": "completed"
+}

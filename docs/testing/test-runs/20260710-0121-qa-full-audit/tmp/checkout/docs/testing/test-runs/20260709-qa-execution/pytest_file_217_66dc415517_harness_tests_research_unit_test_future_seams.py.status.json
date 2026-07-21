@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_217_66dc415517_harness_tests_research_unit_test_future_seams.py",
+  "source": "harness/tests/research_unit/test_future_seams.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research_unit/test_future_seams.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.196,
+  "timeout": false
+}

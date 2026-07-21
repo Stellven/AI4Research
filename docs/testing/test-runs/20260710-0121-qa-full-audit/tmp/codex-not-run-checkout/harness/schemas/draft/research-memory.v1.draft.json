@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/research-memory.v1.draft.json",
+  "title": "Research Memory v1",
+  "description": "Draft schema for ResearchMemory - managing shared/persistent agent memories, episodic contexts, and fact ledgers.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": [
+    "memory_id",
+    "scope",
+    "storage_backend"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "memory_id": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "global",
+        "run-local",
+        "operator-local",
+        "tenant-local"
+      ]
+    },
+    "storage_backend": {
+      "type": "string",
+      "enum": [
+        "sqlite",
+        "vector-db",
+        "file-system",
+        "obsidian"
+      ]
+    },
+    "read_only": {
+      "type": "boolean",
+      "default": false
+    },
+    "memory_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "episodic",
+          "semantic",
+          "facts",
+          "feedback"
+        ]
+      }
+    },
+    "indexing_status": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "indexing",
+        "stale",
+        "error"
+      ]
+    },
+    "embedding_model": {
+      "type": "string"
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "total_items": {
+          "type": "integer"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "last_vacuumed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

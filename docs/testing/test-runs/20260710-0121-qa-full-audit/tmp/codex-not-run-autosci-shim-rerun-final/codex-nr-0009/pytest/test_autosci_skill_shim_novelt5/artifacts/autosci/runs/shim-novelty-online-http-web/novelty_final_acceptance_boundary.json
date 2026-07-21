@@ -1,0 +1,47 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "review_llm status is `unavailable`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-target-generated-skills-for-inference-time-agents",
+        "target:user-supplied",
+        "external:web:https://example.invalid/generated-skills-http"
+      ],
+      "external_novelty_provenance_status": "passed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-target-generated-skills-for-inference-time-agents",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.499,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "endpoint": "http://127.0.0.1:50720/search",
+          "fetched_at": "2026-07-10T19:27:09Z",
+          "provider": "web",
+          "query": "generated skills for inference-time agents",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_novelt5/artifacts/autosci/runs/shim-novelty-online-http-web/external_novelty_payloads/web-ddf0ad6ddf8c87c0.json",
+          "raw_payload_archive_status": "completed",
+          "raw_payload_ref": "http://127.0.0.1:50720/search",
+          "raw_payload_sha256": "ddf0ad6ddf8c87c005e9e14f42f65ff96491ab72c147d91e7b59373d8d26ae00",
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": false,
+      "review_invocation_mode": "unavailable",
+      "review_llm_status": "unavailable",
+      "review_mode": "local_surrogate",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

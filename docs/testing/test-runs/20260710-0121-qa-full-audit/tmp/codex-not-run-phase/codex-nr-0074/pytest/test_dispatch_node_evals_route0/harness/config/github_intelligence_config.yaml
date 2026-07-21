@@ -1,0 +1,162 @@
+version: 1
+name: GitHub Project Intelligence System
+
+# Discovery topics for TopicAdapter (GitHub Search API)
+# Each topic has: name, query (GitHub search query), star_range, recency
+discovery:
+  topics:
+    - name: llm-inference
+      query: "topic:llm+topic:inference"
+      star_range: [50, 50000]
+      recency: 30d
+    - name: agent-framework
+      query: "topic:ai-agent+topic:framework"
+      star_range: [100, 50000]
+      recency: 30d
+    - name: vector-database
+      query: "topic:vector-database+topic:embedding"
+      star_range: [50, 50000]
+      recency: 60d
+    - name: model-training
+      query: "topic:deep-learning+topic:training"
+      star_range: [100, 50000]
+      recency: 30d
+    - name: on-device-ml
+      query: "topic:on-device+topic:machine-learning"
+      star_range: [50, 20000]
+      recency: 60d
+    - name: rag-pipeline
+      query: "topic:rag+topic:retrieval"
+      star_range: [50, 20000]
+      recency: 30d
+    - name: code-generation
+      query: "topic:code-generation+topic:llm"
+      star_range: [50, 50000]
+      recency: 30d
+    - name: multimodal-ai
+      query: "topic:multimodal+topic:vision"
+      star_range: [50, 30000]
+      recency: 60d
+    - name: ai-safety
+      query: "topic:ai-safety+topic:alignment"
+      star_range: [20, 20000]
+      recency: 90d
+    - name: robotics-embodied
+      query: "topic:robotics+topic:embodied-ai"
+      star_range: [50, 20000]
+      recency: 60d
+    - name: data-pipeline
+      query: "topic:data-engineering+topic:pipeline"
+      star_range: [100, 30000]
+      recency: 60d
+    - name: open-source-models
+      query: "topic:open-source+topic:language-model"
+      star_range: [100, 100000]
+      recency: 30d
+
+  # Tracked repos — always monitored regardless of discovery
+  tracked_repos:
+    - full_name: anthropropics/claude-code
+      priority: high
+    - full_name: openai/codex
+      priority: high
+    - full_name: langchain-ai/langchain
+      priority: high
+    - full_name: pytorch/pytorch
+      priority: medium
+    - full_name: huggingface/transformers
+      priority: medium
+    - full_name: modelcontextprotocol/servers
+      priority: high
+    - full_name: vercel/ai
+      priority: medium
+    - full_name: mlflow/mlflow
+      priority: medium
+
+  # Discovery schedule (cron-like, UTC)
+  schedule:
+    topic_discovery: "0 */6 * * *"      # every 6 hours
+    trending_daily: "0 2 * * *"          # daily at 02:00 UTC
+    trending_weekly: "0 3 * * 1"         # weekly Monday 03:00 UTC
+    tracked_refresh: "0 */2 * * *"       # every 2 hours
+    cross_source: "0 4 * * *"            # daily at 04:00 UTC
+
+  # Dedup settings
+  dedup:
+    window_hours: 24
+    max_candidates_per_topic: 100
+
+# Model routing configuration
+model_routing:
+  # Local models (free, ThunderOMLX on Mac mini M4)
+  local:
+    - model: qwen3.6-thunderomlx
+      use_cases: [evidence_compression, verification, wrapper_detection]
+      max_context_tokens: 8192
+      cost_per_1k_tokens: 0.0
+
+  # Premium models (cost money, used sparingly)
+  premium:
+    - model: gemini-3.1-pro
+      use_cases: [long_context_synthesis, weekly_deep_analysis]
+      max_context_tokens: 1000000
+      cost_per_1k_tokens: 0.00125
+    - model: claude-sonnet-4-6
+      use_cases: [editorial_polish, card_generation]
+      max_context_tokens: 200000
+      cost_per_1k_tokens: 0.003
+
+  # Routing rules
+  rules:
+    evidence_compression: local
+    analysis_card: local
+    planning_brief: premium
+    weekly_synthesis: premium
+    verification: local
+
+  # Budget control
+  daily_premium_cap: 20
+  weekly_premium_cap: 80
+  monthly_budget_usd: 50.0
+
+# Pipeline configuration
+pipeline:
+  schedule: "0 0 * * *"  # daily at 00:00 UTC
+  stages:
+    - name: collect
+      timeout_minutes: 60
+    - name: delta
+      timeout_minutes: 30
+    - name: detect
+      timeout_minutes: 15
+    - name: evidence
+      timeout_minutes: 120
+    - name: packet
+      timeout_minutes: 30
+    - name: analysis
+      timeout_minutes: 60
+    - name: verify
+      timeout_minutes: 30
+    - name: report
+      timeout_minutes: 60
+
+  # Failure handling
+  failure_mode: continue  # continue to next stage on failure
+  dry_run: false
+  batch_size: 50  # repos per evidence processing batch
+
+# Scoring weights (from design.md §A5)
+scoring:
+  star_velocity: 0.30
+  star_acceleration: 0.15
+  cross_source_signal: 0.15
+  release_signal: 0.10
+  community_activity: 0.10
+  topic_relevance: 0.10
+  maintainer_signal: 0.05
+  novelty: 0.05
+
+# Database
+database:
+  path: tech-hotspot-radar.sqlite
+  wal_mode: true

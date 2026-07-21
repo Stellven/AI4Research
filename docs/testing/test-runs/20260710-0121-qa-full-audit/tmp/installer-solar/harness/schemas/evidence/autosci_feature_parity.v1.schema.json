@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/autosci_feature_parity.v1.schema.json",
+  "title": "Solar Evidence ABI - AutoSci Feature Parity",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "autosci_feature_parity.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "status": {"$ref": "#/$defs/status"},
+    "inputs": {
+      "type": "object",
+      "required": ["autosci_repo", "route_config"],
+      "additionalProperties": true,
+      "properties": {
+        "autosci_repo": {"type": "string", "minLength": 1},
+        "route_config": {"type": "string", "minLength": 1},
+        "requested_skill": {"type": "string"}
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "required": ["parity"],
+      "additionalProperties": true,
+      "properties": {
+        "parity": {"$ref": "#/$defs/parity"}
+      }
+    },
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "artifact": {
+      "type": "object",
+      "required": ["type", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "implementation_package", "timestamp"],
+      "additionalProperties": true,
+      "properties": {
+        "operator_id": {"type": "string", "minLength": 1},
+        "implementation_package": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"}
+      }
+    },
+    "parity": {
+      "type": "object",
+      "required": [
+        "config_version",
+        "autosci_repo",
+        "native_skill_count",
+        "configured_route_count",
+        "routed_count",
+        "missing_route_count",
+        "full_count",
+        "partial_count",
+        "gated_count",
+        "blocked_count",
+        "native_skills",
+        "items"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "config_version": {"type": "string", "minLength": 1},
+        "autosci_repo": {"type": "string", "minLength": 1},
+        "native_skill_count": {"type": "integer", "minimum": 0},
+        "configured_route_count": {"type": "integer", "minimum": 0},
+        "routed_count": {"type": "integer", "minimum": 0},
+        "missing_route_count": {"type": "integer", "minimum": 0},
+        "full_count": {"type": "integer", "minimum": 0},
+        "partial_count": {"type": "integer", "minimum": 0},
+        "gated_count": {"type": "integer", "minimum": 0},
+        "blocked_count": {"type": "integer", "minimum": 0},
+        "native_skills": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "items": {"type": "array", "items": {"$ref": "#/$defs/parity_item"}}
+      }
+    },
+    "parity_item": {
+      "type": "object",
+      "required": [
+        "autosci_feature",
+        "native_skill",
+        "feature_kind",
+        "native_paths",
+        "solar_capability",
+        "solar_logical_operator",
+        "solar_backend_action",
+        "coverage_status",
+        "backend_mode",
+        "side_effect_policy",
+        "evidence_schema",
+        "primary_tools",
+        "required_capabilities",
+        "limitations",
+        "evidence_ids"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "autosci_feature": {"type": "string", "minLength": 1},
+        "native_skill": {"type": "string", "minLength": 1},
+        "feature_kind": {"type": "string", "enum": ["skill", "tool", "runtime", "ui", "mcp"]},
+        "native_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "solar_capability": {"type": "string", "minLength": 1},
+        "solar_logical_operator": {"type": "string", "minLength": 1},
+        "solar_backend_action": {"type": "string", "minLength": 1},
+        "coverage_status": {"type": "string", "enum": ["full", "partial", "gated", "blocked", "missing"]},
+        "backend_mode": {"type": "string", "enum": ["solar_native", "route_plan", "side_effect_gated", "external_optional"]},
+        "side_effect_policy": {"type": "string", "enum": ["none", "dry_run_only", "approval_required", "unavailable"]},
+        "evidence_schema": {"type": "string", "minLength": 1},
+        "primary_tools": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "required_capabilities": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

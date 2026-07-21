@@ -1,0 +1,37 @@
+{
+  "schema_version": "benchmark.run.v1",
+  "run_id": "bench-20260521010000-deadbeef",
+  "benchmark": "terminal-bench",
+  "benchmark_version": "2.0",
+  "dataset": "terminal-bench@2.0",
+  "adapter": "harbor",
+  "agent": "claude-code",
+  "model": "claude-opus-4-7",
+  "env": "docker",
+  "tasks_requested": [
+    "hello-world-cli"
+  ],
+  "tasks_completed": [],
+  "score": null,
+  "pass_count": 0,
+  "fail_count": 0,
+  "pending_count": 1,
+  "started_at": "2026-05-21T01:00:00Z",
+  "completed_at": "2026-05-21T01:00:01Z",
+  "duration_sec": 1.0,
+  "command": [
+    "harbor",
+    "run",
+    "--dataset",
+    "terminal-bench@2.0"
+  ],
+  "exit_code": null,
+  "stdout_path": null,
+  "stderr_path": null,
+  "artifacts": [],
+  "verdict": "ok",
+  "failure_modes": [],
+  "limitations": [
+    "dry_run: no actual execution"
+  ]
+}

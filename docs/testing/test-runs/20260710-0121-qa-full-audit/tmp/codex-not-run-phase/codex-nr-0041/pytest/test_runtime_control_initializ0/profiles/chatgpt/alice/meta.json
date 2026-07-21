@@ -1,0 +1,18 @@
+{
+  "account_label": "alice",
+  "allowed_account_identifiers": [
+    "alice@example.com"
+  ],
+  "concurrency_policy": "exclusive",
+  "headed_required_for_first_login": true,
+  "headless_default": true,
+  "never_log_cookie_values": true,
+  "profile_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0041/pytest/test_runtime_control_initializ0/chrome/Profile 7",
+  "profile_id": "chatgpt/alice",
+  "runtime_owner": "browser_use",
+  "schema_version": 1,
+  "service": "chatgpt",
+  "status": "leased",
+  "supports_playwright_cdp_attach": false,
+  "updated_at": "2026-07-10T18:49:44Z"
+}

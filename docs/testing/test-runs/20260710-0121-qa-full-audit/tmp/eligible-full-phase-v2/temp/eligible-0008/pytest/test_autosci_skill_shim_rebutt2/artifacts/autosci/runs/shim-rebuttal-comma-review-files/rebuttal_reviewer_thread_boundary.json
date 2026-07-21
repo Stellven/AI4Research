@@ -1,0 +1,16 @@
+{
+  "atomization_completed": true,
+  "concern_count": 2,
+  "limitations": [
+    "Non-standard reviewer text was parsed by a bounded local parser; supply structured reviewer-thread evidence for strict auditability."
+  ],
+  "raw_parser_used": true,
+  "reviewer_count": 2,
+  "schema": "autosci_rebuttal_reviewer_thread_boundary.v1",
+  "source_paths": [
+    "reviewer-1.txt",
+    "reviewer-2.txt"
+  ],
+  "status": "completed",
+  "thread_loaded": true
+}

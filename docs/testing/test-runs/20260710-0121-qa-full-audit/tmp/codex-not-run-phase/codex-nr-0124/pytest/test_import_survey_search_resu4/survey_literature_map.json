@@ -1,0 +1,612 @@
+{
+  "ok": true,
+  "source_count": 16,
+  "source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "chapter_count": 8,
+  "covered_chapters": 8,
+  "chapter_coverage": 1.0,
+  "evidence_backed_source_ratio": 1.0,
+  "claim_backed_source_ratio": 1.0,
+  "sources": [
+    {
+      "source_id": "src_1c707361a977",
+      "source_type": "official_doc",
+      "title": "Latent Reasoning Source 3",
+      "url": "https://docs.example.edu/latent-reasoning",
+      "chapter_ids": [
+        "ch01",
+        "ch02",
+        "ch03",
+        "ch04",
+        "ch05",
+        "ch06",
+        "ch07",
+        "ch08"
+      ],
+      "section_ids": [
+        "ch01/sec01",
+        "ch01/sec02",
+        "ch01/sec03",
+        "ch01/sec04",
+        "ch02/sec01",
+        "ch02/sec02",
+        "ch02/sec03",
+        "ch02/sec04",
+        "ch03/sec01",
+        "ch03/sec02",
+        "ch03/sec03",
+        "ch03/sec04",
+        "ch04/sec01",
+        "ch04/sec02",
+        "ch04/sec03",
+        "ch04/sec04",
+        "ch05/sec01",
+        "ch05/sec02",
+        "ch05/sec03",
+        "ch05/sec04",
+        "ch06/sec01",
+        "ch06/sec02",
+        "ch06/sec03",
+        "ch06/sec04",
+        "ch07/sec01",
+        "ch07/sec02",
+        "ch07/sec03",
+        "ch07/sec04",
+        "ch08/sec01",
+        "ch08/sec02",
+        "ch08/sec03",
+        "ch08/sec04"
+      ],
+      "evidence_ids": [
+        "ev_01e14acb8c1a",
+        "ev_a0544868d806",
+        "ev_ae1ef7ac27d0",
+        "ev_d7e1ced8f26f"
+      ],
+      "claim_ids": [
+        "cl_01e14acb8c1a",
+        "cl_a0544868d806",
+        "cl_ae1ef7ac27d0",
+        "cl_d7e1ced8f26f"
+      ]
+    },
+    {
+      "source_id": "src_27a750b4c63e",
+      "source_type": "paper",
+      "title": "Latent Reasoning Source 1",
+      "url": "https://arxiv.org/abs/2412.06769",
+      "chapter_ids": [
+        "ch01",
+        "ch02",
+        "ch03",
+        "ch04",
+        "ch05",
+        "ch06",
+        "ch07",
+        "ch08"
+      ],
+      "section_ids": [
+        "ch01/sec01",
+        "ch01/sec02",
+        "ch01/sec03",
+        "ch01/sec04",
+        "ch02/sec01",
+        "ch02/sec02",
+        "ch02/sec03",
+        "ch02/sec04",
+        "ch03/sec01",
+        "ch03/sec02",
+        "ch03/sec03",
+        "ch03/sec04",
+        "ch04/sec01",
+        "ch04/sec02",
+        "ch04/sec03",
+        "ch04/sec04",
+        "ch05/sec01",
+        "ch05/sec02",
+        "ch05/sec03",
+        "ch05/sec04",
+        "ch06/sec01",
+        "ch06/sec02",
+        "ch06/sec03",
+        "ch06/sec04",
+        "ch07/sec01",
+        "ch07/sec02",
+        "ch07/sec03",
+        "ch07/sec04",
+        "ch08/sec01",
+        "ch08/sec02",
+        "ch08/sec03",
+        "ch08/sec04"
+      ],
+      "evidence_ids": [
+        "ev_17eb9bf9c1f4",
+        "ev_619152c2b231",
+        "ev_a4831dec67e5",
+        "ev_ee0edc05f1e9"
+      ],
+      "claim_ids": [
+        "cl_17eb9bf9c1f4",
+        "cl_619152c2b231",
+        "cl_a4831dec67e5",
+        "cl_ee0edc05f1e9"
+      ]
+    },
+    {
+      "source_id": "src_431ac849d0c6",
+      "source_type": "paper",
+      "title": "Latent Reasoning Source 9",
+      "url": "https://doi.org/10.1145/latent-reasoning",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_42b0ff9440f1",
+        "ev_512c47935fd7",
+        "ev_6331b312929c",
+        "ev_d75864184623"
+      ],
+      "claim_ids": [
+        "cl_42b0ff9440f1",
+        "cl_512c47935fd7",
+        "cl_6331b312929c",
+        "cl_d75864184623"
+      ]
+    },
+    {
+      "source_id": "src_4335ac6f8e8c",
+      "source_type": "code",
+      "title": "Latent Reasoning Source 2",
+      "url": "https://github.com/example/latent-reasoning",
+      "chapter_ids": [
+        "ch01",
+        "ch02",
+        "ch03",
+        "ch04",
+        "ch05",
+        "ch06",
+        "ch07",
+        "ch08"
+      ],
+      "section_ids": [
+        "ch01/sec01",
+        "ch01/sec02",
+        "ch01/sec03",
+        "ch01/sec04",
+        "ch02/sec01",
+        "ch02/sec02",
+        "ch02/sec03",
+        "ch02/sec04",
+        "ch03/sec01",
+        "ch03/sec02",
+        "ch03/sec03",
+        "ch03/sec04",
+        "ch04/sec01",
+        "ch04/sec02",
+        "ch04/sec03",
+        "ch04/sec04",
+        "ch05/sec01",
+        "ch05/sec02",
+        "ch05/sec03",
+        "ch05/sec04",
+        "ch06/sec01",
+        "ch06/sec02",
+        "ch06/sec03",
+        "ch06/sec04",
+        "ch07/sec01",
+        "ch07/sec02",
+        "ch07/sec03",
+        "ch07/sec04",
+        "ch08/sec01",
+        "ch08/sec02",
+        "ch08/sec03",
+        "ch08/sec04"
+      ],
+      "evidence_ids": [
+        "ev_95cf77e1386c",
+        "ev_c756b6aeb307",
+        "ev_d3b2e0f21f0d",
+        "ev_d883c632047b"
+      ],
+      "claim_ids": [
+        "cl_95cf77e1386c",
+        "cl_c756b6aeb307",
+        "cl_d3b2e0f21f0d",
+        "cl_d883c632047b"
+      ]
+    },
+    {
+      "source_id": "src_4807f20572ff",
+      "source_type": "paper",
+      "title": "Latent Reasoning Source 5",
+      "url": "https://openreview.net/forum?id=latent-reasoning",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_37ba7225295c",
+        "ev_5c0091b9bd41",
+        "ev_b3d493535bc9",
+        "ev_b5e6c91dcb81"
+      ],
+      "claim_ids": [
+        "cl_37ba7225295c",
+        "cl_5c0091b9bd41",
+        "cl_b3d493535bc9",
+        "cl_b5e6c91dcb81"
+      ]
+    },
+    {
+      "source_id": "src_52c0b64fdc55",
+      "source_type": "code",
+      "title": "Latent Reasoning Source 6",
+      "url": "https://github.com/facebookresearch/coconut",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_0fca5311427f",
+        "ev_7a69d4bedcc7",
+        "ev_92d7266a0f02",
+        "ev_ec51a8d6c436"
+      ],
+      "claim_ids": [
+        "cl_0fca5311427f",
+        "cl_7a69d4bedcc7",
+        "cl_92d7266a0f02",
+        "cl_ec51a8d6c436"
+      ]
+    },
+    {
+      "source_id": "src_55165ae7a72e",
+      "source_type": "official_doc",
+      "title": "Latent Reasoning Source 7",
+      "url": "https://docs.example.edu/latent-reasoning/api",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_8b5a56d97e6e",
+        "ev_debbbb0550d3",
+        "ev_e08df63e10a1",
+        "ev_f0cc79681b67"
+      ],
+      "claim_ids": [
+        "cl_8b5a56d97e6e",
+        "cl_debbbb0550d3",
+        "cl_e08df63e10a1",
+        "cl_f0cc79681b67"
+      ]
+    },
+    {
+      "source_id": "src_6842d127ad44",
+      "source_type": "benchmark",
+      "title": "Latent Reasoning Source 16",
+      "url": "https://huggingface.co/spaces/example/latent-benchmark",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_00d1ec577965",
+        "ev_8a160579c6a4",
+        "ev_916988a4a71e",
+        "ev_bee6e593b815"
+      ],
+      "claim_ids": [
+        "cl_00d1ec577965",
+        "cl_8a160579c6a4",
+        "cl_916988a4a71e",
+        "cl_bee6e593b815"
+      ]
+    },
+    {
+      "source_id": "src_6c82a8482814",
+      "source_type": "paper",
+      "title": "Latent Reasoning Source 13",
+      "url": "https://ieeexplore.ieee.org/document/123456",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_3809e59fb01e",
+        "ev_6126c2cee549",
+        "ev_edf46a362b52",
+        "ev_fc604b518b52"
+      ],
+      "claim_ids": [
+        "cl_3809e59fb01e",
+        "cl_6126c2cee549",
+        "cl_edf46a362b52",
+        "cl_fc604b518b52"
+      ]
+    },
+    {
+      "source_id": "src_76aba472fa84",
+      "source_type": "code",
+      "title": "Latent Reasoning Source 14",
+      "url": "https://github.com/example/continuous-thought",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_342b09025a24",
+        "ev_53828c189f7b",
+        "ev_b3b6b2c1b45c",
+        "ev_e35f522aaeb4"
+      ],
+      "claim_ids": [
+        "cl_342b09025a24",
+        "cl_53828c189f7b",
+        "cl_b3b6b2c1b45c",
+        "cl_e35f522aaeb4"
+      ]
+    },
+    {
+      "source_id": "src_a0196aa30236",
+      "source_type": "code",
+      "title": "Latent Reasoning Source 10",
+      "url": "https://github.com/example/latent-eval",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_0d152a939e71",
+        "ev_42b07793e55f",
+        "ev_528de0b668f8",
+        "ev_a35b5a29411c"
+      ],
+      "claim_ids": [
+        "cl_0d152a939e71",
+        "cl_42b07793e55f",
+        "cl_528de0b668f8",
+        "cl_a35b5a29411c"
+      ]
+    },
+    {
+      "source_id": "src_af0a560ce4b0",
+      "source_type": "official_doc",
+      "title": "Latent Reasoning Source 15",
+      "url": "https://docs.example.edu/latent-reasoning/deploy",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_823f20cd50ce",
+        "ev_b84e8102a7e5",
+        "ev_f3d89af121d1",
+        "ev_fa0fef52593f"
+      ],
+      "claim_ids": [
+        "cl_823f20cd50ce",
+        "cl_b84e8102a7e5",
+        "cl_f3d89af121d1",
+        "cl_fa0fef52593f"
+      ]
+    },
+    {
+      "source_id": "src_b85d05c2da67",
+      "source_type": "official_doc",
+      "title": "Latent Reasoning Source 11",
+      "url": "https://docs.example.edu/latent-reasoning/eval",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_4d5a65e19d1e",
+        "ev_9cd023bb189a",
+        "ev_9efb68d0a70c",
+        "ev_e3dbb57285be"
+      ],
+      "claim_ids": [
+        "cl_4d5a65e19d1e",
+        "cl_9cd023bb189a",
+        "cl_9efb68d0a70c",
+        "cl_e3dbb57285be"
+      ]
+    },
+    {
+      "source_id": "src_dba273a3f5a0",
+      "source_type": "benchmark",
+      "title": "Latent Reasoning Source 4",
+      "url": "https://paperswithcode.com/task/latent-reasoning",
+      "chapter_ids": [
+        "ch01",
+        "ch02",
+        "ch03",
+        "ch04",
+        "ch05",
+        "ch06",
+        "ch07",
+        "ch08"
+      ],
+      "section_ids": [
+        "ch01/sec03",
+        "ch01/sec04",
+        "ch02/sec03",
+        "ch02/sec04",
+        "ch03/sec03",
+        "ch03/sec04",
+        "ch04/sec03",
+        "ch04/sec04",
+        "ch05/sec03",
+        "ch05/sec04",
+        "ch06/sec03",
+        "ch06/sec04",
+        "ch07/sec03",
+        "ch07/sec04",
+        "ch08/sec03",
+        "ch08/sec04"
+      ],
+      "evidence_ids": [
+        "ev_20fa3d512193",
+        "ev_38d3140061dd",
+        "ev_7b61cd27858e",
+        "ev_cf24c538424c"
+      ],
+      "claim_ids": [
+        "cl_20fa3d512193",
+        "cl_38d3140061dd",
+        "cl_7b61cd27858e",
+        "cl_cf24c538424c"
+      ]
+    },
+    {
+      "source_id": "src_f22797f57f23",
+      "source_type": "benchmark",
+      "title": "Latent Reasoning Source 12",
+      "url": "https://paperswithcode.com/dataset/latent-eval",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_23857b914569",
+        "ev_38fb93f004b8",
+        "ev_4cecc11214a9",
+        "ev_7a6b09bb89f5"
+      ],
+      "claim_ids": [
+        "cl_23857b914569",
+        "cl_38fb93f004b8",
+        "cl_4cecc11214a9",
+        "cl_7a6b09bb89f5"
+      ]
+    },
+    {
+      "source_id": "src_f9ea2ab36972",
+      "source_type": "benchmark",
+      "title": "Latent Reasoning Source 8",
+      "url": "https://huggingface.co/datasets/example/latent-reasoning",
+      "chapter_ids": [],
+      "section_ids": [],
+      "evidence_ids": [
+        "ev_1b6d41afba70",
+        "ev_7ef1318c406a",
+        "ev_b22694e0866a",
+        "ev_fdcc7ed90b3b"
+      ],
+      "claim_ids": [
+        "cl_1b6d41afba70",
+        "cl_7ef1318c406a",
+        "cl_b22694e0866a",
+        "cl_fdcc7ed90b3b"
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "chapter_id": "ch01",
+      "title": "问题定义与研究边界",
+      "axis": "definition",
+      "ok": true,
+      "source_count": 4,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "evidence_count": 16,
+      "claim_count": 16
+    },
+    {
+      "chapter_id": "ch02",
+      "title": "历史脉络与技术演进",
+      "axis": "history",
+      "ok": true,
+      "source_count": 4,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "evidence_count": 16,
+      "claim_count": 16
+    },
+    {
+      "chapter_id": "ch03",
+      "title": "核心架构范式",
+      "axis": "architecture",
+      "ok": true,
+      "source_count": 4,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "evidence_count": 16,
+      "claim_count": 16
+    },
+    {
+      "chapter_id": "ch04",
+      "title": "方法分类与代表系统",
+      "axis": "architecture",
+      "ok": true,
+      "source_count": 4,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "evidence_count": 16,
+      "claim_count": 16
+    },
+    {
+      "chapter_id": "ch05",
+      "title": "评估方法与基准体系",
+      "axis": "evaluation",
+      "ok": true,
+      "source_count": 4,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "evidence_count": 16,
+      "claim_count": 16
+    },
+    {
+      "chapter_id": "ch06",
+      "title": "工程实现与部署约束",
+      "axis": "engineering",
+      "ok": true,
+      "source_count": 4,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "evidence_count": 16,
+      "claim_count": 16
+    },
+    {
+      "chapter_id": "ch07",
+      "title": "风险、安全与可解释性",
+      "axis": "risk",
+      "ok": true,
+      "source_count": 4,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "evidence_count": 16,
+      "claim_count": 16
+    },
+    {
+      "chapter_id": "ch08",
+      "title": "产业生态与开源实现",
+      "axis": "engineering",
+      "ok": true,
+      "source_count": 4,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "evidence_count": 16,
+      "claim_count": 16
+    }
+  ],
+  "issues": []
+}

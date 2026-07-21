@@ -1,0 +1,15 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+______________ test_extract_selected_skills_from_dispatch_section ______________
+harness/tests/test_solar_skills_selected_injection.py:25: in test_extract_selected_skills_from_dispatch_section
+    assert solar_skills._extract_selected_skills_from_dispatch(text) == [
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'solar_skills' has no attribute '_extract_selected_skills_from_dispatch'
+________________ test_build_skills_block_lists_selected_skills _________________
+harness/tests/test_solar_skills_selected_injection.py:32: in test_build_skills_block_lists_selected_skills
+    block = solar_skills._build_skills_block(
+E   TypeError: _build_skills_block() got an unexpected keyword argument 'selected_skills'
+=========================== short test summary info ============================
+FAILED harness/tests/test_solar_skills_selected_injection.py::test_extract_selected_skills_from_dispatch_section
+FAILED harness/tests/test_solar_skills_selected_injection.py::test_build_skills_block_lists_selected_skills
+2 failed in 0.03s

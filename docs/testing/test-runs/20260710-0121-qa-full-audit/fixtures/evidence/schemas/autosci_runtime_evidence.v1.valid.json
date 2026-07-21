@@ -1,0 +1,25 @@
+{
+  "schema": "autosci_runtime_evidence.v1",
+  "task_id": "f",
+  "sprint_id": "f",
+  "node_id": "f",
+  "status": "completed",
+  "inputs": {},
+  "outputs": {
+    "runtime": {
+      "action": "init_sources",
+      "status": "completed",
+      "command_run": "f",
+      "exit_code": 0,
+      "evidence_ids": [],
+      "checks": []
+    }
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "f",
+    "implementation_package": "f",
+    "timestamp": "2026-07-10T00:00:00Z"
+  },
+  "limitations": []
+}

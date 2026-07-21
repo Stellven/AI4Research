@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HARNESS_DIR="${HARNESS_DIR:-/Users/lisihao/Solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${HOME}/Solar/harness}"
 CONFIG="${GITHUB_TRENDS_CONFIG:-$HARNESS_DIR/config/github-trends.yaml}"
 PYTHON="${PYTHON:-python3}"
 

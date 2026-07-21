@@ -1,0 +1,21 @@
+{
+  "task_id": "task-shim-research-experiment-runtime-scheduler-experiment_run",
+  "operator_id": "autosci-experiment-run-worker",
+  "sprint_id": "shim-research-experiment-runtime-scheduler",
+  "node_id": "experiment_run",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T14:03:44Z",
+  "finished_at": "2026-07-10T14:03:44Z",
+  "log_tail": "          \"write_artifact\",\n          \"local_command\",\n          \"wiki_mutation\"\n        ],\n        \"synthetic_approval_ref\": \"\",\n        \"warnings\": []\n      },\n      \"result\": {\n        \"command_run\": \"approved-local-experiment\",\n        \"evidence_ids\": [\n          \"exp-001\",\n          \"Validate evidence coverage for `claim-001` using a bounded fixture experiment.\",\n          \"runtime:experiment:shim-scheduler\",\n          \"task-experiment-runtime-shim\",\n          \"experiment_runtime\",\n          \"external-experiment-runtime/experiment-runtime.json\"\n        ],\n        \"execution_mode\": \"human_approved\",\n        \"exit_code\": 0,\n        \"experiment_id\": \"exp-001\",\n        \"final_runtime_audit_boundary\": {\n          \"approval_contract_verified\": true,\n          \"approval_state\": \"verified\",\n          \"artifact_types\": [\n            \"approval_contract_json\",\n            \"experiment_run_log\",\n            \"experiment_runtime_evidence_json\",\n            \"gate_policy_decision_json\",\n            \"run_experiment_result_json\",\n            \"wiki_experiment_state\",\n            \"wiki_graph_edges\",\n            \"wiki_log\"\n          ],\n          \"collection_ledger_recorded\": false,\n          \"experiment_id\": \"exp-001\",\n          \"final_runtime_audit_ready\": false,\n          \"limitations\": [\n            \"Final lifecycle audit also requires an approved monitor/collect stage with collection ledger evidence.\"\n          ],\n          \"live_remote_collection_verified\": false,\n          \"remote_collection_boundary_status\": \"N/A\",\n          \"result_collected\": true,\n          \"runtime_semantic_status\": \"verified\",\n          \"runtime_semantic_verified\": true,\n          \"schema\": \"autosci_experiment_run_final_runtime_audit_boundary.v1\",\n          \"stage\": \"run\",\n          \"stage_audit_ready\": true,\n          \"status\": \"stage_runtime_audit_ready\",\n          \"wiki_state_mutated\": true\n        },",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

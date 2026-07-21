@@ -1,0 +1,13 @@
+{
+  "command_id": "phase6_apply_unconfounded_pipx_rerun",
+  "phase": "eligible-full-phase-v3",
+  "linked_feature_ids": "WF-0441-SETUP-STEPS-INSTALL-REQUIRED-08DB20",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar",
+  "command": "docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/apply_eligible_target_rerun.py docs/testing/test-runs/20260710-0121-qa-full-audit eligible-full-phase-v3 eligible-0001 phase6_rerun_pipx_missing_install_unconfounded_v2 evidence/eligible-full-phase-v3/junit-reruns/eligible-0001.xml",
+  "start_time": "2026-07-10T10:21:09-04:00",
+  "end_time": "2026-07-10T10:21:09-04:00",
+  "duration_seconds": "0.024",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase6_apply_unconfounded_pipx_rerun.stdout.txt",
+  "stderr_path": "evidence/commands/phase6_apply_unconfounded_pipx_rerun.stderr.txt"
+}

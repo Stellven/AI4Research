@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Solar Plugin Manifest Schema",
+  "version": "1.0.0",
+  "description": "Schema for plugin/manifest.yaml files in plugins/<id>/",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "version",
+    "description",
+    "status",
+    "write_scope",
+    "read_scope",
+    "capabilities",
+    "commands",
+    "background_safety",
+    "eval_packs",
+    "rollback"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Unique plugin identifier (lowercase, no spaces)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["enabled", "disabled", "candidate"]
+    },
+    "write_scope": {
+      "type": "array",
+      "description": "Filesystem paths this plugin is allowed to write to (relative to HARNESS_DIR or absolute)",
+      "items": { "type": "string" }
+    },
+    "read_scope": {
+      "type": "array",
+      "description": "Filesystem paths this plugin is allowed to read from",
+      "items": { "type": "string" }
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Capability tokens this plugin provides",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "integration_level": {
+      "type": "string",
+      "enum": ["dead_end", "basic_usable", "default_usable", "closed_loop"],
+      "description": "Four-level integration classification"
+    },
+    "entry": {
+      "type": "string",
+      "description": "Entrypoint script or module relative to plugin dir"
+    },
+    "commands": {
+      "type": "array",
+      "description": "CLI commands exposed or wrapped by this plugin",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "background_safety": {
+      "type": "object",
+      "description": "Limits and safety policy for background work",
+      "required": ["mode", "idle_only", "rate_limit"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string", "enum": ["none", "idle", "bounded", "service"] },
+        "idle_only": { "type": "boolean" },
+        "rate_limit": { "type": "string" },
+        "max_runtime_s": { "type": "integer", "minimum": 0 },
+        "max_memory_mb": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "eval_packs": {
+      "type": "array",
+      "description": "Regression/eval packs that must pass before promotion",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "rollback": {
+      "type": "object",
+      "description": "Rollback strategy for disabling or reverting plugin effects",
+      "required": ["strategy", "commands"],
+      "additionalProperties": false,
+      "properties": {
+        "strategy": { "type": "string", "enum": ["disable", "restore_snapshot", "manual"] },
+        "commands": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "depends_on": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "events": {
+      "type": "array",
+      "description": "Event types this plugin emits",
+      "items": { "type": "string" }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

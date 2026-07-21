@@ -1,0 +1,286 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "external_novelty provenance status is `failed`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-model-path-001",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "external:web:web:ideate-001",
+        "wiki:methods/adaptation",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "failed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-model-path-001",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.459,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "fetched_at": "2026-06-24T00:00:00Z",
+          "provider": "supplied_evidence",
+          "query": "agent skill learning",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json",
+          "raw_payload_archive_paths": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json"
+          ],
+          "raw_payload_archive_status": "completed",
+          "raw_payload_archive_statuses": [
+            "completed"
+          ],
+          "raw_payload_ref": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json",
+          "raw_payload_refs": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json"
+          ],
+          "raw_payload_sha256": "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6",
+          "raw_payload_sha256s": [
+            "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6"
+          ],
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty provenance status is `failed`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-model-path-002",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "external:web:web:ideate-001",
+        "wiki:methods/adaptation",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "failed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-model-path-002",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.459,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "fetched_at": "2026-06-24T00:00:00Z",
+          "provider": "supplied_evidence",
+          "query": "agent skill learning",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json",
+          "raw_payload_archive_paths": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json"
+          ],
+          "raw_payload_archive_status": "completed",
+          "raw_payload_archive_statuses": [
+            "completed"
+          ],
+          "raw_payload_ref": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json",
+          "raw_payload_refs": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json"
+          ],
+          "raw_payload_sha256": "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6",
+          "raw_payload_sha256s": [
+            "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6"
+          ],
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty provenance status is `failed`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-model-path-003",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "external:web:web:ideate-001",
+        "wiki:methods/adaptation",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "failed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-model-path-003",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.459,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "fetched_at": "2026-06-24T00:00:00Z",
+          "provider": "supplied_evidence",
+          "query": "agent skill learning",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json",
+          "raw_payload_archive_paths": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json"
+          ],
+          "raw_payload_archive_status": "completed",
+          "raw_payload_archive_statuses": [
+            "completed"
+          ],
+          "raw_payload_ref": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json",
+          "raw_payload_refs": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json"
+          ],
+          "raw_payload_sha256": "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6",
+          "raw_payload_sha256s": [
+            "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6"
+          ],
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty provenance status is `failed`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-model-path-004",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "external:web:web:ideate-001",
+        "wiki:methods/adaptation",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "failed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-model-path-004",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.459,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "fetched_at": "2026-06-24T00:00:00Z",
+          "provider": "supplied_evidence",
+          "query": "agent skill learning",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json",
+          "raw_payload_archive_paths": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json"
+          ],
+          "raw_payload_archive_status": "completed",
+          "raw_payload_archive_statuses": [
+            "completed"
+          ],
+          "raw_payload_ref": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json",
+          "raw_payload_refs": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json"
+          ],
+          "raw_payload_sha256": "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6",
+          "raw_payload_sha256s": [
+            "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6"
+          ],
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty provenance status is `failed`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-model-path-005",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "external:web:web:ideate-001",
+        "wiki:methods/adaptation",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "failed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-model-path-005",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.459,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "fetched_at": "2026-06-24T00:00:00Z",
+          "provider": "supplied_evidence",
+          "query": "agent skill learning",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json",
+          "raw_payload_archive_paths": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/artifacts/autosci/runs/shim-ideate-full-evidence-boundary/external_novelty_payloads/supplied_evidence-4c7a31bc342176cb.json"
+          ],
+          "raw_payload_archive_status": "completed",
+          "raw_payload_archive_statuses": [
+            "completed"
+          ],
+          "raw_payload_ref": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json",
+          "raw_payload_refs": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-external-novelty.json"
+          ],
+          "raw_payload_sha256": "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6",
+          "raw_payload_sha256s": [
+            "4c7a31bc342176cbb486ced5f9864786e65da5786c7cfd2c367c2a33b64752c6"
+          ],
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

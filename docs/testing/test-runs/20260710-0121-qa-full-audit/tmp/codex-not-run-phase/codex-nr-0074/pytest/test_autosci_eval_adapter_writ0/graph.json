@@ -1,0 +1,18 @@
+{
+  "sprint_id": "sprint-adapter",
+  "workflow_contract": "research.autosci.v1",
+  "nodes": [
+    {
+      "id": "paper_ingest",
+      "logical_operator": "ScientificPaperIngestor",
+      "capability_capsule_id": "cap.research-paper-ingest",
+      "write_scope": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tests/evaluators/scientific/fixtures/fail/research_paper.json"
+      ],
+      "evidence_policy": {
+        "expected_schema": "research_paper.v1"
+      }
+    }
+  ],
+  "node_results": {}
+}

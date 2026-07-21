@@ -1,0 +1,29 @@
+{
+  "nodes": [
+    {
+      "id": "N1",
+      "gate": "G_PLAN"
+    },
+    {
+      "id": "N2",
+      "gate": "G_PLAN"
+    },
+    {
+      "id": "N3",
+      "gate": "G_PLAN"
+    },
+    {
+      "id": "N4",
+      "gate": "G_VERIFY"
+    },
+    {
+      "id": "N5",
+      "gate": "G_REVIEW"
+    }
+  ],
+  "required_gates": [
+    "G_PLAN",
+    "G_VERIFY",
+    "G_REVIEW"
+  ]
+}

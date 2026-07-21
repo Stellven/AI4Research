@@ -1,0 +1,191 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "external_novelty status is `invalid`, not `completed`",
+        "external_novelty provenance status is `invalid`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-pilot-path-001",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "invalid",
+      "external_novelty_status": "invalid",
+      "external_source_count": 0,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-pilot-path-001",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.68,
+      "novelty_score": 4,
+      "provider_statuses": [
+        {
+          "provider": "supplied_evidence",
+          "reason": "",
+          "status": "invalid"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty status is `invalid`, not `completed`",
+        "external_novelty provenance status is `invalid`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-pilot-path-002",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "invalid",
+      "external_novelty_status": "invalid",
+      "external_source_count": 0,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-pilot-path-002",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.68,
+      "novelty_score": 4,
+      "provider_statuses": [
+        {
+          "provider": "supplied_evidence",
+          "reason": "",
+          "status": "invalid"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty status is `invalid`, not `completed`",
+        "external_novelty provenance status is `invalid`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-pilot-path-003",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "invalid",
+      "external_novelty_status": "invalid",
+      "external_source_count": 0,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-pilot-path-003",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.68,
+      "novelty_score": 4,
+      "provider_statuses": [
+        {
+          "provider": "supplied_evidence",
+          "reason": "",
+          "status": "invalid"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty status is `invalid`, not `completed`",
+        "external_novelty provenance status is `invalid`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-pilot-path-004",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "invalid",
+      "external_novelty_status": "invalid",
+      "external_source_count": 0,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-pilot-path-004",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.68,
+      "novelty_score": 4,
+      "provider_statuses": [
+        {
+          "provider": "supplied_evidence",
+          "reason": "",
+          "status": "invalid"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty status is `invalid`, not `completed`",
+        "external_novelty provenance status is `invalid`, not `passed`"
+      ],
+      "evidence_ids": [
+        "idea-pilot-path-005",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001",
+        "wiki:graph/open_questions.md",
+        "review-llm:ideate"
+      ],
+      "external_novelty_provenance_status": "invalid",
+      "external_novelty_status": "invalid",
+      "external_source_count": 0,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-pilot-path-005",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.68,
+      "novelty_score": 4,
+      "provider_statuses": [
+        {
+          "provider": "supplied_evidence",
+          "reason": "",
+          "status": "invalid"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": true,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "completed",
+      "review_mode": "review_llm",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

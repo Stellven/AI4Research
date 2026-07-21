@@ -1,0 +1,43 @@
+# Code Signal Plane — unified operator config
+# Per S1-plan §1.3: this is the ONLY config unified operators read.
+
+operators:
+  discovery:
+    enabled: true
+    sources:
+      - trending
+      - search
+      - tracked
+  enrichment:
+    enabled: true
+  scoring:
+    enabled: true
+    noise_risk_gate: 0.6
+  packet_compiler:
+    enabled: true
+  insight:
+    enabled: true
+  knowledge_store:
+    enabled: true
+
+assets:
+  github_hotspot_card:
+    enabled: true
+  direction_brief:
+    enabled: true
+  community_intervention_plan:
+    enabled: true
+  open_source_project_brief:
+    enabled: true
+  ai_influence_topic:
+    enabled: true
+  deep_research_seed_pack:
+    enabled: true
+  action_queue:
+    enabled: true
+
+scoring:
+  noise_risk_gate: 0.6
+
+resonance:
+  sustained_days_threshold: 7

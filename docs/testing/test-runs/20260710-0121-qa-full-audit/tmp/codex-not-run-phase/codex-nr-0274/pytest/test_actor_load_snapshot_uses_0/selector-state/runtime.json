@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "updated_at": "2026-07-10T18:53:56Z",
+  "bindings": {
+    "ResearchScout": {
+      "last_selected_actor": "actor-a",
+      "last_selected_at": "2026-07-10T18:53:56Z",
+      "selection_count": 2,
+      "last_policy": "least_loaded"
+    }
+  },
+  "actors": {
+    "actor-a": {
+      "selection_count": 2,
+      "last_selected_at": "2026-07-10T18:53:56Z",
+      "logical_operators": {
+        "ResearchScout": {
+          "selection_count": 2,
+          "last_selected_at": "2026-07-10T18:53:56Z"
+        }
+      }
+    }
+  }
+}

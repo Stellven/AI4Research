@@ -1,0 +1,82 @@
+{
+  "artifacts": {
+    "checklist": "artifacts/autosci/runs/shim-paper-compile-runtime-submission-audit/paper_compile_checklist.json",
+    "diagnostics": "artifacts/autosci/runs/shim-paper-compile-runtime-submission-audit/paper_compile_diagnostics.md",
+    "submission_boundary": "artifacts/autosci/runs/shim-paper-compile-runtime-submission-audit/publication_submission_boundary.json"
+  },
+  "checks": {
+    "anonymity_check": "ok",
+    "approval_contract_verified": "ok",
+    "auto_fix_requested": "ok",
+    "bibliography_present": "warn",
+    "checklist_requested": "ok",
+    "compile_execution": "ok",
+    "compiled_pdf_present": "ok",
+    "font_size_check": "ok",
+    "latex_source_present": "ok",
+    "latexmk_available": "ok",
+    "page_limit_check": "ok",
+    "pdf_inspection": "ok",
+    "publication_submission_audit": "ok",
+    "publication_submission_boundary": "ok",
+    "runtime_semantic_verified": "ok",
+    "target_resolved": "ok",
+    "tex_executor_available": "ok",
+    "unconfirmed_marker_scan": "ok",
+    "venue_submission_profile": "ok"
+  },
+  "execution": {
+    "approval_ready": true,
+    "execution_verified": true,
+    "runtime_semantic_verified": true
+  },
+  "limitations": [
+    "Paper compile was executed by the approved side-effect executor and verified from runtime evidence."
+  ],
+  "pdf": {
+    "compiled_pdf_verified": true,
+    "pdf_files": [
+      "paper-runtime-submission-audit/main.pdf"
+    ],
+    "pdf_integrity": [
+      {
+        "detail": "PDF artifact has a readable PDF header, xref trailer, and EOF marker.",
+        "eof_ok": true,
+        "exists": true,
+        "header_ok": true,
+        "path": "paper-runtime-submission-audit/main.pdf",
+        "size_bytes": 105,
+        "startxref_ok": true,
+        "valid": true
+      }
+    ],
+    "verified_pdf_files": [
+      "paper-runtime-submission-audit/main.pdf"
+    ]
+  },
+  "schema": "paper_compile_report.v1",
+  "status": "completed",
+  "submission": {
+    "blocking_checks": [],
+    "portal_submission_completed": false,
+    "submission_audit_blocking_checks": [],
+    "submission_audit_ready": true,
+    "submission_ready": true,
+    "venue_blocking_checks": [],
+    "venue_submission_ready": true
+  },
+  "target": {
+    "raw": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_paper_13/paper-runtime-submission-audit",
+    "resolved": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_paper_13/paper-runtime-submission-audit"
+  },
+  "toolchain": {
+    "available_tex_executors": [
+      "latexmk",
+      "lualatex",
+      "pdflatex",
+      "xelatex"
+    ],
+    "latexmk_available": true,
+    "selected_executor": "latexmk"
+  }
+}

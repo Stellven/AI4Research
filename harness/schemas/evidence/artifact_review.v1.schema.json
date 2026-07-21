@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/artifact_review.v1.schema.json",
+  "title": "Solar Evidence ABI - Artifact Review",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "artifact_review.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "status": {"$ref": "#/$defs/status"},
+    "inputs": {"type": "object", "additionalProperties": true},
+    "outputs": {
+      "type": "object",
+      "required": ["review", "findings", "artifact"],
+      "additionalProperties": true,
+      "properties": {
+        "review": {"$ref": "#/$defs/review"},
+        "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+        "artifact": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "artifact": {
+      "type": "object",
+      "required": ["type", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "implementation_package", "timestamp"],
+      "additionalProperties": true,
+      "properties": {
+        "operator_id": {"type": "string", "minLength": 1},
+        "implementation_package": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"}
+      }
+    },
+    "review": {
+      "type": "object",
+      "required": ["artifact_id", "target", "review_mode", "review_available", "difficulty", "focus", "score", "recommendation", "evidence_ids"],
+      "additionalProperties": true,
+      "properties": {
+        "artifact_id": {"type": "string", "minLength": 1},
+        "target": {"type": "string", "minLength": 1},
+        "review_mode": {"type": "string", "enum": ["local_surrogate", "review_llm", "unavailable"]},
+        "review_available": {"type": "boolean"},
+        "difficulty": {"type": "string", "enum": ["standard", "hard", "adversarial"]},
+        "focus": {"type": "string", "enum": ["method", "evidence", "writing", "completeness"]},
+        "score": {"type": "number", "minimum": 0, "maximum": 1},
+        "recommendation": {"type": "string", "enum": ["pass_with_review_required", "revise", "revise_required", "inconclusive"]},
+        "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["finding_id", "severity", "category", "evidence", "suggestion"],
+      "additionalProperties": true,
+      "properties": {
+        "finding_id": {"type": "string", "minLength": 1},
+        "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+        "category": {"type": "string", "minLength": 1},
+        "evidence": {"type": "string", "minLength": 1},
+        "suggestion": {"type": "string", "minLength": 1},
+        "line_refs": {"type": "array", "items": {"type": "integer", "minimum": 1}}
+      }
+    }
+  }
+}

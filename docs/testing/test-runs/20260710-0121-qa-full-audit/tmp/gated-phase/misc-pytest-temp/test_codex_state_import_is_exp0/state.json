@@ -1,0 +1,58 @@
+{
+  "schema_version": "codex-state-portable-v1",
+  "created_at": "2026-07-14T13:40:42Z",
+  "source_db": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/gated-phase/misc-pytest-temp/test_codex_state_import_is_exp0/source.sqlite",
+  "path_rewrite": {
+    "from": "/source",
+    "to": "/portable"
+  },
+  "tables": {
+    "threads": {
+      "columns": [
+        "id",
+        "cwd",
+        "value"
+      ],
+      "pk": [
+        "id"
+      ],
+      "rows": [
+        {
+          "id": "t1",
+          "cwd": "/portable/project",
+          "value": "incoming"
+        }
+      ]
+    },
+    "thread_dynamic_tools": {
+      "columns": [
+        "id",
+        "value"
+      ],
+      "pk": [
+        "id"
+      ],
+      "rows": [
+        {
+          "id": "d1",
+          "value": "incoming"
+        }
+      ]
+    },
+    "thread_goals": {
+      "columns": [
+        "id",
+        "value"
+      ],
+      "pk": [
+        "id"
+      ],
+      "rows": [
+        {
+          "id": "g1",
+          "value": "incoming"
+        }
+      ]
+    }
+  }
+}

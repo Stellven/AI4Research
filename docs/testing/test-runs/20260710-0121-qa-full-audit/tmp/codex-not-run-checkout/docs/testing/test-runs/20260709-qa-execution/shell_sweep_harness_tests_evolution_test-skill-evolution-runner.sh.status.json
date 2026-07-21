@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_evolution_test-skill-evolution-runner.sh",
+  "source": "harness/tests/evolution/test-skill-evolution-runner.sh",
+  "command": [
+    "bash",
+    "harness/tests/evolution/test-skill-evolution-runner.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.139,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-p0lvv42h"
+}

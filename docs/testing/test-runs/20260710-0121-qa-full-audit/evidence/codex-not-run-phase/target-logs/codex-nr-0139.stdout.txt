@@ -1,0 +1,76 @@
+FFFFFFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+________ TestResolveMonthlyProjectName.test_default_uses_current_month _________
+harness/tests/runtime/test_browser_research_job.py:28: in test_default_uses_current_month
+    name = rt.resolve_monthly_project_name()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'resolve_monthly_project_name'. Did you mean: 'resolve_chatgpt_monthly_project_name'?
+_______________ TestResolveMonthlyProjectName.test_explicit_date _______________
+harness/tests/runtime/test_browser_research_job.py:35: in test_explicit_date
+    assert rt.resolve_monthly_project_name(d) == "需求研究-2026-05"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'resolve_monthly_project_name'. Did you mean: 'resolve_chatgpt_monthly_project_name'?
+_______________ TestResolveMonthlyProjectName.test_year_boundary _______________
+harness/tests/runtime/test_browser_research_job.py:39: in test_year_boundary
+    assert rt.resolve_monthly_project_name(d) == "需求研究-2025-12"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'resolve_monthly_project_name'. Did you mean: 'resolve_chatgpt_monthly_project_name'?
+__________________ TestResolveMonthlyProjectName.test_january __________________
+harness/tests/runtime/test_browser_research_job.py:43: in test_january
+    assert rt.resolve_monthly_project_name(d) == "需求研究-2026-01"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'resolve_monthly_project_name'. Did you mean: 'resolve_chatgpt_monthly_project_name'?
+_________ TestSubmitResearchJob.test_creates_job_with_project_routing __________
+harness/tests/runtime/test_browser_research_job.py:51: in test_creates_job_with_project_routing
+    job_id = rt.submit_research_job(
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?
+________________ TestSubmitResearchJob.test_custom_project_name ________________
+harness/tests/runtime/test_browser_research_job.py:69: in test_custom_project_name
+    job_id = rt.submit_research_job(
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?
+____________ TestSubmitResearchJob.test_mock_sequence_research_job _____________
+harness/tests/runtime/test_browser_research_job.py:81: in test_mock_sequence_research_job
+    job_id = rt.submit_research_job(
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?
+__________ TestSubmitResearchJob.test_secrets_scrubbed_from_envelope ___________
+harness/tests/runtime/test_browser_research_job.py:94: in test_secrets_scrubbed_from_envelope
+    job_id = rt.submit_research_job(
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?
+_____ TestCollectResearchArtifact.test_collect_done_job_produces_artifact ______
+harness/tests/runtime/test_browser_research_job.py:108: in test_collect_done_job_produces_artifact
+    job_id = rt.submit_research_job(
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?
+_________ TestCollectResearchArtifact.test_collect_non_terminal_raises _________
+harness/tests/runtime/test_browser_research_job.py:132: in test_collect_non_terminal_raises
+    job_id = rt.submit_research_job(
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?
+____ TestCollectResearchArtifact.test_artifact_has_empty_structured_fields _____
+harness/tests/runtime/test_browser_research_job.py:144: in test_artifact_has_empty_structured_fields
+    job_id = rt.submit_research_job(
+             ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?
+_________________ TestCaptureForResearch.test_import_available _________________
+harness/tests/runtime/test_browser_research_job.py:167: in test_import_available
+    assert callable(mod.capture_for_research)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'chatgpt_conversation_ingest' has no attribute 'capture_for_research'
+=========================== short test summary info ============================
+FAILED harness/tests/runtime/test_browser_research_job.py::TestResolveMonthlyProjectName::test_default_uses_current_month
+FAILED harness/tests/runtime/test_browser_research_job.py::TestResolveMonthlyProjectName::test_explicit_date
+FAILED harness/tests/runtime/test_browser_research_job.py::TestResolveMonthlyProjectName::test_year_boundary
+FAILED harness/tests/runtime/test_browser_research_job.py::TestResolveMonthlyProjectName::test_january
+FAILED harness/tests/runtime/test_browser_research_job.py::TestSubmitResearchJob::test_creates_job_with_project_routing
+FAILED harness/tests/runtime/test_browser_research_job.py::TestSubmitResearchJob::test_custom_project_name
+FAILED harness/tests/runtime/test_browser_research_job.py::TestSubmitResearchJob::test_mock_sequence_research_job
+FAILED harness/tests/runtime/test_browser_research_job.py::TestSubmitResearchJob::test_secrets_scrubbed_from_envelope
+FAILED harness/tests/runtime/test_browser_research_job.py::TestCollectResearchArtifact::test_collect_done_job_produces_artifact
+FAILED harness/tests/runtime/test_browser_research_job.py::TestCollectResearchArtifact::test_collect_non_terminal_raises
+FAILED harness/tests/runtime/test_browser_research_job.py::TestCollectResearchArtifact::test_artifact_has_empty_structured_fields
+FAILED harness/tests/runtime/test_browser_research_job.py::TestCaptureForResearch::test_import_available
+12 failed in 0.09s

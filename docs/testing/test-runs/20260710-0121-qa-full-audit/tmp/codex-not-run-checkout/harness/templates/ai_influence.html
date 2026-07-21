@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Influence Operator Status</title>
+  <style>
+    :root{
+      --bg:#0f1320;
+      --panel:#1a1f33;
+      --panel-2:#20253b;
+      --panel-3:#282d45;
+      --border:#2c3350;
+      --text:#e6eaf3;
+      --muted:#9aa3bf;
+      --accent:#6cc4ff;
+      --accent-2:#ffb86b;
+      --good:#7ee787;
+      --warn:#f0b86e;
+      --bad:#ff8585;
+      --code-bg:#11172a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.6;
+    }
+    .wrap{max-width:1200px;margin:0 auto;padding:32px 28px 80px}
+    header{
+      background:linear-gradient(135deg,#1c2444 0%,#2a1f4a 100%);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:24px 28px;
+      margin-bottom:28px;
+    }
+    h1{margin:0 0 6px 0;font-size:26px;color:#fff;letter-spacing:.3px}
+    .meta{color:var(--muted);font-size:13px;margin-top:8px}
+    .summary{
+      display:flex;
+      gap:16px;
+      margin-top:16px;
+      flex-wrap:wrap;
+    }
+    .summary-item{
+      background:var(--panel-2);
+      padding:10px 16px;
+      border-radius:10px;
+      font-size:13px;
+      border:1px solid var(--border);
+    }
+    .summary-item strong{
+      color:var(--accent);
+      font-size:18px;
+      display:block;
+      line-height:1.2;
+    }
+    .summary-item span{
+      color:var(--muted);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    /* Cards Grid */
+    .cards-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
+      gap:18px;
+    }
+
+    /* Operator Card */
+    .operator-card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:18px;
+      transition:border-color .2s;
+    }
+    .operator-card:hover{
+      border-color:var(--accent);
+    }
+
+    /* Card Header */
+    .card-header{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .card-icon{
+      font-size:26px;
+      min-width:32px;
+    }
+    .card-title{
+      margin:0;
+      font-size:16px;
+      color:#fff;
+      flex:1;
+      font-weight:500;
+    }
+    .status-indicator{
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      flex-shrink:0;
+    }
+    .status-indicator.good{
+      background:var(--good);
+      box-shadow:0 0 8px rgba(126,231,135,.4);
+    }
+    .status-indicator.bad{
+      background:var(--bad);
+      box-shadow:0 0 8px rgba(255,133,133,.4);
+    }
+    .status-indicator.warn{
+      background:var(--warn);
+      box-shadow:0 0 8px rgba(240,184,110,.4);
+      animation:pulse 1.5s ease-in-out infinite;
+    }
+    .status-indicator.muted{
+      background:var(--muted);
+    }
+
+    @keyframes pulse{
+      0%,100%{opacity:1}
+      50%{opacity:.6}
+    }
+
+    /* Card Meta */
+    .card-meta{
+      display:flex;
+      gap:10px;
+      margin-bottom:14px;
+      font-size:12px;
+      color:var(--muted);
+      align-items:center;
+    }
+    .badge{
+      background:var(--panel-2);
+      padding:4px 10px;
+      border-radius:6px;
+      border:1px solid var(--border);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
+    .badge.schedule{
+      background:var(--panel-3);
+    }
+
+    /* Card Section */
+    .card-section{
+      margin-top:14px;
+      padding-top:12px;
+      border-top:1px solid var(--border);
+    }
+    .card-section:first-child{
+      border-top:none;
+      margin-top:0;
+      padding-top:0;
+    }
+    .card-section h4{
+      margin:0 0 8px 0;
+      font-size:12px;
+      color:var(--accent);
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    /* Lists */
+    .artifacts-list,
+    .stats-list,
+    .errors-list{
+      margin:0;
+      padding-left:18px;
+      font-size:12px;
+    }
+    .artifacts-list li,
+    .stats-list li{
+      margin:4px 0;
+    }
+    .errors-list li{
+      margin:4px 0;
+      color:var(--bad);
+    }
+
+    /* Error State */
+    .card-errors{
+      border-top:1px solid var(--bad);
+      padding-top:12px;
+      margin-top:12px;
+    }
+
+    /* Code */
+    code{
+      background:var(--panel-2);
+      padding:2px 6px;
+      border-radius:4px;
+      font-size:11px;
+      color:var(--accent-2);
+      font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    }
+
+    /* Responsive */
+    @media (max-width:700px){
+      .cards-grid{grid-template-columns:1fr}
+      .summary{gap:10px}
+      .summary-item{flex:1;min-width:80px}
+    }
+
+    /* Footer */
+    .footer{
+      margin-top:40px;
+      padding-top:20px;
+      border-top:1px solid var(--border);
+      text-align:center;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .footer a{
+      color:var(--accent);
+      text-decoration:none;
+    }
+    .footer a:hover{
+      text-decoration:underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>AI Influence Operator Status</h1>
+      <div class="meta">Generated: {{GENERATED_AT}}</div>
+      <div class="summary">
+        <div class="summary-item">
+          <strong>{{TOTAL}}</strong>
+          <span>Total</span>
+        </div>
+        <div class="summary-item">
+          <strong style="color:var(--good)">{{SUCCEEDED}}</strong>
+          <span>Succeeded</span>
+        </div>
+        <div class="summary-item">
+          <strong style="color:var(--warn)">{{RUNNING}}</strong>
+          <span>Running</span>
+        </div>
+        <div class="summary-item">
+          <strong style="color:var(--bad)">{{FAILED}}</strong>
+          <span>Failed</span>
+        </div>
+        <div class="summary-item">
+          <strong>{{NO_DATA}}</strong>
+          <span>No Data</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="cards-grid">
+      {{CARDS}}
+    </div>
+
+    <div class="footer">
+      Solar Harness AI Influence Orchestration · <a href="/">Docs</a>
+    </div>
+  </div>
+
+  <script>
+    // Auto-refresh every 30 seconds when running operators are present
+    const runningCards = document.querySelectorAll('[data-status="running"]');
+    if (runningCards.length > 0) {
+      setTimeout(() => location.reload(), 30000);
+    }
+  </script>
+</body>
+</html>

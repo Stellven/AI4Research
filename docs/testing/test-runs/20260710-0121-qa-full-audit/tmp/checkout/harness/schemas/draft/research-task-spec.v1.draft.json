@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/research-task-spec.v1.draft.json",
+  "title": "ResearchTaskSpec v1",
+  "description": "Draft v1 schema for ResearchTaskSpec — the first-class input for a DeepResearch run. Includes task_started_at and dynamic lookback window support.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": ["topic"],
+  "additionalProperties": false,
+  "properties": {
+    "topic": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Research topic or question."
+    },
+    "depth_tier": {
+      "type": "string",
+      "enum": ["quick", "standard", "deep"],
+      "default": "standard",
+      "description": "Research depth tier controlling pipeline complexity."
+    },
+    "lookback_days": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 183,
+      "description": "Dynamic lookback window in days. Evidence older than task_started_at minus lookback_days is considered out of scope."
+    },
+    "task_started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp when the research task was initiated. Defaults to current time."
+    },
+    "db_path": {
+      "type": "string",
+      "default": "",
+      "description": "Path to the SQLite database for the research run."
+    },
+    "output_dir": {
+      "type": "string",
+      "default": "",
+      "description": "Directory for JSONL artifacts and checkpoint files."
+    },
+    "output_md": {
+      "type": "string",
+      "default": "",
+      "description": "Path for the compiled final markdown report."
+    },
+    "text": {
+      "type": "string",
+      "default": "",
+      "description": "Inline source text to ingest before extraction."
+    },
+    "source_file": {
+      "type": "string",
+      "default": "",
+      "description": "Local UTF-8 source file to ingest."
+    },
+    "web_query": {
+      "type": "string",
+      "default": "",
+      "description": "Online query to search and fetch into sources."
+    },
+    "research_profile": {
+      "type": "string",
+      "default": "general",
+      "description": "Profile-aware web search plan."
+    },
+    "max_results": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 5,
+      "description": "Maximum number of web search results."
+    },
+    "search_provider": {
+      "type": "string",
+      "default": "auto",
+      "description": "Search provider to use for web queries."
+    },
+    "extra": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {},
+      "description": "Additional key-value pairs for extensibility."
+    }
+  }
+}

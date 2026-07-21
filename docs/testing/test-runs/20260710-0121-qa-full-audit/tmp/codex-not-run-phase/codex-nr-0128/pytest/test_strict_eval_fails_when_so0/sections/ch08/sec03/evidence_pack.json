@@ -1,0 +1,35 @@
+{
+  "pack_id": "pack_ch08_sec03",
+  "section_id": "ch08/sec03",
+  "evidence_ids": [
+    "ev_0",
+    "ev_1",
+    "ev_2",
+    "ev_3",
+    "ev_4",
+    "ev_5"
+  ],
+  "claim_ids": [
+    "cl_0",
+    "cl_1",
+    "cl_2",
+    "cl_3",
+    "cl_4",
+    "cl_5"
+  ],
+  "source_ids": [
+    "src_0"
+  ],
+  "source_types": [
+    "paper"
+  ],
+  "contradiction_slots": [
+    "contradiction:ch08/sec03:required"
+  ],
+  "status": "blocked",
+  "blockers": [
+    "source_diversity_low:1<2",
+    "missing_source_types:benchmark"
+  ],
+  "schema_version": "solar.research.survey.v1"
+}

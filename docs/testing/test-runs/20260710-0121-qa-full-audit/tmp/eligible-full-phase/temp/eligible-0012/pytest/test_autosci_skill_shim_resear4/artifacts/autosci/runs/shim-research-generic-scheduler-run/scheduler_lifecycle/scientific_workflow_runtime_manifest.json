@@ -1,0 +1,21 @@
+{
+  "generated_by": "harness.tools.run_scientific_workflow",
+  "job_id": "shim-research-generic-scheduler-run-scheduler",
+  "proofs": [
+    {
+      "categories": [
+        "workflow_node_runtime_evidence"
+      ],
+      "description": "Generic scientific workflow runner dispatched this node through operator_runtime and the AutoSci bridge.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/paper_ingest/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/research_paper.json",
+        "run/operator-results/autosci-paper-ingest-worker/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/result.json",
+        "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/paper_ingest/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/ingest_paper.result.json"
+      ],
+      "native_skill": "ingest",
+      "proof_id": "workflow-runtime:scientific_research_lifecycle_full_v1:shim-research-generic-scheduler-run-scheduler:paper_ingest"
+    }
+  ],
+  "schema": "scientific_workflow_runtime_manifest.v1",
+  "workflow_id": "scientific_research_lifecycle_full_v1"
+}

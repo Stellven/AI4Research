@@ -1,0 +1,96 @@
+capability_capsule_id: cap.research-claim-extract
+capsule_kind: capability
+metadata:
+  name: Scientific Claim Extract
+  description: Extract source-anchored scientific claims and hypotheses without assigning verification verdicts.
+applicability:
+  task_types:
+    - scientific-research
+    - claim-extraction
+  positive_signals:
+    - extract claims
+    - identify hypotheses
+    - list testable claims
+  negative_signals:
+    - verify claim
+    - run experiment
+contract:
+  inputs:
+    required:
+      - name: source_evidence
+        description: Paper, idea, method, or experiment evidence containing claims.
+    optional:
+      - name: extraction_policy
+        description: Claim granularity and testability policy.
+  outputs:
+    required:
+      - name: research_claims
+        schema_ref: schemas/evidence/research_claims.v1.schema.json
+    optional:
+      - name: skipped_claims
+        description: Ambiguous or unsupported candidate claims.
+  preconditions:
+    - check: source_evidence_present
+      description: Source evidence includes enough text or anchors to extract claims.
+  postconditions:
+    - check: claims_source_anchored
+      description: Each claim has text, source anchor, testability, and evidence ids.
+  invariants:
+    - Extracted claims default to unverified.
+    - Claim extraction does not produce verdicts.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: Paper-derived claims.
+    - schema_ref: schemas/evidence/idea_candidate.v1.schema.json
+      purpose: Hypothesis-derived claims.
+  produces:
+    - schema_ref: schemas/evidence/research_claims.v1.schema.json
+      purpose: Source-anchored claims.
+  compatible_with:
+    - cap.research-claim-verify
+    - cap.research-experiment-design
+    - cap.research-code-evidence-map
+  incompatible_with:
+    - cap.research-publication-produce
+  requires_after: []
+effects:
+  read:
+    - source scientific evidence
+    - schemas/evidence/research_claims.v1.schema.json
+  write:
+    - artifacts/scientific/research_claims/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - none by default
+  cost:
+    - bounded extraction cost
+  risk:
+    - over-broad or underspecified claims may reduce verification quality
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.claim_extract
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/research_claims.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against research_claims.v1.schema.json.
+    - Confirm no extracted claim is marked verified at extraction time.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Fixture claim extraction emits valid claims with source anchors.
+    - Unsupported claims are skipped or marked inconclusive with limitations.
+operator_compatibility:
+  preferred:
+    - autosci-claim-extract-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

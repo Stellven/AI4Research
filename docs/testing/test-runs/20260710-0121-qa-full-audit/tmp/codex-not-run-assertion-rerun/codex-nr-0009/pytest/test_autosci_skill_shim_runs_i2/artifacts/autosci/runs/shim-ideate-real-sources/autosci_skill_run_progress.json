@@ -1,0 +1,42 @@
+{
+  "action_count": 2,
+  "actions": [
+    {
+      "action": "generate_ideas",
+      "evidence_ids": [
+        "failed:generate_ideas"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_i2/artifacts/autosci/runs/shim-ideate-real-sources/envelopes/generate_ideas.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "evaluate_ideas",
+      "evidence_ids": [
+        "failed:evaluate_ideas"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_i2/artifacts/autosci/runs/shim-ideate-real-sources/envelopes/evaluate_ideas.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    }
+  ],
+  "completed_count": 2,
+  "current_action": "",
+  "remaining_actions": [],
+  "run_id": "shim-ideate-real-sources",
+  "schema": "autosci_skill_run_progress.v1",
+  "skill": "ideate",
+  "status": "failed",
+  "updated_at": "2026-07-10T19:16:50Z",
+  "work_dir": "artifacts/autosci/runs/shim-ideate-real-sources"
+}

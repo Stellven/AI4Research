@@ -1,0 +1,61 @@
+{
+  "action_count": 1,
+  "actions": [
+    {
+      "action": "draft_rebuttal",
+      "evidence_ids": [
+        "artifacts/autosci/runs/shim-draft_rebuttal/rebuttal.md",
+        "rebuttal_markdown",
+        "artifacts/autosci/runs/shim-draft_rebuttal/rebuttal.txt",
+        "rebuttal_formal_text",
+        "artifacts/autosci/runs/shim-draft_rebuttal/rebuttal_response_map.json",
+        "rebuttal_response_map_json",
+        "artifacts/autosci/runs/shim-draft_rebuttal/rebuttal_reviewer_thread_boundary.json",
+        "rebuttal_reviewer_thread_boundary_json",
+        "artifacts/autosci/runs/shim-draft_rebuttal/rebuttal_stress_test_boundary.json",
+        "rebuttal_stress_test_boundary_json",
+        "artifacts/autosci/runs/shim-draft_rebuttal/rebuttal_submission_boundary.json",
+        "rebuttal_submission_audit_boundary_json",
+        "artifacts/autosci/runs/shim-draft_rebuttal/publication_bundle.rebuttal.json",
+        "solar_evidence_json",
+        "artifacts/autosci/runs/shim-draft_rebuttal/claim_verdict.json",
+        "SkillGen draft_rebuttal",
+        "review-comments",
+        "Rebuttal draft is local and evidence-linked; it is not a submitted response.",
+        "No reviewer-thread evidence was supplied.",
+        "Completed Review LLM stress-test evidence is required for final rebuttal acceptance.",
+        "No review/comment/evidence payload was supplied; all concerns remain unmapped.",
+        "Rebuttal submission audit readiness is not proven; supply valid --submission-audit evidence.",
+        "Rebuttal submission readiness requires formal text, full concern coverage, clean safety checks, and valid submission audit evidence.",
+        "node-draft-rebuttal",
+        "rebuttal-skillgen-draft-rebuttal",
+        "rebuttal:review-comments",
+        "rebuttal",
+        "plugins/autosci",
+        "autosci-bridge",
+        "2026-07-10T19:26:05Z",
+        "publication_bundle.v1",
+        "phase19-skillgen-operator-smoke",
+        "inconclusive",
+        "task-autosci-skillgen-draft_rebuttal"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_runs_s1/artifacts/autosci/runs/shim-draft_rebuttal/publication_bundle.rebuttal.json",
+      "gate_status": "schema_only",
+      "reasons": [],
+      "schema": "publication_bundle.v1",
+      "status": "schema_only",
+      "warnings": [
+        "evidence status is inconclusive"
+      ]
+    }
+  ],
+  "completed_count": 1,
+  "current_action": "",
+  "remaining_actions": [],
+  "run_id": "shim-draft_rebuttal",
+  "schema": "autosci_skill_run_progress.v1",
+  "skill": "rebuttal",
+  "status": "inconclusive",
+  "updated_at": "2026-07-10T19:26:05Z",
+  "work_dir": "artifacts/autosci/runs/shim-draft_rebuttal"
+}

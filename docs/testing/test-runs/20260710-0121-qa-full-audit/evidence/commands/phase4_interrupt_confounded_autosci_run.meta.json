@@ -1,0 +1,13 @@
+{
+  "command_id": "phase4_interrupt_confounded_autosci_run",
+  "phase": "deterministic",
+  "linked_feature_ids": "",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit",
+  "command": "/bin/kill -INT 21126",
+  "start_time": "2026-07-10T01:55:22-04:00",
+  "end_time": "2026-07-10T01:55:22-04:00",
+  "duration_seconds": "0.005",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase4_interrupt_confounded_autosci_run.stdout.txt",
+  "stderr_path": "evidence/commands/phase4_interrupt_confounded_autosci_run.stderr.txt"
+}

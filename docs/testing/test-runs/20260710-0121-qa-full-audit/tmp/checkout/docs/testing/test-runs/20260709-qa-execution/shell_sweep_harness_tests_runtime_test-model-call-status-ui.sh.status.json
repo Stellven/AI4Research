@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_runtime_test-model-call-status-ui.sh",
+  "source": "harness/tests/runtime/test-model-call-status-ui.sh",
+  "command": [
+    "bash",
+    "harness/tests/runtime/test-model-call-status-ui.sh"
+  ],
+  "exit_code": 2,
+  "runtime_seconds": 0.041,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-os4f5q7n"
+}

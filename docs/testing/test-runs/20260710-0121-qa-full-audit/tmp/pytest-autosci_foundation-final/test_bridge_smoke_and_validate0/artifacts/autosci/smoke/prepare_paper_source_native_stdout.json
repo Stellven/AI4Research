@@ -1,0 +1,23 @@
+{
+  "entry_id": "local:input-sample-paper-md",
+  "candidate_id": "local:input-sample-paper-md",
+  "source_kind": "paper",
+  "source_path": "raw/input/sample_paper.md",
+  "resolved_source_path": "raw/input/sample_paper.md",
+  "prepared_path": null,
+  "canonical_ingest_path": "raw/input/sample_paper.md",
+  "original_format": "md",
+  "ingest_format": "directory",
+  "title": "sample paper",
+  "abstract_excerpt": "This fixture paper exists only to test Solar-native adapter boundaries.",
+  "arxiv_id": "",
+  "warnings": [],
+  "usable": true,
+  "schema": "autosci_prepare_paper_source_cli.v1",
+  "status": "completed",
+  "ok": true,
+  "allow_network_fetch": false,
+  "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-autosci_foundation-final/test_bridge_smoke_and_validate0/artifacts/autosci/workspace/raw",
+  "workspace_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-autosci_foundation-final/test_bridge_smoke_and_validate0",
+  "repository_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness"
+}

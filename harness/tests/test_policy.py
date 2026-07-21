@@ -208,7 +208,7 @@ def test_row10_file_write_sprint_dir_medium():
 
 def test_row10_file_write_dot_solar_harness_medium():
     rule = classify_action(
-        {"kind": "file_write", "path": "/Users/sihaoli/.solar/harness/sprints/foo.md"}
+        {"kind": "file_write", "path": "~/.solar/harness/sprints/foo.md"}
     )
     assert rule.rule_id == 10
 
@@ -219,7 +219,7 @@ def test_row10_file_write_dot_solar_harness_medium():
 
 def test_row11_file_write_solar_repo_high():
     rule = classify_action(
-        {"kind": "file_write", "path": "/Users/sihaoli/Solar/harness/lib/policy/action_policy.py"}
+        {"kind": "file_write", "path": "~/Solar/harness/lib/policy/action_policy.py"}
     )
     assert rule.rule_id == 11
     assert rule.risk_class == "high"

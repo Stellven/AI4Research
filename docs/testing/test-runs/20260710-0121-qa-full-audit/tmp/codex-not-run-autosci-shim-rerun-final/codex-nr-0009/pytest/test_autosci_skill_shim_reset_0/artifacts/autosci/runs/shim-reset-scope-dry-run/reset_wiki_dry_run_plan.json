@@ -1,0 +1,21 @@
+{
+  "actions": [],
+  "delete_files": [
+    "wiki/papers/old.md",
+    "wiki/log.md"
+  ],
+  "file_count": 2,
+  "ok": true,
+  "project_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_reset_0/reset-project",
+  "reset_files": [],
+  "schema": "autosci_reset_wiki_cli.v1",
+  "scopes": [
+    "wiki"
+  ],
+  "status": "dry_run",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_reset_0/reset-project/wiki",
+  "would_remove": [
+    "wiki/papers/old.md",
+    "wiki/log.md"
+  ]
+}

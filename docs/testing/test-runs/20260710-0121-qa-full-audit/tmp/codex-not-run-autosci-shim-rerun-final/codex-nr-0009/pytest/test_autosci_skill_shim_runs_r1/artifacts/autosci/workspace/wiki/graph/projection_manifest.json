@@ -1,0 +1,13 @@
+{
+  "edges_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+  "generated_at": "2026-07-10T19:26:31.173726Z",
+  "limitations": [],
+  "projected_edge_count": 1,
+  "run_id": "shim-visualize_graph",
+  "schema": "autosci_workspace_graph_projection.v1",
+  "source_evidence": [
+    "artifacts/autosci/runs/shim-visualize_graph/research_graph_update.visualize.json"
+  ],
+  "status": "projected",
+  "written_edge_count": 1
+}

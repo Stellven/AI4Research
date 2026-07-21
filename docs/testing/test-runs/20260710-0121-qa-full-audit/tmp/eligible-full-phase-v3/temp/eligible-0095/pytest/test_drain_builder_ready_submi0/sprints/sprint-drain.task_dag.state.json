@@ -1,0 +1,28 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "sprint-drain",
+  "graph_ref": "sprint-drain.task_graph.json",
+  "node_results": {
+    "B1": {
+      "status": "dispatched",
+      "updated_at": "2026-07-10T14:14:42Z",
+      "assigned_to": "mini-codex-gpt53-spark-builder-1",
+      "dispatch_id": "pm-sprint-drain-B1-test",
+      "dispatched_via": "pm_dispatch",
+      "pm_task_id": "pm-sprint-drain-B1-test",
+      "operator_id": "mini-codex-gpt53-spark-builder-1"
+    }
+  },
+  "gate_results": {},
+  "leases": {
+    "B1": {
+      "pane": "mini-codex-gpt53-spark-builder-1",
+      "dispatch_id": "pm-sprint-drain-B1-test"
+    }
+  },
+  "dispatch_ids": {
+    "B1": "pm-sprint-drain-B1-test"
+  },
+  "updated_at": "2026-07-10T14:14:42Z",
+  "events": []
+}

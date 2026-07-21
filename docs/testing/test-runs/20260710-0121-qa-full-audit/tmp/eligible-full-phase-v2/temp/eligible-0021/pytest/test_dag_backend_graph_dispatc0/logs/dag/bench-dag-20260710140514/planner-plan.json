@@ -1,0 +1,17 @@
+{
+  "stage": "planner",
+  "verdict": "pass",
+  "model": "gpt-5.4",
+  "instruction_chars": 44,
+  "contract": {
+    "workspace": "/app",
+    "write_scope": [
+      "/app"
+    ],
+    "success_predicates": [
+      "builder exits successfully",
+      "workspace changes or existing required files remain available",
+      "Terminal-Bench verifier computes final score"
+    ]
+  }
+}

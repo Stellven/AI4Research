@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/section-contract.v1.draft.json",
+  "title": "Section Contract v1",
+  "description": "Draft schema for SectionContract — S04 section-level writing contract.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": ["section_id", "chapter_id", "title", "required_source_types", "output_contract"],
+  "additionalProperties": false,
+  "properties": {
+    "section_id": {"type": "string"},
+    "chapter_id": {"type": "string"},
+    "title": {"type": "string"},
+    "order": {"type": "integer"},
+    "target_chars": {"type": "integer"},
+    "research_question": {"type": "string"},
+    "required_source_types": {"type": "array", "items": {"type": "string"}},
+    "min_evidence": {"type": "integer", "default": 4},
+    "min_claims": {"type": "integer", "default": 3},
+    "output_contract": {"type": "array", "items": {"type": "string"}},
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "metadata": {"type": "object", "additionalProperties": true}
+  }
+}

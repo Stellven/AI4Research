@@ -1,0 +1,1 @@
+{"sprint_id": "sprint-quota", "nodes": [{"id": "N1", "status": "pending", "quota_failure_reason": "quota_exhausted", "quota_failure_task_id": "mt-quota-earlier-N1", "preferred_profile": "knowledge-extractor"}]}

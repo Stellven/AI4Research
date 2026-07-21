@@ -1,0 +1,1 @@
+PASS Product Delivery layout guard is present

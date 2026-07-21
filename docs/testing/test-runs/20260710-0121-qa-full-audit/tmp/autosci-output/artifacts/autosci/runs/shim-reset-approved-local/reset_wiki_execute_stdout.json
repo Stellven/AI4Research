@@ -1,0 +1,13 @@
+{
+  "deleted_files": 4,
+  "ok": true,
+  "project_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_1/reset-project",
+  "reset_files": 0,
+  "runtime_evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-reset-approved-local/reset_wiki_runtime_evidence.json",
+  "schema": "autosci_reset_wiki_cli.v1",
+  "scopes": [
+    "wiki"
+  ],
+  "status": "completed",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_1/reset-project/wiki"
+}

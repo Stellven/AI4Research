@@ -1,0 +1,291 @@
+      fi
+    fi
+
+    tail_text="$(tmux capture-pane -t "$SESSION_NAME:0.$index" -p -S -80 2>/dev/null | tail -80 || true)"
+    if [[ "$configured" == "claude-opus" && "$tail_text" == *"API Usage Billing"* ]]; then
+      printf 'error: pane%d %s configured Opus but live banner is API Usage Billing\n' "$index" "$persona"
+      errors=$((errors + 1))
+    fi
+    if [[ "$tail_text" == *"API Error: 400"* && "$tail_text" == *"1210"* ]]; then
+      if [[ "$tail_text" == *"API Usage Billing"* ]]; then
+        printf 'error: pane%d %s live output contains API Usage Billing plus API 400 code=1210\n' "$index" "$persona"
+      else
+        printf 'error: pane%d %s live output contains API 400 code=1210\n' "$index" "$persona"
+      fi
+      errors=$((errors + 1))
+    fi
+  done
+
+  if [[ "$errors" -gt 0 ]]; then
+    printf 'checked=%s errors=%s\n' "$checked" "$errors"
+    return 1
+  fi
+  printf 'checked=%s errors=0\n' "$checked"
+  return 0
+}
+
+do_models_command() {
+  local subcmd="${1:-show}"
+  shift || true
+  case "$subcmd" in
+    show|status)
+      local matrix label source pm_model planner_model builder_model evaluator_model
+      matrix="$(solar_lab_builder_matrix)"
+      label="$(solar_lab_builder_matrix_label "$matrix")"
+      pm_model="$(solar_persona_model pm)"
+      planner_model="$(solar_persona_model planner)"
+      builder_model="$(solar_persona_model builder)"
+      evaluator_model="$(solar_persona_model evaluator)"
+      if [[ -n "${SOLAR_LAB_BUILDER_MODEL_MATRIX:-}" ]]; then
+        source="env:SOLAR_LAB_BUILDER_MODEL_MATRIX"
+      else
+        source="$SOLAR_USER_CONFIG"
+      fi
+      printf '┌────────────────────┬──────────────────────────────────────────────┐\n'
+      printf '│ %-18s │ %-44s │\n' "配置项" "当前值"
+      printf '├────────────────────┼──────────────────────────────────────────────┤\n'
+      printf '│ %-18s │ %-44s │\n' "main pm" "$(printf '%.44s' "$pm_model")"
+      printf '│ %-18s │ %-44s │\n' "main planner" "$(printf '%.44s' "$planner_model")"
+      printf '│ %-18s │ %-44s │\n' "main builder" "$(printf '%.44s' "$builder_model")"
+      printf '│ %-18s │ %-44s │\n' "main evaluator" "$(printf '%.44s' "$evaluator_model")"
+      printf '│ %-18s │ %-44s │\n' "lab matrix" "$(printf '%.44s' "$matrix")"
+      printf '│ %-18s │ %-44s │\n' "显示" "$(printf '%.44s' "$label")"
+      printf '│ %-18s │ %-44s │\n' "来源" "$(printf '%.44s' "$source")"
+      printf '└────────────────────┴──────────────────────────────────────────────┘\n'
+      ;;
+    set-main)
+      local alias="${1:-}"
+      [[ -n "$alias" ]] || { err "用法: $0 models set-main <opus|anthropic-sonnet> [--apply]"; exit 2; }
+      solar_set_main_model "$alias"
+      ok "已写入主屏模型: pm/planner/builder/evaluator -> $alias"
+      if [[ "${2:-}" == "--apply" ]]; then
+        apply_product_delivery_models
+        ok "已按配置刷新 Product Delivery 四分屏"
+      else
+        log "生效方式: solar-harness models apply-main 或重启 solar-harness"
+      fi
+      ;;
+    apply-main)
+      apply_product_delivery_models
+      ;;
+    set-lab-matrix)
+      local matrix="${1:-}"
+      [[ -n "$matrix" ]] || { err "用法: $0 models set-lab-matrix <matrix> [--apply]"; exit 2; }
+      solar_set_lab_builder_matrix "$matrix"
+      ok "已写入 lab builder 模型矩阵: $matrix"
+      if [[ "${2:-}" == "--apply" ]]; then
+        ensure_parallel_builder_lab "$(pwd)"
+        ok "已按配置刷新 Builder Lab"
+      else
+        log "生效方式: solar-harness models apply-lab 或重新运行 solar-harness extend"
+      fi
+      ;;
+    apply-lab)
+      ensure_parallel_builder_lab "$(pwd)"
+      ;;
+    refresh-labels)
+      configure_product_delivery_labels
+      configure_builder_lab_labels
+      ;;
+    doctor)
+      local guard="$HARNESS_DIR/tests/test-model-registry-guard.sh"
+      local single="$HARNESS_DIR/tests/test-model-config-single-source.sh"
+      local live_out guard_out single_out live_rc guard_rc single_rc overall live_status
+      live_out="$(mktemp)"
+      guard_out="$(mktemp)"
+      single_out="$(mktemp)"
+      live_rc=0
+      guard_rc=0
+      single_rc=0
+      models_live_route_check >"$live_out" 2>&1 || live_rc=$?
+      bash "$guard" >"$guard_out" 2>&1 || guard_rc=$?
+      bash "$single" >"$single_out" 2>&1 || single_rc=$?
+      overall="ok"
+      [[ "$guard_rc" -eq 0 && "$single_rc" -eq 0 && "$live_rc" -ne 1 ]] || overall="error"
+      live_status="ok"
+      [[ "$live_rc" -eq 1 ]] && live_status="error"
+      [[ "$live_rc" -eq 2 ]] && live_status="warn"
+      printf '┌──────────────────────────────┬────────┬────────────────────────────────────┐\n'
+      printf '│ %-28s │ %-6s │ %-34s │\n' "检查项" "状态" "证据"
+      printf '├──────────────────────────────┼────────┼────────────────────────────────────┤\n'
+      printf '│ %-28s │ %-6s │ %-34s │\n' "live pane route" "$live_status" "$(tail -1 "$live_out" | cut -c1-34)"
+      printf '│ %-28s │ %-6s │ %-34s │\n' "registry guard" "$([[ "$guard_rc" -eq 0 ]] && echo ok || echo error)" "$(tail -1 "$guard_out" | cut -c1-34)"
+      printf '│ %-28s │ %-6s │ %-34s │\n' "model config single source" "$([[ "$single_rc" -eq 0 ]] && echo ok || echo error)" "$(tail -1 "$single_out" | cut -c1-34)"
+      printf '│ %-28s │ %-6s │ %-34s │\n' "overall" "$overall" "$SOLAR_USER_CONFIG"
+      printf '└──────────────────────────────┴────────┴────────────────────────────────────┘\n'
+      if [[ "$overall" != "ok" ]]; then
+        err "models doctor failed"
+        printf '\n--- live pane route ---\n'
+        cat "$live_out"
+        printf '\n--- registry guard ---\n'
+        cat "$guard_out"
+        printf '\n--- model config ---\n'
+        cat "$single_out"
+        rm -f "$live_out" "$guard_out" "$single_out"
+        return 1
+      fi
+      rm -f "$live_out" "$guard_out" "$single_out"
+      ;;
+    help|--help|-h)
+      echo "Solar Harness Models"
+      echo ""
+      echo "Usage:"
+      echo "  $0 models show"
+      echo "  $0 models doctor"
+      echo "  $0 models set-main opus [--apply]"
+      echo "  $0 models set-main anthropic-sonnet [--apply]"
+      echo "  $0 models apply-main"
+      echo "  $0 models set-lab-matrix glm,glm,glm,anthropic-sonnet [--apply]"
+      echo "  $0 models apply-lab"
+      echo "  $0 models refresh-labels"
+      ;;
+    *)
+      err "Unknown models subcommand: $subcmd"; exit 2
+      ;;
+  esac
+}
+
+do_autosci_command() {
+  local script_harness_dir shim py candidate command_text
+  script_harness_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  shim="$script_harness_dir/plugins/autosci/bin/autosci_skill_shim.py"
+  if [[ ! -f "$shim" ]]; then
+    shim="$HARNESS_DIR/plugins/autosci/bin/autosci_skill_shim.py"
+  fi
+  if [[ ! -f "$shim" ]]; then
+    err "AutoSci shim not found: $HARNESS_DIR/plugins/autosci/bin/autosci_skill_shim.py"
+    exit 1
+  fi
+  export HARNESS_DIR
+  export SOLAR_AUTOSCI_OUTPUT_HARNESS="${SOLAR_AUTOSCI_OUTPUT_HARNESS:-$HARNESS_DIR}"
+  export AUTOSCI_ARTIFACT_ROOT="${AUTOSCI_ARTIFACT_ROOT:-$HARNESS_DIR/artifacts/autosci}"
+  export SCIENTIFIC_ARTIFACT_ROOT="${SCIENTIFIC_ARTIFACT_ROOT:-$HARNESS_DIR/artifacts/scientific}"
+
+  py=""
+  for candidate in "$HARNESS_DIR/bin/python3" "$script_harness_dir/bin/python3" python3; do
+    if [[ "$candidate" == "python3" ]]; then
+      command -v python3 >/dev/null 2>&1 || continue
+    elif [[ ! -x "$candidate" ]]; then
+      continue
+    fi
+    if "$candidate" -c 'import sys' >/dev/null 2>&1; then
+      py="$candidate"
+      break
+    fi
+  done
+  if [[ -z "$py" ]]; then
+    err "No usable python3 found for AutoSci shim"
+    exit 1
+  fi
+
+  if [[ "$#" -eq 0 ]]; then
+    "$py" "$shim" skills list
+    return
+  fi
+
+  case "${1:-}" in
+    skills|skill)
+      "$py" "$shim" "$@"
+      ;;
+    *)
+      command_text="$*"
+      "$py" "$shim" text "$command_text"
+      ;;
+  esac
+}
+
+# ---- Main ----
+
+case "${1:-help}" in
+  start)     start_harness 3 "${2:-$(pwd)}" "${3:-}" ;;
+  2)         start_harness 2 "${2:-$(pwd)}" "${3:-}" ;;
+  3)         start_harness 3 "${2:-$(pwd)}" "${3:-}" ;;
+  status)    show_status ;;
+  main-status) do_main_status ;;
+  lab-status) do_lab_status "${2:-}" ;;
+  preflight|launch-preflight) harness_launch_preflight ;;
+  refresh)   shift || true; do_refresh "$@" ;;
+  doctor)    bash "$HARNESS_DIR/doctor.sh" "${2:-}" ;;
+  session)
+    shift || true
+    human_prefix "runtime" "session $*"
+    python3 "$HARNESS_DIR/lib/session_tools.py" "$@"
+    ;;
+  verify-integrations|capability-e2e)
+    _cap_fail=0
+    for _cap_e2e in \
+      "$HARNESS_DIR/tests/integrations/test-capability-plane-e2e.sh" \
+      "$HARNESS_DIR/tests/integrations/test-expanded-capability-plane-e2e.sh" \
+      "$HARNESS_DIR/tests/integrations/test-capability-fusion-benchmark.sh" \
+      "$HARNESS_DIR/tests/integrations/test-platform-workflow-benchmark.sh"
+    do
+      [[ -f "$_cap_e2e" ]] || { err "capability E2E test not found: $_cap_e2e"; exit 1; }
+      [[ -x "$_cap_e2e" ]] || chmod +x "$_cap_e2e" 2>/dev/null || true
+      bash "$_cap_e2e" || _cap_fail=1
+    done
+    exit "$_cap_fail"
+    ;;
+  --skip-doctor) start_harness 3 "${2:-$(pwd)}" "--skip-doctor" ;;
+  coord-status)
+    # Sprint 20260420-082442 D2: 协调器状态诊断
+    pidfile="$HARNESS_DIR/.coordinator.pid"
+    running=false; stale_lock=false; pid=0; uptime_s=0
+    if [[ -f "$pidfile" ]]; then
+      pid=$(cat "$pidfile" 2>/dev/null)
+      if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        running=true
+        # 计算运行时间
+        start_ts=$(ps -p "$pid" -o lstart= 2>/dev/null)
+        if [[ -n "$start_ts" ]]; then
+          start_epoch=$(solar_parse_epoch "%a %b %d %H:%M:%S %Y" "$start_ts" 2>/dev/null || date +%s)
+          uptime_s=$(( $(date +%s) - start_epoch ))
+        fi
+      else
+        stale_lock=true
+      fi
+    fi
+    python3 -c "
+import json
+print(json.dumps({
+    'running': '$running' == 'true',
+    'pid': $pid,
+    'uptime_s': $uptime_s,
+    'stale_lock': '$stale_lock' == 'true'
+}, indent=2))
+" 2>/dev/null
+    ;;
+  # Sprint 20260420-090726 D2: 僵尸文件清理
+  clean-corrupted)
+    do_clean_corrupted "${2:-}"
+    ;;
+  queue-reap-stale)
+    # Archive old terminal queue files whose events are already consumed.
+    # This prevents consumed .jsonl/.lock residue from looking like live backlog.
+    . "$HARNESS_DIR/lib/queue.sh"
+    queue_archive_consumed_terminal "${2:-24}" "${3:-queue-reaper}"
+    ;;
+  kill|stop) kill_harness ;;
+  扩展|extend) start_extension "${2:-$(pwd)}" ;;
+  models) shift; do_models_command "$@" ;;
+  autosci)
+    shift || true
+    do_autosci_command "$@"
+    ;;
+  \$*)
+    do_autosci_command "$@"
+    ;;
+  research)
+    shift || true
+    python3 "$HARNESS_DIR/lib/research/cli.py" "$@"
+    ;;
+  browser)
+    shift || true
+    _browser_scope="${1:-}"
+    if [[ "$_browser_scope" == "profile" ]]; then
+      shift || true
+      _browser_action="${1:-doctor}"
+      shift || true
+      case "$_browser_action" in
+        doctor)
+          python3 "$HARNESS_DIR/tools/browser_profile_control.py" doctor "$@"
+          ;;

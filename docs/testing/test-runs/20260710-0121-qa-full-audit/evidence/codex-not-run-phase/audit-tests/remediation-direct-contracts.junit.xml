@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="12" skipped="0" tests="22" time="1.450" timestamp="2026-07-13T11:52:32.281856-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_semantic_scholar_offline_contract_is_typed_and_non_fabricating[search-args0]" time="0.118" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_semantic_scholar_offline_contract_is_typed_and_non_fabricating[references-args1]" time="0.085" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_semantic_scholar_offline_contract_is_typed_and_non_fabricating[citations-args2]" time="0.129" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_semantic_scholar_fixture_response_is_normalized_with_provenance" time="0.042"><failure message="KeyError: 'source_ref'">evidence/codex-not-run-phase/audit-tests/test_source_provider_direct_contracts.py:105: in test_semantic_scholar_fixture_response_is_normalized_with_provenance
+    assert item["source_ref"]
+           ^^^^^^^^^^^^^^^^^^
+E   KeyError: 'source_ref'</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_deepxiv_missing_config_and_offline_contracts_are_explicit" time="0.100" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_deepxiv_normalizes_fixture_provider_items" time="0.003" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_wikipedia_provider_failure_is_typed_json[summary]" time="0.048"><failure message="AssertionError: usage: fetch_wikipedia.py [-h] [--timeout TIMEOUT]&#10;                            {summary,sections,wikitext,section} ...&#10;  fetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05&#10;  &#10;assert 2 == 3&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...         {summary,sections,wikitext,section} ...\nfetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05\n').returncode">evidence/codex-not-run-phase/audit-tests/test_source_provider_direct_contracts.py:158: in test_wikipedia_provider_failure_is_typed_json
+    assert proc.returncode == 3, proc.stdout + proc.stderr
+E   AssertionError: usage: fetch_wikipedia.py [-h] [--timeout TIMEOUT]
+E                               {summary,sections,wikitext,section} ...
+E     fetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05
+E     
+E   assert 2 == 3
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...         {summary,sections,wikitext,section} ...\nfetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05\n').returncode</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_wikipedia_provider_failure_is_typed_json[sections]" time="0.047"><failure message="AssertionError: usage: fetch_wikipedia.py [-h] [--timeout TIMEOUT]&#10;                            {summary,sections,wikitext,section} ...&#10;  fetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05&#10;  &#10;assert 2 == 3&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...         {summary,sections,wikitext,section} ...\nfetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05\n').returncode">evidence/codex-not-run-phase/audit-tests/test_source_provider_direct_contracts.py:158: in test_wikipedia_provider_failure_is_typed_json
+    assert proc.returncode == 3, proc.stdout + proc.stderr
+E   AssertionError: usage: fetch_wikipedia.py [-h] [--timeout TIMEOUT]
+E                               {summary,sections,wikitext,section} ...
+E     fetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05
+E     
+E   assert 2 == 3
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...         {summary,sections,wikitext,section} ...\nfetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05\n').returncode</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_wikipedia_provider_failure_is_typed_json[section]" time="0.047"><failure message="AssertionError: usage: fetch_wikipedia.py section [-h] --index INDEX [--max-chars MAX_CHARS]&#10;                                    title&#10;  fetch_wikipedia.py section: error: the following arguments are required: --index&#10;  &#10;assert 2 == 3&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...                            title\nfetch_wikipedia.py section: error: the following arguments are required: --index\n').returncode">evidence/codex-not-run-phase/audit-tests/test_source_provider_direct_contracts.py:158: in test_wikipedia_provider_failure_is_typed_json
+    assert proc.returncode == 3, proc.stdout + proc.stderr
+E   AssertionError: usage: fetch_wikipedia.py section [-h] --index INDEX [--max-chars MAX_CHARS]
+E                                       title
+E     fetch_wikipedia.py section: error: the following arguments are required: --index
+E     
+E   assert 2 == 3
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...                            title\nfetch_wikipedia.py section: error: the following arguments are required: --index\n').returncode</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_wikipedia_provider_failure_is_typed_json[wikitext]" time="0.044"><failure message="AssertionError: usage: fetch_wikipedia.py [-h] [--timeout TIMEOUT]&#10;                            {summary,sections,wikitext,section} ...&#10;  fetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05&#10;  &#10;assert 2 == 3&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...         {summary,sections,wikitext,section} ...\nfetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05\n').returncode">evidence/codex-not-run-phase/audit-tests/test_source_provider_direct_contracts.py:158: in test_wikipedia_provider_failure_is_typed_json
+    assert proc.returncode == 3, proc.stdout + proc.stderr
+E   AssertionError: usage: fetch_wikipedia.py [-h] [--timeout TIMEOUT]
+E                               {summary,sections,wikitext,section} ...
+E     fetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05
+E     
+E   assert 2 == 3
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...         {summary,sections,wikitext,section} ...\nfetch_wikipedia.py: error: unrecognized arguments: --timeout 0.05\n').returncode</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_wikipedia_fixture_summary_preserves_source_url_and_timestamp" time="0.002"><failure message="KeyError: 'url'">evidence/codex-not-run-phase/audit-tests/test_source_provider_direct_contracts.py:185: in test_wikipedia_fixture_summary_preserves_source_url_and_timestamp
+    assert payload["url"] == "https://en.wikipedia.org/wiki/Solar_research"
+           ^^^^^^^^^^^^^^
+E   KeyError: 'url'</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_arxiv_fixture_parsing_deduplicates_and_preserves_provenance" time="0.001" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_arxiv_provider_error_returns_empty_without_synthetic_papers" time="0.001" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_source_provider_direct_contracts" name="test_rasterize_latex_rejects_missing_required_inputs_without_writes" time="0.058" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_cli_direct_contracts" name="test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected[graph-scheduler]" time="0.042"><failure message="FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document0/home'">evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:96: in test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected
+    invalid = run([*command, "qa-unsupported-command"], tmp_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:46: in run
+    env=isolated_env(tmp_path),
+        ^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:23: in isolated_env
+    home.mkdir()
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:1011: in mkdir
+    os.mkdir(self, mode)
+E   FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document0/home'</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_cli_direct_contracts" name="test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected[graph-node-dispatcher]" time="0.106"><failure message="FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document1/home'">evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:96: in test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected
+    invalid = run([*command, "qa-unsupported-command"], tmp_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:46: in run
+    env=isolated_env(tmp_path),
+        ^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:23: in isolated_env
+    home.mkdir()
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:1011: in mkdir
+    os.mkdir(self, mode)
+E   FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document1/home'</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_cli_direct_contracts" name="test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected[knowledge-ingest-dispatcher]" time="0.049"><failure message="FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document2/home'">evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:96: in test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected
+    invalid = run([*command, "qa-unsupported-command"], tmp_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:46: in run
+    env=isolated_env(tmp_path),
+        ^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:23: in isolated_env
+    home.mkdir()
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:1011: in mkdir
+    os.mkdir(self, mode)
+E   FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document2/home'</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_cli_direct_contracts" name="test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected[knowledge-ingest-health]" time="0.042"><failure message="FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document3/home'">evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:96: in test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected
+    invalid = run([*command, "qa-unsupported-command"], tmp_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:46: in run
+    env=isolated_env(tmp_path),
+        ^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:23: in isolated_env
+    home.mkdir()
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:1011: in mkdir
+    os.mkdir(self, mode)
+E   FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document3/home'</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_cli_direct_contracts" name="test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected[knowledge-qmd-indexer]" time="0.049"><failure message="FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document4/home'">evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:96: in test_cli_help_exposes_documented_subcommands_and_unknown_is_rejected
+    invalid = run([*command, "qa-unsupported-command"], tmp_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:46: in run
+    env=isolated_env(tmp_path),
+        ^^^^^^^^^^^^^^^^^^^^^^
+evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:23: in isolated_env
+    home.mkdir()
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:1011: in mkdir
+    os.mkdir(self, mode)
+E   FileExistsError: [Errno 17] File exists: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-314/test_cli_help_exposes_document4/home'</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_cli_direct_contracts" name="test_benchmark_cli_help_doctor_list_and_invalid_contract" time="0.229" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_cli_direct_contracts" name="test_solar_lifecycle_read_only_commands_are_typed_and_do_not_create_home_state" time="0.038"><failure message="AssertionError: assert 1 == 0&#10; +  where 1 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...test-of-jamesyuan/pytest-314/test_solar_lifecycle_read_only0/home/.solar/install-receipt.json; run install.sh first\n').returncode">evidence/codex-not-run-phase/audit-tests/test_cli_direct_contracts.py:147: in test_solar_lifecycle_read_only_commands_are_typed_and_do_not_create_home_state
+    assert version.returncode == 0
+E   AssertionError: assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...test-of-jamesyuan/pytest-314/test_solar_lifecycle_read_only0/home/.solar/install-receipt.json; run install.sh first\n').returncode</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_cli_direct_contracts" name="test_solar_uninstall_dry_run_and_invalid_restore_preserve_isolated_home" time="0.035" /></testsuite></testsuites>

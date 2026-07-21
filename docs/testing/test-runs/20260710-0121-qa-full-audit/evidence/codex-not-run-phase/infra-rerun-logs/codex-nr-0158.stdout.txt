@@ -1,0 +1,15 @@
+=== test-chatgpt-conversation-ingest.sh ===
+  PASS: T1 official conversations.json imported
+  PASS: T2 markdown and manifest written
+  PASS: T3 markdown transcript imported
+  PASS: T4 transcript content preserved
+  PASS: T5 default dispatch writes isolated pending wiki ingest instruction
+  PASS: T6 stdin transcript imported
+  PASS: T7 browser capture JSON imported
+  PASS: T8 browser-all capture JSON imported
+  PASS: T9 partial one-sided capture preserved
+  PASS: T10 browser permission error has actionable hint
+  PASS: T11 rich browser capture metadata preserved
+  PASS: T12 solar-harness shell syntax ok
+
+Results: 12 passed, 0 failed

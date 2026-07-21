@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-mkdir -p "$TMP/lib" "$TMP/sprints" "$TMP/personas" "$TMP/templates" "$TMP/raw" "$TMP/tools"
+mkdir -p "$TMP/lib" "$TMP/sprints" "$TMP/personas" "$TMP/templates" "$TMP/raw" "$TMP/tools" "$TMP/project"
 
 cp -R lib/. "$TMP/lib/"
 cp -R tools/. "$TMP/tools/"
@@ -31,7 +31,14 @@ chmod +x "$TMP/solar-harness.sh"
 RAW_DIR="$TMP/raw"
 INTENT_DIR="$TMP/intents"
 
-SOLAR_KNOWLEDGE_RAW_DIR="$RAW_DIR" SOLAR_INTENT_GATEWAY_DIR="$INTENT_DIR" "$TMP/solar-harness.sh" intake --no-dispatch --stdin <<'EOF'
+set +e
+(cd "$TMP" && HARNESS_DIR="$TMP" SOLAR_HARNESS_DIR="$TMP" SOLAR_KNOWLEDGE_RAW_DIR="$RAW_DIR" SOLAR_INTENT_GATEWAY_DIR="$INTENT_DIR" "$TMP/solar-harness.sh" intake --no-dispatch "must not target the installed harness") >"$TMP/unbound.out" 2>"$TMP/unbound.err"
+unbound_rc=$?
+set -e
+[[ "$unbound_rc" -ne 0 ]] || { echo "FAIL: unbound intake from the installed harness must fail closed"; exit 1; }
+grep -Fq "no user workspace is bound" "$TMP/unbound.err" || { echo "FAIL: missing unbound-workspace guidance"; cat "$TMP/unbound.err"; exit 1; }
+
+(cd "$TMP/project" && HARNESS_DIR="$TMP" SOLAR_HARNESS_DIR="$TMP" SOLAR_KNOWLEDGE_RAW_DIR="$RAW_DIR" SOLAR_INTENT_GATEWAY_DIR="$INTENT_DIR" "$TMP/solar-harness.sh" intake --no-dispatch --stdin) <<'EOF'
 修复一个按钮文案 typo。
 EOF
 
@@ -42,12 +49,13 @@ consumer_count=$(find "$INTENT_DIR" -name 'consumer.json' | wc -l | tr -d ' ')
 [[ "$raw_count" -eq 1 ]] || { echo "FAIL: expected one raw intake record, got $raw_count"; exit 1; }
 [[ "$consumer_count" -eq 1 ]] || { echo "FAIL: expected one intent consumer record, got $consumer_count"; exit 1; }
 
-python3 - "$TMP/sprints" "$INTENT_DIR" <<'PY'
+python3 - "$TMP/sprints" "$INTENT_DIR" "$TMP" <<'PY'
 import json
 import pathlib
 import sys
 sprints = pathlib.Path(sys.argv[1])
 intents = pathlib.Path(sys.argv[2])
+root = pathlib.Path(sys.argv[3])
 status = json.loads(next(sprints.glob("sprint-*.status.json")).read_text())
 assert status["status"] == "drafting", status
 assert status["phase"] == "prd_ready", status
@@ -59,12 +67,16 @@ rewritten = next(sprints.glob("sprint-*.rewritten_intent.json"))
 ir = next(sprints.glob("sprint-*.requirement_ir.json"))
 trace = next(sprints.glob("sprint-*.requirement_trace.json"))
 assert json.loads(raw_intent.read_text())["schema_version"] == "solar.raw_intent.v1"
+assert json.loads(raw_intent.read_text())["context"]["repo"] == str((root / "project").resolve())
 assert json.loads(rewritten.read_text())["schema_version"] == "solar.rewritten_intent.v1"
 assert json.loads(ir.read_text())["compiler_next"] == "pm_planner_task_graph"
 assert json.loads(trace.read_text())["stages"][0]["stage"] == "raw_intent_capture"
 consumer = json.loads(next(intents.glob("intent-*/consumer.json")).read_text())
 assert consumer["status"] == "consumed", consumer
 assert consumer["sprint_id"] == (status.get("sprint_id") or status["id"]), consumer
+binding = json.loads((root / "run" / "workspace-binding.json").read_text())
+assert binding["workspace_root"] == str((root / "project").resolve()), binding
+assert (root / "project" / ".pm" / "requirement_ir.json").is_file()
 PY
 
 simple_sid=$(python3 - "$TMP/sprints" <<'PY'
@@ -134,8 +146,8 @@ assert actions and actions[0].get("dropped") == "terminal_sprint", actions
 assert mod.load_queue() == [], mod.load_queue()
 PY
 
-SOLAR_KNOWLEDGE_RAW_DIR="$RAW_DIR" SOLAR_INTENT_GATEWAY_DIR="$INTENT_DIR" SOLAR_EPIC_MIN_CHARS=60 "$TMP/solar-harness.sh" intake --no-dispatch \
-  "把 Solar-Harness 改造成大需求自动拆分、多个 PRD、设计、任务图、并行调度、验证闭环的系统。"
+(cd "$TMP/project" && HARNESS_DIR="$TMP" SOLAR_HARNESS_DIR="$TMP" SOLAR_KNOWLEDGE_RAW_DIR="$RAW_DIR" SOLAR_INTENT_GATEWAY_DIR="$INTENT_DIR" SOLAR_EPIC_MIN_CHARS=60 "$TMP/solar-harness.sh" intake --no-dispatch \
+  "把 Solar-Harness 改造成大需求自动拆分、多个 PRD、设计、任务图、并行调度、验证闭环的系统。")
 
 epic_count=$(find "$TMP/sprints" -name 'epic-*.epic.json' | wc -l | tr -d ' ')
 [[ "$epic_count" -eq 1 ]] || { echo "FAIL: expected one epic, got $epic_count"; exit 1; }

@@ -1,0 +1,1 @@
+{"case_id": "golden-req-311b731e1984", "request_type": "research", "goal": "codex_bridge 入口的研究 artifact 必须出现在 compiled package。", "expected_dag_variant": "research", "expected_template_variant": "research"}

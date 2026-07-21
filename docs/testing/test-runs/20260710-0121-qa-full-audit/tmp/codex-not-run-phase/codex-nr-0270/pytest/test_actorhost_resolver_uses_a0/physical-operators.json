@@ -1,0 +1,10 @@
+{
+  "operators": {
+    "actor-a": {
+      "pane": "solar-harness-lab:*",
+      "compat_maps_to": {
+        "host_type": "tmux_pane"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_441_6f6a37af7f_harness_tests_test_social_semantic_viewpoint_engine.py",
+  "source": "harness/tests/test_social_semantic_viewpoint_engine.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_social_semantic_viewpoint_engine.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.665,
+  "timeout": false
+}

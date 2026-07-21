@@ -88,29 +88,82 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="ignore") if path.exists() else ""
 
 
-def _candidate_reader_artifacts(root: Path, final_path: Path) -> list[Path]:
+def _manifest_reader_path(root: Path) -> Path | None:
+    manifest_path = root / "survey_finalize_run.json"
+    if not manifest_path.exists():
+        return None
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    raw = payload.get("final_md") if isinstance(payload, dict) else ""
+    if not raw:
+        return None
+    candidate = Path(str(raw)).expanduser()
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    try:
+        candidate.resolve().relative_to(root.resolve())
+    except (OSError, ValueError):
+        return None
+    return candidate if candidate.is_file() else None
+
+
+def _reader_final_path(root: Path, explicit: str | Path | None = None) -> Path:
+    if explicit:
+        return Path(explicit).expanduser()
+    manifest_reader = _manifest_reader_path(root)
+    if manifest_reader is not None:
+        return manifest_reader
+    for candidate in (
+        root / "chief_editor_final.md",
+        root / "human_final.md",
+        root / "final.md",
+    ):
+        if candidate.exists():
+            return candidate
+    return root / "final.md"
+
+
+def _candidate_reader_artifacts(
+    root: Path,
+    final_path: Path,
+    *,
+    discover_siblings: bool,
+) -> list[Path]:
     candidates: list[Path] = []
     if final_path.exists():
         candidates.append(final_path)
-    for path in [root / "chief_editor_final.md"]:
-        if path.exists() and path not in candidates:
-            candidates.append(path)
-    for path in sorted(root.glob("*.html")):
-        name = path.name.lower()
-        if name == "quality_golden.html":
-            continue
-        if any(marker in name for marker in REPORT_HTML_NAME_PATTERNS):
-            candidates.append(path)
+    if discover_siblings:
+        for path in [root / "chief_editor_final.md"]:
+            if path.exists() and path not in candidates:
+                candidates.append(path)
+        for path in sorted(root.glob("*.html")):
+            name = path.name.lower()
+            if name == "quality_golden.html":
+                continue
+            if any(marker in name for marker in REPORT_HTML_NAME_PATTERNS):
+                candidates.append(path)
     if not candidates and final_path.exists():
         candidates.append(final_path)
     return candidates
 
 
-def assess_audience_hygiene(root: str | Path, *, final_md: str | Path | None = None) -> dict[str, Any]:
+def assess_audience_hygiene(
+    root: str | Path,
+    *,
+    final_md: str | Path | None = None,
+    persist: bool = False,
+) -> dict[str, Any]:
     """Reject reader-facing reports that leak harness/editor internals."""
     report_root = Path(root).expanduser()
-    final_path = Path(final_md).expanduser() if final_md else report_root / "final.md"
-    artifacts = _candidate_reader_artifacts(report_root, final_path)
+    manifest_reader = _manifest_reader_path(report_root)
+    final_path = _reader_final_path(report_root, final_md)
+    artifacts = _candidate_reader_artifacts(
+        report_root,
+        final_path,
+        discover_siblings=final_md is None and manifest_reader is None,
+    )
     matches: list[dict[str, Any]] = []
     for artifact in artifacts:
         text = _read_text(artifact)
@@ -137,7 +190,11 @@ def assess_audience_hygiene(root: str | Path, *, final_md: str | Path | None = N
         "matches": matches,
         "issues": issues,
     }
-    (report_root / "survey_audience_hygiene.json").write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if persist:
+        (report_root / "survey_audience_hygiene.json").write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
     return payload
 
 
@@ -219,10 +276,12 @@ def assess_golden_style(
     final_md: str | Path | None = None,
     benchmark_html: str | Path | None = None,
     require_benchmark: bool = False,
+    persist: bool = False,
 ) -> dict[str, Any]:
     report_root = Path(root).expanduser()
-    report_root.mkdir(parents=True, exist_ok=True)
-    final_path = Path(final_md).expanduser() if final_md else report_root / "final.md"
+    if persist:
+        report_root.mkdir(parents=True, exist_ok=True)
+    final_path = _reader_final_path(report_root, final_md)
     benchmark_path = _benchmark_path(report_root, benchmark_html)
     text = _read_text(final_path)
     headings = _headings_from_markdown(text)
@@ -235,7 +294,11 @@ def assess_golden_style(
     commentary_density = round(commentary_count / chars_k, 4)
     template_residue = sum(len(re.findall(pattern, text, flags=re.I)) for pattern in TEMPLATE_RESIDUE_PATTERNS)
     duplicate_stats = _duplicate_long_sentence_stats(text)
-    audience_hygiene = assess_audience_hygiene(report_root, final_md=final_path)
+    audience_hygiene = assess_audience_hygiene(
+        report_root,
+        final_md=final_path,
+        persist=persist,
+    )
     benchmark = benchmark_html_stats(benchmark_path) if benchmark_path else {}
 
     if benchmark.get("exists"):
@@ -294,5 +357,9 @@ def assess_golden_style(
         },
         "issues": issues,
     }
-    (report_root / "survey_golden_style.json").write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if persist:
+        (report_root / "survey_golden_style.json").write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
     return payload

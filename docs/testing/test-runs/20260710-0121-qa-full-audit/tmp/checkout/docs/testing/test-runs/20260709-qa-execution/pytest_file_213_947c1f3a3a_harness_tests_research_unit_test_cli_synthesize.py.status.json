@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_213_947c1f3a3a_harness_tests_research_unit_test_cli_synthesize.py",
+  "source": "harness/tests/research_unit/test_cli_synthesize.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research_unit/test_cli_synthesize.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.359,
+  "timeout": false
+}

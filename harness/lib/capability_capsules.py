@@ -21,15 +21,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-try:
-    import yaml  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - exercised in subprocess/runtime without PyYAML
-    from simple_yaml import safe_load as _safe_yaml_load
+import yaml
 
-    class _YamlCompat:
-        safe_load = staticmethod(_safe_yaml_load)
-
-    yaml = _YamlCompat()
+from physical_operator_catalog import (
+    load_physical_operator_catalog,
+    resolve_static_operator_reference,
+)
 
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
@@ -61,9 +58,28 @@ DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR = {
     "TestRunner": "cap.requirement-compiler-verification",
     "Verifier": "cap.requirement-compiler-verification",
     "Critic": "cap.requirement-compiler-verification",
-    "ResearchScout": "cap.requirement-research-scout",
+    "ResearchScout": "cap.research-retrieval",
     "ResearchSynthesizer": "cap.requirement-research-synthesizer",
     "ArtifactCurator": "cap.requirement-research-synthesizer",
+    "ScientificLiteratureDiscoverer": "cap.research-literature-discover",
+    "ScientificPaperIngestor": "cap.research-paper-ingest",
+    "ScientificPaperAnalyzer": "cap.research-paper-analyze",
+    "ScientificMemoryUpdater": "cap.research-memory-update",
+    "ScientificGraphUpdater": "cap.research-graph-update",
+    "ScientificClaimExtractor": "cap.research-claim-extract",
+    "ScientificMethodExtractor": "cap.research-method-extract",
+    "ScientificCodeEvidenceMapper": "cap.research-code-evidence-map",
+    "ScientificIdeaGenerator": "cap.research-idea-generate",
+    "ScientificIdeaEvaluator": "cap.research-idea-evaluate",
+    "ScientificExperimentDesigner": "cap.research-experiment-design",
+    "ScientificExperimentRunner": "cap.research-experiment-run",
+    "ScientificExperimentMonitor": "cap.research-experiment-monitor",
+    "ScientificClaimVerifier": "cap.research-claim-verify",
+    "ScientificReportPlanner": "cap.research-report-plan",
+    "ScientificReportDrafter": "cap.research-report-draft",
+    "ScientificArtifactReviewer": "cap.research-artifact-review",
+    "ScientificPublicationProducer": "cap.research-publication-produce",
+    "ScientificWorkflowEvolver": "cap.research-workflow-evolve",
 }
 
 DEFAULT_TASK_TYPE_BY_LOGICAL_OPERATOR = {
@@ -76,6 +92,61 @@ DEFAULT_TASK_TYPE_BY_LOGICAL_OPERATOR = {
     "ResearchScout": "knowledge-extraction",
     "ResearchSynthesizer": "research",
     "ArtifactCurator": "evidence",
+    "ScientificLiteratureDiscoverer": "scientific-research",
+    "ScientificPaperIngestor": "scientific-research",
+    "ScientificPaperAnalyzer": "scientific-research",
+    "ScientificMemoryUpdater": "scientific-research",
+    "ScientificGraphUpdater": "scientific-research",
+    "ScientificClaimExtractor": "scientific-research",
+    "ScientificMethodExtractor": "scientific-research",
+    "ScientificCodeEvidenceMapper": "scientific-research",
+    "ScientificIdeaGenerator": "scientific-research",
+    "ScientificIdeaEvaluator": "scientific-research",
+    "ScientificExperimentDesigner": "scientific-research",
+    "ScientificExperimentRunner": "scientific-research",
+    "ScientificExperimentMonitor": "scientific-research",
+    "ScientificClaimVerifier": "scientific-research",
+    "ScientificReportPlanner": "scientific-research",
+    "ScientificReportDrafter": "scientific-research",
+    "ScientificArtifactReviewer": "scientific-research",
+    "ScientificPublicationProducer": "scientific-research",
+    "ScientificWorkflowEvolver": "scientific-research",
+}
+
+READ_ONLY_AUDIT_TASK_TYPES = {
+    "audit",
+    "audit_inventory",
+    "inventory",
+    "documentation",
+    "docs",
+    "report",
+    "reporting",
+    "packaging_audit",
+    "packaging_inventory",
+}
+
+READ_ONLY_AUDIT_TASK_TYPE_ALIASES = {
+    "audit": "audit_inventory",
+    "audit_inventory": "audit_inventory",
+    "inventory": "audit_inventory",
+    "packaging_audit": "audit_inventory",
+    "packaging_inventory": "audit_inventory",
+    "documentation": "documentation",
+    "docs": "documentation",
+    "report": "reporting",
+    "reporting": "reporting",
+    "evidence": "evidence",
+}
+
+READ_ONLY_AUDIT_SIGNALS = {
+    "audit",
+    "inventory",
+    "document",
+    "documentation",
+    "report",
+    "readiness",
+    "packaging",
+    "inspect",
 }
 
 
@@ -122,6 +193,62 @@ def _looks_like_understand_anything_task(
     ]
     haystack = " ".join(text_parts).lower()
     return any(token in haystack for token in UNDERSTAND_ANYTHING_SIGNAL_TOKENS)
+
+
+def _looks_like_read_only_audit_task(
+    logical_operator: str,
+    *,
+    request_type: str = "",
+    lane_hint: str = "",
+    node: Optional[Dict[str, Any]] = None,
+    goal_text: str = "",
+) -> bool:
+    if str(logical_operator or "") != "ImplementationWorker":
+        return False
+    node_payload = node or {}
+    policy = node_payload.get("architecture_policy") if isinstance(node_payload.get("architecture_policy"), dict) else {}
+    task_markers = {
+        str(node_payload.get("type") or "").lower(),
+        str(node_payload.get("dispatch_task_type") or "").lower(),
+        str(request_type or "").lower(),
+        str(lane_hint or "").lower(),
+    }
+    skills = {str(skill).lower() for skill in (node_payload.get("required_skills") or [])}
+    write_scope = [str(item) for item in (node_payload.get("write_scope") or [])]
+    writes_only_sprint_artifacts = bool(write_scope) and all(
+        item.startswith(("harness/sprints/", "sprints/")) for item in write_scope
+    )
+    core_patch_denied = policy.get("core_patch_allowed") is False
+    text_parts = [
+        goal_text,
+        str(node_payload.get("goal", "")),
+        str(node_payload.get("title", "")),
+        str(node_payload.get("type", "")),
+        str(node_payload.get("dispatch_task_type", "")),
+        " ".join(skills),
+    ]
+    haystack = " ".join(text_parts).lower().replace("_", " ").replace("-", " ")
+    explicit_audit_type = bool(task_markers.intersection(READ_ONLY_AUDIT_TASK_TYPES))
+    audit_signal = explicit_audit_type or any(signal in haystack for signal in READ_ONLY_AUDIT_SIGNALS)
+    docs_skill = bool(skills.intersection({"documentation", "reporting", "harness.reporting"}))
+    non_mutating_policy = core_patch_denied or writes_only_sprint_artifacts or explicit_audit_type
+    return bool((audit_signal or docs_skill) and non_mutating_policy)
+
+
+def _canonical_read_only_audit_task_type(node: Optional[Dict[str, Any]] = None) -> str:
+    """Map planner freeform read-only audit labels onto the capsule's admitted task types.
+
+    Planners may emit broad labels such as `analysis` for scope/inspection nodes. Once the
+    read-only audit heuristic has selected the audit capsule, keep admission strict by using
+    one of that capsule's canonical task types instead of adding every freeform synonym to
+    the capsule manifest.
+    """
+    node_payload = node or {}
+    for key in ("dispatch_task_type", "type"):
+        raw = str(node_payload.get(key) or "").strip().lower()
+        if raw in READ_ONLY_AUDIT_TASK_TYPE_ALIASES:
+            return READ_ONLY_AUDIT_TASK_TYPE_ALIASES[raw]
+    return "audit_inventory"
 
 
 class CapsuleError(RuntimeError):
@@ -239,6 +366,58 @@ def iter_registry_entries(
         if entry.status == "revoked" and include_revoked:
             filtered.append(entry)
     return filtered
+
+
+def audit_stable_capsule_operator_bindings(
+    *,
+    registry_path: Path,
+    operators_path: Path,
+) -> List[Dict[str, Any]]:
+    """Audit stable capsule defaults/preferences against one operator authority.
+
+    ``default_operator_profile`` may intentionally name a reusable profile when
+    no operator has that exact ID.  Manifest ``preferred`` entries are operator
+    IDs and therefore require an exact, statically selectable record.
+    """
+    operators = load_physical_operator_catalog(Path(operators_path))
+    issues: List[Dict[str, Any]] = []
+
+    for entry in iter_registry_entries(path=Path(registry_path)):
+        references: List[tuple[str, str, bool]] = []
+        if entry.default_operator_profile:
+            references.append(
+                ("default_operator_profile", str(entry.default_operator_profile), True)
+            )
+        manifest = load_capability_capsule_manifest(Path(entry.manifest_path))
+        for reference in manifest.get("operator_compatibility", {}).get("preferred", []) or []:
+            references.append(
+                ("operator_compatibility.preferred", str(reference), False)
+            )
+
+        for field, reference, allow_profile in references:
+            resolution = resolve_static_operator_reference(
+                reference,
+                operators,
+                allow_profile=allow_profile,
+            )
+            if resolution["selectable_matches"]:
+                continue
+            issues.append(
+                {
+                    "capability_capsule_id": entry.capability_capsule_id,
+                    "field": field,
+                    "reference": reference,
+                    "reason": (
+                        "operator_not_found"
+                        if resolution["resolution_kind"] == "missing"
+                        else "operator_not_selectable"
+                    ),
+                    "resolution_kind": resolution["resolution_kind"],
+                    "matches": resolution["matches"],
+                    "rejection_reasons": resolution["rejection_reasons"],
+                }
+            )
+    return issues
 
 
 def get_registry_entry(
@@ -853,6 +1032,66 @@ def default_capability_plan_for_logical_operator(
         selection_mode = "understand_anything_heuristic"
         fallback_used = False
         fallback_reason = None
+    elif _looks_like_read_only_audit_task(
+        logical_operator,
+        request_type=request_type,
+        lane_hint=lane_hint,
+        node=node,
+        goal_text=goal_text,
+    ):
+        capsule_id = "cap.requirement-compiler-audit"
+        dispatch_task_type = _canonical_read_only_audit_task_type(node)
+        selection_mode = "read_only_audit_heuristic"
+        fallback_used = False
+        fallback_reason = None
+    elif str(logical_operator or "") in {
+        "ResearchScout",
+        "ResearchSynthesizer",
+        "ArtifactCurator",
+    }:
+        # Named research operators have explicit, governed artifact contracts.
+        # Bind those contracts before the generic research guard below so a
+        # ResearchScout can retrieve a provenance-complete source pack and the
+        # synthesizer/curator can consume it without falling through to a
+        # code-oriented goal classifier.
+        capsule_id = DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR[str(logical_operator)]
+        dispatch_task_type = DEFAULT_TASK_TYPE_BY_LOGICAL_OPERATOR[str(logical_operator)]
+        selection_mode = "research_logical_operator_default"
+        fallback_used = False
+        fallback_reason = None
+    elif (
+        str(request_type).strip().lower() == "research"
+        and str(logical_operator or "") in DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR
+    ):
+        # A research request does not erase an explicitly named support role.
+        # Verifiers, critics, planners, and implementation workers still need
+        # their declared capsule contract; only an untyped Researcher should
+        # bypass code-oriented goal inference.
+        capsule_id = DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR[str(logical_operator)]
+        dispatch_task_type = DEFAULT_TASK_TYPE_BY_LOGICAL_OPERATOR[str(logical_operator)]
+        selection_mode = "research_support_operator_default"
+        fallback_used = False
+        fallback_reason = None
+    elif (
+        str(request_type).strip().lower() == "research"
+        or str(logical_operator).strip().lower() == "researcher"
+        or str((node or {}).get("type", "")).strip().lower() == "research"
+    ):
+        # Research nodes must NOT bind code-capability capsules. Their goal text routinely
+        # contains code keywords ("autocomplete latency", "refactoring", "benchmark",
+        # "throughput") that mis-trigger the code-task classifier — e.g. the CAPABILITIES
+        # research dimension pulled cap.flashmlx-performance-debugger, whose
+        # root_cause_report/benchmark_report proof obligations a research node can never
+        # produce → permanent eval FAIL → the research gate wedges (observed: S2a failed while
+        # sibling S2b–S2e, identical Researcher nodes, passed with no capsule).
+        # Named ResearchScout/Synthesizer/ArtifactCurator operators bind their
+        # dedicated research capsules above; a plain Researcher node correctly
+        # gets none.
+        capsule_id = None
+        dispatch_task_type = ""
+        fallback_used = False
+        fallback_reason = "research_node_skips_code_capability_classifier"
+        selection_mode = "research_node_no_code_capsule"
     else:
         # ── Priority 2: goal-driven classifier → capsule query ─────────────
         effective_goal = goal_text or str((node or {}).get("goal", "")) or request_type
@@ -891,7 +1130,14 @@ def default_capability_plan_for_logical_operator(
 
     if not capsule_id:
         return {}
-    entry = get_registry_entry(capsule_id, path=registry_path, include_nonstable=True)
+    # Normal product routing admits only stable capsules.  A skill-registry
+    # override is an explicit experimental opt-in and may resolve its draft
+    # capsule; heuristic goal matching must never promote a draft surface.
+    entry = get_registry_entry(
+        capsule_id,
+        path=registry_path,
+        include_nonstable=bool(skill_override),
+    )
     if entry is None or entry.status == "revoked":
         return {}
     manifest = load_capability_capsule_manifest(Path(entry.manifest_path))

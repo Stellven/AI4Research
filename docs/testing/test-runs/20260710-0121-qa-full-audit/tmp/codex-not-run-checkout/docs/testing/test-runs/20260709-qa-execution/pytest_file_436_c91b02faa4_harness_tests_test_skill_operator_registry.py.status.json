@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_436_c91b02faa4_harness_tests_test_skill_operator_registry.py",
+  "source": "harness/tests/test_skill_operator_registry.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_skill_operator_registry.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.2,
+  "timeout": false
+}

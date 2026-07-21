@@ -1,0 +1,21 @@
+{
+  "task_id": "task-job-scientific-lifecycle-resume-test-experiment_design",
+  "operator_id": "autosci-experiment-design-worker",
+  "sprint_id": "job-scientific-lifecycle-resume-test",
+  "node_id": "experiment_design",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T14:06:14Z",
+  "finished_at": "2026-07-10T14:06:14Z",
+  "log_tail": "{\n  \"action\": \"design_experiment\",",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

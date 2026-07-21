@@ -1,0 +1,23 @@
+=== test-state-mapper.sh ===
+  ✅ drafting+prd_ready+handoff_to=planner (KEY BUG FIX) → prd_ready / planner
+  ✅ drafting+no_phase → intake/pm → intake / pm
+  ✅ drafting+prd_ready (no handoff_to) → prd_ready/planner → prd_ready / planner
+  ✅ active → planning_complete/builder_main → planning_complete / builder_main
+  ✅ reviewing → build_complete/evaluator → build_complete / evaluator
+  ✅ status=planning_complete → planning_complete/builder_main → planning_complete / builder_main
+  ✅ active+s0_dispatched → building/builder_main → building / builder_main
+  ✅ active+g0_passed → building/builder_main → building / builder_main
+  ✅ active+s6_dispatched → building/builder_main → building / builder_main
+  ✅ active+s0_ready_for_eval → build_complete/evaluator → build_complete / evaluator
+  ✅ active+s6_ready_for_eval → build_complete/evaluator → build_complete / evaluator
+  ✅ passed → done/none → done / none
+  ✅ failed → failed/none → failed / none
+  ✅ failed_review → blocked/builder_main → blocked / builder_main
+  ✅ blocked → blocked/planner → blocked / planner
+  ✅ corrupt JSON → corrupt/none → corrupt / none
+  ✅ missing file → corrupt/none → corrupt / none
+
+--- validate_transition ---
+  ✅ planning_complete→build_complete via handoff_present: allowed
+
+=== RESULT: PASS=18 FAIL=0 ===

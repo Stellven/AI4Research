@@ -1,0 +1,38 @@
+{
+  "action": "generate_ideas",
+  "allow_destructive": false,
+  "allow_email": false,
+  "allow_network": false,
+  "allow_remote": false,
+  "allowed": false,
+  "allowed_write_roots": [
+    "artifacts/autosci",
+    "artifacts/scientific"
+  ],
+  "blocked": true,
+  "execute_side_effects": false,
+  "mode": "strict_hitl",
+  "proof_best_effort": false,
+  "proof_required": true,
+  "reasons": [
+    "read_local is allowed in strict_hitl.",
+    "write_artifact is allowed in strict_hitl.",
+    "network_fetch requires HITL approval in strict_hitl.",
+    "local_command requires HITL approval in strict_hitl.",
+    "wiki_mutation requires HITL approval in strict_hitl."
+  ],
+  "require_approval_ref": true,
+  "require_before_after_artifacts": true,
+  "require_hitl": true,
+  "require_runtime_evidence": true,
+  "sandbox_required": false,
+  "side_effects": [
+    "read_local",
+    "write_artifact",
+    "network_fetch",
+    "local_command",
+    "wiki_mutation"
+  ],
+  "synthetic_approval_ref": "",
+  "warnings": []
+}

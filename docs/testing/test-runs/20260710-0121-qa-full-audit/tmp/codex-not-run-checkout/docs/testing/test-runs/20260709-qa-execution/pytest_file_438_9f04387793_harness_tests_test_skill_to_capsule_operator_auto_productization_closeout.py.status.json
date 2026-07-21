@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_438_9f04387793_harness_tests_test_skill_to_capsule_operator_auto_productization_closeout.py",
+  "source": "harness/tests/test_skill_to_capsule_operator_auto_productization_closeout.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_skill_to_capsule_operator_auto_productization_closeout.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.2,
+  "timeout": false
+}

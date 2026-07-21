@@ -1,0 +1,52 @@
+---
+id: owl
+name: "CAMEL OWL Multi-Agent Framework"
+version: "1.0.0"
+description: "Local CAMEL OWL checkout under ~/.solar/owl. Registered as a non-default Solar capability provider for multi-agent research and browser experimentation."
+status: enabled
+
+write_scope:
+  - "state/owl"
+  - "logs/owl"
+
+read_scope:
+  - "~/.solar/owl"
+
+capabilities:
+  - "multi_agent.research"
+  - "browser.agent_experiment"
+  - "document.toolkit"
+
+commands:
+  - "~/.solar/owl/start-service.sh"
+  - "~/.solar/owl/venv/bin/python"
+
+background_safety:
+  mode: service
+  idle_only: false
+  rate_limit: "manual"
+  max_runtime_s: 3600
+  max_memory_mb: 4096
+
+eval_packs:
+  - "tests/plugins/test-s4-extension-framework.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable owl"
+
+integration_level: basic_usable
+
+entry: "~/.solar/owl/README.md"
+
+events:
+  - "owl.service_detected"
+  - "owl.research_task_started"
+
+depends_on: []
+
+tags:
+  - "multi-agent"
+  - "research"
+  - "browser"

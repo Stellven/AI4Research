@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Resource Execution Engine - 资源执行引擎架构</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f0f1a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(30, 30, 50, 0.8);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .card h2 {
+            color: #00d4ff;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        .card.highlight {
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+        .card.warning {
+            border-color: #ffaa00;
+            box-shadow: 0 0 15px rgba(255, 170, 0, 0.15);
+        }
+        .architecture {
+            background: #0a0a15;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 11px;
+            line-height: 1.4;
+            overflow-x: auto;
+        }
+        .architecture pre {
+            color: #00ff88;
+            white-space: pre;
+        }
+        .priority-list {
+            list-style: none;
+        }
+        .priority-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border-left: 4px solid;
+            transition: transform 0.2s;
+        }
+        .priority-item:hover {
+            transform: translateX(5px);
+        }
+        .priority-item.p1 { border-left-color: #ff4444; }
+        .priority-item.p2 { border-left-color: #ff8844; }
+        .priority-item.p3 { border-left-color: #ffcc00; }
+        .priority-item.p4 { border-left-color: #88cc00; }
+        .priority-item.p5 { border-left-color: #00cc88; }
+        .priority-item.p6 { border-left-color: #0088cc; }
+        .priority-num {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 14px;
+        }
+        .p1 .priority-num { background: #ff4444; color: white; }
+        .p2 .priority-num { background: #ff8844; color: white; }
+        .p3 .priority-num { background: #ffcc00; color: black; }
+        .p4 .priority-num { background: #88cc00; color: black; }
+        .p5 .priority-num { background: #00cc88; color: white; }
+        .p6 .priority-num { background: #0088cc; color: white; }
+        .priority-content {
+            flex: 1;
+        }
+        .priority-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .priority-desc {
+            font-size: 11px;
+            color: #888;
+        }
+        .priority-latency {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+        }
+        .code-block {
+            background: #0a0a15;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 11px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .code-block code {
+            color: #00ff88;
+        }
+        .comment { color: #666; }
+        .keyword { color: #ff79c6; }
+        .function { color: #50fa7b; }
+        .type { color: #8be9fd; }
+        .string { color: #f1fa8c; }
+        .table-schema {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .table-schema th, .table-schema td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        .table-schema th {
+            color: #00d4ff;
+            font-weight: normal;
+            background: rgba(0, 212, 255, 0.1);
+        }
+        .table-schema tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 15px;
+        }
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .flow-box {
+            background: linear-gradient(135deg, #1a1a3e, #2a2a4e);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 12px 16px;
+            min-width: 140px;
+            text-align: center;
+        }
+        .flow-box.input { border-color: #00d4ff; }
+        .flow-box.process { border-color: #ff79c6; }
+        .flow-box.cache { border-color: #50fa7b; }
+        .flow-box.output { border-color: #ffaa00; }
+        .flow-arrow {
+            color: #00d4ff;
+            font-size: 20px;
+        }
+        .flow-branch {
+            display: flex;
+            gap: 10px;
+            margin-left: 50px;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .metric-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        .metric-label {
+            font-size: 11px;
+            color: #888;
+            margin-top: 5px;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin: 2px;
+        }
+        .tag.shortcut { background: #ff4444; }
+        .tag.script { background: #ff8844; }
+        .tag.skill { background: #ffcc00; color: black; }
+        .tag.mcp { background: #88cc00; color: black; }
+        .tag.agent { background: #00cc88; }
+        .tag.code { background: #0088cc; }
+        footer {
+            text-align: center;
+            color: #444;
+            margin-top: 40px;
+            padding: 20px;
+            border-top: 1px solid #222;
+        }
+        .section-title {
+            color: #00d4ff;
+            font-size: 1.3em;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333;
+        }
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .benefit-item {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .benefit-item h4 {
+            color: #00ff88;
+            margin-bottom: 8px;
+        }
+        .benefit-item p {
+            font-size: 12px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Solar Resource Execution Engine</h1>
+        <p class="subtitle">资源执行优先级 + 脚本引擎架构 · REE v1.0</p>
+
+        <!-- 核心架构图 -->
+        <div class="card highlight" style="margin-bottom: 20px;">
+            <h2>🏗️ 核心架构总览</h2>
+            <div class="architecture">
+<pre>
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                            SOLAR RESOURCE EXECUTION ENGINE (REE)                             │
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                             │
+│   用户请求                                                                                  │
+│       │                                                                                     │
+│       ▼                                                                                     │
+│   ┌───────────────────────────────────────────────────────────────────────────────────┐    │
+│   │                           意图解析器 (Intent Parser)                               │    │
+│   │   • 动作识别 (查询/创建/修改/删除/执行)                                             │    │
+│   │   • 对象提取 (文件/邮件/提醒/天气/...)                                              │    │
+│   │   • 参数解析 (关键词/时间/数量/...)                                                 │    │
+│   └───────────────────────────────────────────────────────────────────────────────────┘    │
+│                                           │                                                 │
+│                                           ▼                                                 │
+│   ┌───────────────────────────────────────────────────────────────────────────────────┐    │
+│   │                         资源匹配引擎 (Resource Matcher)                            │    │
+│   │                                                                                    │    │
+│   │   ┌─────────────────────────────────────────────────────────────────────────────┐ │    │
+│   │   │  P1 SHORTCUTS    Apple 快捷指令 · OS级 · ~50ms                              │ │    │
+│   │   │  ════════════════════════════════════════════════════════════════════════   │ │    │
+│   │   │  提醒/日历/HomeKit/消息/天气/剪贴板/Siri...                                  │ │    │
+│   │   └─────────────────────────────────────────────────────────────────────────────┘ │    │
+│   │                              │ 未匹配 ↓                                           │    │
+│   │   ┌─────────────────────────────────────────────────────────────────────────────┐ │    │
+│   │   │  P2 SCRIPTS      脚本引擎缓存 · 本地执行 · ~100ms                           │ │    │
+│   │   │  ════════════════════════════════════════════════════════════════════════   │ │    │
+│   │   │  已验证脚本/历史代码复用/参数化模板...                                       │ │    │
+│   │   └─────────────────────────────────────────────────────────────────────────────┘ │    │
+│   │                              │ 未匹配 ↓                                           │    │
+│   │   ┌─────────────────────────────────────────────────────────────────────────────┐ │    │
+│   │   │  P3 SKILLS       Solar Skills · 命令式 · ~200ms                             │ │    │
+│   │   │  ════════════════════════════════════════════════════════════════════════   │ │    │
+│   │   │  /commit /review /weather /email /build...                                   │ │    │
+│   │   └─────────────────────────────────────────────────────────────────────────────┘ │    │
+│   │                              │ 未匹配 ↓                                           │    │
+│   │   ┌─────────────────────────────────────────────────────────────────────────────┐ │    │
+│   │   │  P4 MCP          外部服务 · API调用 · ~500ms                                │ │    │
+│   │   │  ════════════════════════════════════════════════════════════════════════   │ │    │
+│   │   │  Notion/Trello/Playwright/Himalaya...                                        │ │    │
+│   │   └─────────────────────────────────────────────────────────────────────────────┘ │    │
+│   │                              │ 未匹配 ↓                                           │    │
+│   │   ┌─────────────────────────────────────────────────────────────────────────────┐ │    │
+│   │   │  P5 AGENTS       多步协作 · 复杂任务 · ~2000ms                              │ │    │
+│   │   │  ════════════════════════════════════════════════════════════════════════   │ │    │
+│   │   │  @Researcher @Architect @Coder @Tester...                                    │ │    │
+│   │   └─────────────────────────────────────────────────────────────────────────────┘ │    │
+│   │                              │ 未匹配 ↓                                           │    │
+│   │   ┌─────────────────────────────────────────────────────────────────────────────┐ │    │
+│   │   │  P6 CODE GEN     新代码生成 · 最后手段 · ~5000ms                            │ │    │
+│   │   │  ════════════════════════════════════════════════════════════════════════   │ │    │
+│   │   │  生成 → 执行 → 验证 → 缓存到脚本引擎                                        │ │    │
+│   │   └─────────────────────────────────────────────────────────────────────────────┘ │    │
+│   │                                                                                    │    │
+│   └───────────────────────────────────────────────────────────────────────────────────┘    │
+│                                           │                                                 │
+│                                           ▼                                                 │
+│   ┌───────────────────────────────────────────────────────────────────────────────────┐    │
+│   │                           脚本引擎 (Script Engine)                                 │    │
+│   │   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐          │    │
+│   │   │ sys_scripts │   │ 语义索引    │   │ 使用统计    │   │ 版本管理    │          │    │
+│   │   │ 脚本注册表  │   │ embedding   │   │ 热度排序    │   │ 回滚能力    │          │    │
+│   │   └─────────────┘   └─────────────┘   └─────────────┘   └─────────────┘          │    │
+│   └───────────────────────────────────────────────────────────────────────────────────┘    │
+│                                                                                             │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+</pre>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- 优先级定义 -->
+            <div class="card">
+                <h2>📊 资源执行优先级 (Priority Levels)</h2>
+                <ul class="priority-list">
+                    <li class="priority-item p1">
+                        <div class="priority-num">P1</div>
+                        <div class="priority-content">
+                            <div class="priority-title">🍎 Apple Shortcuts</div>
+                            <div class="priority-desc">OS 级操作 · 提醒/日历/HomeKit/消息</div>
+                        </div>
+                        <div class="priority-latency">~50ms</div>
+                    </li>
+                    <li class="priority-item p2">
+                        <div class="priority-num">P2</div>
+                        <div class="priority-content">
+                            <div class="priority-title">📜 Cached Scripts</div>
+                            <div class="priority-desc">脚本引擎缓存 · 历史代码复用</div>
+                        </div>
+                        <div class="priority-latency">~100ms</div>
+                    </li>
+                    <li class="priority-item p3">
+                        <div class="priority-num">P3</div>
+                        <div class="priority-content">
+                            <div class="priority-title">⚡ Solar Skills</div>
+                            <div class="priority-desc">命令式技能 · /commit /weather</div>
+                        </div>
+                        <div class="priority-latency">~200ms</div>
+                    </li>
+                    <li class="priority-item p4">
+                        <div class="priority-num">P4</div>
+                        <div class="priority-content">
+                            <div class="priority-title">🔌 MCP Servers</div>
+                            <div class="priority-desc">外部服务集成 · Notion/Trello</div>
+                        </div>
+                        <div class="priority-latency">~500ms</div>
+                    </li>
+                    <li class="priority-item p5">
+                        <div class="priority-num">P5</div>
+                        <div class="priority-content">
+                            <div class="priority-title">🤖 Agents</div>
+                            <div class="priority-desc">多步协作 · @Coder @Researcher</div>
+                        </div>
+                        <div class="priority-latency">~2s</div>
+                    </li>
+                    <li class="priority-item p6">
+                        <div class="priority-num">P6</div>
+                        <div class="priority-content">
+                            <div class="priority-title">🔧 Code Generation</div>
+                            <div class="priority-desc">新代码生成 · 最后手段 → 缓存</div>
+                        </div>
+                        <div class="priority-latency">~5s</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 脚本引擎 -->
+            <div class="card warning">
+                <h2>🔧 脚本引擎 (Script Engine)</h2>
+                <div class="architecture">
+<pre>
+┌─────────────────────────────────────────────┐
+│              SCRIPT ENGINE                   │
+├─────────────────────────────────────────────┤
+│                                             │
+│  ┌─────────────────────────────────────┐   │
+│  │          脚本生命周期                │   │
+│  │                                     │   │
+│  │   生成 → 验证 → 注册 → 索引 → 复用  │   │
+│  │    │      │      │      │      │    │   │
+│  │    ▼      ▼      ▼      ▼      ▼    │   │
+│  │  LLM   测试   sys_   向量   匹配    │   │
+│  │  生成   通过  scripts 嵌入  执行    │   │
+│  └─────────────────────────────────────┘   │
+│                                             │
+│  核心能力:                                  │
+│  ─────────────────────────────────────────  │
+│  • 语义搜索 - embedding 相似度匹配         │
+│  • 参数化 - 模板 + 运行时参数              │
+│  • 版本管理 - 多版本共存 + 回滚            │
+│  • 热度统计 - 高频脚本优先                 │
+│  • 自动清理 - 30天未用自动归档             │
+│                                             │
+└─────────────────────────────────────────────┘
+</pre>
+                </div>
+                <div class="metrics">
+                    <div class="metric-box">
+                        <div class="metric-value">100x</div>
+                        <div class="metric-label">复用 vs 重写加速</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-value">0.8</div>
+                        <div class="metric-label">匹配阈值</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-value">30d</div>
+                        <div class="metric-label">自动归档周期</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统表设计 -->
+        <h3 class="section-title">📋 系统表设计 (IaST)</h3>
+        <div class="grid">
+            <div class="card">
+                <h2>sys_scripts - 脚本注册表</h2>
+                <table class="table-schema">
+                    <tr>
+                        <th>字段</th>
+                        <th>类型</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>script_id</td>
+                        <td>TEXT PK</td>
+                        <td>唯一标识 (hash)</td>
+                    </tr>
+                    <tr>
+                        <td>name</td>
+                        <td>TEXT</td>
+                        <td>脚本名称</td>
+                    </tr>
+                    <tr>
+                        <td>description</td>
+                        <td>TEXT</td>
+                        <td>功能描述 (用于匹配)</td>
+                    </tr>
+                    <tr>
+                        <td>intent_keywords</td>
+                        <td>JSON</td>
+                        <td>意图关键词列表</td>
+                    </tr>
+                    <tr>
+                        <td>runtime</td>
+                        <td>TEXT</td>
+                        <td>bun/node/python/bash</td>
+                    </tr>
+                    <tr>
+                        <td>code</td>
+                        <td>TEXT</td>
+                        <td>脚本代码</td>
+                    </tr>
+                    <tr>
+                        <td>params_schema</td>
+                        <td>JSON</td>
+                        <td>参数定义</td>
+                    </tr>
+                    <tr>
+                        <td>example_inputs</td>
+                        <td>JSON</td>
+                        <td>示例输入</td>
+                    </tr>
+                    <tr>
+                        <td>version</td>
+                        <td>INTEGER</td>
+                        <td>版本号</td>
+                    </tr>
+                    <tr>
+                        <td>status</td>
+                        <td>TEXT</td>
+                        <td>active/deprecated/archived</td>
+                    </tr>
+                    <tr>
+                        <td>created_at</td>
+                        <td>DATETIME</td>
+                        <td>创建时间</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>sys_script_stats - 使用统计</h2>
+                <table class="table-schema">
+                    <tr>
+                        <th>字段</th>
+                        <th>类型</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>script_id</td>
+                        <td>TEXT FK</td>
+                        <td>关联脚本</td>
+                    </tr>
+                    <tr>
+                        <td>invoke_count</td>
+                        <td>INTEGER</td>
+                        <td>调用次数</td>
+                    </tr>
+                    <tr>
+                        <td>success_count</td>
+                        <td>INTEGER</td>
+                        <td>成功次数</td>
+                    </tr>
+                    <tr>
+                        <td>avg_latency_ms</td>
+                        <td>REAL</td>
+                        <td>平均延迟</td>
+                    </tr>
+                    <tr>
+                        <td>last_used_at</td>
+                        <td>DATETIME</td>
+                        <td>最后使用时间</td>
+                    </tr>
+                    <tr>
+                        <td>hot_score</td>
+                        <td>REAL</td>
+                        <td>热度分数</td>
+                    </tr>
+                </table>
+                <div class="code-block">
+<code><span class="comment">-- 热度计算公式</span>
+<span class="keyword">UPDATE</span> sys_script_stats <span class="keyword">SET</span>
+  hot_score = invoke_count * 0.4 +
+    (success_count/invoke_count) * 0.3 +
+    (1.0 / (julianday('now') -
+      julianday(last_used_at) + 1)) * 0.3;</code>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>sys_script_embeddings - 语义索引</h2>
+                <table class="table-schema">
+                    <tr>
+                        <th>字段</th>
+                        <th>类型</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>script_id</td>
+                        <td>TEXT FK</td>
+                        <td>关联脚本</td>
+                    </tr>
+                    <tr>
+                        <td>embedding</td>
+                        <td>BLOB</td>
+                        <td>向量嵌入 (1536d)</td>
+                    </tr>
+                    <tr>
+                        <td>text_hash</td>
+                        <td>TEXT</td>
+                        <td>原文哈希 (变更检测)</td>
+                    </tr>
+                </table>
+                <div class="code-block">
+<code><span class="comment">-- 语义匹配查询</span>
+<span class="keyword">SELECT</span> s.*,
+  cosine_similarity(e.embedding, ?) <span class="keyword">AS</span> sim
+<span class="keyword">FROM</span> sys_scripts s
+<span class="keyword">JOIN</span> sys_script_embeddings e
+  <span class="keyword">ON</span> s.script_id = e.script_id
+<span class="keyword">WHERE</span> sim > 0.8
+<span class="keyword">ORDER BY</span> sim <span class="keyword">DESC</span>
+<span class="keyword">LIMIT</span> 5;</code>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>sys_resource_priority - 优先级配置</h2>
+                <table class="table-schema">
+                    <tr>
+                        <th>字段</th>
+                        <th>类型</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>resource_type</td>
+                        <td>TEXT PK</td>
+                        <td>shortcut/script/skill/mcp/agent/code</td>
+                    </tr>
+                    <tr>
+                        <td>priority</td>
+                        <td>INTEGER</td>
+                        <td>优先级 (1-6)</td>
+                    </tr>
+                    <tr>
+                        <td>enabled</td>
+                        <td>BOOLEAN</td>
+                        <td>是否启用</td>
+                    </tr>
+                    <tr>
+                        <td>match_threshold</td>
+                        <td>REAL</td>
+                        <td>匹配阈值</td>
+                    </tr>
+                    <tr>
+                        <td>max_latency_ms</td>
+                        <td>INTEGER</td>
+                        <td>超时阈值</td>
+                    </tr>
+                </table>
+                <div class="code-block">
+<code><span class="comment">-- 默认优先级配置</span>
+<span class="keyword">INSERT INTO</span> sys_resource_priority <span class="keyword">VALUES</span>
+  (<span class="string">'shortcut'</span>, 1, <span class="keyword">true</span>, 0.7, 100),
+  (<span class="string">'script'</span>,   2, <span class="keyword">true</span>, 0.8, 200),
+  (<span class="string">'skill'</span>,    3, <span class="keyword">true</span>, 0.7, 500),
+  (<span class="string">'mcp'</span>,      4, <span class="keyword">true</span>, 0.6, 1000),
+  (<span class="string">'agent'</span>,    5, <span class="keyword">true</span>, 0.5, 5000),
+  (<span class="string">'code'</span>,     6, <span class="keyword">true</span>, 0.0, 10000);</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- 执行流程 -->
+        <h3 class="section-title">🔄 执行流程详解</h3>
+        <div class="card" style="margin-bottom: 20px;">
+            <h2>资源匹配流程 (Resource Matching Flow)</h2>
+            <div class="architecture">
+<pre>
+用户请求: "帮我设置一个明天早上8点的提醒"
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│  Step 1: 意图解析                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  │
+│  │  动作: CREATE          对象: REMINDER         参数: {time: "明天8点", ...}      │  │
+│  └─────────────────────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│  Step 2: 按优先级匹配资源                                                              │
+│                                                                                        │
+│  ┌─ P1: Shortcuts ──────────────────────────────────────────────────────────────────┐ │
+│  │ 查询: SELECT * FROM sys_shortcuts WHERE capabilities LIKE '%reminder%'           │ │
+│  │ 结果: ✓ 找到 "solar_set_reminder" (similarity: 0.95)                             │ │
+│  │ 决策: 匹配成功 → 执行                                                             │ │
+│  └──────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                        │
+│  (若 P1 未匹配，继续 P2...)                                                            │
+│  ┌─ P2: Scripts ────────────────────────────────────────────────────────────────────┐ │
+│  │ 查询: SELECT * FROM sys_scripts WHERE cosine_sim(embedding, intent) > 0.8        │ │
+│  │ 结果: ✗ 无匹配                                                                    │ │
+│  └──────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                        │
+│  (若 P2 未匹配，继续 P3...)                                                            │
+│  ...                                                                                   │
+│                                                                                        │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│  Step 3: 执行资源                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ shortcuts run solar_set_reminder '{"title":"提醒","time":"2026-02-03T08:00"}'   │  │
+│  └─────────────────────────────────────────────────────────────────────────────────┘  │
+│  结果: ✓ 已创建提醒 · 耗时 52ms                                                        │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│  Step 4: 记录统计                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ UPDATE sys_shortcut_stats SET invoke_count = invoke_count + 1 WHERE ...         │  │
+│  └─────────────────────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+</pre>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+            <h2>代码生成 → 脚本缓存流程</h2>
+            <div class="architecture">
+<pre>
+用户请求: "获取HN头条并发送邮件摘要"
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│  P1-P5 均未匹配 → 触发 P6 代码生成                                                      │
+├───────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│  ┌─ Step 1: 生成代码 ─────────────────────────────────────────────────────────────┐   │
+│  │ LLM 生成: hn_email_summary.ts (约 80 行)                                       │   │
+│  │ 功能: 获取 HN 头条 → 格式化 → 发送邮件                                         │   │
+│  └────────────────────────────────────────────────────────────────────────────────┘   │
+│                              │                                                         │
+│                              ▼                                                         │
+│  ┌─ Step 2: 执行验证 ─────────────────────────────────────────────────────────────┐   │
+│  │ 运行: bun run hn_email_summary.ts                                              │   │
+│  │ 结果: ✓ 成功执行                                                                │   │
+│  └────────────────────────────────────────────────────────────────────────────────┘   │
+│                              │                                                         │
+│                              ▼                                                         │
+│  ┌─ Step 3: 缓存到脚本引擎 ──────────────────────────────────────────────────────┐   │
+│  │ INSERT INTO sys_scripts (                                                       │   │
+│  │   script_id, name, description, intent_keywords,                               │   │
+│  │   runtime, code, params_schema, ...                                            │   │
+│  │ ) VALUES (                                                                      │   │
+│  │   'hn_email_001',                                                              │   │
+│  │   'HN Email Summary',                                                          │   │
+│  │   '获取 Hacker News 头条并发送邮件摘要',                                        │   │
+│  │   '["HN", "头条", "邮件", "摘要", "hacker news"]',                              │   │
+│  │   'bun',                                                                        │   │
+│  │   '... 完整代码 ...',                                                           │   │
+│  │   '{"email": "string", "count": "number?"}',                                   │   │
+│  │   ...                                                                           │   │
+│  │ );                                                                              │   │
+│  └────────────────────────────────────────────────────────────────────────────────┘   │
+│                              │                                                         │
+│                              ▼                                                         │
+│  ┌─ Step 4: 生成向量嵌入 ─────────────────────────────────────────────────────────┐   │
+│  │ INSERT INTO sys_script_embeddings (script_id, embedding, text_hash)            │   │
+│  │ VALUES ('hn_email_001', embed("获取HN头条并发送邮件摘要"), 'abc123');           │   │
+│  └────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                        │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+        下次用户说 "发一份HN摘要给我" → P2 Scripts 直接匹配 → 复用执行
+</pre>
+            </div>
+        </div>
+
+        <!-- API 设计 -->
+        <h3 class="section-title">🔌 API 设计</h3>
+        <div class="grid">
+            <div class="card">
+                <h2>ResourceMatcher API</h2>
+                <div class="code-block">
+<code><span class="keyword">interface</span> <span class="type">ResourceMatcher</span> {
+  <span class="comment">// 匹配最佳资源</span>
+  <span class="function">match</span>(intent: <span class="type">Intent</span>): <span class="type">Promise</span>&lt;<span class="type">MatchResult</span>&gt;;
+
+  <span class="comment">// 按优先级逐层匹配</span>
+  <span class="function">matchByPriority</span>(
+    intent: <span class="type">Intent</span>,
+    levels: <span class="type">PriorityLevel</span>[]
+  ): <span class="type">Promise</span>&lt;<span class="type">MatchResult</span> | <span class="keyword">null</span>&gt;;
+
+  <span class="comment">// 执行匹配到的资源</span>
+  <span class="function">execute</span>(
+    match: <span class="type">MatchResult</span>,
+    params: <span class="type">Record</span>&lt;<span class="keyword">string</span>, <span class="keyword">any</span>&gt;
+  ): <span class="type">Promise</span>&lt;<span class="type">ExecutionResult</span>&gt;;
+}
+
+<span class="keyword">type</span> <span class="type">PriorityLevel</span> =
+  | <span class="string">'shortcut'</span>  <span class="comment">// P1</span>
+  | <span class="string">'script'</span>    <span class="comment">// P2</span>
+  | <span class="string">'skill'</span>     <span class="comment">// P3</span>
+  | <span class="string">'mcp'</span>       <span class="comment">// P4</span>
+  | <span class="string">'agent'</span>     <span class="comment">// P5</span>
+  | <span class="string">'code'</span>;     <span class="comment">// P6</span></code>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>ScriptEngine API</h2>
+                <div class="code-block">
+<code><span class="keyword">interface</span> <span class="type">ScriptEngine</span> {
+  <span class="comment">// 注册新脚本</span>
+  <span class="function">register</span>(script: <span class="type">ScriptDefinition</span>): <span class="type">Promise</span>&lt;<span class="keyword">string</span>&gt;;
+
+  <span class="comment">// 语义搜索脚本</span>
+  <span class="function">search</span>(
+    query: <span class="keyword">string</span>,
+    options?: {
+      threshold?: <span class="keyword">number</span>;  <span class="comment">// 默认 0.8</span>
+      limit?: <span class="keyword">number</span>;      <span class="comment">// 默认 5</span>
+    }
+  ): <span class="type">Promise</span>&lt;<span class="type">ScriptMatch</span>[]&gt;;
+
+  <span class="comment">// 执行脚本</span>
+  <span class="function">execute</span>(
+    scriptId: <span class="keyword">string</span>,
+    params: <span class="type">Record</span>&lt;<span class="keyword">string</span>, <span class="keyword">any</span>&gt;
+  ): <span class="type">Promise</span>&lt;<span class="type">ExecutionResult</span>&gt;;
+
+  <span class="comment">// 更新统计</span>
+  <span class="function">recordStats</span>(
+    scriptId: <span class="keyword">string</span>,
+    success: <span class="keyword">boolean</span>,
+    latencyMs: <span class="keyword">number</span>
+  ): <span class="type">Promise</span>&lt;<span class="keyword">void</span>&gt;;
+
+  <span class="comment">// 清理过期脚本</span>
+  <span class="function">cleanup</span>(daysUnused?: <span class="keyword">number</span>): <span class="type">Promise</span>&lt;<span class="keyword">number</span>&gt;;
+}</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- 收益分析 -->
+        <h3 class="section-title">📈 预期收益</h3>
+        <div class="benefit-grid">
+            <div class="benefit-item">
+                <h4>⚡ 执行效率提升</h4>
+                <p>Shortcut 50ms vs 代码生成 5000ms = <strong>100x 加速</strong></p>
+            </div>
+            <div class="benefit-item">
+                <h4>🔄 代码复用率</h4>
+                <p>脚本缓存后复用，避免重复生成 = <strong>省 90% Token</strong></p>
+            </div>
+            <div class="benefit-item">
+                <h4>🎯 匹配准确率</h4>
+                <p>语义向量 + 关键词 + 热度排序 = <strong>95%+ 准确</strong></p>
+            </div>
+            <div class="benefit-item">
+                <h4>📊 可观测性</h4>
+                <p>IaST 系统表 = 完整统计 + 可查询 + 可优化</p>
+            </div>
+        </div>
+
+        <!-- 实现路线图 -->
+        <h3 class="section-title">🗓️ 实现路线图</h3>
+        <div class="card">
+            <h2>Phase 1-3 实现计划</h2>
+            <div class="architecture">
+<pre>
+Phase 1: 基础框架 (本周)
+───────────────────────────────────────────────────────────────
+├── sys_scripts 表结构
+├── sys_script_stats 统计表
+├── sys_resource_priority 优先级配置
+├── ResourceMatcher 基础匹配逻辑
+└── Shortcut > Script > Skill 优先级链
+
+Phase 2: 脚本引擎 (下周)
+───────────────────────────────────────────────────────────────
+├── ScriptEngine 完整 API
+├── 语义向量索引 (embedding)
+├── 代码生成 → 自动缓存流程
+├── 热度排序算法
+└── 版本管理 + 回滚
+
+Phase 3: 优化迭代 (持续)
+───────────────────────────────────────────────────────────────
+├── 匹配准确率监控
+├── 自动参数推断
+├── 跨 Session 脚本共享
+└── 定期清理 + 归档
+</pre>
+            </div>
+        </div>
+
+        <footer>
+            Solar Resource Execution Engine · REE v1.0 · 2026-02-02<br>
+            <span style="color: #00d4ff;">资源优先级 + 脚本引擎 = 高效执行</span>
+        </footer>
+    </div>
+
+    <script>
+        // 优先级项目动画
+        document.querySelectorAll('.priority-item').forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+                item.style.transition = 'all 0.3s ease';
+                item.style.opacity = '1';
+                item.style.transform = 'translateX(0)';
+            }, index * 100);
+        });
+    </script>
+</body>
+</html>

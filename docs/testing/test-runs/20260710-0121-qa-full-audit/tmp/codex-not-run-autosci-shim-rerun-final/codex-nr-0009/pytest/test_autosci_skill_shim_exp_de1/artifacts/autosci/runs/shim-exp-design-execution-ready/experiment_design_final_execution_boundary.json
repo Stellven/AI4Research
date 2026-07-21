@@ -1,0 +1,30 @@
+{
+  "approval_ready_for_execution": true,
+  "approval_required": true,
+  "approval_state": "approved_pending_runtime",
+  "artifact_handoff_declared": true,
+  "blocking_reasons": [],
+  "command_allowlist": [
+    "python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment",
+    "python3 plugins/autosci/bin/autosci_bridge.py run --action monitor_experiment"
+  ],
+  "command_handoff_declared": true,
+  "execution_mode": "human_approved",
+  "execution_ready": true,
+  "expected_artifacts": [
+    "experiment_result.json",
+    "experiment_status.json",
+    "experiment_run.log"
+  ],
+  "limitations": [],
+  "review_evidence_ids": [
+    "review-exp-design-ready",
+    "review:exp-design-ready"
+  ],
+  "review_llm_completed": true,
+  "review_llm_status": "completed",
+  "schema": "autosci_experiment_design_final_execution_boundary.v1",
+  "status": "execution_ready",
+  "target_ref": "idea-skillgen-ready",
+  "target_resolved": true
+}

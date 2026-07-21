@@ -1,0 +1,18 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "sprint-ac3-fail",
+  "graph_ref": "sprint-ac3-fail.task_graph.json",
+  "node_results": {
+    "N1": {
+      "status": "failed",
+      "updated_at": "2026-07-10T14:06:35Z",
+      "note": "test failure",
+      "artifacts": {}
+    }
+  },
+  "gate_results": {},
+  "leases": {},
+  "dispatch_ids": {},
+  "updated_at": "2026-07-10T14:06:35Z",
+  "events": []
+}

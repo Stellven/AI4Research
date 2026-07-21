@@ -1,0 +1,70 @@
+{
+  "values": [
+    [
+      "Rule",
+      "Definition"
+    ],
+    [
+      "Base case",
+      "Stop splitting when the unit has one clear trigger, one bounded input class or invariant, one observable output/contract, known side effects, and direct pass/fail/inconclusive criteria."
+    ],
+    [
+      "Workflow split axis",
+      "Split by observable behavior: input class, execution mode, output/evidence contract, side-effect policy, lifecycle stage, and failure/recovery mode."
+    ],
+    [
+      "Foundation split axis",
+      "Split by invariant: route/binding, capability/operator mapping, evidence schema, evaluator gate, gate policy mode, side-effect class, TaskGraph/resume/artifact contract."
+    ],
+    [
+      "Misc split axis",
+      "Split by product surface: component, lifecycle command, platform, UI surface, integration/provider boundary, hook trigger, CI job, packaging/release behavior."
+    ],
+    [
+      "Parent-left guarantee",
+      "Every nonblank level n+1 feature is a child of the feature immediately to its left in the same row."
+    ],
+    [
+      "Leaf meaning",
+      "The rightmost nonblank level feature in a row is intended to be a base-case testable behavior/invariant, not merely a file or function name."
+    ],
+    [
+      "Status semantics for later tests",
+      "A correct test outcome can be completed, failed-correctly, inconclusive-correctly, blocked-correctly, approval-required-correctly, skipped-correctly, or static-validation-required."
+    ]
+  ],
+  "formulas": [
+    [
+      "",
+      ""
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "",
+      ""
+    ]
+  ]
+}

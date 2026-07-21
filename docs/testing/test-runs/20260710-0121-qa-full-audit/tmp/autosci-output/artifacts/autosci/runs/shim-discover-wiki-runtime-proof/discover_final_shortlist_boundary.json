@@ -1,0 +1,16 @@
+{
+  "blocking_reasons": [],
+  "candidate_count": 1,
+  "candidate_ids": [
+    "runtime-wiki-source-001"
+  ],
+  "final_shortlist_ready": true,
+  "limitations": [],
+  "mode": "discover_literature_runtime_verified",
+  "provider_channels": [
+    "wiki"
+  ],
+  "schema": "autosci_discover_final_shortlist_boundary.v1",
+  "source_provider_boundary_status": "completed",
+  "status": "final_shortlist_ready"
+}

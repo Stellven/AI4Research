@@ -1,0 +1,231 @@
+{
+  "ok": true,
+  "chapter_count": 8,
+  "p0_chapter_issue_count": 0,
+  "p1_chapter_issue_count": 5,
+  "chapters": [
+    {
+      "chapter_id": "ch01",
+      "title": "问题定义与研究边界",
+      "axis": "definition",
+      "section_ids": [
+        "ch01/sec01",
+        "ch01/sec02",
+        "ch01/sec03",
+        "ch01/sec04"
+      ],
+      "section_count": 4,
+      "ready_pack_ratio": 1.0,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "finalized_sections": 4,
+      "avg_final_chars": 104.0,
+      "p0_count": 0,
+      "p1_count": 4,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "chapter_section_p1_issue_density_high",
+          "detail": 4
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch02",
+      "title": "历史脉络与技术演进",
+      "axis": "history",
+      "section_ids": [
+        "ch02/sec01",
+        "ch02/sec02",
+        "ch02/sec03",
+        "ch02/sec04"
+      ],
+      "section_count": 4,
+      "ready_pack_ratio": 1.0,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "finalized_sections": 4,
+      "avg_final_chars": 104.0,
+      "p0_count": 0,
+      "p1_count": 4,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "chapter_section_p1_issue_density_high",
+          "detail": 4
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch03",
+      "title": "核心架构范式",
+      "axis": "architecture",
+      "section_ids": [
+        "ch03/sec01",
+        "ch03/sec02",
+        "ch03/sec03",
+        "ch03/sec04"
+      ],
+      "section_count": 4,
+      "ready_pack_ratio": 1.0,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "finalized_sections": 4,
+      "avg_final_chars": 104.0,
+      "p0_count": 0,
+      "p1_count": 4,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "chapter_section_p1_issue_density_high",
+          "detail": 4
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch04",
+      "title": "方法分类与代表系统",
+      "axis": "architecture",
+      "section_ids": [
+        "ch04/sec01",
+        "ch04/sec02",
+        "ch04/sec03",
+        "ch04/sec04"
+      ],
+      "section_count": 4,
+      "ready_pack_ratio": 1.0,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "finalized_sections": 4,
+      "avg_final_chars": 104.0,
+      "p0_count": 0,
+      "p1_count": 4,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "chapter_section_p1_issue_density_high",
+          "detail": 4
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch05",
+      "title": "评估方法与基准体系",
+      "axis": "evaluation",
+      "section_ids": [
+        "ch05/sec01",
+        "ch05/sec02",
+        "ch05/sec03",
+        "ch05/sec04"
+      ],
+      "section_count": 4,
+      "ready_pack_ratio": 1.0,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "finalized_sections": 4,
+      "avg_final_chars": 104.0,
+      "p0_count": 0,
+      "p1_count": 4,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "chapter_section_p1_issue_density_high",
+          "detail": 4
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch06",
+      "title": "工程实现与部署约束",
+      "axis": "engineering",
+      "section_ids": [
+        "ch06/sec01",
+        "ch06/sec02",
+        "ch06/sec03",
+        "ch06/sec04"
+      ],
+      "section_count": 4,
+      "ready_pack_ratio": 1.0,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "finalized_sections": 4,
+      "avg_final_chars": 104.0,
+      "p0_count": 0,
+      "p1_count": 0,
+      "issues": []
+    },
+    {
+      "chapter_id": "ch07",
+      "title": "风险、安全与可解释性",
+      "axis": "risk",
+      "section_ids": [
+        "ch07/sec01",
+        "ch07/sec02",
+        "ch07/sec03",
+        "ch07/sec04"
+      ],
+      "section_count": 4,
+      "ready_pack_ratio": 1.0,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "finalized_sections": 4,
+      "avg_final_chars": 104.0,
+      "p0_count": 0,
+      "p1_count": 0,
+      "issues": []
+    },
+    {
+      "chapter_id": "ch08",
+      "title": "产业生态与开源实现",
+      "axis": "engineering",
+      "section_ids": [
+        "ch08/sec01",
+        "ch08/sec02",
+        "ch08/sec03",
+        "ch08/sec04"
+      ],
+      "section_count": 4,
+      "ready_pack_ratio": 1.0,
+      "source_types": [
+        "benchmark",
+        "code",
+        "official_doc",
+        "paper"
+      ],
+      "finalized_sections": 4,
+      "avg_final_chars": 104.0,
+      "p0_count": 0,
+      "p1_count": 0,
+      "issues": []
+    }
+  ],
+  "issues": []
+}

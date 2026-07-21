@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-experience-memory.sh",
+  "source": "harness/tests/test-experience-memory.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-experience-memory.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.61,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-0vahpuwk"
+}

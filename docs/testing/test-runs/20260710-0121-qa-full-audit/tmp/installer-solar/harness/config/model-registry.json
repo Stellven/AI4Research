@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "defaults": {
+    "main_model": "opus",
+    "lab_builder_matrix": "glm,glm,glm,deepseek"
+  },
+  "models": {
+    "claude-opus": {
+      "label": "Claude Opus 4.8",
+      "short_label": "Opus",
+      "provider": "anthropic",
+      "model_flag": "--model claude-opus-4-8",
+      "model_key": "claude-opus",
+      "main_allowed": true,
+      "lab_allowed": true,
+      "aliases": [
+        "opus",
+        "claude-opus",
+        "anthropic-opus",
+        "opus-4.7",
+        "opus-4-7",
+        "claude-opus-4.7",
+        "claude-opus-4-7",
+        "opus-4.8",
+        "opus-4-8",
+        "claude-opus-4.8",
+        "claude-opus-4-8"
+      ]
+    },
+    "claude-sonnet": {
+      "label": "Claude Sonnet",
+      "short_label": "Sonnet",
+      "provider": "anthropic",
+      "model_flag": "--model sonnet",
+      "model_key": "claude-sonnet",
+      "main_allowed": true,
+      "lab_allowed": true,
+      "aliases": [
+        "anthropic-sonnet",
+        "claude",
+        "claude-sonnet",
+        "anthropic"
+      ]
+    },
+    "zhipu-glm-5.1": {
+      "label": "GLM-5.1",
+      "short_label": "GLM-5.1",
+      "provider": "zhipu",
+      "model_flag": "--model opus",
+      "model_key": "glm-5.1",
+      "main_allowed": false,
+      "lab_allowed": true,
+      "aliases": [
+        "glm",
+        "glm-5",
+        "glm-5.1",
+        "zhipu"
+      ]
+    },
+    "zhipu-glm-4.7": {
+      "label": "GLM-4.7",
+      "short_label": "GLM-4.7",
+      "provider": "zhipu",
+      "model_flag": "--model sonnet",
+      "model_key": "glm-4.7",
+      "main_allowed": false,
+      "lab_allowed": true,
+      "aliases": [
+        "sonnet",
+        "glm-4.7",
+        "glm47",
+        "zhipu-sonnet"
+      ]
+    },
+    "deepseek-v4-pro": {
+      "label": "DeepSeek V4 Pro",
+      "short_label": "DeepSeek V4",
+      "provider": "deepseek",
+      "model_flag": "--model sonnet",
+      "model_key": "deepseek",
+      "main_allowed": false,
+      "lab_allowed": true,
+      "aliases": [
+        "deepseek",
+        "deepseek-v4",
+        "deepseek-v4-pro",
+        "deepseek-v4-flash",
+        "ds",
+        "ds-v4"
+      ]
+    },
+    "gemini-2.5-pro": {
+      "label": "Gemini 2.5 Pro",
+      "short_label": "Gemini Pro",
+      "provider": "gemini",
+      "model_flag": "--model gemini-2.5-pro",
+      "model_key": "gemini",
+      "main_allowed": false,
+      "lab_allowed": true,
+      "aliases": [
+        "gemini",
+        "gemini-pro",
+        "gemini-2.5",
+        "gemini-2.5-pro",
+        "google-gemini"
+      ]
+    },
+    "gemini-2.5-flash": {
+      "label": "Gemini 2.5 Flash",
+      "short_label": "Gemini Flash",
+      "provider": "gemini",
+      "model_flag": "--model gemini-2.5-flash",
+      "model_key": "gemini-flash",
+      "main_allowed": false,
+      "lab_allowed": true,
+      "aliases": [
+        "gemini-flash",
+        "flash",
+        "gemini-2.5-flash"
+      ]
+    },
+    "thunderomlx": {
+      "label": "ThunderOMLX",
+      "short_label": "ThunderOMLX",
+      "provider": "local",
+      "model_flag": "",
+      "model_key": "thunderomlx",
+      "main_allowed": false,
+      "lab_allowed": true,
+      "aliases": [
+        "thunderomlx",
+        "thunder-omlx",
+        "omlx"
+      ]
+    }
+  },
+  "matrix_options": [
+    {
+      "value": "glm,glm,glm,deepseek",
+      "label": "3× GLM 5.1 + DeepSeek V4 Pro（当前推荐）"
+    },
+    {
+      "value": "glm-5.1,glm-5.1,sonnet,sonnet",
+      "label": "2× GLM 5.1 + 2× GLM 4.7"
+    },
+    {
+      "value": "glm-5.1,sonnet,glm-5.1,sonnet",
+      "label": "GLM 5.1 / GLM 4.7 交错"
+    },
+    {
+      "value": "anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet",
+      "label": "全 Claude Sonnet"
+    },
+    {
+      "value": "glm,glm,glm,anthropic-sonnet",
+      "label": "3× GLM 5.1 + Claude Sonnet"
+    },
+    {
+      "value": "glm-5.1,anthropic-sonnet,deepseek,anthropic-sonnet",
+      "label": "混合：GLM + Claude Sonnet + DeepSeek"
+    }
+  ]
+}

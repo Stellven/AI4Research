@@ -1,0 +1,703 @@
+## $skills
+{
+  "count": 28,
+  "ok": true,
+  "skills": [
+    {
+      "autosci_command": "/ask",
+      "coverage_status": "partial",
+      "physical_operator": "SkillgenResearchWikiQueryOperator",
+      "side_effect_policy": "none",
+      "skill": "ask",
+      "solar_backend_action": "ask_wiki"
+    },
+    {
+      "autosci_command": "/check",
+      "coverage_status": "partial",
+      "physical_operator": "SkillgenWikiHealthOperator",
+      "side_effect_policy": "none",
+      "skill": "check",
+      "solar_backend_action": "check_wiki_health"
+    },
+    {
+      "autosci_command": "/daily-arxiv",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedDailyArxivOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "daily-arxiv",
+      "solar_backend_action": "daily_arxiv_prepare_finalize"
+    },
+    {
+      "autosci_command": "/discover",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeLiteratureOperator",
+      "side_effect_policy": "none",
+      "skill": "discover",
+      "solar_backend_action": "discover_literature"
+    },
+    {
+      "autosci_command": "/edit",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedWikiEditOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "edit",
+      "solar_backend_action": "edit_wiki_plan"
+    },
+    {
+      "autosci_command": "/exp-design",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeExperimentDesigner",
+      "side_effect_policy": "dry_run_only",
+      "skill": "exp-design",
+      "solar_backend_action": "design_experiment"
+    },
+    {
+      "autosci_command": "/exp-eval",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeClaimVerifier",
+      "side_effect_policy": "approval_required",
+      "skill": "exp-eval",
+      "solar_backend_action": "verify_claim"
+    },
+    {
+      "autosci_command": "/exp-pilot-eval",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgePilotVerifier",
+      "side_effect_policy": "approval_required",
+      "skill": "exp-pilot-eval",
+      "solar_backend_action": "evaluate_pilot_result"
+    },
+    {
+      "autosci_command": "/exp-pilot-run",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedPilotExperimentRunner",
+      "side_effect_policy": "approval_required",
+      "skill": "exp-pilot-run",
+      "solar_backend_action": "run_pilot_experiment"
+    },
+    {
+      "autosci_command": "/exp-run",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedExperimentRunner",
+      "side_effect_policy": "approval_required",
+      "skill": "exp-run",
+      "solar_backend_action": "run_experiment"
+    },
+    {
+      "autosci_command": "/exp-status",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeExperimentMonitor",
+      "side_effect_policy": "none",
+      "skill": "exp-status",
+      "solar_backend_action": "monitor_experiment"
+    },
+    {
+      "autosci_command": "/ideate",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeIdeaOperator",
+      "side_effect_policy": "dry_run_only",
+      "skill": "ideate",
+      "solar_backend_action": "generate_ideas"
+    },
+    {
+      "autosci_command": "/ingest",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgePaperIngestor",
+      "side_effect_policy": "dry_run_only",
+      "skill": "ingest",
+      "solar_backend_action": "ingest_paper"
+    },
+    {
+      "autosci_command": "/init",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeInitSourceOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "init",
+      "solar_backend_action": "init_sources"
+    },
+    {
+      "autosci_command": "/novelty",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeNoveltyEvaluator",
+      "side_effect_policy": "dry_run_only",
+      "skill": "novelty",
+      "solar_backend_action": "evaluate_ideas"
+    },
+    {
+      "autosci_command": "/paper-compile",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedPaperCompileOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "paper-compile",
+      "solar_backend_action": "compile_paper"
+    },
+    {
+      "autosci_command": "/paper-draft",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeReportDrafter",
+      "side_effect_policy": "dry_run_only",
+      "skill": "paper-draft",
+      "solar_backend_action": "write_report"
+    },
+    {
+      "autosci_command": "/paper-plan",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeReportPlanner",
+      "side_effect_policy": "dry_run_only",
+      "skill": "paper-plan",
+      "solar_backend_action": "plan_report"
+    },
+    {
+      "autosci_command": "/poster",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedPosterOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "poster",
+      "solar_backend_action": "build_poster"
+    },
+    {
+      "autosci_command": "/prefill",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedFoundationPrefillOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "prefill",
+      "solar_backend_action": "prefill_foundations"
+    },
+    {
+      "autosci_command": "/rebuttal",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeRebuttalDrafter",
+      "side_effect_policy": "dry_run_only",
+      "skill": "rebuttal",
+      "solar_backend_action": "draft_rebuttal"
+    },
+    {
+      "autosci_command": "/refine",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedRefineOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "refine",
+      "solar_backend_action": "refine_artifact"
+    },
+    {
+      "autosci_command": "/research",
+      "coverage_status": "partial",
+      "physical_operator": "SolarScientificLifecycleOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "research",
+      "solar_backend_action": "run_research_lifecycle"
+    },
+    {
+      "autosci_command": "/reset",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedResetOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "reset",
+      "solar_backend_action": "reset_plan"
+    },
+    {
+      "autosci_command": "/review",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeReviewOperator",
+      "side_effect_policy": "dry_run_only",
+      "skill": "review",
+      "solar_backend_action": "review_artifact"
+    },
+    {
+      "autosci_command": "/setup",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedSetupStatusOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "setup",
+      "solar_backend_action": "setup_status"
+    },
+    {
+      "autosci_command": "/survey",
+      "coverage_status": "partial",
+      "physical_operator": "AutoSciBridgeSurveyWriter",
+      "side_effect_policy": "dry_run_only",
+      "skill": "survey",
+      "solar_backend_action": "write_survey"
+    },
+    {
+      "autosci_command": "/visualize",
+      "coverage_status": "gated",
+      "physical_operator": "ApprovalGatedGraphVisualizationOperator",
+      "side_effect_policy": "approval_required",
+      "skill": "visualize",
+      "solar_backend_action": "visualize_graph"
+    }
+  ]
+}
+
+## $review --help
+usage: autosci_skill_shim.py skill [-h] [--paper PAPER] [--topic TOPIC]
+                                   [--anchor ANCHOR] [--negative NEGATIVE]
+                                   [--discover] [--visualize] [--render]
+                                   [--serve] [--obsidian] [--canvas]
+                                   [--from-wiki] [--venue VENUE] [--year YEAR]
+                                   [--limit LIMIT] [--wiki-root WIKI_ROOT]
+                                   [--discovery-evidence DISCOVERY_EVIDENCE]
+                                   [--novelty-evidence NOVELTY_EVIDENCE]
+                                   [--no-citation-expand] [--target TARGET]
+                                   [--smoke] [--env {local,remote}]
+                                   [--collect] [--check] [--collect-ready]
+                                   [--pipeline PIPELINE] [--full] [--review]
+                                   [--require-review-llm]
+                                   [--review-llm-evidence REVIEW_LLM_EVIDENCE]
+                                   [--review-llm-command REVIEW_LLM_COMMAND]
+                                   [--review-llm-provider {openai,openrouter,openai_compatible}]
+                                   [--review-llm-model REVIEW_LLM_MODEL]
+                                   [--review-llm-endpoint REVIEW_LLM_ENDPOINT]
+                                   [--model-evidence MODEL_EVIDENCE]
+                                   [--model-command MODEL_COMMAND]
+                                   [--experiment-result-evidence EXPERIMENT_RESULT_EVIDENCE]
+                                   [--claims-evidence CLAIMS_EVIDENCE]
+                                   [--code-evidence CODE_EVIDENCE]
+                                   [--source-evidence SOURCE_EVIDENCE]
+                                   [--title TITLE] [--no-introduction]
+                                   [--checklist] [--fix] [--anonymous]
+                                   [--double-blind]
+                                   [--submission-mode SUBMISSION_MODE]
+                                   [--submission-profile SUBMISSION_PROFILE]
+                                   [--pdf-inspection PDF_INSPECTION]
+                                   [--submission-audit SUBMISSION_AUDIT]
+                                   [--page-limit PAGE_LIMIT]
+                                   [--page-count PAGE_COUNT]
+                                   [--verified-page-count VERIFIED_PAGE_COUNT]
+                                   [--min-font-size MIN_FONT_SIZE]
+                                   [--verified-min-font-size VERIFIED_MIN_FONT_SIZE]
+                                   [--quick] [--online]
+                                   [--approval-ref APPROVAL_REF]
+                                   [--allowlist-evidence ALLOWLIST_EVIDENCE]
+                                   [--runtime-evidence RUNTIME_EVIDENCE]
+                                   [--remote-check-command REMOTE_CHECK_COMMAND]
+                                   [--remote-run-dir REMOTE_RUN_DIR]
+                                   [--lifecycle-summary LIFECYCLE_SUMMARY]
+                                   [--scheduler-run] [--scheduler-demo]
+                                   [--scheduler-legacy-smoke-runner]
+                                   [--scheduler-node-id SCHEDULER_NODE_ID]
+                                   [--scheduler-timeout SCHEDULER_TIMEOUT]
+                                   [--scheduler-include-blocked-external]
+                                   [--scheduler-include-human-gates]
+                                   [--scheduler-dispatch-external-evidence]
+                                   [--scheduler-require-workflow-config-alignment]
+                                   [--scheduler-require-production-dispatch]
+                                   [--idea-approval-ref IDEA_APPROVAL_REF]
+                                   [--results-approval-ref RESULTS_APPROVAL_REF]
+                                   [--experiment-approval-ref EXPERIMENT_APPROVAL_REF]
+                                   [--experiment-runtime-evidence EXPERIMENT_RUNTIME_EVIDENCE]
+                                   [--experiment-allowlist-evidence EXPERIMENT_ALLOWLIST_EVIDENCE]
+                                   [--experiment-before-artifact EXPERIMENT_BEFORE_ARTIFACT]
+                                   [--experiment-after-artifact EXPERIMENT_AFTER_ARTIFACT]
+                                   [--experiment-execute-approved]
+                                   [--experiment-executor-timeout-seconds EXPERIMENT_EXECUTOR_TIMEOUT_SECONDS]
+                                   [--compile-target COMPILE_TARGET]
+                                   [--compile-approval-ref COMPILE_APPROVAL_REF]
+                                   [--compile-runtime-evidence COMPILE_RUNTIME_EVIDENCE]
+                                   [--compile-allowlist-evidence COMPILE_ALLOWLIST_EVIDENCE]
+                                   [--compile-before-artifact COMPILE_BEFORE_ARTIFACT]
+                                   [--compile-after-artifact COMPILE_AFTER_ARTIFACT]
+                                   [--compile-execute-approved]
+                                   [--compile-executor-timeout-seconds COMPILE_EXECUTOR_TIMEOUT_SECONDS]
+                                   [--before-artifact BEFORE_ARTIFACT]
+                                   [--after-artifact AFTER_ARTIFACT]
+                                   [--execute-approved] [--verbose] [--write]
+                                   [--crystallize] [--add ADD] [--delete]
+                                   [--difficulty {standard,hard,adversarial}]
+                                   [--focus FOCUS] [--depth DEPTH]
+                                   [--types TYPES] [--edge-types EDGE_TYPES]
+                                   [--max-ideas MAX_IDEAS]
+                                   [--max-papers MAX_PAPERS]
+                                   [--skip-validation] [--skip-pilot] [--auto]
+                                   [--start-from START_FROM] [--skip-paper]
+                                   [--all] [--max-rounds MAX_ROUNDS]
+                                   [--target-score TARGET_SCORE]
+                                   [--format FORMAT] [--paper-slug PAPER_SLUG]
+                                   [--authors AUTHORS] [--no-figures]
+                                   [--no-logos] [--auto-figures] [--no-refine]
+                                   [--refine-iterations REFINE_ITERATIONS]
+                                   [--affiliation-logo AFFILIATION_LOGO]
+                                   [--conference-logo CONFERENCE_LOGO]
+                                   [--layout {corners,stacked}]
+                                   [--reviewer-thread-evidence REVIEWER_THREAD_EVIDENCE]
+                                   [--stress-test] [--no-stress-test]
+                                   [--scope SCOPE]
+                                   [--mode {inform,auto-ingest}]
+                                   [--hours DAILY_HOURS]
+                                   [--categories [DAILY_CATEGORIES ...]]
+                                   [--max-recommendations DAILY_MAX_RECOMMENDATIONS]
+                                   [--max-auto-ingest DAILY_MAX_AUTO_INGEST]
+                                   [--send-email {true,false}]
+                                   [--run-id RUN_ID] [--work-dir WORK_DIR]
+                                   [--route-config ROUTE_CONFIG]
+                                   [--binding-config BINDING_CONFIG]
+                                   skill_name [skill_args ...]
+
+positional arguments:
+  skill_name            AutoSci skill name, for example ingest, ideate,
+                        research
+  skill_args            Optional positional skill arguments
+
+options:
+  -h, --help            show this help message and exit
+  --paper PAPER         Paper/source path. Markdown/text is supported by the
+                        current bridge.
+  --topic TOPIC         Research topic or discovery query hint
+  --anchor ANCHOR       Discover from one or more anchor paper IDs
+  --negative NEGATIVE   Paper ID to push recommendations away from
+  --discover            Native ingest/init discovery follow-up hint
+  --visualize           Native ingest/init visualization follow-up hint
+  --render              Native poster render/export request; execution remains
+                        approval-gated
+  --serve               Native visualize web serving request; execution
+                        remains approval-gated
+  --obsidian            Native visualize Obsidian graph config mode
+  --canvas              Native visualize Canvas generation mode
+  --from-wiki           Derive discovery anchors from current wiki papers
+  --venue VENUE         Venue slug for venue/year discovery
+  --year YEAR           Venue year for venue discovery
+  --limit LIMIT         Maximum discovery shortlist size
+  --wiki-root WIKI_ROOT
+                        Wiki root for discovery dedup and from-wiki mode
+  --discovery-evidence DISCOVERY_EVIDENCE
+                        Existing literature_discovery.v1 evidence for ideation
+  --novelty-evidence NOVELTY_EVIDENCE
+                        Existing Web/Semantic Scholar/DeepXiv novelty evidence
+                        JSON
+  --no-citation-expand  Skip citation/reference expansion for anchor discovery
+  --target TARGET       Idea, experiment, artifact, or route target
+  --smoke               Run bounded fixture bridge actions explicitly
+  --env {local,remote}  Native experiment environment hint
+  --collect             Native experiment collect mode
+  --check               Alias for --collect
+  --collect-ready       Native experiment pipeline collect-ready hint
+  --pipeline PIPELINE   Native research pipeline slug or status target
+  --full                Native full experiment run mode
+  --review              Request native Review LLM review where supported
+  --require-review-llm  Require Review LLM evidence for final review
+                        acceptance
+  --review-llm-evidence REVIEW_LLM_EVIDENCE
+                        Existing Review LLM evidence JSON for /review
+  --review-llm-command REVIEW_LLM_COMMAND
+                        Command bridge that returns artifact_review.v1 Review
+                        LLM JSON on stdout
+  --review-llm-provider {openai,openrouter,openai_compatible}
+                        OpenAI-compatible Review LLM provider
+  --review-llm-model REVIEW_LLM_MODEL
+                        Review LLM model name, defaulting to gpt-5.5 when
+                        provider mode is used
+  --review-llm-endpoint REVIEW_LLM_ENDPOINT
+                        OpenAI-compatible chat completions endpoint for Review
+                        LLM provider mode
+  --model-evidence MODEL_EVIDENCE
+                        Existing autosci_model_response.v1 JSON for ask/check
+                        synthesis
+  --model-command MODEL_COMMAND
+                        Command bridge that returns autosci_model_response.v1
+                        JSON on stdout
+  --experiment-result-evidence EXPERIMENT_RESULT_EVIDENCE
+                        Existing experiment_result.v1 JSON for exp-
+                        eval/status/collect
+  --claims-evidence CLAIMS_EVIDENCE
+                        Existing research_claims.v1 JSON for exp-eval claim
+                        text
+  --code-evidence CODE_EVIDENCE
+                        Existing code_evidence_map.v1 JSON for exp-eval
+                        static/code support
+  --source-evidence SOURCE_EVIDENCE
+                        Existing source/Wikipedia evidence JSON for source-
+                        backed route rendering
+  --title TITLE         Native report/paper working title
+  --no-introduction     Native init mode without introduction source
+                        generation
+  --checklist           Native paper compile checklist mode
+  --fix                 Native paper compile auto-fix mode
+  --anonymous           Paper compile evidence: anonymous submission mode
+                        requested
+  --double-blind        Paper compile evidence: double-blind submission mode
+                        requested
+  --submission-mode SUBMISSION_MODE
+                        Paper compile evidence: submission mode, for example
+                        anonymous or double_blind
+  --submission-profile SUBMISSION_PROFILE
+                        Paper compile evidence: JSON venue submission profile
+                        with source-backed requirements
+  --pdf-inspection PDF_INSPECTION
+                        Paper compile evidence: JSON PDF inspection with
+                        verified page/font measurements
+  --submission-audit SUBMISSION_AUDIT
+                        Paper compile evidence: JSON publication submission
+                        audit/checklist evidence
+  --page-limit PAGE_LIMIT
+                        Paper compile evidence: venue page limit
+  --page-count PAGE_COUNT
+                        Paper compile evidence: observed page count
+  --verified-page-count VERIFIED_PAGE_COUNT
+                        Paper compile evidence: verified PDF page count
+  --min-font-size MIN_FONT_SIZE
+                        Paper compile evidence: required minimum font size
+  --verified-min-font-size VERIFIED_MIN_FONT_SIZE
+                        Paper compile evidence: verified minimum PDF font size
+  --quick               Native quick novelty/review mode
+  --online              Attempt live online evidence fetching for supported
+                        skills
+  --approval-ref APPROVAL_REF
+                        Human approval reference for gated side-effect
+                        execution
+  --allowlist-evidence ALLOWLIST_EVIDENCE
+                        JSON/text artifact proving approved command/source
+                        allowlist
+  --runtime-evidence RUNTIME_EVIDENCE
+                        Runtime log/result artifact from an approved side-
+                        effect execution
+  --remote-check-command REMOTE_CHECK_COMMAND
+                        Approved allowlisted command that returns
+                        autosci_remote_cli.v1 check status JSON
+  --remote-run-dir REMOTE_RUN_DIR
+                        Remote/local run directory to pass through approved
+                        status-check commands
+  --lifecycle-summary LIFECYCLE_SUMMARY
+                        Existing scientific_lifecycle.v1 scheduler runtime
+                        summary evidence
+  --scheduler-run       For $research only: explicitly run the scheduler-
+                        dispatched scientific lifecycle proof and attach its
+                        summary
+  --scheduler-demo      For $research --scheduler-run only: dispatch the demo-
+                        safe multi-node lifecycle preset
+  --scheduler-legacy-smoke-runner
+                        Use the legacy bounded lifecycle smoke runner instead
+                        of the generic workflow runner
+  --scheduler-node-id SCHEDULER_NODE_ID
+                        For the generic workflow runner, dispatch a specific
+                        workflow node; may be repeated
+  --scheduler-timeout SCHEDULER_TIMEOUT
+                        Timeout in seconds for each scheduler-dispatched
+                        lifecycle node
+  --scheduler-include-blocked-external
+                        Record report/compile external nodes as blocked
+                        scheduler state
+  --scheduler-include-human-gates
+                        Record idea/results human approval gates as scheduler-
+                        visible lifecycle state
+  --scheduler-dispatch-external-evidence
+                        Dispatch report/compile external nodes when Review LLM
+                        and compile evidence are supplied
+  --scheduler-require-workflow-config-alignment
+                        Fail scheduler lifecycle smoke when it diverges from
+                        the declared workflow config
+  --scheduler-require-production-dispatch
+                        Fail scheduler lifecycle smoke when it is not a
+                        production-ready non-fixture dispatch
+  --idea-approval-ref IDEA_APPROVAL_REF
+                        Durable approval reference for the scheduler idea
+                        acceptance gate
+  --results-approval-ref RESULTS_APPROVAL_REF
+                        Durable approval reference for the scheduler results
+                        acceptance gate
+  --experiment-approval-ref EXPERIMENT_APPROVAL_REF
+                        Durable approval reference for scheduler experiment
+                        runtime evidence
+  --experiment-runtime-evidence EXPERIMENT_RUNTIME_EVIDENCE
+                        Approved runtime evidence for scheduler
+                        experiment_run/experiment_monitor
+  --experiment-allowlist-evidence EXPERIMENT_ALLOWLIST_EVIDENCE
+                        Allowlist evidence for scheduler experiment runtime
+  --experiment-before-artifact EXPERIMENT_BEFORE_ARTIFACT
+                        Before-state artifact for scheduler experiment runtime
+  --experiment-after-artifact EXPERIMENT_AFTER_ARTIFACT
+                        After-state artifact for scheduler experiment runtime
+  --experiment-execute-approved
+                        Execute an approved allowlisted scheduler experiment
+                        command
+  --experiment-executor-timeout-seconds EXPERIMENT_EXECUTOR_TIMEOUT_SECONDS
+                        Timeout for an approved scheduler experiment command
+  --compile-target COMPILE_TARGET
+                        LaTeX/PDF target directory for scheduler
+                        publication_produce dispatch
+  --compile-approval-ref COMPILE_APPROVAL_REF
+                        Durable approval reference for scheduler publication
+                        compile evidence
+  --compile-runtime-evidence COMPILE_RUNTIME_EVIDENCE
+                        Approved runtime evidence for scheduler
+                        publication_produce
+  --compile-allowlist-evidence COMPILE_ALLOWLIST_EVIDENCE
+                        Allowlist evidence for scheduler publication compile
+  --compile-before-artifact COMPILE_BEFORE_ARTIFACT
+                        Before-state artifact for scheduler publication
+                        compile
+  --compile-after-artifact COMPILE_AFTER_ARTIFACT
+                        After-state artifact for scheduler publication compile
+  --compile-execute-approved
+                        Execute an approved allowlisted scheduler publication
+                        compile command
+  --compile-executor-timeout-seconds COMPILE_EXECUTOR_TIMEOUT_SECONDS
+                        Timeout for an approved scheduler publication compile
+                        command
+  --before-artifact BEFORE_ARTIFACT
+                        Before-state artifact for approved mutation/execution
+  --after-artifact AFTER_ARTIFACT
+                        After-state artifact for approved mutation/execution
+  --execute-approved    Execute an implemented side-effect path only when
+                        approval and allowlist evidence are present
+  --verbose             Native verbose output mode
+  --write               Native write-back mode for supported skills
+  --crystallize         Native ask mode: approved crystallized wiki output
+                        write-back
+  --add ADD             Native prefill add mode: seed exactly one foundation
+                        concept
+  --delete              Native edit mode: delete an approved raw source target
+  --difficulty {standard,hard,adversarial}
+                        Native review difficulty
+  --focus FOCUS         Native review focus or visualize focus node id
+  --depth DEPTH         Native visualize focused canvas BFS depth
+  --types TYPES         Native visualize comma-separated node/page types
+  --edge-types EDGE_TYPES
+                        Native visualize comma-separated graph edge types
+  --max-ideas MAX_IDEAS
+                        Native ideate maximum ideas
+  --max-papers MAX_PAPERS
+                        Native survey maximum cited paper count
+  --skip-validation     Native ideate fast path without deep validation
+  --skip-pilot          Native ideate fast path without pilot execution
+  --auto                Native automatic mode for research pipelines
+  --start-from START_FROM
+                        Native research pipeline resume stage
+  --skip-paper          Native research pipeline mode that skips paper
+                        generation
+  --all                 Native visualize/check all mode
+  --max-rounds MAX_ROUNDS
+                        Native refine maximum rounds
+  --target-score TARGET_SCORE
+                        Native refine target score
+  --format FORMAT       Native output format hint, for example latex or
+                        markdown
+  --paper-slug PAPER_SLUG
+                        Native rebuttal paper slug used to locate paper-
+                        plan/wiki context
+  --authors AUTHORS     Native poster author display override
+  --no-figures          Native poster text-only mode
+  --no-logos            Native poster skip logo injection mode
+  --auto-figures        Native poster automatic figure selection mode
+  --no-refine           Native poster skip critique/refine mode
+  --refine-iterations REFINE_ITERATIONS
+                        Native poster critique/refine iteration cap
+  --affiliation-logo AFFILIATION_LOGO
+                        Native poster affiliation logo path
+  --conference-logo CONFERENCE_LOGO
+                        Native poster conference logo path
+  --layout {corners,stacked}
+                        Native poster header layout
+  --reviewer-thread-evidence REVIEWER_THREAD_EVIDENCE
+                        Native rebuttal reviewer-thread JSON/text evidence
+                        path
+  --stress-test         Enable native rebuttal Review LLM stress-test boundary
+  --no-stress-test      Disable native rebuttal Review LLM stress-test
+                        boundary
+  --scope SCOPE         Native reset scope: wiki, raw, log, checkpoints, all,
+                        or comma-separated values
+  --mode {inform,auto-ingest}
+                        Native daily-arxiv mode
+  --hours DAILY_HOURS   Native daily-arxiv lookback window
+  --categories [DAILY_CATEGORIES ...]
+                        Native daily-arxiv arXiv categories
+  --max-recommendations DAILY_MAX_RECOMMENDATIONS
+                        Native daily-arxiv recommendation cap
+  --max-auto-ingest DAILY_MAX_AUTO_INGEST
+                        Native daily-arxiv auto-ingest cap
+  --send-email {true,false}
+                        Native daily-arxiv SMTP delivery preference
+  --run-id RUN_ID       Stable run/artifact namespace
+  --work-dir WORK_DIR   Output work dir relative to HARNESS_DIR
+  --route-config ROUTE_CONFIG
+  --binding-config BINDING_CONFIG
+
+## $ingest demo
+{
+  "action_count": 2,
+  "autosci_command": "/ingest",
+  "evidence_path": "/private/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/autosci_skill_run.json",
+  "execution_status": "partial",
+  "failed_count": 0,
+  "ok": true,
+  "passed_count": 2,
+  "schema": "autosci_skill_run.v1",
+  "schema_only_count": 0,
+  "side_effect_policy": "dry_run_only",
+  "skill": "ingest",
+  "status": "inconclusive",
+  "wiki_path": "/private/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki",
+  "work_dir": "artifacts/autosci/runs/info-smoke-ingest",
+  "workspace_path": "/private/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace",
+  "workspace_updated_count": 8
+}
+
+## $research scheduler demo
+{
+  "action_count": 1,
+  "autosci_command": "/research",
+  "evidence_path": "/private/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/autosci_skill_run.json",
+  "execution_status": "gated",
+  "failed_count": 0,
+  "ok": true,
+  "passed_count": 0,
+  "scheduler_dispatch_boundary_blocking_reasons": [],
+  "scheduler_dispatch_boundary_production_ready": true,
+  "scheduler_dispatch_boundary_status": "generic_workflow_runner",
+  "scheduler_lifecycle_blocked_node_count": 0,
+  "scheduler_lifecycle_node_count": 1,
+  "scheduler_lifecycle_status": "passed",
+  "scheduler_lifecycle_summary_path": "/private/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/scientific/workflow-runs/info-smoke-research-scheduler/scientific_lifecycle_runtime.json",
+  "scheduler_workflow_config_alignment_issues": [],
+  "scheduler_workflow_config_alignment_ok": null,
+  "scheduler_workflow_config_alignment_status": "N/A",
+  "schema": "autosci_skill_run.v1",
+  "schema_only_count": 1,
+  "side_effect_policy": "approval_required",
+  "skill": "research",
+  "status": "inconclusive",
+  "wiki_path": "/private/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki",
+  "work_dir": "artifacts/autosci/runs/info-smoke-research",
+  "workspace_path": "/private/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace",
+  "workspace_updated_count": 3
+}
+
+## generated files
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/analyze_paper.result.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/autosci_skill_run.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/envelopes/analyze_paper.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/envelopes/ingest_paper.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/evidence.jsonl
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/ingest_final_source_registration_boundary.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/ingest_paper.result.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/ingest_paper_source_provider_runtime_proof.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/research_graph_update.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/research_memory_update.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/research_paper.analyzed.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/research_paper.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-ingest/sample_repo/bridge_fixture.py
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/autosci_skill_run.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/envelopes/run_research_lifecycle.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/evidence.jsonl
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/research_lifecycle_recommended_changes.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/run_research_lifecycle.result.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/run_research_lifecycle_approval_contract.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/run_research_lifecycle_source_provider_runtime_proof.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/sample_repo/bridge_fixture.py
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/scheduler_lifecycle/scheduler_run_stderr.txt
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/scheduler_lifecycle/scheduler_run_stdout.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/scheduler_lifecycle/scientific_workflow_runtime_manifest.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/runs/info-smoke-research/workflow_evolution.research.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/README.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/raw/README.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/graph/citations.jsonl
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/graph/context_brief.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/graph/edges.jsonl
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/graph/open_questions.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/index.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/outputs/PIPELINE_REPORT.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/outputs/lifecycle_summary.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/outputs/pipeline-state.json
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/autosci/workspace/wiki/papers/paper-demo-paper.md
+/tmp/autosci_solar_info_20260701T234751Z/manual_smoke_harness/artifacts/scientific/workflow-runs/info-smoke-research-scheduler/scientific_lifecycle_runtime.json

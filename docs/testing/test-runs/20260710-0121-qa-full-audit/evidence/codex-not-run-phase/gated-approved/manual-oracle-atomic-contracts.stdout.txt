@@ -1,0 +1,17 @@
+........FF...                                                            [100%]
+=================================== FAILURES ===================================
+______ test_missing_method_reports_incomplete_without_inventing_procedure ______
+evidence/codex-not-run-phase/audit-tests/test_manual_oracle_atomic_contracts.py:341: in test_missing_method_reports_incomplete_without_inventing_procedure
+    assert method["name"] == "No explicit method found"
+E   AssertionError: assert 'Background protocol' == 'No explicit method found'
+E     
+E     - No explicit method found
+E     + Background protocol
+_______ test_generated_ideas_cite_source_evidence_and_explicit_gap_links _______
+evidence/codex-not-run-phase/audit-tests/test_manual_oracle_atomic_contracts.py:360: in test_generated_ideas_cite_source_evidence_and_explicit_gap_links
+    assert gap_links
+E   assert None
+=========================== short test summary info ============================
+FAILED evidence/codex-not-run-phase/audit-tests/test_manual_oracle_atomic_contracts.py::test_missing_method_reports_incomplete_without_inventing_procedure
+FAILED evidence/codex-not-run-phase/audit-tests/test_manual_oracle_atomic_contracts.py::test_generated_ideas_cite_source_evidence_and_explicit_gap_links
+2 failed, 11 passed in 7.42s

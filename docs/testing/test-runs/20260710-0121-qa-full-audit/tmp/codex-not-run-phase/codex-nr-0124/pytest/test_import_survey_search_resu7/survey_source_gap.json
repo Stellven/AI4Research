@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "brief": "latent reasoning",
+  "output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu7",
+  "source_count": 16,
+  "evidence_count": 64,
+  "claim_count": 64,
+  "min_sources": 4,
+  "min_evidence": 8,
+  "min_claims": 8,
+  "source_type_counts": {
+    "paper": 4,
+    "code": 4,
+    "official_doc": 4,
+    "benchmark": 4
+  },
+  "required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "missing_source_types": [],
+  "issues": [],
+  "handoff_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu7/survey_source_gap_handoff.md",
+  "handoff_written": true
+}

@@ -1,0 +1,21 @@
+{"suite": "graph", "status": "FAIL", "exit_code": 2, "duration_seconds": "0.426"}
+{"suite": "code_signal", "status": "PASS", "exit_code": 0, "duration_seconds": "0.243"}
+{"suite": "influence", "status": "PASS", "exit_code": 0, "duration_seconds": "0.307"}
+{"suite": "data_plane", "status": "FAIL", "exit_code": 1, "duration_seconds": "0.894"}
+{"suite": "benchmark", "status": "FAIL", "exit_code": 1, "duration_seconds": "0.407"}
+{"suite": "browser", "status": "PASS", "exit_code": 0, "duration_seconds": "0.367"}
+{"suite": "experience", "status": "FAIL", "exit_code": 1, "duration_seconds": "0.198"}
+{"suite": "livework", "status": "FAIL", "exit_code": 1, "duration_seconds": "6.478"}
+{"suite": "research_unit", "status": "PASS", "exit_code": 0, "duration_seconds": "1.850"}
+{"suite": "research_integration", "status": "FAIL", "exit_code": 1, "duration_seconds": "0.863"}
+{"suite": "research_survey", "status": "FAIL", "exit_code": 1, "duration_seconds": "5.363"}
+{"suite": "research", "status": "FAIL", "exit_code": 2, "duration_seconds": "0.417"}
+{"suite": "runtime", "status": "FAIL", "exit_code": 1, "duration_seconds": "2.623"}
+{"suite": "integration", "status": "FAIL", "exit_code": 2, "duration_seconds": "0.314"}
+{"suite": "integrations", "status": "PASS", "exit_code": 0, "duration_seconds": "1.273"}
+{"suite": "orchestration", "status": "PASS", "exit_code": 0, "duration_seconds": "1.036"}
+{"suite": "config", "status": "PASS", "exit_code": 0, "duration_seconds": "0.250"}
+{"suite": "root_ui_python", "status": "PASS", "exit_code": 0, "duration_seconds": "0.316"}
+{"suite": "pipx_distribution", "status": "PASS", "exit_code": 0, "duration_seconds": "0.490"}
+{"suite": "harness_top_level", "status": "FAIL", "exit_code": 2, "duration_seconds": "3.093"}
+{"suite_count": 20, "passed": 9, "failed": 11, "skipped_na": 0, "flaky_timeout": 0}

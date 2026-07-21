@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_274_e5c92148bb_harness_tests_test_ai_influence_daily_recency.py",
+  "source": "harness/tests/test_ai_influence_daily_recency.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_ai_influence_daily_recency.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.185,
+  "timeout": false
+}

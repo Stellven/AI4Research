@@ -1,0 +1,16 @@
+{
+  "id": "graph-dispatcher",
+  "name": "DAG graph node dispatcher inject path",
+  "cmd": [
+    "bash",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tests/control_plane/test-graph-node-dispatcher.sh"
+  ],
+  "exit_code": 1,
+  "duration_s": 0.689,
+  "status": "error",
+  "dimensions": [
+    "default",
+    "automatic"
+  ],
+  "allow_fail_reason": ""
+}

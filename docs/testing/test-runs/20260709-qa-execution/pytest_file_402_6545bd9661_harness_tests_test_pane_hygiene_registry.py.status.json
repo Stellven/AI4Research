@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_402_6545bd9661_harness_tests_test_pane_hygiene_registry.py",
+  "source": "harness/tests/test_pane_hygiene_registry.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_pane_hygiene_registry.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.233,
+  "timeout": false
+}

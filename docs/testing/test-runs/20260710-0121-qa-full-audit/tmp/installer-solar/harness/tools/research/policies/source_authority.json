@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "high_authority_threshold": 0.75,
+  "profiles": {
+    "general": {
+      "min_source_types": 1,
+      "warn_source_types": 2,
+      "required_source_types": [],
+      "warn_missing_source_types": [],
+      "min_covered_section_ratio": 1.0,
+      "max_low_analysis_density_ratio": 1.0,
+      "min_authority_score": 0.3,
+      "min_high_authority_sources": 0
+    },
+    "technical_architecture": {
+      "min_source_types": 2,
+      "warn_source_types": 3,
+      "required_source_types": ["paper"],
+      "warn_missing_source_types": ["code", "official_doc", "benchmark"],
+      "min_covered_section_ratio": 1.0,
+      "max_low_analysis_density_ratio": 0.5,
+      "min_authority_score": 0.55,
+      "min_high_authority_sources": 2
+    },
+    "scientific_review": {
+      "min_source_types": 2,
+      "warn_source_types": 3,
+      "required_source_types": ["paper"],
+      "warn_missing_source_types": ["dataset", "benchmark"],
+      "min_covered_section_ratio": 1.0,
+      "max_low_analysis_density_ratio": 0.7,
+      "min_authority_score": 0.65,
+      "min_high_authority_sources": 2
+    },
+    "market_landscape": {
+      "min_source_types": 3,
+      "warn_source_types": 4,
+      "required_source_types": ["official_doc"],
+      "warn_missing_source_types": ["news", "company", "benchmark"],
+      "min_covered_section_ratio": 1.0,
+      "max_low_analysis_density_ratio": 0.6,
+      "min_authority_score": 0.55,
+      "min_high_authority_sources": 2
+    }
+  },
+  "source_authority": {
+    "paper": [
+      {"score": 0.90, "host_contains": ["arxiv.org", "openreview.net", "doi.org", "semanticscholar.org"]},
+      {"score": 0.85, "host_contains": ["acm.org", "ieee.org", "springer.com", "nature.com", "sciencedirect.com"]},
+      {"score": 0.65, "text_contains": ["abstract", "preprint", "journal", "conference", "proceedings"]},
+      {"score": 0.30, "default": true}
+    ],
+    "code": [
+      {"score": 0.85, "host_contains": ["github.com", "gitlab.com", "bitbucket.org"]},
+      {"score": 0.60, "text_contains": ["source code", "repository", "readme", "pip install", "npm install"]},
+      {"score": 0.30, "default": true}
+    ],
+    "official_doc": [
+      {"score": 0.85, "host_prefix": ["docs."], "host_contains": [".gov", ".edu"]},
+      {"score": 0.70, "text_contains": ["official documentation", "api reference", "developer docs", "release notes", "changelog"]},
+      {"score": 0.35, "default": true}
+    ],
+    "benchmark": [
+      {"score": 0.85, "host_contains": ["paperswithcode.com", "huggingface.co", "tbench.ai"]},
+      {"score": 0.65, "text_contains": ["leaderboard", "benchmark", "evaluation", "dataset", "score", "results"]},
+      {"score": 0.35, "default": true}
+    ],
+    "news": [{"score": 0.55, "default": true}],
+    "company": [{"score": 0.55, "default": true}],
+    "standard": [{"score": 0.55, "default": true}],
+    "web": [{"score": 0.35, "default": true}],
+    "blog": [{"score": 0.35, "default": true}],
+    "other": [{"score": 0.35, "default": true}],
+    "unknown": [{"score": 0.30, "default": true}]
+  }
+}

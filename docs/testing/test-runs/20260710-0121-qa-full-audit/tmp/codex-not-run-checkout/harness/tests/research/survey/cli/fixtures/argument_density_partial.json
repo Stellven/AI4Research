@@ -1,0 +1,30 @@
+{
+  "section_id": "s3",
+  "dimension_coverages": {
+    "mechanism_comparison": "present",
+    "method_taxonomy": "absent",
+    "evaluation_protocol": "present",
+    "failure_negative_evidence": "absent",
+    "engineering_implication": "absent"
+  },
+  "density_score": 0.4,
+  "detected_indicators": [
+    {
+      "dimension": "mechanism_comparison",
+      "span_text": "Transformer versus RNN architectures",
+      "confidence": "high",
+      "schema_version": "solar.research.survey.v1"
+    },
+    {
+      "dimension": "evaluation_protocol",
+      "span_text": "We evaluate using standard benchmark metrics",
+      "confidence": "high",
+      "schema_version": "solar.research.survey.v1"
+    }
+  ],
+  "not_applicable_entries": [],
+  "issues": [
+    "low_density_dimensions:method_taxonomy,failure_negative_evidence,engineering_implication"
+  ],
+  "schema_version": "solar.research.survey.v1"
+}

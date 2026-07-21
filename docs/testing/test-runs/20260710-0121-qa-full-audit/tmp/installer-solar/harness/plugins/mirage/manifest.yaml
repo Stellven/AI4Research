@@ -1,0 +1,59 @@
+---
+# Solar Plugin Manifest — Mirage Unified VFS
+id: mirage
+name: "Mirage Unified Virtual Filesystem"
+version: "1.0.0"
+description: "Exposes a unified virtual filesystem with logical mounts (knowledge, raw, sources, papers, qmd, solar-db, cortex, sprints, optional drive). All cross-source reads and writes go through Mirage for provenance tracking."
+status: enabled
+
+write_scope:
+  - "state/mirage"
+
+read_scope:
+  - "config/mirage.solar.yaml"
+  - "~/Knowledge"
+  - "_sources"
+  - "sprints"
+
+capabilities:
+  - "vfs.mount"
+  - "vfs.read"
+  - "vfs.search"
+  - "vfs.doctor"
+
+commands:
+  - "solar-harness mirage doctor"
+  - "solar-harness mirage mounts"
+  - "solar-harness mirage search"
+
+background_safety:
+  mode: bounded
+  idle_only: false
+  rate_limit: "local-only"
+  max_runtime_s: 30
+  max_memory_mb: 512
+
+eval_packs:
+  - "tests/test-mirage-unified-vfs.sh"
+  - "tests/plugins/test-s4-extension-framework.sh"
+
+rollback:
+  strategy: restore_snapshot
+  commands:
+    - "solar-harness product restore --dry-run"
+
+integration_level: closed_loop
+
+entry: "lib/solar_mirage.py"
+
+events:
+  - "mirage.mount_healthy"
+  - "mirage.mount_degraded"
+  - "mirage.search_complete"
+
+depends_on: []
+
+tags:
+  - "vfs"
+  - "storage"
+  - "provenance"

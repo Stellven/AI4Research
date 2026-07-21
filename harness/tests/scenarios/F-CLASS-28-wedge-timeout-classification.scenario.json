@@ -1,0 +1,21 @@
+{
+  "id": "F-CLASS-28",
+  "class": 28,
+  "title": "A hung operator is bounded by the task timeout and classified, not left spinning",
+  "retires": "F-CLASS-28 supervision wedge; R7/AC-R7.2 (bounded waits, no 90-minute ceilings)",
+  "release_proof_level": "P1.5",
+  "mode": "submit_once",
+  "operator_id": "fake-builder",
+  "env": { "SOLAR_OPERATORD_TASK_TIMEOUT_SECONDS": "2" },
+  "daemon_cap_sec": 6,
+  "envelope": {
+    "fake_behavior": { "hang": true, "hang_seconds": 10 }
+  },
+  "expect": [
+    { "fact": "result_status", "op": "eq", "value": "failed_timeout" },
+    { "fact": "result_exit_code", "op": "eq", "value": 124 },
+    { "fact": "daemon_timed_out", "op": "falsy" }
+  ],
+  "fault": { "env": { "SOLAR_OPERATORD_TASK_TIMEOUT_SECONDS": "0" } },
+  "notes": "GREEN: SOLAR_OPERATORD_TASK_TIMEOUT_SECONDS=2 bounds the hang; operatord SIGTERMs the worker at 2s, sets exit_code=124 and status='failed_timeout' (operatord.py:872-908), and the daemon exits within the 6s cap. RED: fault sets the timeout to 0 (disabled) -> the worker spins the full hang; the runner's 6s subprocess cap fires first (daemon_timed_out=true) and no failed_timeout result is written. The timeout knob is SOLAR_OPERATORD_TASK_TIMEOUT_SECONDS (real), not the spec's generic SOLAR_*_TIMEOUT_SEC* -- see lane2-spec-mismatches.md sec.4."
+}

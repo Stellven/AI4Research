@@ -1,0 +1,427 @@
+{
+  "action": "generate_ideas",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/generate_ideas_approval_contract.json",
+        "type": "approval_contract_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/generate_ideas_gate_policy_decision.json",
+        "type": "gate_policy_decision_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/wiki_state_resolver.json",
+        "type": "wiki_state_resolver_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/ideate_final_promotion_boundary.json",
+        "type": "ideate_final_promotion_boundary_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/ideate_pipeline_report.json",
+        "type": "ideate_pipeline_report_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/ideate_pilot_handoff_boundary.json",
+        "type": "ideate_pilot_handoff_boundary_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/ideate_growth_report.json",
+        "type": "ideate_growth_report_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/generate_ideas_side_effect_access_request.json",
+        "type": "side_effect_access_request_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-native-command/idea_candidate.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "after_artifacts": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru2/exp-native-after.json"
+      ],
+      "allowlist_evidence": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru2/exp-native-allowlist.json"
+      ],
+      "approval_ref": "approval-exp-native-001",
+      "before_artifacts": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru2/exp-native-before.json"
+      ],
+      "claims_evidence": "artifacts/autosci/runs/shim-exp-run-native-command/research_claims.json",
+      "execute_approved_side_effect": true,
+      "memory_evidence": "artifacts/autosci/runs/shim-exp-run-native-command/research_memory_update.json",
+      "method_evidence": "artifacts/autosci/runs/shim-exp-run-native-command/research_method.json",
+      "native_options": {
+        "add": "",
+        "affiliation_logo": "",
+        "after_artifacts": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru2/exp-native-after.json"
+        ],
+        "all": false,
+        "allowlist_evidence": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru2/exp-native-allowlist.json"
+        ],
+        "anonymous": false,
+        "approval_ref": "approval-exp-native-001",
+        "authors": "",
+        "auto": false,
+        "auto_figures": false,
+        "before_artifacts": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru2/exp-native-before.json"
+        ],
+        "canvas": false,
+        "checklist": false,
+        "claims_evidence": [],
+        "code_evidence": [],
+        "collect": false,
+        "collect_ready": false,
+        "compile_after_artifacts": [],
+        "compile_allowlist_evidence": [],
+        "compile_approval_ref": "",
+        "compile_before_artifacts": [],
+        "compile_execute_approved": false,
+        "compile_executor_timeout_seconds": 120,
+        "compile_runtime_evidence": [],
+        "compile_target": "",
+        "conference_logo": "",
+        "crystallize": false,
+        "daily_categories": [],
+        "daily_decisions": "",
+        "daily_feed": "",
+        "daily_hours": 0,
+        "daily_max_auto_ingest": 0,
+        "daily_max_recommendations": 0,
+        "daily_mode": "",
+        "daily_no_external": false,
+        "daily_send_email": "",
+        "depth": 0,
+        "difficulty": "",
+        "discover": false,
+        "double_blind": false,
+        "edge_types": "",
+        "env": "local",
+        "execute_approved": true,
+        "experiment_after_artifacts": [],
+        "experiment_allowlist_evidence": [],
+        "experiment_approval_ref": "",
+        "experiment_before_artifacts": [],
+        "experiment_execute_approved": false,
+        "experiment_executor_timeout_seconds": 120,
+        "experiment_result_evidence": [],
+        "experiment_runtime_evidence": [],
+        "fix": false,
+        "focus": "",
+        "format": "",
+        "full": false,
+        "idea_approval_ref": "",
+        "layout": "",
+        "lifecycle_summary": [],
+        "max_ideas": 0,
+        "max_rounds": 0,
+        "min_font_size": null,
+        "model_command": "",
+        "model_evidence": [],
+        "no_figures": false,
+        "no_introduction": false,
+        "no_logos": false,
+        "no_refine": false,
+        "novelty_evidence": [],
+        "obsidian": false,
+        "online": false,
+        "page_count": null,
+        "page_limit": null,
+        "paper_slug": "",
+        "pdf_inspection": "",
+        "pilot_handoff_evidence": [],
+        "pilot_runtime_evidence": [],
+        "pipeline": "",
+        "quick": false,
+        "refine_iterations": 0,
+        "remote_check_command": "",
+        "remote_run_dir": "",
+        "render": false,
+        "require_review_llm": false,
+        "results_approval_ref": "",
+        "review": true,
+        "review_llm_command": "",
+        "review_llm_endpoint": "",
+        "review_llm_evidence": [],
+        "review_llm_model": "",
+        "review_llm_provider": "",
+        "reviewer_thread_evidence": [],
+        "runtime_evidence": [],
+        "scheduler_demo": false,
+        "scheduler_dispatch_external_evidence": false,
+        "scheduler_include_blocked_external": false,
+        "scheduler_include_human_gates": false,
+        "scheduler_legacy_smoke_runner": false,
+        "scheduler_node_id": [],
+        "scheduler_require_workflow_config_alignment": false,
+        "scheduler_run": false,
+        "scheduler_timeout": 30.0,
+        "scope": "",
+        "serve": false,
+        "skip_paper": false,
+        "skip_pilot": false,
+        "skip_validation": false,
+        "source_evidence": [],
+        "start_from": "",
+        "stress_test": null,
+        "submission_audit": "",
+        "submission_mode": "",
+        "submission_profile": "",
+        "target_score": 0.0,
+        "title": "",
+        "types": "",
+        "verbose": false,
+        "verified_min_font_size": null,
+        "verified_page_count": null,
+        "visualize": false,
+        "write": false
+      },
+      "online_novelty": true,
+      "paper_evidence": "artifacts/autosci/runs/shim-exp-run-native-command/research_paper.json",
+      "review_llm_requested": true,
+      "smoke_mode": false,
+      "topic": "exp-native-001"
+    },
+    "limitations": [
+      "No wiki or discovery evidence was available; ideation is inconclusive.",
+      "Target `exp-native-001` was not found in wiki ideas, experiments, outputs, or graph edges.",
+      "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+      "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields.",
+      "No wiki root exists for state resolution.",
+      "Final idea promotion requires wiki maturity scan, failed-idea banlist check, source-backed evidence, model brainstorm provenance, and novelty/review gate evidence references.",
+      "Native /ideate full parity requires completed landscape scan, independent dual-model brainstorm, novelty/review validation, approved wiki writeback, pilot handoff or explicit skip, and A/B/C/D/E generation-path coverage.",
+      "Side-effect access is required; no protected native side effects were executed."
+    ],
+    "node_id": "node-generate-ideas",
+    "outputs": {
+      "blocking_reasons": [
+        "read_local is allowed in strict_hitl.",
+        "write_artifact is allowed in strict_hitl.",
+        "network_fetch requires HITL approval in strict_hitl.",
+        "local_command requires HITL approval in strict_hitl.",
+        "wiki_mutation requires HITL approval in strict_hitl."
+      ],
+      "ideas": [
+        {
+          "approach": "Run discovery or ingest papers, then rerun ideate with wiki/discovery evidence available.",
+          "duplicate_status": "insufficient_source",
+          "final_promotion_boundary": {
+            "blocking_reasons": [
+              "wiki maturity scan was not completed",
+              "source-backed idea evidence is missing",
+              "model brainstorm provenance is missing or incomplete",
+              "novelty/review gate evidence references are missing",
+              "generation path coverage A/B/C/D/E is incomplete",
+              "structured generation path A/B/C/D/E is missing",
+              "idea status is `blocked`"
+            ],
+            "duplicate_status": "insufficient_source",
+            "generation_path": "source-required",
+            "idea_id": "idea-source-missing",
+            "promotion_ready": false,
+            "schema": "autosci_ideate_idea_promotion_boundary.v1",
+            "source_mode": "missing",
+            "status": "idea_promotion_incomplete"
+          },
+          "generation_path": "source-required",
+          "hypothesis": "A research idea should not be generated without wiki, discovery, or paper evidence.",
+          "idea_id": "idea-source-missing",
+          "novelty_hypothesis": "No novelty claim is made because no source evidence was available.",
+          "origin_evidence_ids": [
+            "missing:wiki-or-discovery-evidence"
+          ],
+          "promotion_ready": false,
+          "selected_for_write": false,
+          "selection_rank": "N/A",
+          "source_mode": "missing",
+          "status": "blocked",
+          "title": "Insufficient sourced context for ideation"
+        }
+      ],
+      "policy_decision": {
+        "action": "generate_ideas",
+        "allow_destructive": false,
+        "allow_email": false,
+        "allow_network": false,
+        "allow_remote": false,
+        "allowed": false,
+        "allowed_write_roots": [
+          "artifacts/autosci",
+          "artifacts/scientific"
+        ],
+        "blocked": true,
+        "execute_side_effects": false,
+        "mode": "strict_hitl",
+        "proof_best_effort": false,
+        "proof_required": true,
+        "reasons": [
+          "read_local is allowed in strict_hitl.",
+          "write_artifact is allowed in strict_hitl.",
+          "network_fetch requires HITL approval in strict_hitl.",
+          "local_command requires HITL approval in strict_hitl.",
+          "wiki_mutation requires HITL approval in strict_hitl."
+        ],
+        "require_approval_ref": true,
+        "require_before_after_artifacts": true,
+        "require_hitl": true,
+        "require_runtime_evidence": true,
+        "sandbox_required": false,
+        "side_effects": [
+          "read_local",
+          "write_artifact",
+          "network_fetch",
+          "local_command",
+          "wiki_mutation"
+        ],
+        "synthetic_approval_ref": "",
+        "warnings": []
+      },
+      "side_effect_access_request": {
+        "action": "generate_ideas",
+        "blocking_reasons": [
+          "read_local is allowed in strict_hitl.",
+          "write_artifact is allowed in strict_hitl.",
+          "network_fetch requires HITL approval in strict_hitl.",
+          "local_command requires HITL approval in strict_hitl.",
+          "wiki_mutation requires HITL approval in strict_hitl."
+        ],
+        "continuation": {
+          "access_patch_options": [
+            {
+              "env": [
+                "SOLAR_AUTOSCI_ALLOW_NETWORK=1"
+              ],
+              "inputs": {
+                "gate_mode": "parity_demo"
+              },
+              "limitations": [
+                "Use only for bounded local parity side effects. Network still requires SOLAR_AUTOSCI_ALLOW_NETWORK=1."
+              ],
+              "name": "bounded_policy_mode"
+            },
+            {
+              "env": [],
+              "inputs": {
+                "gate_mode": "autosci_native"
+              },
+              "limitations": [
+                "Bypasses Solar gate blocking; runtime evidence remains required before claiming full parity."
+              ],
+              "name": "native_policy_mode"
+            },
+            {
+              "env": [
+                "SOLAR_AUTOSCI_ALLOW_NETWORK=1"
+              ],
+              "inputs": {
+                "approval_ref": "<approval-ref>",
+                "execute_approved_side_effect": true
+              },
+              "limitations": [
+                "Strict HITL resume must provide enough typed artifacts for the action approval contract to verify."
+              ],
+              "name": "hitl_approval",
+              "required_artifacts": [
+                "allowlist_evidence",
+                "before_artifact",
+                "runtime_evidence",
+                "after_artifact"
+              ]
+            }
+          ],
+          "action": "generate_ideas",
+          "non_error_contract": {
+            "blocked_runs_exit_successfully": true,
+            "evidence_status": "inconclusive",
+            "side_effect_access_status": "blocked_side_effect_access_required"
+          },
+          "request_fingerprint": "fddc1d74272ca1c54e7ad30c0569800768c2a702209c528e6c923ee77394965b",
+          "resume_strategy": "rerun_same_action_with_access_patch",
+          "retriable": true,
+          "same_envelope_supported": true,
+          "schema": "autosci_side_effect_continuation.v1",
+          "status": "awaiting_side_effect_access"
+        },
+        "gate_policy": {
+          "allowed": false,
+          "blocked": true,
+          "execute_side_effects": false,
+          "mode": "strict_hitl",
+          "require_approval_ref": true,
+          "require_hitl": true,
+          "synthetic_approval_ref": ""
+        },
+        "generated_at": "2026-07-10T19:21:35Z",
+        "how_to_allow": [
+          "Re-run with an AutoSci gate mode that may execute the requested side effects, such as `--gate-mode parity_demo`, `--gate-mode unsafe_native`, or `--gate-mode autosci_native`, depending on risk.",
+          "For risky native side effects, set the explicit SOLAR_AUTOSCI_ALLOW_* opt-in variables listed in requested_access.environment_opt_ins.",
+          "When strict HITL is required, provide approval_ref plus before/allowlist/runtime/after evidence artifacts instead of relying on a silent dry run."
+        ],
+        "limitations": [
+          "Protected native side effects were not executed for this action.",
+          "This request is an access boundary, not proof that the side effects completed."
+        ],
+        "native_skill": "ideate",
+        "requested_access": {
+          "allowed_write_roots": [
+            "artifacts/autosci",
+            "artifacts/scientific"
+          ],
+          "approval_ref": true,
+          "before_after_artifacts": true,
+          "environment_opt_ins": [
+            "SOLAR_AUTOSCI_ALLOW_NETWORK=1"
+          ],
+          "runtime_evidence": true
+        },
+        "requested_side_effects": [
+          "read_local",
+          "write_artifact",
+          "network_fetch",
+          "local_command",
+          "wiki_mutation"
+        ],
+        "required_inputs": [
+          "model brainstorm evidence or approved model command",
+          "novelty/review evidence for promotion",
+          "write approval/runtime proof for wiki idea projection",
+          "pilot handoff evidence or explicit --skip-pilot"
+        ],
+        "schema": "autosci_side_effect_access_request.v1",
+        "status": "blocked_side_effect_access_required"
+      },
+      "side_effect_access_required": true,
+      "side_effect_access_status": "blocked_side_effect_access_required"
+    },
+    "provenance": {
+      "gate_policy": {
+        "action": "generate_ideas",
+        "allowed": false,
+        "execute_side_effects": false,
+        "mode": "strict_hitl",
+        "proof_best_effort": false,
+        "proof_required": true,
+        "synthetic_approval_ref": ""
+      },
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T19:21:35Z"
+    },
+    "schema": "idea_candidate.v1",
+    "sprint_id": "phase19-skillgen-operator-smoke",
+    "status": "inconclusive",
+    "task_id": "task-autosci-skillgen-generate_ideas"
+  },
+  "evidence_jsonl": "artifacts/autosci/runs/shim-exp-run-native-command/evidence.jsonl",
+  "evidence_path": "artifacts/autosci/runs/shim-exp-run-native-command/idea_candidate.json",
+  "ok": true,
+  "result_path": "artifacts/autosci/runs/shim-exp-run-native-command/generate_ideas.result.json",
+  "schema": "idea_candidate.v1",
+  "status": "inconclusive"
+}

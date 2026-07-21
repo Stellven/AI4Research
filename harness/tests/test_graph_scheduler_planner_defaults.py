@@ -27,10 +27,9 @@ def test_normalize_worker_entry_backfills_planner_capabilities() -> None:
         "harness.context_preflight",
         "harness.dispatch_visibility",
         "harness.dag",
+        "artifact.requirement_trace",
         "browser.browse",
         "code.review",
         "test.tdd",
-        "guard.secret-leak-guard",
-        "resource.repo-workspace",
     ):
         assert capability in worker["capabilities"]

@@ -1,0 +1,23 @@
+{
+  "id": "syntax-core",
+  "name": "Core syntax gate",
+  "cmd": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python",
+    "-m",
+    "py_compile",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/intent_engine_adapter.py",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/solar_skills.py",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/capability_fusion_benchmark.py",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/platform_workflow_benchmark.py",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/agent_arena_benchmark.py",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/model_call_runtime.py",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/runtime_context_inject.py"
+  ],
+  "exit_code": 0,
+  "duration_s": 0.054,
+  "status": "ok",
+  "dimensions": [
+    "usable"
+  ],
+  "allow_fail_reason": ""
+}

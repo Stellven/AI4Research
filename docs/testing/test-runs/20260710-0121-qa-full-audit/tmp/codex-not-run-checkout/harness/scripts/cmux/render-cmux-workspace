@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""render-cmux-workspace: load workspace.yaml, validate schema, emit tab/pane command plan."""
+
+import sys
+import json
+import argparse
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("ERROR: PyYAML not installed. Run: pip3 install pyyaml", file=sys.stderr)
+    sys.exit(1)
+
+MAX_PANES_PER_TAB = 4
+VALID_LAYOUTS = {"single", "split", "tri", "quad"}
+VALID_MODES = {"capture", "tail"}
+VALID_SOURCES = {"local", "remote"}
+
+# Layout -> cmux split commands (sequence of split-pane calls)
+LAYOUT_SPLITS = {
+    "single": [],
+    "split":  [{"vertical": False}],               # 1x2 left-right
+    "tri":    [{"vertical": False}, {"vertical": True, "target": 1}],  # top-2 / bottom-1
+    "quad":   [{"vertical": False}, {"vertical": True, "target": 0}, {"vertical": True, "target": 1}],  # 2x2
+}
+
+
+def err(msg: str):
+    print(f"ERROR: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def validate_pane(pane: dict, tab_id: str, idx: int):
+    src = pane.get("source", "local")
+    mode = pane.get("mode", "capture")
+    if src not in VALID_SOURCES:
+        err(f"tab={tab_id} pane[{idx}] invalid source={src!r}. Must be one of {VALID_SOURCES}")
+    if mode not in VALID_MODES:
+        err(f"tab={tab_id} pane[{idx}] invalid mode={mode!r}. Must be one of {VALID_MODES}")
+    if src == "remote" and not pane.get("ssh_profile"):
+        err(f"tab={tab_id} pane[{idx}] source=remote requires ssh_profile")
+    if src == "local" and pane.get("ssh_profile"):
+        err(f"tab={tab_id} pane[{idx}] source=local must not have ssh_profile")
+    if mode == "capture" and not pane.get("tmux_target"):
+        err(f"tab={tab_id} pane[{idx}] mode=capture requires tmux_target")
+    if mode == "tail" and not pane.get("log_path"):
+        err(f"tab={tab_id} pane[{idx}] mode=tail requires log_path")
+
+
+def validate_tab(tab: dict):
+    tab_id = tab.get("id", "<unknown>")
+    panes = tab.get("panes", [])
+    if not panes:
+        err(f"tab={tab_id} has no panes")
+    if len(panes) > MAX_PANES_PER_TAB:
+        err(f"tab={tab_id} has {len(panes)} panes (max {MAX_PANES_PER_TAB})")
+    layout = tab.get("layout", "quad")
+    if layout not in VALID_LAYOUTS:
+        err(f"tab={tab_id} invalid layout={layout!r}. Must be one of {VALID_LAYOUTS}")
+    # auto-assign layout if not set
+    if "layout" not in tab:
+        tab["layout"] = {1: "single", 2: "split", 3: "tri", 4: "quad"}[len(panes)]
+    for i, pane in enumerate(panes):
+        validate_pane(pane, tab_id, i)
+
+
+def build_pane_command(pane: dict, ssh_profiles: dict, scripts_dir: str) -> str:
+    """Build the shell command to inject into a cmux pane."""
+    mode = pane.get("mode", "capture")
+    src = pane.get("source", "local")
+    target = pane.get("tmux_target", "")
+    lines = pane.get("lines", 60)
+    interval = pane.get("interval_sec", 1)
+
+    if mode == "capture":
+        view_cmd = f"tmux-pane-view {target} {lines} {interval}"
+        if src == "remote":
+            profile = pane["ssh_profile"]
+            prof_cfg = ssh_profiles.get(profile, {})
+            host = prof_cfg.get("host", profile)
+            user = prof_cfg.get("user", "")
+            dest = f"{user}@{host}" if user else host
+            return f"ssh {dest} '~/bin/tmux-pane-view {target} {lines} {interval}'"
+        return view_cmd
+
+    if mode == "tail":
+        log_path = pane["log_path"]
+        if src == "remote":
+            profile = pane["ssh_profile"]
+            prof_cfg = ssh_profiles.get(profile, {})
+            host = prof_cfg.get("host", profile)
+            user = prof_cfg.get("user", "")
+            dest = f"{user}@{host}" if user else host
+            return f"ssh {dest} 'tail -F {log_path}'"
+        return f"tail -F {log_path}"
+
+    err(f"Unknown mode: {mode}")
+
+
+def render_workspace(cfg: dict, scripts_dir: str) -> dict:
+    """Validate config and produce a structured command plan."""
+    name = cfg.get("workspace_name", "cmux-workspace")
+    ssh_profiles = cfg.get("ssh_profiles", {})
+    tabs = cfg.get("tabs", [])
+    if not tabs:
+        err("No tabs defined in workspace config")
+
+    plan = {"workspace_name": name, "tabs": []}
+    for tab in tabs:
+        validate_tab(tab)
+        layout = tab.get("layout", "quad")
+        pane_cmds = []
+        for pane in tab["panes"]:
+            cmd = build_pane_command(pane, ssh_profiles, scripts_dir)
+            pane_cmds.append({
+                "title": pane.get("title", "pane"),
+                "command": cmd,
+                "mode": pane.get("mode", "capture"),
+                "source": pane.get("source", "local"),
+            })
+        plan["tabs"].append({
+            "id": tab["id"],
+            "title": tab.get("title", tab["id"]),
+            "layout": layout,
+            "panes": pane_cmds,
+        })
+    return plan
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Render cmux workspace from yaml config")
+    parser.add_argument("config", help="Path to workspace.yaml")
+    parser.add_argument("--json", action="store_true", help="Output JSON plan instead of shell commands")
+    parser.add_argument("--validate-only", action="store_true", help="Validate config and exit")
+    args = parser.parse_args()
+
+    config_path = Path(args.config).expanduser()
+    if not config_path.exists():
+        err(f"Config file not found: {config_path}")
+
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
+
+    scripts_dir = str(Path(__file__).parent)
+    plan = render_workspace(cfg, scripts_dir)
+
+    if args.validate_only:
+        print(f"OK: {len(plan['tabs'])} tabs validated")
+        return
+
+    if args.json:
+        print(json.dumps(plan, indent=2))
+        return
+
+    # Human-readable output
+    print(f"# Workspace: {plan['workspace_name']}")
+    for tab in plan["tabs"]:
+        print(f"\n## Tab: {tab['title']} (layout={tab['layout']})")
+        for i, pane in enumerate(tab["panes"]):
+            print(f"  pane[{i}] {pane['title']} [{pane['source']}/{pane['mode']}]:")
+            print(f"    {pane['command']}")
+
+
+if __name__ == "__main__":
+    main()

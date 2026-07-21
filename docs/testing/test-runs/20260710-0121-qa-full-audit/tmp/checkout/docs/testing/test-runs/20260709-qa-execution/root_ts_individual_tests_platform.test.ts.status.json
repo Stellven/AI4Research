@@ -1,0 +1,12 @@
+{
+  "name": "root_ts_individual_tests_platform.test.ts",
+  "source": "tests/platform.test.ts",
+  "command": [
+    "bun",
+    "test",
+    "tests/platform.test.ts"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.136,
+  "timeout": false
+}

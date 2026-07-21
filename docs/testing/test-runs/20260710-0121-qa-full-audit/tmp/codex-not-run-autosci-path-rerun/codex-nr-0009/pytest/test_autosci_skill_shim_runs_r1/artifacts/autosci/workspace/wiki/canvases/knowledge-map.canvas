@@ -1,0 +1,50 @@
+{
+  "edges": [],
+  "nodes": [
+    {
+      "height": 100,
+      "id": "graph/context_brief.md",
+      "text": "Solar AutoSci Context Brief",
+      "type": "text",
+      "width": 220,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "height": 100,
+      "id": "graph/open_questions.md",
+      "text": "Gap Map",
+      "type": "text",
+      "width": 220,
+      "x": 260,
+      "y": 0
+    },
+    {
+      "height": 100,
+      "id": "index.md",
+      "text": "Solar AutoSci Wiki",
+      "type": "text",
+      "width": 220,
+      "x": 520,
+      "y": 0
+    },
+    {
+      "height": 100,
+      "id": "outputs/PIPELINE_REPORT.md",
+      "text": "AutoSci Research Pipeline Report",
+      "type": "text",
+      "width": 220,
+      "x": 780,
+      "y": 0
+    },
+    {
+      "height": 100,
+      "id": "outputs/pipeline-progress.md",
+      "text": "AutoSci Research Pipeline Progress",
+      "type": "text",
+      "width": 220,
+      "x": 1040,
+      "y": 0
+    }
+  ]
+}

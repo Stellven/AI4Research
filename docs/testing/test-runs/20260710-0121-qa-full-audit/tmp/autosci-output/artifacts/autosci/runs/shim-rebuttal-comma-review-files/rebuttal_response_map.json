@@ -1,0 +1,278 @@
+{
+  "coverage": {
+    "concern_count": 2,
+    "mapped_count": 2,
+    "reviewer_thread_status": "completed",
+    "stress_test_status": "not_requested",
+    "submission_status": "submission_audit_incomplete",
+    "unmapped_count": 0,
+    "wiki_mapped_count": 2,
+    "wiki_unmapped_count": 0
+  },
+  "evidence_ids": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/reviewer-1.txt,/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/reviewer-2.txt"
+  ],
+  "limitations": [
+    "Rebuttal draft is local and evidence-linked; it is not a submitted response.",
+    "Non-standard reviewer text was parsed by a bounded local parser; supply structured reviewer-thread evidence for strict auditability.",
+    "Review LLM stress-test was disabled by CLI; this is not strict native rebuttal parity.",
+    "Rebuttal submission audit readiness is not proven; supply valid --submission-audit evidence.",
+    "Rebuttal submission readiness requires formal text, full concern coverage, clean safety checks, and valid submission audit evidence."
+  ],
+  "mapped_concerns": [
+    {
+      "classification_source": "local_parser",
+      "concern": "The generated skill claim needs baseline ablation evidence.",
+      "concern_id": "Rv1-C1",
+      "evidence_ids": [
+        "review-thread:reviewer-1"
+      ],
+      "focus": "evidence",
+      "mapping": {
+        "entity_id": "skillgen",
+        "entity_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/ideas/skillgen.md",
+        "entity_title": "SkillGen Idea",
+        "entity_type": "idea",
+        "evidence_status": "sufficient",
+        "mapped": true,
+        "match_score": 5,
+        "strategy": "A"
+      },
+      "response": "We will answer this directly by citing `/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/ideas/skillgen.md` as the supporting evidence. The response will state only the result recorded in that source and will avoid adding unverified claims.",
+      "reviewer": "Reviewer 1",
+      "safety_checks": [
+        {
+          "check": "no_fabrication",
+          "detail": "Direct evidence-backed claims are tied to mapped wiki/source evidence.",
+          "evidence": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/ideas/skillgen.md"
+          ],
+          "status": "ok"
+        },
+        {
+          "check": "no_overpromise",
+          "detail": "Responses either cite recorded evidence or frame missing evidence as a concrete follow-up.",
+          "evidence": [],
+          "status": "ok"
+        },
+        {
+          "check": "traceability",
+          "detail": "Concern maps to a wiki/source entity.",
+          "evidence": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/ideas/skillgen.md"
+          ],
+          "status": "ok"
+        },
+        {
+          "check": "invalidated_guard",
+          "detail": "No contradicted evidence is presented as support.",
+          "evidence": [],
+          "status": "ok"
+        }
+      ],
+      "severity": "major",
+      "source_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/reviewer-1.txt",
+      "status": "mapped",
+      "type": "evidence",
+      "wiki_mapping_status": "mapped"
+    },
+    {
+      "classification_source": "local_parser",
+      "concern": "The verifier-gated method procedure is unclear.",
+      "concern_id": "Rv2-C1",
+      "evidence_ids": [
+        "review-thread:reviewer-2"
+      ],
+      "focus": "method",
+      "mapping": {
+        "entity_id": "verifier-gated-skill-selection",
+        "entity_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/methods/verifier-gated-skill-selection.md",
+        "entity_title": "Verifier-Gated Skill Selection",
+        "entity_type": "method",
+        "evidence_status": "sufficient",
+        "mapped": true,
+        "match_score": 2,
+        "strategy": "A"
+      },
+      "response": "We will answer this directly by citing `/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/methods/verifier-gated-skill-selection.md` as the supporting evidence. The response will state only the result recorded in that source and will avoid adding unverified claims.",
+      "reviewer": "Reviewer 2",
+      "safety_checks": [
+        {
+          "check": "no_fabrication",
+          "detail": "Direct evidence-backed claims are tied to mapped wiki/source evidence.",
+          "evidence": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/methods/verifier-gated-skill-selection.md"
+          ],
+          "status": "ok"
+        },
+        {
+          "check": "no_overpromise",
+          "detail": "Responses either cite recorded evidence or frame missing evidence as a concrete follow-up.",
+          "evidence": [],
+          "status": "ok"
+        },
+        {
+          "check": "traceability",
+          "detail": "Concern maps to a wiki/source entity.",
+          "evidence": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/methods/verifier-gated-skill-selection.md"
+          ],
+          "status": "ok"
+        },
+        {
+          "check": "invalidated_guard",
+          "detail": "No contradicted evidence is presented as support.",
+          "evidence": [],
+          "status": "ok"
+        }
+      ],
+      "severity": "major",
+      "source_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/reviewer-2.txt",
+      "status": "mapped",
+      "type": "method",
+      "wiki_mapping_status": "mapped"
+    }
+  ],
+  "paper_slug": "",
+  "review_boundary": {
+    "checked_reviews": [],
+    "completed": false,
+    "invalid_reasons": [],
+    "limitations": [
+      "No completed Review LLM boundary evidence was available for publication planning."
+    ],
+    "schema": "autosci_publication_review_boundary.v1",
+    "status": "inconclusive"
+  },
+  "reviewer_thread": {
+    "atomization_completed": true,
+    "concern_count": 2,
+    "limitations": [
+      "Non-standard reviewer text was parsed by a bounded local parser; supply structured reviewer-thread evidence for strict auditability."
+    ],
+    "raw_parser_used": true,
+    "reviewer_count": 2,
+    "schema": "autosci_rebuttal_reviewer_thread_boundary.v1",
+    "source_paths": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/reviewer-1.txt",
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/reviewer-2.txt"
+    ],
+    "status": "completed",
+    "thread_loaded": true
+  },
+  "safety_checks": [
+    {
+      "check": "no_fabrication",
+      "detail": "Direct evidence-backed claims are tied to mapped wiki/source evidence.",
+      "evidence": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/ideas/skillgen.md"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "no_overpromise",
+      "detail": "Responses either cite recorded evidence or frame missing evidence as a concrete follow-up.",
+      "evidence": [],
+      "status": "ok"
+    },
+    {
+      "check": "traceability",
+      "detail": "Concern maps to a wiki/source entity.",
+      "evidence": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/ideas/skillgen.md"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "invalidated_guard",
+      "detail": "No contradicted evidence is presented as support.",
+      "evidence": [],
+      "status": "ok"
+    },
+    {
+      "check": "no_fabrication",
+      "detail": "Direct evidence-backed claims are tied to mapped wiki/source evidence.",
+      "evidence": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/methods/verifier-gated-skill-selection.md"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "no_overpromise",
+      "detail": "Responses either cite recorded evidence or frame missing evidence as a concrete follow-up.",
+      "evidence": [],
+      "status": "ok"
+    },
+    {
+      "check": "traceability",
+      "detail": "Concern maps to a wiki/source entity.",
+      "evidence": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/workspace/wiki/methods/verifier-gated-skill-selection.md"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "invalidated_guard",
+      "detail": "No contradicted evidence is presented as support.",
+      "evidence": [],
+      "status": "ok"
+    }
+  ],
+  "schema": "autosci_rebuttal_response_map.v1",
+  "source_types": [
+    "text"
+  ],
+  "stress_test_boundary": {
+    "concern_count": 2,
+    "evidence_ids": [],
+    "follow_up_required": false,
+    "invocation_mode": "",
+    "limitations": [
+      "Review LLM stress-test was disabled by CLI; this is not strict native rebuttal parity."
+    ],
+    "review_boundary_status": "inconclusive",
+    "review_llm_completed": false,
+    "schema": "autosci_rebuttal_review_llm_stress_test_boundary.v1",
+    "score": null,
+    "status": "not_requested",
+    "stress_test_ready": true,
+    "stress_test_requested": false
+  },
+  "submission_boundary": {
+    "blocking_checks": [
+      "publication_submission_audit"
+    ],
+    "concern_count": 2,
+    "formal_rebuttal_text_path": "artifacts/autosci/runs/shim-rebuttal-comma-review-files/rebuttal.txt",
+    "format": "formal",
+    "limitations": [
+      "Rebuttal submission readiness requires formal text, full concern coverage, clean safety checks, and valid submission audit evidence."
+    ],
+    "portal_submission_completed": false,
+    "schema": "autosci_rebuttal_submission_boundary.v1",
+    "status": "submission_audit_incomplete",
+    "submission_audit": {
+      "audit_loaded": false,
+      "audit_verified": false,
+      "blocking_checks": [],
+      "checks": [],
+      "evidence_ids": [],
+      "invalid_reasons": [
+        "No submission_audit evidence path was supplied."
+      ],
+      "path": "",
+      "portal_submission_completed": false,
+      "schema": "autosci_publication_submission_audit_boundary.v1",
+      "sha256": "",
+      "status": "missing",
+      "venue": ""
+    },
+    "submission_audit_ready": false,
+    "venue": ""
+  },
+  "target": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/reviewer-1.txt,/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/reviewer-2.txt",
+  "title": "SkillGen Raw Rebuttal",
+  "unmapped_concerns": [],
+  "venue": "",
+  "wiki_unmapped_concerns": []
+}

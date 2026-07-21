@@ -1,0 +1,18 @@
+D1 — platform workflow benchmark runs
+  FAIL: benchmark exits 0:             },             "8789": {               "ok": false,               "status": 0,               "body": "URLError: <urlopen error [Errno 61] Connection refused>"             }           }         },         "data": {           "ok": true,           "points": 25         },         "ui_or_route": {           "ok": false,           "points": 0         }       }     }   ] } 
+  PASS: benchmark JSON valid
+  PASS: benchmark Markdown written
+
+D2 — rows 18-25 all pass threshold
+  FAIL: rows 18-25 passed
+
+D3 — benchmark evidence bundle exists
+  PASS: evidence benchmark.json
+  PASS: evidence apple_notes_ingest_test.json
+  PASS: evidence accepted_artifact_knowledge_test.json
+  PASS: evidence solar_kb_obsidian_autouse_test.json
+  PASS: evidence wiki_upload_ingest_closure_test.json
+  PASS: evidence cortex_counts.json
+  PASS: evidence endpoints.json
+
+=== Platform Workflow Benchmark Test: PASS=9 FAIL=2 ===

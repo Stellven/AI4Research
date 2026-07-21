@@ -1,0 +1,279 @@
+{
+  "ok": true,
+  "source_count": 8,
+  "min_sources": 8,
+  "source_type_counts": {
+    "paper": 4,
+    "official_doc": 1,
+    "code": 1,
+    "benchmark": 2
+  },
+  "required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "missing_required_source_types": [],
+  "paper_like_source_count": 4,
+  "min_paper_like_sources": 4,
+  "high_authority_source_count": 8,
+  "min_high_authority_sources": 4,
+  "source_authority_average": 0.8688,
+  "low_value_source_count": 0,
+  "low_value_source_ratio": 0.0,
+  "cited_source_ratio": 1.0,
+  "source_audit": {
+    "ok": true,
+    "output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0128/pytest/test_strict_eval_fails_when_se1",
+    "research_profile": "technical_architecture",
+    "strict_profile": true,
+    "policy_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/research/policies/source_authority.json",
+    "source_count": 8,
+    "source_type_counts": {
+      "paper": 4,
+      "official_doc": 1,
+      "code": 1,
+      "benchmark": 2
+    },
+    "source_type_count": 4,
+    "missing_required_source_types": [],
+    "missing_recommended_source_types": [],
+    "source_authority_average": 0.8688,
+    "source_high_authority_count": 8,
+    "source_high_authority_threshold": 0.75,
+    "invalid_source_type_count": 0,
+    "low_authority_source_count": 0,
+    "sources": [
+      {
+        "source_id": "src_0",
+        "source_type": "paper",
+        "title": "Latent Reasoning Paper",
+        "url": "https://arxiv.org/abs/2412.06769",
+        "authority_score": 0.9,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.9,
+          "default": false,
+          "host_hits": [
+            "arxiv.org"
+          ],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.9,
+            "host_contains": [
+              "arxiv.org",
+              "openreview.net",
+              "doi.org",
+              "semanticscholar.org"
+            ]
+          }
+        }
+      },
+      {
+        "source_id": "src_1",
+        "source_type": "paper",
+        "title": "Continuous Thought Paper",
+        "url": "https://openreview.net/forum?id=latent-reasoning",
+        "authority_score": 0.9,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.9,
+          "default": false,
+          "host_hits": [
+            "openreview.net"
+          ],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.9,
+            "host_contains": [
+              "arxiv.org",
+              "openreview.net",
+              "doi.org",
+              "semanticscholar.org"
+            ]
+          }
+        }
+      },
+      {
+        "source_id": "src_2",
+        "source_type": "paper",
+        "title": "Reasoning Survey Proceedings",
+        "url": "https://doi.org/10.1145/latent-reasoning",
+        "authority_score": 0.9,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.9,
+          "default": false,
+          "host_hits": [
+            "doi.org"
+          ],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.9,
+            "host_contains": [
+              "arxiv.org",
+              "openreview.net",
+              "doi.org",
+              "semanticscholar.org"
+            ]
+          }
+        }
+      },
+      {
+        "source_id": "src_3",
+        "source_type": "paper",
+        "title": "Neural Computation Journal Article",
+        "url": "https://ieeexplore.ieee.org/document/123456",
+        "authority_score": 0.85,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 1,
+          "score": 0.85,
+          "default": false,
+          "host_hits": [
+            "ieee.org"
+          ],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.85,
+            "host_contains": [
+              "acm.org",
+              "ieee.org",
+              "springer.com",
+              "nature.com",
+              "sciencedirect.com"
+            ]
+          }
+        }
+      },
+      {
+        "source_id": "src_4",
+        "source_type": "official_doc",
+        "title": "Official Developer Docs",
+        "url": "https://docs.example.edu/latent-reasoning",
+        "authority_score": 0.85,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.85,
+          "default": false,
+          "host_hits": [
+            ".edu"
+          ],
+          "host_prefix_hits": [
+            "docs."
+          ],
+          "text_hits": [],
+          "rule": {
+            "score": 0.85,
+            "host_prefix": [
+              "docs."
+            ],
+            "host_contains": [
+              ".gov",
+              ".edu"
+            ]
+          }
+        }
+      },
+      {
+        "source_id": "src_5",
+        "source_type": "code",
+        "title": "Latent Reasoning Repository",
+        "url": "https://github.com/example/latent-reasoning",
+        "authority_score": 0.85,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.85,
+          "default": false,
+          "host_hits": [
+            "github.com"
+          ],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.85,
+            "host_contains": [
+              "github.com",
+              "gitlab.com",
+              "bitbucket.org"
+            ]
+          }
+        }
+      },
+      {
+        "source_id": "src_6",
+        "source_type": "benchmark",
+        "title": "Latent Reasoning Benchmark",
+        "url": "https://paperswithcode.com/task/latent-reasoning",
+        "authority_score": 0.85,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.85,
+          "default": false,
+          "host_hits": [
+            "paperswithcode.com"
+          ],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.85,
+            "host_contains": [
+              "paperswithcode.com",
+              "huggingface.co",
+              "tbench.ai"
+            ]
+          }
+        }
+      },
+      {
+        "source_id": "src_7",
+        "source_type": "benchmark",
+        "title": "Hugging Face Evaluation Dataset",
+        "url": "https://huggingface.co/datasets/example/latent-reasoning",
+        "authority_score": 0.85,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.85,
+          "default": false,
+          "host_hits": [
+            "huggingface.co"
+          ],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.85,
+            "host_contains": [
+              "paperswithcode.com",
+              "huggingface.co",
+              "tbench.ai"
+            ]
+          }
+        }
+      }
+    ],
+    "replacement_suggestions": [],
+    "errors": [],
+    "warnings": []
+  },
+  "issues": []
+}

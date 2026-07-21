@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test-solar-kb-obsidian-autouse.sh — Sprint sprint-20260508-solar-kb-obsidian-autouse
 # Covers A1-A7 smoke tests using isolated tmp DB and vault.
-# NEVER touches real ~/.solar/solar.db or /Users/sihaoli/Knowledge.
+# NEVER touches real ~/.solar/solar.db or ~/Knowledge.
 
 set +e  # Tests use ok/fail, not early-exit
 
@@ -19,7 +19,7 @@ export SOLAR_KB_MANIFEST="${TMPDIR_BASE}/manifest.json"
 
 # Safety guards (from plan §5)
 [[ "$SOLAR_DB" == "${HOME}/.solar/solar.db" ]] && { echo "REFUSE: pointing at real DB"; exit 1; }
-[[ "$OBSIDIAN_VAULT_PATH" == "/Users/sihaoli/Knowledge" ]] && { echo "REFUSE: pointing at real vault"; exit 1; }
+[[ "$OBSIDIAN_VAULT_PATH" == "~/Knowledge" ]] && { echo "REFUSE: pointing at real vault"; exit 1; }
 
 cleanup() {
   rm -rf "$TMPDIR_BASE" 2>/dev/null || true

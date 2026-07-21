@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-07-10T19:22:03Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed citation/source evidence for AutoSci `survey` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-survey-citation-map/scientific_report.survey.json",
+        "artifacts/autosci/runs/shim-survey-citation-map/survey_plan.json",
+        "artifacts/autosci/runs/shim-survey-citation-map/survey.md",
+        "artifacts/autosci/runs/shim-survey-citation-map/write_survey_citation_map.json",
+        "artifacts/autosci/runs/shim-survey-citation-map/survey_final_coverage_boundary.json",
+        "survey-discovery.json",
+        "https://arxiv.org/abs/2601.00002"
+      ],
+      "native_skill": "survey",
+      "production_ready": true,
+      "proof_id": "runtime:survey:references:20260710T192203Z",
+      "provenance": {
+        "artifact_kind": "publication_citation_map",
+        "captured_at": "2026-07-10T19:22:03Z",
+        "citation_count": 1,
+        "command": "write_survey:citation_source_map",
+        "source": "references"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

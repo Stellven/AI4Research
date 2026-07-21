@@ -1,0 +1,11 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "sprint-test",
+  "graph_ref": "sprint-test.task_graph.json",
+  "node_results": {},
+  "gate_results": {},
+  "leases": {},
+  "dispatch_ids": {},
+  "updated_at": "2026-07-10T18:50:40Z",
+  "events": []
+}

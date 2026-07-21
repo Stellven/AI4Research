@@ -1,0 +1,15 @@
+{
+  "name": "gepa_optimizer_pytest",
+  "command": [
+    "env",
+    "PYTHONPATH=harness",
+    "AUTOSCI_DISABLE_NETWORK_FETCH=1",
+    "harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/integrations/gepa_optimizer"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 2
+}

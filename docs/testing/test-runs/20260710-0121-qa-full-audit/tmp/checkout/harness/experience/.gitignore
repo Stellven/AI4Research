@@ -1,0 +1,14 @@
+# Runtime experience memory state.
+#
+# Keep the schema and README in git, but do not publish local operator data,
+# SQLite files, locks, or compressed private sprint trajectories.
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.lock
+decisions.jsonl
+entries/
+trajectory/
+

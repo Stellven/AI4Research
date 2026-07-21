@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/research_paper.v1.schema.json",
+  "title": "Solar Evidence ABI - Research Paper",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "research_paper.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "status": {"$ref": "#/$defs/status"},
+    "inputs": {"type": "object", "additionalProperties": true},
+    "outputs": {
+      "type": "object",
+      "required": ["paper"],
+      "additionalProperties": true,
+      "properties": {
+        "paper": {"$ref": "#/$defs/paper"}
+      }
+    },
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "artifact": {
+      "type": "object",
+      "required": ["type", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "implementation_package", "timestamp"],
+      "additionalProperties": true,
+      "properties": {
+        "operator_id": {"type": "string", "minLength": 1},
+        "implementation_package": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"}
+      }
+    },
+    "paper": {
+      "type": "object",
+      "required": ["paper_id", "title", "source_type", "source_ref", "parse_status", "sections"],
+      "additionalProperties": true,
+      "properties": {
+        "paper_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "source_type": {"type": "string", "enum": ["pdf", "latex", "markdown", "html", "arxiv", "doi", "url", "unknown"]},
+        "source_ref": {"type": "string", "minLength": 1},
+        "identifiers": {"type": "object", "additionalProperties": {"type": "string"}},
+        "abstract": {"type": "string"},
+        "parse_status": {"type": "string", "enum": ["parsed", "partial", "failed"]},
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["section_id", "title"],
+            "additionalProperties": true,
+            "properties": {
+              "section_id": {"type": "string", "minLength": 1},
+              "title": {"type": "string", "minLength": 1},
+              "text": {"type": "string"},
+              "source_anchor": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

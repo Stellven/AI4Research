@@ -1,0 +1,34 @@
+{
+  "schema": "autosci_feature_parity.v1",
+  "task_id": "f",
+  "sprint_id": "f",
+  "node_id": "f",
+  "status": "completed",
+  "inputs": {
+    "autosci_repo": "f",
+    "route_config": "f"
+  },
+  "outputs": {
+    "parity": {
+      "config_version": "f",
+      "autosci_repo": "f",
+      "native_skill_count": 0,
+      "configured_route_count": 0,
+      "routed_count": 0,
+      "missing_route_count": 0,
+      "full_count": 0,
+      "partial_count": 0,
+      "gated_count": 0,
+      "blocked_count": 0,
+      "native_skills": [],
+      "items": []
+    }
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "f",
+    "implementation_package": "f",
+    "timestamp": "2026-07-10T00:00:00Z"
+  },
+  "limitations": []
+}

@@ -1,0 +1,20 @@
+{
+  "name": "autosci_product_smoke_subset",
+  "command": [
+    "env",
+    "PYTHONPATH=harness",
+    "AUTOSCI_DISABLE_NETWORK_FETCH=1",
+    "harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/integration/test_autosci_routes_list.py",
+    "harness/tests/integration/test_autosci_cli_dispatch.py",
+    "harness/tests/integration/test_autosci_ingest_demo.py",
+    "harness/tests/integration/test_autosci_review_demo.py",
+    "harness/tests/integration/test_autosci_research_scheduler_demo.py",
+    "harness/tests/integration/test_autosci_artifact_root.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 6
+}

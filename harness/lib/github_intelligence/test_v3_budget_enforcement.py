@@ -33,8 +33,8 @@ from model_ledger import (
     ModelLedger,
 )
 
-REPORT_DIR = "/Users/lisihao/.solar/harness/reports/github-intelligence/s05-acceptance"
-BACKUP_DIR = "/Users/lisihao/.solar/harness/backups/github-intelligence"
+REPORT_DIR = "~/.solar/harness/reports/github-intelligence/s05-acceptance"
+BACKUP_DIR = "~/.solar/harness/backups/github-intelligence"
 
 # Timestamp for this test run
 TS = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")

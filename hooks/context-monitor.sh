@@ -14,6 +14,12 @@ STATE_FILE="$HOME/.solar/STATE.md"
 SUMMARIZER="$HOME/.claude/core/auto-summarizer.ts"
 COUNTER_FILE="/tmp/solar_tool_call_counter"
 SUMMARY_MARKER="/tmp/solar_last_auto_summary"
+[[ -f "$HOME/.solar/harness/lib/portable.sh" ]] && . "$HOME/.solar/harness/lib/portable.sh"
+if ! type solar_file_mtime >/dev/null 2>&1; then
+    solar_file_mtime() {
+        stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0
+    }
+fi
 
 # 阈值配置
 THRESHOLD_PERCENT=80          # 80% 触发摘要
@@ -41,7 +47,10 @@ echo "0" > "$COUNTER_FILE"
 # 估算上下文使用率
 # ─────────────────────────────────────────────────────────────────
 
-PROJECT_DIR="$HOME/.claude/projects/-Users-sihaoli"
+# Derive the current project's transcript dir from the cwd (Claude Code encodes
+# the project path as ~/.claude/projects/<cwd with '/' -> '-'>). Portable; if it
+# does not exist the readiness check below exits cleanly.
+PROJECT_DIR="$HOME/.claude/projects/$(printf '%s' "$PWD" | sed 's#/#-#g')"
 CURRENT_SESSION=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
 
 if [[ -z "$CURRENT_SESSION" ]]; then
@@ -68,7 +77,7 @@ USAGE_PERCENT=$((TOTAL_CHARS * 100 / 600000))
 # ─────────────────────────────────────────────────────────────────
 
 if [[ -f "$SUMMARY_MARKER" ]]; then
-    LAST_SUMMARY=$(stat -f %m "$SUMMARY_MARKER" 2>/dev/null || stat -c %Y "$SUMMARY_MARKER" 2>/dev/null || echo "0")
+    LAST_SUMMARY=$(solar_file_mtime "$SUMMARY_MARKER" 2>/dev/null || echo "0")
     CURRENT_TIME=$(date +%s)
     TIME_DIFF=$((CURRENT_TIME - LAST_SUMMARY))
     MIN_INTERVAL_SECONDS=$((MIN_INTERVAL_MINUTES * 60))

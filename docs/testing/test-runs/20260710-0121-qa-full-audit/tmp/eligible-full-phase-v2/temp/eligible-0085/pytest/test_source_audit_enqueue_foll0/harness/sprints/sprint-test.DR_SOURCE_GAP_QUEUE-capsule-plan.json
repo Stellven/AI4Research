@@ -1,0 +1,9 @@
+{
+  "schema_version": "solar.capsule_plan_node.v1",
+  "node_id": "DR_SOURCE_GAP_QUEUE",
+  "logical_operator": "",
+  "request_type": "",
+  "lane_hint": "",
+  "selected": false,
+  "stages": []
+}

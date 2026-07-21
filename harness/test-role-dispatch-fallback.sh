@@ -27,7 +27,7 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 export COORD_NO_MAIN=1
-export HOME="${HOME:-/Users/lisihao}"
+export HOME="${HOME:-${HOME}}"
 # shellcheck disable=SC1091
 . "$HARNESS_DIR/coordinator.sh"
 

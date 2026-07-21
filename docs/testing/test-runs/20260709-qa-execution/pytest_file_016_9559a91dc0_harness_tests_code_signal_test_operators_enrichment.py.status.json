@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_016_9559a91dc0_harness_tests_code_signal_test_operators_enrichment.py",
+  "source": "harness/tests/code_signal/test_operators_enrichment.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/code_signal/test_operators_enrichment.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.144,
+  "timeout": false
+}

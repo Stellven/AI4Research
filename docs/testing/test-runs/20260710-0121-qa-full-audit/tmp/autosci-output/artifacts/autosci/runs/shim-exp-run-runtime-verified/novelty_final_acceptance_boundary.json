@@ -1,0 +1,95 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "external_novelty status is `missing`, not `completed`",
+        "external_novelty provenance status is `missing`, not `passed`",
+        "review_llm status is `missing`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-wiki-discovery-001",
+        "discovery:AutoSci Adapter Fixture Paper",
+        "discovery:Runtime Verified Local Wiki Source"
+      ],
+      "external_novelty_provenance_status": "missing",
+      "external_novelty_status": "missing",
+      "external_source_count": "N/A",
+      "final_acceptance_ready": false,
+      "idea_id": "idea-wiki-discovery-001",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.15,
+      "novelty_score": 2,
+      "provider_statuses": [],
+      "recommendation": "reject",
+      "review_available": false,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "missing",
+      "review_mode": "N/A",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty status is `missing`, not `completed`",
+        "external_novelty provenance status is `missing`, not `passed`",
+        "review_llm status is `missing`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-method-incremental-001",
+        "wiki:methods/method-001"
+      ],
+      "external_novelty_provenance_status": "missing",
+      "external_novelty_status": "missing",
+      "external_source_count": "N/A",
+      "final_acceptance_ready": false,
+      "idea_id": "idea-method-incremental-001",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.15,
+      "novelty_score": 2,
+      "provider_statuses": [],
+      "recommendation": "reject",
+      "review_available": false,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "missing",
+      "review_mode": "N/A",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty status is `missing`, not `completed`",
+        "external_novelty provenance status is `missing`, not `passed`",
+        "review_llm status is `missing`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-wiki-discovery-002",
+        "discovery:AutoSci Adapter Fixture Paper",
+        "discovery:Runtime Verified Skill Generation Source"
+      ],
+      "external_novelty_provenance_status": "missing",
+      "external_novelty_status": "missing",
+      "external_source_count": "N/A",
+      "final_acceptance_ready": false,
+      "idea_id": "idea-wiki-discovery-002",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.15,
+      "novelty_score": 2,
+      "provider_statuses": [],
+      "recommendation": "reject",
+      "review_available": false,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "missing",
+      "review_mode": "N/A",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

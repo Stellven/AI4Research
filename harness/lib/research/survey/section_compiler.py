@@ -250,8 +250,19 @@ def _split_markdown_sections(text: str) -> dict[str, str]:
     return {key: "\n".join(value).strip() for key, value in blocks.items() if "\n".join(value).strip()}
 
 
-def _clean_human_text(text: str, evidence_numbers: dict[str, int]) -> str:
+def _clean_human_text(
+    text: str,
+    evidence_numbers: dict[str, int],
+    *,
+    section_id: str = "",
+    section_title: str = "",
+) -> str:
     cleaned_lines: list[str] = []
+    internal_prefix = None
+    if section_id and section_title:
+        internal_prefix = re.compile(
+            rf"\bch\d{{1,3}}#\d+::{re.escape(section_id)}::{re.escape(section_title)}"
+        )
     for raw in (text or "").splitlines():
         line = raw.strip()
         if not line:
@@ -264,6 +275,18 @@ def _clean_human_text(text: str, evidence_numbers: dict[str, int]) -> str:
             continue
         if any(pattern.search(line) for pattern in _HUMAN_DROP_PATTERNS):
             continue
+        if internal_prefix is not None:
+            line = re.sub(
+                rf"在\s*{internal_prefix.pattern}\s*中",
+                "在这一主题中",
+                line,
+            )
+            line = re.sub(
+                rf"{internal_prefix.pattern}\s*的",
+                "该主题的",
+                line,
+            )
+            line = internal_prefix.sub("该主题", line)
         line = re.sub(r"^本节(?:的)?立场(?:是)?[：:]\s*", "", line)
         line = re.sub(r"^本节(?:的)?(?:认为|判断|主张)(?:是)?[：:]?\s*", "", line)
         line = re.sub(r"^本节(?:的)?工程风险边界", "工程风险边界", line)
@@ -289,6 +312,7 @@ def _clean_human_text(text: str, evidence_numbers: dict[str, int]) -> str:
             "本节认为": "本文认为",
             "本节无法": "目前无法",
             "与本节": "与上述",
+            "claim_id 和 evidence_id": "支撑性主张与证据",
         }.items():
             line = line.replace(old, new)
         line = re.sub(r"\[claim:[^\]]+\]", "", line)
@@ -338,7 +362,12 @@ def _append_unique(items: list[str], candidates: list[str], *, max_items: int) -
             break
 
 
-def _human_chapter_block(root: Path, chapter: dict, sections: list[dict], evidence_numbers: dict[str, int]) -> tuple[str, dict[str, int]]:
+def _human_chapter_block(
+    root: Path,
+    chapter: dict,
+    sections: list[dict],
+    evidence_numbers: dict[str, int],
+) -> tuple[str, dict[str, Any]]:
     title = str(chapter.get("title") or chapter.get("chapter_id") or "N/A")
     positions: list[str] = []
     mechanisms: list[str] = []
@@ -363,7 +392,12 @@ def _human_chapter_block(root: Path, chapter: dict, sections: list[dict], eviden
             content = blocks.get(heading, "")
             if not content:
                 continue
-            cleaned = _clean_human_text(content, evidence_numbers)
+            cleaned = _clean_human_text(
+                content,
+                evidence_numbers,
+                section_id=str(section.get("section_id") or ""),
+                section_title=str(section.get("title") or ""),
+            )
             _append_unique(target, _first_units(cleaned, limit=limit), max_items=6)
 
     metrics = {
@@ -372,6 +406,7 @@ def _human_chapter_block(root: Path, chapter: dict, sections: list[dict], eviden
         "comparisons": len(comparisons),
         "risks": len(risks),
         "open_problems": len(open_problems),
+        "core_positions": positions[:2],
     }
     lines = [f"## {title}", ""]
     if positions:
@@ -406,6 +441,14 @@ def _build_human_readable_final(root: Path, ast: dict, contribution: dict) -> di
         chapter_blocks.append(block)
         chapter_metrics.append({"chapter_id": chapter_id, **metrics})
 
+    core_positions: list[str] = []
+    for metrics in chapter_metrics:
+        _append_unique(
+            core_positions,
+            [str(item) for item in (metrics.get("core_positions") or [])],
+            max_items=4,
+        )
+
     source_summary = "、".join(f"{key} {value}" for key, value in sorted(source_counts.items())) or "N/A"
     title = str(ast.get("title") or "Professor-Grade Survey")
     lines = [
@@ -413,7 +456,11 @@ def _build_human_readable_final(root: Path, ast: dict, contribution: dict) -> di
         "",
         "## 核心结论",
         "",
-        "2026 年的 Agentic Runtime 已经从“会调用工具的 LLM 应用”变成一类独立的执行系统：它必须同时处理长时状态、可恢复执行、控制权转移、执行边界安全、动作/权限/副作用风险，以及 session/state/artifact 生命周期治理。当前行业的主要矛盾不是缺少框架，而是框架文档、源码实现、外部 benchmark 与生产部署证据之间尚未形成闭环。",
+        *(
+            [f"- {item}" for item in core_positions]
+            if core_positions
+            else [f"现有证据尚不足以对“{title}”形成可靠结论；以下内容保留已验证事实与明确缺口。"]
+        ),
         "",
         "## 证据基础",
         "",

@@ -62,7 +62,7 @@ chroma_persist_dir: ~/.solar/mempalace/data
     "solar-mempalace": {
       "command": "/opt/homebrew/bin/python3.11",
       "args": ["-m", "mempalace_mcp_server"],
-      "cwd": "/Users/sihaoli/.solar/mempalace"
+      "cwd": "~/.solar/mempalace"
     }
   }
 }
@@ -90,7 +90,7 @@ result = mempalace_add(
 | 码 | 含义 |
 |----|------|
 | SOL | Solar 系统 |
-| HGR | 监护人 (昊哥) |
+| HGR | 监护人 |
 | DRV | DeepSeek-R1 |
 | GL5 | GLM-5 |
 | COR | Cortex 来源 |

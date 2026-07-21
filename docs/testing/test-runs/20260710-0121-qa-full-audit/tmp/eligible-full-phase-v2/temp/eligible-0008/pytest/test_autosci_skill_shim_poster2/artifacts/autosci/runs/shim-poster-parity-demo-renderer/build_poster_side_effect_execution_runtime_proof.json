@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-07-10T14:04:40Z",
+  "proofs": [
+    {
+      "categories": [
+        "side_effect_execution_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed approved side-effect execution evidence for AutoSci `poster` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/publication_bundle.poster.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_validation.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_review_llm_boundary.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/dag.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/outline.html",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_template.html",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_validate_result.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_generation_report.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/build_poster_approval_contract.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/build_poster_gate_policy_decision.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_runtime_evidence.json",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.png",
+        "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_executor_validation.json"
+      ],
+      "native_skill": "poster",
+      "production_ready": true,
+      "proof_id": "runtime:poster:approved-mutation:20260710T140440Z",
+      "provenance": {
+        "artifact_kind": "poster_render_export",
+        "captured_at": "2026-07-10T14:04:40Z",
+        "command": "build_poster:approved_mutation",
+        "source": "approved_mutation"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

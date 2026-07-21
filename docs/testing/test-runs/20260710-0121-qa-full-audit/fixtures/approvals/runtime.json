@@ -1,0 +1,6 @@
+{
+  "schema": "fixture_runtime.v1",
+  "fixture_source": true,
+  "status": "blocked_expected",
+  "continuation_required": true
+}

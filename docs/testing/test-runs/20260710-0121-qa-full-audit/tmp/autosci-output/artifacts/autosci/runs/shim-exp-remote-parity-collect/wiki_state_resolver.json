@@ -1,0 +1,1899 @@
+{
+  "action": "monitor_experiment",
+  "existing_wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ],
+  "experiments": [
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-001",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-001",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "supports",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-001.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-001",
+      "status": "completed",
+      "title": "Validate evidence coverage for `claim-001` using a bounded fixture experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-approved",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 1,
+      "id": "exp-approved",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "supports",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-approved.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-approved",
+      "status": "completed",
+      "title": "Validate evidence coverage for `exp-approved` using an approval-gated native experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [
+        "exp-collect",
+        "runtime:exp-collect",
+        "task-exp-collect-runtime",
+        "node-exp-collect-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co0/collect-runtime.json"
+      ],
+      "experiment_id": "exp-collect",
+      "frontmatter_keys": [
+        "evidence_ids",
+        "experiment_id",
+        "outcome",
+        "status",
+        "updated_at"
+      ],
+      "graph_edge_count": 1,
+      "id": "exp-collect",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "partially_supports",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-collect.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-collect",
+      "status": "completed",
+      "title": "exp-collect"
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-idea-skillgen-design",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-idea-skillgen-design",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-idea-skillgen-design.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-idea-skillgen-design",
+      "status": "planned",
+      "title": "Validate evidence coverage for `idea-skillgen-design` using a bounded fixture experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-idea-skillgen-ready",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-idea-skillgen-ready",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-idea-skillgen-ready.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-idea-skillgen-ready",
+      "status": "planned",
+      "title": "Validate evidence coverage for `idea-skillgen-ready` using an approval-gated native experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-native-001",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-native-001",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "inconclusive",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-native-001.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-native-001",
+      "status": "planned",
+      "title": "Validate evidence coverage for `exp-native-001` using an approval-gated native experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-parity-001",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-parity-001",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "inconclusive",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-parity-001.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-parity-001",
+      "status": "planned",
+      "title": "Validate evidence coverage for `exp-parity-001` using an approval-gated native experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [
+        "exp-remote-collect",
+        "remote-collect:exp-remote-collect",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/remote-results/results.json",
+        "result:exp-remote-collect",
+        "task-autosci-skillgen-monitor_experiment",
+        "node-monitor-experiment",
+        "artifacts/autosci/runs/shim-exp-remote-collect/monitor_experiment_runtime_evidence.json"
+      ],
+      "experiment_id": "exp-remote-collect",
+      "frontmatter_keys": [
+        "evidence_ids",
+        "experiment_id",
+        "outcome",
+        "status",
+        "updated_at"
+      ],
+      "graph_edge_count": 1,
+      "id": "exp-remote-collect",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "partially_supports",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-remote-collect.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-remote-collect",
+      "status": "completed",
+      "title": "exp-remote-collect"
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-remote-missing",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-remote-missing",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "inconclusive",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-remote-missing.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-remote-missing",
+      "status": "planned",
+      "title": "Validate evidence coverage for `exp-remote-missing` using an approval-gated native experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-remote",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 1,
+      "id": "exp-remote",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "supports",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-remote.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-remote",
+      "status": "completed",
+      "title": "Validate evidence coverage for `exp-remote` using an approval-gated native experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-session",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-session",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "inconclusive",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-session.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-session",
+      "status": "planned",
+      "title": "Validate evidence coverage for `exp-session` using an approval-gated native experiment."
+    },
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-skillgen",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-skillgen",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "inconclusive",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-skillgen.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-skillgen",
+      "status": "planned",
+      "title": "Validate evidence coverage for `exp-skillgen` using an approval-gated native experiment."
+    }
+  ],
+  "graph_edges": [
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 1,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 2,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 3,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 4,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 5,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 6,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [],
+      "line": 7,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "claim-003"
+    },
+    {
+      "evidence_ids": [],
+      "line": 8,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 9,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-ingest_paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 10,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-extract_claims"
+    },
+    {
+      "evidence_ids": [],
+      "line": 11,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "claim-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 12,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "claim-002"
+    },
+    {
+      "evidence_ids": [],
+      "line": 13,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-extract_methods"
+    },
+    {
+      "evidence_ids": [],
+      "line": 14,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "paper-skillgen-operator-smoke-paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 15,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "claim-003"
+    },
+    {
+      "evidence_ids": [],
+      "line": 16,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 17,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-ingest_paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 18,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-extract_claims"
+    },
+    {
+      "evidence_ids": [],
+      "line": 19,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "claim-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 20,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "claim-002"
+    },
+    {
+      "evidence_ids": [],
+      "line": 21,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-extract_methods"
+    },
+    {
+      "evidence_ids": [],
+      "line": 22,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "paper-skillgen-operator-smoke-paper"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 23,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 24,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 25,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 26,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 27,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 28,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "paper-SkillGen"
+      ],
+      "line": 29,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-SkillGen",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-SkillGen"
+      ],
+      "line": 30,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-SkillGen",
+      "status": "",
+      "target": "artifacts/autosci/workspace/raw/tmp/papers/skillgen.tex"
+    },
+    {
+      "evidence_ids": [
+        "paper-registered-source"
+      ],
+      "line": 31,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-registered-source",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-registered-source"
+      ],
+      "line": 32,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-registered-source",
+      "status": "",
+      "target": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ingest1/raw/papers/registered_source.md"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 33,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 34,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [],
+      "line": 35,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "claim-003"
+    },
+    {
+      "evidence_ids": [],
+      "line": 36,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 37,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-ingest_paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 38,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-extract_claims"
+    },
+    {
+      "evidence_ids": [],
+      "line": 39,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "claim-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 40,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "claim-002"
+    },
+    {
+      "evidence_ids": [],
+      "line": 41,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-extract_methods"
+    },
+    {
+      "evidence_ids": [],
+      "line": 42,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-001.md",
+      "status": "",
+      "target": "paper-skillgen-operator-smoke-paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 43,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "claim-003"
+    },
+    {
+      "evidence_ids": [],
+      "line": 44,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 45,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-ingest_paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 46,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-extract_claims"
+    },
+    {
+      "evidence_ids": [],
+      "line": 47,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "claim-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 48,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "claim-002"
+    },
+    {
+      "evidence_ids": [],
+      "line": 49,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "task-autosci-skillgen-extract_methods"
+    },
+    {
+      "evidence_ids": [],
+      "line": 50,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-duplicate-001.md",
+      "status": "",
+      "target": "paper-skillgen-operator-smoke-paper"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 51,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 52,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 53,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "line": 54,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-skillgen-operator-smoke-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+    },
+    {
+      "evidence_ids": [],
+      "line": 55,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 56,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Local Wiki Source"
+    },
+    {
+      "evidence_ids": [],
+      "line": 57,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-method-incremental-001.md",
+      "status": "",
+      "target": "wiki:methods/method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 58,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 59,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Skill Generation Source"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 60,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 61,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "exp-approved",
+        "Validate evidence coverage for `exp-approved` using an approval-gated native experiment.",
+        "runtime:exp-approved",
+        "task-exp-approved-runtime",
+        "node-exp-approved-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru1/exp-runtime.json"
+      ],
+      "line": 62,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "produced_result",
+      "source": "exp-approved",
+      "status": "",
+      "target": "exp-approved"
+    },
+    {
+      "evidence_ids": [],
+      "line": 63,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 64,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Local Wiki Source"
+    },
+    {
+      "evidence_ids": [],
+      "line": 65,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-method-incremental-001.md",
+      "status": "",
+      "target": "wiki:methods/method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 66,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 67,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Skill Generation Source"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 68,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 69,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+    },
+    {
+      "evidence_ids": [],
+      "line": 70,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 71,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Local Wiki Source"
+    },
+    {
+      "evidence_ids": [],
+      "line": 72,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-method-incremental-001.md",
+      "status": "",
+      "target": "wiki:methods/method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 73,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 74,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Skill Generation Source"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 75,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 76,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+    },
+    {
+      "evidence_ids": [],
+      "line": 77,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 78,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Local Wiki Source"
+    },
+    {
+      "evidence_ids": [],
+      "line": 79,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-method-incremental-001.md",
+      "status": "",
+      "target": "wiki:methods/method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 80,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 81,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Skill Generation Source"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 82,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 83,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "exp-remote",
+        "Validate evidence coverage for `exp-remote` using an approval-gated native experiment.",
+        "remote-runtime:exp-remote",
+        "remote-launch-exp-remote",
+        "node-remote-launch-exp-remote",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru4/exp-remote-runtime.json",
+        "experiment-runtime:exp-remote",
+        "task-autosci-skillgen-run_experiment",
+        "node-run-experiment",
+        "artifacts/autosci/runs/shim-exp-run-remote-helper/run_experiment_runtime_evidence.json"
+      ],
+      "line": 84,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "produced_result",
+      "source": "exp-remote",
+      "status": "",
+      "target": "exp-remote"
+    },
+    {
+      "evidence_ids": [],
+      "line": 85,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 86,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Local Wiki Source"
+    },
+    {
+      "evidence_ids": [],
+      "line": 87,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-method-incremental-001.md",
+      "status": "",
+      "target": "wiki:methods/method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 88,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 89,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Skill Generation Source"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 90,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 91,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+    },
+    {
+      "evidence_ids": [],
+      "line": 92,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 93,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Local Wiki Source"
+    },
+    {
+      "evidence_ids": [],
+      "line": 94,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-method-incremental-001.md",
+      "status": "",
+      "target": "wiki:methods/method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 95,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 96,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Skill Generation Source"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 97,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 98,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+    },
+    {
+      "evidence_ids": [],
+      "line": 99,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 100,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-001.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Local Wiki Source"
+    },
+    {
+      "evidence_ids": [],
+      "line": 101,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-method-incremental-001.md",
+      "status": "",
+      "target": "wiki:methods/method-001"
+    },
+    {
+      "evidence_ids": [],
+      "line": 102,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:AutoSci Adapter Fixture Paper"
+    },
+    {
+      "evidence_ids": [],
+      "line": 103,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-wiki-discovery-002.md",
+      "status": "",
+      "target": "discovery:Runtime Verified Skill Generation Source"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 104,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 105,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+    },
+    {
+      "evidence_ids": [
+        "exp-collect",
+        "runtime:exp-collect",
+        "task-exp-collect-runtime",
+        "node-exp-collect-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co0/collect-runtime.json"
+      ],
+      "line": 106,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "produced_result",
+      "source": "exp-collect",
+      "status": "",
+      "target": "exp-collect"
+    },
+    {
+      "evidence_ids": [
+        "exp-remote-collect",
+        "remote-collect:exp-remote-collect",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/remote-results/results.json",
+        "result:exp-remote-collect",
+        "task-autosci-skillgen-monitor_experiment",
+        "node-monitor-experiment",
+        "artifacts/autosci/runs/shim-exp-remote-collect/monitor_experiment_runtime_evidence.json"
+      ],
+      "line": 107,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "produced_result",
+      "source": "exp-remote-collect",
+      "status": "",
+      "target": "exp-remote-collect"
+    }
+  ],
+  "graph_errors": [],
+  "ideas": [
+    {
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": false,
+      "id": "idea-001",
+      "idea_id": "idea-001",
+      "linked_experiments": [],
+      "novelty_score": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/ideas/idea-001.md",
+      "slug": "idea-001",
+      "status": "unknown",
+      "title": "Evidence-linked verification coverage experiment"
+    },
+    {
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": false,
+      "id": "idea-duplicate-001",
+      "idea_id": "idea-duplicate-001",
+      "linked_experiments": [],
+      "novelty_score": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/ideas/idea-duplicate-001.md",
+      "slug": "idea-duplicate-001",
+      "status": "unknown",
+      "title": "Repeat existing fixture bridge smoke"
+    },
+    {
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": false,
+      "id": "idea-method-incremental-001",
+      "idea_id": "idea-method-incremental-001",
+      "linked_experiments": [],
+      "novelty_score": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/ideas/idea-method-incremental-001.md",
+      "slug": "idea-method-incremental-001",
+      "status": "unknown",
+      "title": "Patch a limitation in Method protocol"
+    },
+    {
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": false,
+      "id": "idea-wiki-discovery-001",
+      "idea_id": "idea-wiki-discovery-001",
+      "linked_experiments": [],
+      "novelty_score": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/ideas/idea-wiki-discovery-001.md",
+      "slug": "idea-wiki-discovery-001",
+      "status": "unknown",
+      "title": "Close the evidence gap around exp-session"
+    },
+    {
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": false,
+      "id": "idea-wiki-discovery-002",
+      "idea_id": "idea-wiki-discovery-002",
+      "linked_experiments": [],
+      "novelty_score": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/ideas/idea-wiki-discovery-002.md",
+      "slug": "idea-wiki-discovery-002",
+      "status": "unknown",
+      "title": "Stress-test method transfer from AutoSci Adapter Fixture Paper"
+    }
+  ],
+  "indexes": {
+    "experiments_by_slug": {
+      "exp-001": "exp-001",
+      "exp-approved": "exp-approved",
+      "exp-collect": "exp-collect",
+      "exp-idea-skillgen-design": "exp-idea-skillgen-design",
+      "exp-idea-skillgen-ready": "exp-idea-skillgen-ready",
+      "exp-native-001": "exp-native-001",
+      "exp-parity-001": "exp-parity-001",
+      "exp-remote": "exp-remote",
+      "exp-remote-collect": "exp-remote-collect",
+      "exp-remote-missing": "exp-remote-missing",
+      "exp-session": "exp-session",
+      "exp-skillgen": "exp-skillgen"
+    },
+    "ideas_by_slug": {
+      "idea-001": "idea-001",
+      "idea-duplicate-001": "idea-duplicate-001",
+      "idea-method-incremental-001": "idea-method-incremental-001",
+      "idea-wiki-discovery-001": "idea-wiki-discovery-001",
+      "idea-wiki-discovery-002": "idea-wiki-discovery-002"
+    },
+    "outputs_by_slug": {
+      "claims-shim-exp-run-deploy-native": "claims-shim-exp-run-deploy-native",
+      "claims-shim-exp-run-native-command": "claims-shim-exp-run-native-command",
+      "claims-shim-exp-run-parity-demo-command": "claims-shim-exp-run-parity-demo-command",
+      "claims-shim-exp-run-remote-helper": "claims-shim-exp-run-remote-helper",
+      "claims-shim-exp-run-remote-missing-runtime": "claims-shim-exp-run-remote-missing-runtime",
+      "claims-shim-exp-run-runtime-verified": "claims-shim-exp-run-runtime-verified",
+      "claims-shim-exp-session-launch": "claims-shim-exp-session-launch",
+      "claims-shim-research": "claims-shim-research",
+      "claims-shim-single-token-dollar-command": "claims-shim-single-token-dollar-command",
+      "discovery": "discovery",
+      "experiment": "experiment",
+      "ideas": "ideas",
+      "lifecycle-summary": "lifecycle-summary",
+      "pipeline-progress": "pipeline-progress",
+      "pipeline-report": "pipeline-report",
+      "report": "report",
+      "report-skillgen-operator-smoke": "report-skillgen-operator-smoke"
+    }
+  },
+  "limitations": [
+    "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+    "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+  ],
+  "outputs": [
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [],
+      "id": "pipeline-report",
+      "idea_id": "",
+      "output_id": "pipeline-report",
+      "path": "artifacts/autosci/workspace/wiki/outputs/PIPELINE_REPORT.md",
+      "slug": "pipeline-report",
+      "status": "unknown",
+      "title": "AutoSci Research Pipeline Report"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-exp-run-deploy-native",
+      "idea_id": "",
+      "output_id": "claims-shim-exp-run-deploy-native",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-exp-run-deploy-native.md",
+      "slug": "claims-shim-exp-run-deploy-native",
+      "status": "unknown",
+      "title": "Claims from shim-exp-run-deploy-native"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-exp-run-native-command",
+      "idea_id": "",
+      "output_id": "claims-shim-exp-run-native-command",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-exp-run-native-command.md",
+      "slug": "claims-shim-exp-run-native-command",
+      "status": "unknown",
+      "title": "Claims from shim-exp-run-native-command"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-exp-run-parity-demo-command",
+      "idea_id": "",
+      "output_id": "claims-shim-exp-run-parity-demo-command",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-exp-run-parity-demo-command.md",
+      "slug": "claims-shim-exp-run-parity-demo-command",
+      "status": "unknown",
+      "title": "Claims from shim-exp-run-parity-demo-command"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-exp-run-remote-helper",
+      "idea_id": "",
+      "output_id": "claims-shim-exp-run-remote-helper",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-exp-run-remote-helper.md",
+      "slug": "claims-shim-exp-run-remote-helper",
+      "status": "unknown",
+      "title": "Claims from shim-exp-run-remote-helper"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-exp-run-remote-missing-runtime",
+      "idea_id": "",
+      "output_id": "claims-shim-exp-run-remote-missing-runtime",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-exp-run-remote-missing-runtime.md",
+      "slug": "claims-shim-exp-run-remote-missing-runtime",
+      "status": "unknown",
+      "title": "Claims from shim-exp-run-remote-missing-runtime"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-exp-run-runtime-verified",
+      "idea_id": "",
+      "output_id": "claims-shim-exp-run-runtime-verified",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-exp-run-runtime-verified.md",
+      "slug": "claims-shim-exp-run-runtime-verified",
+      "status": "unknown",
+      "title": "Claims from shim-exp-run-runtime-verified"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-exp-session-launch",
+      "idea_id": "",
+      "output_id": "claims-shim-exp-session-launch",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-exp-session-launch.md",
+      "slug": "claims-shim-exp-session-launch",
+      "status": "unknown",
+      "title": "Claims from shim-exp-session-launch"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-research",
+      "idea_id": "",
+      "output_id": "claims-shim-research",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-research.md",
+      "slug": "claims-shim-research",
+      "status": "unknown",
+      "title": "Claims from shim-research"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-single-token-dollar-command",
+      "idea_id": "",
+      "output_id": "claims-shim-single-token-dollar-command",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-single-token-dollar-command.md",
+      "slug": "claims-shim-single-token-dollar-command",
+      "status": "unknown",
+      "title": "Claims from shim-single-token-dollar-command"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "discovery",
+      "idea_id": "",
+      "output_id": "discovery",
+      "path": "artifacts/autosci/workspace/wiki/outputs/discovery.md",
+      "slug": "discovery",
+      "status": "unknown",
+      "title": "Discovery summary for shim-research"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "experiment",
+      "idea_id": "",
+      "output_id": "experiment",
+      "path": "artifacts/autosci/workspace/wiki/outputs/experiment.md",
+      "slug": "experiment",
+      "status": "unknown",
+      "title": "Experiment summary for shim-exp-remote-collect"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "ideas",
+      "idea_id": "",
+      "output_id": "ideas",
+      "path": "artifacts/autosci/workspace/wiki/outputs/ideas.md",
+      "slug": "ideas",
+      "status": "unknown",
+      "title": "Idea summary for shim-exp-session-launch"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "lifecycle-summary",
+      "idea_id": "",
+      "output_id": "lifecycle-summary",
+      "path": "artifacts/autosci/workspace/wiki/outputs/lifecycle_summary.md",
+      "slug": "lifecycle-summary",
+      "status": "unknown",
+      "title": "Lifecycle summary for shim-research-generic-scheduler-authorization"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [],
+      "id": "pipeline-progress",
+      "idea_id": "",
+      "output_id": "pipeline-progress",
+      "path": "artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md",
+      "slug": "pipeline-progress",
+      "status": "unknown",
+      "title": "AutoSci Research Pipeline Progress"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "report-skillgen-operator-smoke",
+      "idea_id": "",
+      "output_id": "report-skillgen-operator-smoke",
+      "path": "artifacts/autosci/workspace/wiki/outputs/report-skillgen-operator-smoke.md",
+      "slug": "report-skillgen-operator-smoke",
+      "status": "unknown",
+      "title": "agent skill learning Evidence-Linked Solar AutoSci Report"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "report",
+      "idea_id": "",
+      "output_id": "report",
+      "path": "artifacts/autosci/workspace/wiki/outputs/report.md",
+      "slug": "report",
+      "status": "unknown",
+      "title": "agent skill learning Evidence-Linked Solar AutoSci Report"
+    }
+  ],
+  "resolution": {
+    "fallback_used": false,
+    "target": "exp-remote-parity-collect",
+    "target_id": "",
+    "target_path": "",
+    "target_type": "unresolved",
+    "warnings": [
+      "Target `exp-remote-parity-collect` was not found in wiki ideas, experiments, outputs, or graph edges."
+    ]
+  },
+  "schema": "autosci_wiki_state_resolver.v1",
+  "selected_root": "artifacts/autosci/workspace/wiki",
+  "status": "completed",
+  "wiki_roots": [
+    "artifacts/autosci/workspace/wiki",
+    "wiki",
+    "harness/artifacts/autosci/workspace/wiki"
+  ]
+}

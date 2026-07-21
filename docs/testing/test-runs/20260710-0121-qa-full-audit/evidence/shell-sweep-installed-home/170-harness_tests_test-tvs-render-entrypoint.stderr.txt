@@ -1,0 +1,1 @@
+tvs-render error: Unable to import TVS v1. Checked roots: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/TVS, /private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/TVS. Set SOLAR_TVS_ROOT to the TVS package directory.

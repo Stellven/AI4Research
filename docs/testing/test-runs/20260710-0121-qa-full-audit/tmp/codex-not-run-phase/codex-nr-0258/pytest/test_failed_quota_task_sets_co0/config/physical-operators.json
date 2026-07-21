@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "operators": {
+    "test-command-builder": {
+      "display_name": "Test Command Builder",
+      "role": "builder",
+      "persona": "builder",
+      "backend": "command",
+      "model": "local-command",
+      "enabled": true,
+      "quota_guard_state": "cooldown",
+      "quota_refresh_at": "2026-07-11T17:40:00Z",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "cooldown",
+        "cooldown_until": "2026-07-11T17:40:00Z",
+        "last_error": "rate_limit",
+        "last_error_at": "2026-07-10T18:53:03Z"
+      },
+      "flow_control": {
+        "last_block_state": "cooldown",
+        "last_block_reason": "rate_limit",
+        "last_block_source": "failure_flow_control",
+        "last_block_detected_at": "2026-07-10T18:53:03Z",
+        "last_block_expires_at": "2026-07-11T17:40:00Z",
+        "last_block_excerpt": "You've hit your limit · resets 1:40pm"
+      }
+    }
+  }
+}

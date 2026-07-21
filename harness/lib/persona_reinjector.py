@@ -61,6 +61,20 @@ def _tmux_send_keys(pane_id: str, text: str) -> None:
     )
 
 
+def _resolve_persona_template(template_base: str | Path, role: str) -> Path:
+    base = Path(template_base)
+    name = f"{role}.md"
+    candidates = [
+        base / "persona" / name,
+        base.parent / "personas" / name,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    searched = ", ".join(str(p) for p in candidates)
+    raise FileNotFoundError(f"Persona template not found for {role!r}; searched: {searched}")
+
+
 class PersonaReinjector:
 
     def __init__(
@@ -81,9 +95,7 @@ class PersonaReinjector:
         self._capture = capture_fn or (lambda pid: "")
 
     def inject_persona(self, pane_id: str, role: str) -> bool:
-        template_path = Path(self._template_base) / "persona" / f"{role}.md"
-        if not template_path.exists():
-            raise FileNotFoundError(f"Persona template not found: {template_path}")
+        template_path = _resolve_persona_template(self._template_base, role)
         content = template_path.read_text()
         self._send(pane_id, content)
         self._sleep(INJECT_SETTLE_MS)

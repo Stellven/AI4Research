@@ -1,0 +1,56 @@
+{
+  "ok": true,
+  "status": "consumed",
+  "intent_id": "intent-20260710-184959-783cd2ce75",
+  "sprint_id": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce",
+  "updated_at": "2026-07-10T18:49:59Z",
+  "consumer": "intent_consumer.py",
+  "direct_pane_dispatch": false,
+  "planner_runtime_submit": true,
+  "planner_handoff": {
+    "source_channel": "pm_dispatch",
+    "source_trust": "pm_dispatch",
+    "allow_autodispatch": true,
+    "requires_human_confirm": false,
+    "trusted_channels": [
+      "codex_bridge",
+      "github_webhook",
+      "pm_compile_request",
+      "pm_dispatch"
+    ],
+    "auto_dispatch_planner": true,
+    "requested": true,
+    "reason": "trusted_channel",
+    "status": "submitted",
+    "exit_code": 0,
+    "cmd": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python",
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/tools/pm_dispatch.py",
+      "submit",
+      "--role",
+      "planner",
+      "--objective",
+      "请接手 sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce：RawIntent 已经通过 Intent Gateway 和 Requirement Compiler 生成需求编译包。\n\n先读取：\n- /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.product-brief.md\n- /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.prd.md\n- /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.contract.md\n- /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.task_graph.json\n- /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.requirement_ir.json\n- /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.handoff.md\n\n你的任务：\n1. 基于 compiled requirement package 产出 design.md 和 plan.md。\n2. 如有必要，细化或修正 task_graph.json，但不得绕过 compiled contracts。\n3. 不要直接跳 Builder；保持 RawIntent -> Requirement Compiler -> Planner -> task_graph -> Builder 主链。\n4. 如果 compiled package 缺失关键字段，先写明 blocker 和修正建议。",
+      "--sprint",
+      "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce",
+      "--node",
+      "N0",
+      "--task-type",
+      "planning",
+      "--context",
+      "compiled_requirement_ir=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.requirement_ir.json"
+    ],
+    "stdout_tail": "✅ PM 任务已提交\n   task_id     = pm-sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce-N0-426c7565\n   operator    = mini-claude-opus-planner-print (opus)\n   submit_mode = operator_runtime.submit\n   dispatch    = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/run/pm-dispatch-files/pm-sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce-N0-426c7565.md\n   result      = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.N0.pm-result.md\n\n查看结果：solar-harness pm-fleet inbox\n等待完成：watch cat '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.N0.pm-result.md'\n",
+    "stderr_tail": ""
+  },
+  "artifacts": {
+    "status": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.status.json",
+    "product_brief": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.product-brief.md",
+    "prd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.prd.md",
+    "contract": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.contract.md",
+    "task_graph": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.task_graph.json",
+    "raw_intent": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.raw_intent.json",
+    "requirement_ir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.requirement_ir.json"
+  },
+  "compiler_stdout_tail": "✅ Requirement Compiler package ready\n   sprint_id   = sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce\n   workspace   = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/workspace\n   pm_dir      = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/workspace/.pm\n   requirement = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/workspace/.pm/requirement_ir.json\n   product_brief = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.product-brief.md\n   prd         = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.prd.md\n   contract    = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.contract.md\n   task_graph  = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.task_graph.json\n   status      = /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.status.json\n"
+}

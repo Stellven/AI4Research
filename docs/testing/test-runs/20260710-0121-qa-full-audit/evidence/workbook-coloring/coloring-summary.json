@@ -1,0 +1,226 @@
+{
+  "source_workbook": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/control-material/ai4research_recursive_feature_split_qa_execution.xlsx",
+  "test_result_directory": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit",
+  "output_workbook": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_colored.xlsx",
+  "result_feature_ids": 2117,
+  "duplicate_result_feature_ids": [],
+  "ambiguous_mappings": [],
+  "unknown_status_values": {},
+  "normalizations": {},
+  "sheets": {
+    "Entrypoint Map": {
+      "data_rows": 2117,
+      "added_columns": [
+        "pre_test_status",
+        "test_result_status"
+      ],
+      "pre_test_status_column": "M",
+      "test_result_status_column": "N",
+      "matched_feature_ids": 2117,
+      "unmatched_feature_ids": 0,
+      "unmatched_feature_id_values": [],
+      "duplicate_sheet_feature_ids": [],
+      "pre_test_status_cells_colored": 0,
+      "test_result_status_cells_colored": 682,
+      "total_status_cells_colored": 682,
+      "not_run_or_blank_test_result_rows": 1435,
+      "unknown_sheet_statuses": [],
+      "status_counts": {
+        "PASS": 204,
+        "FAIL": 40,
+        "BLOCKED_EXPECTED": 36,
+        "SKIPPED_ENV": 21,
+        "INCONCLUSIVE_EXPECTED": 381,
+        "FLAKY": 0,
+        "SKIPPED_NA": 0,
+        "NOT_RUN": 1435
+      }
+    },
+    "Existing Test Map": {
+      "data_rows": 2117,
+      "added_columns": [
+        "pre_test_status",
+        "test_result_status"
+      ],
+      "pre_test_status_column": "N",
+      "test_result_status_column": "O",
+      "matched_feature_ids": 2117,
+      "unmatched_feature_ids": 0,
+      "unmatched_feature_id_values": [],
+      "duplicate_sheet_feature_ids": [],
+      "pre_test_status_cells_colored": 0,
+      "test_result_status_cells_colored": 682,
+      "total_status_cells_colored": 682,
+      "not_run_or_blank_test_result_rows": 1435,
+      "unknown_sheet_statuses": [],
+      "status_counts": {
+        "PASS": 204,
+        "FAIL": 40,
+        "BLOCKED_EXPECTED": 36,
+        "SKIPPED_ENV": 21,
+        "INCONCLUSIVE_EXPECTED": 381,
+        "FLAKY": 0,
+        "SKIPPED_NA": 0,
+        "NOT_RUN": 1435
+      }
+    },
+    "Missing Test Plan": {
+      "data_rows": 2117,
+      "added_columns": [
+        "pre_test_status",
+        "test_result_status"
+      ],
+      "pre_test_status_column": "M",
+      "test_result_status_column": "N",
+      "matched_feature_ids": 2117,
+      "unmatched_feature_ids": 0,
+      "unmatched_feature_id_values": [],
+      "duplicate_sheet_feature_ids": [],
+      "pre_test_status_cells_colored": 0,
+      "test_result_status_cells_colored": 682,
+      "total_status_cells_colored": 682,
+      "not_run_or_blank_test_result_rows": 1435,
+      "unknown_sheet_statuses": [],
+      "status_counts": {
+        "PASS": 204,
+        "FAIL": 40,
+        "BLOCKED_EXPECTED": 36,
+        "SKIPPED_ENV": 21,
+        "INCONCLUSIVE_EXPECTED": 381,
+        "FLAKY": 0,
+        "SKIPPED_NA": 0,
+        "NOT_RUN": 1435
+      }
+    },
+    "Pass Fail Criteria": {
+      "data_rows": 2117,
+      "added_columns": [
+        "pre_test_status",
+        "test_result_status"
+      ],
+      "pre_test_status_column": "L",
+      "test_result_status_column": "M",
+      "matched_feature_ids": 2117,
+      "unmatched_feature_ids": 0,
+      "unmatched_feature_id_values": [],
+      "duplicate_sheet_feature_ids": [],
+      "pre_test_status_cells_colored": 0,
+      "test_result_status_cells_colored": 682,
+      "total_status_cells_colored": 682,
+      "not_run_or_blank_test_result_rows": 1435,
+      "unknown_sheet_statuses": [],
+      "status_counts": {
+        "PASS": 204,
+        "FAIL": 40,
+        "BLOCKED_EXPECTED": 36,
+        "SKIPPED_ENV": 21,
+        "INCONCLUSIVE_EXPECTED": 381,
+        "FLAKY": 0,
+        "SKIPPED_NA": 0,
+        "NOT_RUN": 1435
+      }
+    }
+  },
+  "verification": {
+    "original_sheet_info": "{\"kind\":\"sheet\",\"id\":\"ws/6ql2nw\",\"name\":\"Recursive Split\",\"index\":0,\"range\":\"A1:I2118\",\"address\":\"A1:I2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/eb4hi9\",\"name\":\"Summary\",\"index\":1,\"range\":\"A1:H82\",\"address\":\"A1:H82\"}\n{\"kind\":\"sheet\",\"id\":\"ws/eitipr\",\"name\":\"Split Rules\",\"index\":2,\"range\":\"A1:B8\",\"address\":\"A1:B8\"}\n{\"kind\":\"sheet\",\"id\":\"ws/uguong\",\"name\":\"Feature IDs\",\"index\":3,\"range\":\"A1:N2118\",\"address\":\"A1:N2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/9ixrhf\",\"name\":\"Function Inventory\",\"index\":4,\"range\":\"A1:N2118\",\"address\":\"A1:N2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/g7myxm\",\"name\":\"Entrypoint Map\",\"index\":5,\"range\":\"A1:L2118\",\"address\":\"A1:L2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/89ngtm\",\"name\":\"Existing Test Map\",\"index\":6,\"range\":\"A1:M2118\",\"address\":\"A1:M2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/czhkwr\",\"name\":\"Missing Test Plan\",\"index\":7,\"range\":\"A1:L2118\",\"address\":\"A1:L2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/9b5j38\",\"name\":\"Pass Fail Criteria\",\"index\":8,\"range\":\"A1:K2118\",\"address\":\"A1:K2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/pb6kkp\",\"name\":\"Severity Rubric\",\"index\":9,\"range\":\"A1:E6\",\"address\":\"A1:E6\"}",
+    "exported_sheet_info": "{\"kind\":\"sheet\",\"id\":\"ws/gjic0k\",\"name\":\"Recursive Split\",\"index\":0,\"range\":\"A1:I2118\",\"address\":\"A1:I2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/8j3miq\",\"name\":\"Summary\",\"index\":1,\"range\":\"A1:H82\",\"address\":\"A1:H82\"}\n{\"kind\":\"sheet\",\"id\":\"ws/pxha63\",\"name\":\"Split Rules\",\"index\":2,\"range\":\"A1:B8\",\"address\":\"A1:B8\"}\n{\"kind\":\"sheet\",\"id\":\"ws/0yehas\",\"name\":\"Feature IDs\",\"index\":3,\"range\":\"A1:N2118\",\"address\":\"A1:N2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/b30oy7\",\"name\":\"Function Inventory\",\"index\":4,\"range\":\"A1:N2118\",\"address\":\"A1:N2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/igsa88\",\"name\":\"Entrypoint Map\",\"index\":5,\"range\":\"A1:N2118\",\"address\":\"A1:N2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/ex10ev\",\"name\":\"Existing Test Map\",\"index\":6,\"range\":\"A1:O2118\",\"address\":\"A1:O2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/8usqa8\",\"name\":\"Missing Test Plan\",\"index\":7,\"range\":\"A1:N2118\",\"address\":\"A1:N2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/y00tnu\",\"name\":\"Pass Fail Criteria\",\"index\":8,\"range\":\"A1:M2118\",\"address\":\"A1:M2118\"}\n{\"kind\":\"sheet\",\"id\":\"ws/6g02ya\",\"name\":\"Severity Rubric\",\"index\":9,\"range\":\"A1:E6\",\"address\":\"A1:E6\"}",
+    "formula_error_scan": "{\"kind\":\"notice\",\"message\":\"Cell search matched 0 entries.\"}",
+    "original_content_preserved": {
+      "Recursive Split": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Summary": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Split Rules": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Feature IDs": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Function Inventory": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Entrypoint Map": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Existing Test Map": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Missing Test Plan": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Pass Fail Criteria": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      },
+      "Severity Rubric": {
+        "values_preserved": true,
+        "formulas_preserved": true
+      }
+    },
+    "target_header_checks": {
+      "Entrypoint Map": {
+        "pre_test_status_present": true,
+        "test_result_status_present": true,
+        "data_rows": 2117,
+        "status_counts": {
+          "PASS": 204,
+          "INCONCLUSIVE_EXPECTED": 381,
+          "NOT_RUN": 1435,
+          "FAIL": 40,
+          "SKIPPED_ENV": 21,
+          "BLOCKED_EXPECTED": 36
+        }
+      },
+      "Existing Test Map": {
+        "pre_test_status_present": true,
+        "test_result_status_present": true,
+        "data_rows": 2117,
+        "status_counts": {
+          "PASS": 204,
+          "INCONCLUSIVE_EXPECTED": 381,
+          "NOT_RUN": 1435,
+          "FAIL": 40,
+          "SKIPPED_ENV": 21,
+          "BLOCKED_EXPECTED": 36
+        }
+      },
+      "Missing Test Plan": {
+        "pre_test_status_present": true,
+        "test_result_status_present": true,
+        "data_rows": 2117,
+        "status_counts": {
+          "PASS": 204,
+          "INCONCLUSIVE_EXPECTED": 381,
+          "NOT_RUN": 1435,
+          "FAIL": 40,
+          "SKIPPED_ENV": 21,
+          "BLOCKED_EXPECTED": 36
+        }
+      },
+      "Pass Fail Criteria": {
+        "pre_test_status_present": true,
+        "test_result_status_present": true,
+        "data_rows": 2117,
+        "status_counts": {
+          "PASS": 204,
+          "INCONCLUSIVE_EXPECTED": 381,
+          "NOT_RUN": 1435,
+          "FAIL": 40,
+          "SKIPPED_ENV": 21,
+          "BLOCKED_EXPECTED": 36
+        }
+      }
+    },
+    "all_original_content_preserved": true
+  }
+}

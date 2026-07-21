@@ -11,7 +11,7 @@ ALLOWED_DIR="$TMPDIR/allowed"
 FORBIDDEN_TARGET="$TMPDIR/forbidden/leak.txt"
 mkdir -p "$ALLOWED_DIR"
 
-cd /Users/sihaoli/.solar
+cd ~/.solar
 
 python3 - "$TMPDIR" "$ALLOWED_DIR" "$FORBIDDEN_TARGET" <<'PY'
 import os, sys

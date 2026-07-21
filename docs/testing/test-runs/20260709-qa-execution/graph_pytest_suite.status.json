@@ -1,0 +1,14 @@
+{
+  "name": "graph_pytest_suite",
+  "command": [
+    "env",
+    "PYTHONPATH=harness",
+    "harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph"
+  ],
+  "exit_code": 2,
+  "runtime_seconds": 0
+}

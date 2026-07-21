@@ -1,0 +1,25 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "sprint-20260710-140626-intent-official-full-runtime-autosc-fb4b2588",
+  "graph_ref": "sprint-20260710-140626-intent-official-full-runtime-autosc-fb4b2588.task_graph.json",
+  "node_results": {
+    "literature_discover": {
+      "status": "dispatched",
+      "updated_at": "2026-07-10T14:06:28Z",
+      "assigned_to": "operator:autosci-literature-discover-worker",
+      "dispatch_id": "graph-test-autosci-direct-submit"
+    }
+  },
+  "gate_results": {},
+  "leases": {
+    "literature_discover": {
+      "pane": "operator:autosci-literature-discover-worker",
+      "dispatch_id": "graph-test-autosci-direct-submit"
+    }
+  },
+  "dispatch_ids": {
+    "literature_discover": "graph-test-autosci-direct-submit"
+  },
+  "updated_at": "2026-07-10T14:06:28Z",
+  "events": []
+}

@@ -1,0 +1,15 @@
+{
+  "run_id": "d4cd9c68c2c6dfda",
+  "run_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-17/test_backend_returns_gepa_unav0/skill/a2f4fc49472d4bca",
+  "started_at": "2026-07-10T06:10:59Z",
+  "finished_at": "2026-07-10T06:10:59Z",
+  "status": "completed",
+  "total_candidates": 1,
+  "evaluated_candidates": 0,
+  "pareto_size": 0,
+  "best_score": null,
+  "mean_score": null,
+  "max_generation": 0,
+  "backend_status": "gepa_unavailable",
+  "adapter_model": "gpt-4o"
+}

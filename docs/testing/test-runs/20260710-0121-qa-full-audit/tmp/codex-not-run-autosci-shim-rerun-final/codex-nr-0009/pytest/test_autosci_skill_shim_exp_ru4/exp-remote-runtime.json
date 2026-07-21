@@ -1,0 +1,77 @@
+{
+  "artifacts": [
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru4/remote-run/remote_stdout.txt",
+      "type": "remote_stdout"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru4/remote-run/remote_stderr.txt",
+      "type": "remote_stderr"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru4/remote-run/results.json",
+      "type": "remote_result"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "approval-exp-remote",
+    "experiment": "exp-remote"
+  },
+  "limitations": [
+    "Remote/local launch ran an explicitly approved and allowlisted command."
+  ],
+  "node_id": "node-remote-launch-exp-remote",
+  "outputs": {
+    "runtime": {
+      "action": "run_experiment",
+      "approval_ref": "approval-exp-remote",
+      "checks": [
+        {
+          "check": "command_allowlisted",
+          "detail": "command allowlisted by commands",
+          "status": "ok"
+        },
+        {
+          "check": "exit_code",
+          "detail": "exit_code=0",
+          "status": "ok"
+        },
+        {
+          "check": "result_collected",
+          "detail": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru4/remote-run/results.json",
+          "status": "ok"
+        }
+      ],
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru4/exp_remote_inner.py",
+      "evidence_ids": [
+        "remote-runtime:exp-remote"
+      ],
+      "exit_code": 0,
+      "logs": [
+        "remote helper collected result"
+      ],
+      "metrics": [
+        {
+          "name": "accuracy",
+          "value": 0.92
+        }
+      ],
+      "outcome": "supports",
+      "result_collected": true,
+      "result_paths": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru4/remote-run/results.json"
+      ],
+      "run_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru4/remote-run",
+      "status": "completed"
+    }
+  },
+  "provenance": {
+    "implementation_package": "tools.remote",
+    "operator_id": "autosci-remote-cli",
+    "timestamp": "2026-07-10T19:25:46Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "remote-launch",
+  "status": "completed",
+  "task_id": "remote-launch-exp-remote"
+}

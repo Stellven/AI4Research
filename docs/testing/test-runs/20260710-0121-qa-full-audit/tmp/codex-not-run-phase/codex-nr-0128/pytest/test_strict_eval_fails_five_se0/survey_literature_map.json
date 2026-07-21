@@ -1,0 +1,28 @@
+{
+  "ok": false,
+  "source_count": 0,
+  "source_types": [],
+  "chapter_count": 1,
+  "covered_chapters": 0,
+  "chapter_coverage": 0.0,
+  "evidence_backed_source_ratio": 0.0,
+  "claim_backed_source_ratio": 0.0,
+  "sources": [],
+  "chapters": [
+    {
+      "chapter_id": "ch1",
+      "title": "Brief",
+      "axis": "other",
+      "ok": false,
+      "source_count": 0,
+      "source_types": [],
+      "evidence_count": 0,
+      "claim_count": 0
+    }
+  ],
+  "issues": [
+    "literature_source_type_count_low:0<4",
+    "literature_chapter_coverage_low:0.0000<0.8000",
+    "literature_evidence_backed_source_ratio_low:0.0000<0.7500"
+  ]
+}

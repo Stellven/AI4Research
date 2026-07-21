@@ -1,0 +1,1 @@
+cp: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/evolution_engine.py: No such file or directory

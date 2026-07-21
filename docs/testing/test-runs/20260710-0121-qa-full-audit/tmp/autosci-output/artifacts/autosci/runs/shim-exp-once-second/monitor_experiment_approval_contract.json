@@ -1,0 +1,158 @@
+{
+  "action": "monitor_experiment",
+  "after_artifacts": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/remote-once-results/results.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/remote-once-results/results.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-once-second/monitor_experiment_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-once-second/monitor_experiment_runtime_evidence.json",
+      "verifiable": true
+    }
+  ],
+  "after_ready": true,
+  "allowlist_evidence": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/remote-once-allowlist.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/remote-once-allowlist.json",
+      "verifiable": true
+    }
+  ],
+  "allowlist_ready": true,
+  "approval_ref": "approval-exp-once",
+  "approval_state": "verified",
+  "approved": true,
+  "authorization_request": {
+    "action": "monitor_experiment",
+    "approval_state": "verified",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [],
+        "allowlist_evidence": [],
+        "approval_ref": "",
+        "before_artifacts": [],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": []
+      },
+      "request_fingerprint": "1ca259befda808960e685a04986467e4d9257dd09ec408d2e84ad458d5c03e9b",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": false,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "ready"
+    },
+    "missing": [],
+    "non_error_contract": {
+      "approval_state": "verified",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": false,
+      "allowlist_evidence": false,
+      "approval_ref": false,
+      "before_artifacts": false,
+      "runtime_evidence": false
+    },
+    "requested_side_effects": [
+      "result_collection",
+      "status_mutation",
+      "wiki_state_mutation"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "authorized"
+  },
+  "before_artifacts": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/remote-once-before.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/remote-once-before.json",
+      "verifiable": true
+    }
+  ],
+  "before_ready": true,
+  "execution_verified": true,
+  "missing": [],
+  "ready_for_execution": true,
+  "runtime_evidence": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-once-second/monitor_experiment_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-once-second/monitor_experiment_runtime_evidence.json",
+      "verifiable": true
+    }
+  ],
+  "runtime_ready": true,
+  "schema": "autosci_approval_contract.v1",
+  "semantic_runtime": {
+    "action": "run_experiment",
+    "checks": [
+      {
+        "check": "approval_contract_execution_verified",
+        "detail": "Approval, allowlist, runtime, and before/after artifact paths are present.",
+        "status": "ok"
+      },
+      {
+        "check": "runtime_records_loaded",
+        "detail": "1 runtime record(s) loaded.",
+        "status": "ok"
+      },
+      {
+        "check": "experiment_exit_ok",
+        "detail": "True",
+        "status": "ok"
+      },
+      {
+        "check": "experiment_result_collected",
+        "detail": "True",
+        "status": "ok"
+      }
+    ],
+    "detail": {
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/remote.py pull-results --result-dir /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/remote-once-results",
+      "errors": [],
+      "evidence_ids": [
+        "remote-collect:exp-once",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/remote-once-results/results.json",
+        "result:exp-once",
+        "task-autosci-skillgen-monitor_experiment",
+        "node-monitor-experiment",
+        "artifacts/autosci/runs/shim-exp-once-second/monitor_experiment_runtime_evidence.json"
+      ],
+      "experiment_exit_ok": true,
+      "logs": [
+        "first collection payload",
+        "remote_cli_status=completed"
+      ],
+      "metric_aggregates": [],
+      "metrics": [
+        {
+          "name": "accuracy",
+          "value": 0.96
+        }
+      ],
+      "outcome": "supports",
+      "records_loaded": 1,
+      "result_collected": true
+    },
+    "schema": "autosci_runtime_semantic_verification.v1",
+    "status": "verified",
+    "verified": true
+  },
+  "side_effects": [
+    "result_collection",
+    "status_mutation",
+    "wiki_state_mutation"
+  ]
+}

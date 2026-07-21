@@ -1,0 +1,62 @@
+{
+  "approved_after_artifact_applied": false,
+  "auto_review_rounds": [],
+  "difficulty": "hard",
+  "final_score": 6.0,
+  "final_verdict": "needs-work",
+  "fixed_issues": [],
+  "focus": "writing",
+  "limitations": [
+    "Refine loop requires completed Review LLM evidence and approved after_artifact application before final completion."
+  ],
+  "max_rounds": 2,
+  "review_evidence_completed": true,
+  "review_evidence_count": 1,
+  "review_llm_requested": true,
+  "rounds": [
+    {
+      "actionable_items": [
+        {
+          "issue": "Clarify contribution statement.",
+          "severity": "major"
+        }
+      ],
+      "review_available": true,
+      "review_llm": {
+        "evidence_ids": [
+          "review:refine-report"
+        ],
+        "model": "gpt-5.5",
+        "provider": "openai",
+        "status": "completed"
+      },
+      "review_mode": "review_llm",
+      "round": 1,
+      "score": 6.0,
+      "source_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_refine0/refine-review.json",
+      "status": "completed",
+      "verdict": "needs-work",
+      "weaknesses": [
+        {
+          "issue": "Contribution statement is vague.",
+          "severity": "major"
+        }
+      ]
+    }
+  ],
+  "schema": "autosci_refine_loop_report.v1",
+  "score_history": [
+    6.0
+  ],
+  "status": "incomplete",
+  "target": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_refine0/artifacts/autosci/workspace/wiki/outputs/report-001.md",
+  "target_score": 8.0,
+  "termination_reason": "needs_more_rounds_or_approval",
+  "unresolved_issues": [
+    {
+      "issue": "Clarify contribution statement.",
+      "round": 1,
+      "severity": "major"
+    }
+  ]
+}

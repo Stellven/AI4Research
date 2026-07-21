@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/context-store.schema.json",
+  "title": "Solar Context Store",
+  "description": "Schema for the context store: project packets, task packets, memory packets, and task envelopes. Context is always external to long-lived tmux panes to prevent stale state.",
+  "type": "object",
+  "required": ["version", "packets"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string"},
+    "packets": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/context_packet"}
+    },
+    "task_envelopes": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/task_envelope"}
+    }
+  },
+  "$defs": {
+    "packet_type": {
+      "type": "string",
+      "enum": ["project", "task", "memory"],
+      "description": "project: long-lived project context; task: per-sprint-node ephemeral context; memory: compressed/summarized long-term memory."
+    },
+    "context_packet": {
+      "type": "object",
+      "required": ["packet_id", "packet_type", "created_at"],
+      "additionalProperties": true,
+      "properties": {
+        "packet_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Globally unique packet identifier."
+        },
+        "packet_type": {"$ref": "#/$defs/packet_type"},
+        "created_at": {"type": "string", "description": "ISO 8601 creation timestamp."},
+        "expires_at": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 expiry. Null means no expiry (project/memory packets). Task packets should set this."
+        },
+        "project_id": {
+          "type": ["string", "null"],
+          "description": "Parent project id. Required for task and memory packets."
+        },
+        "sprint_id": {
+          "type": ["string", "null"],
+          "description": "Sprint id for task packets."
+        },
+        "node_id": {
+          "type": ["string", "null"],
+          "description": "DAG node id for task packets."
+        },
+        "actor_id": {
+          "type": ["string", "null"],
+          "description": "Actor that owns this context packet."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Human-readable summary of this packet's content."
+        },
+        "content": {
+          "type": "object",
+          "description": "Packet payload. Structure varies by packet_type.",
+          "additionalProperties": true
+        },
+        "token_estimate": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Estimated token count of this packet's content."
+        },
+        "compression_level": {
+          "type": "string",
+          "enum": ["none", "light", "medium", "heavy"],
+          "description": "How much this packet has been compressed from the original context."
+        },
+        "parent_packet_id": {
+          "type": ["string", "null"],
+          "description": "Reference to the packet this was compressed/derived from."
+        }
+      },
+      "if": {"properties": {"packet_type": {"const": "task"}}},
+      "then": {
+        "required": ["sprint_id", "node_id"],
+        "properties": {
+          "expires_at": {"not": {"type": "null"}}
+        }
+      }
+    },
+    "task_envelope": {
+      "type": "object",
+      "required": ["envelope_id", "task_id", "criticality", "assigned_actor_id"],
+      "additionalProperties": true,
+      "description": "A dispatched task envelope binding a task to an actor. Critical tasks MUST include a context_packet_ref or embedded context_packet.",
+      "properties": {
+        "envelope_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique envelope id for this dispatch event."
+        },
+        "task_id": {
+          "type": "string",
+          "description": "Reference to the DAG node task being dispatched."
+        },
+        "sprint_id": {"type": "string"},
+        "assigned_actor_id": {
+          "type": "string",
+          "description": "Actor that received this envelope."
+        },
+        "logical_operator": {
+          "type": ["string", "null"],
+          "description": "Logical operator type used for routing."
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["low", "normal", "high", "critical"],
+          "description": "Task criticality level. critical tasks require context_packet_ref or context_packet."
+        },
+        "dispatched_at": {"type": "string"},
+        "context_packet_ref": {
+          "type": ["object", "null"],
+          "description": "Reference to the active context packet for this task.",
+          "additionalProperties": false,
+          "properties": {
+            "packet_id": {"type": "string"},
+            "path": {"type": ["string", "null"]}
+          }
+        },
+        "context_packet": {
+          "description": "Embedded context packet (alternative to context_packet_ref for small packets).",
+          "$ref": "#/$defs/context_packet"
+        },
+        "evidence_ledger_ref": {
+          "type": ["object", "null"],
+          "description": "Reference to the evidence ledger directory for audit.",
+          "additionalProperties": false,
+          "properties": {
+            "path": {"type": ["string", "null"]}
+          }
+        },
+        "timeout_sec": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Task timeout in seconds."
+        },
+        "retry_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_retries": {"type": "integer", "minimum": 0},
+            "backoff_sec": {"type": "integer", "minimum": 1}
+          }
+        }
+      },
+      "if": {
+        "properties": {"criticality": {"const": "critical"}}
+      },
+      "then": {
+        "anyOf": [
+          {"required": ["context_packet_ref"], "properties": {"context_packet_ref": {"not": {"type": "null"}}}},
+          {"required": ["context_packet"]}
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar-harness://schemas/feedback-event.schema.v1.draft.json",
+  "title": "Feedback Event v1",
+  "description": "Unified feedback event for Requirement Compiler Quality Loop. Captures planner diffs, evaluator rejections, golden set violations, and replay failures. All value fields are secret-safe (truncated >=256 chars + regex scrubbed).",
+  "type": "object",
+  "required": ["schema_version", "event_id", "event_type", "sprint_id", "actor", "severity", "ts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "feedback-event.v1",
+      "description": "Schema version identifier."
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^fe-\\d{8}T\\d{6}Z-[0-9a-f]{8}$",
+      "description": "Globally unique event ID. Format: fe-<ISO8601_compact_ts>-<sha8>.",
+      "examples": ["fe-20260524T043500Z-a1b2c3d4"]
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["planner_diff", "evaluator_reject", "golden_set_violation", "replay_fail"],
+      "description": "The type of feedback event. planner_diff: planner modified compiled PRD field. evaluator_reject: evaluator rejected compiled output. golden_set_violation: golden case assertion failed. replay_fail: failure replay produced different result."
+    },
+    "sprint_id": {
+      "type": "string",
+      "pattern": "^sprint-\\d{8}-",
+      "description": "Source sprint ID.",
+      "examples": ["sprint-20260523-requirement-compiler-quality-loop"]
+    },
+    "actor": {
+      "type": "string",
+      "enum": ["planner", "evaluator", "pm", "autopilot"],
+      "description": "The role that generated this feedback event."
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warn", "error"],
+      "description": "info: minor diff / observation. warn: field mismatch needing attention. error: critical violation (secret leak, hard gate fail)."
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of the event.",
+      "examples": ["2026-05-24T04:35:00Z"]
+    },
+    "ir_path": {
+      "type": "string",
+      "description": "Dot-path into the Requirement IR indicating which field was affected. Used by planner_diff and evaluator_reject event types.",
+      "examples": ["ir.acceptance[2].criterion", "ir.scope[0]", "ir.severity", "ir.request_kind"]
+    },
+    "original_value": {
+      "type": ["string", "null"],
+      "description": "The value as compiled by the Requirement Compiler. MUST be secret-safe: truncated to 256 chars if >=256, then regex-scrubbed for secrets.",
+      "maxLength": 256
+    },
+    "modified_value": {
+      "type": ["string", "null"],
+      "description": "The value after planner/evaluator modification. MUST be secret-safe: same truncation + scrubbing rules as original_value.",
+      "maxLength": 256
+    },
+    "reason": {
+      "type": "string",
+      "description": "Short human-readable explanation of why the modification was made or why the rejection occurred.",
+      "maxLength": 500
+    },
+    "expected": {
+      "type": ["string", "null"],
+      "description": "Expected value (for evaluator_reject / golden_set_violation). Secret-safe.",
+      "maxLength": 256
+    },
+    "actual": {
+      "type": ["string", "null"],
+      "description": "Actual observed value (for evaluator_reject / golden_set_violation). Secret-safe.",
+      "maxLength": 256
+    },
+    "suggested_fix": {
+      "type": "string",
+      "description": "Suggested fix for the issue (for evaluator_reject).",
+      "maxLength": 500
+    },
+    "case_id": {
+      "type": "string",
+      "description": "Golden case ID (for golden_set_violation / replay_fail). References golden-set-spec.md case_id.",
+      "examples": ["V1", "E1", "R3"]
+    },
+    "field": {
+      "type": "string",
+      "description": "Specific field within the golden case that violated the assertion (for golden_set_violation).",
+      "examples": ["expected_classification.type_inferred", "expected_ir.severity"]
+    },
+    "failure_kind": {
+      "type": "string",
+      "enum": ["misclassification", "miscompilation", "missing_field", "secret_leak", "other"],
+      "description": "Classification of the replay failure (for replay_fail)."
+    },
+    "diff_summary": {
+      "type": "string",
+      "description": "Brief summary of the diff between expected and actual replay output (for replay_fail).",
+      "maxLength": 500
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sprint round when this event was generated."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event_type": { "const": "planner_diff" } } },
+      "then": { "required": ["ir_path", "original_value", "modified_value", "reason"] }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "evaluator_reject" } } },
+      "then": { "required": ["ir_path", "expected", "actual", "suggested_fix"] }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "golden_set_violation" } } },
+      "then": { "required": ["case_id", "field", "expected", "actual"] }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "replay_fail" } } },
+      "then": { "required": ["case_id", "failure_kind", "diff_summary"] }
+    }
+  ],
+  "$comment": "Secret-safe enforcement: original_value, modified_value, expected, actual, and diff_summary MUST NOT contain raw secrets. Implementations MUST apply: (1) truncate values >=256 chars to 253 chars + '...', (2) regex-scrub api_key/token/password patterns with <REDACTED_*> placeholders. Schema maxLength constraints enforce truncation; regex scrub is implementation responsibility."
+}

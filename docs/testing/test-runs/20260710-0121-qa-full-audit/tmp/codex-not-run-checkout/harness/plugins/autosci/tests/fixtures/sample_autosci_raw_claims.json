@@ -1,0 +1,20 @@
+{
+  "claims": [
+    {
+      "id": "claim-001",
+      "text": "The fixture adapter path produces schema-shaped Solar evidence.",
+      "claim_type": "result",
+      "source_anchor": "sample_paper.md#results",
+      "testability": "testable",
+      "evidence_ids": ["paper:sample#results"]
+    },
+    {
+      "id": "claim-002",
+      "text": "The bridge does not own the research workflow.",
+      "claim_type": "architecture",
+      "source_anchor": "sample_paper.md#method",
+      "testability": "partially_testable",
+      "evidence_ids": ["paper:sample#method"]
+    }
+  ]
+}

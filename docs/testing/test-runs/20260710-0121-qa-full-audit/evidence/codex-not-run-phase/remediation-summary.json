@@ -1,0 +1,24 @@
+{
+  "schema": "qa.codex_not_run_remediation.v1",
+  "decision_count": 609,
+  "decision_status_counts": {
+    "FAIL": 58,
+    "PASS": 411,
+    "SKIPPED_ENV": 95,
+    "SKIPPED_NA": 45
+  },
+  "phase_status_counts": {
+    "FAIL": 72,
+    "PASS": 639,
+    "SKIPPED_ENV": 105,
+    "SKIPPED_NA": 45
+  },
+  "main_status_counts": {
+    "BLOCKED_EXPECTED": 36,
+    "FAIL": 112,
+    "INCONCLUSIVE_EXPECTED": 381,
+    "PASS": 843,
+    "SKIPPED_ENV": 126,
+    "SKIPPED_NA": 619
+  }
+}

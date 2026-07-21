@@ -1,0 +1,180 @@
+{
+  "schema": "scientific_lifecycle.v1",
+  "workflow_id": "scientific_research_lifecycle_full_v1",
+  "artifact_root": "artifacts/scientific/phase15-fixture",
+  "summary_artifact": "artifacts/scientific/phase15-fixture/lifecycle_summary.json",
+  "evidence_log": "artifacts/scientific/phase15-fixture/evidence.jsonl",
+  "lifecycle_status": "failed",
+  "nodes": [
+    {
+      "id": "literature_discover",
+      "logical_operator": "AutoSciRunner",
+      "gate": "G_LITERATURE_DISCOVER",
+      "status": "passed",
+      "expected_schema": "literature_discovery.v1",
+      "evidence_entry_id": "evidence:literature_discover"
+    },
+    {
+      "id": "paper_ingest",
+      "logical_operator": "ScientificPaperIngestor",
+      "gate": "G_PAPER_INGEST",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/01_paper/research_paper.v1.json",
+      "expected_schema": "research_paper.v1",
+      "evidence_entry_id": "evidence:paper_ingest"
+    },
+    {
+      "id": "paper_analyze",
+      "logical_operator": "ScientificPaperAnalyzer",
+      "gate": "G_PAPER_ANALYZE",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/01_paper/research_paper_analysis.v1.json",
+      "expected_schema": "research_paper.v1",
+      "evidence_entry_id": "evidence:paper_analyze"
+    },
+    {
+      "id": "memory_update_initial",
+      "logical_operator": "ScientificMemoryUpdater",
+      "gate": "G_MEMORY_UPDATE_INITIAL",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/10_memory_update/initial_research_memory_update.v1.json",
+      "expected_schema": "research_memory_update.v1",
+      "evidence_entry_id": "evidence:memory_update_initial"
+    },
+    {
+      "id": "graph_update",
+      "logical_operator": "ScientificGraphUpdater",
+      "gate": "G_GRAPH_UPDATE",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/10_memory_update/research_graph_update.v1.json",
+      "expected_schema": "research_graph_update.v1",
+      "evidence_entry_id": "evidence:graph_update"
+    },
+    {
+      "id": "claim_extract",
+      "logical_operator": "ScientificClaimExtractor",
+      "gate": "G_CLAIM_EXTRACT",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/02_claims/research_claims.v1.json",
+      "expected_schema": "research_claims.v1",
+      "evidence_entry_id": "evidence:claim_extract"
+    },
+    {
+      "id": "method_extract",
+      "logical_operator": "ScientificMethodExtractor",
+      "gate": "G_METHOD_EXTRACT",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/03_methods/research_method.v1.json",
+      "expected_schema": "research_method.v1",
+      "evidence_entry_id": "evidence:method_extract"
+    },
+    {
+      "id": "code_evidence_map",
+      "logical_operator": "ScientificCodeEvidenceMapper",
+      "gate": "G_CODE_EVIDENCE_MAP",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/04_code_evidence/code_evidence_map.v1.json",
+      "expected_schema": "code_evidence_map.v1",
+      "evidence_entry_id": "evidence:code_evidence_map"
+    },
+    {
+      "id": "idea_generate",
+      "logical_operator": "ScientificIdeaGenerator",
+      "gate": "G_IDEA_GENERATE",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/05_ideas/idea_candidate.v1.json",
+      "expected_schema": "idea_candidate.v1",
+      "evidence_entry_id": "evidence:idea_generate"
+    },
+    {
+      "id": "idea_evaluate",
+      "logical_operator": "ScientificIdeaEvaluator",
+      "gate": "G_IDEA_EVALUATE",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/05_ideas/idea_evaluation.v1.json",
+      "expected_schema": "idea_evaluation.v1",
+      "evidence_entry_id": "evidence:idea_evaluate"
+    },
+    {
+      "id": "experiment_design",
+      "logical_operator": "ScientificExperimentDesigner",
+      "gate": "G_EXPERIMENT_DESIGN",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/06_experiment_plan/experiment_plan.v1.json",
+      "expected_schema": "experiment_plan.v1",
+      "evidence_entry_id": "evidence:experiment_design"
+    },
+    {
+      "id": "experiment_run",
+      "logical_operator": "ScientificExperimentRunner",
+      "gate": "G_EXPERIMENT_RUN",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/07_experiment_result/experiment_result.v1.json",
+      "expected_schema": "experiment_result.v1",
+      "evidence_entry_id": "evidence:experiment_run"
+    },
+    {
+      "id": "experiment_monitor",
+      "logical_operator": "ScientificExperimentMonitor",
+      "gate": "G_EXPERIMENT_MONITOR",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/07_experiment_result/experiment_status.v1.json",
+      "expected_schema": "experiment_status.v1",
+      "evidence_entry_id": "evidence:experiment_monitor"
+    },
+    {
+      "id": "claim_verify",
+      "logical_operator": "ScientificClaimVerifier",
+      "gate": "G_CLAIM_VERIFY",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/08_verdict/claim_verdict.v1.json",
+      "expected_schema": "claim_verdict.v1",
+      "evidence_entry_id": "evidence:claim_verify"
+    },
+    {
+      "id": "report_plan",
+      "logical_operator": "ScientificReportPlanner",
+      "gate": "G_REPORT_PLAN",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/09_report/scientific_report_plan.v1.json",
+      "expected_schema": "scientific_report.v1",
+      "evidence_entry_id": "evidence:report_plan"
+    },
+    {
+      "id": "report_draft",
+      "logical_operator": "ScientificReportDrafter",
+      "gate": "G_REPORT_DRAFT",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/09_report/scientific_report.v1.json",
+      "expected_schema": "scientific_report.v1",
+      "evidence_entry_id": "evidence:report_draft"
+    },
+    {
+      "id": "publication_produce",
+      "logical_operator": "ScientificPublicationProducer",
+      "gate": "G_PUBLICATION_PRODUCE",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/09_report/publication_bundle.v1.json",
+      "expected_schema": "publication_bundle.v1",
+      "evidence_entry_id": "evidence:publication_produce"
+    },
+    {
+      "id": "memory_update_final",
+      "logical_operator": "ScientificMemoryUpdater",
+      "gate": "G_MEMORY_UPDATE_FINAL",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/10_memory_update/research_memory_update.v1.json",
+      "expected_schema": "research_memory_update.v1",
+      "evidence_entry_id": "evidence:memory_update_final"
+    },
+    {
+      "id": "workflow_evolve",
+      "logical_operator": "ScientificWorkflowEvolver",
+      "gate": "G_WORKFLOW_EVOLVE",
+      "status": "passed",
+      "artifact": "artifacts/scientific/phase15-fixture/10_memory_update/workflow_evolution.v1.json",
+      "expected_schema": "workflow_evolution.v1",
+      "evidence_entry_id": "evidence:workflow_evolve"
+    }
+  ]
+}

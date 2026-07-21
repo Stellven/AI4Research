@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+"""Run a declared scientific workflow through Solar node runtime dispatch.
+
+This runner is intentionally config-driven: it reads workflow nodes from a
+Solar workflow JSON file and dispatches each node through the existing
+operator_runtime -> AutoSci bridge single-node path. It is not an AutoSci
+black-box lifecycle wrapper.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+
+REPO_HARNESS_DIR = Path(__file__).resolve().parents[1]
+if str(REPO_HARNESS_DIR / "tools") not in sys.path:
+    sys.path.insert(0, str(REPO_HARNESS_DIR / "tools"))
+
+import run_scientific_lifecycle_smoke as lifecycle_smoke  # noqa: E402
+import run_scientific_node_smoke as node_runtime  # noqa: E402
+
+
+DEFAULT_WORKFLOW_ID = "scientific_research_lifecycle_full_v1"
+DEFAULT_WORKFLOW_CONFIG = REPO_HARNESS_DIR / "workflows" / f"{DEFAULT_WORKFLOW_ID}.json"
+DEFAULT_PAPER = "plugins/autosci/tests/fixtures/sample_paper.md"
+NODE_SPEC_BY_ID = {
+    spec["node_id"]: spec
+    for spec in [*lifecycle_smoke.NODE_SPECS, *lifecycle_smoke.EXTERNAL_NODE_SPECS]
+}
+SIDE_EFFECT_OR_PROVIDER_NODES = {
+    "literature_discover",
+    "experiment_run",
+    "experiment_monitor",
+    "report_plan",
+    "publication_produce",
+}
+CAPABILITY_NATIVE_SKILL_BY_NODE = {
+    "literature_discover": "daily-arxiv",
+    "paper_ingest": "ingest",
+    "paper_analyze": "survey",
+    "memory_update_initial": "edit",
+    "memory_update_final": "edit",
+    "graph_update": "research",
+    "claim_extract": "check",
+    "method_extract": "check",
+    "code_evidence_map": "check",
+    "idea_generate": "ideate",
+    "idea_evaluate": "novelty",
+    "experiment_design": "exp-design",
+    "experiment_run": "exp-run",
+    "experiment_monitor": "exp-status",
+    "claim_verify": "exp-eval",
+    "report_plan": "paper-plan",
+    "report_draft": "paper-draft",
+    "artifact_review": "review",
+    "publication_produce": "paper-compile",
+    "workflow_evolve": "refine",
+}
+
+
+def _utc_stamp() -> str:
+    return dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _resolve_harness_path(root: Path, raw: str | Path) -> Path:
+    path = Path(raw)
+    return path if path.is_absolute() else root / path
+
+
+def _artifact_root_from_env(harness_dir: Path, env_name: str, default_rel: str) -> Path:
+    raw = os.environ.get(env_name)
+    path = Path(raw).expanduser() if raw else harness_dir / default_rel
+    if not path.is_absolute():
+        path = harness_dir / path
+    return path.resolve()
+
+
+def _rel(path: Path, root: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON object expected at {path}")
+    return data
+
+
+def _workflow_nodes(workflow_config: Path, selected: set[str] | None = None) -> tuple[str, list[dict[str, Any]]]:
+    payload = _load_json(workflow_config)
+    workflow_id = str(payload.get("workflow_id") or workflow_config.stem)
+    raw_nodes = payload.get("nodes")
+    if not isinstance(raw_nodes, list) or not raw_nodes:
+        raise ValueError(f"Workflow config must contain a non-empty nodes array: {workflow_config}")
+    nodes: list[dict[str, Any]] = []
+    for raw in raw_nodes:
+        if not isinstance(raw, dict):
+            continue
+        node_id = str(raw.get("id") or "").strip()
+        if not node_id or (selected and node_id not in selected):
+            continue
+        spec = NODE_SPEC_BY_ID.get(node_id)
+        if not spec:
+            raise ValueError(f"No scientific node runtime binding for workflow node {node_id}")
+        merged = dict(spec)
+        depends_on = [str(item) for item in raw.get("depends_on") or [] if str(item).strip()]
+        if selected:
+            depends_on = [item for item in depends_on if item in selected]
+        merged["depends_on"] = depends_on
+        merged["workflow_logical_operator"] = str(raw.get("logical_operator") or spec["logical_operator"])
+        merged["workflow_gate"] = str(raw.get("gate") or spec["gate"])
+        nodes.append(merged)
+    if not nodes:
+        raise ValueError("No selected workflow nodes were found in the workflow config")
+    return workflow_id, nodes
+
+
+def _has_external_evidence(args: argparse.Namespace, node_id: str) -> bool:
+    if node_id == "literature_discover":
+        return bool(args.allow_network_fetch or args.source_runtime_evidence)
+    if node_id in {"experiment_run", "experiment_monitor"}:
+        return bool(args.experiment_runtime_evidence or args.experiment_approval_ref)
+    if node_id == "report_plan":
+        return bool(args.review_llm_evidence)
+    if node_id == "publication_produce":
+        return bool(args.compile_target or args.compile_runtime_evidence or args.compile_approval_ref)
+    return True
+
+
+def _should_block_before_dispatch(args: argparse.Namespace, spec: dict[str, Any], node_results: dict[str, Any]) -> str:
+    node_id = spec["node_id"]
+    missing_dependencies = [
+        dep for dep in spec.get("depends_on", []) if dep and dep not in node_results
+    ]
+    if missing_dependencies:
+        return f"Waiting for dependency node results: {', '.join(missing_dependencies)}"
+    if args.require_external_evidence and node_id in SIDE_EFFECT_OR_PROVIDER_NODES and not _has_external_evidence(args, node_id):
+        return "Waiting for supplied provider/runtime evidence or explicit approval."
+    return ""
+
+
+def _blocked_node(job_id: str, spec: dict[str, Any], reason: str) -> dict[str, Any]:
+    return {
+        "job_id": job_id,
+        "node_id": spec["node_id"],
+        "logical_operator": spec["logical_operator"],
+        "operator_id": spec["operator_id"],
+        "action": spec["action"],
+        "gate": spec["gate"],
+        "status": "blocked",
+        "reason": reason,
+        "required_evidence": ["provider/runtime evidence or upstream node artifact"],
+        "unblock_condition": "Resume the workflow after supplying the missing evidence.",
+    }
+
+
+def _artifact_path(node_results: dict[str, Any], node_id: str) -> str:
+    result = node_results.get(node_id)
+    return str(result.get("artifact_path") or "") if isinstance(result, dict) else ""
+
+
+def _extra_inputs_for(spec: dict[str, Any], node_results: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    node_id = spec["node_id"]
+    inputs: dict[str, Any] = {
+        "workflow_id": args.workflow_id,
+        "workflow_runner": "generic_workflow_runner",
+    }
+    paper_path = _artifact_path(node_results, "paper_ingest")
+    claims_path = _artifact_path(node_results, "claim_extract")
+    method_path = _artifact_path(node_results, "method_extract")
+    code_path = _artifact_path(node_results, "code_evidence_map")
+    idea_path = _artifact_path(node_results, "idea_generate")
+    idea_eval_path = _artifact_path(node_results, "idea_evaluate")
+    experiment_plan_path = _artifact_path(node_results, "experiment_design")
+    experiment_result_path = _artifact_path(node_results, "experiment_run")
+    claim_verdict_path = _artifact_path(node_results, "claim_verify")
+    report_path = _artifact_path(node_results, "report_draft")
+    report_plan_path = _artifact_path(node_results, "report_plan")
+
+    if node_id == "literature_discover":
+        inputs.update({
+            "query": args.discovery_query or "scientific workflow run",
+            "topic": args.discovery_query or "scientific workflow run",
+            "limit": int(args.discovery_limit),
+            "allow_network_fetch": bool(args.allow_network_fetch),
+            "fixture_fallback": False,
+            "require_online_source_evidence": bool(args.require_online_source_evidence),
+            "min_online_source_channels": int(args.min_online_source_channels),
+        })
+        if args.source_runtime_evidence:
+            inputs["runtime_evidence"] = list(args.source_runtime_evidence)
+        if args.source_approval_ref:
+            inputs["approval_ref"] = args.source_approval_ref
+    if node_id in {"paper_analyze", "memory_update_initial", "graph_update", "claim_extract", "method_extract"} and paper_path:
+        inputs["paper_evidence"] = paper_path
+        inputs["source_evidence"] = paper_path
+    if node_id in {"code_evidence_map", "idea_generate", "idea_evaluate"}:
+        if paper_path:
+            inputs["paper_evidence"] = paper_path
+        if claims_path:
+            inputs["claims_evidence"] = claims_path
+        if method_path:
+            inputs["method_evidence"] = method_path
+    if node_id == "code_evidence_map" and args.repo_path:
+        inputs["repo_path"] = args.repo_path
+    if node_id == "idea_evaluate" and idea_path:
+        inputs["ideas_evidence"] = idea_path
+    if node_id == "experiment_design" and idea_eval_path:
+        inputs["idea_evaluation_evidence"] = idea_eval_path
+    if node_id in {"experiment_run", "experiment_monitor"}:
+        inputs["execution_mode"] = "human_approved"
+        if experiment_plan_path:
+            inputs["experiment_plan_evidence"] = experiment_plan_path
+        if experiment_result_path:
+            inputs["experiment_result_evidence"] = experiment_result_path
+        if args.experiment_approval_ref:
+            inputs["approval_ref"] = args.experiment_approval_ref
+        if args.experiment_runtime_evidence:
+            inputs["runtime_evidence"] = list(args.experiment_runtime_evidence)
+    if node_id in {"claim_verify", "report_plan", "report_draft"}:
+        if claims_path:
+            inputs["claims_evidence"] = claims_path
+        if code_path:
+            inputs["code_evidence"] = code_path
+        if method_path:
+            inputs["method_evidence"] = method_path
+        if experiment_result_path:
+            inputs["experiment_result"] = experiment_result_path
+        if claim_verdict_path:
+            inputs["claim_verdict_evidence"] = claim_verdict_path
+        if idea_eval_path:
+            inputs["idea_evaluation_evidence"] = idea_eval_path
+        if paper_path:
+            inputs["paper_evidence"] = paper_path
+        if args.review_llm_evidence:
+            inputs["review_llm_evidence"] = list(args.review_llm_evidence)
+            inputs["artifact_review_evidence"] = list(args.review_llm_evidence)
+    if node_id == "claim_verify":
+        inputs["claim_id"] = "claim-001"
+    if node_id == "report_plan":
+        inputs.update({
+            "claim_id": "claim-001",
+            "experiment_id": "exp-001",
+            "report_id": f"report-{args.job_id}",
+            "report_title": args.report_title or "Scientific Workflow Report Plan",

@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_runtime_test-session-get-events.sh",
+  "source": "harness/tests/runtime/test-session-get-events.sh",
+  "command": [
+    "bash",
+    "harness/tests/runtime/test-session-get-events.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.043,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-kk5nrlq7"
+}

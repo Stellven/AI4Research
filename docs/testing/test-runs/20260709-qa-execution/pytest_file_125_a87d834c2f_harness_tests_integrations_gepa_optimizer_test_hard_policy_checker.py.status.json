@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_125_a87d834c2f_harness_tests_integrations_gepa_optimizer_test_hard_policy_checker.py",
+  "source": "harness/tests/integrations/gepa_optimizer/test_hard_policy_checker.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/integrations/gepa_optimizer/test_hard_policy_checker.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.202,
+  "timeout": false
+}

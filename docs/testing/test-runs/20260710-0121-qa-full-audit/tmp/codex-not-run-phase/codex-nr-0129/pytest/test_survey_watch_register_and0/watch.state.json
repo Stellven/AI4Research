@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "schema_version": "solar.research.survey.watch.v1",
+  "config_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0129/pytest/test_survey_watch_register_and0/watch.json",
+  "state_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0129/pytest/test_survey_watch_register_and0/watch.state.json",
+  "disabled": false,
+  "run_count": 1,
+  "processed_total": 0,
+  "passed_total": 0,
+  "failed_total": 0,
+  "pending_total": 1,
+  "runs": [
+    {
+      "ok": false,
+      "processed": 0,
+      "passed": 0,
+      "failed": 0,
+      "pending_responses": 1,
+      "skipped_final": 0,
+      "results": [],
+      "pending_section_ids": [
+        "ch01/sec01"
+      ],
+      "output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0129/pytest/test_survey_watch_register_and0/run"
+    }
+  ],
+  "checked_at": "2026-07-10T18:50:40Z"
+}

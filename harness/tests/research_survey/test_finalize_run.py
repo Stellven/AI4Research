@@ -12,6 +12,7 @@ from research.cli import main
 from research.survey.finalize_run import finalize_survey_run
 from research.survey.evidence_pack import build_evidence_packs
 from research.survey.planner import create_survey_plan, write_survey_plan
+from research.survey.status_next import survey_status_next_action
 
 
 def _append_jsonl(path, rows):
@@ -61,6 +62,56 @@ def test_finalize_run_builds_pipeline_and_compiles(tmp_path):
     assert (tmp_path / "survey_finalize_run.json").exists()
 
 
+def test_finalize_run_executes_requested_narrative_projection(tmp_path, monkeypatch):
+    monkeypatch.setenv("HARNESS_DIR", str(tmp_path / "installed-harness"))
+    _ledgers(tmp_path)
+    payload = finalize_survey_run(
+        tmp_path,
+        brief="latent reasoning",
+        section_limit=1,
+        repair_limit=1,
+        min_finalized=1,
+        min_chars=100,
+        repair_passes=1,
+        narrative_backend="deterministic",
+        narrative_min_chars=100,
+    )
+
+    assert payload["ok"] is True
+    assert payload["narrative"]["ok"] is True
+    assert payload["narrative"]["backend"] == "deterministic"
+    assert payload["final_md"].endswith("chief_editor_final.md")
+    assert (tmp_path / "chief_editor_final.md").exists()
+    assert [step["step"] for step in payload["steps"]][-2:] == ["chief_editor", "narrative_eval"]
+
+
+def test_finalize_run_manifest_selects_current_reader_projection_over_stale_chief_editor(tmp_path):
+    _ledgers(tmp_path)
+    (tmp_path / "chief_editor_final.md").write_text(
+        "# Stale output\n\n## Prompt Packet\n\nInternal ch01/sec99 process leak.\n",
+        encoding="utf-8",
+    )
+
+    payload = finalize_survey_run(
+        tmp_path,
+        brief="latent reasoning",
+        section_limit=1,
+        repair_limit=1,
+        min_finalized=1,
+        min_chars=100,
+        repair_passes=1,
+        narrative_backend="off",
+    )
+
+    assert payload["ok"] is True
+    assert payload["final_md"].endswith("human_final.md")
+    assert payload["audit_final_md"].endswith("final.md")
+    assert payload["final_eval"]["audience_hygiene"]["ok"] is True
+    status = survey_status_next_action(tmp_path)
+    assert status["status"] == "done"
+    assert status["final_md"].endswith("human_final.md")
+
+
 def test_finalize_run_can_reuse_existing_plan_and_pack(tmp_path):
     plan = create_survey_plan("latent reasoning", target_chars=50000)
     write_survey_plan(plan, tmp_path)
@@ -97,7 +148,8 @@ def test_finalize_run_stops_and_writes_handoff_when_ledgers_missing(tmp_path):
     assert "paper" in text
 
 
-def test_finalize_run_cli(tmp_path, capsys):
+def test_finalize_run_cli(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("HARNESS_DIR", str(tmp_path / "installed-harness"))
     _ledgers(tmp_path)
     rc = main([
         "survey-finalize-run",
@@ -108,9 +160,38 @@ def test_finalize_run_cli(tmp_path, capsys):
         "--min-finalized", "1",
         "--min-chars", "100",
         "--repair-passes", "1",
+        "--narrative-backend", "deterministic",
+        "--narrative-min-chars", "100",
         "--json",
     ])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["ok"] is True
     assert payload["reason"] == "passed"
+
+
+def test_finalize_run_cli_does_not_mask_requested_narrative_failure(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("HARNESS_DIR", str(tmp_path / "installed-harness"))
+    _ledgers(tmp_path)
+    rc = main([
+        "survey-finalize-run",
+        "--output-dir", str(tmp_path),
+        "--brief", "latent reasoning",
+        "--section-limit", "1",
+        "--repair-limit", "1",
+        "--min-finalized", "1",
+        "--min-chars", "100",
+        "--repair-passes", "1",
+        "--narrative-backend", "local-command",
+        "--narrative-command", "/bin/false",
+        "--narrative-min-chars", "100",
+        "--json",
+    ])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert payload["reason"] == "narrative_failed"
+    assert payload["narrative"]["ok"] is False
+    assert not (tmp_path / "final_closeout.json").exists()
+    assert not (tmp_path / "run.finalized").exists()

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_385_94a2ec790f_harness_tests_test_multitask_history_window_label_closeout.py",
+  "source": "harness/tests/test_multitask_history_window_label_closeout.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_multitask_history_window_label_closeout.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.193,
+  "timeout": false
+}

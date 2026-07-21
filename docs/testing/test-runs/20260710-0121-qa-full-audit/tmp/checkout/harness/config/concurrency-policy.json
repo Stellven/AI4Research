@@ -1,0 +1,295 @@
+{
+  "version": 1,
+  "active_level": "normal",
+  "env_override": "SOLAR_CONCURRENCY_LEVEL",
+  "levels": {
+    "low": {
+      "graph_max_parallel": 2,
+      "builder_dispatch_limit": 2,
+      "drain_max_items": 2,
+      "operator_task_timeout_seconds": 900
+    },
+    "normal": {
+      "graph_max_parallel": 4,
+      "builder_dispatch_limit": 5,
+      "drain_max_items": 4,
+      "operator_task_timeout_seconds": 1800
+    },
+    "high": {
+      "graph_max_parallel": 8,
+      "builder_dispatch_limit": 9,
+      "drain_max_items": 8,
+      "operator_task_timeout_seconds": 2700
+    },
+    "burst": {
+      "graph_max_parallel": 13,
+      "builder_dispatch_limit": 13,
+      "drain_max_items": 13,
+      "operator_task_timeout_seconds": 3600
+    }
+  },
+  "builder_pool": {
+    "enabled": true,
+    "desired_total": 14,
+    "groups": {
+      "glm-5.1": {
+        "desired": 3,
+        "priority": 80
+      },
+      "sonnet": {
+        "desired": 3,
+        "priority": 90
+      },
+      "thunderomlx": {
+        "desired": 1,
+        "priority": 55
+      },
+      "deepseek-v4-flash": {
+        "desired": 0,
+        "priority": 10
+      },
+      "codex-gpt-5.5-medium": {
+        "desired": 2,
+        "priority": 82
+      },
+      "codex-gpt-5.3-spark": {
+        "desired": 1,
+        "priority": 96
+      },
+      "antigravity-gemini-3.5-flash": {
+        "desired": 0,
+        "priority": 10
+      }
+    }
+  },
+  "role_pool_spillover": {
+    "enabled": true,
+    "roles": {
+      "planner": {
+        "enabled": true,
+        "max_active": 8,
+        "allowed_source_roles": [
+          "builder",
+          "evaluator"
+        ],
+        "preferred_groups": [
+          "codex-gpt-5.5-medium",
+          "thunderomlx"
+        ],
+        "reason": "Independent planning work may borrow capable non-planner operators when the canonical planner pool is blocked."
+      },
+      "evaluator": {
+        "enabled": true,
+        "max_active": 4,
+        "allowed_source_roles": [
+          "builder"
+        ],
+        "preferred_groups": [
+          "codex-gpt-5.5-medium"
+        ],
+        "reason": "Independent evaluator work may borrow builder operators when evaluator pool is temporarily blocked."
+      }
+    }
+  },
+  "dynamic_concurrency": {
+    "enabled": true,
+    "mode": "aggressive_spend_down",
+    "snapshot_path": "run/quota-snapshots/latest.json",
+    "snapshot_ttl_seconds": 600,
+    "min_level": "normal",
+    "max_level": "burst",
+    "prefer_efficiency_over_reserve": true,
+    "backlog_high_threshold": 6,
+    "backlog_burst_threshold": 12,
+    "available_ratio_high": 0.45,
+    "available_ratio_burst": 0.65,
+    "blocked_ratio_low": 0.7
+  },
+  "backlog_autoscaling": {
+    "enabled": true,
+    "snapshot_path": "run/backlog-autoscale/latest.json",
+    "snapshot_ttl_seconds": 60,
+    "metrics": {
+      "drafting_spec": {
+        "status": "drafting",
+        "phase": "spec"
+      },
+      "active_prd_ready": {
+        "status": "active",
+        "phase": "prd_ready"
+      },
+      "active_planning_complete": {
+        "status": "active",
+        "phase": "planning_complete"
+      },
+      "reviewing_handoff_ready": {
+        "status": "reviewing",
+        "phase": "handoff_ready"
+      }
+    },
+    "profile_targets": {
+      "pm": {
+        "metric": "drafting_spec",
+        "base": 4,
+        "min": 2,
+        "max": 8,
+        "trigger_backlog": 24,
+        "backlog_per_step": 24,
+        "step": 1
+      },
+      "planner": {
+        "metric": "active_prd_ready",
+        "base": 2,
+        "min": 2,
+        "max": 6,
+        "trigger_backlog": 6,
+        "backlog_per_step": 4,
+        "step": 1
+      },
+      "builder": {
+        "metric": "active_planning_complete",
+        "base": 4,
+        "min": 3,
+        "max": 10,
+        "trigger_backlog": 8,
+        "backlog_per_step": 6,
+        "step": 1
+      },
+      "evaluator": {
+        "metric": "reviewing_handoff_ready",
+        "base": 3,
+        "min": 1,
+        "max": 8,
+        "trigger_backlog": 2,
+        "backlog_per_step": 2,
+        "step": 1
+      }
+    },
+    "logical_operator_targets": {
+      "DeepArchitect": {
+        "metric": "active_prd_ready",
+        "base": 6,
+        "min": 3,
+        "max": 10,
+        "trigger_backlog": 6,
+        "backlog_per_step": 4,
+        "step": 1
+      },
+      "ParallelExplorer": {
+        "metric": "active_prd_ready",
+        "base": 5,
+        "min": 2,
+        "max": 8,
+        "trigger_backlog": 8,
+        "backlog_per_step": 4,
+        "step": 1
+      },
+      "ImplementationWorker": {
+        "metric": "active_planning_complete",
+        "base": 5,
+        "min": 3,
+        "max": 10,
+        "trigger_backlog": 8,
+        "backlog_per_step": 6,
+        "step": 1
+      },
+      "PatchWorker": {
+        "metric": "active_planning_complete",
+        "base": 8,
+        "min": 4,
+        "max": 12,
+        "trigger_backlog": 10,
+        "backlog_per_step": 8,
+        "step": 1
+      },
+      "TestDesigner": {
+        "metric": "active_planning_complete",
+        "base": 4,
+        "min": 2,
+        "max": 8,
+        "trigger_backlog": 8,
+        "backlog_per_step": 6,
+        "step": 1
+      },
+      "Verifier": {
+        "metric": "reviewing_handoff_ready",
+        "base": 4,
+        "min": 2,
+        "max": 8,
+        "trigger_backlog": 2,
+        "backlog_per_step": 2,
+        "step": 1
+      },
+      "VerifierLite": {
+        "metric": "reviewing_handoff_ready",
+        "base": 4,
+        "min": 1,
+        "max": 8,
+        "trigger_backlog": 2,
+        "backlog_per_step": 2,
+        "step": 1
+      }
+    },
+    "builder_pool_targets": {
+      "desired_total": {
+        "metric": "active_planning_complete",
+        "base": 14,
+        "min": 10,
+        "max": 20,
+        "trigger_backlog": 8,
+        "backlog_per_step": 6,
+        "step": 1
+      },
+      "groups": {
+        "codex-gpt-5.3-spark": {
+          "metric": "active_planning_complete",
+          "base": 2,
+          "min": 1,
+          "max": 6,
+          "trigger_backlog": 10,
+          "backlog_per_step": 6,
+          "step": 1
+        },
+        "codex-gpt-5.5-medium": {
+          "metric": "active_planning_complete",
+          "base": 2,
+          "min": 1,
+          "max": 4,
+          "trigger_backlog": 10,
+          "backlog_per_step": 8,
+          "step": 1
+        },
+        "sonnet": {
+          "metric": "active_planning_complete",
+          "base": 3,
+          "min": 2,
+          "max": 5,
+          "trigger_backlog": 10,
+          "backlog_per_step": 8,
+          "step": 1
+        }
+      }
+    },
+    "global_limits": {
+      "max_workers": {
+        "base": 4,
+        "cap": 16,
+        "profile_names": [
+          "pm",
+          "planner",
+          "builder",
+          "evaluator"
+        ]
+      }
+    }
+  },
+  "recovery": {
+    "high_backlog_pending_tasks": 6,
+    "critical_backlog_pending_tasks": 12,
+    "min_available_ratio": 0.5,
+    "stale_runtime_seconds": 900,
+    "health_cache_seconds": 60,
+    "auto_start_services": false,
+    "auto_clear_stale_dead_pid": true
+  }
+}

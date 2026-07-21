@@ -1,0 +1,311 @@
+{
+  "artifacts": [
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json",
+      "type": "route_config"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+      "type": "semantic_parity_audit"
+    }
+  ],
+  "inputs": {
+    "autosci_repo": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/AutoSci",
+    "requested_skill": "novelty",
+    "route_config": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json",
+    "runtime_proof_dirs": [],
+    "runtime_proof_manifest_paths": [],
+    "runtime_proof_manifests": [],
+    "semantic_audit_dirs": [],
+    "semantic_audit_paths": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/artifacts/runtime/novelty-direct/semantic-audit-direct.json"
+    ],
+    "semantic_audits": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/artifacts/runtime/novelty-direct/semantic-audit-direct.json"
+    ]
+  },
+  "limitations": [
+    "Phase 19 parity evidence verifies Solar-native route coverage, not live execution of external services.",
+    "Side effects such as secrets, remote execution, SMTP, browser rendering, GitHub Actions, and destructive reset remain approval-gated.",
+    "Local primary tool/config references are checked for ABI existence; external executables/providers are represented as external requirements."
+  ],
+  "node_id": "autosci-feature-parity-novelty",
+  "outputs": {
+    "parity": {
+      "autosci_repo": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/AutoSci",
+      "blocked_count": 0,
+      "config_version": "phase19.v1",
+      "configured_route_count": 1,
+      "execution_policy_counts": {
+        "approval_required": 0,
+        "bounded_local": 1,
+        "provider_required": 0,
+        "pure": 0
+      },
+      "full_count": 0,
+      "gated_count": 0,
+      "items": [
+        {
+          "autosci_command": "/novelty",
+          "autosci_feature": "/novelty",
+          "backend_mode": "external_optional",
+          "coverage_status": "partial",
+          "evidence_ids": [
+            "route:novelty",
+            "native:novelty"
+          ],
+          "evidence_schema": "idea_evaluation.v1",
+          "execution_policy": "bounded_local",
+          "feature_kind": "skill",
+          "limitations": [
+            "S2 and DeepXiv source CLIs now emit explicit provider evidence; unavailable sources and Review LLM remain warnings/inconclusive evidence, not deterministic substitutes; novelty_final_acceptance_boundary requires completed external novelty evidence, passed provider provenance, and completed Review LLM proof before promotion/writeback is treated as final."
+          ],
+          "missing_primary_tools": [],
+          "native_paths": [
+            "i18n/en/skills/novelty/SKILL.md"
+          ],
+          "native_skill": "novelty",
+          "primary_tool_statuses": [
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py",
+              "ref": "plugins/autosci/bin/autosci_bridge.py run --action evaluate_ideas",
+              "status": "ok",
+              "token": "plugins/autosci/bin/autosci_bridge.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/fetch_s2.py",
+              "ref": "tools/fetch_s2.py search",
+              "status": "ok",
+              "token": "tools/fetch_s2.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/fetch_deepxiv.py",
+              "ref": "tools/fetch_deepxiv.py search",
+              "status": "ok",
+              "token": "tools/fetch_deepxiv.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/review_model_runtime_proof.py",
+              "ref": "tools/review_model_runtime_proof.py from-evidence",
+              "status": "ok",
+              "token": "tools/review_model_runtime_proof.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/wiki_mutation_runtime_proof.py",
+              "ref": "tools/wiki_mutation_runtime_proof.py from-writeback",
+              "status": "ok",
+              "token": "tools/wiki_mutation_runtime_proof.py"
+            }
+          ],
+          "primary_tools": [
+            "plugins/autosci/bin/autosci_bridge.py run --action evaluate_ideas",
+            "tools/fetch_s2.py search",
+            "tools/fetch_deepxiv.py search",
+            "tools/review_model_runtime_proof.py from-evidence",
+            "tools/wiki_mutation_runtime_proof.py from-writeback"
+          ],
+          "proof_level": "E3",
+          "proof_refs": [
+            "route:novelty",
+            "native:novelty"
+          ],
+          "proof_requirements": [
+            {
+              "category": "route_definition",
+              "description": "Solar route declaration exists in feature_parity_routes.v1.json.",
+              "evidence_refs": [
+                "route:novelty"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "native_skill_presence",
+              "description": "Discovered AutoSci native skill file exists under i18n/en/skills.",
+              "evidence_refs": [
+                "native:novelty"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "primary_tool_abi",
+              "description": "Primary Solar tool/config references resolve locally or are declared external.",
+              "evidence_refs": [
+                "plugins/autosci/bin/autosci_bridge.py run --action evaluate_ideas",
+                "tools/fetch_s2.py search",
+                "tools/fetch_deepxiv.py search",
+                "tools/review_model_runtime_proof.py from-evidence",
+                "tools/wiki_mutation_runtime_proof.py from-writeback"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "semantic_equivalence_evidence",
+              "description": "Route still needs audited native AutoSci semantic equivalence proof before semantic full parity.",
+              "evidence_refs": [
+                "runtime:novelty:semantic-audit:semantic-audit-direct",
+                "artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+                "artifacts/runtime/novelty-direct/native-novelty.md",
+                "artifacts/runtime/novelty-direct/solar-novelty.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "external_runtime_evidence",
+              "description": "Route needs approved provider/runtime execution evidence before external behavior can be considered complete.",
+              "evidence_refs": [
+                "runtime:novelty:semantic-audit:semantic-audit-direct",
+                "artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+                "artifacts/runtime/novelty-direct/native-novelty.md",
+                "artifacts/runtime/novelty-direct/solar-novelty.json"
+              ],
+              "status": "pending"
+            },
+            {
+              "category": "review_llm_or_model_evidence",
+              "description": "Model/Review LLM-dependent route needs persisted request/response or supplied review evidence.",
+              "evidence_refs": [
+                "runtime:novelty:semantic-audit:semantic-audit-direct",
+                "artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+                "artifacts/runtime/novelty-direct/native-novelty.md",
+                "artifacts/runtime/novelty-direct/solar-novelty.json"
+              ],
+              "status": "pending"
+            },
+            {
+              "category": "provider_source_evidence",
+              "description": "Source-dependent route needs non-fixture provider/source-channel evidence.",
+              "evidence_refs": [
+                "runtime:novelty:semantic-audit:semantic-audit-direct",
+                "artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+                "artifacts/runtime/novelty-direct/native-novelty.md",
+                "artifacts/runtime/novelty-direct/solar-novelty.json"
+              ],
+              "status": "pending"
+            },
+            {
+              "category": "wiki_mutation_evidence",
+              "description": "Wiki-mutating route needs approved before/after mutation and rebuild evidence.",
+              "evidence_refs": [
+                "runtime:novelty:semantic-audit:semantic-audit-direct",
+                "artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+                "artifacts/runtime/novelty-direct/native-novelty.md",
+                "artifacts/runtime/novelty-direct/solar-novelty.json"
+              ],
+              "status": "pending"
+            }
+          ],
+          "remaining_requirements": [],
+          "required_capabilities": [
+            "wiki comparison",
+            "web search evidence",
+            "Semantic Scholar evidence",
+            "Review LLM second opinion"
+          ],
+          "runtime_proof_refs": [
+            "runtime:novelty:semantic-audit:semantic-audit-direct",
+            "artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+            "artifacts/runtime/novelty-direct/native-novelty.md",
+            "artifacts/runtime/novelty-direct/solar-novelty.json"
+          ],
+          "runtime_proof_sources": [
+            {
+              "block_reasons": [],
+              "categories": [
+                "semantic_equivalence_evidence"
+              ],
+              "collection_mode": "semantic_audit",
+              "description": "Semantic parity audit supplied directly to the parity inventory.",
+              "evidence_ref_statuses": [
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+                  "ref": "artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+                  "status": "ok"
+                },
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/artifacts/runtime/novelty-direct/native-novelty.md",
+                  "ref": "artifacts/runtime/novelty-direct/native-novelty.md",
+                  "status": "ok"
+                },
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/artifacts/runtime/novelty-direct/solar-novelty.json",
+                  "ref": "artifacts/runtime/novelty-direct/solar-novelty.json",
+                  "status": "ok"
+                }
+              ],
+              "evidence_refs": [
+                "artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+                "artifacts/runtime/novelty-direct/native-novelty.md",
+                "artifacts/runtime/novelty-direct/solar-novelty.json"
+              ],
+              "manifest_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_route_accepts_direct_sema0/artifacts/runtime/novelty-direct/semantic-audit-direct.json",
+              "native_skill": "novelty",
+              "production_ready": true,
+              "proof_id": "runtime:novelty:semantic-audit:semantic-audit-direct",
+              "provenance": {
+                "artifact_kind": "autosci_semantic_parity_audit.v1",
+                "captured_at": "2026-06-30T00:00:00Z",
+                "command": "autosci_parity_bridge.py semantic-audit ingestion",
+                "source": "phase19-direct-semantic-audit"
+              },
+              "status": "supplied"
+            }
+          ],
+          "runtime_proof_status": "supplied",
+          "semantic_audit_refs": [
+            "artifacts/runtime/novelty-direct/semantic-audit-direct.json"
+          ],
+          "semantic_audit_status": "verified",
+          "semantic_parity": "full",
+          "side_effect_policy": "dry_run_only",
+          "solar_backend_action": "evaluate_ideas",
+          "solar_capability": "cap.research-idea-evaluate",
+          "solar_logical_operator": "ScientificIdeaEvaluator",
+          "tool_abi_status": "ok"
+        }
+      ],
+      "missing_route_count": 0,
+      "native_skill_count": 1,
+      "native_skills": [
+        "novelty"
+      ],
+      "partial_count": 1,
+      "proof_level_counts": {
+        "E0": 0,
+        "E1": 0,
+        "E2": 0,
+        "E3": 1,
+        "E4": 0,
+        "E5": 0
+      },
+      "proof_requirement_status_counts": {
+        "blocked": 0,
+        "missing": 0,
+        "ok": 3,
+        "pending": 4,
+        "supplied": 1
+      },
+      "routed_count": 1,
+      "runtime_proof_status_counts": {
+        "not_required": 0,
+        "pending": 0,
+        "supplied": 1,
+        "verified": 0
+      },
+      "semantic_full_count": 1,
+      "semantic_missing_count": 0,
+      "semantic_partial_count": 0
+    }
+  },
+  "provenance": {
+    "implementation_package": "harness.plugins.autosci",
+    "operator_id": "AutoSciFeatureParityBridge",
+    "timestamp": "2026-07-10T19:22:54.470406Z"
+  },
+  "schema": "autosci_feature_parity.v1",
+  "sprint_id": "phase19",
+  "status": "completed",
+  "task_id": "phase19-autosci-feature-parity"
+}

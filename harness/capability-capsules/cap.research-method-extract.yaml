@@ -1,0 +1,93 @@
+capability_capsule_id: cap.research-method-extract
+capsule_kind: capability
+metadata:
+  name: Scientific Method Extract
+  description: Extract reusable scientific methods with procedures, sources, and evidence grounding.
+applicability:
+  task_types:
+    - scientific-research
+    - method-extraction
+  positive_signals:
+    - extract method
+    - identify procedure
+    - reusable scientific method
+  negative_signals:
+    - verify claim
+    - publish paper
+contract:
+  inputs:
+    required:
+      - name: research_paper
+        schema_ref: schemas/evidence/research_paper.v1.schema.json
+    optional:
+      - name: method_scope
+        description: Optional method categories or extraction focus.
+  outputs:
+    required:
+      - name: research_method
+        schema_ref: schemas/evidence/research_method.v1.schema.json
+    optional:
+      - name: rejected_methods
+        description: Candidate methods rejected for insufficient grounding.
+  preconditions:
+    - check: source_contains_method
+      description: Source evidence contains method or procedure sections.
+  postconditions:
+    - check: methods_grounded
+      description: Each method has summary, procedure, source papers, and evidence ids.
+  invariants:
+    - Does not invent procedure steps not grounded in source evidence.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: Paper method evidence.
+  produces:
+    - schema_ref: schemas/evidence/research_method.v1.schema.json
+      purpose: Reusable method evidence.
+  compatible_with:
+    - cap.research-code-evidence-map
+    - cap.research-claim-extract
+    - cap.research-graph-update
+  incompatible_with: []
+  requires_after:
+    - cap.research-paper-ingest
+effects:
+  read:
+    - normalized paper evidence
+    - schemas/evidence/research_method.v1.schema.json
+  write:
+    - artifacts/scientific/research_method/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - none by default
+  cost:
+    - bounded extraction cost
+  risk:
+    - procedure extraction can overfit paper-specific implementation details
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.method_extract
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/research_method.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against research_method.v1.schema.json.
+    - Confirm method source papers and evidence ids are populated.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Fixture method extraction emits valid method evidence.
+    - Ambiguous methods are represented as limitations or rejected candidates.
+operator_compatibility:
+  preferred:
+    - autosci-method-extract-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

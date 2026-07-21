@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-07-10T19:26:10Z",
+  "proofs": [
+    {
+      "categories": [
+        "external_runtime_evidence",
+        "approval_boundary_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Verified approval/runtime evidence for AutoSci `prefill` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-prefill-approved/research_memory_update.prefill.json",
+        "artifacts/autosci/runs/shim-prefill-approved/prefill_foundations_approval_contract.json",
+        "prefill-allowlist.json",
+        "prefill-runtime.json",
+        "artifacts/autosci/runs/shim-prefill-approved/prefill_foundations_local_mutation_runtime_evidence.json",
+        "prefill-before.md",
+        "artifacts/autosci/workspace/wiki/foundations/foundation-skillgen.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "prefill",
+      "production_ready": true,
+      "proof_id": "runtime:prefill:approval-contract:20260710T192610Z",
+      "provenance": {
+        "artifact_kind": "wiki_foundation_prefill",
+        "captured_at": "2026-07-10T19:26:10Z",
+        "command": "prefill_foundations:approved_mutation",
+        "source": "approval_contract"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

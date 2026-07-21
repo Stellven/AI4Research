@@ -1,0 +1,1 @@
+{"sprint_id": "sid", "nodes": [{"id": "A1", "status": "dispatched", "assigned_to": "pane-a"}, {"id": "A2", "status": "pending"}], "node_results": {}}

@@ -1,0 +1,59 @@
+{
+  "task_id": "task-shim-research-publication-compile-scheduler-report_plan",
+  "sprint_id": "shim-research-publication-compile-scheduler",
+  "node_id": "report_plan",
+  "operator_id": "autosci-report-plan-worker",
+  "task_type": "scientific-report-plan",
+  "objective": "Scheduler-dispatched bounded smoke for ScientificReportPlanner.",
+  "mode": "bounded_runtime_smoke",
+  "runner_contract": "bounded_node_smoke",
+  "output_dir": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan",
+  "inputs": {
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear11/external-publication-compile/compile_target",
+    "paper_id": "paper-shim-research-publication-compile-scheduler",
+    "allow_network_fetch": false,
+    "smoke_mode": true,
+    "claim_id": "claim-001",
+    "experiment_id": "exp-supported-001",
+    "report_id": "report-scheduler-lifecycle-resume-plan",
+    "report_title": "Scheduler Lifecycle Resumed Paper Plan",
+    "target": "scheduler-lifecycle-resume",
+    "discovery_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/literature_discover/task-shim-research-publication-compile-scheduler-literature_discover/literature_discovery.json",
+    "paper_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/paper_ingest/task-shim-research-publication-compile-scheduler-paper_ingest/research_paper.json",
+    "claims_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/claim_extract/task-shim-research-publication-compile-scheduler-claim_extract/research_claims.json",
+    "claim_verdict_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/claim_verify/task-shim-research-publication-compile-scheduler-claim_verify/claim_verdict.json",
+    "experiment_result": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/experiment_run/task-shim-research-publication-compile-scheduler-experiment_run/experiment_result.json",
+    "code_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/code_evidence_map/task-shim-research-publication-compile-scheduler-code_evidence_map/code_evidence_map.json",
+    "method_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/method_extract/task-shim-research-publication-compile-scheduler-method_extract/research_method.json",
+    "idea_evaluation_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/idea_evaluate/task-shim-research-publication-compile-scheduler-idea_evaluate/idea_evaluation.json",
+    "review_llm_evidence": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear11/external-publication-compile/review_llm_artifact_review.json"
+    ],
+    "artifact_review_evidence": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear11/external-publication-compile/review_llm_artifact_review.json"
+    ],
+    "supplied_compile_target_evidence": true,
+    "approval_ref": "approval-publication-compile-shim",
+    "allowlist_evidence": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear11/external-publication-compile/compile-allowlist.json"
+    ],
+    "before_artifacts": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear11/external-publication-compile/compile-before.json"
+    ],
+    "execute_approved_side_effect": true,
+    "executor_timeout_seconds": 20
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/plan_report.result.json",
+    "evidence_payload_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/scientific_report_plan.json",
+    "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/evidence.jsonl",
+    "memory_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/research_memory_update.json",
+    "graph_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/research_graph_update.json"
+  },
+  "expected_schema": "scientific_report.v1",
+  "expected_action": "plan_report",
+  "logical_operator": "ScientificReportPlanner",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T14:03:54Z",
+  "lease_expires_at": "2026-07-10T14:05:54Z"
+}

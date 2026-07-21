@@ -1,0 +1,18 @@
+PASS: D1 schema exists
+PASS: D2 extract returns ok
+PASS: D2 extract output contains ok
+PASS: D3 query returns memories field
+PASS: D3 query output contains memories
+PASS: D4 terminal_phase_mismatch in state
+PASS: D4 repair_recipe entry exists
+PASS: stats total_entries present
+PASS: EXPERIENCE_HOOK=0 returns allow
+PASS: pre_dispatch fail-open on missing sid
+PASS: decisions.jsonl exists
+FAIL: backfill not idempotent: {"processed": 0, "skipped": 0, "errors": 0, "ok": true}
+PASS: schema validate_trajectory works
+PASS: schema rejects invalid status
+
+========================
+PASS=13 FAIL=1
+FAIL

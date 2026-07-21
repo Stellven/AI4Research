@@ -1,0 +1,175 @@
+{
+  "action": "verify_claim",
+  "after_artifacts": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-eval-parity-writeback/verify_claim_local_mutation_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-eval-parity-writeback/verify_claim_local_mutation_runtime_evidence.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/ideas/claim-skillgen-parity-write.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/ideas/claim-skillgen-parity-write.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/log.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/log.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/index.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/index.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+      "verifiable": true
+    }
+  ],
+  "after_ready": true,
+  "allowlist_evidence": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-eval-parity-writeback/verify_claim_gate_policy_allowlist.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-eval-parity-writeback/verify_claim_gate_policy_allowlist.json",
+      "verifiable": true
+    }
+  ],
+  "allowlist_ready": true,
+  "approval_ref": "policy:auto:parity_demo:verify_claim:2026-07-10T19:22:38Z",
+  "approval_state": "verified",
+  "approved": true,
+  "authorization_request": {
+    "action": "verify_claim",
+    "approval_state": "verified",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [],
+        "allowlist_evidence": [],
+        "approval_ref": "",
+        "before_artifacts": [],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": []
+      },
+      "request_fingerprint": "60c7da55a4fc6e9be4f6788eacc0353e13a782d4e326077cc5a43f4f0a382ca4",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": false,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "ready"
+    },
+    "missing": [],
+    "non_error_contract": {
+      "approval_state": "verified",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": false,
+      "allowlist_evidence": false,
+      "approval_ref": false,
+      "before_artifacts": false,
+      "runtime_evidence": false
+    },
+    "requested_side_effects": [
+      "claim_verdict_wiki_writeback",
+      "wiki_log",
+      "wiki_graph_edge"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "authorized"
+  },
+  "before_artifacts": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-eval-parity-writeback/verify_claim_gate_policy_decision.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-eval-parity-writeback/verify_claim_gate_policy_decision.json",
+      "verifiable": true
+    }
+  ],
+  "before_ready": true,
+  "execution_verified": true,
+  "missing": [],
+  "policy_auto_approved": true,
+  "policy_decision": {
+    "action": "verify_claim",
+    "allow_destructive": false,
+    "allow_email": false,
+    "allow_network": false,
+    "allow_remote": false,
+    "allowed": true,
+    "allowed_write_roots": [
+      "artifacts/autosci",
+      "artifacts/scientific"
+    ],
+    "blocked": false,
+    "execute_side_effects": true,
+    "mode": "parity_demo",
+    "proof_best_effort": false,
+    "proof_required": true,
+    "reasons": [
+      "read_local is allowed in parity_demo.",
+      "write_artifact is allowed in parity_demo.",
+      "wiki_mutation is auto-allowed in parity_demo."
+    ],
+    "require_approval_ref": false,
+    "require_before_after_artifacts": false,
+    "require_hitl": false,
+    "require_runtime_evidence": false,
+    "sandbox_required": true,
+    "side_effects": [
+      "read_local",
+      "write_artifact",
+      "wiki_mutation"
+    ],
+    "synthetic_approval_ref": "policy:auto:parity_demo:verify_claim:2026-07-10T19:22:38Z",
+    "warnings": [
+      "Auto-approved by gate policy mode `parity_demo`; no human approval was requested."
+    ]
+  },
+  "ready_for_execution": true,
+  "runtime_evidence": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-eval-parity-writeback/verify_claim_local_mutation_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-eval-parity-writeback/verify_claim_local_mutation_runtime_evidence.json",
+      "verifiable": true
+    }
+  ],
+  "runtime_ready": true,
+  "schema": "autosci_approval_contract.v1",
+  "side_effects": [
+    "claim_verdict_wiki_writeback",
+    "wiki_log",
+    "wiki_graph_edge"
+  ]
+}

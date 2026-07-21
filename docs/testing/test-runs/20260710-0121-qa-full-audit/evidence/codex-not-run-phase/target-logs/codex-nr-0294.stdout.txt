@@ -1,0 +1,32 @@
+=== Git Error Handling Tests ===
+
+Scenario 1: gh pr merge failure logs PR URL and continues
+  PASS: merge failed but flow continued
+  PASS: PR URL logged
+  PASS: warning message logged
+  PASS: error section in log.md
+  PASS: manual command suggested
+Scenario 2: gh pr merge success works normally
+  PASS: merge succeeded
+  PASS: log.md has no merge errors
+Scenario 3: branch cleanup checkout failure logs warning and continues
+  PASS: checkout warning logged
+  PASS: checkout failure log recorded
+  PASS: flow continues after checkout failure
+Scenario 4: branch cleanup pull failure logs warning and continues
+  PASS: pull warning logged
+  PASS: pull failure log recorded
+  PASS: flow continues after pull failure
+Scenario 5: branch cleanup delete failure logs warning and continues
+  PASS: delete warning logged
+  PASS: delete failure log recorded
+  PASS: flow continues after delete failure
+Scenario 6: branch cleanup missing branch skips delete without warnings
+  PASS: no delete attempted when branch missing
+Scenario 7: combined failures (PR merge + branch cleanup) don't block flow
+  PASS: flow continued after multiple failures
+  PASS: PR merge error in log.md
+  PASS: checkout error in terminal.log
+
+=== Test Summary ===
+Total: 20, Passed: 20, Failed: 0

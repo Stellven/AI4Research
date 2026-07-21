@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-hot-reload-noop.sh",
+  "source": "harness/tests/test-hot-reload-noop.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-hot-reload-noop.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.083,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-ult0j6_v"
+}

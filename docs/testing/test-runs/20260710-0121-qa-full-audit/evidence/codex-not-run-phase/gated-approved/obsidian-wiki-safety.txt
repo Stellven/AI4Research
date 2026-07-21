@@ -1,0 +1,9 @@
+
+=== D7 — safety (real dir overwrite protection) ===
+  PASS: install refused/warned about real dir at codex/skills target
+  PASS: real directory was NOT replaced by symlink
+  PASS: vault is a temp path: /private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-vault.XXXXXX.YwPgMyaJTS
+
+────────────────────────────────────────────────────
+  Results: PASS=3  FAIL=0
+────────────────────────────────────────────────────

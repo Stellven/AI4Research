@@ -1,0 +1,57 @@
+---
+# Solar Plugin Manifest — MinerU PDF Extractor
+id: mineru
+name: "MinerU PDF Extractor"
+version: "1.0.0"
+description: "Idle-priority PDF extraction worker using MinerU. Runs as launchd Background process at Nice=20, rate-limited to 3 RPM, memory-capped at 2GB. Never blocks user shell."
+status: enabled
+
+write_scope:
+  - "_sources/ingested"
+  - "state/mineru"
+
+read_scope:
+  - "_sources/papers"
+  - "config/storage.solar.yaml"
+
+capabilities:
+  - "pdf.extract"
+  - "pdf.ocr"
+  - "pdf.structure"
+
+commands:
+  - "solar-harness mineru doctor"
+  - "launchctl kickstart gui/$UID/com.solar.qmd-mineru-embed"
+
+background_safety:
+  mode: idle
+  idle_only: true
+  rate_limit: "3/min"
+  max_runtime_s: 1800
+  max_memory_mb: 2048
+
+eval_packs:
+  - "tests/external-integrations/test_schema_health.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable mineru"
+
+integration_level: basic_usable
+
+entry: "lib/mineru_extract.py"
+
+events:
+  - "mineru.extract_started"
+  - "mineru.extract_complete"
+  - "mineru.extract_failed"
+  - "mineru.rate_limited"
+
+depends_on: []
+
+tags:
+  - "pdf"
+  - "extraction"
+  - "ocr"
+  - "idle-worker"

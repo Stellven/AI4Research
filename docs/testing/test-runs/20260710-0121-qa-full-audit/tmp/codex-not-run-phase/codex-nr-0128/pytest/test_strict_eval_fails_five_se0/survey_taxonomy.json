@@ -1,0 +1,12 @@
+{
+  "ok": false,
+  "taxonomy_depth_score": 0.0,
+  "chapter_axes": [
+    "other"
+  ],
+  "required_source_types": [],
+  "observed_source_types": [],
+  "method_axis_present": false,
+  "evaluation_axis_present": false,
+  "contradiction_axis_present": false
+}

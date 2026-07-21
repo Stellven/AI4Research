@@ -1,0 +1,46 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/smoke/research_graph_update.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md"
+  },
+  "limitations": [
+    "Fixture graph update records explicit proposed edges only."
+  ],
+  "node_id": "node-ingest-paper",
+  "outputs": {
+    "edges": [
+      {
+        "evidence_ids": [
+          "paper-sample-paper"
+        ],
+        "operation": "propose",
+        "relation": "describes",
+        "source": "paper-sample-paper",
+        "target": "concept.solar_evidence_abi"
+      },
+      {
+        "evidence_ids": [
+          "paper-sample-paper"
+        ],
+        "operation": "confirm",
+        "relation": "has_source",
+        "source": "paper-sample-paper",
+        "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T14:13:09Z"
+  },
+  "schema": "research_graph_update.v1",
+  "sprint_id": "sprint-autosci-phase9",
+  "status": "completed",
+  "task_id": "task-autosci-ingest-fixture"
+}

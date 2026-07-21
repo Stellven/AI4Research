@@ -1,0 +1,35 @@
+{
+  "schema_version": "solar.raw_intent.v1",
+  "intent_id": "intent-20260710-185257-94ccb6a0a8",
+  "source": {
+    "channel": "pm_dispatch",
+    "actor": "user",
+    "device": "",
+    "session_id": "",
+    "thread_ref": ""
+  },
+  "raw": {
+    "text": "可信 PM 入口应该自动进入 Planner handoff。",
+    "attachments": [],
+    "quoted_context": [],
+    "received_at": "2026-07-10T18:52:57Z"
+  },
+  "context": {
+    "repo": "",
+    "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout",
+    "related_sprints": [],
+    "knowledge_query": ""
+  },
+  "routing_hints": {
+    "urgency": "normal",
+    "mode": "delivery",
+    "allow_autodispatch": true,
+    "requires_human_confirm": false,
+    "require_research_artifact": false
+  },
+  "trust": {
+    "source_trust": "pm_dispatch",
+    "prompt_injection_risk": "unknown",
+    "contains_secrets": "unknown"
+  }
+}

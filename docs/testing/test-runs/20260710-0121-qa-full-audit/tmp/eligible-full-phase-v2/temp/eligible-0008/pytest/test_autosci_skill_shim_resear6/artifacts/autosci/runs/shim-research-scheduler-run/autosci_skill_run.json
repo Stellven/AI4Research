@@ -1,0 +1,1045 @@
+{
+  "artifacts": [
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json",
+      "type": "route_config"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/config/feature_operator_bindings.v1.json",
+      "type": "binding_config"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/workflow_evolution.research.json",
+      "type": "action_evidence"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/autosci_skill_run_progress.json",
+      "type": "skill_run_progress_json"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+      "type": "scientific_lifecycle_summary"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scheduler_run_stdout.json",
+      "type": "scheduler_lifecycle_stdout"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scheduler_run_stderr.txt",
+      "type": "scheduler_lifecycle_stderr"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/README.md",
+      "type": "human_workspace"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/raw/README.md",
+      "type": "human_workspace"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/outputs/lifecycle_summary.md",
+      "type": "human_workspace"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/graph/citations.jsonl",
+      "type": "human_workspace"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "type": "human_workspace"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/graph/open_questions.md",
+      "type": "human_workspace"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/index.md",
+      "type": "human_workspace"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/index.md",
+      "type": "human_workspace_index"
+    }
+  ],
+  "inputs": {
+    "anchors": [],
+    "binding_config": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/config/feature_operator_bindings.v1.json",
+    "discovery_evidence": [],
+    "from_wiki": false,
+    "lifecycle_summary": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json"
+    ],
+    "limit": 0,
+    "native_options": {
+      "add": "",
+      "affiliation_logo": "",
+      "after_artifacts": [],
+      "all": false,
+      "allowlist_evidence": [],
+      "anonymous": false,
+      "approval_ref": "",
+      "authors": "",
+      "auto": false,
+      "auto_figures": false,
+      "before_artifacts": [],
+      "canvas": false,
+      "checklist": false,
+      "claims_evidence": [],
+      "code_evidence": [],
+      "collect": false,
+      "collect_ready": false,
+      "compile_after_artifacts": [],
+      "compile_allowlist_evidence": [],
+      "compile_approval_ref": "",
+      "compile_before_artifacts": [],
+      "compile_execute_approved": false,
+      "compile_executor_timeout_seconds": 120,
+      "compile_runtime_evidence": [],
+      "compile_target": "",
+      "conference_logo": "",
+      "crystallize": false,
+      "daily_categories": [],
+      "daily_decisions": "",
+      "daily_feed": "",
+      "daily_hours": 0,
+      "daily_max_auto_ingest": 0,
+      "daily_max_recommendations": 0,
+      "daily_mode": "",
+      "daily_no_external": false,
+      "daily_send_email": "",
+      "depth": 0,
+      "difficulty": "",
+      "discover": false,
+      "double_blind": false,
+      "edge_types": "",
+      "env": "",
+      "execute_approved": false,
+      "experiment_after_artifacts": [],
+      "experiment_allowlist_evidence": [],
+      "experiment_approval_ref": "",
+      "experiment_before_artifacts": [],
+      "experiment_execute_approved": false,
+      "experiment_executor_timeout_seconds": 120,
+      "experiment_result_evidence": [],
+      "experiment_runtime_evidence": [],
+      "fix": false,
+      "focus": "",
+      "format": "",
+      "full": false,
+      "idea_approval_ref": "",
+      "layout": "",
+      "lifecycle_summary": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json"
+      ],
+      "max_ideas": 0,
+      "max_rounds": 0,
+      "min_font_size": null,
+      "model_command": "",
+      "model_evidence": [],
+      "no_figures": false,
+      "no_introduction": false,
+      "no_logos": false,
+      "no_refine": false,
+      "novelty_evidence": [],
+      "obsidian": false,
+      "online": false,
+      "page_count": null,
+      "page_limit": null,
+      "paper_slug": "",
+      "pdf_inspection": "",
+      "pilot_handoff_evidence": [],
+      "pilot_runtime_evidence": [],
+      "pipeline": "",
+      "quick": false,
+      "refine_iterations": 0,
+      "remote_check_command": "",
+      "remote_run_dir": "",
+      "render": false,
+      "require_review_llm": false,
+      "results_approval_ref": "",
+      "review": false,
+      "review_llm_command": "",
+      "review_llm_endpoint": "",
+      "review_llm_evidence": [],
+      "review_llm_model": "",
+      "review_llm_provider": "",
+      "reviewer_thread_evidence": [],
+      "runtime_evidence": [],
+      "scheduler_demo": false,
+      "scheduler_dispatch_external_evidence": false,
+      "scheduler_include_blocked_external": true,
+      "scheduler_include_human_gates": false,
+      "scheduler_legacy_smoke_runner": true,
+      "scheduler_node_id": [],
+      "scheduler_require_workflow_config_alignment": false,
+      "scheduler_run": true,
+      "scheduler_timeout": 20.0,
+      "scope": "",
+      "serve": false,
+      "skip_paper": false,
+      "skip_pilot": false,
+      "skip_validation": false,
+      "source_evidence": [],
+      "start_from": "",
+      "stress_test": null,
+      "submission_audit": "",
+      "submission_mode": "",
+      "submission_profile": "",
+      "target_score": 0.0,
+      "title": "",
+      "types": "",
+      "verbose": false,
+      "verified_min_font_size": null,
+      "verified_page_count": null,
+      "visualize": false,
+      "write": false
+    },
+    "negative_ids": [],
+    "paper_path": "",
+    "route_config": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json",
+    "run_id": "shim-research-scheduler-run",
+    "skill": "research",
+    "skill_args": [
+      "skillgen lifecycle"
+    ],
+    "smoke": false,
+    "target": "skillgen lifecycle",
+    "topic": "",
+    "venue": "",
+    "work_dir": "artifacts/autosci/runs/shim-research-scheduler-run",
+    "year": ""
+  },
+  "limitations": [
+    "Evidence-aware lifecycle completion is supported when wiki/source, Review LLM, experiment runtime, collection, and compile/PDF evidence are supplied.",
+    "`$research --scheduler-run` now defaults to `run_scientific_workflow.py`, a config-driven generic workflow runner that dispatches selected workflow nodes through operator_runtime and records `runner_contract=generic_workflow_runner`; the old bounded lifecycle smoke runner remains available only through `--scheduler-legacy-smoke-runner`.",
+    "Scheduler resume runs on the legacy smoke path still emit `autosci_scheduler_resume_boundary.v1` with reused-node fingerprints and no-rerun checks; generic workflow lifecycle summaries emit `scientific_workflow_runtime_manifest.v1`, but production scheduler parity still requires complete non-fixture node selection plus distributed lease/quota/runtime audit.",
+    "`--scheduler-require-workflow-config-alignment` passes only for the full supplied-evidence tail; partial/default runs surface workflow_config_alignment drift or inconclusive status rather than full parity.",
+    "`--scheduler-require-production-dispatch` now fails when the selected scheduler runner reports fixture/smoke input markers or blocked provider/runtime evidence.",
+    "`--scheduler-include-human-gates` records idea/results approval pauses as scheduler-visible blocked nodes, `--online` can carry supplied approval/runtime source evidence into strict scheduler source mode with non-fixture provider channel boundary checks, scheduler experiment stages can carry explicit `--experiment-*` approval/runtime evidence without reusing source evidence paths, `--experiment-execute-approved` can run an allowlisted approved local experiment command, and scheduler publication compile can use compile-specific approved runtime evidence or `--compile-execute-approved`.",
+    "Full parity still requires real provider evidence, audited remote/session stage runners, production scheduler dispatch, and submission/anonymity checks.",
+    "Evidence-aware lifecycle completion is supported when required stage evidence is supplied; human gates and long-running execution are not collapsed into one unapproved black-box operator.",
+    "Approval-gated external effects were not executed by the shim.",
+    "Fixture bridge fallback is disabled unless --smoke is passed explicitly.",
+    "Scheduler workflow-config drift was detected; smoke lifecycle evidence must not be treated as full scheduler parity."
+  ],
+  "node_id": "autosci-skill-research",
+  "outputs": {
+    "authorization_requests": [
+      {
+        "autosci_command": "/research",
+        "backend_action": "run_research_lifecycle",
+        "continuation": {
+          "access_patch_options": [
+            {
+              "args": [
+                "--approval-ref",
+                "<approval-ref>",
+                "--allowlist-evidence",
+                "<allowlist-evidence.json>",
+                "--before-artifact",
+                "<before-artifact>",
+                "--runtime-evidence",
+                "<runtime-evidence.json>",
+                "--after-artifact",
+                "<after-artifact>",
+                "--execute-approved"
+              ],
+              "name": "hitl_approval"
+            },
+            {
+              "args": [
+                "--gate-mode",
+                "parity_demo"
+              ],
+              "limitations": [
+                "Only bounded local side effects may execute in parity_demo."
+              ],
+              "name": "bounded_policy_mode"
+            },
+            {
+              "args": [
+                "--gate-mode",
+                "autosci_native"
+              ],
+              "limitations": [
+                "Runtime proof is still required before claiming full parity."
+              ],
+              "name": "native_policy_mode"
+            }
+          ],
+          "request_fingerprint": "bc1fc5f8d4969c668950fdd5326ad78ffea6307bcfba8767ae7e7abce7090dec",
+          "resume_strategy": "rerun_same_skill_with_authorization_patch",
+          "retriable": true,
+          "same_command_supported": true,
+          "schema": "autosci_route_gate_continuation.v1",
+          "status": "awaiting_authorization"
+        },
+        "coverage_status": "partial",
+        "non_error_contract": {
+          "blocked_runs_exit_successfully": true,
+          "evidence_status": "inconclusive"
+        },
+        "physical_operator": "SolarScientificLifecycleOperator",
+        "prompt": "This AutoSci route is approval-gated. Grant access or provide typed runtime evidence, then rerun the same command with the authorization patch.",
+        "requested_access": {
+          "approval_ref": true,
+          "before_after_artifacts": true,
+          "gate_mode": [
+            "parity_demo",
+            "autosci_native"
+          ],
+          "runtime_evidence": true
+        },
+        "schema": "autosci_route_gate_authorization_request.v1",
+        "side_effect_policy": "approval_required",
+        "skill": "research",
+        "status": "awaiting_authorization"
+      },
+      {
+        "continuation": {
+          "request_fingerprint": "d3ae6cf56d77370f017a44d9cd8cb88726a1e899aa9ca6893f8dd24de57a541e",
+          "resume_args_patch": [
+            "--review-llm-evidence",
+            "<review-llm-evidence.json>"
+          ],
+          "resume_node_id": "report_plan",
+          "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+          "retriable": true,
+          "same_workflow_supported": true,
+          "schema": "scientific_workflow_gate_continuation.v1",
+          "status": "awaiting_authorization"
+        },
+        "job_id": "shim-research-scheduler-run-scheduler",
+        "native_skill": "plan_report",
+        "node_id": "report_plan",
+        "non_error_contract": {
+          "blocked_runs_exit_successfully": true,
+          "lifecycle_status": "blocked"
+        },
+        "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+        "reason": "Waiting for completed Review LLM artifact_review.v1 evidence.",
+        "requested_side_effects": [
+          "review_llm"
+        ],
+        "required_inputs": [
+          "review_llm_evidence"
+        ],
+        "schema": "scientific_workflow_gate_authorization_request.v1",
+        "status": "awaiting_authorization"
+      },
+      {
+        "continuation": {
+          "request_fingerprint": "f4721bdcbc09e01816c8933e1f8302d1a872f88c0ace2210897cca5c67f627b0",
+          "resume_args_patch": [
+            "--compile-target",
+            "<paper-or-tex-target>",
+            "--compile-runtime-evidence",
+            "<compile-runtime-evidence.json>",
+            "--compile-approval-ref",
+            "<approval-ref>"
+          ],
+          "resume_node_id": "publication_produce",
+          "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+          "retriable": true,
+          "same_workflow_supported": true,
+          "schema": "scientific_workflow_gate_continuation.v1",
+          "status": "awaiting_authorization"
+        },
+        "job_id": "shim-research-scheduler-run-scheduler",
+        "native_skill": "compile_paper",
+        "node_id": "publication_produce",
+        "non_error_contract": {
+          "blocked_runs_exit_successfully": true,
+          "lifecycle_status": "blocked"
+        },
+        "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+        "reason": "Waiting for LaTeX/PDF compile evidence or approved compile runtime evidence.",
+        "requested_side_effects": [
+          "tex_compile",
+          "publication_runtime"
+        ],
+        "required_inputs": [
+          "compile_target",
+          "compile_runtime_evidence",
+          "compile_approval_ref"
+        ],
+        "schema": "scientific_workflow_gate_authorization_request.v1",
+        "status": "awaiting_authorization"
+      }
+    ],
+    "authorization_required": true,
+    "skill_run": {
+      "action_count": 1,
+      "actions": [
+        {
+          "action": "run_research_lifecycle",
+          "evidence_ids": [
+            "artifacts/autosci/runs/shim-research-scheduler-run/research_lifecycle_recommended_changes.md",
+            "recommended_changes_markdown",
+            "artifacts/autosci/runs/shim-research-scheduler-run/patch_candidates",
+            "patch_candidates_directory",
+            "artifacts/autosci/runs/shim-research-scheduler-run/run_research_lifecycle_approval_contract.json",
+            "approval_contract_json",
+            "artifacts/autosci/runs/shim-research-scheduler-run/run_research_lifecycle_gate_policy_decision.json",
+            "gate_policy_decision_json",
+            "artifacts/autosci/runs/shim-research-scheduler-run/run_research_lifecycle_side_effect_access_request.json",
+            "side_effect_access_request_json",
+            "artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md",
+            "pipeline_progress_markdown",
+            "artifacts/autosci/workspace/wiki/outputs/PIPELINE_REPORT.md",
+            "pipeline_report_markdown",
+            "artifacts/autosci/workspace/wiki/outputs/pipeline-state.json",
+            "pipeline_state_json",
+            "artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+            "research_lifecycle_stage_evidence_json",
+            "artifacts/autosci/runs/shim-research-scheduler-run/workflow_evolution.research.json",
+            "solar_evidence_json",
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+            "skillgen lifecycle",
+            "Research lifecycle native side effects require explicit access before stage runners can execute.",
+            "Approval/runtime evidence contract is not fully verified: approval_ref, allowlist_evidence, before_artifacts, runtime_evidence, after_artifacts",
+            "Side-effect access is required; no protected native side effects were executed.",
+            "node-run-research-lifecycle",
+            "read_local is allowed in strict_hitl.",
+            "write_artifact is allowed in strict_hitl.",
+            "network_fetch requires HITL approval in strict_hitl.",
+            "local_command requires HITL approval in strict_hitl.",
+            "wiki_mutation requires HITL approval in strict_hitl.",
+            "remote_execution requires HITL approval in strict_hitl.",
+            "tex_compile requires HITL approval in strict_hitl.",
+            "proposed",
+            "workflow_template",
+            "Record the user-approved resume stage and exact stage runner before executing a native pipeline.",
+            "research.lifecycle.resume",
+            "research_lifecycle_evidence_gate",
+            "ScientificWorkflowEvolver",
+            "stage-setup",
+            "setup",
+            "blocked",
+            "Side-effect access is required before native lifecycle stage runners can execute.",
+            "Native research lifecycle execution is incomplete until every required stage has verified evidence.",
+            "setup: Native research lifecycle execution was not launched without approval/runtime evidence.",
+            "Approval contract missing: approval_ref, allowlist_evidence, before_artifacts, runtime_evidence, after_artifacts",
+            "Human approval is required before network fetch, experiment deployment, workspace mutation, or paper compilation.",
+            "research.lifecycle.approval",
+            "The current AutoSci gate mode blocked required native lifecycle side effects; grant access or provide typed runtime evidence.",
+            "research.lifecycle.side_effect_access",
+            "Native research lifecycle side effects were not executed because the gate policy requires access approval.",
+            "side-effect-access-required",
+            "No native AutoSci stage runner evidence was supplied for this gated lifecycle request.",
+            "native-stage-runner-not-executed",
+            "research-lifecycle:skillgen-lifecycle",
+            "pipeline-progress:skillgen-lifecycle",
+            "pipeline-report:skillgen-lifecycle",
+            "Expose auditable pipeline progress and required full-parity evidence without pretending the lifecycle executed.",
+            "skillgen-lifecycle",
+            "blocked_side_effect_access_required",
+            "N/A",
+            "run-research-lifecycle-skillgen-lifecycle",
+            "proposed_only",
+            "manual",
+            "change.manual.research-lifecycle-resume",
+            "Persist target, resume stage, venue, and skip-paper intent before executing native lifecycle stages.",
+            "research lifecycle resume protocol",
+            "gate",
+            "change.gate.research-lifecycle-required-evidence",
+            "Require online evidence, Review LLM, experiment runtime, collection, and compile artifacts before marking the lifecycle complete.",
+            "research lifecycle gate",
+            "change.workflow.research-lifecycle-stage-artifacts",
+            "Write pipeline progress, state, and report artifacts so resume and audit checks no longer depend on route-only evidence.",
+            "wiki/outputs pipeline artifacts",
+            "A native research lifecycle request needs stage-resumable wiki-first state before protected side effects can run.",
+            "scientific research lifecycle",
+            "blocked_approval",
+            "Setup and topic initialization",
+            "ingest",
+            "pending",
+            "Source ingest and wiki paper registration",
+            "discover",
+            "Landscape scan and source evidence fetch",
+            "ideate",
+            "Gap map and idea generation",
+            "novelty-review",
+            "Novelty and Review LLM gates",
+            "experiment-design",
+            "Experiment design",
+            "experiment-run",
+            "Experiment deployment",
+            "collect",
+            "Result collection",
+            "review",
+            "Result and artifact review",
+            "paper-plan",
+            "Publication plan",
+            "paper-compile",
+            "LaTeX/PDF compile and checklist",
+            "run_research_lifecycle",
+            "artifacts/autosci",
+            "artifacts/scientific",
+            "strict_hitl",
+            "read_local",
+            "write_artifact",
+            "network_fetch",
+            "local_command",
+            "wiki_mutation",
+            "remote_execution",
+            "tex_compile",
+            "SOLAR_AUTOSCI_ALLOW_NETWORK=1",
+            "SOLAR_AUTOSCI_ALLOW_REMOTE=1",
+            "parity_demo",
+            "Use only for bounded local parity side effects. Network still requires SOLAR_AUTOSCI_ALLOW_NETWORK=1.",
+            "bounded_policy_mode",
+            "autosci_native",
+            "Bypasses Solar gate blocking; runtime evidence remains required before claiming full parity.",
+            "native_policy_mode",
+            "<approval-ref>",
+            "Strict HITL resume must provide enough typed artifacts for the action approval contract to verify.",
+            "hitl_approval",
+            "allowlist_evidence",
+            "before_artifact",
+            "runtime_evidence",
+            "after_artifact",
+            "inconclusive",
+            "f2d1bfae58779ed1332cbfd21af66587063d330d09639ab303e290ab6b8b0ca7",
+            "rerun_same_action_with_access_patch",
+            "autosci_side_effect_continuation.v1",
+            "awaiting_side_effect_access",
+            "2026-07-10T14:03:12Z",
+            "Re-run with an AutoSci gate mode that may execute the requested side effects, such as `--gate-mode parity_demo`, `--gate-mode unsafe_native`, or `--gate-mode autosci_native`, depending on risk.",
+            "For risky native side effects, set the explicit SOLAR_AUTOSCI_ALLOW_* opt-in variables listed in requested_access.environment_opt_ins.",
+            "When strict HITL is required, provide approval_ref plus before/allowlist/runtime/after evidence artifacts instead of relying on a silent dry run.",
+            "Protected native side effects were not executed for this action.",
+            "This request is an access boundary, not proof that the side effects completed.",
+            "research",
+            "approved source discovery/network fetch evidence",
+            "approved experiment deployment/runtime evidence",
+            "approved paper compile evidence",
+            "wiki mutation proof for lifecycle state updates",
+            "autosci_side_effect_access_request.v1",
+            "plugins/autosci",
+            "workflow_evolution.v1",
+            "phase19-skillgen-operator-smoke",
+            "task-autosci-skillgen-run_research_lifecycle"
+          ],
+          "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/workflow_evolution.research.json",
+          "gate_status": "schema_only",
+          "reasons": [],
+          "schema": "workflow_evolution.v1",
+          "status": "schema_only",
+          "warnings": [
+            "evidence status is inconclusive"
+          ]
+        }
+      ],
+      "authorization_requests": [
+        {
+          "autosci_command": "/research",
+          "backend_action": "run_research_lifecycle",
+          "continuation": {
+            "access_patch_options": [
+              {
+                "args": [
+                  "--approval-ref",
+                  "<approval-ref>",
+                  "--allowlist-evidence",
+                  "<allowlist-evidence.json>",
+                  "--before-artifact",
+                  "<before-artifact>",
+                  "--runtime-evidence",
+                  "<runtime-evidence.json>",
+                  "--after-artifact",
+                  "<after-artifact>",
+                  "--execute-approved"
+                ],
+                "name": "hitl_approval"
+              },
+              {
+                "args": [
+                  "--gate-mode",
+                  "parity_demo"
+                ],
+                "limitations": [
+                  "Only bounded local side effects may execute in parity_demo."
+                ],
+                "name": "bounded_policy_mode"
+              },
+              {
+                "args": [
+                  "--gate-mode",
+                  "autosci_native"
+                ],
+                "limitations": [
+                  "Runtime proof is still required before claiming full parity."
+                ],
+                "name": "native_policy_mode"
+              }
+            ],
+            "request_fingerprint": "bc1fc5f8d4969c668950fdd5326ad78ffea6307bcfba8767ae7e7abce7090dec",
+            "resume_strategy": "rerun_same_skill_with_authorization_patch",
+            "retriable": true,
+            "same_command_supported": true,
+            "schema": "autosci_route_gate_continuation.v1",
+            "status": "awaiting_authorization"
+          },
+          "coverage_status": "partial",
+          "non_error_contract": {
+            "blocked_runs_exit_successfully": true,
+            "evidence_status": "inconclusive"
+          },
+          "physical_operator": "SolarScientificLifecycleOperator",
+          "prompt": "This AutoSci route is approval-gated. Grant access or provide typed runtime evidence, then rerun the same command with the authorization patch.",
+          "requested_access": {
+            "approval_ref": true,
+            "before_after_artifacts": true,
+            "gate_mode": [
+              "parity_demo",
+              "autosci_native"
+            ],
+            "runtime_evidence": true
+          },
+          "schema": "autosci_route_gate_authorization_request.v1",
+          "side_effect_policy": "approval_required",
+          "skill": "research",
+          "status": "awaiting_authorization"
+        },
+        {
+          "continuation": {
+            "request_fingerprint": "d3ae6cf56d77370f017a44d9cd8cb88726a1e899aa9ca6893f8dd24de57a541e",
+            "resume_args_patch": [
+              "--review-llm-evidence",
+              "<review-llm-evidence.json>"
+            ],
+            "resume_node_id": "report_plan",
+            "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+            "retriable": true,
+            "same_workflow_supported": true,
+            "schema": "scientific_workflow_gate_continuation.v1",
+            "status": "awaiting_authorization"
+          },
+          "job_id": "shim-research-scheduler-run-scheduler",
+          "native_skill": "plan_report",
+          "node_id": "report_plan",
+          "non_error_contract": {
+            "blocked_runs_exit_successfully": true,
+            "lifecycle_status": "blocked"
+          },
+          "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+          "reason": "Waiting for completed Review LLM artifact_review.v1 evidence.",
+          "requested_side_effects": [
+            "review_llm"
+          ],
+          "required_inputs": [
+            "review_llm_evidence"
+          ],
+          "schema": "scientific_workflow_gate_authorization_request.v1",
+          "status": "awaiting_authorization"
+        },
+        {
+          "continuation": {
+            "request_fingerprint": "f4721bdcbc09e01816c8933e1f8302d1a872f88c0ace2210897cca5c67f627b0",
+            "resume_args_patch": [
+              "--compile-target",
+              "<paper-or-tex-target>",
+              "--compile-runtime-evidence",
+              "<compile-runtime-evidence.json>",
+              "--compile-approval-ref",
+              "<approval-ref>"
+            ],
+            "resume_node_id": "publication_produce",
+            "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+            "retriable": true,
+            "same_workflow_supported": true,
+            "schema": "scientific_workflow_gate_continuation.v1",
+            "status": "awaiting_authorization"
+          },
+          "job_id": "shim-research-scheduler-run-scheduler",
+          "native_skill": "compile_paper",
+          "node_id": "publication_produce",
+          "non_error_contract": {
+            "blocked_runs_exit_successfully": true,
+            "lifecycle_status": "blocked"
+          },
+          "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+          "reason": "Waiting for LaTeX/PDF compile evidence or approved compile runtime evidence.",
+          "requested_side_effects": [
+            "tex_compile",
+            "publication_runtime"
+          ],
+          "required_inputs": [
+            "compile_target",
+            "compile_runtime_evidence",
+            "compile_approval_ref"
+          ],
+          "schema": "scientific_workflow_gate_authorization_request.v1",
+          "status": "awaiting_authorization"
+        }
+      ],
+      "autosci_command": "/research",
+      "execution_status": "gated",
+      "failed_count": 0,
+      "passed_count": 0,
+      "route": {
+        "backend_mode": "route_plan",
+        "coverage_status": "partial",
+        "evidence_schema": "workflow_evolution.v1",
+        "physical_operator": "SolarScientificLifecycleOperator",
+        "solar_backend_action": "run_research_lifecycle",
+        "solar_capability": "cap.research-workflow-evolve",
+        "solar_logical_operator": "ScientificWorkflowEvolver"
+      },
+      "scheduler_failed": false,
+      "scheduler_lifecycle": {
+        "authorization_prompt": "One or more legacy lifecycle gates are waiting for authorization or runtime evidence; supply the requested access patch and resume the lifecycle.",
+        "authorization_request_count": 2,
+        "authorization_requests": [
+          {
+            "continuation": {
+              "request_fingerprint": "d3ae6cf56d77370f017a44d9cd8cb88726a1e899aa9ca6893f8dd24de57a541e",
+              "resume_args_patch": [
+                "--review-llm-evidence",
+                "<review-llm-evidence.json>"
+              ],
+              "resume_node_id": "report_plan",
+              "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+              "retriable": true,
+              "same_workflow_supported": true,
+              "schema": "scientific_workflow_gate_continuation.v1",
+              "status": "awaiting_authorization"
+            },
+            "job_id": "shim-research-scheduler-run-scheduler",
+            "native_skill": "plan_report",
+            "node_id": "report_plan",
+            "non_error_contract": {
+              "blocked_runs_exit_successfully": true,
+              "lifecycle_status": "blocked"
+            },
+            "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+            "reason": "Waiting for completed Review LLM artifact_review.v1 evidence.",
+            "requested_side_effects": [
+              "review_llm"
+            ],
+            "required_inputs": [
+              "review_llm_evidence"
+            ],
+            "schema": "scientific_workflow_gate_authorization_request.v1",
+            "status": "awaiting_authorization"
+          },
+          {
+            "continuation": {
+              "request_fingerprint": "f4721bdcbc09e01816c8933e1f8302d1a872f88c0ace2210897cca5c67f627b0",
+              "resume_args_patch": [
+                "--compile-target",
+                "<paper-or-tex-target>",
+                "--compile-runtime-evidence",
+                "<compile-runtime-evidence.json>",
+                "--compile-approval-ref",
+                "<approval-ref>"
+              ],
+              "resume_node_id": "publication_produce",
+              "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+              "retriable": true,
+              "same_workflow_supported": true,
+              "schema": "scientific_workflow_gate_continuation.v1",
+              "status": "awaiting_authorization"
+            },
+            "job_id": "shim-research-scheduler-run-scheduler",
+            "native_skill": "compile_paper",
+            "node_id": "publication_produce",
+            "non_error_contract": {
+              "blocked_runs_exit_successfully": true,
+              "lifecycle_status": "blocked"
+            },
+            "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+            "reason": "Waiting for LaTeX/PDF compile evidence or approved compile runtime evidence.",
+            "requested_side_effects": [
+              "tex_compile",
+              "publication_runtime"
+            ],
+            "required_inputs": [
+              "compile_target",
+              "compile_runtime_evidence",
+              "compile_approval_ref"
+            ],
+            "schema": "scientific_workflow_gate_authorization_request.v1",
+            "status": "awaiting_authorization"
+          }
+        ],
+        "authorization_required": true,
+        "blocked_node_count": 2,
+        "command": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tools/run_scientific_lifecycle_smoke.py",
+          "--harness-dir",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6",
+          "--job-id",
+          "shim-research-scheduler-run-scheduler",
+          "--timeout-seconds",
+          "20.0",
+          "--output-dir",
+          "artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle",
+          "--out",
+          "artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+          "--authorization-blocked-exit-zero",
+          "--include-blocked-external",
+          "--experiment-executor-timeout-seconds",
+          "120",
+          "--compile-executor-timeout-seconds",
+          "120"
+        ],
+        "dispatch_boundary": {
+          "blocking_reasons": [
+            "runner_contract=bounded_smoke_runner",
+            "node_inputs_include_smoke_mode",
+            "node_inputs_include_fixture_or_fixture_fallback"
+          ],
+          "fixture_nodes": [
+            "claim_extract",
+            "claim_verify",
+            "code_evidence_map",
+            "experiment_design",
+            "experiment_monitor",
+            "experiment_run",
+            "graph_update",
+            "idea_evaluate",
+            "idea_generate",
+            "literature_discover",
+            "memory_update_initial",
+            "method_extract",
+            "paper_analyze",
+            "paper_ingest"
+          ],
+          "limitations": [
+            "This lifecycle is dispatched through the bounded smoke runner, not a generic production scheduler.",
+            "Production parity requires a non-smoke workflow dispatcher with no fixture/smoke input markers and durable resume/runtime proof."
+          ],
+          "production_ready": false,
+          "profiled_nodes": [
+            "claim_extract",
+            "claim_verify",
+            "code_evidence_map",
+            "experiment_design",
+            "experiment_monitor",
+            "experiment_run",
+            "graph_update",
+            "idea_evaluate",
+            "idea_generate",
+            "literature_discover",
+            "memory_update_initial",
+            "method_extract",
+            "paper_analyze",
+            "paper_ingest"
+          ],
+          "required_nodes": [
+            "literature_discover",
+            "paper_ingest",
+            "paper_analyze",
+            "memory_update_initial",
+            "graph_update",
+            "claim_extract",
+            "method_extract",
+            "code_evidence_map",
+            "idea_generate",
+            "idea_evaluate",
+            "experiment_design",
+            "experiment_run",
+            "experiment_monitor",
+            "claim_verify",
+            "report_plan",
+            "publication_produce"
+          ],
+          "runner": "tools/run_scientific_lifecycle_smoke.py",
+          "runner_contract": "bounded_smoke_runner",
+          "schema": "autosci_scheduler_dispatch_boundary.v1",
+          "smoke_nodes": [
+            "claim_extract",
+            "claim_verify",
+            "code_evidence_map",
+            "experiment_design",
+            "experiment_monitor",
+            "experiment_run",
+            "graph_update",
+            "idea_evaluate",
+            "idea_generate",
+            "literature_discover",
+            "memory_update_initial",
+            "method_extract",
+            "paper_analyze",
+            "paper_ingest"
+          ],
+          "status": "bounded_smoke",
+          "workflow_config_path": "workflows/scientific_research_lifecycle_full_v1.json",
+          "workflow_config_sha256": "61bcd747f0ade7361ec2c7f15916eea8d23210067483a516b8103541d8b67ac8",
+          "workflow_id": "scientific_research_lifecycle_full_v1"
+        },
+        "dispatch_boundary_blocking_reasons": [
+          "runner_contract=bounded_smoke_runner",
+          "node_inputs_include_smoke_mode",
+          "node_inputs_include_fixture_or_fixture_fallback"
+        ],
+        "dispatch_boundary_production_ready": false,
+        "dispatch_boundary_status": "bounded_smoke",
+        "exit_code": 0,
+        "job_id": "shim-research-scheduler-run-scheduler",
+        "lifecycle_status": "blocked",
+        "node_count": 14,
+        "runner_kind": "bounded_smoke",
+        "schema": "autosci_scheduler_lifecycle_run.v1",
+        "status": "blocked",
+        "stderr_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scheduler_run_stderr.txt",
+        "stdout_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scheduler_run_stdout.json",
+        "summary_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+        "workflow_config_alignment": {
+          "configured_nodes": [
+            "literature_discover",
+            "paper_ingest",
+            "paper_analyze",
+            "memory_update_initial",
+            "graph_update",
+            "claim_extract",
+            "method_extract",
+            "code_evidence_map",
+            "idea_generate",
+            "idea_evaluate",
+            "experiment_design",
+            "experiment_run",
+            "experiment_monitor",
+            "claim_verify",
+            "report_plan",
+            "report_draft",
+            "artifact_review",
+            "publication_produce",
+            "memory_update_final",
+            "workflow_evolve"
+          ],
+          "configured_nodes_missing_from_runner": [],
+          "configured_nodes_not_required_by_run": [
+            "report_draft",
+            "artifact_review",
+            "memory_update_final",
+            "workflow_evolve"
+          ],
+          "configured_required_order": [
+            "literature_discover",
+            "paper_ingest",
+            "paper_analyze",
+            "memory_update_initial",
+            "graph_update",
+            "claim_extract",
+            "method_extract",
+            "code_evidence_map",
+            "idea_generate",
+            "idea_evaluate",
+            "experiment_design",
+            "experiment_run",
+            "experiment_monitor",
+            "claim_verify",
+            "report_plan",
+            "publication_produce"
+          ],
+          "issues": [
+            "configured_nodes_not_required_by_run"
+          ],
+          "ok": false,
+          "order_matches": true,
+          "required_nodes": [
+            "literature_discover",
+            "paper_ingest",
+            "paper_analyze",
+            "memory_update_initial",
+            "graph_update",
+            "claim_extract",
+            "method_extract",
+            "code_evidence_map",
+            "idea_generate",
+            "idea_evaluate",
+            "experiment_design",
+            "experiment_run",
+            "experiment_monitor",
+            "claim_verify",
+            "report_plan",
+            "publication_produce"
+          ],
+          "required_run_nodes_not_declared_in_config": [],
+          "runner_available_nodes": [
+            "literature_discover",
+            "paper_ingest",
+            "paper_analyze",
+            "memory_update_initial",
+            "graph_update",
+            "claim_extract",
+            "method_extract",
+            "code_evidence_map",
+            "idea_generate",
+            "idea_evaluate",
+            "experiment_design",
+            "experiment_run",
+            "experiment_monitor",
+            "claim_verify",
+            "report_draft",
+            "artifact_review",
+            "memory_update_final",
+            "workflow_evolve",
+            "report_plan",
+            "publication_produce"
+          ],
+          "runner_configured_order": [
+            "literature_discover",
+            "paper_ingest",
+            "paper_analyze",
+            "memory_update_initial",
+            "graph_update",
+            "claim_extract",
+            "method_extract",
+            "code_evidence_map",
+            "idea_generate",
+            "idea_evaluate",
+            "experiment_design",
+            "experiment_run",
+            "experiment_monitor",
+            "claim_verify",
+            "report_plan",
+            "publication_produce"
+          ],
+          "runner_nodes_not_declared_in_config": [],
+          "status": "drift",
+          "workflow_config_path": "workflows/scientific_research_lifecycle_full_v1.json"
+        },
+        "workflow_config_alignment_issues": [
+          "configured_nodes_not_required_by_run"
+        ],
+        "workflow_config_alignment_ok": false,
+        "workflow_config_alignment_status": "drift"
+      },
+      "schema_only_count": 1,
+      "selected_skill": "research",
+      "side_effect_policy": "approval_required",
+      "workspace": {
+        "include_idea_pages": true,
+        "index_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/index.md",
+        "policy": "human-facing workspace projection; execution logs remain Solar-managed",
+        "solar_managed_run_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/runs/shim-research-scheduler-run",
+        "updated_count": 7,
+        "updated_paths": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/README.md",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/raw/README.md",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/outputs/lifecycle_summary.md",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/graph/citations.jsonl",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/graph/context_brief.md",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/graph/open_questions.md",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki/index.md"
+        ],
+        "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace/wiki",
+        "workspace_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear6/artifacts/autosci/workspace"
+      }
+    }
+  },
+  "provenance": {
+    "implementation_package": "harness.plugins.autosci",
+    "operator_id": "AutoSciSkillShim",
+    "timestamp": "2026-07-10T14:03:12.576641Z"
+  },
+  "schema": "autosci_skill_run.v1",
+  "sprint_id": "shim-research-scheduler-run",
+  "status": "inconclusive",
+  "task_id": "autosci-skill-research"
+}

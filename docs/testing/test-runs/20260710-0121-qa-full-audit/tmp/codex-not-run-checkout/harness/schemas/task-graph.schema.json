@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/task-graph.schema.json",
+  "title": "Solar Harness TaskGraph",
+  "type": "object",
+  "required": ["sprint_id", "nodes"],
+  "additionalProperties": true,
+  "properties": {
+    "sprint_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dag_variant": {
+      "type": "string",
+      "enum": ["short", "standard", "parallel_spec", "research"]
+    },
+    "research_mode": {
+      "type": "boolean"
+    },
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "required_gates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "node_results": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/result"
+      }
+    },
+    "gate_results": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/result"
+      }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "goal", "depends_on", "acceptance", "priority", "required_phase", "required_node_id", "required_node_status"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "goal": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "write_scope": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "read_scope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "logical_operator": {
+          "type": "string"
+        },
+        "verifier_required": {
+          "type": "boolean"
+        },
+        "research_stage": {
+          "type": "string"
+        },
+        "evidence_policy": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "capability_inference": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "preferred_model": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "number"
+        },
+        "required_phase": {
+          "type": ["string", "null"]
+        },
+        "required_node_id": {
+          "type": ["string", "null"]
+        },
+        "required_node_status": {
+          "type": ["string", "null"]
+        },
+        "requirement_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "acceptance_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "gate": {
+          "type": "string"
+        },
+        "acceptance": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "estimated_cost": {
+          "type": "number",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "queued", "assigned", "dispatched", "in_progress", "reviewing", "passed", "failed", "skipped"]
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

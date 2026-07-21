@@ -1,0 +1,136 @@
+{
+  "action": "design_experiment",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/experiment_design_final_execution_boundary.json",
+        "type": "experiment_design_final_execution_boundary_json"
+      },
+      {
+        "path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/experiment_plan.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "allow_network_fetch": false,
+      "claim_id": "claim-001",
+      "execution_mode": "fixture",
+      "idea_evaluation_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/idea_evaluation.json",
+      "paper_id": "paper-shim-research-scheduler-run-scheduler",
+      "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+      "smoke_mode": true
+    },
+    "limitations": [
+      "Fixture experiment design is bounded to local bridge artifacts.",
+      "Review LLM design validation was not supplied.",
+      "Experiment design final execution readiness requires resolved target evidence, completed Review LLM validation, approval preflight, command handoff, and expected artifact handoff."
+    ],
+    "node_id": "experiment_design",
+    "outputs": {
+      "experiment_plan": {
+        "approval_required": false,
+        "baseline": "previous fixture bridge run writes result.json and evidence.jsonl",
+        "baseline_absence_reason": "",
+        "command_allowlist": [
+          "python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment",
+          "python3 plugins/autosci/bin/autosci_bridge.py run --action monitor_experiment"
+        ],
+        "evidence_ids": [
+          "claim-001"
+        ],
+        "execution_mode": "fixture",
+        "expected_artifacts": [
+          "experiment_result.json",
+          "experiment_status.json",
+          "experiment_run.log"
+        ],
+        "experiment_id": "exp-001",
+        "hypothesis": "Fixture execution will emit result evidence, a ledger entry, and a monitorable status without external side effects.",
+        "metrics": [
+          "result_json_written",
+          "evidence_jsonl_written",
+          "fixture_passed"
+        ],
+        "objective": "Validate evidence coverage for `claim-001` using a bounded fixture experiment.",
+        "procedure": [
+          "Confirm the experiment plan evidence is present.",
+          "Run the AutoSci bridge in fixture mode only.",
+          "Record command, metrics, logs, and produced evidence paths.",
+          "Validate experiment_result.v1 and experiment_status.v1 gates."
+        ],
+        "resource_limits": {
+          "network": "denied",
+          "timeout_seconds": 30,
+          "write_scope": "artifact_dir_only"
+        },
+        "review_llm": {
+          "checked_paths": [],
+          "claim_id": "claim-001",
+          "reasons": [
+            "No Review LLM evidence was supplied."
+          ],
+          "status": "unavailable"
+        },
+        "source_context": {
+          "final_execution_boundary": {
+            "approval_ready_for_execution": false,
+            "approval_required": false,
+            "approval_state": "approval_required",
+            "artifact_handoff_declared": true,
+            "blocking_reasons": [
+              "completed Review LLM design validation is missing",
+              "experiment execution approval is not required by this plan",
+              "approved runtime preflight contract is incomplete"
+            ],
+            "command_allowlist": [
+              "python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment",
+              "python3 plugins/autosci/bin/autosci_bridge.py run --action monitor_experiment"
+            ],
+            "command_handoff_declared": true,
+            "execution_mode": "fixture",
+            "execution_ready": false,
+            "expected_artifacts": [
+              "experiment_result.json",
+              "experiment_status.json",
+              "experiment_run.log"
+            ],
+            "limitations": [
+              "Experiment design final execution readiness requires resolved target evidence, completed Review LLM validation, approval preflight, command handoff, and expected artifact handoff."
+            ],
+            "review_evidence_ids": [],
+            "review_llm_completed": false,
+            "review_llm_status": "unavailable",
+            "schema": "autosci_experiment_design_final_execution_boundary.v1",
+            "status": "execution_readiness_incomplete",
+            "target_ref": "claim-001",
+            "target_resolved": true
+          }
+        },
+        "success_criteria": [
+          "result_json_written == true",
+          "evidence_jsonl_written == true",
+          "fixture_passed == true"
+        ],
+        "variables": [
+          "execution_mode",
+          "evidence_payload"
+        ]
+      }
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T19:24:08Z"
+    },
+    "schema": "experiment_plan.v1",
+    "sprint_id": "shim-research-scheduler-run-scheduler",
+    "status": "completed",
+    "task_id": "task-shim-research-scheduler-run-scheduler-experiment_design"
+  },
+  "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/evidence.jsonl",
+  "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/experiment_plan.json",
+  "ok": true,
+  "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/design_experiment.result.json",
+  "schema": "experiment_plan.v1",
+  "status": "completed"
+}

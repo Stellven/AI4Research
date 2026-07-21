@@ -1,0 +1,1 @@
+{"schema": "experiment_result.v1", "task_id": "result-parity-write", "status": "completed", "outputs": {"result": {"experiment_id": "exp-parity-write", "outcome": "supports", "evidence_ids": ["experiment:parity-write"]}}}

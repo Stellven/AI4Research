@@ -1,0 +1,10 @@
+F.                                                                       [100%]
+=================================== FAILURES ===================================
+______________ test_reasonix_physical_operators_are_advisory_only ______________
+harness/tests/test_reasonix_advisory_routing.py:46: in test_reasonix_physical_operators_are_advisory_only
+    assert "builder" not in roles, f"{op_id}: Reasonix must not advertise builder role"
+E   AssertionError: mini-reasonix-deepseek-v4-flash-builder-1: Reasonix must not advertise builder role
+E   assert 'builder' not in {'builder'}
+=========================== short test summary info ============================
+FAILED harness/tests/test_reasonix_advisory_routing.py::test_reasonix_physical_operators_are_advisory_only
+1 failed, 1 passed, 4 deselected in 0.03s

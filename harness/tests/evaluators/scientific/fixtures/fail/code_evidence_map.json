@@ -1,0 +1,36 @@
+{
+  "schema": "code_evidence_map.v1",
+  "task_id": "task.phase1.sample.code_map",
+  "sprint_id": "sprint.autosci.phase1",
+  "node_id": "node.code_evidence_map",
+  "status": "completed",
+  "inputs": {
+    "claim_id": "claim.sample.001"
+  },
+  "outputs": {
+    "mappings": [
+      {
+        "mapping_id": "mapping.sample.001",
+        "claim_id": "claim.sample.001",
+        "repo_or_path": "experiments/sample",
+        "files": [],
+        "execution_entrypoint": "python run.py",
+        "evidence_ids": []
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "code_evidence_map",
+      "path": "artifacts/autosci/fixtures/code_evidence_map.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificCodeEvidenceMapper",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": [
+    "Fixture path is illustrative and not executed."
+  ]
+}

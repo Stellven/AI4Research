@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "source": "https://github.com/affaan-m/everything-claude-code",
+  "default_action": "defer",
+  "allowed": {
+    "agents": [],
+    "commands": [],
+    "skills": [],
+    "rules": [],
+    "hooks": [],
+    "mcp_configs": []
+  },
+  "blocked_by_default": [
+    "hooks",
+    "mcp_configs",
+    "install_scripts",
+    "auto_update_scripts",
+    "global_settings"
+  ],
+  "notes": [
+    "Empty allowlist is intentional until collision review passes.",
+    "No hook may be activated globally without explicit review.",
+    "All synced names should use a Solar prefix or documented precedence rule when collisions exist."
+  ]
+}

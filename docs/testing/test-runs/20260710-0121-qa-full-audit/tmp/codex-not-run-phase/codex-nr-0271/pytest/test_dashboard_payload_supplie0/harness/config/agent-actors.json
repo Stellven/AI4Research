@@ -1,0 +1,12 @@
+{
+  "actors": {
+    "builder-spark": {
+      "actor_id": "builder-spark",
+      "host_id": "spark-host",
+      "capability_profile": {
+        "harness.status": 5,
+        "test.tdd": 4
+      }
+    }
+  }
+}

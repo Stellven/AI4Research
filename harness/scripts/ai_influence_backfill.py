@@ -14,7 +14,7 @@ from datetime import datetime, timezone, timedelta
 
 def run_backfill(handles: list[str], output_dir: str, days: int = 30):
     scraper_path = str(Path(__file__).resolve().parent.parent / "tools" / "playwright_twitter_scraper.py")
-    python_bin = "/Users/lisihao/.claude/mcp-servers/browser-use/.venv/bin/python"
+    python_bin = "~/.claude/mcp-servers/browser-use/.venv/bin/python"
 
     now = datetime.now(timezone.utc)
     cutoff_date = now - timedelta(days=days)

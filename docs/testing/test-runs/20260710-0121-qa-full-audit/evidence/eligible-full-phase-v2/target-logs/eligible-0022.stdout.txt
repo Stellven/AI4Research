@@ -1,0 +1,26 @@
+.FF                                                                      [100%]
+=================================== FAILURES ===================================
+______________ test_missing_prereqs_yields_pending_verdict_not_ok ______________
+harness/tests/benchmark/test_terminal_bench_adapter.py:171: in test_missing_prereqs_yields_pending_verdict_not_ok
+    assert "harbor_cli" in result.failure_modes
+E   AssertionError: assert 'harbor_cli' in ('dataset_registry', 'docker')
+E    +  where ('dataset_registry', 'docker') = BenchmarkRunResult(schema_version='benchmark.run.v1', run_id='bench-20260710140514-21c4dfa9', benchmark='terminal-benc...nding', failure_modes=('dataset_registry', 'docker'), limitations=('Missing prerequisites: dataset_registry, docker',)).failure_modes
+_________________ test_empty_missing_prereqs_allows_dry_run_ok _________________
+harness/tests/benchmark/test_terminal_bench_adapter.py:192: in test_empty_missing_prereqs_allows_dry_run_ok
+    assert result.verdict == "ok"
+E   AssertionError: assert 'pending' == 'ok'
+E     
+E     - ok
+E     + pending
+=============================== warnings summary ===============================
+harness/tests/benchmark/test_terminal_bench_adapter.py::test_agent_not_in_allowlist_yields_error_verdict
+harness/tests/benchmark/test_terminal_bench_adapter.py::test_missing_prereqs_yields_pending_verdict_not_ok
+harness/tests/benchmark/test_terminal_bench_adapter.py::test_empty_missing_prereqs_allows_dry_run_ok
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/benchmark/schemas.py:121: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    stamp = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED harness/tests/benchmark/test_terminal_bench_adapter.py::test_missing_prereqs_yields_pending_verdict_not_ok
+FAILED harness/tests/benchmark/test_terminal_bench_adapter.py::test_empty_missing_prereqs_allows_dry_run_ok
+2 failed, 1 passed, 10 deselected, 3 warnings in 0.12s

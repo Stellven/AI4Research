@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-HARNESS_DIR="${HARNESS_DIR:-/Users/lisihao/Solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${HOME}/Solar/harness}"
 PYTHON="${PYTHON:-python3}"
-DB="${DB:-/Users/lisihao/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite}"
-STATE_DIR="${STATE_DIR:-/Users/lisihao/.solar/harness/state/tech-hotspot-radar}"
+DB="${DB:-${HOME}/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite}"
+STATE_DIR="${STATE_DIR:-${HOME}/.solar/harness/state/tech-hotspot-radar}"
 CONFIG="${CONFIG:-$HARNESS_DIR/config/tech-hotspot-radar.yaml}"
-LOG_DIR="${LOG_DIR:-/Users/lisihao/.solar/harness/run}"
+LOG_DIR="${LOG_DIR:-${HOME}/.solar/harness/run}"
 LOCK_DIR="${LOCK_DIR:-$STATE_DIR/youtube-weekly-db-backfill.lockdir}"
 
 mkdir -p "$LOG_DIR" "$STATE_DIR"

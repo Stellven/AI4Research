@@ -1,0 +1,15 @@
+{
+  "checked_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st6/remote-status-run/status.json",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st6/remote-status-run/run_log.json",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st6/remote-status-run/results.json"
+  ],
+  "command": "check",
+  "evidence_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st6/remote-status-run/status.json"
+  ],
+  "experiment": "exp-remote-check",
+  "ok": true,
+  "schema": "autosci_remote_cli.v1",
+  "status": "completed"
+}

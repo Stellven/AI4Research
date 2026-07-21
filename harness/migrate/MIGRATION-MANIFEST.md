@@ -45,7 +45,7 @@
 | `~/.claude/agents/` | Agent 定义 | 低 | 必须 |
 | `~/.claude/settings.json` | 全局设置 (含 MCP server 配置) | 中 | 必须 |
 | `~/.claude/settings.local.json` | 本地设置覆盖 | 中 | 必须 |
-| `~/.claude/projects/-Users-sihaoli/memory/` | Claude Memory 持久记忆 | 中 | 必须 |
+| `~/.claude/projects/<project>/memory/` | Claude Memory 持久记忆 | 中 | 必须 |
 | `~/.claude/core/` | Solar 核心模块 (solar-farm/cortex/plan-act) | 低 | 必须 |
 | `~/.claude/scripts/` | 辅助脚本 | 低 | 可选 |
 | `~/.config/claude-code/` | Claude Code 配置 | 低 | 可选 |

@@ -1,0 +1,1 @@
+{"verdict": "FAIL", "node_id": "N1", "summary": "Missing required entrypoint coverage.", "failed_conditions": ["AC1", "AC2"], "errors": [{"cond": "AC1", "severity": "high", "evidence": "inventory omitted a required launcher", "fix_hint": "Add the missing launcher row with cwd/env assumptions."}]}

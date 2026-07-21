@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-07-10T14:04:28Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "live_provider",
+      "description": "Completed provider-backed source evidence for AutoSci `daily-arxiv` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-daily-runtime-auto-ingest/literature_discovery.daily_arxiv.json",
+        "artifacts/autosci/runs/shim-daily-runtime-auto-ingest/daily_arxiv_prepare_finalize_approval_contract.json",
+        "artifacts/autosci/runs/shim-daily-runtime-auto-ingest/daily_arxiv_prepare_finalize_gate_policy_decision.json",
+        "artifacts/autosci/runs/shim-daily-runtime-auto-ingest/daily_arxiv_ingest_handoff.json",
+        "daily-review-llm.json",
+        "artifacts/autosci/runs/shim-daily-runtime-auto-ingest/daily_arxiv_final_provider_delivery_boundary.json",
+        "artifacts/autosci/runs/shim-daily-runtime-auto-ingest/daily_arxiv_prepare_finalize_approval_boundary_runtime_proof.json",
+        "daily-runtime.json",
+        "https://arxiv.org/abs/2601.00004"
+      ],
+      "native_skill": "daily-arxiv",
+      "production_ready": true,
+      "proof_id": "runtime:daily-arxiv:arxiv:20260710T140428Z",
+      "provenance": {
+        "artifact_kind": "literature_discovery",
+        "captured_at": "2026-07-10T14:04:28Z",
+        "command": "daily_arxiv_prepare_finalize:source_provider_boundary",
+        "source": "arxiv"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

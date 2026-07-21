@@ -1,0 +1,48 @@
+T1: py_compile
+  PASS: plugin_loader.py compiles
+  PASS: capability_registry.py compiles
+T2: solar-harness.sh syntax
+  PASS: solar-harness.sh bash syntax
+T3: JSON schemas
+  PASS: schemas/plugin.schema.json: valid JSON
+  PASS: schemas/capability.schema.json: valid JSON
+T4: plugin manifest count
+  PASS: plugin manifests:       20 >= 5
+T5: manifest validation
+  PASS: validate: ok
+  PASS: manifests valid: 20 >= 5
+T6: plugin list
+  PASS: list: ok
+  PASS: plugin list: total=20 >= 5
+T7: integrations plugin-status --json
+  PASS: status: ok
+  PASS: status: by_level present
+  PASS: status: has closed_loop
+T8: scope enforcement
+  PASS: scope: /etc/passwd rejected
+  PASS: scope: alert emitted
+T9: scope allow declared path
+  PASS: scope: ingested path allowed for obsidian
+T10: scope violation event
+  PASS: scope violation: event written to events.jsonl
+T11: capability registry sync
+  PASS: cap sync: ok
+  PASS: capability sync: 95 capabilities >= 5
+T12: capability list
+  PASS: cap list: ok
+  PASS: cap list: has capabilities array
+T13: capability query
+  PASS: query wiki.read: found
+  PASS: query wiki.read: obsidian provides it
+T14: solar-harness integrations CLI routing
+  PASS: solar-harness integrations list
+  PASS: solar-harness integrations plugins
+  PASS: solar-harness integrations validate
+T15: install/disable round-trip
+  PASS: disable mermaid: ok
+  PASS: install mermaid: ok (re-enabled)
+T16: capability scorecard
+  PASS: scorecard: ok
+  PASS: scorecard: weighted_score present
+
+=== S4 Plugins: PASS=30 FAIL=0 ===

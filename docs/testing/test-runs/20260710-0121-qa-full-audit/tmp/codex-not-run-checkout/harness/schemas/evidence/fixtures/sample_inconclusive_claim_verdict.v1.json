@@ -1,0 +1,42 @@
+{
+  "schema": "claim_verdict.v1",
+  "task_id": "task.phase1.inconclusive.claim_verdict",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.claim_verify",
+  "status": "inconclusive",
+  "inputs": {
+    "claim_id": "claim.inconclusive.001",
+    "experiment_result": "sample_inconclusive_experiment_plan.v1.json"
+  },
+  "outputs": {
+    "verdicts": [
+      {
+        "claim_id": "claim.inconclusive.001",
+        "verdict": "inconclusive",
+        "confidence": 0.28,
+        "basis": "The available evidence is partial and lacks a verified baseline or completed experiment result.",
+        "evidence_ids": [
+          "claim.inconclusive.001",
+          "experiment.inconclusive.needs-baseline"
+        ],
+        "limitations": [
+          "Baseline definition and completed metrics are unavailable."
+        ]
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "claim_verdict",
+      "path": "artifacts/scientific/fixtures/inconclusive_claim_verdict.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificClaimVerifier",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T21:00:00Z"
+  },
+  "limitations": [
+    "Fixture demonstrates inconclusive verdict handling without upgrading partial evidence to support."
+  ]
+}

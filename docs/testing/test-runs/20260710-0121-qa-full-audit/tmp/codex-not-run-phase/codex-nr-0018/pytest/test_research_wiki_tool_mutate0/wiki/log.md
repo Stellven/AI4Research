@@ -1,0 +1,1 @@
+- 2026-07-10T18:47:33Z | novelty | Reviewed SkillGen idea | evidence=ev-runtime-1

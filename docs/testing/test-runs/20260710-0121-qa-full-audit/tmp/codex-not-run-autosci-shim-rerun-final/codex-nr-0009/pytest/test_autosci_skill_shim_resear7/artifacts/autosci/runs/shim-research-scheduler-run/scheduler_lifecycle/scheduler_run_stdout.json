@@ -1,0 +1,3094 @@
+{
+  "authorization_prompt": "One or more legacy lifecycle gates are waiting for authorization or runtime evidence; supply the requested access patch and resume the lifecycle.",
+  "authorization_requests": [
+    {
+      "continuation": {
+        "request_fingerprint": "d3ae6cf56d77370f017a44d9cd8cb88726a1e899aa9ca6893f8dd24de57a541e",
+        "resume_args_patch": [
+          "--review-llm-evidence",
+          "<review-llm-evidence.json>"
+        ],
+        "resume_node_id": "report_plan",
+        "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+        "retriable": true,
+        "same_workflow_supported": true,
+        "schema": "scientific_workflow_gate_continuation.v1",
+        "status": "awaiting_authorization"
+      },
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "native_skill": "plan_report",
+      "node_id": "report_plan",
+      "non_error_contract": {
+        "blocked_runs_exit_successfully": true,
+        "lifecycle_status": "blocked"
+      },
+      "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+      "reason": "Waiting for completed Review LLM artifact_review.v1 evidence.",
+      "requested_side_effects": [
+        "review_llm"
+      ],
+      "required_inputs": [
+        "review_llm_evidence"
+      ],
+      "schema": "scientific_workflow_gate_authorization_request.v1",
+      "status": "awaiting_authorization"
+    },
+    {
+      "continuation": {
+        "request_fingerprint": "f4721bdcbc09e01816c8933e1f8302d1a872f88c0ace2210897cca5c67f627b0",
+        "resume_args_patch": [
+          "--compile-target",
+          "<paper-or-tex-target>",
+          "--compile-runtime-evidence",
+          "<compile-runtime-evidence.json>",
+          "--compile-approval-ref",
+          "<approval-ref>"
+        ],
+        "resume_node_id": "publication_produce",
+        "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+        "retriable": true,
+        "same_workflow_supported": true,
+        "schema": "scientific_workflow_gate_continuation.v1",
+        "status": "awaiting_authorization"
+      },
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "native_skill": "compile_paper",
+      "node_id": "publication_produce",
+      "non_error_contract": {
+        "blocked_runs_exit_successfully": true,
+        "lifecycle_status": "blocked"
+      },
+      "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+      "reason": "Waiting for LaTeX/PDF compile evidence or approved compile runtime evidence.",
+      "requested_side_effects": [
+        "tex_compile",
+        "publication_runtime"
+      ],
+      "required_inputs": [
+        "compile_target",
+        "compile_runtime_evidence",
+        "compile_approval_ref"
+      ],
+      "schema": "scientific_workflow_gate_authorization_request.v1",
+      "status": "awaiting_authorization"
+    }
+  ],
+  "authorization_required": true,
+  "blocked_nodes": {
+    "publication_produce": {
+      "action": "compile_paper",
+      "authorization_request": {
+        "continuation": {
+          "request_fingerprint": "f4721bdcbc09e01816c8933e1f8302d1a872f88c0ace2210897cca5c67f627b0",
+          "resume_args_patch": [
+            "--compile-target",
+            "<paper-or-tex-target>",
+            "--compile-runtime-evidence",
+            "<compile-runtime-evidence.json>",
+            "--compile-approval-ref",
+            "<approval-ref>"
+          ],
+          "resume_node_id": "publication_produce",
+          "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+          "retriable": true,
+          "same_workflow_supported": true,
+          "schema": "scientific_workflow_gate_continuation.v1",
+          "status": "awaiting_authorization"
+        },
+        "job_id": "shim-research-scheduler-run-scheduler",
+        "native_skill": "compile_paper",
+        "node_id": "publication_produce",
+        "non_error_contract": {
+          "blocked_runs_exit_successfully": true,
+          "lifecycle_status": "blocked"
+        },
+        "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+        "reason": "Waiting for LaTeX/PDF compile evidence or approved compile runtime evidence.",
+        "requested_side_effects": [
+          "tex_compile",
+          "publication_runtime"
+        ],
+        "required_inputs": [
+          "compile_target",
+          "compile_runtime_evidence",
+          "compile_approval_ref"
+        ],
+        "schema": "scientific_workflow_gate_authorization_request.v1",
+        "status": "awaiting_authorization"
+      },
+      "continuation": {
+        "request_fingerprint": "f4721bdcbc09e01816c8933e1f8302d1a872f88c0ace2210897cca5c67f627b0",
+        "resume_args_patch": [
+          "--compile-target",
+          "<paper-or-tex-target>",
+          "--compile-runtime-evidence",
+          "<compile-runtime-evidence.json>",
+          "--compile-approval-ref",
+          "<approval-ref>"
+        ],
+        "resume_node_id": "publication_produce",
+        "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+        "retriable": true,
+        "same_workflow_supported": true,
+        "schema": "scientific_workflow_gate_continuation.v1",
+        "status": "awaiting_authorization"
+      },
+      "gate": "G_PUBLICATION_PRODUCE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificPublicationProducer",
+      "node_id": "publication_produce",
+      "operator_id": "autosci-publication-compile-worker",
+      "reason": "Waiting for LaTeX/PDF compile evidence or approved compile runtime evidence.",
+      "required_evidence": [
+        "publication_bundle.v1 with existing files and compile/PDF evidence"
+      ],
+      "status": "blocked",
+      "unblock_condition": "Provide a compile target with LaTeX/PDF artifacts or approved runtime evidence, then dispatch publication_produce."
+    },
+    "report_plan": {
+      "action": "plan_report",
+      "authorization_request": {
+        "continuation": {
+          "request_fingerprint": "d3ae6cf56d77370f017a44d9cd8cb88726a1e899aa9ca6893f8dd24de57a541e",
+          "resume_args_patch": [
+            "--review-llm-evidence",
+            "<review-llm-evidence.json>"
+          ],
+          "resume_node_id": "report_plan",
+          "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+          "retriable": true,
+          "same_workflow_supported": true,
+          "schema": "scientific_workflow_gate_continuation.v1",
+          "status": "awaiting_authorization"
+        },
+        "job_id": "shim-research-scheduler-run-scheduler",
+        "native_skill": "plan_report",
+        "node_id": "report_plan",
+        "non_error_contract": {
+          "blocked_runs_exit_successfully": true,
+          "lifecycle_status": "blocked"
+        },
+        "prompt": "This legacy lifecycle gate is waiting for approval or runtime evidence. Supply the requested inputs, then resume the lifecycle.",
+        "reason": "Waiting for completed Review LLM artifact_review.v1 evidence.",
+        "requested_side_effects": [
+          "review_llm"
+        ],
+        "required_inputs": [
+          "review_llm_evidence"
+        ],
+        "schema": "scientific_workflow_gate_authorization_request.v1",
+        "status": "awaiting_authorization"
+      },
+      "continuation": {
+        "request_fingerprint": "d3ae6cf56d77370f017a44d9cd8cb88726a1e899aa9ca6893f8dd24de57a541e",
+        "resume_args_patch": [
+          "--review-llm-evidence",
+          "<review-llm-evidence.json>"
+        ],
+        "resume_node_id": "report_plan",
+        "resume_strategy": "resume_legacy_lifecycle_with_authorization_patch",
+        "retriable": true,
+        "same_workflow_supported": true,
+        "schema": "scientific_workflow_gate_continuation.v1",
+        "status": "awaiting_authorization"
+      },
+      "gate": "G_REPORT_PLAN",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificReportPlanner",
+      "node_id": "report_plan",
+      "operator_id": "autosci-report-plan-worker",
+      "reason": "Waiting for completed Review LLM artifact_review.v1 evidence.",
+      "required_evidence": [
+        "artifact_review.v1 with review_mode=review_llm and review_llm.status=completed"
+      ],
+      "status": "blocked",
+      "unblock_condition": "Provide completed Review LLM-backed artifact_review.v1 evidence, then dispatch report_plan."
+    }
+  },
+  "checks": [
+    {
+      "check": "literature_discover_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "paper_ingest_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "paper_analyze_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "memory_update_initial_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "graph_update_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "claim_extract_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "method_extract_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "code_evidence_map_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "idea_generate_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "idea_evaluate_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "experiment_design_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "experiment_run_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "experiment_monitor_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "claim_verify_dispatched",
+      "detail": "passed",
+      "status": "ok"
+    },
+    {
+      "check": "external_blocked_nodes_recorded",
+      "detail": "publication_produce,report_plan",
+      "status": "ok"
+    },
+    {
+      "check": "scheduler_local_lease_boundary",
+      "detail": "artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scheduler_lease.json",
+      "status": "ok"
+    },
+    {
+      "check": "lifecycle_runtime_gate_passed",
+      "detail": "inconclusive",
+      "status": "ok"
+    }
+  ],
+  "dispatch_boundary": {
+    "blocking_reasons": [
+      "runner_contract=bounded_smoke_runner",
+      "node_inputs_include_smoke_mode",
+      "node_inputs_include_fixture_or_fixture_fallback"
+    ],
+    "fixture_nodes": [
+      "claim_extract",
+      "claim_verify",
+      "code_evidence_map",
+      "experiment_design",
+      "experiment_monitor",
+      "experiment_run",
+      "graph_update",
+      "idea_evaluate",
+      "idea_generate",
+      "literature_discover",
+      "memory_update_initial",
+      "method_extract",
+      "paper_analyze",
+      "paper_ingest"
+    ],
+    "limitations": [
+      "This lifecycle is dispatched through the bounded smoke runner, not a generic production scheduler.",
+      "Production parity requires a non-smoke workflow dispatcher with no fixture/smoke input markers and durable resume/runtime proof."
+    ],
+    "production_ready": false,
+    "profiled_nodes": [
+      "claim_extract",
+      "claim_verify",
+      "code_evidence_map",
+      "experiment_design",
+      "experiment_monitor",
+      "experiment_run",
+      "graph_update",
+      "idea_evaluate",
+      "idea_generate",
+      "literature_discover",
+      "memory_update_initial",
+      "method_extract",
+      "paper_analyze",
+      "paper_ingest"
+    ],
+    "required_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_plan",
+      "publication_produce"
+    ],
+    "runner": "tools/run_scientific_lifecycle_smoke.py",
+    "runner_contract": "bounded_smoke_runner",
+    "schema": "autosci_scheduler_dispatch_boundary.v1",
+    "smoke_nodes": [
+      "claim_extract",
+      "claim_verify",
+      "code_evidence_map",
+      "experiment_design",
+      "experiment_monitor",
+      "experiment_run",
+      "graph_update",
+      "idea_evaluate",
+      "idea_generate",
+      "literature_discover",
+      "memory_update_initial",
+      "method_extract",
+      "paper_analyze",
+      "paper_ingest"
+    ],
+    "status": "bounded_smoke",
+    "workflow_config_path": "workflows/scientific_research_lifecycle_full_v1.json",
+    "workflow_config_sha256": "61bcd747f0ade7361ec2c7f15916eea8d23210067483a516b8103541d8b67ac8",
+    "workflow_id": "scientific_research_lifecycle_full_v1"
+  },
+  "dispatch_input_profiles": {
+    "claim_extract": {
+      "action": "extract_claims",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificClaimExtractor",
+      "node_id": "claim_extract",
+      "operator_id": "autosci-claim-extract-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "claim_verify": {
+      "action": "verify_claim",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificClaimVerifier",
+      "node_id": "claim_verify",
+      "operator_id": "autosci-claim-verify-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "code_evidence_map": {
+      "action": "map_code_evidence",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_inputs",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificCodeEvidenceMapper",
+      "node_id": "code_evidence_map",
+      "operator_id": "autosci-code-evidence-map-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "experiment_design": {
+      "action": "design_experiment",
+      "execution_mode": "fixture",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "execution_mode=fixture",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificExperimentDesigner",
+      "node_id": "experiment_design",
+      "operator_id": "autosci-experiment-design-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "experiment_monitor": {
+      "action": "monitor_experiment",
+      "execution_mode": "fixture",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "execution_mode=fixture",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificExperimentMonitor",
+      "node_id": "experiment_monitor",
+      "operator_id": "autosci-experiment-monitor-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "experiment_run": {
+      "action": "run_experiment",
+      "execution_mode": "fixture",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "execution_mode=fixture",
+        "fixture_reference_in_inputs",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificExperimentRunner",
+      "node_id": "experiment_run",
+      "operator_id": "autosci-experiment-run-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "graph_update": {
+      "action": "update_graph",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificGraphUpdater",
+      "node_id": "graph_update",
+      "operator_id": "autosci-graph-update-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "idea_evaluate": {
+      "action": "evaluate_ideas",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificIdeaEvaluator",
+      "node_id": "idea_evaluate",
+      "operator_id": "autosci-idea-evaluate-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "idea_generate": {
+      "action": "generate_ideas",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificIdeaGenerator",
+      "node_id": "idea_generate",
+      "operator_id": "autosci-idea-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "literature_discover": {
+      "action": "discover_literature",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_fallback=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificLiteratureDiscoverer",
+      "node_id": "literature_discover",
+      "operator_id": "autosci-literature-discover-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "memory_update_initial": {
+      "action": "update_memory",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificMemoryUpdater",
+      "node_id": "memory_update_initial",
+      "operator_id": "autosci-memory-update-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "method_extract": {
+      "action": "extract_methods",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificMethodExtractor",
+      "node_id": "method_extract",
+      "operator_id": "autosci-method-extract-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "paper_analyze": {
+      "action": "analyze_paper",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificPaperAnalyzer",
+      "node_id": "paper_analyze",
+      "operator_id": "autosci-paper-analyze-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    },
+    "paper_ingest": {
+      "action": "ingest_paper",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificPaperIngestor",
+      "node_id": "paper_ingest",
+      "operator_id": "autosci-paper-ingest-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    }
+  },
+  "execution_owner": "solar.operator_runtime.scheduler_lifecycle_smoke",
+  "gate_results": {
+    "claim_extract": {
+      "gate": "G_CLAIM_EXTRACT",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "claim_extract",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "claim_verify": {
+      "gate": "G_CLAIM_VERIFY",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "claim_verify",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "code_evidence_map": {
+      "gate": "G_CODE_EVIDENCE_MAP",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "code_evidence_map",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "experiment_design": {
+      "gate": "G_EXPERIMENT_DESIGN",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "experiment_design",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "experiment_monitor": {
+      "gate": "G_EXPERIMENT_MONITOR",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "experiment_monitor",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "experiment_run": {
+      "gate": "G_EXPERIMENT_RUN",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "experiment_run",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "graph_update": {
+      "gate": "G_GRAPH_UPDATE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "graph_update",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "idea_evaluate": {
+      "gate": "G_IDEA_EVALUATE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "idea_evaluate",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "idea_generate": {
+      "gate": "G_IDEA_GENERATE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "idea_generate",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "literature_discover": {
+      "gate": "G_LITERATURE_DISCOVER",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "literature_discover",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": [
+        "fixture discovery passed only as smoke evidence; it is not live literature discovery"
+      ]
+    },
+    "memory_update_initial": {
+      "gate": "G_MEMORY_UPDATE_INITIAL",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "memory_update_initial",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "method_extract": {
+      "gate": "G_METHOD_EXTRACT",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "method_extract",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "paper_analyze": {
+      "gate": "G_PAPER_ANALYZE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "paper_analyze",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    },
+    "paper_ingest": {
+      "gate": "G_PAPER_INGEST",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "node_id": "paper_ingest",
+      "ok": true,
+      "reasons": [],
+      "status": "passed",
+      "warnings": []
+    }
+  },
+  "job_id": "shim-research-scheduler-run-scheduler",
+  "lease_boundary": {
+    "blocking_reasons": [
+      "lease_scope=local_smoke_runner",
+      "distributed_lease_not_verified"
+    ],
+    "distributed_lease_verified": false,
+    "lease_id": "512bfb74f796b70f533faa56adcc6be9b7b34031",
+    "lease_path": "artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scheduler_lease.json",
+    "lease_scope": "local_smoke_runner",
+    "limitations": [
+      "Scheduler lease ownership is recorded locally for auditability; production parity requires a distributed lease/quota manager."
+    ],
+    "local_lease_recorded": true,
+    "production_ready": false,
+    "required_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_plan",
+      "publication_produce"
+    ],
+    "schema": "autosci_scheduler_lease_boundary.v1",
+    "status": "local_smoke_lease"
+  },
+  "lifecycle_gate_result": {
+    "evidence_status": "blocked",
+    "exit_code": 3,
+    "ok": false,
+    "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+    "reasons": [],
+    "schema": "scientific_lifecycle.v1",
+    "status": "inconclusive",
+    "warnings": [
+      "lifecycle is blocked waiting for external evidence"
+    ]
+  },
+  "lifecycle_status": "blocked",
+  "node_results": {
+    "claim_extract": {
+      "action": "extract_claims",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/research_claims.json",
+      "artifact_sha256": "2a5db4dfcd996e72270c6026414d60a3bffafbb8902adcd88908814ca95f76cb",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/extract_claims.result.json",
+      "expected_schema": "research_claims.v1",
+      "gate": "G_CLAIM_EXTRACT",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificClaimExtractor",
+      "node_id": "claim_extract",
+      "operator_id": "autosci-claim-extract-worker",
+      "operator_result_path": "run/operator-results/autosci-claim-extract-worker/task-shim-research-scheduler-run-scheduler-claim_extract/result.json",
+      "status": "passed"
+    },
+    "claim_verify": {
+      "action": "verify_claim",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_verify/task-shim-research-scheduler-run-scheduler-claim_verify/claim_verdict.json",
+      "artifact_sha256": "db0154c702446901213e5ab5ef8273e396e5aa348c4c25649f31543aad197069",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_verify/task-shim-research-scheduler-run-scheduler-claim_verify/verify_claim.result.json",
+      "expected_schema": "claim_verdict.v1",
+      "gate": "G_CLAIM_VERIFY",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificClaimVerifier",
+      "node_id": "claim_verify",
+      "operator_id": "autosci-claim-verify-worker",
+      "operator_result_path": "run/operator-results/autosci-claim-verify-worker/task-shim-research-scheduler-run-scheduler-claim_verify/result.json",
+      "status": "passed"
+    },
+    "code_evidence_map": {
+      "action": "map_code_evidence",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/code_evidence_map.json",
+      "artifact_sha256": "7f3ad8df02ef79eec68c141185fc7c307247f66ddd2bbe0f0ac543eaa1c35671",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/map_code_evidence.result.json",
+      "expected_schema": "code_evidence_map.v1",
+      "gate": "G_CODE_EVIDENCE_MAP",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificCodeEvidenceMapper",
+      "node_id": "code_evidence_map",
+      "operator_id": "autosci-code-evidence-map-worker",
+      "operator_result_path": "run/operator-results/autosci-code-evidence-map-worker/task-shim-research-scheduler-run-scheduler-code_evidence_map/result.json",
+      "status": "passed"
+    },
+    "experiment_design": {
+      "action": "design_experiment",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/experiment_plan.json",
+      "artifact_sha256": "3ac4c9296cb2a697382888663c06f646c0ed200c3b072b2d91c65ea456233c87",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/design_experiment.result.json",
+      "expected_schema": "experiment_plan.v1",
+      "gate": "G_EXPERIMENT_DESIGN",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificExperimentDesigner",
+      "node_id": "experiment_design",
+      "operator_id": "autosci-experiment-design-worker",
+      "operator_result_path": "run/operator-results/autosci-experiment-design-worker/task-shim-research-scheduler-run-scheduler-experiment_design/result.json",
+      "status": "passed"
+    },
+    "experiment_monitor": {
+      "action": "monitor_experiment",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_monitor/task-shim-research-scheduler-run-scheduler-experiment_monitor/experiment_status.json",
+      "artifact_sha256": "852fbd3eeb353692ae7158031dc02637962ad257874688109e0a1fa9840d9edd",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_monitor/task-shim-research-scheduler-run-scheduler-experiment_monitor/monitor_experiment.result.json",
+      "expected_schema": "experiment_status.v1",
+      "gate": "G_EXPERIMENT_MONITOR",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificExperimentMonitor",
+      "node_id": "experiment_monitor",
+      "operator_id": "autosci-experiment-monitor-worker",
+      "operator_result_path": "run/operator-results/autosci-experiment-monitor-worker/task-shim-research-scheduler-run-scheduler-experiment_monitor/result.json",
+      "status": "passed"
+    },
+    "experiment_run": {
+      "action": "run_experiment",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_run/task-shim-research-scheduler-run-scheduler-experiment_run/experiment_result.json",
+      "artifact_sha256": "b8c4bf6f82c9d765a38aab6d36c9015f888eb8409333d5b05d203cce76f12efe",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_run/task-shim-research-scheduler-run-scheduler-experiment_run/run_experiment.result.json",
+      "expected_schema": "experiment_result.v1",
+      "gate": "G_EXPERIMENT_RUN",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificExperimentRunner",
+      "node_id": "experiment_run",
+      "operator_id": "autosci-experiment-run-worker",
+      "operator_result_path": "run/operator-results/autosci-experiment-run-worker/task-shim-research-scheduler-run-scheduler-experiment_run/result.json",
+      "status": "passed"
+    },
+    "graph_update": {
+      "action": "update_graph",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/graph_update/task-shim-research-scheduler-run-scheduler-graph_update/research_graph_update.json",
+      "artifact_sha256": "7e4e533cf7cb4aa70dbc0fbe0381980789e1bf312d590ad7cdafeff2633d28f2",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/graph_update/task-shim-research-scheduler-run-scheduler-graph_update/update_graph.result.json",
+      "expected_schema": "research_graph_update.v1",
+      "gate": "G_GRAPH_UPDATE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificGraphUpdater",
+      "node_id": "graph_update",
+      "operator_id": "autosci-graph-update-worker",
+      "operator_result_path": "run/operator-results/autosci-graph-update-worker/task-shim-research-scheduler-run-scheduler-graph_update/result.json",
+      "status": "passed"
+    },
+    "idea_evaluate": {
+      "action": "evaluate_ideas",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/idea_evaluation.json",
+      "artifact_sha256": "fe638bf940121e9adcf05a7b0e4518588d00c57c82c3be32e7ff71ad96cfbc8d",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/evaluate_ideas.result.json",
+      "expected_schema": "idea_evaluation.v1",
+      "gate": "G_IDEA_EVALUATE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificIdeaEvaluator",
+      "node_id": "idea_evaluate",
+      "operator_id": "autosci-idea-evaluate-worker",
+      "operator_result_path": "run/operator-results/autosci-idea-evaluate-worker/task-shim-research-scheduler-run-scheduler-idea_evaluate/result.json",
+      "status": "passed"
+    },
+    "idea_generate": {
+      "action": "generate_ideas",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_generate/task-shim-research-scheduler-run-scheduler-idea_generate/idea_candidate.json",
+      "artifact_sha256": "42a6b8e3c31be3d67bf68420a672532f52fc2bbd4155dda116e57bd087fec693",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_generate/task-shim-research-scheduler-run-scheduler-idea_generate/generate_ideas.result.json",
+      "expected_schema": "idea_candidate.v1",
+      "gate": "G_IDEA_GENERATE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificIdeaGenerator",
+      "node_id": "idea_generate",
+      "operator_id": "autosci-idea-worker",
+      "operator_result_path": "run/operator-results/autosci-idea-worker/task-shim-research-scheduler-run-scheduler-idea_generate/result.json",
+      "status": "passed"
+    },
+    "literature_discover": {
+      "action": "discover_literature",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/literature_discover/task-shim-research-scheduler-run-scheduler-literature_discover/literature_discovery.json",
+      "artifact_sha256": "42416785a7c7d45d49ba135bd7a0a3e0bcd52baa5f7c9955d6ba6ef0b66a30d0",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/literature_discover/task-shim-research-scheduler-run-scheduler-literature_discover/discover_literature.result.json",
+      "expected_schema": "literature_discovery.v1",
+      "gate": "G_LITERATURE_DISCOVER",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificLiteratureDiscoverer",
+      "node_id": "literature_discover",
+      "operator_id": "autosci-literature-discover-worker",
+      "operator_result_path": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-run-scheduler-literature_discover/result.json",
+      "status": "passed"
+    },
+    "memory_update_initial": {
+      "action": "update_memory",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/memory_update_initial/task-shim-research-scheduler-run-scheduler-memory_update_initial/research_memory_update.json",
+      "artifact_sha256": "6bd53bba01d5d15432329426c56844556ca1d1fb6e2b4b7de8cf628819822172",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/memory_update_initial/task-shim-research-scheduler-run-scheduler-memory_update_initial/update_memory.result.json",
+      "expected_schema": "research_memory_update.v1",
+      "gate": "G_MEMORY_UPDATE_INITIAL",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificMemoryUpdater",
+      "node_id": "memory_update_initial",
+      "operator_id": "autosci-memory-update-worker",
+      "operator_result_path": "run/operator-results/autosci-memory-update-worker/task-shim-research-scheduler-run-scheduler-memory_update_initial/result.json",
+      "status": "passed"
+    },
+    "method_extract": {
+      "action": "extract_methods",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/research_method.json",
+      "artifact_sha256": "c15695a066b0fffa36094a7efe3bf607dea05a8c9b1e7dfd5600493340427443",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/extract_methods.result.json",
+      "expected_schema": "research_method.v1",
+      "gate": "G_METHOD_EXTRACT",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificMethodExtractor",
+      "node_id": "method_extract",
+      "operator_id": "autosci-method-extract-worker",
+      "operator_result_path": "run/operator-results/autosci-method-extract-worker/task-shim-research-scheduler-run-scheduler-method_extract/result.json",
+      "status": "passed"
+    },
+    "paper_analyze": {
+      "action": "analyze_paper",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/research_paper_analysis.json",
+      "artifact_sha256": "828a409b90c6665df14fe2c2c4c500453f88ee5f681000a2d20e40d2c7802f74",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/analyze_paper.result.json",
+      "expected_schema": "research_paper.v1",
+      "gate": "G_PAPER_ANALYZE",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificPaperAnalyzer",
+      "node_id": "paper_analyze",
+      "operator_id": "autosci-paper-analyze-worker",
+      "operator_result_path": "run/operator-results/autosci-paper-analyze-worker/task-shim-research-scheduler-run-scheduler-paper_analyze/result.json",
+      "status": "passed"
+    },
+    "paper_ingest": {
+      "action": "ingest_paper",
+      "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/research_paper.json",
+      "artifact_sha256": "8deb62f2187cc499ff7f112319acc6ab7146f04f8cc85ae9013a6583688071e3",
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/ingest_paper.result.json",
+      "expected_schema": "research_paper.v1",
+      "gate": "G_PAPER_INGEST",
+      "job_id": "shim-research-scheduler-run-scheduler",
+      "logical_operator": "ScientificPaperIngestor",
+      "node_id": "paper_ingest",
+      "operator_id": "autosci-paper-ingest-worker",
+      "operator_result_path": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-scheduler-run-scheduler-paper_ingest/result.json",
+      "status": "passed"
+    }
+  },
+  "node_summaries": {
+    "claim_extract": {
+      "action": "extract_claims",
+      "bridge_result": {
+        "action": "extract_claims",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/research_claims.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/extract_claims.result.json",
+        "schema": "research_claims.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/extract_claims.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-claim_extract', 'operator_id': 'autosci-claim-extract-worker', 'lease_id': 'autosci-claim-extract-worker:task-shim-research-scheduler-run-scheduler-claim_extract:2026-07-10T19:24:05Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-claim-extract-worker/task-shim-research-scheduler-run-scheduler-claim_extract.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:05Z', 'daemon_pid': 19445}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.615, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-claim-extract-worker/task-shim-research-scheduler-run-scheduler-claim_extract/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_extract_claims",
+          "detail": "extract_claims",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_research_claims.v1",
+          "detail": "research_claims.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-claim_extract",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "claim_extract",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-claim-extract-worker/task-shim-research-scheduler-run-scheduler-claim_extract/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/research_claims.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/research_claims.json",
+        "reasons": [],
+        "schema": "research_claims.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificClaimExtractor",
+      "materialized_envelope_path": "run/operator-results/autosci-claim-extract-worker/task-shim-research-scheduler-run-scheduler-claim_extract/envelope.json",
+      "node_id": "claim_extract",
+      "operator_id": "autosci-claim-extract-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:06Z",
+        "log_tail": "{\n  \"action\": \"extract_claims\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "claim_extract",
+        "operator_id": "autosci-claim-extract-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:05Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-claim_extract"
+      },
+      "operator_result_path": "run/operator-results/autosci-claim-extract-worker/task-shim-research-scheduler-run-scheduler-claim_extract/result.json",
+      "output_log_path": "run/operator-results/autosci-claim-extract-worker/task-shim-research-scheduler-run-scheduler-claim_extract/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 19445,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-claim-extract-worker/task-shim-research-scheduler-run-scheduler-claim_extract.json",
+        "lease_id": "autosci-claim-extract-worker:task-shim-research-scheduler-run-scheduler-claim_extract:2026-07-10T19:24:05Z",
+        "operator_id": "autosci-claim-extract-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:05Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-claim_extract"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-claim_extract",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.615
+      }
+    },
+    "claim_verify": {
+      "action": "verify_claim",
+      "bridge_result": {
+        "action": "verify_claim",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_verify/task-shim-research-scheduler-run-scheduler-claim_verify/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_verify/task-shim-research-scheduler-run-scheduler-claim_verify/claim_verdict.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_verify/task-shim-research-scheduler-run-scheduler-claim_verify/verify_claim.result.json",
+        "schema": "claim_verdict.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_verify/task-shim-research-scheduler-run-scheduler-claim_verify/verify_claim.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-claim_verify', 'operator_id': 'autosci-claim-verify-worker', 'lease_id': 'autosci-claim-verify-worker:task-shim-research-scheduler-run-scheduler-claim_verify:2026-07-10T19:24:10Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-claim-verify-worker/task-shim-research-scheduler-run-scheduler-claim_verify.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:10Z', 'daemon_pid': 21264}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.41, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-claim-verify-worker/task-shim-research-scheduler-run-scheduler-claim_verify/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_verify_claim",
+          "detail": "verify_claim",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_claim_verdict.v1",
+          "detail": "claim_verdict.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-claim_verify",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "claim_verify",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-claim-verify-worker/task-shim-research-scheduler-run-scheduler-claim_verify/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_verify/task-shim-research-scheduler-run-scheduler-claim_verify/claim_verdict.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_verify/task-shim-research-scheduler-run-scheduler-claim_verify/claim_verdict.json",
+        "reasons": [],
+        "schema": "claim_verdict.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificClaimVerifier",
+      "materialized_envelope_path": "run/operator-results/autosci-claim-verify-worker/task-shim-research-scheduler-run-scheduler-claim_verify/envelope.json",
+      "node_id": "claim_verify",
+      "operator_id": "autosci-claim-verify-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:10Z",
+        "log_tail": "            ],\n            \"claim_evidence_linked\": true,\n            \"claim_id\": \"claim-001\",\n            \"code_evidence_ids\": [\n              \"task-shim-research-scheduler-run-scheduler-code_evidence_map\",\n              \"map-001\",\n              \"plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py\",\n              \"claim-001\"\n            ],\n            \"code_evidence_linked\": true,\n            \"evidence_ids\": [\n              \"claim-001\",\n              \"paper-shim-research-scheduler-run-scheduler\",\n              \"sample_paper.md#results\",\n              \"task-shim-research-scheduler-run-scheduler-experiment_run\",\n              \"exp-001\",\n              \"evidence:autosci-fixture-result\",\n              \"evidence:autosci-fixture-ledger\",\n              \"task-shim-research-scheduler-run-scheduler-code_evidence_map\",\n              \"map-001\",\n              \"plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py\"\n            ],\n            \"experiment_evidence_ids\": [\n              \"task-shim-research-scheduler-run-scheduler-experiment_run\",\n              \"exp-001\",\n              \"evidence:autosci-fixture-result\",\n              \"evidence:autosci-fixture-ledger\"\n            ],\n            \"experiment_result_ready\": true,\n            \"experiment_schema\": \"experiment_result.v1\",\n            \"experiment_status\": \"completed\",\n            \"final_verdict_ready\": false,\n            \"limitations\": [\n              \"Final experiment evaluation requires completed Review LLM proof.\",\n              \"Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final.\"\n            ],\n            \"review_llm_completed\": false,\n            \"review_llm_status\": \"unavailable\",\n            \"schema\": \"autosci_experiment_evaluation_final_verdict_boundary.v1\",\n            \"status\": \"final_verdict_incomplete\",\n            \"verdict\": \"supported\",\n            \"writeback_completed\": false,\n            \"writeback_status\": {\n              \"applied\": false,\n              \"approval_ref\": \"N/A\",\n              \"limitations\": [\n                \"Claim verdict writeback was not requested.\"\n              ],\n              \"path\": \"\",\n              \"requested\": false,",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "claim_verify",
+        "operator_id": "autosci-claim-verify-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:10Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-claim_verify"
+      },
+      "operator_result_path": "run/operator-results/autosci-claim-verify-worker/task-shim-research-scheduler-run-scheduler-claim_verify/result.json",
+      "output_log_path": "run/operator-results/autosci-claim-verify-worker/task-shim-research-scheduler-run-scheduler-claim_verify/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 21264,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-claim-verify-worker/task-shim-research-scheduler-run-scheduler-claim_verify.json",
+        "lease_id": "autosci-claim-verify-worker:task-shim-research-scheduler-run-scheduler-claim_verify:2026-07-10T19:24:10Z",
+        "operator_id": "autosci-claim-verify-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:10Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-claim_verify"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-claim_verify",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.41
+      }
+    },
+    "code_evidence_map": {
+      "action": "map_code_evidence",
+      "bridge_result": {
+        "action": "map_code_evidence",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/code_evidence_map.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/map_code_evidence.result.json",
+        "schema": "code_evidence_map.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/map_code_evidence.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-code_evidence_map', 'operator_id': 'autosci-code-evidence-map-worker', 'lease_id': 'autosci-code-evidence-map-worker:task-shim-research-scheduler-run-scheduler-code_evidence_map:2026-07-10T19:24:07Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-code-evidence-map-worker/task-shim-research-scheduler-run-scheduler-code_evidence_map.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:07Z', 'daemon_pid': 20056}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.41, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-code-evidence-map-worker/task-shim-research-scheduler-run-scheduler-code_evidence_map/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_map_code_evidence",
+          "detail": "map_code_evidence",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_code_evidence_map.v1",
+          "detail": "code_evidence_map.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-code_evidence_map",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "code_evidence_map",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-code-evidence-map-worker/task-shim-research-scheduler-run-scheduler-code_evidence_map/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/code_evidence_map.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/code_evidence_map.json",
+        "reasons": [],
+        "schema": "code_evidence_map.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificCodeEvidenceMapper",
+      "materialized_envelope_path": "run/operator-results/autosci-code-evidence-map-worker/task-shim-research-scheduler-run-scheduler-code_evidence_map/envelope.json",
+      "node_id": "code_evidence_map",
+      "operator_id": "autosci-code-evidence-map-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:07Z",
+        "log_tail": "{\n  \"action\": \"map_code_evidence\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "code_evidence_map",
+        "operator_id": "autosci-code-evidence-map-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:07Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-code_evidence_map"
+      },
+      "operator_result_path": "run/operator-results/autosci-code-evidence-map-worker/task-shim-research-scheduler-run-scheduler-code_evidence_map/result.json",
+      "output_log_path": "run/operator-results/autosci-code-evidence-map-worker/task-shim-research-scheduler-run-scheduler-code_evidence_map/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 20056,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-code-evidence-map-worker/task-shim-research-scheduler-run-scheduler-code_evidence_map.json",
+        "lease_id": "autosci-code-evidence-map-worker:task-shim-research-scheduler-run-scheduler-code_evidence_map:2026-07-10T19:24:07Z",
+        "operator_id": "autosci-code-evidence-map-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:07Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-code_evidence_map"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-code_evidence_map",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.41
+      }
+    },
+    "experiment_design": {
+      "action": "design_experiment",
+      "bridge_result": {
+        "action": "design_experiment",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/experiment_plan.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/design_experiment.result.json",
+        "schema": "experiment_plan.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/design_experiment.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-experiment_design', 'operator_id': 'autosci-experiment-design-worker', 'lease_id': 'autosci-experiment-design-worker:task-shim-research-scheduler-run-scheduler-experiment_design:2026-07-10T19:24:08Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-experiment-design-worker/task-shim-research-scheduler-run-scheduler-experiment_design.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:08Z', 'daemon_pid': 20771}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.41, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-experiment-design-worker/task-shim-research-scheduler-run-scheduler-experiment_design/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_design_experiment",
+          "detail": "design_experiment",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_experiment_plan.v1",
+          "detail": "experiment_plan.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-experiment_design",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "experiment_design",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-experiment-design-worker/task-shim-research-scheduler-run-scheduler-experiment_design/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/experiment_plan.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/experiment_plan.json",
+        "reasons": [],
+        "schema": "experiment_plan.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificExperimentDesigner",
+      "materialized_envelope_path": "run/operator-results/autosci-experiment-design-worker/task-shim-research-scheduler-run-scheduler-experiment_design/envelope.json",
+      "node_id": "experiment_design",
+      "operator_id": "autosci-experiment-design-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:08Z",
+        "log_tail": "{\n  \"action\": \"design_experiment\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "experiment_design",
+        "operator_id": "autosci-experiment-design-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:08Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-experiment_design"
+      },
+      "operator_result_path": "run/operator-results/autosci-experiment-design-worker/task-shim-research-scheduler-run-scheduler-experiment_design/result.json",
+      "output_log_path": "run/operator-results/autosci-experiment-design-worker/task-shim-research-scheduler-run-scheduler-experiment_design/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 20771,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-experiment-design-worker/task-shim-research-scheduler-run-scheduler-experiment_design.json",
+        "lease_id": "autosci-experiment-design-worker:task-shim-research-scheduler-run-scheduler-experiment_design:2026-07-10T19:24:08Z",
+        "operator_id": "autosci-experiment-design-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:08Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-experiment_design"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-experiment_design",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.41
+      }
+    },
+    "experiment_monitor": {
+      "action": "monitor_experiment",
+      "bridge_result": {
+        "action": "monitor_experiment",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_monitor/task-shim-research-scheduler-run-scheduler-experiment_monitor/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_monitor/task-shim-research-scheduler-run-scheduler-experiment_monitor/experiment_status.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_monitor/task-shim-research-scheduler-run-scheduler-experiment_monitor/monitor_experiment.result.json",
+        "schema": "experiment_status.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_monitor/task-shim-research-scheduler-run-scheduler-experiment_monitor/monitor_experiment.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-experiment_monitor', 'operator_id': 'autosci-experiment-monitor-worker', 'lease_id': 'autosci-experiment-monitor-worker:task-shim-research-scheduler-run-scheduler-experiment_monitor:2026-07-10T19:24:09Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-experiment-monitor-worker/task-shim-research-scheduler-run-scheduler-experiment_monitor.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:09Z', 'daemon_pid': 21217}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.408, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-experiment-monitor-worker/task-shim-research-scheduler-run-scheduler-experiment_monitor/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_monitor_experiment",
+          "detail": "monitor_experiment",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_experiment_status.v1",
+          "detail": "experiment_status.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-experiment_monitor",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "experiment_monitor",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-experiment-monitor-worker/task-shim-research-scheduler-run-scheduler-experiment_monitor/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_monitor/task-shim-research-scheduler-run-scheduler-experiment_monitor/experiment_status.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_monitor/task-shim-research-scheduler-run-scheduler-experiment_monitor/experiment_status.json",
+        "reasons": [],
+        "schema": "experiment_status.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificExperimentMonitor",
+      "materialized_envelope_path": "run/operator-results/autosci-experiment-monitor-worker/task-shim-research-scheduler-run-scheduler-experiment_monitor/envelope.json",
+      "node_id": "experiment_monitor",
+      "operator_id": "autosci-experiment-monitor-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:09Z",
+        "log_tail": "{\n  \"action\": \"monitor_experiment\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "experiment_monitor",
+        "operator_id": "autosci-experiment-monitor-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:09Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-experiment_monitor"
+      },
+      "operator_result_path": "run/operator-results/autosci-experiment-monitor-worker/task-shim-research-scheduler-run-scheduler-experiment_monitor/result.json",
+      "output_log_path": "run/operator-results/autosci-experiment-monitor-worker/task-shim-research-scheduler-run-scheduler-experiment_monitor/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 21217,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-experiment-monitor-worker/task-shim-research-scheduler-run-scheduler-experiment_monitor.json",
+        "lease_id": "autosci-experiment-monitor-worker:task-shim-research-scheduler-run-scheduler-experiment_monitor:2026-07-10T19:24:09Z",
+        "operator_id": "autosci-experiment-monitor-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:09Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-experiment_monitor"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-experiment_monitor",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.408
+      }
+    },
+    "experiment_run": {
+      "action": "run_experiment",
+      "bridge_result": {
+        "action": "run_experiment",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_run/task-shim-research-scheduler-run-scheduler-experiment_run/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_run/task-shim-research-scheduler-run-scheduler-experiment_run/experiment_result.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_run/task-shim-research-scheduler-run-scheduler-experiment_run/run_experiment.result.json",
+        "schema": "experiment_result.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_run/task-shim-research-scheduler-run-scheduler-experiment_run/run_experiment.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-experiment_run', 'operator_id': 'autosci-experiment-run-worker', 'lease_id': 'autosci-experiment-run-worker:task-shim-research-scheduler-run-scheduler-experiment_run:2026-07-10T19:24:09Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-experiment-run-worker/task-shim-research-scheduler-run-scheduler-experiment_run.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:09Z', 'daemon_pid': 20827}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.41, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-experiment-run-worker/task-shim-research-scheduler-run-scheduler-experiment_run/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_run_experiment",
+          "detail": "run_experiment",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_experiment_result.v1",
+          "detail": "experiment_result.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-experiment_run",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "experiment_run",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-experiment-run-worker/task-shim-research-scheduler-run-scheduler-experiment_run/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_run/task-shim-research-scheduler-run-scheduler-experiment_run/experiment_result.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_run/task-shim-research-scheduler-run-scheduler-experiment_run/experiment_result.json",
+        "reasons": [],
+        "schema": "experiment_result.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificExperimentRunner",
+      "materialized_envelope_path": "run/operator-results/autosci-experiment-run-worker/task-shim-research-scheduler-run-scheduler-experiment_run/envelope.json",
+      "node_id": "experiment_run",
+      "operator_id": "autosci-experiment-run-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:09Z",
+        "log_tail": "{\n  \"action\": \"run_experiment\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "experiment_run",
+        "operator_id": "autosci-experiment-run-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:09Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-experiment_run"
+      },
+      "operator_result_path": "run/operator-results/autosci-experiment-run-worker/task-shim-research-scheduler-run-scheduler-experiment_run/result.json",
+      "output_log_path": "run/operator-results/autosci-experiment-run-worker/task-shim-research-scheduler-run-scheduler-experiment_run/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 20827,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-experiment-run-worker/task-shim-research-scheduler-run-scheduler-experiment_run.json",
+        "lease_id": "autosci-experiment-run-worker:task-shim-research-scheduler-run-scheduler-experiment_run:2026-07-10T19:24:09Z",
+        "operator_id": "autosci-experiment-run-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:09Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-experiment_run"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-experiment_run",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.41
+      }
+    },
+    "graph_update": {
+      "action": "update_graph",
+      "bridge_result": {
+        "action": "update_graph",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/graph_update/task-shim-research-scheduler-run-scheduler-graph_update/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/graph_update/task-shim-research-scheduler-run-scheduler-graph_update/research_graph_update.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/graph_update/task-shim-research-scheduler-run-scheduler-graph_update/update_graph.result.json",
+        "schema": "research_graph_update.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/graph_update/task-shim-research-scheduler-run-scheduler-graph_update/update_graph.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-graph_update', 'operator_id': 'autosci-graph-update-worker', 'lease_id': 'autosci-graph-update-worker:task-shim-research-scheduler-run-scheduler-graph_update:2026-07-10T19:24:04Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-graph-update-worker/task-shim-research-scheduler-run-scheduler-graph_update.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:04Z', 'daemon_pid': 19029}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.616, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-graph-update-worker/task-shim-research-scheduler-run-scheduler-graph_update/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_update_graph",
+          "detail": "update_graph",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_research_graph_update.v1",
+          "detail": "research_graph_update.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-graph_update",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "graph_update",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-graph-update-worker/task-shim-research-scheduler-run-scheduler-graph_update/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/graph_update/task-shim-research-scheduler-run-scheduler-graph_update/research_graph_update.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/graph_update/task-shim-research-scheduler-run-scheduler-graph_update/research_graph_update.json",
+        "reasons": [],
+        "schema": "research_graph_update.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificGraphUpdater",
+      "materialized_envelope_path": "run/operator-results/autosci-graph-update-worker/task-shim-research-scheduler-run-scheduler-graph_update/envelope.json",
+      "node_id": "graph_update",
+      "operator_id": "autosci-graph-update-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:05Z",
+        "log_tail": "{\n  \"action\": \"update_graph\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "graph_update",
+        "operator_id": "autosci-graph-update-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:04Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-graph_update"
+      },
+      "operator_result_path": "run/operator-results/autosci-graph-update-worker/task-shim-research-scheduler-run-scheduler-graph_update/result.json",
+      "output_log_path": "run/operator-results/autosci-graph-update-worker/task-shim-research-scheduler-run-scheduler-graph_update/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 19029,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-graph-update-worker/task-shim-research-scheduler-run-scheduler-graph_update.json",
+        "lease_id": "autosci-graph-update-worker:task-shim-research-scheduler-run-scheduler-graph_update:2026-07-10T19:24:04Z",
+        "operator_id": "autosci-graph-update-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:04Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-graph_update"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-graph_update",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.616
+      }
+    },
+    "idea_evaluate": {
+      "action": "evaluate_ideas",
+      "bridge_result": {
+        "action": "evaluate_ideas",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/idea_evaluation.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/evaluate_ideas.result.json",
+        "schema": "idea_evaluation.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/evaluate_ideas.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-idea_evaluate', 'operator_id': 'autosci-idea-evaluate-worker', 'lease_id': 'autosci-idea-evaluate-worker:task-shim-research-scheduler-run-scheduler-idea_evaluate:2026-07-10T19:24:08Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-idea-evaluate-worker/task-shim-research-scheduler-run-scheduler-idea_evaluate.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:08Z', 'daemon_pid': 20461}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.41, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-idea-evaluate-worker/task-shim-research-scheduler-run-scheduler-idea_evaluate/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_evaluate_ideas",
+          "detail": "evaluate_ideas",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_idea_evaluation.v1",
+          "detail": "idea_evaluation.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-idea_evaluate",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "idea_evaluate",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-idea-evaluate-worker/task-shim-research-scheduler-run-scheduler-idea_evaluate/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/idea_evaluation.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/idea_evaluation.json",
+        "reasons": [],
+        "schema": "idea_evaluation.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificIdeaEvaluator",
+      "materialized_envelope_path": "run/operator-results/autosci-idea-evaluate-worker/task-shim-research-scheduler-run-scheduler-idea_evaluate/envelope.json",
+      "node_id": "idea_evaluate",
+      "operator_id": "autosci-idea-evaluate-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:08Z",
+        "log_tail": "              \"task-shim-research-scheduler-run-scheduler-paper_ingest\",\n              \"task-shim-research-scheduler-run-scheduler-claim_extract\",\n              \"claim-002\",\n              \"task-shim-research-scheduler-run-scheduler-method_extract\"\n            ],\n            \"external_novelty_provenance_status\": \"missing\",\n            \"external_novelty_status\": \"missing\",\n            \"external_source_count\": \"N/A\",\n            \"final_acceptance_ready\": false,\n            \"idea_id\": \"idea-duplicate-001\",\n            \"limitations\": [\n              \"Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence.\"\n            ],\n            \"novelty\": 0.15,\n            \"novelty_score\": 2,\n            \"provider_statuses\": [],\n            \"recommendation\": \"reject\",\n            \"review_available\": false,\n            \"review_invocation_mode\": \"N/A\",\n            \"review_llm_status\": \"missing\",\n            \"review_mode\": \"N/A\",\n            \"schema\": \"autosci_novelty_final_acceptance_boundary.v1\",\n            \"status\": \"novelty_acceptance_incomplete\"\n          },\n          \"idea_id\": \"idea-duplicate-001\",\n          \"novelty\": 0.15,\n          \"novelty_rationale\": \"The idea duplicates known fixture validation rather than adding a new research question.\",\n          \"recommendation\": \"reject\",\n          \"risks\": [\n            \"Marked duplicate of an existing fixture smoke path.\"\n          ],\n          \"source_mode\": \"fixture\"\n        }\n      ]\n    },\n    \"provenance\": {\n      \"implementation_package\": \"plugins/autosci\",\n      \"operator_id\": \"autosci-bridge\",\n      \"timestamp\": \"2026-07-10T19:24:08Z\"\n    },\n    \"schema\": \"idea_evaluation.v1\",\n    \"sprint_id\": \"shim-research-scheduler-run-scheduler\",\n    \"status\": \"completed\",\n    \"task_id\": \"task-shim-research-scheduler-run-scheduler-idea_evaluate\"\n  },\n  \"evidence_jsonl\": \"artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/evidence.jsonl\",\n  \"evidence_path\": \"artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/idea_evaluation.json\",\n  \"ok\": true,\n  \"result_path\": \"artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/evaluate_ideas.result.json\",\n  \"schema\": \"idea_evaluation.v1\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "idea_evaluate",
+        "operator_id": "autosci-idea-evaluate-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:08Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-idea_evaluate"
+      },
+      "operator_result_path": "run/operator-results/autosci-idea-evaluate-worker/task-shim-research-scheduler-run-scheduler-idea_evaluate/result.json",
+      "output_log_path": "run/operator-results/autosci-idea-evaluate-worker/task-shim-research-scheduler-run-scheduler-idea_evaluate/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 20461,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-idea-evaluate-worker/task-shim-research-scheduler-run-scheduler-idea_evaluate.json",
+        "lease_id": "autosci-idea-evaluate-worker:task-shim-research-scheduler-run-scheduler-idea_evaluate:2026-07-10T19:24:08Z",
+        "operator_id": "autosci-idea-evaluate-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:08Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-idea_evaluate"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-idea_evaluate",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.41
+      }
+    },
+    "idea_generate": {
+      "action": "generate_ideas",
+      "bridge_result": {
+        "action": "generate_ideas",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_generate/task-shim-research-scheduler-run-scheduler-idea_generate/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_generate/task-shim-research-scheduler-run-scheduler-idea_generate/idea_candidate.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_generate/task-shim-research-scheduler-run-scheduler-idea_generate/generate_ideas.result.json",
+        "schema": "idea_candidate.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_generate/task-shim-research-scheduler-run-scheduler-idea_generate/generate_ideas.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-idea_generate', 'operator_id': 'autosci-idea-worker', 'lease_id': 'autosci-idea-worker:task-shim-research-scheduler-run-scheduler-idea_generate:2026-07-10T19:24:07Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-idea-worker/task-shim-research-scheduler-run-scheduler-idea_generate.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:07Z', 'daemon_pid': 20339}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.41, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-idea-worker/task-shim-research-scheduler-run-scheduler-idea_generate/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_generate_ideas",
+          "detail": "generate_ideas",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_idea_candidate.v1",
+          "detail": "idea_candidate.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-idea_generate",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "idea_generate",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-idea-worker/task-shim-research-scheduler-run-scheduler-idea_generate/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_generate/task-shim-research-scheduler-run-scheduler-idea_generate/idea_candidate.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_generate/task-shim-research-scheduler-run-scheduler-idea_generate/idea_candidate.json",
+        "reasons": [],
+        "schema": "idea_candidate.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificIdeaGenerator",
+      "materialized_envelope_path": "run/operator-results/autosci-idea-worker/task-shim-research-scheduler-run-scheduler-idea_generate/envelope.json",
+      "node_id": "idea_generate",
+      "operator_id": "autosci-idea-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:07Z",
+        "log_tail": "              \"novelty/review gate evidence references are missing\",\n              \"generation path coverage A/B/C/D/E is incomplete\",\n              \"structured generation path A/B/C/D/E is missing\",\n              \"idea overlaps failed or duplicate idea banlist\",\n              \"idea status is `filtered`\"\n            ],\n            \"duplicate_status\": \"duplicate\",\n            \"generation_path\": \"fixture-smoke\",\n            \"idea_id\": \"idea-duplicate-001\",\n            \"promotion_ready\": false,\n            \"schema\": \"autosci_ideate_idea_promotion_boundary.v1\",\n            \"source_mode\": \"fixture\",\n            \"status\": \"idea_promotion_incomplete\"\n          },\n          \"generation_path\": \"fixture-smoke\",\n          \"grounding_summary\": \"Included to prove duplicate ideas are marked rather than silently promoted.\",\n          \"hypothesis\": \"Repeating the bridge smoke test alone will improve scientific verification.\",\n          \"idea_id\": \"idea-duplicate-001\",\n          \"novelty_hypothesis\": \"Low novelty because it duplicates the fixture smoke path.\",\n          \"origin_evidence_ids\": [\n            \"claim-001\",\n            \"method-001\",\n            \"task-shim-research-scheduler-run-scheduler-paper_ingest\",\n            \"task-shim-research-scheduler-run-scheduler-claim_extract\",\n            \"claim-001\",\n            \"claim-002\",\n            \"task-shim-research-scheduler-run-scheduler-method_extract\",\n            \"method-001\"\n          ],\n          \"promotion_ready\": false,\n          \"selected_for_write\": false,\n          \"selection_rank\": \"N/A\",\n          \"source_mode\": \"fixture\",\n          \"status\": \"filtered\",\n          \"title\": \"Repeat existing fixture bridge smoke\"\n        }\n      ],\n      \"policy_decision\": {\n        \"action\": \"generate_ideas\",\n        \"allow_destructive\": false,\n        \"allow_email\": false,\n        \"allow_network\": false,\n        \"allow_remote\": false,\n        \"allowed\": false,\n        \"allowed_write_roots\": [\n          \"artifacts/autosci\",\n          \"artifacts/scientific\"\n        ],\n        \"blocked\": true,\n        \"execute_side_effects\": false,",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "idea_generate",
+        "operator_id": "autosci-idea-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:07Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-idea_generate"
+      },
+      "operator_result_path": "run/operator-results/autosci-idea-worker/task-shim-research-scheduler-run-scheduler-idea_generate/result.json",
+      "output_log_path": "run/operator-results/autosci-idea-worker/task-shim-research-scheduler-run-scheduler-idea_generate/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 20339,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-idea-worker/task-shim-research-scheduler-run-scheduler-idea_generate.json",
+        "lease_id": "autosci-idea-worker:task-shim-research-scheduler-run-scheduler-idea_generate:2026-07-10T19:24:07Z",
+        "operator_id": "autosci-idea-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:07Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-idea_generate"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-idea_generate",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.41
+      }
+    },
+    "literature_discover": {
+      "action": "discover_literature",
+      "bridge_result": {
+        "action": "discover_literature",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/literature_discover/task-shim-research-scheduler-run-scheduler-literature_discover/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/literature_discover/task-shim-research-scheduler-run-scheduler-literature_discover/literature_discovery.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/literature_discover/task-shim-research-scheduler-run-scheduler-literature_discover/discover_literature.result.json",
+        "schema": "literature_discovery.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/literature_discover/task-shim-research-scheduler-run-scheduler-literature_discover/discover_literature.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-literature_discover', 'operator_id': 'autosci-literature-discover-worker', 'lease_id': 'autosci-literature-discover-worker:task-shim-research-scheduler-run-scheduler-literature_discover:2026-07-10T19:24:01Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-literature-discover-worker/task-shim-research-scheduler-run-scheduler-literature_discover.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:01Z', 'daemon_pid': 18067}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.615, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-run-scheduler-literature_discover/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_discover_literature",
+          "detail": "discover_literature",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_literature_discovery.v1",
+          "detail": "literature_discovery.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-literature_discover",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "literature_discover",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-run-scheduler-literature_discover/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/literature_discover/task-shim-research-scheduler-run-scheduler-literature_discover/literature_discovery.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/literature_discover/task-shim-research-scheduler-run-scheduler-literature_discover/literature_discovery.json",
+        "reasons": [],
+        "schema": "literature_discovery.v1",
+        "status": "passed",
+        "warnings": [
+          "fixture discovery passed only as smoke evidence; it is not live literature discovery"
+        ]
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificLiteratureDiscoverer",
+      "materialized_envelope_path": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-run-scheduler-literature_discover/envelope.json",
+      "node_id": "literature_discover",
+      "operator_id": "autosci-literature-discover-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:02Z",
+        "log_tail": "{\n  \"action\": \"discover_literature\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "literature_discover",
+        "operator_id": "autosci-literature-discover-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:01Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-literature_discover"
+      },
+      "operator_result_path": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-run-scheduler-literature_discover/result.json",
+      "output_log_path": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-run-scheduler-literature_discover/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 18067,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-literature-discover-worker/task-shim-research-scheduler-run-scheduler-literature_discover.json",
+        "lease_id": "autosci-literature-discover-worker:task-shim-research-scheduler-run-scheduler-literature_discover:2026-07-10T19:24:01Z",
+        "operator_id": "autosci-literature-discover-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:01Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-literature_discover"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-literature_discover",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.615
+      }
+    },
+    "memory_update_initial": {
+      "action": "update_memory",
+      "bridge_result": {
+        "action": "update_memory",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/memory_update_initial/task-shim-research-scheduler-run-scheduler-memory_update_initial/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/memory_update_initial/task-shim-research-scheduler-run-scheduler-memory_update_initial/research_memory_update.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/memory_update_initial/task-shim-research-scheduler-run-scheduler-memory_update_initial/update_memory.result.json",
+        "schema": "research_memory_update.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/memory_update_initial/task-shim-research-scheduler-run-scheduler-memory_update_initial/update_memory.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-memory_update_initial', 'operator_id': 'autosci-memory-update-worker', 'lease_id': 'autosci-memory-update-worker:task-shim-research-scheduler-run-scheduler-memory_update_initial:2026-07-10T19:24:03Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-memory-update-worker/task-shim-research-scheduler-run-scheduler-memory_update_initial.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:03Z', 'daemon_pid': 18647}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.824, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-memory-update-worker/task-shim-research-scheduler-run-scheduler-memory_update_initial/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_update_memory",
+          "detail": "update_memory",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_research_memory_update.v1",
+          "detail": "research_memory_update.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-memory_update_initial",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "memory_update_initial",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-memory-update-worker/task-shim-research-scheduler-run-scheduler-memory_update_initial/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/memory_update_initial/task-shim-research-scheduler-run-scheduler-memory_update_initial/research_memory_update.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/memory_update_initial/task-shim-research-scheduler-run-scheduler-memory_update_initial/research_memory_update.json",
+        "reasons": [],
+        "schema": "research_memory_update.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificMemoryUpdater",
+      "materialized_envelope_path": "run/operator-results/autosci-memory-update-worker/task-shim-research-scheduler-run-scheduler-memory_update_initial/envelope.json",
+      "node_id": "memory_update_initial",
+      "operator_id": "autosci-memory-update-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:04Z",
+        "log_tail": "{\n  \"action\": \"update_memory\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "memory_update_initial",
+        "operator_id": "autosci-memory-update-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:03Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-memory_update_initial"
+      },
+      "operator_result_path": "run/operator-results/autosci-memory-update-worker/task-shim-research-scheduler-run-scheduler-memory_update_initial/result.json",
+      "output_log_path": "run/operator-results/autosci-memory-update-worker/task-shim-research-scheduler-run-scheduler-memory_update_initial/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 18647,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-memory-update-worker/task-shim-research-scheduler-run-scheduler-memory_update_initial.json",
+        "lease_id": "autosci-memory-update-worker:task-shim-research-scheduler-run-scheduler-memory_update_initial:2026-07-10T19:24:03Z",
+        "operator_id": "autosci-memory-update-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:03Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-memory_update_initial"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-memory_update_initial",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.824
+      }
+    },
+    "method_extract": {
+      "action": "extract_methods",
+      "bridge_result": {
+        "action": "extract_methods",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/research_method.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/extract_methods.result.json",
+        "schema": "research_method.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/extract_methods.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-method_extract', 'operator_id': 'autosci-method-extract-worker', 'lease_id': 'autosci-method-extract-worker:task-shim-research-scheduler-run-scheduler-method_extract:2026-07-10T19:24:06Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-method-extract-worker/task-shim-research-scheduler-run-scheduler-method_extract.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:06Z', 'daemon_pid': 19852}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.819, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-method-extract-worker/task-shim-research-scheduler-run-scheduler-method_extract/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_extract_methods",
+          "detail": "extract_methods",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_research_method.v1",
+          "detail": "research_method.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-method_extract",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "method_extract",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-method-extract-worker/task-shim-research-scheduler-run-scheduler-method_extract/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/research_method.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/research_method.json",
+        "reasons": [],
+        "schema": "research_method.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificMethodExtractor",
+      "materialized_envelope_path": "run/operator-results/autosci-method-extract-worker/task-shim-research-scheduler-run-scheduler-method_extract/envelope.json",
+      "node_id": "method_extract",
+      "operator_id": "autosci-method-extract-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:06Z",
+        "log_tail": "{\n  \"action\": \"extract_methods\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "method_extract",
+        "operator_id": "autosci-method-extract-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:06Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-method_extract"
+      },
+      "operator_result_path": "run/operator-results/autosci-method-extract-worker/task-shim-research-scheduler-run-scheduler-method_extract/result.json",
+      "output_log_path": "run/operator-results/autosci-method-extract-worker/task-shim-research-scheduler-run-scheduler-method_extract/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 19852,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-method-extract-worker/task-shim-research-scheduler-run-scheduler-method_extract.json",
+        "lease_id": "autosci-method-extract-worker:task-shim-research-scheduler-run-scheduler-method_extract:2026-07-10T19:24:06Z",
+        "operator_id": "autosci-method-extract-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:06Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-method_extract"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-method_extract",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.819
+      }
+    },
+    "paper_analyze": {
+      "action": "analyze_paper",
+      "bridge_result": {
+        "action": "analyze_paper",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/research_paper_analysis.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/analyze_paper.result.json",
+        "schema": "research_paper.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/analyze_paper.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-paper_analyze', 'operator_id': 'autosci-paper-analyze-worker', 'lease_id': 'autosci-paper-analyze-worker:task-shim-research-scheduler-run-scheduler-paper_analyze:2026-07-10T19:24:03Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-paper-analyze-worker/task-shim-research-scheduler-run-scheduler-paper_analyze.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:03Z', 'daemon_pid': 18563}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.615, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-paper-analyze-worker/task-shim-research-scheduler-run-scheduler-paper_analyze/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_analyze_paper",
+          "detail": "analyze_paper",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_research_paper.v1",
+          "detail": "research_paper.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-paper_analyze",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "paper_analyze",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-paper-analyze-worker/task-shim-research-scheduler-run-scheduler-paper_analyze/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/research_paper_analysis.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/research_paper_analysis.json",
+        "reasons": [],
+        "schema": "research_paper.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificPaperAnalyzer",
+      "materialized_envelope_path": "run/operator-results/autosci-paper-analyze-worker/task-shim-research-scheduler-run-scheduler-paper_analyze/envelope.json",
+      "node_id": "paper_analyze",
+      "operator_id": "autosci-paper-analyze-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:03Z",
+        "log_tail": "{\n  \"action\": \"analyze_paper\",",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "paper_analyze",
+        "operator_id": "autosci-paper-analyze-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:03Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-paper_analyze"
+      },
+      "operator_result_path": "run/operator-results/autosci-paper-analyze-worker/task-shim-research-scheduler-run-scheduler-paper_analyze/result.json",
+      "output_log_path": "run/operator-results/autosci-paper-analyze-worker/task-shim-research-scheduler-run-scheduler-paper_analyze/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 18563,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-paper-analyze-worker/task-shim-research-scheduler-run-scheduler-paper_analyze.json",
+        "lease_id": "autosci-paper-analyze-worker:task-shim-research-scheduler-run-scheduler-paper_analyze:2026-07-10T19:24:03Z",
+        "operator_id": "autosci-paper-analyze-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:03Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-paper_analyze"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-paper_analyze",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.615
+      }
+    },
+    "paper_ingest": {
+      "action": "ingest_paper",
+      "bridge_result": {
+        "action": "ingest_paper",
+        "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/evidence.jsonl",
+        "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/research_paper.json",
+        "ok": true,
+        "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/ingest_paper.result.json",
+        "schema": "research_paper.v1",
+        "status": "completed"
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/ingest_paper.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-run-scheduler-paper_ingest', 'operator_id': 'autosci-paper-ingest-worker', 'lease_id': 'autosci-paper-ingest-worker:task-shim-research-scheduler-run-scheduler-paper_ingest:2026-07-10T19:24:02Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-paper-ingest-worker/task-shim-research-scheduler-run-scheduler-paper_ingest.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:24:02Z', 'daemon_pid': 18093}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.615, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-scheduler-run-scheduler-paper_ingest/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "0",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "completed",
+          "status": "ok"
+        },
+        {
+          "check": "bridge_action_ingest_paper",
+          "detail": "ingest_paper",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_schema_research_paper.v1",
+          "detail": "research_paper.v1",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "task-shim-research-scheduler-run-scheduler-paper_ingest",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "paper_ingest",
+          "status": "ok"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "passed",
+          "status": "ok"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-scheduler-run-scheduler-paper_ingest/output.log",
+          "status": "ok"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/research_paper.json",
+      "gate_result": {
+        "evidence_status": "completed",
+        "exit_code": 0,
+        "ok": true,
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/research_paper.json",
+        "reasons": [],
+        "schema": "research_paper.v1",
+        "status": "passed",
+        "warnings": []
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7",
+      "logical_operator": "ScientificPaperIngestor",
+      "materialized_envelope_path": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-scheduler-run-scheduler-paper_ingest/envelope.json",
+      "node_id": "paper_ingest",
+      "operator_id": "autosci-paper-ingest-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 0,
+        "finished_at": "2026-07-10T19:24:02Z",
+        "log_tail": "            }\n          ],\n          \"downstream_handoff_ready\": true,\n          \"final_registration_ready\": false,\n          \"graph_sidecar_ready\": true,\n          \"memory_sidecar_ready\": true,\n          \"missing\": [\n            \"wiki_registration_ready\"\n          ],\n          \"paper_id\": \"paper-shim-research-scheduler-run-scheduler\",\n          \"parse_quality_ready\": true,\n          \"raw_artifact_provenance_ready\": true,\n          \"schema\": \"autosci_ingest_final_source_registration_boundary.v1\",\n          \"sidecar_evidence_paths\": [\n            \"artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/research_memory_update.json\",\n            \"artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_ingest/task-shim-research-scheduler-run-scheduler-paper_ingest/research_graph_update.json\"\n          ],\n          \"source_preparation_verified\": true,\n          \"status\": \"ingest_source_registration_incomplete\",\n          \"wiki_registration\": {\n            \"context_brief_path\": \"artifacts/autosci/workspace/wiki/graph/context_brief.md\",\n            \"context_rebuilt\": false,\n            \"graph_edges_path\": \"artifacts/autosci/workspace/wiki/graph/edges.jsonl\",\n            \"graph_registered\": false,\n            \"index_path\": \"artifacts/autosci/workspace/wiki/index.md\",\n            \"index_rebuilt\": false,\n            \"log_path\": \"artifacts/autosci/workspace/wiki/log.md\",\n            \"log_registered\": false,\n            \"paper_page\": \"artifacts/autosci/workspace/wiki/papers/paper-shim-research-scheduler-run-scheduler.md\",\n            \"paper_registered\": false,\n            \"wiki_root\": \"artifacts/autosci/workspace/wiki\"\n          },\n          \"wiki_registration_ready\": false\n        },\n        \"identifiers\": {\n          \"native_prepare_status\": \"completed\",\n          \"source_fetch_status\": \"not_applicable\",\n          \"source_prepare_status\": \"completed\"\n        },\n        \"paper_id\": \"paper-shim-research-scheduler-run-scheduler\",\n        \"parse_status\": \"parsed\",\n        \"preparation\": {\n          \"abstract_excerpt\": \"\",\n          \"artifacts\": [],\n          \"arxiv_id\": \"\",\n          \"canonical_ingest_path\": \"plugins/autosci/tests/fixtures/sample_paper.md\",\n          \"extracted_text_path\": null,\n          \"ingest_format\": \"md\",\n          \"native_prepare_paper_source\": {\n            \"allow_network_fetch\": false,",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "paper_ingest",
+        "operator_id": "autosci-paper-ingest-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:24:02Z",
+        "status": "completed",
+        "task_id": "task-shim-research-scheduler-run-scheduler-paper_ingest"
+      },
+      "operator_result_path": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-scheduler-run-scheduler-paper_ingest/result.json",
+      "output_log_path": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-scheduler-run-scheduler-paper_ingest/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-run-scheduler",
+      "status": "passed",
+      "submission": {
+        "daemon_pid": 18093,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/run/operator-inbox/autosci-paper-ingest-worker/task-shim-research-scheduler-run-scheduler-paper_ingest.json",
+        "lease_id": "autosci-paper-ingest-worker:task-shim-research-scheduler-run-scheduler-paper_ingest:2026-07-10T19:24:02Z",
+        "operator_id": "autosci-paper-ingest-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:24:02Z",
+        "task_id": "task-shim-research-scheduler-run-scheduler-paper_ingest"
+      },
+      "task_id": "task-shim-research-scheduler-run-scheduler-paper_ingest",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.615
+      }
+    }
+  },
+  "nodes": [
+    {
+      "action": "discover_literature",
+      "gate": "G_LITERATURE_DISCOVER",
+      "id": "literature_discover",
+      "logical_operator": "ScientificLiteratureDiscoverer",
+      "operator_id": "autosci-literature-discover-worker"
+    },
+    {
+      "action": "ingest_paper",
+      "gate": "G_PAPER_INGEST",
+      "id": "paper_ingest",
+      "logical_operator": "ScientificPaperIngestor",
+      "operator_id": "autosci-paper-ingest-worker"
+    },
+    {
+      "action": "analyze_paper",
+      "gate": "G_PAPER_ANALYZE",
+      "id": "paper_analyze",
+      "logical_operator": "ScientificPaperAnalyzer",
+      "operator_id": "autosci-paper-analyze-worker"
+    },
+    {
+      "action": "update_memory",
+      "gate": "G_MEMORY_UPDATE_INITIAL",
+      "id": "memory_update_initial",
+      "logical_operator": "ScientificMemoryUpdater",
+      "operator_id": "autosci-memory-update-worker"
+    },
+    {
+      "action": "update_graph",
+      "gate": "G_GRAPH_UPDATE",
+      "id": "graph_update",
+      "logical_operator": "ScientificGraphUpdater",
+      "operator_id": "autosci-graph-update-worker"
+    },
+    {
+      "action": "extract_claims",
+      "gate": "G_CLAIM_EXTRACT",
+      "id": "claim_extract",
+      "logical_operator": "ScientificClaimExtractor",
+      "operator_id": "autosci-claim-extract-worker"
+    },
+    {
+      "action": "extract_methods",
+      "gate": "G_METHOD_EXTRACT",
+      "id": "method_extract",
+      "logical_operator": "ScientificMethodExtractor",
+      "operator_id": "autosci-method-extract-worker"
+    },
+    {
+      "action": "map_code_evidence",
+      "gate": "G_CODE_EVIDENCE_MAP",
+      "id": "code_evidence_map",
+      "logical_operator": "ScientificCodeEvidenceMapper",
+      "operator_id": "autosci-code-evidence-map-worker"
+    },
+    {
+      "action": "generate_ideas",
+      "gate": "G_IDEA_GENERATE",
+      "id": "idea_generate",
+      "logical_operator": "ScientificIdeaGenerator",
+      "operator_id": "autosci-idea-worker"
+    },
+    {
+      "action": "evaluate_ideas",
+      "gate": "G_IDEA_EVALUATE",
+      "id": "idea_evaluate",
+      "logical_operator": "ScientificIdeaEvaluator",
+      "operator_id": "autosci-idea-evaluate-worker"
+    },
+    {
+      "action": "design_experiment",
+      "gate": "G_EXPERIMENT_DESIGN",
+      "id": "experiment_design",
+      "logical_operator": "ScientificExperimentDesigner",
+      "operator_id": "autosci-experiment-design-worker"
+    },
+    {
+      "action": "run_experiment",
+      "gate": "G_EXPERIMENT_RUN",
+      "id": "experiment_run",
+      "logical_operator": "ScientificExperimentRunner",
+      "operator_id": "autosci-experiment-run-worker"
+    },
+    {
+      "action": "monitor_experiment",
+      "gate": "G_EXPERIMENT_MONITOR",
+      "id": "experiment_monitor",
+      "logical_operator": "ScientificExperimentMonitor",
+      "operator_id": "autosci-experiment-monitor-worker"
+    },
+    {
+      "action": "verify_claim",
+      "gate": "G_CLAIM_VERIFY",
+      "id": "claim_verify",
+      "logical_operator": "ScientificClaimVerifier",
+      "operator_id": "autosci-claim-verify-worker"
+    },
+    {
+      "action": "plan_report",
+      "gate": "G_REPORT_PLAN",
+      "id": "report_plan",
+      "logical_operator": "ScientificReportPlanner",
+      "operator_id": "autosci-report-plan-worker"
+    },
+    {
+      "action": "compile_paper",
+      "gate": "G_PUBLICATION_PRODUCE",
+      "id": "publication_produce",
+      "logical_operator": "ScientificPublicationProducer",
+      "operator_id": "autosci-publication-compile-worker"
+    }
+  ],
+  "required_nodes": [
+    "literature_discover",
+    "paper_ingest",
+    "paper_analyze",
+    "memory_update_initial",
+    "graph_update",
+    "claim_extract",
+    "method_extract",
+    "code_evidence_map",
+    "idea_generate",
+    "idea_evaluate",
+    "experiment_design",
+    "experiment_run",
+    "experiment_monitor",
+    "claim_verify",
+    "report_plan",
+    "publication_produce"
+  ],
+  "schema": "scientific_lifecycle.v1",
+  "sprint_id": "shim-research-scheduler-run-scheduler",
+  "summary_path": "artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+  "workflow_config_alignment": {
+    "configured_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_plan",
+      "report_draft",
+      "artifact_review",
+      "publication_produce",
+      "memory_update_final",
+      "workflow_evolve"
+    ],
+    "configured_nodes_missing_from_runner": [],
+    "configured_nodes_not_required_by_run": [
+      "report_draft",
+      "artifact_review",
+      "memory_update_final",
+      "workflow_evolve"
+    ],
+    "configured_required_order": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_plan",
+      "publication_produce"
+    ],
+    "issues": [
+      "configured_nodes_not_required_by_run"
+    ],
+    "ok": false,
+    "order_matches": true,
+    "required_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_plan",
+      "publication_produce"
+    ],
+    "required_run_nodes_not_declared_in_config": [],
+    "runner_available_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_draft",
+      "artifact_review",
+      "memory_update_final",
+      "workflow_evolve",
+      "report_plan",
+      "publication_produce"
+    ],
+    "runner_configured_order": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_plan",
+      "publication_produce"
+    ],
+    "runner_nodes_not_declared_in_config": [],
+    "status": "drift",
+    "workflow_config_path": "workflows/scientific_research_lifecycle_full_v1.json"
+  },
+  "workflow_id": "scientific_research_lifecycle_full_v1"
+}

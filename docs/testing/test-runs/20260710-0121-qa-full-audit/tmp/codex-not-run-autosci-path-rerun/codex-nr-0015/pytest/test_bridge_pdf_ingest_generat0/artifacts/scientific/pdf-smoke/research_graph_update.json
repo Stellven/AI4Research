@@ -1,0 +1,48 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/pdf-smoke/research_graph_update.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allow_network_fetch": false,
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0015/pytest/test_bridge_pdf_ingest_generat0/raw/papers/2401.00002.pdf",
+    "raw_root": "raw"
+  },
+  "limitations": [
+    "Fixture graph update records explicit proposed edges only."
+  ],
+  "node_id": "node-ingest-pdf",
+  "outputs": {
+    "edges": [
+      {
+        "evidence_ids": [
+          "paper-2401.00002"
+        ],
+        "operation": "propose",
+        "relation": "describes",
+        "source": "paper-2401.00002",
+        "target": "concept.solar_evidence_abi"
+      },
+      {
+        "evidence_ids": [
+          "paper-2401.00002"
+        ],
+        "operation": "confirm",
+        "relation": "has_source",
+        "source": "paper-2401.00002",
+        "target": "raw/tmp/papers/2401-00002.tex"
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T19:22:53Z"
+  },
+  "schema": "research_graph_update.v1",
+  "sprint_id": "phase19-pdf-prepare",
+  "status": "completed",
+  "task_id": "task-pdf-ingest"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_304_722fb657ed_harness_tests_test_autopilot_broker_gate.py",
+  "source": "harness/tests/test_autopilot_broker_gate.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_autopilot_broker_gate.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.24,
+  "timeout": false
+}

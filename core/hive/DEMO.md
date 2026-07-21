@@ -43,10 +43,10 @@ bun core/hive/cli/node.ts start --name="Mac-Mini" --port=9877
 [HIVE] ✓ 节点运行中... (Ctrl+C 退出)
 
 # 几秒后...
-[mDNS] ✓ 发现节点: Mac-Mini (192.168.1.x:9877)
-[HIVE] ✓ 发现节点: Mac-Mini (192.168.1.x:9877)
-[P2P] ✓ 已连接: 192.168.1.x:9877
-[P2P] ✓ 节点加入: 1b3c4d5e-... (192.168.1.x:9877)
+[mDNS] ✓ 发现节点: Mac-Mini (192.0.2.10:9877)
+[HIVE] ✓ 发现节点: Mac-Mini (192.0.2.10:9877)
+[P2P] ✓ 已连接: 192.0.2.10:9877
+[P2P] ✓ 节点加入: 1b3c4d5e-... (192.0.2.10:9877)
 
 # 5秒后选举...
 [Election] 开始选举 (候选节点: 2)
@@ -76,9 +76,9 @@ bun core/hive/cli/node.ts start --name="Mac-Mini" --port=9877
 [HIVE] ✓ 节点运行中... (Ctrl+C 退出)
 
 # 几秒后...
-[mDNS] ✓ 发现节点: MacBook-Pro (192.168.1.y:9876)
-[HIVE] ✓ 发现节点: MacBook-Pro (192.168.1.y:9876)
-[P2P] ✓ 已连接: 192.168.1.y:9876
+[mDNS] ✓ 发现节点: MacBook-Pro (192.0.2.11:9876)
+[HIVE] ✓ 发现节点: MacBook-Pro (192.0.2.11:9876)
+[P2P] ✓ 已连接: 192.0.2.11:9876
 
 # 5秒后选举...
 [Election] 开始选举 (候选节点: 2)
@@ -101,7 +101,7 @@ bun core/hive/cli/node.ts peers
 ┌─ 🌐 Discovered Peers ──────────────────────────────┐
 │ 已发现: 1 个节点
 ├─────────────────────────────────────────────────────┤
-│ ✓ Mac-Mini            192.168.1.x:9877
+│ ✓ Mac-Mini            192.0.2.10:9877
 │   Tier: local | Agents: coder, tester, reviewer
 └─────────────────────────────────────────────────────┘
 ```

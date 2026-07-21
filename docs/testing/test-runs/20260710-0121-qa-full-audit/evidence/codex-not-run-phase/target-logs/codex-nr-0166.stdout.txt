@@ -1,0 +1,38 @@
+=== test-dispatch-ledger.sh ===
+
+--- dispatch_id format ---
+  ✅ dispatch_id format: d-20260710T185057Z-f94c6a
+  ⏳ generating 1000 dispatch_ids...  ✅ 1000 dispatch_ids unique
+
+--- dispatch_ledger_append + query ---
+  ✅ ledger has 1 record after append
+  ✅ record contains dispatch_id
+  ✅ record contains kind=attempted
+  ✅ ledger has 3 records after 3 appends
+  ✅ query --sid sprint-test-02 returns 1 line
+  ✅ query --did returns 2 lines (attempted+acked for DID1)
+  ✅ query --tail 1 contains nacked
+
+--- queue FIFO + dedup ---
+  ✅ queue_enqueue returns ok
+  ✅ queue_enqueue same intent returns duplicate
+  ✅ queue_enqueue different intent returns ok
+  ✅ queue_peek returns first intent
+  ✅ queue_depth is 2 after peek
+  ✅ queue_pop returns first item
+  ✅ queue_depth is 1 after pop
+  ✅ queue_peek returns second item after pop
+  ✅ queue_pop on empty returns empty
+  ✅ crash recovery: item visible after re-source
+  ✅ queue_peek returns highest priority item
+  ✅ queue_pop returns highest priority item
+  ✅ queue_consume_all returns number consumed
+  ✅ queue_consume_all leaves depth 0
+  ✅ queue_consume_all records reason
+  ✅ queue_consume_all removes empty terminal lock
+  ✅ queue_consume_intent_prefix returns matching count
+  ✅ queue_consume_intent_prefix leaves non-matching pending
+  ✅ queue_consume_intent_prefix records reason
+  ✅ concurrent 10 appends all recorded (total=13)
+
+=== RESULT: PASS=29 FAIL=0 ===

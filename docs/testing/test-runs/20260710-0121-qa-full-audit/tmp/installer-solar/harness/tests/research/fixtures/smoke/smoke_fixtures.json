@@ -1,0 +1,183 @@
+{
+  "run_id": "smoke-run-20260514",
+  "topic": "Transformer Attention Mechanisms: From Self-Attention to Multi-Head Patterns",
+  "depth_tier": "standard",
+  "sources": [
+    {
+      "doc_id": "doc_vaswani_2017",
+      "connector_type": "internal_mirage",
+      "title": "Attention Is All You Need",
+      "authors": ["Vaswani, A.", "Shazeer, N.", "Parmar, N.", "Uszkoreit, J.", "Jones, L.", "Gomez, A.N.", "Kaiser, L.", "Polosukhin, I."],
+      "published_date": "2017-06-12",
+      "authority_score": 0.98,
+      "raw_text": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show that these models are superior in quality while being more parallelizable and requiring significantly less time to train. The Transformer model architecture eschews recurrence and relies entirely on an attention mechanism to draw global dependencies between input and output. Self-attention, sometimes called intra-attention, is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. The Transformer uses multi-head self-attention in six encoder layers and six decoder layers.",
+      "content_length": 876
+    },
+    {
+      "doc_id": "doc_devlin_2019",
+      "connector_type": "internal_mirage",
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+      "authors": ["Devlin, J.", "Chang, M.W.", "Lee, K.", "Toutanova, K."],
+      "published_date": "2019-05-13",
+      "authority_score": 0.95,
+      "raw_text": "We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. As a result, the pre-trained BERT model can be fine-tuned with just one additional output layer to create state-of-the-art models for a wide range of tasks. BERT obtains new state-of-the-art results on eleven NLP tasks, including pushing the GLUE benchmark to 80.4% and the SQuAD v1.1 question answering test F1 to 93.2. BERT is conceptually simple and empirically powerful. It can be pre-trained on large text corpora in 94 hours using 4 Cloud TPU pods. The masked language model (MLM) objective randomly masks some percentage of the input tokens and the model must predict the original vocabulary ID of the masked word based on its context.",
+      "content_length": 772
+    },
+    {
+      "doc_id": "doc_dosovitskiy_2021",
+      "connector_type": "internal_mirage",
+      "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+      "authors": ["Dosovitskiy, A.", "Beyer, L.", "Kolesnikov, A.", "Weissenborn, D.", "Zhai, X.", "Unterthiner, T.", "Dehghani, M.", "Minderer, M.", "Heigold, G.", "Gelly, S."],
+      "published_date": "2021-06-03",
+      "authority_score": 0.97,
+      "raw_text": "While the Transformer architecture has become the de-facto standard for natural language processing tasks, its applications to computer vision remain limited. In vision, attention is either applied in conjunction with convolutional networks, or used to replace certain components of convolutional networks while keeping their overall structure in place. We show that this reliance on CNNs is not necessary and a pure transformer applied directly to sequences of image patches can perform very well on image classification tasks. The Vision Transformer (ViT) model splits an image into fixed-size patches, linearly embeds each of them, adds position embeddings, and feeds the resulting sequence of vectors to a standard Transformer encoder. With enough pre-training, ViT attains excellent results when pre-trained on large datasets and transferred to multiple mid-size or large image recognition benchmarks.",
+      "content_length": 747
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "ev_vaswani_self_attention",
+      "source_id": "doc_vaswani_2017",
+      "span_start": 0,
+      "span_end": 417,
+      "span_text": "We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Self-attention, sometimes called intra-attention, is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions.",
+      "evidence_type": "direct_quote",
+      "relevance_score": 0.95
+    },
+    {
+      "evidence_id": "ev_vaswani_multi_head",
+      "source_id": "doc_vaswani_2017",
+      "span_start": 418,
+      "span_end": 530,
+      "span_text": "The Transformer uses multi-head self-attention in six encoder layers and six decoder layers. Experiments on two machine translation tasks show that these models are superior in quality while being more parallelizable and requiring significantly less time to train.",
+      "evidence_type": "finding",
+      "relevance_score": 0.90
+    },
+    {
+      "evidence_id": "ev_devlin_mlm",
+      "source_id": "doc_devlin_2019",
+      "span_start": 0,
+      "span_end": 380,
+      "span_text": "Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. As a result, the pre-trained BERT model can be fine-tuned with just one additional output layer to create state-of-the-art models for a wide range of tasks.",
+      "evidence_type": "finding",
+      "relevance_score": 0.93
+    },
+    {
+      "evidence_id": "ev_devlin_results",
+      "source_id": "doc_devlin_2019",
+      "span_start": 381,
+      "span_end": 588,
+      "span_text": "BERT obtains new state-of-the-art results on eleven NLP tasks, including pushing the GLUE benchmark to 80.4% and the SQuAD v1.1 question answering test F1 to 93.2%. The masked language model (MLM) objective randomly masks some percentage of the input tokens and the model must predict the original vocabulary ID of the masked word based on its context.",
+      "evidence_type": "statistic",
+      "relevance_score": 0.91
+    },
+    {
+      "evidence_id": "ev_dosovitskiy_patches",
+      "source_id": "doc_dosovitskiy_2021",
+      "span_start": 0,
+      "span_end": 410,
+      "span_text": "We show that this reliance on CNNs is not necessary and a pure transformer applied directly to sequences of image patches can perform very well on image classification tasks. The Vision Transformer (ViT) model splits an image into fixed-size patches, linearly embeds each of them, adds position embeddings, and feeds the resulting sequence of vectors to a standard Transformer encoder.",
+      "evidence_type": "finding",
+      "relevance_score": 0.94
+    },
+    {
+      "evidence_id": "ev_dosovitskiy_transfer",
+      "source_id": "doc_dosovitskiy_2021",
+      "span_start": 411,
+      "span_end": 540,
+      "span_text": "With enough pre-training, ViT attains excellent results when pre-trained on large datasets and transferred to multiple mid-size or large image recognition benchmarks.",
+      "evidence_type": "finding",
+      "relevance_score": 0.88
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "clm_0001_transformer_architecture",
+      "claim_text": "The Transformer architecture replaces recurrence and convolutions entirely with attention mechanisms, establishing a new paradigm for sequence modeling.",
+      "section_path": "ch1/sec1",
+      "is_key": true,
+      "claim_type": "factual",
+      "source_method": "extracted_from_evidence",
+      "evidence_ids": ["ev_vaswani_self_attention"],
+      "support_rating": "strong"
+    },
+    {
+      "claim_id": "clm_0002_parallelization",
+      "claim_text": "Transformer models achieve superior quality while being significantly more parallelizable than recurrent architectures, reducing training time substantially.",
+      "section_path": "ch1/sec1",
+      "is_key": true,
+      "claim_type": "factual",
+      "source_method": "extracted_from_evidence",
+      "evidence_ids": ["ev_vaswani_multi_head"],
+      "support_rating": "strong"
+    },
+    {
+      "claim_id": "clm_0003_bert_pretraining",
+      "claim_text": "BERT pre-trains deep bidirectional representations by jointly conditioning on both left and right context, enabling transfer learning with minimal task-specific architecture changes.",
+      "section_path": "ch2/sec1",
+      "is_key": true,
+      "claim_type": "factual",
+      "source_method": "extracted_from_evidence",
+      "evidence_ids": ["ev_devlin_mlm"],
+      "support_rating": "strong"
+    },
+    {
+      "claim_id": "clm_0004_bert_sota",
+      "claim_text": "BERT achieved new state-of-the-art results across eleven NLP tasks including 80.4% on GLUE and 93.2% F1 on SQuAD v1.1.",
+      "section_path": "ch2/sec2",
+      "is_key": true,
+      "claim_type": "factual",
+      "source_method": "extracted_from_evidence",
+      "evidence_ids": ["ev_devlin_results"],
+      "support_rating": "strong"
+    },
+    {
+      "claim_id": "clm_0005_vit_patches",
+      "claim_text": "The Vision Transformer applies the Transformer architecture directly to image patches without convolutional networks, demonstrating that self-attention is sufficient for visual recognition.",
+      "section_path": "ch3/sec1",
+      "is_key": true,
+      "claim_type": "factual",
+      "source_method": "extracted_from_evidence",
+      "evidence_ids": ["ev_dosovitskiy_patches"],
+      "support_rating": "strong"
+    },
+    {
+      "claim_id": "clm_0006_vit_transfer",
+      "claim_text": "With sufficient pre-training on large datasets, ViT achieves excellent transfer learning results on multiple image recognition benchmarks without task-specific architectural modifications.",
+      "section_path": "ch3/sec1",
+      "is_key": true,
+      "claim_type": "factual",
+      "source_method": "extracted_from_evidence",
+      "evidence_ids": ["ev_dosovitskiy_transfer"],
+      "support_rating": "moderate"
+    },
+    {
+      "claim_id": "clm_0007_cross_domain",
+      "claim_text": "The Transformer architecture has been successfully extended beyond NLP to computer vision and other domains, demonstrating its generality as a sequence modeling primitive.",
+      "section_path": "ch3/sec2",
+      "is_key": true,
+      "claim_type": "comparative",
+      "source_method": "synthesized_from_multiple",
+      "evidence_ids": ["ev_dosovitskiy_patches", "ev_devlin_mlm"],
+      "support_rating": "strong"
+    }
+  ],
+  "claim_evidence_links": [
+    {"link_id": "cel_0001", "claim_id": "clm_0001_transformer_architecture", "evidence_id": "ev_vaswani_self_attention", "link_type": "supports", "relevance_score": 0.95},
+    {"link_id": "cel_0002", "claim_id": "clm_0002_parallelization", "evidence_id": "ev_vaswani_multi_head", "link_type": "supports", "relevance_score": 0.90},
+    {"link_id": "cel_0003", "claim_id": "clm_0003_bert_pretraining", "evidence_id": "ev_devlin_mlm", "link_type": "supports", "relevance_score": 0.93},
+    {"link_id": "cel_0004", "claim_id": "clm_0004_bert_sota", "evidence_id": "ev_devlin_results", "link_type": "supports", "relevance_score": 0.91},
+    {"link_id": "cel_0005", "claim_id": "clm_0005_vit_patches", "evidence_id": "ev_dosovitskiy_patches", "link_type": "supports", "relevance_score": 0.94},
+    {"link_id": "cel_0006", "claim_id": "clm_0006_vit_transfer", "evidence_id": "ev_dosovitskiy_transfer", "link_type": "supports", "relevance_score": 0.88},
+    {"link_id": "cel_0007a", "claim_id": "clm_0007_cross_domain", "evidence_id": "ev_dosovitskiy_patches", "link_type": "supports", "relevance_score": 0.90},
+    {"link_id": "cel_0007b", "claim_id": "clm_0007_cross_domain", "evidence_id": "ev_devlin_mlm", "link_type": "supports", "relevance_score": 0.85}
+  ],
+  "citation_spans": [
+    {"citation_id": "cit_0001", "section_path": "ch1/sec1", "span_start": 30, "span_end": 34, "span_text": "data", "marker_text": "[cite:ev_vaswani_self_attention]", "marker_position": 180, "verified": true, "verification_result": "match"},
+    {"citation_id": "cit_0002", "section_path": "ch1/sec1", "span_start": 85, "span_end": 89, "span_text": "data", "marker_text": "[cite:ev_vaswani_multi_head]", "marker_position": 320, "verified": true, "verification_result": "match"},
+    {"citation_id": "cit_0003", "section_path": "ch2/sec1", "span_start": 45, "span_end": 49, "span_text": "data", "marker_text": "[cite:ev_devlin_mlm]", "marker_position": 195, "verified": true, "verification_result": "match"},
+    {"citation_id": "cit_0004", "section_path": "ch2/sec2", "span_start": 20, "span_end": 24, "span_text": "data", "marker_text": "[cite:ev_devlin_results]", "marker_position": 230, "verified": true, "verification_result": "match"},
+    {"citation_id": "cit_0005", "section_path": "ch3/sec1", "span_start": 40, "span_end": 44, "span_text": "data", "marker_text": "[cite:ev_dosovitskiy_patches]", "marker_position": 155, "verified": true, "verification_result": "match"},
+    {"citation_id": "cit_0006", "section_path": "ch3/sec2", "span_start": 55, "span_end": 59, "span_text": "data", "marker_text": "[cite:ev_dosovitskiy_transfer]", "marker_position": 180, "verified": true, "verification_result": "match"}
+  ]
+}

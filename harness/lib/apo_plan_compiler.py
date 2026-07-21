@@ -10,15 +10,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-try:
-    import yaml  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - exercised in subprocess/runtime without PyYAML
-    from simple_yaml import safe_load as _safe_yaml_load
-
-    class _YamlCompat:
-        safe_load = staticmethod(_safe_yaml_load)
-
-    yaml = _YamlCompat()
+import yaml
 
 from capability_capsules import (
     CAPSULE_REGISTRY_PATH,
@@ -31,6 +23,11 @@ from capability_capsules import (
     load_capability_capsule_manifest,
     query_capability_capsules,
 )
+from executable_node import (
+    canonical_executable_node,
+    physical_role as executable_physical_role,
+)
+from physical_operator_catalog import is_operator_statically_selectable
 
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
@@ -38,38 +35,27 @@ LOGICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "logical-operators.json"
 PHYSICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "physical-operators.json"
 ARTIFACT_ADAPTER_REGISTRY_PATH = HARNESS_DIR / "config" / "artifact-adapter-capsules.registry.yaml"
 EFFECT_KEYS = ("read", "write", "execute", "network", "cost", "risk")
-
-CODEX_FIRST_ROUTING_BOOST = int(os.environ.get("SOLAR_CODEX_FIRST_ROUTING_BOOST", "80") or "80")
-
-
-def codex_first_routing_enabled() -> bool:
-    return os.environ.get("SOLAR_CODEX_FIRST_ROUTING", "1").strip().lower() not in {"0", "false", "off", "no"}
-
-
-def _operator_is_codex(operator: Dict[str, Any], operator_id: str = "") -> bool:
-    values: List[str] = [
-        operator_id,
-        str(operator.get("operator_id") or ""),
-        str(operator.get("actor_id") or ""),
-        str(operator.get("profile") or ""),
-        str(operator.get("provider") or ""),
-        str(operator.get("vendor") or ""),
-        str(operator.get("model") or ""),
-        str(operator.get("model_config") or ""),
-        str(operator.get("base_url") or ""),
-        str(operator.get("backend") or ""),
-        str(operator.get("operator_class") or ""),
-    ]
-    for key in ("preferred_for", "task_classes", "roles", "strengths", "capabilities"):
-        raw = operator.get(key) or []
-        if isinstance(raw, str):
-            values.append(raw)
-        elif isinstance(raw, dict):
-            values.extend(str(item) for item in raw.keys())
-        else:
-            values.extend(str(item) for item in raw)
-    return "codex" in " ".join(values).lower()
-
+SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR = {
+    "ScientificLiteratureDiscoverer": "autosci-literature-discover-worker",
+    "ScientificPaperIngestor": "autosci-paper-ingest-worker",
+    "ScientificPaperAnalyzer": "autosci-paper-analyze-worker",
+    "ScientificMemoryUpdater": "autosci-memory-update-worker",
+    "ScientificGraphUpdater": "autosci-graph-update-worker",
+    "ScientificClaimExtractor": "autosci-claim-extract-worker",
+    "ScientificMethodExtractor": "autosci-method-extract-worker",
+    "ScientificCodeEvidenceMapper": "autosci-code-evidence-map-worker",
+    "ScientificIdeaGenerator": "autosci-idea-worker",
+    "ScientificIdeaEvaluator": "autosci-idea-evaluate-worker",
+    "ScientificExperimentDesigner": "autosci-experiment-design-worker",
+    "ScientificExperimentRunner": "autosci-experiment-run-worker",
+    "ScientificExperimentMonitor": "autosci-experiment-monitor-worker",
+    "ScientificClaimVerifier": "autosci-claim-verify-worker",
+    "ScientificReportPlanner": "autosci-report-plan-worker",
+    "ScientificReportDrafter": "autosci-report-worker",
+    "ScientificArtifactReviewer": "autosci-artifact-review-worker",
+    "ScientificPublicationProducer": "autosci-publication-compile-worker",
+    "ScientificWorkflowEvolver": "autosci-workflow-evolve-worker",
+}
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
@@ -87,6 +73,51 @@ def _write_json(path: Path, payload: Dict[str, Any]) -> str:
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     os.replace(tmp, path)
     return str(path)
+
+
+def _product_mode_enabled() -> bool:
+    return str(os.environ.get("SOLAR_PRODUCT_MODE", "") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _operator_suggestion_id(physical_plan: Dict[str, Any]) -> str:
+    return str(
+        physical_plan.get("suggested_operator_id")
+        or physical_plan.get("selected_operator_id")
+        or physical_plan.get("operator_id")
+        or physical_plan.get("actor_id")
+        or ""
+    ).strip()
+
+
+def _operator_suggestion_host_type(physical_plan: Dict[str, Any], operator_id: str) -> str:
+    explicit = str(physical_plan.get("host_type") or "").strip()
+    if explicit:
+        return explicit
+    for key in ("execution_candidates", "candidates"):
+        candidates = physical_plan.get(key)
+        if not isinstance(candidates, list):
+            continue
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            if str(candidate.get("operator_id") or "").strip() != operator_id:
+                continue
+            host_type = str(candidate.get("host_type") or candidate.get("backend") or "").strip()
+            if host_type:
+                return host_type
+    return "unknown"
+
+
+def _physical_plan_artifact_payload(physical_plan: Dict[str, Any]) -> Dict[str, Any]:
+    if not _product_mode_enabled():
+        return physical_plan
+    payload = dict(physical_plan)
+    suggestion = _operator_suggestion_id(payload)
+    payload.pop("selected_operator_id", None)
+    if suggestion:
+        payload["suggested_operator_id"] = suggestion
+    payload["host_type"] = _operator_suggestion_host_type(payload, suggestion)
+    return payload
 
 
 def _load_yaml(path: Path) -> Dict[str, Any]:
@@ -126,6 +157,20 @@ def _dedupe(values: List[str]) -> List[str]:
         seen.add(item)
         out.append(item)
     return out
+
+
+def _operator_constraints_for_logical_operator(
+    logical_operator: str,
+    constraints: Dict[str, Any],
+) -> Dict[str, Any]:
+    normalized = dict(constraints or {})
+    exact_operator = SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR.get(str(logical_operator or ""))
+    if not exact_operator:
+        return normalized
+    preferred = [exact_operator]
+    preferred.extend(str(item) for item in list(normalized.get("preferred") or []))
+    normalized["preferred"] = _dedupe(preferred)
+    return normalized
 
 
 def _resolve_manifest_path(base: Path, manifest_path: str) -> Path:
@@ -486,6 +531,21 @@ def build_capsule_plan_node(
         else ARTIFACT_ADAPTER_REGISTRY_PATH
     )
     base_plan = dict(node.get("capsule_plan") or {})
+    if not base_plan and str(node.get("capability_capsule_id") or "").strip():
+        # A certified planner node has already selected its admitted capsule
+        # and task type.  Re-classifying the goal here can silently replace
+        # that identity with a different default capsule.
+        base_plan = {
+            "capability_capsule_id": str(node.get("capability_capsule_id") or "").strip(),
+            "dispatch_task_type": str(
+                node.get("dispatch_task_type")
+                or node.get("task_type")
+                or node.get("type")
+                or ""
+            ).strip(),
+            "selected_skills": list(node.get("selected_skills") or []),
+            "selection_mode": "planner_declared",
+        }
     if not base_plan:
         base_plan = default_capability_plan_for_logical_operator(
             logical_operator,
@@ -510,9 +570,16 @@ def build_capsule_plan_node(
     manifest = _capsule_manifest(capsule_id, registry_path=registry_path)
     bindings = manifest.get("bindings", {})
     verification = manifest.get("verification", {})
-    op_constraints = dict(base_plan.get("operator_constraints") or manifest.get("operator_compatibility") or {})
+    op_constraints = _operator_constraints_for_logical_operator(
+        logical_operator,
+        dict(base_plan.get("operator_constraints") or manifest.get("operator_compatibility") or {}),
+    )
     task_type = str(base_plan.get("dispatch_task_type") or node.get("dispatch_task_type") or node.get("type") or "")
-    role = logical_role_for_operator(logical_operator)
+    # The logical operator carries semantics; allowed_operators.role is the
+    # certified physical-role constraint.  Keep the two distinct so a
+    # ResearchScout may run as builder work and an evaluator may be hosted by
+    # a compatible builder pane without changing its logical identity.
+    role = executable_physical_role(node)
 
     stages: List[Dict[str, Any]] = []
     for index, guard_id in enumerate(bindings.get("required_guard_capsules", []) or [], start=1):
@@ -743,14 +810,16 @@ def enumerate_physical_candidates(
             continue
         if op_id in forbidden_ops:
             continue
-        enabled = bool(spec.get("enabled", False))
-        available = bool(spec.get("available", False))
-        if not enabled or not available:
+        if not is_operator_statically_selectable(spec):
             continue
         if require_dispatchable and not _is_dispatchable_runtime(op_id):
             continue
         roles = [str(r).lower() for r in spec.get("roles", [spec.get("role", "")])]
-        if role and role.lower() not in roles:
+        explicitly_preferred = op_id in preferred_ops
+        # A capsule's explicit physical binding is stronger than its generic
+        # host role. AutoSci stages run on the builder plane but intentionally
+        # bind to scientific-* command workers with narrower operator roles.
+        if role and role.lower() not in roles and not explicitly_preferred:
             continue
 
         priority = 0
@@ -770,33 +839,24 @@ def enumerate_physical_candidates(
             priority += 2
         if role.lower() in preferred_for:
             priority += 2
-        if preferred_ops and op_id in preferred_ops:
+        if explicitly_preferred:
             priority += 20
         if default_profile and (op_id == default_profile or str(spec.get("profile", "")) == default_profile):
             priority += 8
-        codex_candidate = codex_first_routing_enabled() and _operator_is_codex(spec, op_id)
-        if codex_candidate:
-            priority += CODEX_FIRST_ROUTING_BOOST
-        candidates.append(
-            {
-                "operator_id": op_id,
-                "priority": priority,
-                "role": role,
-                "task_type": task_type,
-                "profile": spec.get("profile"),
-                "model": spec.get("model"),
-                "preferred_for": spec.get("preferred_for", []),
-                "codex_first": codex_candidate,
-            }
-        )
+        candidate = {
+            "operator_id": op_id,
+            "priority": priority,
+            "role": role,
+            "task_type": task_type,
+            "profile": spec.get("profile"),
+            "model": spec.get("model"),
+            "preferred_for": spec.get("preferred_for", []),
+        }
+        if _product_mode_enabled():
+            candidate["host_type"] = spec.get("host_type") or spec.get("backend") or "unknown"
+        candidates.append(candidate)
 
-    candidates.sort(
-        key=lambda item: (
-            0 if item.get("codex_first") else 1,
-            -int(item["priority"]),
-            str(item["operator_id"]),
-        )
-    )
+    candidates.sort(key=lambda item: (-int(item["priority"]), str(item["operator_id"])))
     return candidates
 
 
@@ -893,7 +953,7 @@ def materialize_execution_plan_artifacts(
     capsule_path = Path(paths["capsule_plan_ir_path"])
     physical_path = Path(paths["physical_plan_ir_path"])
     _write_json(capsule_path, capsule_plan)
-    _write_json(physical_path, physical_plan)
+    _write_json(physical_path, _physical_plan_artifact_payload(physical_plan))
     return paths
 
 
@@ -989,6 +1049,8 @@ def compile_execution_plan_for_node(
         "selected_operator_id": physical_plan.get("operator_id") or physical_plan.get("actor_id"),
         "candidates": physical_plan.get("candidates", []),
     }
+    if _product_mode_enabled():
+        physical_plan_artifact = _physical_plan_artifact_payload(physical_plan)
 
     # ── Evidence policy ───────────────────────────────────────────────────────
     evidence_policy: Dict[str, Any] = {
@@ -1005,6 +1067,7 @@ def compile_execution_plan_for_node(
         ]
 
     return {
+        "executable_node": canonical_executable_node(node),
         "logical_plan_node": {
             "node_id": node.get("id"),
             "logical_operator": node.get("logical_operator"),

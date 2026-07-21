@@ -1,0 +1,172 @@
+{
+  "captured_at": "2026-07-10T05:54:54Z",
+  "checks": [
+    {
+      "check": "setup_guide_present",
+      "detail": "plugins/autosci/config/setup-guide.md",
+      "status": "ok"
+    },
+    {
+      "check": "env_template_present",
+      "detail": "plugins/autosci/config/.env.example",
+      "status": "error"
+    },
+    {
+      "check": "dotenv_present",
+      "detail": "not found",
+      "status": "warn"
+    },
+    {
+      "check": "venv_present",
+      "detail": "present",
+      "status": "ok"
+    },
+    {
+      "check": "python_version",
+      "detail": "3.14.2",
+      "status": "ok"
+    },
+    {
+      "check": "secrets_redacted",
+      "detail": "Only booleans and key names are recorded; secret values are never serialized.",
+      "status": "ok"
+    }
+  ],
+  "keys": [
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "SEMANTIC_SCHOLAR_API_KEY",
+      "label": "Semantic Scholar",
+      "priority": "recommended",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "DEEPXIV_TOKEN",
+      "label": "DeepXiv token",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "DEEPXIV_API_URL",
+      "label": "DeepXiv endpoint",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "LLM_API_KEY",
+      "label": "Review LLM API key",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "LLM_BASE_URL",
+      "label": "Review LLM base URL",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "LLM_MODEL",
+      "label": "Review LLM model",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "OPENAI_API_KEY",
+      "label": "OpenAI-compatible API key",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "AUTOSCI_REVIEW_LLM_PROVIDER",
+      "label": "Solar Review LLM provider",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "AUTOSCI_REVIEW_LLM_MODEL",
+      "label": "Solar Review LLM model",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "AUTOSCI_REVIEW_LLM_ENDPOINT",
+      "label": "Solar Review LLM endpoint",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "ARXIV_CATEGORIES",
+      "label": "arXiv categories",
+      "priority": "optional",
+      "process_env_set": false,
+      "value_recorded": false
+    },
+    {
+      "configured": false,
+      "dotenv_set": false,
+      "env_example_declared": false,
+      "key": "AUTOSCI_DISABLE_NETWORK_FETCH",
+      "label": "Offline source-fetch switch",
+      "priority": "safety",
+      "process_env_set": false,
+      "value_recorded": false
+    }
+  ],
+  "paths": {
+    "dotenv": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.env",
+    "env_example": "plugins/autosci/config/.env.example",
+    "setup_guide": "plugins/autosci/config/setup-guide.md",
+    "venv": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv"
+  },
+  "schema": "autosci_setup_status.v1",
+  "status": "completed",
+  "summary": {
+    "configured_count": 0,
+    "known_key_count": 12,
+    "python_executable": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+    "review_llm_ready": false,
+    "setup_guide_section_count": 2
+  }
+}

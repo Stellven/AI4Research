@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-07-14T13:40:56Z",
+  "proofs": [
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci `exp-eval` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-exp-eval-writeback/claim_verdict.json",
+        "review-write.json"
+      ],
+      "native_skill": "exp-eval",
+      "production_ready": true,
+      "proof_id": "runtime:exp-eval:review-write-json:20260714T134056Z",
+      "provenance": {
+        "artifact_kind": "artifact_review",
+        "captured_at": "2026-07-14T13:40:56Z",
+        "command": "review_llm_evidence:review-write.json",
+        "source": "review-write.json"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

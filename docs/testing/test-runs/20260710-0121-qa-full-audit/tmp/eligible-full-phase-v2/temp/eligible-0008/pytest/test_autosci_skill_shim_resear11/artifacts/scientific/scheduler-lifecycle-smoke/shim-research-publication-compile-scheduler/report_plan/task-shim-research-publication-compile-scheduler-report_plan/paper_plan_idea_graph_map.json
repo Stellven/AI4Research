@@ -1,0 +1,20 @@
+{
+  "checked_roots": [
+    "artifacts/autosci/workspace/wiki",
+    "wiki",
+    "harness/artifacts/autosci/workspace/wiki"
+  ],
+  "idea_graph_ready": false,
+  "ideas": [],
+  "limitations": [
+    "Paper plan requires at least one validated/in-progress idea with a succeeded linked experiment."
+  ],
+  "referenced_entities": [],
+  "schema": "autosci_paper_plan_idea_graph_map.v1",
+  "status": "incomplete",
+  "supporting_experiments": [],
+  "target": "scheduler-lifecycle-resume",
+  "target_slugs": [
+    "scheduler-lifecycle-resume"
+  ]
+}

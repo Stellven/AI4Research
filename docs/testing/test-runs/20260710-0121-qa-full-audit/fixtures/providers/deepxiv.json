@@ -1,0 +1,10 @@
+{
+  "fixture_source": true,
+  "provider": "deepxiv",
+  "results": [
+    {
+      "id": "fixture-deepxiv-1",
+      "score": 0.9
+    }
+  ]
+}

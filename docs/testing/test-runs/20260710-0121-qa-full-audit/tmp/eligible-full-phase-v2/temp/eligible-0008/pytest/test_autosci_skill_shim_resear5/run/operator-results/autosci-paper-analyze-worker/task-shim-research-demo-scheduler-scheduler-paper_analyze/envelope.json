@@ -1,0 +1,33 @@
+{
+  "task_id": "task-shim-research-demo-scheduler-scheduler-paper_analyze",
+  "sprint_id": "shim-research-demo-scheduler-scheduler",
+  "node_id": "paper_analyze",
+  "operator_id": "autosci-paper-analyze-worker",
+  "task_type": "scientific-paper-analyze",
+  "objective": "Run paper_analyze from scientific workflow scientific_research_lifecycle_full_v1.",
+  "mode": "solar_scientific_workflow",
+  "runner_contract": "generic_workflow_runner",
+  "output_dir": "artifacts/autosci/runs/shim-research-demo-scheduler/scheduler_lifecycle/paper_analyze/task-shim-research-demo-scheduler-scheduler-paper_analyze",
+  "inputs": {
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear5/scheduler-demo-paper.md",
+    "paper_id": "paper-shim-research-demo-scheduler-scheduler",
+    "allow_network_fetch": false,
+    "workflow_id": "scientific_research_lifecycle_full_v1",
+    "workflow_runner": "generic_workflow_runner",
+    "paper_evidence": "artifacts/autosci/runs/shim-research-demo-scheduler/scheduler_lifecycle/paper_ingest/task-shim-research-demo-scheduler-scheduler-paper_ingest/research_paper.json",
+    "source_evidence": "artifacts/autosci/runs/shim-research-demo-scheduler/scheduler_lifecycle/paper_ingest/task-shim-research-demo-scheduler-scheduler-paper_ingest/research_paper.json"
+  },
+  "outputs": {
+    "result_path": "artifacts/autosci/runs/shim-research-demo-scheduler/scheduler_lifecycle/paper_analyze/task-shim-research-demo-scheduler-scheduler-paper_analyze/analyze_paper.result.json",
+    "evidence_payload_path": "artifacts/autosci/runs/shim-research-demo-scheduler/scheduler_lifecycle/paper_analyze/task-shim-research-demo-scheduler-scheduler-paper_analyze/research_paper_analysis.json",
+    "evidence_jsonl": "artifacts/autosci/runs/shim-research-demo-scheduler/scheduler_lifecycle/paper_analyze/task-shim-research-demo-scheduler-scheduler-paper_analyze/evidence.jsonl",
+    "memory_update_path": "artifacts/autosci/runs/shim-research-demo-scheduler/scheduler_lifecycle/paper_analyze/task-shim-research-demo-scheduler-scheduler-paper_analyze/research_memory_update.json",
+    "graph_update_path": "artifacts/autosci/runs/shim-research-demo-scheduler/scheduler_lifecycle/paper_analyze/task-shim-research-demo-scheduler-scheduler-paper_analyze/research_graph_update.json"
+  },
+  "expected_schema": "research_paper.v1",
+  "expected_action": "analyze_paper",
+  "logical_operator": "ScientificPaperAnalyzer",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T14:03:01Z",
+  "lease_expires_at": "2026-07-10T14:05:01Z"
+}

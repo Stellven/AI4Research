@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-multi-task-screen-health.sh",
+  "source": "harness/tests/test-multi-task-screen-health.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-multi-task-screen-health.sh"
+  ],
+  "exit_code": 99,
+  "runtime_seconds": 0.011,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-qrjk4sf5"
+}

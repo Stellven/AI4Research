@@ -1,0 +1,13 @@
+{
+  "command_id": "phase4_pytest_matrix_corrected",
+  "phase": "deterministic",
+  "linked_feature_ids": "PYTHON_FEATURE_SET",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "\"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/run_pytest_matrix.py\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit\" pytest-matrix-corrected",
+  "start_time": "2026-07-10T02:22:29-04:00",
+  "end_time": "2026-07-10T02:22:52-04:00",
+  "duration_seconds": "22.745",
+  "exit_code": 1,
+  "stdout_path": "evidence/commands/phase4_pytest_matrix_corrected.stdout.txt",
+  "stderr_path": "evidence/commands/phase4_pytest_matrix_corrected.stderr.txt"
+}

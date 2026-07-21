@@ -1,0 +1,59 @@
+---
+# Solar Plugin Manifest — Obsidian Wiki
+id: obsidian
+name: "Obsidian Wiki Integration"
+version: "1.0.0"
+description: "Bidirectional sync between Solar knowledge base and Obsidian vault. Reads wiki pages, writes drafts, triggers note ingest pipeline."
+status: enabled
+
+# Filesystem write permissions (declared scope, enforced by plugin_loader)
+write_scope:
+  - "_sources/ingested"
+  - "state/obsidian"
+
+read_scope:
+  - "~/Knowledge"
+  - "_sources"
+  - "config/storage.solar.yaml"
+
+capabilities:
+  - "wiki.read"
+  - "wiki.write_draft"
+  - "wiki.ingest"
+  - "wiki.search"
+
+commands:
+  - "solar-harness wiki status"
+  - "solar-harness wiki ingest"
+  - "solar-harness wiki query"
+
+background_safety:
+  mode: bounded
+  idle_only: false
+  rate_limit: "dispatch-queue"
+  max_runtime_s: 900
+  max_memory_mb: 1024
+
+eval_packs:
+  - "tests/external-integrations/test_upload_ingest_coverage.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable obsidian"
+
+integration_level: closed_loop
+
+entry: "run.sh"
+
+events:
+  - "obsidian.page_ingested"
+  - "obsidian.draft_written"
+  - "obsidian.sync_complete"
+
+depends_on: []
+
+tags:
+  - "knowledge"
+  - "wiki"
+  - "notes"

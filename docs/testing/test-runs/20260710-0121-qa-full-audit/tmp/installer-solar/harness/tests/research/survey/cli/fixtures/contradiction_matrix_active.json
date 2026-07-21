@@ -1,0 +1,29 @@
+{
+  "verdict": "pass",
+  "verdict_reasons": [],
+  "matrix_row_count": 3,
+  "decorative": false,
+  "rows": [
+    {
+      "claim_id": "c1",
+      "synthesis_referenced": true,
+      "supporting_count": 3,
+      "contradicting_count": 1,
+      "uncertain_count": 0
+    },
+    {
+      "claim_id": "c2",
+      "synthesis_referenced": true,
+      "supporting_count": 2,
+      "contradicting_count": 0,
+      "uncertain_count": 1
+    },
+    {
+      "claim_id": "c3",
+      "synthesis_referenced": true,
+      "supporting_count": 1,
+      "contradicting_count": 2,
+      "uncertain_count": 0
+    }
+  ]
+}

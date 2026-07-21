@@ -1,0 +1,18 @@
+...F...................................                                  [100%]
+=================================== FAILURES ===================================
+_____ test_call_browser_agent_chatgpt_text_prefers_process_env_over_config _____
+harness/tests/test_tech_hotspot_browser_agent_cmd.py:67: in test_call_browser_agent_chatgpt_text_prefers_process_env_over_config
+    result = ns["call_browser_agent_chatgpt_text"](
+harness/scripts/tech_hotspot_radar.py:14508: in call_browser_agent_chatgpt_text
+    run = subprocess.run(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github'
+=========================== short test summary info ============================
+FAILED harness/tests/test_tech_hotspot_browser_agent_cmd.py::test_call_browser_agent_chatgpt_text_prefers_process_env_over_config
+1 failed, 38 passed in 6.45s

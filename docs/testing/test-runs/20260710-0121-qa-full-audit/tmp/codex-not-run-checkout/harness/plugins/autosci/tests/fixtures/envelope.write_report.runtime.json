@@ -1,0 +1,31 @@
+{
+  "task_id": "task-autosci-report-phase14-fixture",
+  "sprint_id": "sprint-autosci-phase14",
+  "node_id": "node-write-report",
+  "operator_id": "autosci-report-worker",
+  "task_type": "scientific-report-draft",
+  "objective": "Produce evidence-linked scientific_report.v1 and publication_bundle.v1 fixture artifacts.",
+  "mode": "fixture",
+  "output_dir": "artifacts/scientific/smoke",
+  "inputs": {
+    "claim_id": "claim-001",
+    "experiment_id": "exp-supported-001",
+    "claims_evidence": "artifacts/scientific/smoke/research_claims.json",
+    "claim_verdict_evidence": "artifacts/scientific/smoke/claim_verdict.json",
+    "experiment_result": "artifacts/scientific/smoke/experiment_result.json",
+    "code_evidence": "artifacts/scientific/smoke/code_evidence_map.json",
+    "report_id": "report-autosci-phase14",
+    "report_title": "AutoSci Evidence-Linked Fixture Report"
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/smoke/write_report.runtime.result.json",
+    "evidence_payload_path": "artifacts/scientific/smoke/scientific_report.json",
+    "report_plan_path": "artifacts/scientific/smoke/report_plan.json",
+    "publication_bundle_path": "artifacts/scientific/smoke/publication_bundle.json",
+    "report_markdown_path": "artifacts/scientific/smoke/report.md",
+    "report_evidence_index_path": "artifacts/scientific/smoke/report_evidence_index.json",
+    "poster_html_path": "artifacts/scientific/smoke/optional_poster.html",
+    "rebuttal_markdown_path": "artifacts/scientific/smoke/optional_rebuttal.md",
+    "evidence_jsonl": "artifacts/scientific/smoke/evidence.jsonl"
+  }
+}

@@ -1,0 +1,38 @@
+---
+skill: plan
+namespace: builtin
+status: stable
+min_score: 0.8
+version: "1.0"
+created_at: "2026-05-09T00:00:00Z"
+
+cases:
+  - id: plan-01
+    description: "Basic sprint plan from vague intent"
+    input: "我想给 solar-harness 加一个 skill 升级命令"
+    expect:
+      - slice_topology_present: true
+      - done_conditions_per_slice: true
+      - gate_table_present: true
+      - stop_conditions_present: true
+    weight: 0.3
+
+  - id: plan-02
+    description: "Plan correctly identifies exclusive write scopes"
+    input: "两个并行 builder，一个做 registry.yaml，一个做 solar_skills.py"
+    expect:
+      - no_scope_overlap: true
+      - parallel_allowed: true
+    weight: 0.3
+
+  - id: plan-03
+    description: "Plan schema gate — plan.md has required sections"
+    input: "生成 plan.md 然后通过 schema gate"
+    expect:
+      - has_section_变更文件列表: true
+      - has_section_技术方案: true
+    weight: 0.4
+
+scoring:
+  method: weighted_sum
+  pass_threshold: 0.8

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/closure.schema.json",
+  "title": "Solar Closure Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "sprint_id",
+    "status",
+    "requirement_ir_ref",
+    "contracts_manifest_ref",
+    "graph_ref",
+    "all_nodes_passed",
+    "all_required_gates_passed",
+    "acceptance_traceability_coverage",
+    "tests",
+    "evals",
+    "changed_files",
+    "residual_risks"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "solar.closure_record.v1"
+    },
+    "sprint_id": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "passed", "failed"]
+    },
+    "requirement_ir_ref": { "type": "string", "minLength": 1 },
+    "contracts_manifest_ref": { "type": "string", "minLength": 1 },
+    "graph_ref": { "type": "string", "minLength": 1 },
+    "all_nodes_passed": { "type": "boolean" },
+    "all_required_gates_passed": { "type": "boolean" },
+    "acceptance_traceability_coverage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "tests": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "evals": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "changed_files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "residual_risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

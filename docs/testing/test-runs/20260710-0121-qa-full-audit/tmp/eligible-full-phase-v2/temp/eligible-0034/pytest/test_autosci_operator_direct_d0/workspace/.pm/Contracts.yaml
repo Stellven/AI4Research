@@ -1,0 +1,89 @@
+schema_version: solar.contract_bundle.v1
+request_type: research
+source_of_truth: requirement_ir.json
+contracts:
+  product:
+    enabled: true
+    goal: Official full-runtime AutoSci integration test through normal solar intake.
+      Do not call a
+    success_metrics: &id001
+    - Normal Solar intake emits a research.autosci.v1 task graph.
+    - Scientific* nodes resolve to AutoSci research capsules and autosci-* physical
+      operators.
+    - Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.
+    non_goals:
+    - 不把论文总结直接当作实现结论。
+    - 不在缺证据时进入生产实现。
+    acceptance: *id001
+    stop_rules: &id002
+    - 缺少可验证 acceptance 不得标记为完成。
+    - 缺少 verifier 决策不得进入 DONE。
+    - 缺少 evidence ledger 或 critique gate 时不得推进到 adoption。
+  interface:
+    enabled: true
+    name: RequirementCompilerAdapters
+    version: '1.0'
+    inputs:
+    - RequirementIR
+    outputs:
+    - ProductBrief
+    - ContractsBundle
+    - TaskDAG
+    - HandoffPackage
+    invariants:
+    - Requirement IR is the only source of truth.
+    - DAG nodes[*].id must be unique.
+    - Every acceptance criterion maps to at least one validation step.
+    errors:
+    - code: CYCLE_DETECTED
+      action: split dependencies or ask for clarification
+    - code: ACCEPTANCE_COVERAGE_MISSING
+      action: add validation before dispatch
+  agent_execution:
+    enabled: true
+    task_scope: research
+    allowed_paths:
+    - apps/pm-pane/**
+    - packages/requirement-ir/**
+    - harness/**
+    forbidden_paths:
+    - infra/prod/**
+    - .env*
+    - secrets/**
+    commands:
+      test:
+      - pnpm test
+      - pnpm lint
+      inspect:
+      - rg
+      - python3
+      - pytest
+    approval_required_when:
+    - new production dependency
+    - database migration
+    - network access
+    - touching auth or billing
+    stop_conditions: *id002
+  research:
+    enabled: true
+    hypothesis: Official full-runtime AutoSci integration test through normal solar
+      intake. Do not call a
+    source_papers: []
+    experiments:
+    - name: dag_quality_eval
+      dataset: golden_cases.jsonl
+      metric:
+      - cycle_rate
+      - acceptance_coverage
+      - human_edit_distance
+    adoption_threshold:
+      cycle_rate: < 2%
+      acceptance_coverage: '> 95%'
+      human_edit_reduction: '> 25%'
+    rejection_criteria:
+    - No evidence ledger available
+    - No verifier/critique gate
+request_excerpt: "# RawIntent Consumer Request - Official full-runtime AutoSci integration\
+  \ test through normal solar intake. Do not call a \n\n## Source\n\n- intent_id:\
+  \ intent-20260710-140626-fb4b2588f9\n- channel: pm_dispatch\n- actor: user\n- device:\
+  \ \n- thread_re"

@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-07-10T05:58:10Z",
+  "proofs": [
+    {
+      "categories": [
+        "wiki_mutation_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed wiki registration evidence for AutoSci `ingest` parity.",
+      "evidence_refs": [
+        "artifacts/scientific/scheduler-node-smoke/task-scientific-node-smoke-test/research_paper.json",
+        "artifacts/scientific/scheduler-node-smoke/task-scientific-node-smoke-test/ingest_final_source_registration_boundary.json",
+        "artifacts/scientific/scheduler-node-smoke/task-scientific-node-smoke-test/research_memory_update.json",
+        "artifacts/scientific/scheduler-node-smoke/task-scientific-node-smoke-test/research_graph_update.json",
+        "artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "ingest",
+      "production_ready": true,
+      "proof_id": "runtime:ingest:wiki-registration:20260710T055810Z",
+      "provenance": {
+        "artifact_kind": "ingest_wiki_registration_boundary",
+        "captured_at": "2026-07-10T05:58:10Z",
+        "command": "ingest_paper:wiki_registration_boundary",
+        "paper_id": "paper-scheduler-node-smoke",
+        "source": "ingest_wiki_registration"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

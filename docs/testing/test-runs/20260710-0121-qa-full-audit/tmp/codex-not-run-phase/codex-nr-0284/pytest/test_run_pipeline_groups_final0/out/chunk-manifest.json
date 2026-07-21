@@ -1,0 +1,29 @@
+{
+  "schema_version": "solar.understand_anything.chunk_manifest.v1",
+  "generated_at": "2026-07-10T18:54:04Z",
+  "repo_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0284/pytest/test_run_pipeline_groups_final0/repo",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "chunk_id": "chunk-001",
+      "paths": [
+        "README.md",
+        "src/mod_1.py",
+        "src/mod_2.py",
+        "src/mod_3.py"
+      ],
+      "snippet_count": 4,
+      "total_chars": 786
+    },
+    {
+      "chunk_id": "chunk-002",
+      "paths": [
+        "src/mod_4.py",
+        "src/mod_5.py",
+        "src/mod_6.py"
+      ],
+      "snippet_count": 3,
+      "total_chars": 774
+    }
+  ]
+}

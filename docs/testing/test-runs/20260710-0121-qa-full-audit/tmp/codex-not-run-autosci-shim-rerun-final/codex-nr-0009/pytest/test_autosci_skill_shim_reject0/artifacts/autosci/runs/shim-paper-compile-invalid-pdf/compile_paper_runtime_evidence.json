@@ -1,0 +1,86 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/shim-paper-compile-invalid-pdf/compile_paper_executor_stdout.txt",
+      "type": "executor_stdout"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-paper-compile-invalid-pdf/compile_paper_executor_stderr.txt",
+      "type": "executor_stderr"
+    },
+    {
+      "path": "invalid-pdf-paper/main.pdf",
+      "type": "compiled_pdf"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "approval-invalid-compile"
+  },
+  "limitations": [
+    "Approved paper compile executor ran latexmk locally."
+  ],
+  "node_id": "node-compile-paper",
+  "outputs": {
+    "runtime": {
+      "action": "compile_paper",
+      "approval_ref": "approval-invalid-compile",
+      "available_tex_executors": [
+        "latexmk",
+        "pdflatex",
+        "xelatex",
+        "lualatex"
+      ],
+      "checks": [
+        {
+          "check": "command_allowlisted",
+          "detail": "executable allowlisted: latexmk",
+          "status": "ok"
+        },
+        {
+          "check": "tex_executor",
+          "detail": "latexmk",
+          "status": "ok"
+        },
+        {
+          "check": "exit_code",
+          "detail": "exit_code=0",
+          "status": "ok"
+        },
+        {
+          "check": "pdf_generated",
+          "detail": "PDF artifact is present but missing required structural markers.",
+          "status": "error"
+        }
+      ],
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_reject0/bin/latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex",
+      "evidence_ids": [
+        "paper-compile-runtime:latexmk",
+        "invalid-pdf-paper/main.tex"
+      ],
+      "exit_code": 0,
+      "pdf_generated": false,
+      "pdf_integrity": {
+        "detail": "PDF artifact is present but missing required structural markers.",
+        "eof_ok": false,
+        "exists": true,
+        "header_ok": true,
+        "path": "invalid-pdf-paper/main.pdf",
+        "size_bytes": 9,
+        "startxref_ok": false,
+        "valid": false
+      },
+      "pdf_path": "invalid-pdf-paper/main.pdf",
+      "status": "failed",
+      "tex_executor": "latexmk"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-approved-side-effect-executor",
+    "timestamp": "2026-07-10T19:26:51Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "failed",
+  "task_id": "task-autosci-skillgen-compile_paper"
+}

@@ -1,0 +1,22 @@
+C1 — benchmark command produces machine-readable result
+  FAIL: benchmark exits 0:     }   ],   "optional_skipped": [     {       "id": "ruflo",       "name": "Ruflo / Claude Flow",       "reason": "optional runtime scenario excluded from release gate; enable with --include-optional"     }   ],   "evidence_dir": "/tmp/solar-capability-fusion-evidence.sp1yC6",   "global_evidence": {     "plugins_checked": null,     "capabilities_total": null,     "health_summary": null,     "pane": {       "builder": false,       "lab_builder": false     }   } } 
+  PASS: benchmark JSON valid
+  PASS: benchmark Markdown report written
+  PASS: benchmark evidence bundle written
+
+C2 — benchmark proves all targeted capabilities are fused
+  FAIL: all target scenarios passed threshold
+
+C3 — benchmark covers the actual fusion dimensions
+  FAIL: dimension manifest ok for all scenarios
+  FAIL: dimension registry ok for all scenarios
+  FAIL: dimension health ok for all scenarios
+  FAIL: dimension dispatch ok for all scenarios
+  FAIL: dimension runtime ok for all scenarios
+  FAIL: dimension pane ok for all scenarios
+
+C4 — negative controls prove the benchmark is not unconditional PASS
+  PASS: negative dispatch does not select unrelated providers
+  PASS: fake capability query fails
+
+=== Capability Fusion Benchmark Test: PASS=5 FAIL=8 ===

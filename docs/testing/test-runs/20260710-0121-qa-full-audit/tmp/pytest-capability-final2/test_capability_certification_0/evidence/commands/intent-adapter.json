@@ -1,0 +1,16 @@
+{
+  "id": "intent-adapter",
+  "name": "Intent adapter direct/hint/learned DB",
+  "cmd": [
+    "bash",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tests/test-intent-engine-adapter.sh"
+  ],
+  "exit_code": 0,
+  "duration_s": 0.785,
+  "status": "ok",
+  "dimensions": [
+    "automatic",
+    "effective"
+  ],
+  "allow_fail_reason": ""
+}

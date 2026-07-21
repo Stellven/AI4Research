@@ -10,6 +10,8 @@ cp "$HARNESS_DIR_REAL/lib/evolution_engine.py" "$TMPDIR_TEST/lib/evolution_engin
 cp "$HARNESS_DIR_REAL/lib/capability_registry.py" "$TMPDIR_TEST/lib/capability_registry.py"
 cp "$HARNESS_DIR_REAL/lib/failure_miner.py" "$TMPDIR_TEST/lib/failure_miner.py"
 cp "$HARNESS_DIR_REAL/lib/eval_runner.py" "$TMPDIR_TEST/lib/eval_runner.py"
+cp "$HARNESS_DIR_REAL/lib/graph_scheduler.py" "$TMPDIR_TEST/lib/graph_scheduler.py"
+cp "$HARNESS_DIR_REAL/lib/prerequisite_resolver.py" "$TMPDIR_TEST/lib/prerequisite_resolver.py"
 
 SID="sprint-test-dr-debt"
 GRAPH="$TMPDIR_TEST/sprints/$SID.task_graph.json"
@@ -36,6 +38,18 @@ cat > "$GRAPH" <<JSON
       "goal": "Regular engineering node",
       "status": "passed",
       "required_capabilities": ["python.edit"]
+    },
+    {
+      "id": "R10",
+      "goal": "DeepResearch node awaiting a human decision",
+      "status": "needs_human_review",
+      "required_capabilities": ["research.factuality_evaluator"],
+      "human_review": {
+        "schema_version": "solar.human_review.v1",
+        "generation": 1,
+        "state": "blocked",
+        "reason": "repeated evaluator failure"
+      }
     }
   ],
   "node_results": {
@@ -45,6 +59,10 @@ cat > "$GRAPH" <<JSON
       "research_quality_gate": {"ok": false}
     },
     "R9": {
+      "status": "passed",
+      "gate_status": "passed"
+    },
+    "R10": {
       "status": "passed",
       "gate_status": "passed"
     }
@@ -91,6 +109,8 @@ if result.get("status") != "reviewing" or result.get("gate_status") != "reviewin
     raise SystemExit(f"node_results not reopened: {result}")
 if graph["node_results"]["R9"].get("status") != "passed":
     raise SystemExit(f"non research node mutated: {graph['node_results']['R9']}")
+if nodes["R10"].get("status") != "needs_human_review":
+    raise SystemExit(f"human-review node reopened: {nodes['R10']}")
 for event_path in (Path(sys.argv[3]), Path(sys.argv[4])):
     text = event_path.read_text()
     if "evolution_deepresearch_quality_gate_repair_requested" not in text:

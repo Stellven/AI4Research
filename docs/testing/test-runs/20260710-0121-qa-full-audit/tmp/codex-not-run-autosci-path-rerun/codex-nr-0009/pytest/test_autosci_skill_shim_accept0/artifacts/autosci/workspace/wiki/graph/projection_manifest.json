@@ -1,0 +1,13 @@
+{
+  "edges_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+  "generated_at": "2026-07-10T19:19:54.363199Z",
+  "limitations": [],
+  "projected_edge_count": 2,
+  "run_id": "shim-ingest-followup-flags",
+  "schema": "autosci_workspace_graph_projection.v1",
+  "source_evidence": [
+    "artifacts/autosci/runs/shim-ingest-followup-flags/research_graph_update.json"
+  ],
+  "status": "projected",
+  "written_edge_count": 2
+}

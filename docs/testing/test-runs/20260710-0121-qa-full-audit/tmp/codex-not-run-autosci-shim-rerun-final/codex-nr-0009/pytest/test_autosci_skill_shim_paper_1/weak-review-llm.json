@@ -1,0 +1,1 @@
+{"schema": "artifact_review.v1", "task_id": "weak-review-paper-plan", "status": "completed", "outputs": {"review": {"review_mode": "review_llm", "score": 0.91, "recommendation": "accept"}}}

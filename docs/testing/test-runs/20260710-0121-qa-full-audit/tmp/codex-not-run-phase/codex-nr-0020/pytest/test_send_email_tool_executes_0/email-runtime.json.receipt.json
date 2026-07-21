@@ -1,0 +1,10 @@
+{
+  "approval_ref": "approval-email-smtp",
+  "delivered": true,
+  "from": "autosci@example.com",
+  "provider": "smtp",
+  "schema": "autosci_email_delivery_receipt.v1",
+  "status": "completed",
+  "subject": "AutoSci SMTP",
+  "to": "user@example.com"
+}

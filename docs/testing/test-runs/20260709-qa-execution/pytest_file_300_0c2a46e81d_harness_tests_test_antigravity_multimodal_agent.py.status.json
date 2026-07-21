@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_300_0c2a46e81d_harness_tests_test_antigravity_multimodal_agent.py",
+  "source": "harness/tests/test_antigravity_multimodal_agent.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_antigravity_multimodal_agent.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.202,
+  "timeout": false
+}

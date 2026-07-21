@@ -1,0 +1,14 @@
+{
+  "name": "research_survey_pytest",
+  "command": [
+    "env",
+    "PYTHONPATH=harness",
+    "harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research_survey"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 5
+}

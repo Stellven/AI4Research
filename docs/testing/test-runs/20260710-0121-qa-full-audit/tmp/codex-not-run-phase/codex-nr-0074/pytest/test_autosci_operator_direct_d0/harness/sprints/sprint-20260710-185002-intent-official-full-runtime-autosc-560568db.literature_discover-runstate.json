@@ -1,0 +1,27 @@
+{
+  "sprint_id": "sprint-20260710-185002-intent-official-full-runtime-autosc-560568db",
+  "node_id": "literature_discover",
+  "updated_at": "2026-07-10T18:50:04Z",
+  "build_attribution": {
+    "phase": "dispatched",
+    "role": "scientific-literature-discoverer",
+    "dispatch_id": "graph-test-autosci-direct-submit",
+    "dispatch_mode": "autosci_operator_direct",
+    "pm_task_id": "graph-test-autosci-direct-submit",
+    "operator_id": "autosci-literature-discover-worker",
+    "backend": "command",
+    "instruction_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_autosci_operator_direct_d0/harness/sprints/sprint-20260710-185002-intent-official-full-runtime-autosc-560568db.literature_discover-dispatch.md",
+    "updated_at": "2026-07-10T18:50:04Z"
+  },
+  "attribution": {
+    "phase": "dispatched",
+    "role": "scientific-literature-discoverer",
+    "dispatch_id": "graph-test-autosci-direct-submit",
+    "dispatch_mode": "autosci_operator_direct",
+    "pm_task_id": "graph-test-autosci-direct-submit",
+    "operator_id": "autosci-literature-discover-worker",
+    "backend": "command",
+    "instruction_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_autosci_operator_direct_d0/harness/sprints/sprint-20260710-185002-intent-official-full-runtime-autosc-560568db.literature_discover-dispatch.md",
+    "updated_at": "2026-07-10T18:50:04Z"
+  }
+}

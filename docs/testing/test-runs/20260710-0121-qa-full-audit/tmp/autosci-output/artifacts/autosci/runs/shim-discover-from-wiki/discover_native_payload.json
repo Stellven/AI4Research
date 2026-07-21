@@ -1,0 +1,15 @@
+{
+  "anchors": [
+    "test-runs/2026071",
+    "2601.00001"
+  ],
+  "candidates": [],
+  "limitations": [
+    "Network discovery disabled; no provider/source request was made."
+  ],
+  "mode": "wiki",
+  "ok": false,
+  "query": "test-runs/2026071 2601.00001",
+  "schema": "autosci_discover_cli.v1",
+  "status": "inconclusive"
+}

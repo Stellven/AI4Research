@@ -11,7 +11,7 @@
 
 import Database from 'bun:sqlite';
 
-const DB_PATH = `${process.env.HOME}/.solar/solar.db`;
+const DB_PATH = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
 
 // 任务类型的 Token 估算 (基于历史平均值)
 const TOKEN_ESTIMATES: Record<string, { input: number; output: number; variance: number }> = {

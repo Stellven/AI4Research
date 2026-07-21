@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-knowledge-qmd-watermarks.sh",
+  "source": "harness/tests/test-knowledge-qmd-watermarks.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-knowledge-qmd-watermarks.sh"
+  ],
+  "exit_code": 2,
+  "runtime_seconds": 0.241,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-wc7boikz"
+}

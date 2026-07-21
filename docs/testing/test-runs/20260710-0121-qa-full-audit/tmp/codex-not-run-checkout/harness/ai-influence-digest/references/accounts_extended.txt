@@ -1,0 +1,238 @@
+# accounts_extended.txt — AI Influence Digest Account Configuration
+# Sprint: sprint-20260522-ai-influence-digest-scan
+# Total accounts: 200
+#
+# Format: TSV (tab-separated)
+# Columns: tier  category  handle  display_name  notes  enabled  rotation_group
+#
+# Field definitions:
+#   tier            : 1 (mandatory every run) | 2 (rotated/sampled weekly)
+#   category        : semantic grouping for filtering and reporting
+#   handle          : X/Twitter handle (without @)
+#   display_name    : human-readable name or org name
+#   notes           : free-text context (optional, may be empty)
+#   enabled         : true | false (disabled accounts are skipped)
+#   rotation_group  : A-G for Tier 2 (7-day rotation), blank for Tier 1
+#
+# Rotation schedule: each group is scanned on one day per week (Mon=A, Tue=B, ...)
+#   Plus random补充 from other groups to fill daily quota.
+#   Goal: every enabled Tier 2 account scanned at least once per 7 days.
+#
+# Tier 1 (57 accounts): mandatory every run, no rotation.
+# Tier 2 (143 accounts): 7 rotation groups, rate-limited by daily rotation.
+#
+# Parser contract:
+#   - Lines starting with # are comments, skip.
+#   - Blank lines are skipped.
+#   - First non-comment non-blank line is the header.
+#   - Fields are tab-separated.
+#   - Parse as: tier(int), category(str), handle(str), display_name(str), notes(str), enabled(bool), rotation_group(str)
+#   - enabled: "true" or "false" (case-insensitive).
+#   - Tier 1 accounts have rotation_group="" (empty).
+#
+# Coverage summary:
+#   Tier 1: 57 accounts (core leaders, research, labs, open-source, safety, agent coding)
+#   Tier 2: 143 accounts (rotated across chip, agent, multimodal, investment, Chinese circle, safety, infra)
+#   Total: 200 accounts
+
+tier	category	handle	display_name	notes	enabled	rotation_group
+1	core_leader	sama	Sam Altman	CEO OpenAI	true	
+1	core_leader	karpathy	Andrej Karpathy	AI educator, former Tesla/OpenAI	true	
+1	core_leader	ylecun	Yann LeCun	Chief AI Scientist Meta	true	
+1	core_leader	demishassabis	Demis Hassabis	CEO Google DeepMind	true	
+1	core_leader	gdb	Dario Amodei's co-CEO alias	Anthropic CEO	true	
+1	core_leader	ilyasut	Ilya Sutskever	SSI founder, former OpenAI	true	
+1	core_leader	AndrewYNg	Andrew Ng	Coursera, Landing AI, Stanford	true	
+1	core_leader	drfeifei	Fei-Fei Li	Stanford HAI, World Labs	true	
+1	core_leader	jimkellerpa	Jim Keller	Chip architect, Tenstorrent	true	
+1	core_leader	aravind	Aravind Srinivas	CEO Perplexity	true	
+1	core_leader	mustafasuleyman	Mustafa Suleyman	CEO Microsoft AI	true	
+1	core_leader	fchollet	François Chollet	Keras creator, ARC Prize	true	
+1	core_leader	darioamodei	Dario Amodei	CEO Anthropic	true	
+1	core_leader	clemens_	Clemens Mewald	xAI	true	
+1	core_leader	JeffDean	Jeff Dean	Google AI, Gemini	true	
+1	core_leader	AnthropicAI	Anthropic Official	Lab account	true	
+1	paper_research	_akhaliq	AK	ML paper aggregator, fastest arxiv surfacer	true	
+1	paper_research	_jasonwei	Jason Wei	Chain-of-thought, OpenAI	true	
+1	paper_research	DrJimFan	Jim Fan	NVIDIA Research, robotics	true	
+1	paper_research	chrmanning	Chris Manning	Stanford NLP	true	
+1	paper_research	AidanGomez	Aidan Gomez	Cohere CEO, Transformer co-author	true	
+1	paper_research	NoamBrown	Noam Brown	OpenAI, game AI & reasoning	true	
+1	paper_research	quocle	Quoc Le	Google Brain, scaling	true	
+1	paper_research	OriolVinyalsML	Oriol Vinyals	Google DeepMind, Gemini	true	
+1	paper_research	hardmaru	hardmaru	Google Brain, creative ML	true	
+1	paper_research	denny_zhou	Denny Zhou	Google, reasoning & CoT	true	
+1	ai_lab	OpenAI	OpenAI Official	OpenAI lab account	true	
+1	ai_lab	GoogleDeepMind	Google DeepMind Official	Lab	true	
+1	ai_lab	deepseek_ai	DeepSeek Official	Lab	true	
+1	ai_lab	GoogleAI	Google AI Official	Lab	true	
+1	ai_lab	Alibaba_Qwen	Qwen Team	Alibaba LLM	true	
+1	ai_lab	Kimi_Moonshot	Moonshot AI / Kimi	Lab	true	
+1	ai_lab	MiniMax_AI	MiniMax Official	Lab	true	
+1	ai_lab	Hailuo_AI	Hailuo / MiniMax video	Lab	true	
+1	ai_lab	midjourney	Midjourney Official	Lab	true	
+1	ai_lab	MetaAI	Meta AI Official	Lab	true	
+1	open_source	ThomasWolf7	Thomas Wolf	HuggingFace co-founder	true	
+1	open_source	ArthurMensch	Arthur Mensch	Mistral CEO	true	
+1	open_source	ggerganov	Georgi Gerganov	llama.cpp creator	true	
+1	open_source	tri_dao	Tri Dao	FlashAttention	true	
+1	open_source	answerdotai	Answer.AI	Jeremy Howard's AI lab	true	
+1	open_source	Teknium1	Teknium	Open-source AI, OpenHermes	true	
+2	chip_semiconductor	dylan522p	Dylan Patel	SemiAnalysis, chip analysis	true	A
+2	chip_semiconductor	LisaSu	Lisa Su	AMD CEO	true	A
+2	chip_semiconductor	NVIDIA	NVIDIA Official	GPU & AI chips	true	A
+2	chip_semiconductor	AMD	AMD Official	Semiconductor	true	A
+2	chip_semiconductor	Arm	Arm Official	Chip architecture	true	A
+2	chip_semiconductor	asmlholding	ASML Official	EUV lithography	true	A
+2	chip_semiconductor	Asianometry	Asianometry	Tech analysis YouTube	true	A
+2	chip_semiconductor	Intel	Intel Official	Semiconductor & AI	true	A
+2	chip_semiconductor	TSMC	TSMC Official	Foundry	true	A
+2	chip_semiconductor	SKhynix_KR	SK Hynix Official	Memory chips	true	A
+2	chip_semiconductor	broadcom	Broadcom Official	Semiconductor	true	A
+2	chip_semiconductor	qualcomm	Qualcomm Official	Mobile & AI chips	true	A
+2	chip_semiconductor	coreteks	Coreteks	Chip analysis	true	A
+2	chip_semiconductor	mehrspokemon	Karl Freund	Cambrian AI Research	true	A
+2	chip_semiconductor	MooreAndStrat	Moore Insights & Strategy	Chip analysis	true	A
+2	agent_coding	itak_	Itak	AI agent builder	true	B
+2	agent_coding	swyx	swyx	AI engineering, Latent Space	true	B
+2	agent_coding	mckaywrigley	McKay Wrigley	AI tutorials & agents	true	B
+2	agent_coding	amanrsanger	Aman Sanger	AI coding tools	true	B
+2	agent_coding	LangChainAI	LangChain Official	Agent framework	true	B
+2	agent_coding	crewAIInc	CrewAI Official	Agent framework	true	B
+2	agent_coding	llamaindex_ai	LlamaIndex Official	RAG framework	true	B
+2	agent_coding	FlowiseAI	Flowise Official	Visual AI builder	true	B
+2	agent_coding	phidatahq	PhiData Official	AI agent framework	true	B
+2	agent_coding	replit	Replit Official	Coding platform	true	B
+2	agent_coding	cursor_ai	Cursor Official	AI code editor	true	B
+2	agent_coding	aider_ai	Aider Official	AI pair programming	true	B
+2	agent_coding	bolt_new	Bolt Official	AI web builder	true	B
+2	agent_coding	WindsurfAI	Windsurf Official	AI code editor	true	B
+2	agent_coding	OpenAIDevs	OpenAI Developers	Developer updates	true	B
+2	agent_coding	v0_build	v0 by Vercel	AI UI builder	true	G
+2	agent_coding	babyAGI	babyAGI	Agent research	true	G
+2	agent_coding	Mathemagic1an	Mathemagic1an	AI/ML tools	true	G
+2	agent_coding	skirano	skirano	AI development	true	G
+2	agent_coding	ChatGPTapp	ChatGPT Official	App & tool updates	true	G
+2	multimodal	Runwayml	Runway Official	Video AI	true	C
+2	multimodal	LumaLabsAI	Luma Official	3D & video AI	true	C
+2	multimodal	pika_art	Pika Official	Video AI	true	C
+2	multimodal	krea_ai	Krea Official	Image AI	true	C
+2	multimodal	stabilityai	Stability AI Official	Image AI, SD	true	C
+2	multimodal	ElevenLabs	ElevenLabs Official	Voice AI	true	C
+2	multimodal	sunodotai	Suno Official	Music AI	true	C
+2	multimodal	udio_ai	Udio Official	Music AI	true	C
+2	multimodal	HeyGen_Official	HeyGen Official	Video generation	true	C
+2	multimodal	synthesiaIO	Synthesia Official	Video AI avatars	true	C
+2	multimodal	descriptapp	Descript Official	Audio & video editing	true	C
+2	multimodal	canva	Canva Official	Design & AI	true	C
+2	multimodal	PicsartAI	Picsart AI	Image editing AI	true	C
+2	multimodal	clipdrop_ai	Clipdrop Official	Image AI tools	true	C
+2	multimodal	haiper_ai	Haiper Official	Video AI	true	C
+2	investment_trend	eladgil	Elad Gil	Startup advisor & investor	true	D
+2	investment_trend	natfriedman	Nat Friedman	Former GitHub CEO, AI investor	true	D
+2	investment_trend	benthompson	Ben Thompson	Stratechery analyst	true	D
+2	investment_trend	CathieDWood	Cathie Wood	ARK Invest, tech investing	true	D
+2	investment_trend	paulg	Paul Graham	Y Combinator co-founder	true	D
+2	investment_trend	micsolana	Mike Solana	Founders Fund	true	D
+2	investment_trend	emaborevkova	Emilia Borevkova	AI venture analysis	true	D
+2	investment_trend	gaborw	Gabor	AI trends & investment	true	D
+2	investment_trend	harjtaggar	Harj Taggar	YC partner	true	D
+2	investment_trend	gara_labs	Gara	AI market analysis	true	D
+2	investment_trend	saranormous	Sara	AI & startup trends	true	D
+2	investment_trend	alexrHeyAlec	Alec	Retro tech & AI	true	D
+2	investment_trend	aaborncrypto	Aaborne	Crypto & AI trends	true	D
+2	investment_trend	naborovsky	Naborovsky	Tech VC perspective	true	D
+2	investment_trend	zaborowski	Zaborowski	AI investment trends	true	D
+2	chinese_circle	dotey	宝玉	AI translation & curation	true	E
+2	chinese_circle	muyao	Muyao	AI content curation	true	E
+2	chinese_circle	guizang9	归藏	AI tool reviews, Chinese AI	true	E
+2	chinese_circle	oran_ge	橙子	AI industry analysis	true	E
+2	chinese_circle	_will_fang	Will Fang	Chinese AI trends	true	E
+2	chinese_circle	barretlee	Barret Lee	AI engineering, China	true	E
+2	chinese_circle	coolifegenius	CoolifeGenius	AI tools & resources	true	E
+2	chinese_circle	winterpei	Winter Pei	AI research, China	true	E
+2	chinese_circle	youxinbiao	You Xinbiao	AI applications, China	true	E
+2	chinese_circle	yanheinz	Yan Heinz	Chinese AI content	true	E
+2	chinese_circle	lijin219	Li Jin	Atelier Ventures, creator economy	true	E
+2	chinese_circle	op7418	大狸子	AI aggregation & curation	true	E
+2	chinese_circle	alfredzhang	Alfred Zhang	Chinese AI tools	true	E
+2	chinese_circle	kangbeniot	Kangben	AI & IoT, China	true	E
+2	chinese_circle	ahelioo	Ahelio	Chinese AI community	true	E
+2	chinese_circle	bropeng	Bropeng	AI tools & workflows, China	true	E
+2	chinese_circle	zhangpapa_ai	Zhang Papa	AI education, China	true	E
+2	chinese_circle	arthurzhou	Arthur Zhou	AI engineering, China	true	E
+2	chinese_circle	gorden_Sun	Gorden Sun	AI trends, China	true	E
+2	chinese_circle	realTinyGrimes	Tiny Grimes	Chinese AI content	true	E
+2	deepseek_supplement	huggingface	HuggingFace Official	Open ML platform	true	F
+2	deepseek_supplement	mistralai	Mistral AI Official	European LLM lab	true	F
+2	deepseek_supplement	cohere	Cohere Official	Enterprise AI	true	F
+2	deepseek_supplement	ai21labs	AI21 Labs Official	Jurassic LLM	true	F
+2	deepseek_supplement	GoogleResearch	Google Research	Research publications	true	F
+2	deepseek_supplement	MicrosoftAI	Microsoft AI Official	Copilot & Azure AI	true	F
+2	deepseek_supplement	Azure_AI	Azure AI	Cloud AI services	true	F
+2	deepseek_supplement	AWS_AI	AWS AI	Cloud AI services	true	F
+2	deepseek_supplement	PapersWithCode	Papers With Code	ML benchmark tracker	true	F
+2	deepseek_supplement	scienceai	Science AI	AI for science	true	F
+2	deepseek_supplement	GoogleSafetyAI	Google Safety	AI safety research	true	F
+2	deepseek_supplement	AnthropicSafety	Anthropic Safety	AI safety & alignment	true	F
+2	deepseek_supplement	BostonDynamics	Boston Dynamics	Robotics	true	F
+2	deepseek_supplement	figure_ai	Figure AI	Humanoid robotics	true	F
+2	deepseek_supplement	AgilityRobotics	Agility Robotics	Digit humanoid	true	F
+2	deepseek_supplement	tesla_optimus	Tesla Optimus	Humanoid robotics	true	F
+2	deepseek_supplement	DeepMindHealth	DeepMind Health	AI for healthcare	true	G
+2	deepseek_supplement	GoogleHealthAI	Google Health AI	AI for medical	true	G
+2	deepseek_supplement	Nuance_Inc	Nuance	AI medical, Microsoft	true	G
+2	deepseek_supplement	OpenAISafety	OpenAI Safety	AI safety research	true	G
+2	deepseek_supplement	AI_Safety_Info	AI Safety Community	Safety alignment community	true	G
+2	deepseek_supplement	robotics_today	Robotics Today	Robotics news	true	G
+2	deepseek_supplement	AISafetyForum	AI Safety Forum	Safety & alignment	true	G
+2	deepseek_supplement	deepseek_research	DeepSeek Research	Research publications	true	G
+1	core_leader	lexfridman	Lex Fridman	AI/robotics long-form interviews and field signal amplifier	true	
+1	core_leader	ID_AA_Carmack	John Carmack	Keen Technologies, systems and AGI engineering	true	
+1	core_leader	goodfellow_ian	Ian Goodfellow	Deep learning researcher, GANs, frontier ML	true	
+1	paper_research	rasbt	Sebastian Raschka	LLM implementation, Ahead of AI, build-from-scratch education	true	
+1	paper_research	lilianweng	Lilian Weng	OpenAI research notes, Lil'Log, agents and LLM systems	true	
+1	paper_research	chipro	Chip Huyen	ML systems, evaluation, production AI	true	
+1	paper_research	JayAlammar	Jay Alammar	Visual explanations for LLMs and transformers	true	
+1	open_source	simonw	Simon Willison	LLM tooling, local AI, data journalism engineering	true	
+1	agent_coding	mattshumer_	Matt Shumer	AI product builder and agent workflow signal	true	
+1	ai_lab	xai	xAI Official	Grok and frontier AI lab official account	true	
+1	ai_lab	grok	Grok Official	xAI product account and release signal	true	
+1	safety_governance	ch402	Chris Olah	Anthropic interpretability and mechanistic transparency	true	
+1	safety_governance	janleike	Jan Leike	AI alignment and frontier safety researcher	true	
+1	open_source	ClementDelangue	Clement Delangue	Hugging Face CEO and open AI ecosystem	true	
+1	agent_coding	jerryjliu0	Jerry Liu	LlamaIndex founder, RAG and agent data infra	true	
+2	paper_research	dair_ai	DAIR.AI	ML paper and prompt engineering curation	true	F
+2	paper_research	askalphaxiv	alphaXiv	Social layer for arXiv paper discovery	true	F
+2	paper_research	lmarena_ai	LM Arena	Model evaluation and arena benchmark signal	true	F
+2	safety_governance	EpochAIResearch	Epoch AI	AI trends, compute, timelines, and forecasting	true	F
+2	safety_governance	METR_Evals	METR	Evals for frontier model autonomy and safety	true	F
+2	open_source	EleutherAI	EleutherAI	Open-source ML research collective	true	F
+2	open_source	NousResearch	Nous Research	Open model lab and community research	true	F
+2	open_source	togethercompute	Together AI	Open model serving and AI infrastructure	true	F
+2	ai_lab	perplexity_ai	Perplexity AI	AI search and answer engine official account	true	F
+2	chip_semiconductor	groqinc	Groq	LLM inference chips and serving	true	A
+2	chip_semiconductor	CerebrasSystems	Cerebras Systems	Wafer-scale AI hardware and models	true	A
+2	open_source	Modal_Labs	Modal Labs	Serverless compute for AI workloads	true	F
+2	open_source	replicate	Replicate	Model hosting and open model deployment	true	F
+2	open_source	FireworksAI_HQ	Fireworks AI	Fast inference and model serving	true	F
+2	open_source	vllm_project	vLLM	Open-source LLM serving framework	true	F
+2	open_source	PyTorch	PyTorch	Deep learning framework official account	true	F
+2	agent_coding	yoheinakajima	Yohei Nakajima	BabyAGI and autonomous agent experiments	true	B
+2	agent_coding	jxnlco	Jason Liu	Instructor, structured extraction, AI engineering	true	B
+2	agent_coding	hwchase17	Harrison Chase	LangChain founder and agent tooling	true	B
+2	agent_coding	mervenoyann	Merve Noyan	Hugging Face developer advocacy and AI demos	true	B
+2	agent_coding	HamelHusain	Hamel Husain	LLM evals, AI engineering, product quality	true	B
+2	agent_coding	eugeneyan	Eugene Yan	Applied ML systems and recommender infrastructure	true	B
+2	agent_coding	alexalbert__	Alex Albert	Prompting, Claude and AI product workflows	true	B
+2	agent_coding	antonosika	Anton Osika	Lovable founder, AI app generation workflows	true	B
+2	safety_governance	miles_brundage	Miles Brundage	AI policy, safety, and deployment governance	true	G
+2	safety_governance	robertskmiles	Robert Miles	AI safety education and alignment explanations	true	G
+2	safety_governance	DanHendrycks	Dan Hendrycks	Center for AI Safety and evals	true	G
+2	safety_governance	beth_barnes	Beth Barnes	Model evaluations and alignment research	true	G
+2	paper_research	srush_nlp	Sasha Rush	NLP systems, sequence modeling, open education	true	G
+2	paper_research	colinraffel	Colin Raffel	LLM research, T5, datasets and evaluation	true	G
+2	paper_research	shakir_za	Shakir Mohamed	DeepMind, ML research and ethics	true	G
+2	paper_research	petergyang	Peter Yang	AI product strategy and agent workflows	true	G
+2	paper_research	YiTayML	Yi Tay	LLM architecture and efficient modeling research	true	G
+2	paper_research	OfirPress	Ofir Press	LLM research, long context, evaluation	true	G

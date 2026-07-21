@@ -72,7 +72,7 @@ except ImportError as _e:
 
 UTC = dt.timezone.utc
 
-DEFAULT_CONFIG = "/Users/lisihao/Solar/harness/config/youtube-influence-digest.yaml"
+DEFAULT_CONFIG = "~/Solar/harness/config/youtube-influence-digest.yaml"
 
 # ---------------------------------------------------------------------------
 # Date / ISO week helpers
@@ -728,7 +728,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     state_dir = Path(
-        out_cfg.get("state_dir", "/Users/lisihao/.solar/harness/state/youtube-influence-digest")
+        out_cfg.get("state_dir", "~/.solar/harness/state/youtube-influence-digest")
     ).expanduser()
     backfill_dir = state_dir / "backfill"
     backfill_dir.mkdir(parents=True, exist_ok=True)

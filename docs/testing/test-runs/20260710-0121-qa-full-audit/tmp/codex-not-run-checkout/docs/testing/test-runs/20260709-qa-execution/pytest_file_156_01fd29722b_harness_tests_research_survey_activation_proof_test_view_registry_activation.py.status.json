@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_156_01fd29722b_harness_tests_research_survey_activation_proof_test_view_registry_activation.py",
+  "source": "harness/tests/research/survey/activation_proof/test_view_registry_activation.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research/survey/activation_proof/test_view_registry_activation.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.202,
+  "timeout": false
+}

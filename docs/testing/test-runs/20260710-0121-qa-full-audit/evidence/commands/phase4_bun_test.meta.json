@@ -1,0 +1,13 @@
+{
+  "command_id": "phase4_bun_test",
+  "phase": "deterministic",
+  "linked_feature_ids": "TS_UI_CORE_SET",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "/opt/homebrew/bin/bun test",
+  "start_time": "2026-07-10T02:12:08-04:00",
+  "end_time": "2026-07-10T02:12:08-04:00",
+  "duration_seconds": "0.420",
+  "exit_code": 2,
+  "stdout_path": "evidence/commands/phase4_bun_test.stdout.txt",
+  "stderr_path": "evidence/commands/phase4_bun_test.stderr.txt"
+}

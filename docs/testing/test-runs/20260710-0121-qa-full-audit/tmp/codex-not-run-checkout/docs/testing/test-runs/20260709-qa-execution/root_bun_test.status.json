@@ -1,0 +1,9 @@
+{
+  "name": "root_bun_test",
+  "command": [
+    "bun",
+    "test"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 1
+}

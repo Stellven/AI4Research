@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "contradiction_coverage": 1.0,
+  "required_sections": 32,
+  "covered_sections": 32,
+  "missing_section_ids": [],
+  "contradiction_axis_present": false
+}

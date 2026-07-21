@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "influence.output.finance_event_watch.v1",
+  "title": "FinanceEventWatch",
+  "type": "object",
+  "required": ["schema_version", "asset_type", "packet_id", "thesis_id"],
+  "properties": {
+    "schema_version": {"const": "influence.output.finance_event_watch.v1"},
+    "asset_type": {"const": "finance_event_watch"},
+    "packet_id": {"type": "string"},
+    "thesis_id": {"type": "string"},
+    "financial_events": {"type": "array"},
+    "company_releases": {"type": "array"}
+  }
+}

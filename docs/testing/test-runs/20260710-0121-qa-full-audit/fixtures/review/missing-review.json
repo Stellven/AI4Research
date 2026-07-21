@@ -1,0 +1,5 @@
+{
+  "fixture_source": true,
+  "status": "missing",
+  "reason": "Review LLM not invoked in offline audit"
+}

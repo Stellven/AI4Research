@@ -1,0 +1,1 @@
+coordinator.ts missing current Builder pane mapping

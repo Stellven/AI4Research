@@ -1,0 +1,56 @@
+---
+id: empirical-research
+name: "Empirical Research Skills"
+version: "1.0.0"
+description: "Empirical research pipeline skill set for topic design, literature review, causal/statistical analysis, reproducibility and academic writing. Registered as a Solar dispatch capability provider."
+status: enabled
+
+write_scope:
+  - "state/empirical-research"
+  - "logs/empirical-research"
+  - "~/Knowledge/_raw"
+
+read_scope:
+  - "~/.claude/skills/empirical-pipeline"
+  - "~/.solar/reports/gap-analysis-empirical-research.md"
+
+capabilities:
+  - "research.empirical_pipeline"
+  - "research.literature_review"
+  - "analysis.causal_inference"
+  - "paper.reproducibility"
+
+commands:
+  - "solar-harness skills inventory"
+  - "solar-harness context inject --query empirical research"
+
+background_safety:
+  mode: none
+  idle_only: false
+  rate_limit: "none"
+  max_runtime_s: 30
+  max_memory_mb: 128
+
+eval_packs:
+  - "tests/integrations/test-expanded-capability-plane-e2e.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable empirical-research"
+
+integration_level: default_usable
+
+entry: "~/.claude/skills/empirical-pipeline/SKILL.md"
+
+events:
+  - "empirical_research.skill_selected"
+
+depends_on:
+  - "qmd"
+  - "obsidian"
+
+tags:
+  - "research"
+  - "empirical"
+  - "academic"

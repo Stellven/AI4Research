@@ -1,0 +1,1 @@
+{"outcome": "supports", "metrics": [{"name": "accuracy", "value": 0.96}], "evidence_ids": ["result:exp-remote-parity-collect"], "logs": ["parity remote pull-results collected metrics"]}

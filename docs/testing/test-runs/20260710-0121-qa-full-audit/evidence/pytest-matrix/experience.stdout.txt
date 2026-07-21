@@ -1,0 +1,21 @@
+..F..FF                                                                  [100%]
+=================================== FAILURES ===================================
+_______________ TestExperienceMemoryE2E.test_extract_idempotent ________________
+harness/tests/experience/test_e2e_synthetic.py:102: in test_extract_idempotent
+    for fname in sorted(os.listdir(sprints_dir), reverse=True):
+                        ^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/sprints'
+____________ TestExperienceMemoryE2E.test_stats_shows_anti_patterns ____________
+harness/tests/experience/test_e2e_synthetic.py:87: in test_stats_shows_anti_patterns
+    self.assertTrue(known & present, f"Expected some of {known} in {present}")
+E   AssertionError: set() is not true : Expected some of {'repair_recipe', 'success_workflow'} in set()
+____________ TestExperienceMemoryE2E.test_terminal_phase_wake_abort ____________
+harness/tests/experience/test_e2e_synthetic.py:33: in test_terminal_phase_wake_abort
+    with open(syn_path, "w") as f:
+         ^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/sprints/sprint-synthetic-e2e-test-001.status.json'
+=========================== short test summary info ============================
+FAILED harness/tests/experience/test_e2e_synthetic.py::TestExperienceMemoryE2E::test_extract_idempotent
+FAILED harness/tests/experience/test_e2e_synthetic.py::TestExperienceMemoryE2E::test_stats_shows_anti_patterns
+FAILED harness/tests/experience/test_e2e_synthetic.py::TestExperienceMemoryE2E::test_terminal_phase_wake_abort
+3 failed, 4 passed in 0.07s

@@ -1,0 +1,1 @@
+{"schema": "autosci_runtime_evidence.v1", "task_id": "pilot-runtime-parity-write", "status": "completed", "exit_code": 0, "outcome": "supports", "metrics": [{"name": "pilot_accuracy", "value": 0.81}], "evidence_ids": ["runtime:pilot-parity-write"]}

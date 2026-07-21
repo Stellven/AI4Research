@@ -1,0 +1,11 @@
+{
+  "section_id": "s1",
+  "source_type_counts": {"paper": 3, "code": 1, "official": 1, "benchmark": 1},
+  "primary_ratio": 1.0,
+  "stuffing_alerts": [],
+  "canonical_coverage": {"paper": true, "code": true, "official": true, "benchmark": true},
+  "verdict": "pass",
+  "verdict_reasons": [],
+  "taxonomy_version": "paper,code,official,benchmark,web,blog,wiki",
+  "schema_version": "survey.schemas.v1"
+}

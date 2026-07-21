@@ -1,0 +1,320 @@
+{
+  "answer_lines": [
+    "- - 2026-07-10T05:54:45Z | experiment | completed `exp-once` outcome `supports` evidence `exp-once, remote-collect:exp-once, /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_sh Source: [[log]] (`artifacts/autosci/workspace/wiki/log.md`).",
+    "- - [skillgen](ideas/skillgen.md) Source: [[index]] (`artifacts/autosci/workspace/wiki/index.md`).",
+    "- # SkillGen Survey Source: [[related-work-topic-skillgen-2026-07-10]] (`artifacts/autosci/workspace/wiki/outputs/related-work-topic-skillgen-2026-07-10.md`).",
+    "- # SKILLGEN: Verified Inference-Time Agent Skill Synthesis Source: [[paper-skillgen-operator-smoke-paper]] (`artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md`).",
+    "- # SKILLGEN: Verified Inference-Time Agent Skill Synthesis Source: [[paper-skillgen]] (`artifacts/autosci/workspace/wiki/papers/paper-skillgen.md`)."
+  ],
+  "answer_status": "completed",
+  "crystallize_recommendation": {
+    "gap_status": "no_matching_open_questions",
+    "model_status": "unavailable",
+    "reason": "Crystallize requires retrieved source evidence and completed model synthesis with evidence ids.",
+    "recommendation": "blocked",
+    "retrieval_source_count": 5,
+    "schema": "autosci_ask_crystallize_recommendation.v1",
+    "source": "ask_final_answer_boundary",
+    "status": "blocked"
+  },
+  "final_answer_boundary": {
+    "answer_status": "completed",
+    "blocking_reasons": [
+      "model synthesis status is `unavailable`, not completed with answer and evidence ids"
+    ],
+    "final_answer_ready": false,
+    "limitations": [
+      "Final ask answer requires retrieved source evidence and completed model-backed synthesis with evidence ids."
+    ],
+    "model_confidence": "N/A",
+    "model_evidence_ids": [],
+    "model_name": "",
+    "model_provider": "",
+    "model_source": "",
+    "model_status": "unavailable",
+    "query": "What supports SkillGen?",
+    "request_sha256": "",
+    "response_sha256": "",
+    "retrieval_paths": [
+      "artifacts/autosci/workspace/wiki/log.md",
+      "artifacts/autosci/workspace/wiki/index.md",
+      "artifacts/autosci/workspace/wiki/outputs/related-work-topic-skillgen-2026-07-10.md",
+      "artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+      "artifacts/autosci/workspace/wiki/papers/paper-skillgen.md"
+    ],
+    "retrieval_source_count": 5,
+    "retrieval_status": "completed",
+    "schema": "autosci_ask_final_answer_boundary.v1",
+    "status": "ask_final_answer_incomplete"
+  },
+  "gap_annotations": {
+    "annotations": [],
+    "schema": "autosci_ask_gap_annotations.v1",
+    "status": "no_matching_open_questions"
+  },
+  "hits": [
+    {
+      "matched_terms": [
+        "supports",
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/log.md",
+      "score": 24,
+      "snippet": "- 2026-07-10T05:54:45Z | experiment | completed `exp-once` outcome `supports` evidence `exp-once, remote-collect:exp-once, /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_sh"
+    },
+    {
+      "matched_terms": [
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/index.md",
+      "score": 18,
+      "snippet": "- [skillgen](ideas/skillgen.md)"
+    },
+    {
+      "matched_terms": [
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/outputs/related-work-topic-skillgen-2026-07-10.md",
+      "score": 14,
+      "snippet": "# SkillGen Survey"
+    },
+    {
+      "matched_terms": [
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+      "score": 12,
+      "snippet": "# SKILLGEN: Verified Inference-Time Agent Skill Synthesis"
+    },
+    {
+      "matched_terms": [
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/papers/paper-skillgen.md",
+      "score": 9,
+      "snippet": "# SKILLGEN: Verified Inference-Time Agent Skill Synthesis"
+    }
+  ],
+  "limitations": [
+    "Extractive answer is grounded in retrieved wiki snippets.",
+    "Model synthesis is included only when explicit model evidence or a model command was supplied."
+  ],
+  "model_output": {
+    "checked_paths": [],
+    "reason": "No model evidence or model command was supplied.",
+    "status": "unavailable"
+  },
+  "query": "What supports SkillGen?",
+  "requested_format": "bullets",
+  "status": "completed",
+  "wiki_context": {
+    "limitations": [],
+    "query_terms": [
+      "supports",
+      "skillgen"
+    ],
+    "schema": "autosci_ask_wiki_context.v1",
+    "sources": {
+      "context_brief": {
+        "line_count": 8,
+        "matched_lines": [],
+        "matched_terms": [],
+        "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+        "sha256": "e4ae94623e08b8da30a99fc606e77a113b23a0d4e7ff18b89802269b4e25551d",
+        "status": "present"
+      },
+      "edges": {
+        "line_count": 112,
+        "matched_edge_count": 43,
+        "matched_edges": [
+          {
+            "edge": {
+              "evidence_ids": [
+                "paper-skillgen-operator-smoke-paper"
+              ],
+              "operation": "propose",
+              "relation": "describes",
+              "run_id": "shim-ingest",
+              "source": "paper-skillgen-operator-smoke-paper",
+              "source_evidence": "artifacts/autosci/runs/shim-ingest/research_graph_update.json",
+              "target": "concept.solar_evidence_abi"
+            },
+            "line": 1,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "evidence_ids": [
+                "paper-skillgen-operator-smoke-paper"
+              ],
+              "operation": "confirm",
+              "relation": "has_source",
+              "run_id": "shim-ingest",
+              "source": "paper-skillgen-operator-smoke-paper",
+              "source_evidence": "artifacts/autosci/runs/shim-ingest/research_graph_update.json",
+              "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+            },
+            "line": 2,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "evidence_ids": [
+                "paper-skillgen-operator-smoke-paper"
+              ],
+              "operation": "propose",
+              "relation": "describes",
+              "run_id": "shim-dollar-skill-ingest",
+              "source": "paper-skillgen-operator-smoke-paper",
+              "source_evidence": "artifacts/autosci/runs/shim-dollar-skill-ingest/research_graph_update.json",
+              "target": "concept.solar_evidence_abi"
+            },
+            "line": 3,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "evidence_ids": [
+                "paper-skillgen-operator-smoke-paper"
+              ],
+              "operation": "confirm",
+              "relation": "has_source",
+              "run_id": "shim-dollar-skill-ingest",
+              "source": "paper-skillgen-operator-smoke-paper",
+              "source_evidence": "artifacts/autosci/runs/shim-dollar-skill-ingest/research_graph_update.json",
+              "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+            },
+            "line": 4,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "evidence_ids": [
+                "paper-skillgen-operator-smoke-paper"
+              ],
+              "operation": "propose",
+              "relation": "describes",
+              "run_id": "shim-dollar-ingest",
+              "source": "paper-skillgen-operator-smoke-paper",
+              "source_evidence": "artifacts/autosci/runs/shim-dollar-ingest/research_graph_update.json",
+              "target": "concept.solar_evidence_abi"
+            },
+            "line": 5,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "evidence_ids": [
+                "paper-skillgen-operator-smoke-paper"
+              ],
+              "operation": "confirm",
+              "relation": "has_source",
+              "run_id": "shim-dollar-ingest",
+              "source": "paper-skillgen-operator-smoke-paper",
+              "source_evidence": "artifacts/autosci/runs/shim-dollar-ingest/research_graph_update.json",
+              "target": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+            },
+            "line": 6,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "relation": "generated_from",
+              "run_id": "shim-single-token-dollar-command",
+              "source": "ideas/idea-001.md",
+              "source_evidence": "artifacts/autosci/runs/shim-single-token-dollar-command/idea_candidate.json",
+              "target": "task-autosci-skillgen-ingest_paper"
+            },
+            "line": 9,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "relation": "generated_from",
+              "run_id": "shim-single-token-dollar-command",
+              "source": "ideas/idea-001.md",
+              "source_evidence": "artifacts/autosci/runs/shim-single-token-dollar-command/idea_candidate.json",
+              "target": "task-autosci-skillgen-extract_claims"
+            },
+            "line": 10,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "relation": "generated_from",
+              "run_id": "shim-single-token-dollar-command",
+              "source": "ideas/idea-001.md",
+              "source_evidence": "artifacts/autosci/runs/shim-single-token-dollar-command/idea_candidate.json",
+              "target": "task-autosci-skillgen-extract_methods"
+            },
+            "line": 13,
+            "matched_terms": [
+              "skillgen"
+            ]
+          },
+          {
+            "edge": {
+              "relation": "generated_from",
+              "run_id": "shim-single-token-dollar-command",
+              "source": "ideas/idea-001.md",
+              "source_evidence": "artifacts/autosci/runs/shim-single-token-dollar-command/idea_candidate.json",
+              "target": "paper-skillgen-operator-smoke-paper"
+            },
+            "line": 14,
+            "matched_terms": [
+              "skillgen"
+            ]
+          }
+        ],
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "sha256": "8ae4e35dd0e0f7c2bb1b55e60083a59674c6a2efe8922b0bb1aeb3aee1d0b976",
+        "status": "present"
+      },
+      "index": {
+        "line_count": 93,
+        "matched_lines": [
+          "- [paper-skillgen-operator-smoke-paper](papers/paper-skillgen-operator-smoke-paper.md)",
+          "- [paper-skillgen](papers/paper-skillgen.md)",
+          "- [foundation-skillgen](foundations/foundation-skillgen.md)",
+          "- [skillgen](ideas/skillgen.md)",
+          "- [exp-idea-skillgen-design](experiments/exp-idea-skillgen-design.md)"
+        ],
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/index.md",
+        "sha256": "0ca3d3cf36644cbe5ee7e957ff480abc589d8563171a5739d96b16fafe75707e",
+        "status": "present"
+      },
+      "open_questions": {
+        "line_count": 5,
+        "matched_lines": [],
+        "matched_terms": [],
+        "path": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+        "sha256": "7686cb7e8d5bccbf9c0b9d912bde923314b3d832c6361b44a118e8fb9fea689b",
+        "status": "present"
+      }
+    },
+    "status": "completed",
+    "wiki_root": "artifacts/autosci/workspace/wiki"
+  }
+}

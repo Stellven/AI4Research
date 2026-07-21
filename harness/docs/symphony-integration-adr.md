@@ -269,7 +269,7 @@ The `--unsafe-run-codex` flag bypasses the dry-run guard and allows `runner.sh` 
 Usage must be explicitly authorized by one of:
 
 - The coordinator via a `WORKFLOW.md` `allow_codex_run: true` field signed by the planner pane.
-- A human operator (昊哥 / Solar guardian) confirming via the PM gate.
+- A human operator (the Solar guardian) confirming via the PM gate.
 - An automated test harness with `ALLOW_CODEX_IN_TEST=1` set in a sandboxed environment.
 
 Callers must never embed `--unsafe-run-codex` as a hardcoded constant in non-test scripts. It should always be conditionally assembled from a policy check.

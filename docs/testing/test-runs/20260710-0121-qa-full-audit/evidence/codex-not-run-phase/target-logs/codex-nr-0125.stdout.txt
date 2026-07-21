@@ -1,0 +1,10 @@
+..F.                                                                     [100%]
+=================================== FAILURES ===================================
+_______________ test_survey_pack_attaches_matching_paper_trends ________________
+harness/tests/research_survey/test_paper_enrichment.py:136: in test_survey_pack_attaches_matching_paper_trends
+    assert pack["paper_trend_ids"] == ["trend_agent"]
+           ^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'paper_trend_ids'
+=========================== short test summary info ============================
+FAILED harness/tests/research_survey/test_paper_enrichment.py::test_survey_pack_attaches_matching_paper_trends
+1 failed, 3 passed in 0.11s

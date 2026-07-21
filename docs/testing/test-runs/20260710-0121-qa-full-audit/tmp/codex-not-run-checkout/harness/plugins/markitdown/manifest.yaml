@@ -1,0 +1,57 @@
+---
+id: markitdown
+name: "Microsoft MarkItDown Document Conversion"
+version: "1.0.0"
+description: "Document-to-Markdown capability provider. Solar uses it for PDF/Office/HTML extraction before Obsidian/QMD/Mirage knowledge ingest; MCP runtime is optional and separately probed."
+status: enabled
+
+write_scope:
+  - "state/markitdown"
+  - "logs/markitdown"
+  - "~/Knowledge/_raw"
+
+read_scope:
+  - "~/.agents/skills/markitdown"
+  - "~/.claude/skills/markitdown"
+  - "~/.solar/owl/venv/lib/python3.11/site-packages/camel/toolkits/markitdown_toolkit.py"
+
+capabilities:
+  - "document.convert"
+  - "document.markdown_extract"
+  - "mcp.markitdown"
+
+commands:
+  - "~/.agents/skills/markitdown/scripts/batch_convert.py"
+  - "~/.agents/skills/markitdown/scripts/convert_with_ai.py"
+
+background_safety:
+  mode: bounded
+  idle_only: true
+  rate_limit: "local-document-conversion"
+  max_runtime_s: 900
+  max_memory_mb: 2048
+
+eval_packs:
+  - "tests/integrations/test-capability-plane-e2e.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable markitdown"
+
+integration_level: default_usable
+
+entry: "~/.agents/skills/markitdown/SKILL.md"
+
+events:
+  - "markitdown.document_converted"
+  - "markitdown.mcp_checked"
+
+depends_on:
+  - "mirage"
+  - "obsidian"
+
+tags:
+  - "documents"
+  - "markdown"
+  - "mcp"

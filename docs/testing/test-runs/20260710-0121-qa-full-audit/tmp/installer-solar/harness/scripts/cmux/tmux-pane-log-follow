@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# tmux-pane-log-follow: tail-F mode for cmux pane monitoring
+# Usage: tmux-pane-log-follow <log_path> [--remote <ssh_dest>] [--check-target <tmux_target>]
+set -euo pipefail
+
+usage() {
+  echo "Usage: tmux-pane-log-follow <log_path> [--remote <user@host>] [--check-target <tmux_target>]"
+  exit 1
+}
+
+LOG_PATH=""
+REMOTE=""
+CHECK_TARGET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --remote)    REMOTE="$2"; shift 2 ;;
+    --check-target) CHECK_TARGET="$2"; shift 2 ;;
+    -h|--help)   usage ;;
+    *)
+      if [[ -z "$LOG_PATH" ]]; then
+        LOG_PATH="$1"; shift
+      else
+        echo "ERROR: unexpected argument: $1" >&2; usage
+      fi
+      ;;
+  esac
+done
+
+if [[ -z "$LOG_PATH" ]]; then
+  echo "ERROR: log_path is required" >&2; usage
+fi
+
+HOST="${HOSTNAME:-$(hostname -s 2>/dev/null || echo unknown)}"
+
+if [[ -n "$REMOTE" ]]; then
+  # Remote tail
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] host=${HOST}  remote=${REMOTE}  log=${LOG_PATH}  mode=tail"
+  echo "------------------------------------------------------------"
+  if [[ -n "$CHECK_TARGET" ]]; then
+    # Verify tmux target exists on remote before tailing
+    if ! ssh "$REMOTE" "tmux has-session -t '${CHECK_TARGET}' 2>/dev/null"; then
+      echo "WARN: tmux target ${CHECK_TARGET} not found on ${REMOTE} — log may be stale"
+    fi
+  fi
+  exec ssh "$REMOTE" "tail -F '${LOG_PATH}' 2>&1 || echo 'ERROR: cannot tail ${LOG_PATH} on ${REMOTE}'"
+else
+  # Local tail
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] host=${HOST}  log=${LOG_PATH}  mode=tail"
+  echo "------------------------------------------------------------"
+  if [[ -n "$CHECK_TARGET" ]]; then
+    if ! tmux has-session -t "${CHECK_TARGET}" 2>/dev/null; then
+      echo "WARN: tmux target ${CHECK_TARGET} not found locally — log may be stale"
+    fi
+  fi
+  # Validate log path is accessible
+  if [[ ! -e "$LOG_PATH" ]]; then
+    echo "WARN: log path ${LOG_PATH} does not exist yet — waiting for file to appear ..."
+  fi
+  exec tail -F "${LOG_PATH}" 2>&1 || echo "ERROR: cannot tail ${LOG_PATH}"
+fi

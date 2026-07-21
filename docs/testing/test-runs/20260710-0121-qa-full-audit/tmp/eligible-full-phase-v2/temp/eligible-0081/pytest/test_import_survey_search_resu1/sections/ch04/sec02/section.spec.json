@@ -1,0 +1,15 @@
+{
+  "section_id": "ch04/sec02",
+  "chapter_id": "ch04",
+  "title": "方法分类与代表系统：关键机制与设计空间",
+  "order": 17,
+  "target_chars": 1666,
+  "research_question": "latent reasoning 在“方法分类与代表系统/关键机制与设计空间”上的证据、架构取舍和争议是什么？",
+  "required_source_types": [
+    "paper",
+    "code"
+  ],
+  "min_evidence": 4,
+  "min_claims": 3,
+  "schema_version": "solar.research.survey.v1"
+}

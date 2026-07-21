@@ -1,0 +1,379 @@
+{
+  "artifacts": [
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json",
+      "type": "route_config"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/daily-arxiv-delivery-proof.json",
+      "type": "runtime_proof_manifest"
+    }
+  ],
+  "inputs": {
+    "autosci_repo": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/AutoSci",
+    "requested_skill": "daily-arxiv",
+    "route_config": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json",
+    "runtime_proof_dirs": [],
+    "runtime_proof_manifest_paths": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/daily-arxiv-delivery-proof.json"
+    ],
+    "runtime_proof_manifests": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/daily-arxiv-delivery-proof.json"
+    ],
+    "semantic_audit_dirs": [],
+    "semantic_audit_paths": [],
+    "semantic_audits": []
+  },
+  "limitations": [
+    "Phase 19 parity evidence verifies Solar-native route coverage, not live execution of external services.",
+    "Side effects such as secrets, remote execution, SMTP, browser rendering, GitHub Actions, and destructive reset remain approval-gated.",
+    "Local primary tool/config references are checked for ABI existence; external executables/providers are represented as external requirements."
+  ],
+  "node_id": "autosci-feature-parity-daily-arxiv",
+  "outputs": {
+    "parity": {
+      "autosci_repo": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/AutoSci",
+      "blocked_count": 0,
+      "config_version": "phase19.v1",
+      "configured_route_count": 1,
+      "execution_policy_counts": {
+        "approval_required": 1,
+        "bounded_local": 0,
+        "provider_required": 0,
+        "pure": 0
+      },
+      "full_count": 0,
+      "gated_count": 1,
+      "items": [
+        {
+          "autosci_command": "/daily-arxiv",
+          "autosci_feature": "/daily-arxiv",
+          "backend_mode": "side_effect_gated",
+          "coverage_status": "gated",
+          "evidence_ids": [
+            "route:daily-arxiv",
+            "native:daily-arxiv"
+          ],
+          "evidence_schema": "literature_discovery.v1",
+          "execution_policy": "approval_required",
+          "feature_kind": "skill",
+          "limitations": [
+            "Native daily arXiv recommendation semantics are complete behind explicit approval/provider boundaries: one-off inform runs can use provider/runtime evidence plus Review LLM ranking, while SMTP delivery, GitHub Actions scheduling, and auto-ingest fan-in remain approval/provider-gated side effects. daily_arxiv_final_provider_delivery_boundary must verify provider candidates, ranking evidence, and either explicit delivery or approved wiki ingest/fan-in before a digest is final; semantic full parity is attached only through route-level audit evidence."
+          ],
+          "missing_primary_tools": [],
+          "native_paths": [
+            "i18n/en/skills/daily-arxiv/SKILL.md",
+            "tools/daily_arxiv.py",
+            "config/daily-arxiv.yml.example"
+          ],
+          "native_skill": "daily-arxiv",
+          "primary_tool_statuses": [
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/daily_arxiv.py",
+              "ref": "tools/daily_arxiv.py prepare",
+              "status": "ok",
+              "token": "tools/daily_arxiv.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/daily_arxiv.py",
+              "ref": "tools/daily_arxiv.py finalize",
+              "status": "ok",
+              "token": "tools/daily_arxiv.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/send_email.py",
+              "ref": "tools/send_email.py",
+              "status": "ok",
+              "token": "tools/send_email.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/review_model_runtime_proof.py",
+              "ref": "tools/review_model_runtime_proof.py from-evidence",
+              "status": "ok",
+              "token": "tools/review_model_runtime_proof.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/approval_runtime_proof.py",
+              "ref": "tools/approval_runtime_proof.py from-contract",
+              "status": "ok",
+              "token": "tools/approval_runtime_proof.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/wiki_mutation_runtime_proof.py",
+              "ref": "tools/wiki_mutation_runtime_proof.py from-writeback",
+              "status": "ok",
+              "token": "tools/wiki_mutation_runtime_proof.py"
+            }
+          ],
+          "primary_tools": [
+            "tools/daily_arxiv.py prepare",
+            "tools/daily_arxiv.py finalize",
+            "tools/send_email.py",
+            "tools/review_model_runtime_proof.py from-evidence",
+            "tools/approval_runtime_proof.py from-contract",
+            "tools/wiki_mutation_runtime_proof.py from-writeback"
+          ],
+          "proof_level": "E3",
+          "proof_refs": [
+            "route:daily-arxiv",
+            "native:daily-arxiv"
+          ],
+          "proof_requirements": [
+            {
+              "category": "route_definition",
+              "description": "Solar route declaration exists in feature_parity_routes.v1.json.",
+              "evidence_refs": [
+                "route:daily-arxiv"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "native_skill_presence",
+              "description": "Discovered AutoSci native skill file exists under i18n/en/skills.",
+              "evidence_refs": [
+                "native:daily-arxiv"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "primary_tool_abi",
+              "description": "Primary Solar tool/config references resolve locally or are declared external.",
+              "evidence_refs": [
+                "tools/daily_arxiv.py prepare",
+                "tools/daily_arxiv.py finalize",
+                "tools/send_email.py",
+                "tools/review_model_runtime_proof.py from-evidence",
+                "tools/approval_runtime_proof.py from-contract",
+                "tools/wiki_mutation_runtime_proof.py from-writeback"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "semantic_equivalence_evidence",
+              "description": "Route still needs audited native AutoSci semantic equivalence proof before semantic full parity.",
+              "evidence_refs": [
+                "runtime:daily-arxiv:semantic-audit-full",
+                "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                "runtime:daily-arxiv:delivery-finality",
+                "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "external_runtime_evidence",
+              "description": "Route needs approved provider/runtime execution evidence before external behavior can be considered complete.",
+              "evidence_refs": [
+                "runtime:daily-arxiv:semantic-audit-full",
+                "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                "runtime:daily-arxiv:delivery-finality",
+                "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "approval_boundary_evidence",
+              "description": "Side-effecting route requires durable approval, allowlist, before/after, and result evidence.",
+              "evidence_refs": [
+                "runtime:daily-arxiv:semantic-audit-full",
+                "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                "runtime:daily-arxiv:delivery-finality",
+                "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "side_effect_execution_evidence",
+              "description": "Gated side-effect route needs approved execution or provider delivery proof.",
+              "evidence_refs": [
+                "runtime:daily-arxiv:semantic-audit-full",
+                "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                "runtime:daily-arxiv:delivery-finality",
+                "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "review_llm_or_model_evidence",
+              "description": "Model/Review LLM-dependent route needs persisted request/response or supplied review evidence.",
+              "evidence_refs": [
+                "runtime:daily-arxiv:semantic-audit-full",
+                "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                "runtime:daily-arxiv:delivery-finality",
+                "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "provider_source_evidence",
+              "description": "Source-dependent route needs non-fixture provider/source-channel evidence.",
+              "evidence_refs": [
+                "runtime:daily-arxiv:semantic-audit-full",
+                "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                "runtime:daily-arxiv:delivery-finality",
+                "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"
+              ],
+              "status": "supplied"
+            }
+          ],
+          "remaining_requirements": [],
+          "required_capabilities": [
+            "arXiv feed collection",
+            "Semantic Scholar enrichment",
+            "LLM ranking",
+            "email digest",
+            "optional ingest"
+          ],
+          "runtime_proof_refs": [
+            "runtime:daily-arxiv:semantic-audit-full",
+            "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+            "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+            "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+            "runtime:daily-arxiv:delivery-finality",
+            "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"
+          ],
+          "runtime_proof_sources": [
+            {
+              "block_reasons": [],
+              "categories": [
+                "semantic_equivalence_evidence"
+              ],
+              "collection_mode": "semantic_audit",
+              "description": "Daily arXiv semantic parity audit proof.",
+              "evidence_ref_statuses": [
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                  "ref": "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                  "status": "ok"
+                },
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                  "ref": "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                  "status": "ok"
+                },
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                  "ref": "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json",
+                  "status": "ok"
+                }
+              ],
+              "evidence_refs": [
+                "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json",
+                "artifacts/runtime/daily-arxiv-delivery/native-daily-arxiv.md",
+                "artifacts/runtime/daily-arxiv-delivery/solar-daily-arxiv.json"
+              ],
+              "manifest_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/daily-arxiv-delivery-proof.json",
+              "native_skill": "daily-arxiv",
+              "production_ready": true,
+              "proof_id": "runtime:daily-arxiv:semantic-audit-full",
+              "provenance": {
+                "artifact_kind": "autosci_semantic_parity_audit.v1",
+                "captured_at": "2026-07-02T00:00:00Z",
+                "source": "phase19 semantic audit"
+              },
+              "status": "supplied"
+            },
+            {
+              "block_reasons": [],
+              "categories": [
+                "approval_boundary_evidence",
+                "external_runtime_evidence",
+                "provider_source_evidence",
+                "review_llm_or_model_evidence",
+                "side_effect_execution_evidence"
+              ],
+              "collection_mode": "approved_side_effect",
+              "description": "Daily arXiv provider, Review LLM, approval, and delivery proof.",
+              "evidence_ref_statuses": [
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/artifacts/runtime/daily-arxiv-delivery/daily-runtime.json",
+                  "ref": "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json",
+                  "status": "ok"
+                }
+              ],
+              "evidence_refs": [
+                "artifacts/runtime/daily-arxiv-delivery/daily-runtime.json"
+              ],
+              "manifest_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0016/pytest/test_daily_arxiv_delivery_fina0/daily-arxiv-delivery-proof.json",
+              "native_skill": "daily-arxiv",
+              "production_ready": true,
+              "proof_id": "runtime:daily-arxiv:delivery-finality",
+              "provenance": {
+                "artifact_kind": "autosci_daily_arxiv_final_provider_delivery_boundary.v1",
+                "captured_at": "2026-07-02T00:00:00Z",
+                "source": "daily arXiv final provider delivery boundary"
+              },
+              "status": "supplied"
+            }
+          ],
+          "runtime_proof_status": "verified",
+          "semantic_audit_refs": [
+            "artifacts/runtime/daily-arxiv-delivery/semantic-audit-full.json"
+          ],
+          "semantic_audit_status": "verified",
+          "semantic_parity": "full",
+          "side_effect_policy": "approval_required",
+          "solar_backend_action": "daily_arxiv_prepare_finalize",
+          "solar_capability": "cap.research-literature-discover",
+          "solar_logical_operator": "ScientificLiteratureDiscoverer",
+          "tool_abi_status": "ok"
+        }
+      ],
+      "missing_route_count": 0,
+      "native_skill_count": 1,
+      "native_skills": [
+        "daily-arxiv"
+      ],
+      "partial_count": 0,
+      "proof_level_counts": {
+        "E0": 0,
+        "E1": 0,
+        "E2": 0,
+        "E3": 1,
+        "E4": 0,
+        "E5": 0
+      },
+      "proof_requirement_status_counts": {
+        "blocked": 0,
+        "missing": 0,
+        "ok": 3,
+        "pending": 0,
+        "supplied": 6
+      },
+      "routed_count": 1,
+      "runtime_proof_status_counts": {
+        "not_required": 0,
+        "pending": 0,
+        "supplied": 0,
+        "verified": 1
+      },
+      "semantic_full_count": 1,
+      "semantic_missing_count": 0,
+      "semantic_partial_count": 0
+    }
+  },
+  "provenance": {
+    "implementation_package": "harness.plugins.autosci",
+    "operator_id": "AutoSciFeatureParityBridge",
+    "timestamp": "2026-07-10T19:22:54.363830Z"
+  },
+  "schema": "autosci_feature_parity.v1",
+  "sprint_id": "phase19",
+  "status": "completed",
+  "task_id": "phase19-autosci-feature-parity"
+}

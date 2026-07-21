@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-28T21:05:00Z",
+  "providers": {
+    "claude_cli": {
+      "label": "Claude CLI / Subscription",
+      "enabled": true,
+      "key_env": "",
+      "key_ref": "claude_subscription",
+      "base_url": "local-cli",
+      "default_model": "claude-opus-4-8",
+      "notes": "Use local Claude CLI subscription/session for pane operators. No ANTHROPIC_API_KEY is required for this path."
+    },
+    "anthropic_api": {
+      "label": "Anthropic API / SDK",
+      "enabled": false,
+      "key_env": "ANTHROPIC_API_KEY",
+      "key_ref": "anthropic_api_key",
+      "base_url": "https://api.anthropic.com",
+      "default_model": "claude-opus-4-8",
+      "notes": "Only enable this for Anthropic API/SDK calls; Claude CLI subscription is configured separately."
+    },
+    "codex_cli": {
+      "label": "Codex CLI",
+      "enabled": true,
+      "key_env": "",
+      "key_ref": "codex_cli_session",
+      "base_url": "local-cli",
+      "default_model": "gpt-5.5-codex",
+      "notes": "Use the local codex CLI session/subscription for repo/code architecture analysis, implementation review, and coding-heavy premium reasoning. No OpenAI API key is required here."
+    },
+    "deepseek": {
+      "label": "DeepSeek",
+      "enabled": false,
+      "key_env": "DEEPSEEK_API_KEY",
+      "key_ref": "deepseek_api_key",
+      "base_url": "https://api.deepseek.com",
+      "default_model": "deepseek-v4-pro",
+      "notes": "Use as a low-cost cloud reasoner/fallback for research synthesis and critique."
+    },
+    "gemini_antigravity": {
+      "label": "Gemini Antigravity / OAuth",
+      "enabled": true,
+      "key_env": "",
+      "key_ref": "antigravity_oauth",
+      "base_url": "antigravity-cli",
+      "default_model": "gemini-3.1-pro",
+      "notes": "Use local Antigravity/agy OAuth session for Gemini operators. No GOOGLE_AI_API_KEY is required for this path."
+    },
+    "google_api": {
+      "label": "Google AI API / Gemini API",
+      "enabled": false,
+      "key_env": "GOOGLE_AI_API_KEY",
+      "key_ref": "google_ai_api_key",
+      "base_url": "https://generativelanguage.googleapis.com",
+      "default_model": "gemini-3.1-pro",
+      "notes": "Only enable this for direct Google AI API calls; Antigravity/OAuth is configured separately."
+    },
+    "thunderomlx": {
+      "label": "ThunderOMLX local",
+      "enabled": true,
+      "key_env": "THUNDEROMLX_AUTH_TOKEN",
+      "key_ref": "local-thunderomlx",
+      "base_url": "http://127.0.0.1:8002",
+      "default_model": "Qwen3.6-35b-a3b",
+      "admin_url": "http://127.0.0.1:8002/admin/dashboard",
+      "notes": "Default local preprocessing engine for knowledge extraction; embeddings stay unchanged."
+    }
+  },
+  "knowledge_task_routes": {
+    "transcript_cleanup": {
+      "label": "Transcript 清洗/切分",
+      "mode": "local",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-deepseek-v4-reasoner",
+      "notes": "默认本地，避免大段 transcript 进云端。"
+    },
+    "evidence_atom_extraction": {
+      "label": "Evidence Atom 抽取",
+      "mode": "local",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-codex-cli-coding-reasoner",
+      "notes": "默认 ThunderOMLX/Qwen3.6 35B。"
+    },
+    "entity_topic_tagging": {
+      "label": "实体/主题标签",
+      "mode": "local",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-deepseek-v4-reasoner",
+      "notes": "批量低成本任务，默认本地。"
+    },
+    "cluster_ranking": {
+      "label": "热点聚类/排序",
+      "mode": "auto",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-deepseek-v4-reasoner",
+      "notes": "普通 cluster 本地；高分/冲突 cluster 可升云。"
+    },
+    "reasoning_packet_build": {
+      "label": "Reasoning Packet 生成",
+      "mode": "local",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-codex-cli-coding-reasoner",
+      "notes": "压缩输入包默认本地。"
+    },
+    "trend_judgement": {
+      "label": "趋势研判",
+      "mode": "cloud",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-antigravity-gemini31-pro",
+      "notes": "需要高级模型做跨源判断。"
+    },
+    "repo_technical_analysis": {
+      "label": "GitHub 技术解剖",
+      "mode": "cloud",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-codex-cli-coding-reasoner",
+      "notes": "代码/系统设计类优先 Codex CLI。"
+    },
+    "final_report": {
+      "label": "最终报告写作",
+      "mode": "cloud",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-claude-opus-evaluator",
+      "notes": "报告表达和最终判断默认高级模型。"
+    },
+    "verification": {
+      "label": "证据绑定复核",
+      "mode": "auto",
+      "local_operator": "mini-thunderomlx-qwen36-knowledge",
+      "cloud_operator": "mini-claude-opus-evaluator",
+      "notes": "常规本地，重大结论或失败复核走云端。"
+    }
+  }
+}

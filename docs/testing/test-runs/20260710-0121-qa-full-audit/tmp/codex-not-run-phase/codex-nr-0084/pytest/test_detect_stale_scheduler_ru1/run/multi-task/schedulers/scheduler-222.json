@@ -1,0 +1,7 @@
+{
+  "pid": 222,
+  "graphs": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0084/pytest/test_detect_stale_scheduler_ru1/sprint-active.task_graph.json"
+  ],
+  "log": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0084/pytest/test_detect_stale_scheduler_ru1/run/multi-task/schedulers/222.log"
+}

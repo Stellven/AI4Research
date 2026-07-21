@@ -1,0 +1,9 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_runner_script_auto_closes_terminal_window ________________
+harness/tests/graph/test_multi_task_runner_auto_close.py:36: in test_runner_script_auto_closes_terminal_window
+    assert "AUTO_CLOSE_TERMINAL_WINDOWS=1" in script
+E   assert 'AUTO_CLOSE_TERMINAL_WINDOWS=1' in '#!/usr/bin/env bash\nset -u\nTASK_DIR=\'/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/tes...s multi-task] sid=$SID node=$NODE_ID exit=$rc end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$OUTPUT_LOG"\nexit "$rc"\n'
+=========================== short test summary info ============================
+FAILED harness/tests/graph/test_multi_task_runner_auto_close.py::test_runner_script_auto_closes_terminal_window
+1 failed in 0.07s

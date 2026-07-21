@@ -6,6 +6,7 @@ metadata:
   description: Verify implementation, evidence, and acceptance coverage before closeout.
 applicability:
   task_types:
+    - graph_eval
     - tests
     - verification
     - review
@@ -40,6 +41,7 @@ contract:
   preconditions:
     - check: task_type_in
       values:
+        - graph_eval
         - tests
         - verification
         - review
@@ -105,9 +107,9 @@ verification:
     - eval_json exists
 operator_compatibility:
   preferred:
-    - mini-claude-opus-evaluator
+    - mini-claude-sonnet-evaluator-print
   forbidden:
     - mini-antigravity-gemini35-flash-high
 provenance:
-  owner: lisihao
+  owner: opensolar
   created_at: "2026-05-24T00:00:00Z"

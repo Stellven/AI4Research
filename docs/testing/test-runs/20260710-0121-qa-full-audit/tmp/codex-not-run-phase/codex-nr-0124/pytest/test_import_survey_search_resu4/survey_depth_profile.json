@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "complete_context": false,
+  "finalized_sections": 1,
+  "total_sections": 32,
+  "claim_tag_density_per_1k_chars": 0.9873,
+  "evidence_tag_density_per_1k_chars": 1.2991,
+  "chapter_structure_coverage": 0.0312,
+  "academic_marker_counts": {
+    "taxonomy": 15,
+    "mechanism": 43,
+    "evaluation_protocol": 23,
+    "baseline_or_ablation": 6,
+    "reproducibility": 17,
+    "deployment": 48,
+    "failure_mode": 13,
+    "controversy": 29,
+    "auditability": 9,
+    "evolution": 25
+  },
+  "academic_marker_variants": [
+    "auditability",
+    "baseline_or_ablation",
+    "controversy",
+    "deployment",
+    "evaluation_protocol",
+    "evolution",
+    "failure_mode",
+    "mechanism",
+    "reproducibility",
+    "taxonomy"
+  ],
+  "section_marker_coverage": 1.0,
+  "section_marker_rows": [
+    {
+      "section_id": "ch01/sec01",
+      "academic_marker_count": 10,
+      "academic_markers": [
+        "auditability",
+        "baseline_or_ablation",
+        "controversy",
+        "deployment",
+        "evaluation_protocol",
+        "evolution",
+        "failure_mode",
+        "mechanism",
+        "reproducibility",
+        "taxonomy"
+      ],
+      "ok": true
+    }
+  ],
+  "terminology_profile": "agentic_runtime",
+  "terminology_counts": {
+    "runtime_orchestration": 0,
+    "tool_execution": 0,
+    "memory_state": 21,
+    "multi_agent_handoff": 0,
+    "evaluation_benchmark": 55,
+    "safety_governance": 11,
+    "observability_trace": 10
+  },
+  "terminology_variants": [
+    "evaluation_benchmark",
+    "memory_state",
+    "observability_trace",
+    "safety_governance"
+  ],
+  "terminology_evolution_edges": [
+    "evaluation_benchmark->safety_governance",
+    "safety_governance->observability_trace"
+  ],
+  "literature_map_ok": true,
+  "controversy_matrix_ok": true,
+  "issues": []
+}

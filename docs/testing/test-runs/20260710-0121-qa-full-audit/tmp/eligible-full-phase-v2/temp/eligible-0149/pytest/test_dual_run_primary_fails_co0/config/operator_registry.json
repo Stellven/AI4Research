@@ -1,0 +1,19 @@
+{
+  "schema_version": "solar.operator_registry.v1",
+  "lines": {
+    "github_trends": {
+      "primary": "scripts/github_trends_digest.py",
+      "executors": [],
+      "fallback": [],
+      "control": [
+        "tools/github_intelligence/pipeline.py"
+      ],
+      "schedule": "daily",
+      "output_dir": "reports/github/",
+      "dual_run": {
+        "enabled": true,
+        "comparison_view": true
+      }
+    }
+  }
+}

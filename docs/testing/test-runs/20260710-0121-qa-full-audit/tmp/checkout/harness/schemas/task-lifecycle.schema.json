@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "task-lifecycle.schema.json",
+  "title": "Solar Task Lifecycle",
+  "description": "Schema for sprint task / slice lifecycle tracked in solar_state_db.tasks and status.json",
+  "type": "object",
+  "required": ["sprint_id", "slice_id", "status"],
+  "properties": {
+    "sprint_id": {
+      "type": "string",
+      "description": "Parent sprint identifier (e.g. sprint-20260509-solar-product-platform)"
+    },
+    "slice_id": {
+      "type": "string",
+      "description": "Slice identifier (S0..S7)",
+      "enum": ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7"]
+    },
+    "status": {
+      "type": "string",
+      "description": "Current lifecycle state",
+      "enum": [
+        "pending",
+        "blocked",
+        "dispatched",
+        "in_progress",
+        "reviewing",
+        "passed",
+        "failed"
+      ]
+    },
+    "gate": {
+      "type": "string",
+      "description": "Gate that must pass before this slice is considered done",
+      "enum": ["G0", "G1", "G2", "G3", "G4", "G5", "G6", "G7", "A9", "A10"]
+    },
+    "gate_passed": {
+      "type": "boolean",
+      "description": "Whether the associated gate has been passed by the evaluator",
+      "default": false
+    },
+    "blocked_by": {
+      "type": "array",
+      "description": "slice_ids that must reach 'passed' before this slice can become 'pending'",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "priority": {
+      "type": "integer",
+      "description": "Dispatch priority (100=P0, 50=P1, 10=P2)",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 50
+    },
+    "assigned_to": {
+      "type": ["string", "null"],
+      "description": "Pane ID or model name currently assigned to this slice"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false,
+
+  "x-state-transitions": {
+    "description": "Valid status transitions",
+    "transitions": [
+      {"from": "pending",     "to": "dispatched",  "trigger": "worker_acquired"},
+      {"from": "pending",     "to": "blocked",     "trigger": "blocker_registered"},
+      {"from": "blocked",     "to": "pending",     "trigger": "blocker_gate_passed"},
+      {"from": "dispatched",  "to": "in_progress", "trigger": "builder_started"},
+      {"from": "in_progress", "to": "reviewing",   "trigger": "handoff_submitted"},
+      {"from": "reviewing",   "to": "passed",      "trigger": "eval_pass"},
+      {"from": "reviewing",   "to": "failed",      "trigger": "eval_fail"},
+      {"from": "failed",      "to": "pending",     "trigger": "retry_requested"},
+      {"from": "dispatched",  "to": "pending",     "trigger": "worker_lost_no_pane"},
+      {"from": "in_progress", "to": "pending",     "trigger": "worker_lost_no_pane"},
+      {"from": "dispatched",  "to": "pending",     "trigger": "deadlock_resolved"}
+    ]
+  },
+
+  "x-status-json-mapping": {
+    "description": "How existing sprint status.json fields map to this schema",
+    "mappings": {
+      "queued":    "pending",
+      "drafting":  "pending",
+      "planning":  "pending",
+      "active":    "in_progress",
+      "reviewing": "reviewing",
+      "passed":    "passed",
+      "finalized": "passed"
+    }
+  },
+
+  "x-gate-unlock-map": {
+    "description": "Which slices are unblocked when a gate passes",
+    "G0":  ["S1", "S2", "S6"],
+    "G2":  ["S3"],
+    "G3":  ["S3"],
+    "G4":  ["S4"],
+    "G5":  ["S4"],
+    "G6":  ["S3"],
+    "A10": ["S5"],
+    "A9":  ["S7"],
+    "G7":  []
+  }
+}

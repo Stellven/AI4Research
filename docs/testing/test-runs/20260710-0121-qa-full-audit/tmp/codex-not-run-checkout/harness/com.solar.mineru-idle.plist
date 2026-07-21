@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Solar MinerU Idle Worker — launchd agent -->
+    <!-- Install: cp com.solar.mineru-idle.plist ~/Library/LaunchAgents/ -->
+    <!--           launchctl load ~/Library/LaunchAgents/com.solar.mineru-idle.plist -->
+    <!-- Unload:  launchctl unload ~/Library/LaunchAgents/com.solar.mineru-idle.plist -->
+
+    <key>Label</key>
+    <string>com.solar.mineru-idle</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>cd "{{SOLAR_HOME}}/harness" &amp;&amp; python3 lib/mineru_extract.py idle-worker --rate-limit 3 --log "{{SOLAR_HOME}}/logs/mineru-idle.log" 2&gt;&gt;"{{SOLAR_HOME}}/logs/mineru-idle.log"</string>
+    </array>
+
+    <!-- Run at idle CPU priority — never block user shell -->
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <!-- Only run when idle: wait 60s of inactivity -->
+    <key>LowPriorityIO</key>
+    <true/>
+
+    <key>Nice</key>
+    <integer>20</integer>
+
+    <!-- Memory cap: 2 GB -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>256</integer>
+        <!-- RSS cap: 2 GB = 2147483648 bytes -->
+        <key>VirtualMemory</key>
+        <integer>2147483648</integer>
+    </dict>
+
+    <!-- Restart on crash, but with backoff -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Environment -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HARNESS_DIR</key>
+        <string>{{SOLAR_HOME}}/harness</string>
+        <key>MINERU_RATE_LIMIT_RPM</key>
+        <string>3</string>
+        <key>MINERU_MEMORY_CAP_MB</key>
+        <string>2048</string>
+    </dict>
+
+    <!-- Stdout/Stderr to log file -->
+    <key>StandardOutPath</key>
+    <string>{{SOLAR_HOME}}/logs/mineru-idle-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{SOLAR_HOME}}/logs/mineru-idle-stderr.log</string>
+
+    <!-- Run on load -->
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>

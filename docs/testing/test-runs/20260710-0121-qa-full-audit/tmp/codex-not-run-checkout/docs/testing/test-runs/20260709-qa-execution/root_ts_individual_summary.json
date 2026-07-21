@@ -1,0 +1,206 @@
+[
+  {
+    "name": "root_ts_individual_tests_braille.test.ts",
+    "source": "tests/braille.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/braille.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.492,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_console.test.ts",
+    "source": "tests/console.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/console.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.15,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_display.test.ts",
+    "source": "tests/display.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/display.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.15,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_grid.test.ts",
+    "source": "tests/grid.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/grid.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.147,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_llm-integration.test.ts",
+    "source": "tests/llm-integration.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/llm-integration.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.205,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_platform.test.ts",
+    "source": "tests/platform.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/platform.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.136,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_realtime.test.ts",
+    "source": "tests/realtime.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/realtime.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.134,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_semantic-design.test.ts",
+    "source": "tests/semantic-design.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/semantic-design.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.14,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_taur-integration.test.ts",
+    "source": "tests/taur-integration.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/taur-integration.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.143,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_taur-sdk.test.ts",
+    "source": "tests/taur-sdk.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/taur-sdk.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.135,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_taur-v2.test.ts",
+    "source": "tests/taur-v2.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/taur-v2.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.141,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_theme.test.ts",
+    "source": "tests/theme.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/theme.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.148,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_tvs-v2.test.ts",
+    "source": "tests/tvs-v2.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/tvs-v2.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.14,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_tvs.test.ts",
+    "source": "tests/tvs.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/tvs.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.133,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_ui-engine.test.ts",
+    "source": "tests/ui-engine.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/ui-engine.test.ts"
+    ],
+    "exit_code": 0,
+    "runtime_seconds": 0.185,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_ui-integration.test.ts",
+    "source": "tests/ui-integration.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/ui-integration.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.131,
+    "timeout": false
+  },
+  {
+    "name": "root_ts_individual_tests_ui-watcher.test.ts",
+    "source": "tests/ui-watcher.test.ts",
+    "command": [
+      "bun",
+      "test",
+      "tests/ui-watcher.test.ts"
+    ],
+    "exit_code": 1,
+    "runtime_seconds": 0.143,
+    "timeout": false
+  }
+]

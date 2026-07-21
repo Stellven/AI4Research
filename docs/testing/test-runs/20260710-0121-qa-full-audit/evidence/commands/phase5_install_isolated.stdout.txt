@@ -1,0 +1,3 @@
+database initialized: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/db/solar.db
+schema migrations: 0 applied, schema_version 0
+settings.json merged: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude/settings.json

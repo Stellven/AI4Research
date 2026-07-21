@@ -1,0 +1,37 @@
+{
+  "artifacts": [],
+  "inputs": {
+    "handoff_test": true
+  },
+  "limitations": [
+    "Synthetic strict lifecycle handoff fixture."
+  ],
+  "node_id": "report_draft",
+  "outputs": {
+    "evolution": {
+      "approval_state": "approved",
+      "change_type": "other",
+      "evidence_ids": [
+        "evidence:report_draft"
+      ],
+      "expected_effect": "Proves lifecycle summary handoff has runtime sidecars.",
+      "proposal_id": "proposal-report_draft",
+      "rationale": "Strict handoff fixture for report_draft.",
+      "review": {
+        "application_state": "not_applied",
+        "human_accept_reject_required": false,
+        "protected_core_edits_applied": false
+      },
+      "scope": "scheduler lifecycle handoff"
+    }
+  },
+  "provenance": {
+    "implementation_package": "harness.plugins.autosci.tests",
+    "operator_id": "operator-report_draft",
+    "timestamp": "2026-06-26T00:00:00Z"
+  },
+  "schema": "workflow_evolution.v1",
+  "sprint_id": "job-scheduler-lifecycle-strict",
+  "status": "completed",
+  "task_id": "task-report_draft"
+}

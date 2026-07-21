@@ -1,0 +1,10 @@
+OPEN_SOLAR_REPO_ENV=/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar
+STELLVEN_SOLAR_REPO_ENV=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar
+NATIVE_AUTOSCI_REPO_ENV=
+
+## Candidate repos
+/Users/jamesyuan/Developer/Forked/Huawei/AI4Research
+/Users/jamesyuan/Developer/Github Repos (On Git)/AI4Research
+/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci
+/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar
+/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar

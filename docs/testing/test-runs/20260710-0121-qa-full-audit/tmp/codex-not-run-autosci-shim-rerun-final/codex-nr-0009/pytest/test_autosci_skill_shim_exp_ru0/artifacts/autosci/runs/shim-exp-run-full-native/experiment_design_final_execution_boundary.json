@@ -1,0 +1,32 @@
+{
+  "approval_ready_for_execution": false,
+  "approval_required": true,
+  "approval_state": "approval_required",
+  "artifact_handoff_declared": true,
+  "blocking_reasons": [
+    "completed Review LLM design validation is missing",
+    "approved runtime preflight contract is incomplete"
+  ],
+  "command_allowlist": [
+    "python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment",
+    "python3 plugins/autosci/bin/autosci_bridge.py run --action monitor_experiment"
+  ],
+  "command_handoff_declared": true,
+  "execution_mode": "human_approved",
+  "execution_ready": false,
+  "expected_artifacts": [
+    "experiment_result.json",
+    "experiment_status.json",
+    "experiment_run.log"
+  ],
+  "limitations": [
+    "Experiment design final execution readiness requires resolved target evidence, completed Review LLM validation, approval preflight, command handoff, and expected artifact handoff."
+  ],
+  "review_evidence_ids": [],
+  "review_llm_completed": false,
+  "review_llm_status": "unavailable",
+  "schema": "autosci_experiment_design_final_execution_boundary.v1",
+  "status": "execution_readiness_incomplete",
+  "target_ref": "exp-skillgen",
+  "target_resolved": true
+}

@@ -1,0 +1,62 @@
+T1: release scripts syntax check
+  PASS: build.sh syntax
+  PASS: publish.sh syntax
+T2: VERSION file exists and is semver
+  PASS: VERSION=1.0.0 (semver)
+T3: CHANGELOG.md exists with expected slice sections
+  PASS: CHANGELOG.md exists
+  PASS: CHANGELOG has S0
+  PASS: CHANGELOG has S6
+  PASS: CHANGELOG has S7
+T4: upgrade and rollback docs exist
+  PASS: upgrade-guide.md exists
+  PASS: rollback-guide.md exists
+  PASS: upgrade guide references snapshot
+  PASS: rollback guide references restore
+T5: ADR set complete (001-005)
+  PASS: ADR-001 exists
+  PASS: ADR-002 exists
+  PASS: ADR-003 exists
+  PASS: ADR-004 exists
+  PASS: ADR-005 exists
+T6: build.sh dry-run lists files
+  PASS: dry-run mentions tarball
+  PASS: dry-run lists exclusions
+T7: build.sh creates tarball + checksum + manifest
+  PASS: tarball created
+  PASS: sha256 file created
+  PASS: MANIFEST.json created
+T8: MANIFEST.json fields valid
+  PASS: MANIFEST fields ok
+T9: checksum verification
+  PASS: checksum verified
+T10: publish.sh audit from artifacts dir
+  FAIL: publish audit returns ok (expected: "ok":true got: {"ok":false,"version":"1.0.0","pass":6,"fail":1,"warn":1,"gates":[{"gate":"G1",")
+  PASS: publish has gates array
+  PASS: publish has TVS gate
+T11: secret grep audit (no plaintext secrets in lib/)
+  PASS: no plaintext secrets in lib/ installer/
+T12: plugin manifest schema validation passes (G5)
+  PASS: plugin validate ok
+T13: docker smoke-test script exists (D7.2 deferred)
+  PASS: docker/smoke-test.sh exists (Docker daemon required to execute)
+  PASS: smoke-test.sh syntax ok
+T14: tarball excludes run/ and backups/
+  PASS: tarball excludes run/
+  PASS: tarball excludes backups/
+  PASS: tarball excludes events/
+  PASS: tarball excludes logs/
+  PASS: tarball excludes sessions/
+  PASS: tarball excludes reports/
+  PASS: tarball excludes _extracted_knowledge_fallback/
+  PASS: tarball excludes .pytest_cache/
+T15: capability plane E2E suite passes
+  FAIL: capability plane E2E failed:  A3 — Mirage /drive is reachable through Solar VFS   PASS: mirage doctor exits 0   FAIL: mirage exec ls /drive  A4 — dispatch auto-inject selects all requested capabilities   PASS: capability block injected   PASS: gstack selected   PASS: Superpowers selected   PASS: ATLAS selected   PASS: OWL selected   PASS: MarkItDown selected   PASS: agency-agents selected  A5 — two four-pane topology can receive capability context   PASS: skills doctor has builder config   PASS: skills doctor has lab-builder config   PASS: tmux live topology skipped: sessions not running in this test context  === Capability Plane E2E: PASS=19 FAIL=5 === 
+T16: expanded capability plane E2E suite passes
+  FAIL: expanded capability plane E2E failed:   FAIL: browser-use MCP server py_compile   PASS: chain-watcher syntax   FAIL: codex bridge active inbox/protocol/ledger  B5 — dispatch auto-inject selects rows 11-17 capability hints   PASS: capability block injected   PASS: Empirical Research selected   PASS: addyosmani/agent-skills selected   PASS: gstack selected   PASS: Browser-use MCP selected   PASS: Superpowers selected   PASS: openai-agents-python selected   PASS: Codex Bridge selected  B6 — two four-pane topology can see skill/capability context   PASS: skills doctor has builder config   PASS: skills doctor has lab-builder config   PASS: tmux live topology skipped: sessions not running in this test context  === Expanded Capability Plane E2E: PASS=25 FAIL=12 === 
+T17: capability fusion benchmark passes
+  FAIL: capability fusion benchmark failed:   PASS: benchmark JSON valid   PASS: benchmark Markdown report written   PASS: benchmark evidence bundle written  C2 — benchmark proves all targeted capabilities are fused   FAIL: all target scenarios passed threshold  C3 — benchmark covers the actual fusion dimensions   FAIL: dimension manifest ok for all scenarios   FAIL: dimension registry ok for all scenarios   FAIL: dimension health ok for all scenarios   PASS: dimension dispatch ok for all scenarios   FAIL: dimension runtime ok for all scenarios   PASS: dimension pane ok for all scenarios  C4 — negative controls prove the benchmark is not unconditional PASS   PASS: negative dispatch does not select unrelated providers   PASS: fake capability query fails  === Capability Fusion Benchmark Test: PASS=7 FAIL=6 === 
+T18: platform workflow benchmark passes
+  FAIL: platform workflow benchmark failed: D1 — platform workflow benchmark runs   FAIL: benchmark exits 0:             },             "8789": {               "ok": false,               "status": 0,               "body": "URLError: <urlopen error [Errno 61] Connection refused>"             }           }         },         "data": {           "ok": true,           "points": 25         },         "ui_or_route": {           "ok": false,           "points": 0         }       }     }   ] }    PASS: benchmark JSON valid   PASS: benchmark Markdown written  D2 — rows 18-25 all pass threshold   FAIL: rows 18-25 passed  D3 — benchmark evidence bundle exists   PASS: evidence benchmark.json   PASS: evidence apple_notes_ingest_test.json   PASS: evidence accepted_artifact_knowledge_test.json   PASS: evidence solar_kb_obsidian_autouse_test.json   PASS: evidence wiki_upload_ingest_closure_test.json   PASS: evidence cortex_counts.json   PASS: evidence endpoints.json  === Platform Workflow Benchmark Test: PASS=9 FAIL=2 === 
+
+=== S7 Release Tooling: PASS=37 FAIL=5 ===

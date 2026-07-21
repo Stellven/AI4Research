@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "influence.evidence_packet.v1",
+  "title": "InfluenceEvidencePacket",
+  "type": "object",
+  "required": [
+    "schema_version", "packet_id", "thesis_id", "thesis_claim",
+    "local_scores", "mapped_evidence", "questions_for_high_model"
+  ],
+  "properties": {
+    "schema_version": {"const": "influence.evidence_packet.v1"},
+    "packet_id": {"type": "string", "minLength": 1},
+    "thesis_id": {"type": "string", "minLength": 1},
+    "thesis_claim": {"type": "string", "minLength": 1},
+    "local_scores": {
+      "type": "object",
+      "required": [
+        "novelty", "signal_strength", "source_credibility",
+        "cross_source_resonance", "timeliness", "actionability", "contrarian_score"
+      ],
+      "properties": {
+        "novelty": {"type": "number"},
+        "signal_strength": {"type": "number"},
+        "source_credibility": {"type": "number"},
+        "cross_source_resonance": {"type": "number"},
+        "timeliness": {"type": "number"},
+        "actionability": {"type": "number"},
+        "contrarian_score": {"type": "number"}
+      }
+    },
+    "mapped_evidence": {
+      "type": "object",
+      "required": ["papers", "github_repos", "hf_assets", "conference_events",
+                   "company_releases", "financial_events", "major_news"],
+      "properties": {
+        "papers": {"type": "array"},
+        "github_repos": {"type": "array"},
+        "hf_assets": {"type": "array"},
+        "conference_events": {"type": "array"},
+        "company_releases": {"type": "array"},
+        "financial_events": {"type": "array"},
+        "major_news": {"type": "array"},
+        "coverage_gap": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "questions_for_high_model": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "source_statements": {"type": "array", "items": {"type": "string"}},
+    "generated_at": {"type": "string"}
+  }
+}

@@ -1,0 +1,20 @@
+..................                                                       [100%]
+=============================== warnings summary ===============================
+harness/tests/graph/test_worker_assignment_reasons.py::test_enqueue_ready_marks_no_matching_worker_nodes_as_worker_blocked
+harness/tests/graph/test_worker_assignment_reasons.py::test_enqueue_ready_marks_no_matching_worker_nodes_as_worker_blocked
+harness/tests/graph/test_worker_assignment_reasons.py::test_enqueue_ready_marks_no_matching_worker_nodes_as_worker_blocked
+harness/tests/graph/test_worker_assignment_reasons.py::test_enqueue_ready_marks_no_matching_worker_nodes_as_worker_blocked
+harness/tests/graph/test_worker_assignment_reasons.py::test_worker_blocked_nodes_are_retryable_after_capability_fix
+harness/tests/graph/test_worker_assignment_reasons.py::test_worker_blocked_nodes_are_retryable_after_capability_fix
+harness/tests/graph/test_worker_assignment_reasons.py::test_worker_blocked_node_becomes_queued_when_matching_worker_is_pane_busy
+harness/tests/graph/test_worker_assignment_reasons.py::test_worker_blocked_node_becomes_queued_when_matching_worker_is_pane_busy
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/capability_inference.py:21: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+harness/tests/graph/test_worker_assignment_reasons.py::test_worker_blocked_nodes_are_retryable_after_capability_fix
+harness/tests/graph/test_worker_assignment_reasons.py::test_worker_blocked_node_becomes_queued_when_matching_worker_is_pane_busy
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/graph_scheduler.py:2376: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    dispatch_id = f"graph-{sid}-{node_id}-{datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+18 passed, 10 warnings in 0.13s

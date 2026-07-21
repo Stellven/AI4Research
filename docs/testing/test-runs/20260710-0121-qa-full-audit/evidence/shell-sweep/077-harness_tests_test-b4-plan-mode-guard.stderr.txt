@@ -1,0 +1,1 @@
+FAIL: coordinator.sh 不存在

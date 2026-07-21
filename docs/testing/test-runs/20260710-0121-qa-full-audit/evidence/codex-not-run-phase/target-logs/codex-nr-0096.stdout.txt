@@ -1,0 +1,77 @@
+.F........                                                               [100%]
+=================================== FAILURES ===================================
+___________________ test_broker_coverage_conforms_to_schema ____________________
+harness/tests/integration/test_end_to_end.py:234: in test_broker_coverage_conforms_to_schema
+    Draft202012Validator(schema).validate(coverage)
+.venv/lib/python3.14/site-packages/jsonschema/validators.py:450: in validate
+    raise error
+E   jsonschema.exceptions.ValidationError: 'coverage_pct' is a required property
+E   
+E   Failed validating 'required' in schema:
+E       {'$schema': 'http://json-schema.org/draft-07/schema#',
+E        'title': 'BrokerCoverage',
+E        'description': 'Broker constraint coverage telemetry for Solar '
+E                       'Harness activation proof.',
+E        'type': 'object',
+E        'required': ['total_actions',
+E                     'contracted_actions',
+E                     'coverage_pct',
+E                     'unscoped_write_count',
+E                     'policy_denied_count',
+E                     'lease_denied_count',
+E                     'human_approval_pending'],
+E        'properties': {'total_actions': {'type': 'integer',
+E                                         'minimum': 0,
+E                                         'description': 'Total write/dispatch '
+E                                                        'actions recorded in '
+E                                                        'this session.'},
+E                       'contracted_actions': {'type': 'integer',
+E                                              'minimum': 0,
+E                                              'description': 'Actions with an '
+E                                                             'explicit '
+E                                                             'contract/write_scope '
+E                                                             'entry.'},
+E                       'coverage_pct': {'type': 'number',
+E                                        'minimum': 0,
+E                                        'maximum': 100,
+E                                        'description': 'contracted_actions / '
+E                                                       'total_actions * 100. '
+E                                                       'Zero when '
+E                                                       'total_actions=0.'},
+E                       'unscoped_write_count': {'type': 'integer',
+E                                                'minimum': 0,
+E                                                'description': 'Write actions '
+E                                                               'not covered '
+E                                                               'by any '
+E                                                               'write_scope.'},
+E                       'policy_denied_count': {'type': 'integer',
+E                                               'minimum': 0,
+E                                               'description': 'Actions '
+E                                                              'blocked by '
+E                                                              'policy gate.'},
+E                       'lease_denied_count': {'type': 'integer',
+E                                              'minimum': 0,
+E                                              'description': 'Actions blocked '
+E                                                             'by pane-lease '
+E                                                             'gate.'},
+E                       'human_approval_pending': {'type': 'integer',
+E                                                  'minimum': 0,
+E                                                  'description': 'Actions '
+E                                                                 'currently '
+E                                                                 'awaiting '
+E                                                                 'human '
+E                                                                 'approval.'}},
+E        'additionalProperties': True}
+E   
+E   On instance:
+E       {'uncontracted_action_count': 0,
+E        'unscoped_write_count': 0,
+E        'total_actions': 2,
+E        'contracted_actions': 2,
+E        'coverage_ratio': 1.0,
+E        'legacy_path_actions': 0,
+E        'by_kind': {'shell': 1, 'tool_call': 1},
+E        'health': 'PASS'}
+=========================== short test summary info ============================
+FAILED harness/tests/integration/test_end_to_end.py::test_broker_coverage_conforms_to_schema
+1 failed, 9 passed in 0.27s

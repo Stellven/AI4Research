@@ -1,0 +1,74 @@
+{
+  "schema": "solar.s05.schema_results.v1",
+  "generated_at": "2026-06-02T09:57:01Z",
+  "checks": [
+    {
+      "name": "schema_has_eight_host_types",
+      "status": "passed",
+      "evidence": {
+        "enum": [
+          "antigravity_managed_env",
+          "claude_code_session",
+          "codex_cloud",
+          "codex_worktree",
+          "docker_sandbox",
+          "local_mlx_process",
+          "ssh_devbox",
+          "tmux_pane"
+        ],
+        "expected": [
+          "antigravity_managed_env",
+          "claude_code_session",
+          "codex_cloud",
+          "codex_worktree",
+          "docker_sandbox",
+          "local_mlx_process",
+          "ssh_devbox",
+          "tmux_pane"
+        ]
+      }
+    },
+    {
+      "name": "registry_has_at_least_eight_hosts",
+      "status": "passed",
+      "evidence": {
+        "host_count": 8
+      }
+    },
+    {
+      "name": "registry_covers_all_host_types",
+      "status": "passed",
+      "evidence": {
+        "host_types": [
+          "antigravity_managed_env",
+          "claude_code_session",
+          "codex_cloud",
+          "codex_worktree",
+          "docker_sandbox",
+          "local_mlx_process",
+          "ssh_devbox",
+          "tmux_pane"
+        ]
+      }
+    },
+    {
+      "name": "registry_types_are_in_schema_enum",
+      "status": "passed",
+      "evidence": {
+        "extra": []
+      }
+    },
+    {
+      "name": "mini_maps_to_standard_host_type",
+      "status": "passed",
+      "evidence": {
+        "mini_host_type": "claude_code_session"
+      }
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0
+  }
+}

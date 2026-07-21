@@ -1,0 +1,139 @@
+{
+  "action": "ask_wiki",
+  "context": {
+    "gap_annotations": {
+      "annotations": [
+        {
+          "source": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+          "status": "matched_open_question",
+          "text": "- How much evidence supports SkillGen beyond a single paper?"
+        }
+      ],
+      "schema": "autosci_ask_gap_annotations.v1",
+      "status": "matched_open_questions"
+    },
+    "query": "What supports SkillGen?",
+    "retrieval_hits": [
+      {
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/papers/skillgen.md",
+        "score": 5,
+        "snippet": "# SkillGen"
+      },
+      {
+        "matched_terms": [
+          "supports",
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+        "score": 2,
+        "snippet": "- How much evidence supports SkillGen beyond a single paper?"
+      },
+      {
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/index.md",
+        "score": 2,
+        "snippet": "- [skillgen](papers/skillgen.md)"
+      },
+      {
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+        "score": 1,
+        "snippet": "SkillGen connects generated skills, verifier checks, and runtime evidence."
+      }
+    ],
+    "wiki_context": {
+      "limitations": [],
+      "query_terms": [
+        "supports",
+        "skillgen"
+      ],
+      "schema": "autosci_ask_wiki_context.v1",
+      "sources": {
+        "context_brief": {
+          "line_count": 3,
+          "matched_lines": [
+            "SkillGen connects generated skills, verifier checks, and runtime evidence."
+          ],
+          "matched_terms": [
+            "skillgen"
+          ],
+          "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+          "sha256": "8432a7c109e9c3f1b3bae7aa57fd4e15428e874828d756c4d8603997fd708ada",
+          "status": "present"
+        },
+        "edges": {
+          "line_count": 1,
+          "matched_edge_count": 1,
+          "matched_edges": [
+            {
+              "edge": {
+                "source": "skillgen",
+                "target": "runtime-evidence",
+                "type": "supported_by"
+              },
+              "line": 1,
+              "matched_terms": [
+                "skillgen"
+              ]
+            }
+          ],
+          "matched_terms": [
+            "skillgen"
+          ],
+          "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+          "sha256": "d59a6aab492575cfa0814ff97992b73eb2ed61311e83dc923cdbd3d27dc8cadf",
+          "status": "present"
+        },
+        "index": {
+          "line_count": 3,
+          "matched_lines": [
+            "- [skillgen](papers/skillgen.md)"
+          ],
+          "matched_terms": [
+            "skillgen"
+          ],
+          "path": "artifacts/autosci/workspace/wiki/index.md",
+          "sha256": "45baf7bbb7df9e975f50161b34c33711c5b5c606ab553ff20edb8125b59dad4d",
+          "status": "present"
+        },
+        "open_questions": {
+          "line_count": 3,
+          "matched_lines": [
+            "- How much evidence supports SkillGen beyond a single paper?"
+          ],
+          "matched_terms": [
+            "supports",
+            "skillgen"
+          ],
+          "path": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+          "sha256": "c883e91098311e113c7cdf109fd79acd8ffc56d308133824669553cb6c140f77",
+          "status": "present"
+        }
+      },
+      "status": "completed",
+      "wiki_root": "artifacts/autosci/workspace/wiki"
+    }
+  },
+  "prompt": "What supports SkillGen?",
+  "required_response_schema": {
+    "outputs": {
+      "answer": "source-grounded answer or assessment",
+      "confidence": "number between 0 and 1",
+      "evidence_ids": [
+        "source id used by the answer"
+      ],
+      "findings": [],
+      "ideas": []
+    },
+    "schema": "autosci_model_response.v1",
+    "status": "completed"
+  },
+  "schema": "autosci_model_request.v1"
+}

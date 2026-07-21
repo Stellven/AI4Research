@@ -1,0 +1,27 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ test_product_autosci_ingest_writes_research_paper_evidence __________
+harness/tests/integration/test_autosci_ingest_demo.py:22: in test_product_autosci_ingest_writes_research_paper_evidence
+    proc = run_autosci(harness_dir, f"$ingest --paper {paper} --run-id {run_id}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/integration/autosci_product_smoke_helpers.py:61: in run_autosci
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+           ^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: {
+E     "action_count": 2,
+E     "autosci_command": "/ingest",
+E     "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0051/pytest/test_product_autosci_ingest_wr0/harness/artifacts/autosci/runs/phase-c-ingest-689c2655c35e434e91181debf81fd7ec/autosci_skill_run.json",
+E     "execution_status": "failed",
+E     "failed_count": 2,
+E     "ok": false,
+E     "passed_count": 0,
+E     "schema": "autosci_skill_run.v1",
+E     "schema_only_count": 0,
+E     "side_effect_policy": "dry_run_only",
+E     "skill": "ingest",
+E     "status": "failed",
+E     "work_dir": "artifacts/autosci/runs/phase-c-ingest-689c2655c35e434e91181debf81fd7ec"
+E   }
+=========================== short test summary info ============================
+FAILED harness/tests/integration/test_autosci_ingest_demo.py::test_product_autosci_ingest_writes_research_paper_evidence
+1 failed in 1.10s

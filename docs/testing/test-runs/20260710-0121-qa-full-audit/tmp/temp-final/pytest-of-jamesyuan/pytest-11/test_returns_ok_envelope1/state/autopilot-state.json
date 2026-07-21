@@ -1,0 +1,1 @@
+{"routing_decisions": [{"sprint_id": "sprint-abc", "node_id": "N1", "decision": "dispatched", "target_pane": "pane-0", "required_capabilities": ["python"], "provided_capabilities": ["python"], "blocked_by": []}]}

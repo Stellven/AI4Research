@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_172_9606623e69_harness_tests_research_survey_negative_controls_test_nc_decorative_matrix.py",
+  "source": "harness/tests/research/survey/negative_controls/test_nc_decorative_matrix.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research/survey/negative_controls/test_nc_decorative_matrix.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.192,
+  "timeout": false
+}

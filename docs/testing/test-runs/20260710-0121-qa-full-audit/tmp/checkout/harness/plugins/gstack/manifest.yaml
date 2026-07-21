@@ -1,0 +1,56 @@
+---
+id: gstack
+name: "gstack Browser QA Skills"
+version: "1.1.0"
+description: "Solar browser, QA, review, investigate, ship and visual testing workflow skills installed under ~/.claude/skills/gstack. Exposed to Solar Harness as a capability provider."
+status: enabled
+
+write_scope:
+  - "state/gstack"
+  - "logs/gstack"
+
+read_scope:
+  - "~/.claude/skills/gstack"
+  - "~/Solar/CLAUDE.md"
+
+capabilities:
+  - "browser.browse"
+  - "browser.qa"
+  - "code.review"
+  - "workflow.investigate"
+  - "release.ship"
+
+commands:
+  - "~/.claude/skills/gstack/bin/gstack-config"
+  - "~/.claude/skills/gstack/bin/gstack-update-check"
+
+background_safety:
+  mode: bounded
+  idle_only: false
+  rate_limit: "local-browser"
+  max_runtime_s: 300
+  max_memory_mb: 1024
+
+eval_packs:
+  - "tests/plugins/test-s4-extension-framework.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable gstack"
+
+integration_level: default_usable
+
+entry: "~/.claude/skills/gstack/SKILL.md"
+
+events:
+  - "gstack.browser_used"
+  - "gstack.qa_complete"
+
+depends_on: []
+
+tags:
+  - "browser"
+  - "qa"
+  - "review"
+  - "solar-skill"

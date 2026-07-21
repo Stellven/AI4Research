@@ -1,0 +1,30 @@
+{
+  "task_id": "task-job-scientific-lifecycle-production-boundary-test-paper_ingest",
+  "sprint_id": "job-scientific-lifecycle-production-boundary-test",
+  "node_id": "paper_ingest",
+  "operator_id": "autosci-paper-ingest-worker",
+  "task_type": "scientific-paper-ingest",
+  "objective": "Scheduler-dispatched bounded smoke for ScientificPaperIngestor.",
+  "mode": "bounded_runtime_smoke",
+  "runner_contract": "bounded_node_smoke",
+  "output_dir": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-production-boundary-test/paper_ingest/task-job-scientific-lifecycle-production-boundary-test-paper_ingest",
+  "inputs": {
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "paper_id": "paper-job-scientific-lifecycle-production-boundary-test",
+    "allow_network_fetch": false,
+    "smoke_mode": true
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-production-boundary-test/paper_ingest/task-job-scientific-lifecycle-production-boundary-test-paper_ingest/ingest_paper.result.json",
+    "evidence_payload_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-production-boundary-test/paper_ingest/task-job-scientific-lifecycle-production-boundary-test-paper_ingest/research_paper.json",
+    "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-production-boundary-test/paper_ingest/task-job-scientific-lifecycle-production-boundary-test-paper_ingest/evidence.jsonl",
+    "memory_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-production-boundary-test/paper_ingest/task-job-scientific-lifecycle-production-boundary-test-paper_ingest/research_memory_update.json",
+    "graph_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-production-boundary-test/paper_ingest/task-job-scientific-lifecycle-production-boundary-test-paper_ingest/research_graph_update.json"
+  },
+  "expected_schema": "research_paper.v1",
+  "expected_action": "ingest_paper",
+  "logical_operator": "ScientificPaperIngestor",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T14:13:42Z",
+  "lease_expires_at": "2026-07-10T14:15:42Z"
+}

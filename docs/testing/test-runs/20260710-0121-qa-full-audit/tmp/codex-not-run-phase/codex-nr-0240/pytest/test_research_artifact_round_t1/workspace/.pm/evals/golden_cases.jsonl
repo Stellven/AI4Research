@@ -1,0 +1,1 @@
+{"case_id": "golden-req-a727db55f99b", "request_type": "research", "goal": "pm_dispatch 入口的研究 artifact 必须出现在 compiled package。", "expected_dag_variant": "research", "expected_template_variant": "research"}

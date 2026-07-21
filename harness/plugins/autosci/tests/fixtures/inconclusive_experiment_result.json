@@ -1,0 +1,16 @@
+{
+  "experiment_id": "exp-inconclusive-001",
+  "claim_id": "claim-001",
+  "outcome": "inconclusive",
+  "metrics": [
+    {
+      "name": "fixture_passed",
+      "value": null
+    }
+  ],
+  "evidence_ids": [
+    "experiment.inconclusive.001",
+    "metric.fixture_unknown"
+  ],
+  "basis": "Fixture result is incomplete and cannot support the claim."
+}

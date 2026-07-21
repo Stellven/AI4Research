@@ -1,0 +1,14 @@
+PASS: no raw pane capture output in state
+PASS: no secrets in state/experience-memory
+PASS: no secrets in trajectory files
+PASS: all advisories bounded < 2048 chars
+PASS: all repair_recipes bounded < 2048 chars
+PASS: coordinator hook advisory < 2KB
+PASS: no TODO/FIXME/mock/stub in implementation
+PASS: experience_runner.py invocable
+PASS: decisions.jsonl all valid JSON
+PASS: secret strip filter works
+
+========================
+PASS=10 FAIL=0
+PASS

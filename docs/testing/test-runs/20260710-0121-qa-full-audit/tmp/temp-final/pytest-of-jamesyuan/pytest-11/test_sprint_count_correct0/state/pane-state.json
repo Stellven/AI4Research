@@ -1,0 +1,1 @@
+{"panes": [{"id": "pane-0", "role": "builder", "state": "idle", "model": "claude", "mtime": 0}, {"id": "pane-1", "role": "evaluator", "state": "active", "model": "gemini", "mtime": 0}]}

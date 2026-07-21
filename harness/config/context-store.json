@@ -26,7 +26,7 @@
           "Critical task envelopes must have context_packet_ref or embedded context_packet"
         ],
         "sprint": "sprint-20260523-lease-based-model-fleet-runtime",
-        "harness_dir": "/Users/lisihao/.solar/harness"
+        "harness_dir": "~/.solar/harness"
       },
       "token_estimate": 512,
       "compression_level": "none",

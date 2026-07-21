@@ -1,0 +1,21 @@
+{
+  "task_id": "task-shim-research-experiment-executor-scheduler-experiment_run",
+  "operator_id": "autosci-experiment-run-worker",
+  "sprint_id": "shim-research-experiment-executor-scheduler",
+  "node_id": "experiment_run",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T19:21:09Z",
+  "finished_at": "2026-07-10T19:21:09Z",
+  "log_tail": "        \"mode\": \"strict_hitl\",\n        \"proof_best_effort\": false,\n        \"proof_required\": true,\n        \"reasons\": [\n          \"read_local is allowed in strict_hitl.\",\n          \"write_artifact is allowed in strict_hitl.\",\n          \"local_command requires HITL approval in strict_hitl.\",\n          \"wiki_mutation requires HITL approval in strict_hitl.\"\n        ],\n        \"require_approval_ref\": true,\n        \"require_before_after_artifacts\": true,\n        \"require_hitl\": true,\n        \"require_runtime_evidence\": true,\n        \"sandbox_required\": false,\n        \"side_effects\": [\n          \"read_local\",\n          \"write_artifact\",\n          \"local_command\",\n          \"wiki_mutation\"\n        ],\n        \"synthetic_approval_ref\": \"\",\n        \"warnings\": []\n      },\n      \"result\": {\n        \"command_run\": \"python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment\",\n        \"evidence_ids\": [\n          \"exp-001\",\n          \"Validate evidence coverage for `claim-001` using a bounded fixture experiment.\"\n        ],\n        \"execution_mode\": \"human_approved\",\n        \"exit_code\": 0,\n        \"experiment_id\": \"exp-001\",\n        \"final_runtime_audit_boundary\": {\n          \"approval_contract_verified\": true,\n          \"approval_state\": \"verified\",\n          \"artifact_types\": [\n            \"approval_contract_json\",\n            \"experiment_run_log\",\n            \"experiment_runtime_evidence_json\",\n            \"gate_policy_decision_json\"\n          ],\n          \"collection_ledger_recorded\": false,\n          \"experiment_id\": \"exp-001\",\n          \"final_runtime_audit_ready\": false,\n          \"limitations\": [\n            \"Final runtime audit requires semantic runtime verification to pass.\",\n            \"Final runtime audit requires collected experiment result evidence.\",\n            \"Final runtime audit requires wiki experiment state, log, and graph mutation proof.\",\n            \"Final lifecycle audit also requires an approved monitor/collect stage with collection ledger evidence.\"\n          ],",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

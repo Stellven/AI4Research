@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "intent_id": "intent-20260710-185002-560568dbf5",
+  "sprint_id": "sprint-20260710-185002-intent-official-full-runtime-autosc-560568db",
+  "artifacts": {
+    "raw_intent.json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_autosci_operator_direct_d0/harness/sprints/sprint-20260710-185002-intent-official-full-runtime-autosc-560568db.raw_intent.json",
+    "rewritten_intent.json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_autosci_operator_direct_d0/harness/sprints/sprint-20260710-185002-intent-official-full-runtime-autosc-560568db.rewritten_intent.json",
+    "requirement_ir.json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_autosci_operator_direct_d0/harness/sprints/sprint-20260710-185002-intent-official-full-runtime-autosc-560568db.requirement_ir.json",
+    "requirement_trace.json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_autosci_operator_direct_d0/harness/sprints/sprint-20260710-185002-intent-official-full-runtime-autosc-560568db.requirement_trace.json"
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/logical-operators.schema.json",
+  "title": "Solar Logical Operator Registry",
+  "description": "Routing abstraction layer between DAG nodes and physical actor assignments. Defines the 16 P0 logical operator types, their bindings to candidate actor_ids, and the DAG node constraint that prevents direct physical id use.",
+  "type": "object",
+  "required": ["version", "logical_operators", "bindings"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string"},
+    "logical_operators": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/logical_operator_def"}
+    },
+    "bindings": {
+      "type": "object",
+      "description": "Maps each logical_operator_type to an ordered list of candidate actor_ids.",
+      "additionalProperties": {"$ref": "#/$defs/binding_entry"}
+    },
+    "workflow_vocabulary": {
+      "type": "object",
+      "description": "Optional workflow stage vocabulary used by APO workflow expansion.",
+      "additionalProperties": true
+    },
+    "workflow_templates": {
+      "type": "object",
+      "description": "Optional workflow templates that reference workflow_vocabulary stages.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "logical_operator_type": {
+      "type": "string",
+      "enum": [
+        "DeepArchitect",
+        "RootCauseDebugger",
+        "ImplementationWorker",
+        "PatchWorker",
+        "TestDesigner",
+        "TestRunner",
+        "BenchmarkRunner",
+        "ParallelExplorer",
+        "ResearchScout",
+        "ResearchSynthesizer",
+        "Critic",
+        "Verifier",
+        "VerifierLite",
+        "SecurityGate",
+        "QuotaBroker",
+        "ContextCompressor",
+        "ArtifactCurator",
+        "DeepResearchBrowser",
+        "DeepResearchGemini",
+        "DeepResearchChatGPT",
+        "WebwrightPlaywright",
+        "BrowserUseMcp",
+        "YoutubeTranscriptExtractor",
+        "TechnologyDiagramPainter"
+      ],
+      "description": "Solar logical operator types. These are abstract routing labels — never physical actor or model ids."
+    },
+    "logical_operator_def": {
+      "type": "object",
+      "required": ["operator_type", "description", "primary_role"],
+      "additionalProperties": false,
+      "properties": {
+        "operator_type": {"$ref": "#/$defs/logical_operator_type"},
+        "description": {"type": "string"},
+        "primary_role": {
+          "type": "string",
+          "enum": ["planner", "builder", "evaluator", "knowledge-extractor", "router", "auditor"]
+        },
+        "required_capabilities": {
+          "type": "object",
+          "description": "Minimum capability_profile scores required for actor assignment.",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^(architecture_reasoning|code_impl|root_cause_debug|test_generation|test_execution|research_synthesis|academic_critique|browser_use|gui_use|long_context|multi_agent_coordination|speed|data_extraction)$": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            }
+          }
+        },
+        "risk_constraints": {
+          "type": "object",
+          "description": "Risk profile constraints that assigned actors must satisfy.",
+          "additionalProperties": true
+        },
+        "cost_hint": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Expected cost tier for tasks assigned to this operator."
+        },
+        "concurrency": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_parallel": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum concurrent instances of this operator type."
+            },
+            "singleton": {
+              "type": "boolean",
+              "description": "If true, only one instance may run at a time globally."
+            }
+          }
+        }
+      }
+    },
+    "binding_entry": {
+      "type": "object",
+      "required": ["operator_type", "candidates"],
+      "additionalProperties": false,
+      "properties": {
+        "operator_type": {"$ref": "#/$defs/logical_operator_type"},
+        "candidates": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Ordered list of actor_ids eligible for this logical operator. First entry is preferred.",
+          "items": {
+            "type": "object",
+            "required": ["actor_id"],
+            "additionalProperties": false,
+            "properties": {
+              "actor_id": {
+                "type": "string",
+                "description": "Must match an actor_id in agent-actors.json."
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Lower is higher priority. Ties resolved by order in array."
+              },
+              "condition": {
+                "type": "string",
+                "description": "Optional condition for when this candidate is eligible: always, quota_ok, low_load."
+              }
+            }
+          }
+        },
+        "selection_policy": {
+          "type": "string",
+          "enum": ["priority_first", "round_robin", "least_loaded", "cost_optimal"],
+          "default": "priority_first",
+          "description": "How to choose among available candidates."
+        },
+        "fallback_policy": {
+          "type": "string",
+          "enum": ["skip", "queue", "error"],
+          "default": "queue",
+          "description": "What to do when all candidates are unavailable."
+        }
+      }
+    },
+    "dag_node": {
+      "type": "object",
+      "description": "Schema for a DAG task node. Logical operator is the correct field; direct physical ids are rejected unless compatibility=true.",
+      "required": ["node_id"],
+      "additionalProperties": true,
+      "properties": {
+        "node_id": {"type": "string", "minLength": 1},
+        "logical_operator": {
+          "$ref": "#/$defs/logical_operator_type",
+          "description": "Preferred assignment field. Routes via binding table at dispatch time."
+        },
+        "compatibility": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set true only for legacy DAGs that use direct physical actor/operator/model ids. New DAGs MUST leave this false and use logical_operator instead."
+        },
+        "physical_actor_id": {
+          "type": "string",
+          "description": "Direct actor assignment. Only valid when compatibility=true. Bypasses routing table."
+        },
+        "physical_operator_id": {
+          "type": "string",
+          "description": "Direct physical-operators.json key. Only valid when compatibility=true."
+        },
+        "physical_model_id": {
+          "type": "string",
+          "description": "Direct model id. Only valid when compatibility=true."
+        }
+      },
+      "if": {
+        "properties": {
+          "compatibility": {"const": false}
+        },
+        "not": {
+          "required": ["compatibility"]
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {"required": ["physical_actor_id"]},
+            {"required": ["physical_operator_id"]},
+            {"required": ["physical_model_id"]}
+          ]
+        }
+      }
+    }
+  }
+}

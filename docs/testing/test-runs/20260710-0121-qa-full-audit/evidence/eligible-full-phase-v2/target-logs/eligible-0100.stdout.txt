@@ -1,0 +1,1 @@
+knowledge_ingest_registry ok

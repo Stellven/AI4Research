@@ -1,0 +1,34 @@
+..                                                                 [100%]
+=================================== FAILURES ===================================
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='status') _
+distribution/pipx/tests/test_cli.py:200: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertNotEqual(code, 0)
+E   AssertionError: 0 == 0
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='doctor') _
+distribution/pipx/tests/test_cli.py:200: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertNotEqual(code, 0)
+E   AssertionError: 0 == 0
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='harness') _
+distribution/pipx/tests/test_cli.py:200: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertNotEqual(code, 0)
+E   AssertionError: 0 == 0
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='components') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0001/tmpakgvt1us/home/.solar/bin/solar' not found in ''
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='update') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0001/tmp06o_jnen/home/.solar/bin/solar' not found in ''
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='uninstall') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0001/tmpgqjm4y0v/home/.solar/bin/solar' not found in ''
+=========================== short test summary info ============================
+SUBFAILED(command='status') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='doctor') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='harness') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='components') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='update') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='uninstall') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+6 failed, 2 passed, 7 deselected in 0.94s

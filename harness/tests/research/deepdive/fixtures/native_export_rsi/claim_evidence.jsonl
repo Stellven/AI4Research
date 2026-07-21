@@ -1,0 +1,12 @@
+{"id": "ce_00", "claim_id": "cl_01", "evidence_id": "ev_1", "relation": "supports", "strength": 0.8}
+{"id": "ce_01", "claim_id": "cl_02", "evidence_id": "ev_2", "relation": "supports", "strength": 0.8}
+{"id": "ce_02", "claim_id": "cl_03", "evidence_id": "ev_3", "relation": "supports", "strength": 0.8}
+{"id": "ce_03", "claim_id": "cl_04", "evidence_id": "ev_4", "relation": "supports", "strength": 0.8}
+{"id": "ce_04", "claim_id": "cl_05", "evidence_id": "ev_5", "relation": "supports", "strength": 0.8}
+{"id": "ce_05", "claim_id": "cl_06", "evidence_id": "ev_6", "relation": "supports", "strength": 0.8}
+{"id": "ce_06", "claim_id": "cl_07", "evidence_id": "ev_7", "relation": "supports", "strength": 0.8}
+{"id": "ce_07", "claim_id": "cl_08", "evidence_id": "ev_8", "relation": "supports", "strength": 0.8}
+{"id": "ce_08", "claim_id": "cl_09", "evidence_id": "ev_1", "relation": "supports", "strength": 0.8}
+{"id": "ce_09", "claim_id": "cl_10", "evidence_id": "ev_2", "relation": "supports", "strength": 0.8}
+{"id": "ce_10", "claim_id": "cl_11", "evidence_id": "ev_3", "relation": "supports", "strength": 0.8}
+{"id": "ce_11", "claim_id": "cl_12", "evidence_id": "ev_4", "relation": "supports", "strength": 0.8}

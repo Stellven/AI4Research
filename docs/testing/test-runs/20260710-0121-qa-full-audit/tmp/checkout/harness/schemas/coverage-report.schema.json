@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/coverage-report.schema.json",
+  "title": "Solar Coverage Report",
+  "type": "object",
+  "required": ["schema_version", "sprint_id", "requirement_ir_id", "summary", "items"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "type": "string", "const": "solar.coverage_report.v1" },
+    "sprint_id": { "type": "string" },
+    "requirement_ir_id": { "type": "string" },
+    "summary": {
+      "type": "object",
+      "required": ["total", "done", "partial", "missing", "coverage_ratio", "graph_complete"],
+      "additionalProperties": true,
+      "properties": {
+        "total": { "type": "number" },
+        "done": { "type": "number" },
+        "partial": { "type": "number" },
+        "missing": { "type": "number" },
+        "coverage_ratio": { "type": "number" },
+        "graph_complete": { "type": "boolean" }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  }
+}

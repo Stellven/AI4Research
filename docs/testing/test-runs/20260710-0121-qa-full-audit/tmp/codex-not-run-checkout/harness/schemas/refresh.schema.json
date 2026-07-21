@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "refresh.run.v1",
+  "title": "Solar-Harness Refresh Run Result",
+  "description": "Output schema for solar-harness refresh --json. Exit code semantics: 0=all ok, 1=any error, 2=any degraded (no error), 3=all skipped.",
+  "type": "object",
+  "required": ["schema", "started_at", "finished_at", "duration_ms", "scope", "deep", "exit_code", "sources"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "refresh.run.v1",
+      "description": "Schema version identifier. Must always equal 'refresh.run.v1'."
+    },
+    "started_at": {
+      "type": "string",
+      "description": "ISO-8601 UTC timestamp when the refresh run started."
+    },
+    "finished_at": {
+      "type": "string",
+      "description": "ISO-8601 UTC timestamp when the refresh run finished."
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 35000,
+      "description": "Total wall-time in milliseconds. Max 35000 to accommodate --deep mode (30s + overhead)."
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["status", "sprints", "dashboards", "autopilot", "kb"]
+      },
+      "minItems": 1,
+      "description": "Ordered list of source names that were executed."
+    },
+    "deep": {
+      "type": "boolean",
+      "description": "Whether --deep mode was active (extends budget to 30s)."
+    },
+    "exit_code": {
+      "type": "integer",
+      "enum": [0, 1, 2, 3],
+      "description": "0=all ok, 1=any error, 2=any degraded (no error), 3=all skipped."
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Per-source result records, one per executed scope.",
+      "items": {
+        "type": "object",
+        "required": ["name", "status", "duration_ms"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["status", "sprints", "dashboards", "autopilot", "kb"],
+            "description": "Source identifier."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ok", "degraded", "skipped", "error"],
+            "description": "ok=healthy, degraded=partial/timeout, skipped=intentionally bypassed, error=unexpected failure."
+          },
+          "duration_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Wall-time for this source in milliseconds."
+          },
+          "note": {
+            "type": "string",
+            "description": "Human-readable detail; empty string when status=ok and nothing notable."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "section_id": "ch01/sec01",
+  "chapter_id": "ch01",
+  "title": "问题定义与研究边界：研究问题与术语边界",
+  "order": 1,
+  "target_chars": 1666,
+  "research_question": "latent reasoning 在“问题定义与研究边界/研究问题与术语边界”上的证据、架构取舍和争议是什么？",
+  "required_source_types": [
+    "paper",
+    "official_doc"
+  ],
+  "min_evidence": 4,
+  "min_claims": 3,
+  "schema_version": "solar.research.survey.v1"
+}

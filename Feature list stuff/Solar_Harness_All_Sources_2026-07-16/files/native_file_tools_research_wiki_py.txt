@@ -1,0 +1,521 @@
+===== tools/research_wiki.py =====
+#!/usr/bin/env python3
+"""OmegaWiki — Wiki Knowledge Engine.
+
+Core operations for a wiki-centric research knowledge base: entity metadata
+read/write, typed graph management, knowledge-state queries, purpose-driven
+context compilation, lifecycle enforcement, and audit logging.
+
+Called by skills via:  Bash: python3 tools/research_wiki.py <command> [args]
+
+Commands:
+    # Infrastructure
+    init <wiki_root>
+    slug "<title>"
+    log <wiki_root> "<message>"
+
+    # Frontmatter operations
+    read-meta <path> [field]
+    set-meta <path> <field> <value> [--append]
+
+    # Graph operations
+    add-edge <wiki_root> --from <id> --to <id> --type <type> [--evidence "..."] [--confidence high|medium|low]
+    add-citation <wiki_root> --from papers/a --to papers/b [--source semantic_scholar]
+    batch-edges <wiki_root>                          # reads JSON array from stdin
+    dedup-edges <wiki_root>
+    dedup-citations <wiki_root>
+
+    # Knowledge queries
+    find <wiki_root> <entity_type> [--field value ...]
+    query <wiki_root> <subquery> [options]
+    neighbors <wiki_root> <node_id> [--depth N] [--edge-type T] [--incoming|--outgoing]
+
+    # Derived data
+    compile-context <wiki_root> --for <purpose> [--max-chars 8000]
+    rebuild-context-brief <wiki_root> [--max-chars 8000]   # alias for compile-context --for general
+    rebuild-open-questions <wiki_root>
+    rebuild-index <wiki_root>
+
+    # Lifecycle
+    transition <path> --to <status> [--reason "..."]
+
+    # Statistics
+    stats <wiki_root> [--json]
+    maturity <wiki_root> [--json]
+
+    # Checkpoint (batch operation resume)
+    checkpoint-save <wiki_root> <task_id> <item> [--failed]
+    checkpoint-load <wiki_root> <task_id>
+    checkpoint-clear <wiki_root> <task_id>
+    checkpoint-set-meta <wiki_root> <task_id> <key> <value>
+    checkpoint-get-meta <wiki_root> <task_id> [<key>]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+from collections import defaultdict
+from datetime import datetime, timezone
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# Schema API lives in runtime/loader.py — single source for both this file and
+# tools/lint.py.  The 3-line bridge below makes runtime/ importable from tools/.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from runtime.loader import (  # noqa: E402
+    CITATION_SOURCES,
+    CONVENTIONS,
+    EDGE_CONFIDENCE_VALUES,
+    EDGES,
+    ENTITIES,
+    ENTITY_DIRS,
+    SYMMETRIC_EDGE_TYPES,
+    VALID_EDGE_TYPES,
+    edge_is_legacy_for_endpoint,
+    edge_endpoint_matches,
+    edge_expected_endpoint,
+    edge_is_symmetric,
+    edge_legacy_replacement_message,
+    edge_requires_confidence,
+    validate_edge_attributes,
+    validate_lifecycle_transition,
+)
+
+DERIVED_DIR = "graph"
+
+STOP_WORDS = frozenset({
+    "a", "an", "the", "of", "for", "in", "on", "with", "via",
+    "and", "to", "by", "is", "are", "from", "that", "this",
+    "its", "at", "as", "or", "be", "it", "not", "but", "we",
+    "can", "do", "has", "have", "was", "were", "been", "our",
+})
+
+FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
+
+# ---------------------------------------------------------------------------
+# Slug generation
+# ---------------------------------------------------------------------------
+
+def slugify(title: str) -> str:
+    """Generate a kebab-case slug from a paper/concept title.
+
+    Rules (from product CLAUDE.md):
+      - All lowercase, hyphen-separated, no spaces
+      - Extract meaningful keywords from title, drop stop words
+      - Keep first 5-6 keywords for reasonable length
+
+    Examples:
+        >>> slugify("LoRA: Low-Rank Adaptation of Large Language Models")
+        'lora-low-rank-adaptation-large-language-models'
+        >>> slugify("Attention Is All You Need")
+        'attention-all-you-need'
+    """
+    # Normalize: lowercase, replace non-alphanum with spaces
+    text = re.sub(r"[^a-z0-9\s]", " ", title.lower())
+    words = text.split()
+    # Filter stop words but keep short meaningful words (3+ chars or known terms)
+    keywords = [w for w in words if w not in STOP_WORDS and len(w) > 1]
+    if not keywords:
+        keywords = [w for w in words if w]  # fallback: keep all
+    if not keywords:
+        return "untitled"
+    # Cap at 6 keywords to keep slugs manageable
+    return "-".join(keywords[:6])
+
+
+# ---------------------------------------------------------------------------
+# Wiki init
+# ---------------------------------------------------------------------------
+
+def init_wiki(wiki_root: str) -> None:
+    """Initialize wiki directory structure with all entity dirs and graph/.
+
+    Creates:
+      - one directory per entity kind in runtime.loader.ENTITY_DIRS
+      - graph/ with empty edges.jsonl, citations.jsonl, context_brief.md, open_questions.md
+      - outputs/
+      - index.md, log.md (if they don't exist)
+    """
+    root = Path(wiki_root)
+
+    # Entity directories
+    for d in ENTITY_DIRS:
+        (root / d).mkdir(parents=True, exist_ok=True)
+
+    # Derived graph directory
+    graph = root / DERIVED_DIR
+    graph.mkdir(parents=True, exist_ok=True)
+
+    # Outputs directory
+    (root / "outputs").mkdir(parents=True, exist_ok=True)
+
+    # Seed files (only if they don't already exist)
+    _write_if_missing(root / "index.md", _initial_index())
+    _write_if_missing(root / "log.md", _initial_log())
+    _write_if_missing(graph / "edges.jsonl", "")
+    _write_if_missing(graph / "citations.jsonl", "")
+    _write_if_missing(graph / "context_brief.md",
+                      "# Query Pack\n\n_Auto-generated compressed context. Do not edit._\n")
+    _write_if_missing(graph / "open_questions.md",
+                      "# Gap Map\n\n_Auto-generated open questions. Do not edit._\n")
+
+    append_log(wiki_root, "init | wiki initialized")
+    print(json.dumps({"status": "ok", "wiki_root": str(root)}))
+
+
+def _write_if_missing(path: Path, content: str) -> None:
+    if not path.exists():
+        path.write_text(content, encoding="utf-8")
+
+
+def _initial_index() -> str:
+    sections = []
+    for entity in ENTITY_DIRS:
+        sections.append(f"{entity}:")
+    return "# Wiki Index\n\n" + "\n".join(sections) + "\n"
+
+
+def _initial_log() -> str:
+    return "# OmegaWiki Log\n\n"
+
+
+# ---------------------------------------------------------------------------
+# Edge and citation management
+# ---------------------------------------------------------------------------
+
+def _today() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def _truthy(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y"}
+    return bool(value)
+
+
+def _node_kind(node_id: str) -> str:
+    return node_id.split("/", 1)[0] if "/" in node_id else ""
+
+
+def _validate_node_refs(root: Path, *node_ids: str) -> list[str]:
+    warnings: list[str] = []
+    for node_id in node_ids:
+        if "/" in node_id:
+            entity_path = root / f"{node_id}.md"
+            if not entity_path.exists():
+                warnings.append(f"{node_id}.md not found")
+    return warnings
+
+
+def _edge_topology_issues(edge_type: str, from_id: str, to_id: str,
+                          legacy_check: bool = False) -> list[str]:
+    """Endpoint / self-edge / legacy checks (the parts that aren't attribute-level)."""
+    issues: list[str] = []
+    from_kind = _node_kind(from_id)
+    to_kind = _node_kind(to_id)
+
+    if legacy_check and edge_is_legacy_for_endpoint(edge_type, from_kind, to_kind):
+        issues.append(edge_legacy_replacement_message(edge_type, from_kind, to_kind))
+    if not edge_endpoint_matches(edge_type, from_kind, to_kind):
+        expected_from = edge_expected_endpoint(edge_type, "from")
+        expected_to = edge_expected_endpoint(edge_type, "to")
+        issues.append(f"{edge_type} should connect {expected_from}/* -> {expected_to}/*")
+    if (edge_expected_endpoint(edge_type, "from") == "papers"
+            and edge_expected_endpoint(edge_type, "to") == "papers"
+            and from_id == to_id):
+        issues.append(f"{edge_type} should not connect a paper to itself")
+    return issues
+
+
+def _semantic_edge_warnings(edge_type: str, from_id: str, to_id: str,
+                            confidence: str = "",
+                            evidence: str = "") -> list[str]:
+    return (_edge_topology_issues(edge_type, from_id, to_id, legacy_check=False)
+            + validate_edge_attributes(edge_type,
+                                       {"confidence": confidence, "evidence": evidence}))
+
+
+def _semantic_edge_errors(edge_type: str, from_id: str, to_id: str,
+                          confidence: str = "",
+                          evidence: str = "") -> list[str]:
+    """Hard validation for new writes. Legacy graph rows remain lint-readable."""
+    return (_edge_topology_issues(edge_type, from_id, to_id, legacy_check=True)
+            + validate_edge_attributes(edge_type,
+                                       {"confidence": confidence, "evidence": evidence}))
+
+
+def _canonical_edge_ids(from_id: str, to_id: str, edge_type: str,
+                        symmetric: bool = False) -> tuple[str, str, bool, str]:
+    is_symmetric = symmetric or edge_is_symmetric(edge_type)
+    if is_symmetric and not edge_is_symmetric(edge_type):
+        return from_id, to_id, False, f"symmetric is only valid for {sorted(SYMMETRIC_EDGE_TYPES)}"
+    if is_symmetric:
+        left, right = sorted([from_id, to_id])
+        return left, right, True, ""
+    return from_id, to_id, False, ""
+
+
+def _edge_key(edge: dict) -> tuple[str, str, str]:
+    from_id = str(edge.get("from", ""))
+    to_id = str(edge.get("to", ""))
+    edge_type = str(edge.get("type", ""))
+    if edge.get("symmetric") is True or edge_is_symmetric(edge_type):
+        from_id, to_id = sorted([from_id, to_id])
+    return from_id, to_id, edge_type
+
+
+def add_edge(wiki_root: str, from_id: str, to_id: str,
+             edge_type: str, evidence: str = "", confidence: str = "",
+             symmetric: bool = False) -> None:
+    """Append a typed edge to graph/edges.jsonl with dedup and entity validation."""
+    if edge_type not in VALID_EDGE_TYPES:
+        print(json.dumps({
+            "status": "error",
+            "message": f"Unknown edge type '{edge_type}'. Valid: {sorted(VALID_EDGE_TYPES)}"
+        }))
+        sys.exit(1)
+    if confidence and confidence not in EDGE_CONFIDENCE_VALUES:
+        print(json.dumps({
+            "status": "error",
+            "message": f"Unknown confidence '{confidence}'. Valid: {sorted(EDGE_CONFIDENCE_VALUES)}"
+        }))
+        sys.exit(1)
+
+    from_id, to_id, is_symmetric, error = _canonical_edge_ids(
+        from_id, to_id, edge_type, symmetric
+    )
+    if error:
+        print(json.dumps({"status": "error", "message": error}))
+        sys.exit(1)
+
+    root = Path(wiki_root)
+    edges_path = root / DERIVED_DIR / "edges.jsonl"
+    edges_path.parent.mkdir(parents=True, exist_ok=True)
+
+    errors = _semantic_edge_errors(edge_type, from_id, to_id, confidence, evidence)
+    if errors:
+        print(json.dumps({"status": "error", "errors": errors},
+                         ensure_ascii=False))
+        sys.exit(1)
+
+    warnings = _validate_node_refs(root, from_id, to_id)
+    warnings.extend(_semantic_edge_warnings(
+        edge_type, from_id, to_id, confidence, evidence
+    ))
+    for msg in warnings:
+        print(msg, file=sys.stderr)
+
+    # Dedup: check existing edges
+    target_key = _edge_key({
+        "from": from_id, "to": to_id, "type": edge_type,
+        "symmetric": is_symmetric,
+    })
+    if edges_path.exists():
+        for line in edges_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                e = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if _edge_key(e) == target_key:
+                result: dict = {"status": "exists",
+                                "message": f"{from_id} --{edge_type}--> {to_id}"}
+                if warnings:
+                    result["warnings"] = warnings
+                print(json.dumps(result))
+                return
+
+    edge = {
+        "from": from_id,
+        "to": to_id,
+        "type": edge_type,
+        "evidence": evidence,
+        "date": _today(),
+    }
+    if confidence:
+        edge["confidence"] = confidence
+    if is_symmetric:
+        edge["symmetric"] = True
+
+    with open(edges_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(edge, ensure_ascii=False) + "\n")
+
+    result2: dict = {"status": "ok",
+                     "edge": f"{from_id} --{edge_type}--> {to_id}"}
+    if warnings:
+        result2["warnings"] = warnings
+    print(json.dumps(result2))
+
+
+def load_citations(wiki_root: str) -> list[dict]:
+    """Load all bibliographic citation rows from citations.jsonl."""
+    citations_path = Path(wiki_root) / DERIVED_DIR / "citations.jsonl"
+    citations = []
+    if not citations_path.exists():
+        return citations
+    for line in citations_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            citations.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return citations
+
+
+def add_citation(wiki_root: str, from_id: str, to_id: str,
+                 source: str = "semantic_scholar") -> None:
+    """Append a deterministic bibliographic paper citation to graph/citations.jsonl."""
+    if source not in CITATION_SOURCES:
+        print(json.dumps({
+            "status": "error",
+            "message": f"Unknown citation source '{source}'. Valid: {sorted(CITATION_SOURCES)}"
+        }))
+        sys.exit(1)
+
+    root = Path(wiki_root)
+    citations_path = root / DERIVED_DIR / "citations.jsonl"
+    citations_path.parent.mkdir(parents=True, exist_ok=True)
+
+    warnings = _validate_node_refs(root, from_id, to_id)
+    if _node_kind(from_id) != "papers" or _node_kind(to_id) != "papers":
+        warnings.append("cites should connect papers/* -> papers/*")
+    for msg in warnings:
+        print(msg, file=sys.stderr)
+
+    if citations_path.exists():
+        for line in citations_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                c = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if c.get("from") == from_id and c.get("to") == to_id:
+                result: dict = {"status": "exists",
+                                "citation": f"{from_id} --cites--> {to_id}"}
+                if warnings:
+                    result["warnings"] = warnings
+                print(json.dumps(result))
+                return
+
+    citation = {
+        "from": from_id,
+        "to": to_id,
+        "type": "cites",
+        "source": source,
+        "date": _today(),
+    }
+    with open(citations_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(citation, ensure_ascii=False) + "\n")
+
+    result2: dict = {"status": "ok",
+                     "citation": f"{from_id} --cites--> {to_id}"}
+    if warnings:
+        result2["warnings"] = warnings
+    print(json.dumps(result2))
+
+
+def _build_arxiv_index(wiki_root: Path) -> dict[str, str]:
+    """Map arXiv ID (and S2 ID) → paper slug, for citation resolution.
+
+    Reads each wiki/papers/*.md frontmatter once. Both 'arxiv' and 's2_id'
+    fields are indexed so references arriving with either identifier match.
+    """
+    index: dict[str, str] = {}
+    papers_dir = wiki_root / "papers"
+    if not papers_dir.is_dir():
+        return index
+    for md in papers_dir.glob("*.md"):
+        slug = md.stem
+        fm = _parse_frontmatter(md)
+        for key in ("arxiv", "s2_id"):
+            v = fm.get(key)
+            if isinstance(v, str) and v.strip():
+                index[v.strip()] = slug
+    return index
+
+
+def add_citations_batch(wiki_root: str, citer_id: str) -> None:
+    """Read a JSON array of S2 reference objects from stdin and append all
+    matching `cites` rows to graph/citations.jsonl in one pass.
+
+    Input: a JSON array (as emitted by `tools/fetch_s2.py references <arxiv>`)
+    of paper objects, each with optional `externalIds.ArXiv` and `paperId`.
+
+    Output: a single JSON status line with counts (received, matched, added,
+    skipped_existing, unmatched).
+    """
+    if _node_kind(citer_id) != "papers":
+        print(json.dumps({"status": "error",
+                          "message": f"--citer must be papers/<slug>, got {citer_id}"}))
+        sys.exit(1)
+
+    root = Path(wiki_root)
+    citations_path = root / DERIVED_DIR / "citations.jsonl"
+    citations_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        refs = json.load(sys.stdin)
+    except json.JSONDecodeError as exc:
+        print(json.dumps({"status": "error",
+                          "message": f"stdin is not valid JSON: {exc}"}))
+        sys.exit(1)
+    if not isinstance(refs, list):
+        print(json.dumps({"status": "error",
+                          "message": "stdin must be a JSON array of reference objects"}))
+        sys.exit(1)
+
+    arxiv_index = _build_arxiv_index(root)
+
+    existing: set[tuple[str, str]] = set()
+    if citations_path.exists():
+        for line in citations_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                c = json.loads(line)
+                existing.add((c.get("from", ""), c.get("to", "")))
+            except json.JSONDecodeError:
+                continue
+
+    today = _today()
+    matched = 0
+    added = 0
+    skipped_existing = 0
+    unmatched_samples: list[str] = []
+    new_rows: list[str] = []
+
+    for ref in refs:
+        if not isinstance(ref, dict):
+            continue
+        ext_ids = ref.get("externalIds") or {}
+        arxiv = ext_ids.get("ArXiv") or ext_ids.get("arxiv")
+        s2id = ref.get("paperId")
+        target_slug = None
+        if arxiv and arxiv in arxiv_index:
+            target_slug = arxiv_index[arxiv]
+        elif s2id and s2id in arxiv_index:
+            target_slug = arxiv_index[s2id]
+        if not target_slug:
+            if len(unmatched_samples) < 5:
+                title = (ref.get("title") or "")[:80]
+                unmatched_samples.append(title or "(no title)")
+            continue
+        matched += 1
+        to_id = f"papers/{target_slug}"
+        if to_id == citer_id:

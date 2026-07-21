@@ -1,0 +1,172 @@
+version: 1
+skill_operator_bindings:
+- skill_id: understand-anything.chat
+  logical_operator: CodebaseChatBuilder
+  physical_operator: mini-understand-anything-pane-bridge
+  capsule_id: cap.understand-anything-chat-builder
+  actor: codex
+  semantic_backend: ThunderOMLX
+- skill_id: understand-anything.domain_analysis
+  logical_operator: DomainAnalysisBuilder
+  physical_operator: mini-understand-anything-pane-bridge
+  capsule_id: cap.understand-anything-domain-analysis-builder
+  actor: codex
+  semantic_backend: ThunderOMLX
+- skill_id: understand-anything.knowledge_graph
+  logical_operator: KnowledgeGraphBuilder
+  physical_operator: mini-understand-anything-pane-bridge
+  capsule_id: cap.understand-anything-knowledge-graph-builder
+  actor: codex
+  semantic_backend: ThunderOMLX
+- skill_id: understand-anything.tour
+  logical_operator: RepositoryTourBuilder
+  physical_operator: mini-understand-anything-pane-bridge
+  capsule_id: cap.understand-anything-tour-builder
+  actor: codex
+  semantic_backend: ThunderOMLX
+
+# ─── APO skill capability metadata ──────────────────────────────────────────
+# Used by the goal-driven APO compiler to:
+#   1. Match skills to workflow stages based on required_capabilities
+#   2. Resolve MCP requirements before dispatch
+#   3. Validate output artifacts against output_schema
+# Schema reference: schemas/draft/skill.v2.draft.json
+skill_capability_metadata:
+
+  - skill_id: skill.root-cause-debug
+    display_name: Root Cause Debug
+    required_capabilities:
+      - root_cause_debug
+      - long_context
+    output_artifacts:
+      - name: root_cause_report
+        type: markdown
+      - name: hypothesis_list
+        type: json
+    mcp_requirements:
+      - capability: git.read
+        access: readonly
+        why: "Read commit history and diffs to trace regression origin"
+      - capability: repo.read
+        access: readonly
+        why: "Inspect source code around failure site"
+    applicable_workflow_stages:
+      - DebugRCA
+    readiness_tier: stable
+
+  - skill_id: skill.benchmark-analysis
+    display_name: Benchmark Analysis
+    required_capabilities:
+      - test_execution
+      - root_cause_debug
+    output_artifacts:
+      - name: benchmark_report
+        type: markdown
+      - name: metrics_summary
+        type: json
+    mcp_requirements:
+      - capability: shell.benchmark
+        access: limited
+        why: "Execute benchmark suite to measure before/after throughput"
+      - capability: artifact.write
+        access: write
+        why: "Persist benchmark results as evidence artifact"
+    applicable_workflow_stages:
+      - RunBenchmark
+    readiness_tier: stable
+
+  - skill_id: skill.implementation
+    display_name: Code Implementation
+    required_capabilities:
+      - code_impl
+      - test_generation
+    output_artifacts:
+      - name: patch_diff
+        type: diff
+      - name: implementation_summary
+        type: markdown
+    mcp_requirements:
+      - capability: repo.read
+        access: readonly
+        why: "Read existing code before writing patch"
+      - capability: repo.write
+        access: write
+        why: "Commit patch to repository"
+    applicable_workflow_stages:
+      - ImplementPatch
+    readiness_tier: stable
+
+  - skill_id: skill.review
+    display_name: Code Review
+    required_capabilities:
+      - academic_critique
+      - root_cause_debug
+    output_artifacts:
+      - name: review_report
+        type: markdown
+    mcp_requirements:
+      - capability: git.read
+        access: readonly
+        why: "Read diff for review"
+    applicable_workflow_stages:
+      - ReviewPatch
+    readiness_tier: stable
+
+  - skill_id: skill.context-scan
+    display_name: Context Scanner
+    required_capabilities:
+      - research_synthesis
+      - long_context
+    output_artifacts:
+      - name: context_summary
+        type: markdown
+      - name: related_files
+        type: json
+    mcp_requirements:
+      - capability: repo.read
+        access: readonly
+        why: "Scan repository for relevant files and history"
+      - capability: git.read
+        access: readonly
+        why: "Read recent commit log for context"
+    applicable_workflow_stages:
+      - ScanContext
+    readiness_tier: stable
+
+  - skill_id: skill.architecture-design
+    display_name: Architecture Design
+    required_capabilities:
+      - architecture_reasoning
+      - long_context
+    output_artifacts:
+      - name: design_doc
+        type: markdown
+      - name: interface_sketch
+        type: markdown
+    mcp_requirements:
+      - capability: repo.read
+        access: readonly
+        why: "Read existing architecture before proposing changes"
+    applicable_workflow_stages:
+      - DesignSolution
+    readiness_tier: stable
+
+  - skill_id: skill.verification
+    display_name: Evidence Verification
+    required_capabilities:
+      - test_execution
+      - root_cause_debug
+    output_artifacts:
+      - name: verification_report
+        type: markdown
+      - name: evidence_ledger_entry
+        type: json
+    mcp_requirements:
+      - capability: artifact.write
+        access: write
+        why: "Write evidence ledger entry"
+    applicable_workflow_stages:
+      - VerifyEvidence
+    readiness_tier: stable
+
+defaults: {}

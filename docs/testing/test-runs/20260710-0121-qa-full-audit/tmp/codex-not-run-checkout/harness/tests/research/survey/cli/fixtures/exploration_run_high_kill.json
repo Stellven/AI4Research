@@ -1,0 +1,79 @@
+{
+  "run_id": "run_highkill_001",
+  "selected_directions": [
+    {
+      "direction_id": "d1",
+      "direction_name": "LLM Reasoning",
+      "query": "chain-of-thought reasoning in large language models",
+      "status": "selected",
+      "source_matrix": null,
+      "elimination_record": null,
+      "schema_version": "solar.research.survey.v1"
+    }
+  ],
+  "eliminated_directions": [
+    {
+      "direction_id": "d2",
+      "direction_name": "Symbolic AI",
+      "query": "symbolic reasoning vs neural methods",
+      "status": "eliminated",
+      "source_matrix": null,
+      "elimination_record": {
+        "direction_id": "d2",
+        "direction_name": "Symbolic AI",
+        "score": 0.15,
+        "kill_reason": "low_novelty_score",
+        "evidence_refs": ["src_s1"],
+        "decision_ts": "2026-05-17T12:05:00Z",
+        "direction_query": "symbolic reasoning vs neural methods",
+        "candidate_count": 4,
+        "score_breakdown": {"source_coverage": 0.1, "novelty": 0.1, "feasibility": 0.2, "evidence_density": 0.2},
+        "schema_version": "solar.research.survey.v1"
+      },
+      "schema_version": "solar.research.survey.v1"
+    },
+    {
+      "direction_id": "d3",
+      "direction_name": "Neuro-Symbolic Hybrid",
+      "query": "neuro-symbolic integration methods",
+      "status": "eliminated",
+      "source_matrix": null,
+      "elimination_record": {
+        "direction_id": "d3",
+        "direction_name": "Neuro-Symbolic Hybrid",
+        "score": 0.20,
+        "kill_reason": "insufficient_source_coverage",
+        "evidence_refs": ["src_ns1", "src_ns2"],
+        "decision_ts": "2026-05-17T12:05:00Z",
+        "direction_query": "neuro-symbolic integration methods",
+        "candidate_count": 4,
+        "score_breakdown": {"source_coverage": 0.1, "novelty": 0.3, "feasibility": 0.2, "evidence_density": 0.2},
+        "schema_version": "solar.research.survey.v1"
+      },
+      "schema_version": "solar.research.survey.v1"
+    },
+    {
+      "direction_id": "d4",
+      "direction_name": "Bayesian Reasoning",
+      "query": "bayesian approaches to reasoning",
+      "status": "eliminated",
+      "source_matrix": null,
+      "elimination_record": {
+        "direction_id": "d4",
+        "direction_name": "Bayesian Reasoning",
+        "score": 0.18,
+        "kill_reason": "low_evidence_density",
+        "evidence_refs": ["src_b1"],
+        "decision_ts": "2026-05-17T12:06:00Z",
+        "direction_query": "bayesian approaches to reasoning",
+        "candidate_count": 4,
+        "score_breakdown": {"source_coverage": 0.2, "novelty": 0.2, "feasibility": 0.1, "evidence_density": 0.2},
+        "schema_version": "solar.research.survey.v1"
+      },
+      "schema_version": "solar.research.survey.v1"
+    }
+  ],
+  "elimination_log_path": "runtime/survey-continue/run_highkill_001/elimination_log.jsonl",
+  "source_matrix_consumed": null,
+  "schema_version": "solar.research.survey.v1"
+}

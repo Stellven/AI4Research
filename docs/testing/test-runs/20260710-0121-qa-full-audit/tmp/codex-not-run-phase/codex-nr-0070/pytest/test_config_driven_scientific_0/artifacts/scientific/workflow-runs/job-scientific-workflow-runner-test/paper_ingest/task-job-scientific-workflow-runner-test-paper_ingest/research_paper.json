@@ -1,0 +1,221 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/prepare_paper_source_native_stdout.json",
+      "type": "prepare_paper_source_native_stdout_json"
+    },
+    {
+      "path": "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/prepare_paper_source_native_stderr.txt",
+      "type": "prepare_paper_source_native_stderr"
+    },
+    {
+      "path": "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/prepare_paper_source_native_payload.json",
+      "type": "prepare_paper_source_native_payload_json"
+    },
+    {
+      "path": "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/research_memory_update.json",
+      "type": "research_memory_update_json"
+    },
+    {
+      "path": "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/research_graph_update.json",
+      "type": "research_graph_update_json"
+    },
+    {
+      "path": "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/ingest_final_source_registration_boundary.json",
+      "type": "ingest_final_source_registration_boundary_json"
+    },
+    {
+      "path": "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/ingest_paper_source_provider_runtime_proof.json",
+      "type": "provider_source_runtime_proof_manifest_json"
+    },
+    {
+      "path": "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/research_paper.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allow_network_fetch": false,
+    "paper_id": "paper-job-scientific-workflow-runner-test",
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0070/pytest/test_config_driven_scientific_0/raw/paper.md",
+    "workflow_id": "scientific_workflow_runner_contract_test",
+    "workflow_runner": "generic_workflow_runner"
+  },
+  "limitations": [
+    "Solar AutoSci prepared the source without warnings.",
+    "Ingest final source registration incomplete: wiki_registration_ready"
+  ],
+  "node_id": "paper_ingest",
+  "outputs": {
+    "final_source_registration_boundary": {
+      "checks": [
+        {
+          "name": "source_preparation_verified",
+          "status": "ok"
+        },
+        {
+          "name": "parse_quality_ready",
+          "status": "ok"
+        },
+        {
+          "name": "raw_artifact_provenance_ready",
+          "status": "ok"
+        },
+        {
+          "name": "downstream_handoff_ready",
+          "status": "ok"
+        },
+        {
+          "name": "wiki_registration_ready",
+          "status": "missing"
+        }
+      ],
+      "downstream_handoff_ready": true,
+      "final_registration_ready": false,
+      "graph_sidecar_ready": true,
+      "memory_sidecar_ready": true,
+      "missing": [
+        "wiki_registration_ready"
+      ],
+      "paper_id": "paper-job-scientific-workflow-runner-test",
+      "parse_quality_ready": true,
+      "raw_artifact_provenance_ready": true,
+      "schema": "autosci_ingest_final_source_registration_boundary.v1",
+      "sidecar_evidence_paths": [
+        "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/research_memory_update.json",
+        "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/research_graph_update.json"
+      ],
+      "source_preparation_verified": true,
+      "status": "ingest_source_registration_incomplete",
+      "wiki_registration": {
+        "context_brief_path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+        "context_rebuilt": false,
+        "graph_edges_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "graph_registered": false,
+        "index_path": "artifacts/autosci/workspace/wiki/index.md",
+        "index_rebuilt": false,
+        "log_path": "artifacts/autosci/workspace/wiki/log.md",
+        "log_registered": false,
+        "paper_page": "artifacts/autosci/workspace/wiki/papers/paper-job-scientific-workflow-runner-test.md",
+        "paper_registered": false,
+        "wiki_root": "artifacts/autosci/workspace/wiki"
+      },
+      "wiki_registration_ready": false
+    },
+    "paper": {
+      "abstract": "This paper evaluates a Solar-native workflow runner with explicit runtime evidence.",
+      "final_source_registration_boundary": {
+        "checks": [
+          {
+            "name": "source_preparation_verified",
+            "status": "ok"
+          },
+          {
+            "name": "parse_quality_ready",
+            "status": "ok"
+          },
+          {
+            "name": "raw_artifact_provenance_ready",
+            "status": "ok"
+          },
+          {
+            "name": "downstream_handoff_ready",
+            "status": "ok"
+          },
+          {
+            "name": "wiki_registration_ready",
+            "status": "missing"
+          }
+        ],
+        "downstream_handoff_ready": true,
+        "final_registration_ready": false,
+        "graph_sidecar_ready": true,
+        "memory_sidecar_ready": true,
+        "missing": [
+          "wiki_registration_ready"
+        ],
+        "paper_id": "paper-job-scientific-workflow-runner-test",
+        "parse_quality_ready": true,
+        "raw_artifact_provenance_ready": true,
+        "schema": "autosci_ingest_final_source_registration_boundary.v1",
+        "sidecar_evidence_paths": [
+          "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/research_memory_update.json",
+          "artifacts/scientific/workflow-runs/job-scientific-workflow-runner-test/paper_ingest/task-job-scientific-workflow-runner-test-paper_ingest/research_graph_update.json"
+        ],
+        "source_preparation_verified": true,
+        "status": "ingest_source_registration_incomplete",
+        "wiki_registration": {
+          "context_brief_path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+          "context_rebuilt": false,
+          "graph_edges_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+          "graph_registered": false,
+          "index_path": "artifacts/autosci/workspace/wiki/index.md",
+          "index_rebuilt": false,
+          "log_path": "artifacts/autosci/workspace/wiki/log.md",
+          "log_registered": false,
+          "paper_page": "artifacts/autosci/workspace/wiki/papers/paper-job-scientific-workflow-runner-test.md",
+          "paper_registered": false,
+          "wiki_root": "artifacts/autosci/workspace/wiki"
+        },
+        "wiki_registration_ready": false
+      },
+      "identifiers": {
+        "native_prepare_status": "completed",
+        "source_fetch_status": "not_applicable",
+        "source_prepare_status": "completed"
+      },
+      "paper_id": "paper-job-scientific-workflow-runner-test",
+      "parse_status": "parsed",
+      "preparation": {
+        "abstract_excerpt": "",
+        "artifacts": [],
+        "arxiv_id": "",
+        "canonical_ingest_path": "raw/paper.md",
+        "extracted_text_path": null,
+        "ingest_format": "md",
+        "native_prepare_paper_source": {
+          "allow_network_fetch": false,
+          "canonical_ingest_path": "raw/input/paper.md",
+          "ok": true,
+          "prepared_path": null,
+          "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0070/pytest/test_config_driven_scientific_0/artifacts/autosci/workspace/raw",
+          "schema": "autosci_prepare_paper_source_cli.v1",
+          "source_path": "raw/input/paper.md",
+          "status": "completed"
+        },
+        "original_format": "md",
+        "prepared_path": null,
+        "source_fetch_status": "not_applicable",
+        "source_path": "raw/paper.md",
+        "status": "completed",
+        "title": "",
+        "warnings": []
+      },
+      "sections": [
+        {
+          "section_id": "abstract",
+          "source_anchor": "paper.md#abstract",
+          "text": "This paper evaluates a Solar-native workflow runner with explicit runtime evidence.",
+          "title": "Abstract"
+        },
+        {
+          "section_id": "results",
+          "source_anchor": "paper.md#results",
+          "text": "The runner records operator and bridge outputs without using a hidden AutoSci lifecycle runner.",
+          "title": "Results"
+        }
+      ],
+      "source_ref": "raw/paper.md",
+      "source_type": "markdown",
+      "title": "Workflow Runtime Paper"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T18:49:56Z"
+  },
+  "schema": "research_paper.v1",
+  "sprint_id": "job-scientific-workflow-runner-test",
+  "status": "completed",
+  "task_id": "task-job-scientific-workflow-runner-test-paper_ingest"
+}

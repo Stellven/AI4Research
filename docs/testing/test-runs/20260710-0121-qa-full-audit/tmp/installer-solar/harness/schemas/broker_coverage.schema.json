@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BrokerCoverage",
+  "description": "Broker constraint coverage telemetry for Solar Harness activation proof.",
+  "type": "object",
+  "required": [
+    "total_actions",
+    "contracted_actions",
+    "coverage_pct",
+    "unscoped_write_count",
+    "policy_denied_count",
+    "lease_denied_count",
+    "human_approval_pending"
+  ],
+  "properties": {
+    "total_actions": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total write/dispatch actions recorded in this session."
+    },
+    "contracted_actions": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Actions with an explicit contract/write_scope entry."
+    },
+    "coverage_pct": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "contracted_actions / total_actions * 100. Zero when total_actions=0."
+    },
+    "unscoped_write_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Write actions not covered by any write_scope."
+    },
+    "policy_denied_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Actions blocked by policy gate."
+    },
+    "lease_denied_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Actions blocked by pane-lease gate."
+    },
+    "human_approval_pending": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Actions currently awaiting human approval."
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,26 @@
+=== test-ack-contract.sh ===
+
+--- write_ack_file schema ---
+  ✅ ack file created
+  ✅ ack contains dispatch_id
+  ✅ ack contains sid
+  ✅ ack contains role=builder
+  ✅ ack contains status=success
+  ✅ ack contains exit_code
+  ✅ ack contains artifacts
+  ✅ read_ack_file returns content
+  ✅ read_ack_file missing → empty
+
+--- ack-watcher (fast path: ack appears quickly) ---
+  ✅ ack-watcher writes acked_by_ack_file to ledger
+  ✅ ack-watcher ledger entry has correct did
+
+--- ack-watcher (timeout path) ---
+  ✅ ack-watcher timeout writes ack_timeout to ledger
+  ✅ ack_timeout entry has correct sid
+
+--- failed ack ---
+  ✅ failed ack has status=failed
+  ✅ failed ack has exit_code=1
+
+=== RESULT: PASS=15 FAIL=0 ===

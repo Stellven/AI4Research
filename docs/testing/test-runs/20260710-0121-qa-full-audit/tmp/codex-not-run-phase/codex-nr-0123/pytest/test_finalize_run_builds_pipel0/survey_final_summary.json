@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "title": "Professor-Grade Survey: latent reasoning",
+  "executive_summary": [
+    "This survey compiles 1/32 finalized sections into a structured technical report.",
+    "The evidence base covers source types: benchmark=2, code=1, official_doc=1, paper=4.",
+    "The report separates architecture synthesis, comparison, evaluation boundaries, limitations, contradictions, and open problems."
+  ],
+  "technical_summary": [
+    "Claim tags: 6.",
+    "Evidence tags: 6.",
+    "Pending sections: 31.",
+    "Chapter review issue count: 8."
+  ],
+  "roadmap": [
+    "Use contribution gaps to drive section rewrites.",
+    "Use chapter synthesis outputs for chief-editor coherence review.",
+    "Use source/evidence ledgers to prevent unsupported expansion in final prose."
+  ]
+}

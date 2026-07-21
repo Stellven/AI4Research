@@ -1,0 +1,100 @@
+{
+  "ok": false,
+  "source_count": 1,
+  "min_sources": 8,
+  "source_type_counts": {
+    "paper": 1
+  },
+  "required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "missing_required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc"
+  ],
+  "paper_like_source_count": 1,
+  "min_paper_like_sources": 4,
+  "high_authority_source_count": 1,
+  "min_high_authority_sources": 4,
+  "source_authority_average": 0.9,
+  "low_value_source_count": 0,
+  "low_value_source_ratio": 0.0,
+  "cited_source_ratio": 1.0,
+  "source_audit": {
+    "ok": false,
+    "output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0128/pytest/test_strict_eval_fails_when_so0",
+    "research_profile": "technical_architecture",
+    "strict_profile": true,
+    "policy_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/research/policies/source_authority.json",
+    "source_count": 1,
+    "source_type_counts": {
+      "paper": 1
+    },
+    "source_type_count": 1,
+    "missing_required_source_types": [],
+    "missing_recommended_source_types": [
+      "benchmark",
+      "code",
+      "official_doc"
+    ],
+    "source_authority_average": 0.9,
+    "source_high_authority_count": 1,
+    "source_high_authority_threshold": 0.75,
+    "invalid_source_type_count": 0,
+    "low_authority_source_count": 0,
+    "sources": [
+      {
+        "source_id": "src_0",
+        "source_type": "paper",
+        "title": "paper",
+        "url": "https://arxiv.org/abs/0000.00000",
+        "authority_score": 0.9,
+        "high_authority": true,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.9,
+          "default": false,
+          "host_hits": [
+            "arxiv.org"
+          ],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.9,
+            "host_contains": [
+              "arxiv.org",
+              "openreview.net",
+              "doi.org",
+              "semanticscholar.org"
+            ]
+          }
+        }
+      }
+    ],
+    "replacement_suggestions": [
+      "Add benchmark source for profile technical_architecture",
+      "Add code source for profile technical_architecture",
+      "Add official_doc source for profile technical_architecture"
+    ],
+    "errors": [
+      "source_type_count_too_low:1<2",
+      "high_authority_sources_too_low:1<2"
+    ],
+    "warnings": [
+      "missing_recommended_source_types:benchmark,code,official_doc"
+    ]
+  },
+  "issues": [
+    "survey_source_count_low:1<8",
+    "survey_missing_required_source_types:benchmark,code,official_doc",
+    "paper_like_source_count_low:1<4",
+    "high_authority_source_count_low:1<4",
+    "source_type_count_too_low:1<2",
+    "high_authority_sources_too_low:1<2"
+  ]
+}

@@ -1,0 +1,24 @@
+::group::AutoSci premerge syntax checks
+::endgroup::
+::group::AutoSci Phase C readiness contracts
+...F.......                                                              [100%]
+=================================== FAILURES ===================================
+____________ test_generated_artifacts_remain_untracked_for_premerge ____________
+
+    def test_generated_artifacts_remain_untracked_for_premerge() -> None:
+        payload = _load_json(AUDIT)
+        cleanup = payload["tracked_generated_artifacts"]
+        assert cleanup["status"] == "ok"
+    
+        for pattern in cleanup["must_remain_untracked_patterns"]:
+>           assert _git_ls_files(pattern) == [], pattern
+E           AssertionError: harness/artifacts/autosci/runs/*
+E           assert ['harness/art...as.json', ...] == []
+E             
+E             Left contains 667 more items, first extra item: 'harness/artifacts/autosci/runs/e2e-doc-literature-20260707-idea-chain/autosci_native_final/extracted_elements.json'
+E             Use -v to get more diff
+
+harness/tests/test_autosci_phase_c_premerge_readiness.py:132: AssertionError
+=========================== short test summary info ============================
+FAILED harness/tests/test_autosci_phase_c_premerge_readiness.py::test_generated_artifacts_remain_untracked_for_premerge
+1 failed, 10 passed in 0.11s

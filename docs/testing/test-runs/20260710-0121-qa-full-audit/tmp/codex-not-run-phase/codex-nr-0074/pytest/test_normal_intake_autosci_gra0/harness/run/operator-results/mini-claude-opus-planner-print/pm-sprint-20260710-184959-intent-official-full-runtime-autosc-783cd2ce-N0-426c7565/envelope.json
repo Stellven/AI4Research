@@ -1,0 +1,23 @@
+{
+  "task_id": "pm-sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce-N0-426c7565",
+  "sprint_id": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce",
+  "node_id": "N0",
+  "operator_id": "mini-claude-opus-planner-print",
+  "task_type": "planning",
+  "objective": "请接手 sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce：RawIntent 已经通过 Intent Gateway 和 Requirement Compiler 生成需求编译包。\n\n先读取：\n- /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/t",
+  "dispatch_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/run/pm-dispatch-files/pm-sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce-N0-426c7565.md",
+  "result_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.N0.pm-result.md",
+  "issued_by": "pm_pane",
+  "issued_at": "2026-07-10T18:49:59Z",
+  "pm_context": "compiled_requirement_ir=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.requirement_ir.json",
+  "requested_role": "planner",
+  "work_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce/workdir",
+  "graph_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.task_graph.json",
+  "runtime_mode": "mixed",
+  "provider_policy": "",
+  "operator_provider": "anthropic",
+  "operator_backend": "claude-cli",
+  "operator_model": "opus",
+  "submitted_at": "2026-07-10T18:49:59Z",
+  "lease_expires_at": "2026-07-10T19:49:59Z"
+}

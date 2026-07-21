@@ -1,0 +1,10 @@
+{
+  "operators": {
+    "builder-a": {
+      "pane": "pane-builder",
+      "compat_maps_to": {
+        "host_type": "tmux_pane"
+      }
+    }
+  }
+}

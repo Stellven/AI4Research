@@ -1,0 +1,16 @@
+{
+  "account_label": "example-user",
+  "allowed_account_identifiers": [
+    "browser-agent@example.com"
+  ],
+  "concurrency_policy": "exclusive",
+  "headed_required_for_first_login": true,
+  "headless_default": true,
+  "never_log_cookie_values": true,
+  "profile_id": "chatgpt/example-user",
+  "runtime_owner": "browser-use",
+  "schema_version": 1,
+  "service": "chatgpt",
+  "status": "initialized",
+  "updated_at": "2026-07-10T18:49:44Z"
+}

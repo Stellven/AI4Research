@@ -1,0 +1,13 @@
+{
+  "command_id": "phase5_validate_install_doctor_contract",
+  "phase": "installer",
+  "linked_feature_ids": "INSTALL_CORE_SET,INSTALL_DOCTOR_SET",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit",
+  "command": "\"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/validate_install_evidence.py\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit\"",
+  "start_time": "2026-07-10T02:27:29-04:00",
+  "end_time": "2026-07-10T02:27:29-04:00",
+  "duration_seconds": "0.045",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase5_validate_install_doctor_contract.stdout.txt",
+  "stderr_path": "evidence/commands/phase5_validate_install_doctor_contract.stderr.txt"
+}

@@ -1,0 +1,64 @@
+{
+  "action": "map_code_evidence",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/scientific/smoke/handoff.md",
+        "type": "handoff_markdown"
+      },
+      {
+        "path": "artifacts/scientific/smoke/code_evidence_map.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "claim_id": "claim-001",
+      "claims_evidence": "artifacts/scientific/smoke/research_claims.json",
+      "method_evidence": "artifacts/scientific/smoke/research_method.json",
+      "repo_path": "plugins/autosci/tests/fixtures/sample_repo"
+    },
+    "limitations": [
+      "Code mapping records candidate file relevance; it is not evidence of claim verification."
+    ],
+    "node_id": "node-map-code-evidence",
+    "outputs": {
+      "mappings": [
+        {
+          "claim_id": "claim-001",
+          "evidence_ids": [
+            "claim-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py"
+          ],
+          "execution_entrypoint": "python3 plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+          "files": [
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py"
+          ],
+          "mapping_id": "map-001",
+          "mapping_status": "mapped",
+          "relevance_label": "related",
+          "relevance_reason": "Claim and code share terms: evidence, path.",
+          "repo_or_path": "plugins/autosci/tests/fixtures/sample_repo",
+          "symbols": [
+            "run_fixture_bridge"
+          ]
+        }
+      ]
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T19:22:51Z"
+    },
+    "schema": "code_evidence_map.v1",
+    "sprint_id": "sprint-autosci-phase10",
+    "status": "completed",
+    "task_id": "task-autosci-code-evidence-fixture"
+  },
+  "evidence_jsonl": "artifacts/scientific/smoke/evidence.jsonl",
+  "evidence_path": "artifacts/scientific/smoke/code_evidence_map.json",
+  "handoff_path": "artifacts/scientific/smoke/handoff.md",
+  "ok": true,
+  "result_path": "artifacts/scientific/smoke/map_code_evidence.result.json",
+  "schema": "code_evidence_map.v1",
+  "status": "completed"
+}

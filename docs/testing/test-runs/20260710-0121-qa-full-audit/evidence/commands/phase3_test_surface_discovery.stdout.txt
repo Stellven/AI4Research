@@ -1,0 +1,530 @@
+TOP PACKAGE
+{
+  "name": "solar",
+  "version": "3.0.0",
+  "type": "module",
+  "description": "Solar Multi-Agent Development Framework",
+  "main": "bin/solar",
+  "bin": {
+    "solar": "./bin/solar",
+    "solar-daemon": "./bin/solar-daemon"
+  },
+  "scripts": {
+    "dev": "bun run core/daemon/server.ts",
+    "daemon": "bun run core/daemon/server.ts",
+    "extract:skills": "bun run scripts/extract-skills.ts",
+    "knowledge:repair": "bun run scripts/repair-solar-knowledge-graph.ts",
+    "smoke:skills": "bun run scripts/smoke-skills.ts",
+    "smoke:health-monitor": "bun run scripts/smoke-health-monitor.ts",
+    "skills:reindex": "bun run scripts/rebuild-skills-index.ts",
+    "matrix:skills": "bun run scripts/generate-skills-matrix.ts",
+    "dashboard": "bun run core/dashboard/server.ts",
+    "dashboard:web": "bun run core/dashboard/server.ts",
+    "test": "bun test",
+    "test:ui": "bun run tests/ui-engine.test.ts",
+    "test:llm": "bun run tests/llm-integration.test.ts"
+  },
+  "dependencies": {
+    "bonjour-service": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "author": "Solar Team",
+  "license": "MIT"
+}
+
+DESKTOP PACKAGE
+{
+  "name": "solar-desktop",
+  "version": "1.0.0-rc.8",
+  "private": true,
+  "description": "Solar desktop app — native shell that spawns the status-server backend and renders the bundled dashboard frontend. One codebase for macOS + Windows + Linux.",
+  "author": "OpenSolar",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "selftest": "SOLAR_DESKTOP_SELFTEST=1 electron .",
+    "gate": "node verify.js",
+    "build:renderer": "bash build-renderer.sh",
+    "prepackage-check": "node prepackage-check.js",
+    "build:win": "bash build-renderer.sh && node prepackage-check.js && electron-builder --win portable",
+    "build:mac": "bash build-renderer.sh && node prepackage-check.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg",
+    "build:linux": "bash build-renderer.sh && node prepackage-check.js && electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^26.15.3",
+    "playwright": "^1.61.1"
+  },
+  "build": {
+    "appId": "dev.opensolar.desktop",
+    "productName": "Solar",
+    "files": [
+      "src/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../harness",
+        "to": "harness",
+        "filter": [
+          "**/*",
+          "!templates/persona",
+          "!run/**",
+          "!state/**",
+          "!logs/**",
+          "!cache/**",
+          "!venvs/**",
+          "!vendor/**",
+          "!quarantine/**",
+          "!**/node_modules/**",
+          "!**/__pycache__/**",
+          "!**/*.pyc"
+        ]
+      },
+      {
+        "from": "../VERSION",
+        "to": "VERSION"
+      },
+      {
+        "from": "../scripts/sync-harness-runtime.sh",
+        "to": "sync-harness-runtime.sh"
+      }
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico",
+      "extraResources": [
+        {
+          "from": "../install.ps1",
+          "to": "install.ps1"
+        },
+        {
+          "from": "../get-solar.sh",
+          "to": "get-solar.sh"
+        },
+        {
+          "from": "runtime/install-windows-autostart.ps1",
+          "to": "runtime/install-windows-autostart.ps1"
+        },
+        {
+          "from": "runtime/start-solar-wsl.vbs",
+          "to": "runtime/start-solar-wsl.vbs"
+        }
+      ]
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "icon": "build/icon.icns",
+      "extraResources": [
+        {
+          "from": "../get-solar.sh",
+          "to": "get-solar.sh"
+        },
+        {
+          "from": "runtime/install-macos-agent.sh",
+          "to": "runtime/install-macos-agent.sh"
+        },
+        {
+          "from": "runtime/uninstall-macos-agent.sh",
+          "to": "runtime/uninstall-macos-agent.sh"
+        },
+        {
+          "from": "runtime/com.solar.status-server.plist",
+          "to": "runtime/com.solar.status-server.plist"
+        }
+      ]
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icon.png",
+      "category": "Development",
+      "extraResources": [
+        {
+          "from": "../get-solar.sh",
+          "to": "get-solar.sh"
+        }
+      ]
+    }
+  }
+}
+
+PIPX PYPROJECT
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openjiuwen-solar"
+version = "1.0.0rc6"
+description = "OpenJiuwen Solar installer wrapper for the shell bootstrap and lifecycle command"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+  { name = "OpenSolar" }
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Build Tools",
+]
+
+[project.urls]
+Homepage = "https://github.com/Stellven/OpenSolar"
+Source = "https://github.com/Stellven/OpenSolar"
+Issues = "https://github.com/Stellven/OpenSolar/issues"
+
+[project.scripts]
+openjiuwen-solar = "opensolar_cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["opensolar_cli*"]
+
+TEST DIR COUNTS
+
+TOP TEST DOC HITS
+INSTALL.md:209:~/.solar/bin/solar doctor --json   # expect "verdict": "ok"
+INSTALL.md:226:~/.solar/bin/solar doctor --json
+INSTALL.md:289:For a full health report, run `~/.solar/bin/solar doctor --json`.
+docs/WINDOWS.md:53:5. `wsl -d Ubuntu-24.04 -- ~/.solar/bin/solar doctor --json` → verdict ok.
+docs/integrations/autosci/phase18-progress-log.md:25:| Gate and plugin tests | ok | `bin/python3 -m pytest tests/evaluators/scientific plugins/autosci/tests`: 53 passed. |
+docs/RELEASE-CHECKLIST.md:127:HOME="$sandbox_home" "$tmp/venv/bin/openjiuwen-solar" doctor --json
+docs/RELEASE-CHECKLIST.md:132:`doctor --json` must include:
+docs/integrations/autosci/phase17-progress-log.md:59:| Plugin/evaluator tests | ok | `pytest harness/plugins/autosci/tests harness/tests/evaluators/scientific`: 53 passed. |
+docs/integrations/autosci/phase17-progress-log.md:67:- `python3 -m pytest` failed because system Python has no pytest installed; the
+docs/integrations/autosci/phase17-progress-log.md:68:  same checks passed with the project `.venv/bin/pytest`.
+docs/integrations/autosci/phase13-progress-log.md:102:| Plugin/evaluator tests | ok | `pytest plugins/autosci/tests tests/evaluators/scientific`: 34 passed. |
+docs/integrations/autosci/phase13-progress-log.md:157:| Tests | ok | `bin/python3 -m pytest -q plugins/autosci/tests tests/evaluators/scientific`: 45 passed. |
+docs/MEMORY_DECISION_INFLUENCE_DESIGN.md:293:    - 成功模式: pytest + fixtures + parametrize
+docs/integrations/autosci/phase15-progress-log.md:59:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py -q` | ok: 1 passed |
+docs/integrations/autosci/phase15-progress-log.md:60:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 66 passed |
+docs/integrations/autosci/phase15-progress-log.md:67:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q` | ok: 11 passed |
+docs/integrations/autosci/phase15-progress-log.md:68:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 67 passed |
+docs/integrations/autosci/phase15-progress-log.md:75:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q` | ok: 11 passed |
+docs/integrations/autosci/phase15-progress-log.md:76:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 67 passed |
+docs/integrations/autosci/phase15-progress-log.md:83:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q` | ok: 11 passed |
+docs/integrations/autosci/phase15-progress-log.md:84:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 67 passed |
+docs/integrations/autosci/phase15-progress-log.md:91:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_runtime_binding_audit.py harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 5 passed |
+docs/integrations/autosci/phase15-progress-log.md:92:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 68 passed |
+docs/integrations/autosci/phase15-progress-log.md:100:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 1 passed |
+docs/integrations/autosci/phase15-progress-log.md:101:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_runtime_binding_audit.py harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 5 passed |
+docs/integrations/autosci/phase15-progress-log.md:102:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 68 passed |
+docs/integrations/autosci/phase15-progress-log.md:109:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 1 passed |
+docs/integrations/autosci/phase15-progress-log.md:110:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_runtime_binding_audit.py harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 5 passed |
+docs/integrations/autosci/phase15-progress-log.md:111:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 68 passed |
+docs/integrations/autosci/phase15-progress-log.md:118:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 13 passed |
+docs/integrations/autosci/phase15-progress-log.md:119:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 71 passed |
+docs/integrations/autosci/phase15-progress-log.md:152:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 3 passed |
+docs/integrations/autosci/phase15-progress-log.md:153:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 14 passed |
+docs/integrations/autosci/phase15-progress-log.md:154:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 72 passed |
+docs/integrations/autosci/phase15-progress-log.md:179:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_literature_discovery_gate.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 7 passed |
+docs/integrations/autosci/phase15-progress-log.md:180:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 76 passed |
+docs/integrations/autosci/phase15-progress-log.md:212:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 9 passed |
+docs/integrations/autosci/phase15-progress-log.md:213:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 77 passed |
+docs/integrations/autosci/phase15-progress-log.md:214:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest -q` | ok: 2 passed |
+docs/integrations/autosci/phase15-progress-log.md:238:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 5 passed |
+docs/integrations/autosci/phase15-progress-log.md:239:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 77 passed |
+docs/integrations/autosci/phase15-progress-log.md:254:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 4 passed |
+docs/integrations/autosci/phase15-progress-log.md:279:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_lifecycle_completes_from_scheduler_summary harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_lifecycle_completes_from_verified_stage_evidence -q` | ok: 2 passed |
+docs/integrations/autosci/phase15-progress-log.md:280:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 77 passed |
+docs/integrations/autosci/phase15-progress-log.md:306:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 5 passed |
+docs/integrations/autosci/phase15-progress-log.md:307:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 78 passed |
+docs/integrations/autosci/phase15-progress-log.md:332:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_survey_format_latex -q` | ok: 1 passed |
+docs/integrations/autosci/phase15-progress-log.md:355:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_status_pipeline_runs_monitor_action harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_status_pipeline_reads_wiki_experiment_state -q` | ok: 2 passed |
+docs/integrations/autosci/phase15-progress-log.md:356:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_experiment_status_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 7 passed |
+docs/integrations/autosci/phase15-progress-log.md:386:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_novelty_target_with_local_sources harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_defaults_to_online_fetch_when_available harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_uses_supplied_external_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_skips_without_external_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_skips_without_review_llm_evidence -q` | ok: 5 passed |
+docs/integrations/autosci/phase15-progress-log.md:387:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 80 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:388:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 78 passed |
+docs/integrations/autosci/phase15-progress-log.md:414:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ideate_uses_model_command_for_brainstorm -q` | ok: 1 passed |
+docs/integrations/autosci/phase15-progress-log.md:416:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 12 passed |
+docs/integrations/autosci/phase15-progress-log.md:419:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 78 passed |
+docs/integrations/autosci/phase15-progress-log.md:442:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_skips_without_external_evidence -q` | ok: 1 passed |
+docs/integrations/autosci/phase15-progress-log.md:443:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 81 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:466:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_status_pipeline_reads_wiki_experiment_state harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_status_normalizes_native_wiki_states harness/tests/evaluators/scientific/test_experiment_status_gate.py -q` | ok: 6 passed |
+docs/integrations/autosci/phase15-progress-log.md:467:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 84 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:468:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 78 passed |
+docs/integrations/autosci/phase15-progress-log.md:496:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 85 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:497:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 78 passed |
+docs/integrations/autosci/phase15-progress-log.md:526:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 6 passed |
+docs/integrations/autosci/phase15-progress-log.md:527:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 86 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:528:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 79 passed |
+docs/integrations/autosci/phase15-progress-log.md:555:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_resumes_human_gate_pauses -q` | ok: 1 passed |
+docs/integrations/autosci/phase15-progress-log.md:556:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 7 passed |
+docs/integrations/autosci/phase15-progress-log.md:557:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 80 passed |
+docs/integrations/autosci/phase15-progress-log.md:587:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 87 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:588:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 80 passed |
+docs/integrations/autosci/phase15-progress-log.md:618:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 8 passed |
+docs/integrations/autosci/phase15-progress-log.md:619:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 81 passed |
+docs/integrations/autosci/phase15-progress-log.md:620:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 88 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:650:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 9 passed |
+docs/integrations/autosci/phase15-progress-log.md:651:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 82 passed |
+docs/integrations/autosci/phase15-progress-log.md:652:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 89 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:682:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 10 passed |
+docs/integrations/autosci/phase15-progress-log.md:683:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 83 passed |
+docs/integrations/autosci/phase15-progress-log.md:684:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 90 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:712:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 91 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:740:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 93 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:769:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 95 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:804:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q` | ok: 13 passed |
+docs/integrations/autosci/phase15-progress-log.md:805:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 10 passed |
+docs/integrations/autosci/phase15-progress-log.md:806:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 85 passed |
+docs/integrations/autosci/phase15-progress-log.md:808:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 97 passed with elevated local bind permission; sandbox-only run failed only on `127.0.0.1` bind permission after 96 passes |
+docs/integrations/autosci/phase15-progress-log.md:841:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 10 passed |
+docs/integrations/autosci/phase15-progress-log.md:842:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 85 passed |
+docs/integrations/autosci/phase15-progress-log.md:873:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 11 passed |
+docs/integrations/autosci/phase15-progress-log.md:874:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 86 passed |
+docs/integrations/autosci/phase15-progress-log.md:905:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'research_scheduler' -q` | ok: 7 passed, 91 deselected |
+docs/integrations/autosci/phase15-progress-log.md:906:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 98 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:962:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_lifecycle_gate.py::test_full_lifecycle_workflow_contract_passes ... -q` | ok: 4 passed |
+docs/integrations/autosci/phase15-progress-log.md:963:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 11 passed |
+docs/integrations/autosci/phase15-progress-log.md:964:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 86 passed |
+docs/integrations/autosci/phase15-progress-log.md:965:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'research_scheduler' -q` | ok: 7 passed, 91 deselected |
+docs/integrations/autosci/phase15-progress-log.md:996:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 11 passed |
+docs/integrations/autosci/phase15-progress-log.md:997:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 86 passed |
+docs/integrations/autosci/phase15-progress-log.md:998:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'research_scheduler' -q` | ok: 7 passed, 91 deselected |
+docs/integrations/autosci/phase15-progress-log.md:999:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 98 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1029:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q` | ok: 11 passed |
+docs/integrations/autosci/phase15-progress-log.md:1030:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 86 passed |
+docs/integrations/autosci/phase15-progress-log.md:1031:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'research_scheduler' -q` | ok: 7 passed, 91 deselected |
+docs/integrations/autosci/phase15-progress-log.md:1032:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 98 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1064:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/plugins/autosci/tests/test_root_tool_abi.py::test_feature_parity_routes_reference_existing_root_tools -q` | ok: 12 passed |
+docs/integrations/autosci/phase15-progress-log.md:1065:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_root_tool_abi.py -q` | ok: 5 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1102:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 86 passed |
+docs/integrations/autosci/phase15-progress-log.md:1103:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 99 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1134:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'exp_status or exp_collect or exp_run_assimilates_remote or exp_run_rejects_remote_helper' -q` | ok: 14 passed |
+docs/integrations/autosci/phase15-progress-log.md:1135:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 100 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1173:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ask_uses_model_command or check_uses_model_command or ideate_uses_model_command' -q` | ok: 3 passed |
+docs/integrations/autosci/phase15-progress-log.md:1175:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 100 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1213:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_plan_completes_with_citations_and_review_llm or paper_plan_rejects_weak_review_llm_boundary or paper_plan_attaches_verified_compile_handoff' -q` | ok: 3 passed |
+docs/integrations/autosci/phase15-progress-log.md:1214:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_plan or paper_draft or paper_compile or research_scheduler_executes_approved_publication_compile' -q` | ok: 13 passed |
+docs/integrations/autosci/phase15-progress-log.md:1215:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 101 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1248:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 87 passed |
+docs/integrations/autosci/phase15-progress-log.md:1249:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 102 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1283:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 87 passed |
+docs/integrations/autosci/phase15-progress-log.md:1284:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 103 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1314:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 96 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:1343:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 97 passed outside sandbox; local provider test requires binding `127.0.0.1` |
+docs/integrations/autosci/phase15-progress-log.md:1374:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 103 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1405:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 104 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1436:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1465:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 87 passed |
+docs/integrations/autosci/phase15-progress-log.md:1467:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1496:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 87 passed |
+docs/integrations/autosci/phase15-progress-log.md:1498:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1528:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
+docs/integrations/autosci/phase15-progress-log.md:1559:| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` with elevated local bind permission | ok: 106 passed |
+docs/integrations/autosci/phase15-progress-log.md:2240:| `pytest harness/tests/evaluators/scientific/test_autosci_skill_run_gate.py -q` | ok: 3 passed |
+docs/integrations/autosci/phase15-progress-log.md:2242:| `pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_skill_run_gate.py -q` | ok: 5 passed |
+docs/integrations/autosci/phase15-progress-log.md:2287:| `pytest harness/tests/evaluators/scientific -q` | ok: 91 passed |
+docs/integrations/autosci/phase15-progress-log.md:2316:| `pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py -q` | ok: 4 passed |
+docs/integrations/autosci/phase15-progress-log.md:2317:| `pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 8 passed |
+docs/integrations/autosci/phase15-progress-log.md:2320:| `pytest harness/tests/evaluators/scientific -q` | ok: 93 passed |
+docs/integrations/autosci/phase15-progress-log.md:2358:| `pytest harness/tests/evaluators/scientific -q` | ok: 95 passed |
+docs/integrations/autosci/phase15-progress-log.md:2384:| `pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py -q` | ok: 6 passed |
+docs/integrations/autosci/phase15-progress-log.md:2385:| `pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 10 passed |
+docs/integrations/autosci/phase15-progress-log.md:2388:| `pytest harness/tests/evaluators/scientific -q` | ok: 95 passed |
+docs/integrations/autosci/phase15-progress-log.md:2414:| `pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py -q` | ok: 6 passed |
+docs/integrations/autosci/phase10-progress-log.md:72:| Plugin tests | ok | `pytest plugins/autosci/tests`: 10 passed. |
+docs/integrations/autosci/phase10-progress-log.md:75:| Evaluator regression tests | ok | `pytest tests/evaluators/scientific`: 10 passed. |
+docs/integrations/autosci/phase10-progress-log.md:140:| Regression tests | ok | `pytest tests/evaluators/scientific plugins/autosci/tests`: 23 passed. |
+docs/integrations/autosci/phase10-progress-log.md:159:| Code evidence gate regression | ok | `pytest tests/evaluators/scientific/test_code_evidence_gate.py`: 4 passed. |
+docs/integrations/autosci/phase10-progress-log.md:160:| Full relevant regression | ok | `pytest plugins/autosci/tests tests/evaluators/scientific`: 26 passed. |
+docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json:2:  "schema": "autosci_phase_c_premerge_readiness_audit.v1",
+docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json:3:  "status": "ready_for_integration_branch_premerge",
+docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json:94:    "script_path": "harness/tests/test-autosci-premerge-gate.sh",
+docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json:96:    "ci_job": "autosci-premerge-gate",
+docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json:156:    "bash harness/tests/test-autosci-premerge-gate.sh",
+docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json:157:    "harness/bin/python3 -m py_compile harness/tests/test_autosci_phase_c_premerge_readiness.py",
+docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json:158:    "env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py -q",
+docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json:159:    "git diff --check -- docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json docs/integrations/autosci/phase19-progress-log.md harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py .agents/skills",
+docs/testing/qa_master_pass_fail_table.csv:10:ci.solar_ci.acceptance,CI,solar-ci,6,workflow,3,0,3,0,18,harness/lib/github_intelligence/test_v3_budget_enforcement.py;harness/plugins/autosci/tests/test_bridge_smoke.py;harness/plugins/autosci/tests/test_conversion_to_solar_evidence.py;harness/plugins/autosci/tests/test_gate_policy_modes.py;harness/plugins/autosci/tests/test_phase19_operator_smoke.py;harness/tests/benchmark/test_solar_solver.py;harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py;harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py,ci.solar_ci.autosci_premerge_gate;ci.solar_ci.harness_shell_smoke;ci.solar_ci.hf_ai_influence_smoke;ci.solar_ci.python_smoke;ci.solar_ci.release_packaging_smoke;ci.solar_ci.verification_release_gate,All workflow jobs in this group either pass in CI or have equivalent local evidence captured in the test report.
+docs/integrations/autosci/unification-status.md:33:- `harness/tests/test_autosci_phase_c_premerge_readiness.py`
+docs/integrations/autosci/unification-status.md:38:- `harness/tests/test-autosci-premerge-gate.sh`
+docs/integrations/autosci/unification-status.md:42:- Added `.github/workflows/solar-ci.yml` job `autosci-premerge-gate`.
+docs/integrations/autosci/unification-status.md:65:- `pytest -q harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py harness/tests/test_autosci_priority_a_contracts.py harness/tests/test_autosci_priority_b_demo_contracts.py`: `24 passed`
+docs/integrations/autosci/unification-status.md:66:- `pytest -q harness/tests/evaluators/scientific harness/tests/config/test_autosci_research_capsule_registry.py`: `102 passed`
+docs/integrations/autosci/unification-status.md:67:- `bash harness/tests/test-autosci-premerge-gate.sh`: passed
+docs/integrations/autosci/unification-status.md:70:Local hygiene note: the first premerge gate run was blocked only by local Finder metadata at `.git/refs/.DS_Store`; that invalid local ref file was removed and the gate then passed.
+docs/integrations/autosci/unification-status.md:136:- Imported pytest smokes, using BetterSolar's project-local `.venv`:
+docs/integrations/autosci/unification-status.md:173:Branch under test: `integration/autosci-unification-hardening`
+docs/integrations/autosci/unification-status.md:207:- `env PATH="$PWD/bin:$PATH" python3 -m pytest -q tests/integration/test_autosci_routes_list.py tests/integration/test_autosci_cli_dispatch.py tests/integration/test_autosci_ingest_demo.py tests/integration/test_autosci_review_demo.py tests/integration/test_autosci_research_scheduler_demo.py tests/integration/test_autosci_artifact_root.py`
+docs/integrations/autosci/phase12-progress-log.md:91:| Plugin/evaluator tests | ok | `pytest plugins/autosci/tests tests/evaluators/scientific`: 30 passed. |
+docs/integrations/autosci/phase12-progress-log.md:139:| Plugin/evaluator tests | ok | `bin/python3 -m pytest -q plugins/autosci/tests tests/evaluators/scientific`: 31 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:45:| Targeted lifecycle tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_lifecycle_gate.py harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q`: 15 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:46:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 63 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:62:| Synthetic complete-chain test | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_runtime_binding_audit.py -q`: 2 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:92:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 65 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:93:| AutoSci manifest/parity targeted tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_manifest_capabilities.py harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_phase19_operator_smoke.py -q`: 11 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:109:| Isolated dispatch smoke test | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py -q`: 1 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:111:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 66 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:131:| Targeted runtime tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q`: 11 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:132:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 67 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:153:| Targeted runtime tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q`: 11 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:154:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 67 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:175:| Targeted runtime tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q`: 11 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:176:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 67 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:198:| Targeted tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_runtime_binding_audit.py harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 5 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:199:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 68 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:227:| Targeted tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_runtime_binding_audit.py harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 5 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:228:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 68 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:247:| Lifecycle smoke accepted | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 1 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:248:| Targeted tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_runtime_binding_audit.py harness/tests/evaluators/scientific/test_scientific_node_runtime_smoke.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 5 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:249:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 68 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:270:| Targeted tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 13 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:271:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 71 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:301:| Resume lifecycle smoke test | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 3 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:302:| Targeted runtime tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 14 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:303:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 72 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:326:| Related tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_literature_discovery_gate.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 7 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:327:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 76 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:356:| Related tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 9 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:357:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 77 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:358:| AutoSci shim source runtime tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest -q`: 2 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:379:| Lifecycle smoke tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 5 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:380:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 77 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:391:| Feature parity gate | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q`: 4 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:411:| Targeted tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_lifecycle_completes_from_scheduler_summary harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_lifecycle_completes_from_verified_stage_evidence -q`: 2 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:412:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 77 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:435:| Feature parity gate tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q`: 5 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:436:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 78 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:454:| Targeted test | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_survey_format_latex -q`: 1 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:474:| Targeted tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest ...test_autosci_skill_shim_exp_status_pipeline_runs_monitor_action ...test_autosci_skill_shim_exp_status_pipeline_reads_wiki_experiment_state -q`: 2 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:490:| Novelty targeted group | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest ...novelty... -q`: 5 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:491:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 80 passed when rerun outside the sandbox because one provider test binds `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:492:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 78 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:531:| Targeted test | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest ...test_autosci_skill_shim_novelty_write_skips_without_external_evidence -q`: 1 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:532:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 81 passed outside sandbox because one provider test binds `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:552:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 84 passed outside sandbox because one provider test binds `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:553:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 78 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:575:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 85 passed outside sandbox because one provider test binds `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:576:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 78 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:599:| Lifecycle smoke suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 6 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:600:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 86 passed outside sandbox because one provider test binds `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:601:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 79 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:623:| Lifecycle smoke suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 7 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:624:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 80 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:647:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 87 passed outside sandbox because one provider test binds `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:648:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 80 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:672:| Lifecycle smoke suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 8 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:673:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 81 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:674:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 88 passed outside sandbox because the provider test binds `127.0.0.1`; the sandboxed run had the same single localhost-bind permission failure. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:699:| Lifecycle smoke suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 9 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:700:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 82 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:701:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 89 passed outside sandbox; sandboxed run still cannot bind the local provider test to `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:725:| Lifecycle smoke suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 10 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:726:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 83 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:727:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 90 passed outside sandbox; sandboxed run still cannot bind the local provider test to `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:749:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 91 passed outside sandbox; sandboxed run cannot bind the local provider test to `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:772:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 93 passed outside sandbox; local provider test still requires binding `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:796:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 95 passed outside sandbox; local provider test still requires binding `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:820:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 96 passed outside sandbox; local provider test still requires binding `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:844:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 97 passed outside sandbox; local provider test still requires binding `127.0.0.1`. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:875:| Lifecycle gate tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_lifecycle_runtime_gate.py -q`: 13 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:876:| Lifecycle smoke tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 10 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:877:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 85 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:878:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 97 passed with elevated local bind permission; sandbox-only run reached 96 passed and failed only on `127.0.0.1` bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:901:| Lifecycle smoke tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 10 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:902:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 85 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:925:| Targeted tests | ok | Config-alignment affected tests and strict drift test: 3 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:926:| Lifecycle smoke tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 11 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:927:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 86 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:950:| Scheduler shim subset | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'research_scheduler' -q`: 7 passed, 91 deselected. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:951:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 98 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1001:| Lifecycle smoke tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 11 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1002:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 86 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1003:| Scheduler shim subset | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'research_scheduler' -q`: 7 passed, 91 deselected. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1026:| Lifecycle smoke tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 11 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1027:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 86 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1028:| Scheduler shim subset | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'research_scheduler' -q`: 7 passed, 91 deselected. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1029:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 98 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1051:| Lifecycle smoke tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py -q`: 11 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1052:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 86 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1053:| Scheduler shim subset | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'research_scheduler' -q`: 7 passed, 91 deselected. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1054:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 98 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1077:| Route/gate tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/plugins/autosci/tests/test_root_tool_abi.py::test_feature_parity_routes_reference_existing_root_tools -q`: 12 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1078:| Root-tool ABI tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_root_tool_abi.py -q`: 5 passed with elevated local bind permission for SMTP fixture. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1110:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 86 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1111:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 99 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1134:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 100 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1164:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 100 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1194:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 101 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1226:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 87 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1227:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 102 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1258:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 87 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1259:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 103 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1289:| Targeted test | ok | `$exp-status` approved remote-check boundary test: 1 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1292:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 103 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1318:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 104 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1344:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 105 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1366:| Targeted resume test | ok | Human-gate resume targeted test: 1 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1367:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 87 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1369:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 105 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1392:| Scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 87 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1394:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 105 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1417:| Targeted test | ok | Submission checklist boundary targeted test: 1 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1419:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 105 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1469:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 107 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1495:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 108 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1521:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1547:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1572:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1596:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1621:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1646:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1671:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1697:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1730:| Scheduler regression | ok | Approved publication compile lifecycle test: 1 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1732:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1758:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 109 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1785:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 110 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1811:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 110 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1837:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 110 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1862:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 110 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1887:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 110 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1912:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 110 passed with elevated local bind permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:1965:| Full shim suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q`: 111 passed with elevated local daemon/provider permission. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:2068:| Broad scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 91 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:2069:| Full AutoSci plugin suite | ok | Elevated local-bind run: `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q`: 161 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:2094:| Broad scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 93 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:2095:| Full AutoSci plugin suite | ok | Elevated local-bind run: `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q`: 161 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:2124:| Broad scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 95 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:2125:| Full AutoSci plugin suite | ok | Elevated local-bind run: `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q`: 162 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:2149:| Broad scientific evaluator suite | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q`: 95 passed. |
+docs/integrations/autosci/native-lifecycle-continuation-log.md:2150:| Full AutoSci plugin suite | ok | Elevated local-bind run: `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q`: 163 passed. |
+docs/integrations/autosci/autosci-artifact-map.yaml:23:    human_test: Source paper path is preserved and user-owned raw files are not overwritten.
+docs/integrations/autosci/autosci-artifact-map.yaml:36:    human_test: Notes-derived pages are marked provisional and not treated as paper evidence.
+docs/integrations/autosci/autosci-artifact-map.yaml:49:    human_test: Web-derived claims remain provisional until linked to paper or experiment evidence.
+docs/integrations/autosci/autosci-artifact-map.yaml:62:    human_test: Prepared sources retain provenance back to the original raw input.
+docs/integrations/autosci/autosci-artifact-map.yaml:77:    human_test: Discovery artifact explains why a paper was fetched before ingestion occurs.
+docs/integrations/autosci/autosci-artifact-map.yaml:90:    human_test: Reviewer can see which local files were considered and which warnings degraded confidence.
+docs/integrations/autosci/autosci-artifact-map.yaml:104:    human_test: Final source selection is traceable to shortlist order and explicit selection criteria.
+docs/integrations/autosci/autosci-artifact-map.yaml:117:    human_test: Parallel ingestion reads this manifest rather than rescanning raw directories.
+docs/integrations/autosci/autosci-artifact-map.yaml:132:    human_test: Shortlist is proposal-only and contains no hidden memory mutation.
+docs/integrations/autosci/autosci-artifact-map.yaml:145:    human_test: Context is enough for a reviewer to reproduce candidate ranking inputs.
+docs/integrations/autosci/autosci-artifact-map.yaml:159:    human_test: Auto-ingest is allowed only when explicit mode, high confidence, and cap constraints are recorded.
+docs/integrations/autosci/autosci-artifact-map.yaml:176:    human_test: Paper evidence can be inspected without reading AutoSci markdown conventions.

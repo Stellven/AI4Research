@@ -1,0 +1,55 @@
+---
+id: agency-agents
+name: "Agency Agents Persona Catalog"
+version: "1.0.0"
+description: "Specialist agent/persona catalog from local Claude agents and addy-agent-skills marketplace. Solar uses it as a routing hint provider, not as a replacement coordinator."
+status: enabled
+
+write_scope:
+  - "state/agency-agents"
+  - "logs/agency-agents"
+
+read_scope:
+  - "~/.claude/agents"
+  - "~/.claude/plugins/marketplaces/addy-agent-skills/agents"
+  - "~/.claude/plugins/marketplaces/addy-agent-skills/skills"
+
+capabilities:
+  - "persona.agent"
+  - "agent.catalog"
+  - "specialist.routing"
+  - "skill.catalog"
+
+commands:
+  - "solar-harness skills inventory"
+  - "solar-harness skills doctor"
+
+background_safety:
+  mode: none
+  idle_only: false
+  rate_limit: "none"
+  max_runtime_s: 30
+  max_memory_mb: 128
+
+eval_packs:
+  - "tests/integrations/test-capability-plane-e2e.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable agency-agents"
+
+integration_level: default_usable
+
+entry: "~/.claude/agents"
+
+events:
+  - "agency_agents.catalog_selected"
+  - "agency_agents.persona_routed"
+
+depends_on: []
+
+tags:
+  - "agents"
+  - "persona"
+  - "routing"

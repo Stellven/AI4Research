@@ -1,0 +1,194 @@
+{
+  "answer_lines": [
+    "- # SkillGen Source: [[skillgen]] (`artifacts/autosci/workspace/wiki/papers/skillgen.md`).",
+    "- - How much evidence supports SkillGen beyond a single paper? Source: [[open-questions]] (`artifacts/autosci/workspace/wiki/graph/open_questions.md`).",
+    "- - [skillgen](papers/skillgen.md) Source: [[index]] (`artifacts/autosci/workspace/wiki/index.md`).",
+    "- SkillGen connects generated skills, verifier checks, and runtime evidence. Source: [[context-brief]] (`artifacts/autosci/workspace/wiki/graph/context_brief.md`)."
+  ],
+  "answer_status": "completed",
+  "crystallize_recommendation": {
+    "gap_status": "matched_open_questions",
+    "model_status": "completed",
+    "reason": "The user requested crystallize and the final answer boundary is ready.",
+    "recommendation": "worthwhile",
+    "retrieval_source_count": 4,
+    "schema": "autosci_ask_crystallize_recommendation.v1",
+    "source": "ask_final_answer_boundary",
+    "status": "completed"
+  },
+  "final_answer_boundary": {
+    "answer_status": "completed",
+    "blocking_reasons": [],
+    "final_answer_ready": true,
+    "limitations": [],
+    "model_confidence": 0.87,
+    "model_evidence_ids": [
+      "model:skillgen-concept"
+    ],
+    "model_name": "test-model",
+    "model_provider": "command",
+    "model_source": "model-command",
+    "model_status": "completed",
+    "query": "What supports SkillGen?",
+    "request_sha256": "846ae7b8a07b9ba5e4405292e03e44dc9e2d5b7c80a292d85c34b47f3cb28d12",
+    "response_sha256": "b105dca56136635b632f4e6592fc3df31c456cd5b4d96aa148f9d869afa8dd32",
+    "retrieval_paths": [
+      "artifacts/autosci/workspace/wiki/papers/skillgen.md",
+      "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+      "artifacts/autosci/workspace/wiki/index.md",
+      "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+    ],
+    "retrieval_source_count": 4,
+    "retrieval_status": "completed",
+    "schema": "autosci_ask_final_answer_boundary.v1",
+    "status": "final_answer_ready"
+  },
+  "gap_annotations": {
+    "annotations": [
+      {
+        "source": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+        "status": "matched_open_question",
+        "text": "- How much evidence supports SkillGen beyond a single paper?"
+      }
+    ],
+    "schema": "autosci_ask_gap_annotations.v1",
+    "status": "matched_open_questions"
+  },
+  "hits": [
+    {
+      "matched_terms": [
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/papers/skillgen.md",
+      "score": 5,
+      "snippet": "# SkillGen"
+    },
+    {
+      "matched_terms": [
+        "supports",
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+      "score": 2,
+      "snippet": "- How much evidence supports SkillGen beyond a single paper?"
+    },
+    {
+      "matched_terms": [
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/index.md",
+      "score": 2,
+      "snippet": "- [skillgen](papers/skillgen.md)"
+    },
+    {
+      "matched_terms": [
+        "skillgen"
+      ],
+      "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "score": 1,
+      "snippet": "SkillGen connects generated skills, verifier checks, and runtime evidence."
+    }
+  ],
+  "limitations": [
+    "Extractive answer is grounded in retrieved wiki snippets.",
+    "Model synthesis is included only when explicit model evidence or a model command was supplied."
+  ],
+  "model_output": {
+    "answer": "SkillGen support is grounded in verifier-gated generated skills from the retrieved source.",
+    "checked_paths": [],
+    "command": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ask_cr1/ask_model_command.py"
+    ],
+    "confidence": 0.87,
+    "evidence_ids": [
+      "model:skillgen-concept"
+    ],
+    "findings": [],
+    "ideas": [],
+    "invocation_mode": "command",
+    "model": "test-model",
+    "provider": "command",
+    "request_path": "artifacts/autosci/runs/shim-ask-crystallize-concept/ask_wiki_model_request.json",
+    "request_sha256": "846ae7b8a07b9ba5e4405292e03e44dc9e2d5b7c80a292d85c34b47f3cb28d12",
+    "response_path": "artifacts/autosci/runs/shim-ask-crystallize-concept/ask_wiki_model_stdout.json",
+    "response_sha256": "b105dca56136635b632f4e6592fc3df31c456cd5b4d96aa148f9d869afa8dd32",
+    "source": "model-command",
+    "status": "completed"
+  },
+  "query": "What supports SkillGen?",
+  "requested_format": "bullets",
+  "status": "completed",
+  "wiki_context": {
+    "limitations": [],
+    "query_terms": [
+      "supports",
+      "skillgen"
+    ],
+    "schema": "autosci_ask_wiki_context.v1",
+    "sources": {
+      "context_brief": {
+        "line_count": 3,
+        "matched_lines": [
+          "SkillGen connects generated skills, verifier checks, and runtime evidence."
+        ],
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+        "sha256": "8432a7c109e9c3f1b3bae7aa57fd4e15428e874828d756c4d8603997fd708ada",
+        "status": "present"
+      },
+      "edges": {
+        "line_count": 1,
+        "matched_edge_count": 1,
+        "matched_edges": [
+          {
+            "edge": {
+              "source": "skillgen",
+              "target": "runtime-evidence",
+              "type": "supported_by"
+            },
+            "line": 1,
+            "matched_terms": [
+              "skillgen"
+            ]
+          }
+        ],
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "sha256": "d59a6aab492575cfa0814ff97992b73eb2ed61311e83dc923cdbd3d27dc8cadf",
+        "status": "present"
+      },
+      "index": {
+        "line_count": 3,
+        "matched_lines": [
+          "- [skillgen](papers/skillgen.md)"
+        ],
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/index.md",
+        "sha256": "45baf7bbb7df9e975f50161b34c33711c5b5c606ab553ff20edb8125b59dad4d",
+        "status": "present"
+      },
+      "open_questions": {
+        "line_count": 3,
+        "matched_lines": [
+          "- How much evidence supports SkillGen beyond a single paper?"
+        ],
+        "matched_terms": [
+          "supports",
+          "skillgen"
+        ],
+        "path": "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+        "sha256": "c883e91098311e113c7cdf109fd79acd8ffc56d308133824669553cb6c140f77",
+        "status": "present"
+      }
+    },
+    "status": "completed",
+    "wiki_root": "artifacts/autosci/workspace/wiki"
+  }
+}

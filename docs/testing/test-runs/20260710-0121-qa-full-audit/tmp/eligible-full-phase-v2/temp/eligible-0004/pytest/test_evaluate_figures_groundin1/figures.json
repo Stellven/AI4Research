@@ -1,0 +1,1 @@
+[{"figure_id": "fig_unlisted", "title": "Unlisted Comp", "figure_type": "architecture_diagram", "grounding_ids": ["cl_1"], "spec_data": {"nodes": [{"id": "n1", "grounding_id": "ev_1"}], "edges": []}}]

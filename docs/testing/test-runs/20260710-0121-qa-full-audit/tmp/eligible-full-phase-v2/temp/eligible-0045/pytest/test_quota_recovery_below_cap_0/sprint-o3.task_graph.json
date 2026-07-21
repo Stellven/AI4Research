@@ -1,0 +1,24 @@
+{
+  "sprint_id": "sprint-o3",
+  "nodes": [
+    {
+      "id": "N1",
+      "status": "pending",
+      "quota_recovery_count": 2,
+      "quota_recovery_task_ids": [
+        "r1",
+        "task-recovery-ok"
+      ],
+      "quota_blocked_profiles": [
+        "builder"
+      ],
+      "quota_failure_reason": "quota_exhausted",
+      "quota_failure_task_id": "task-recovery-ok",
+      "quota_failure_recovered_at": "2026-07-10T14:06:35Z",
+      "preferred_profile": "codex-builder",
+      "quota_fallback_from": "builder",
+      "quota_fallback_reason": "quota_exhausted",
+      "updated_at": "2026-07-10T14:06:35Z"
+    }
+  ]
+}

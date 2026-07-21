@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_320_ddc0af2891_harness_tests_test_capability_capsules_understand_anything.py",
+  "source": "harness/tests/test_capability_capsules_understand_anything.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_capability_capsules_understand_anything.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.204,
+  "timeout": false
+}

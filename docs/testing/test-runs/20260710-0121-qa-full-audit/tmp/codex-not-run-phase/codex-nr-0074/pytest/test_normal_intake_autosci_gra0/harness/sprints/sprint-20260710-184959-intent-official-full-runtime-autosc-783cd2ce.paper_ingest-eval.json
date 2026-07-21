@@ -1,0 +1,60 @@
+{
+  "command_line": "'/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/plugins/autosci/bin/autosci_eval_adapter.py' --graph '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.task_graph.json' --node paper_ingest --eval-json '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.paper_ingest-eval.json' --eval-md '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.paper_ingest-eval.md' --instruction-file '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.paper_ingest-eval-dispatch-q1.md'",
+  "errors": [],
+  "evidence": {
+    "adapter": "autosci_eval_adapter.py",
+    "candidate_paths": [
+      {
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/artifacts/intake-green/research_paper.v1.json",
+        "raw": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/artifacts/intake-green/research_paper.v1.json",
+        "source": "node.artifacts.evidence_payload_path"
+      },
+      {
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/artifacts/scientific/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce/01_paper/research_paper.v1.json",
+        "raw": "artifacts/scientific/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce/01_paper/research_paper.v1.json",
+        "source": "node.resume_policy.artifact"
+      }
+    ],
+    "capability_capsule_id": "cap.research-paper-ingest",
+    "evidence_paths": [
+      "artifacts/intake-green/research_paper.v1.json"
+    ],
+    "expected_schema": "research_paper.v1",
+    "gate_result": {
+      "evidence_status": "completed",
+      "exit_code": 0,
+      "ok": true,
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/artifacts/intake-green/research_paper.v1.json",
+      "reasons": [],
+      "schema": "research_paper.v1",
+      "status": "passed",
+      "warnings": []
+    },
+    "logical_operator": "ScientificPaperIngestor",
+    "observed_schema": "research_paper.v1",
+    "workflow_contract": "research.autosci.v1"
+  },
+  "failed_conditions": [],
+  "generated_by": "autosci-evaluator-worker",
+  "generation_mode": "autosci_eval_adapter",
+  "independent_author": "autosci-evaluator-worker",
+  "node_id": "paper_ingest",
+  "passed_conditions": [
+    "AutoSci evidence gate passed for research_paper.v1"
+  ],
+  "proof_level": "independent_verification",
+  "provenance": {
+    "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/artifacts/intake-green/research_paper.v1.json",
+    "graph_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.task_graph.json",
+    "implementation_package": "harness.plugins.autosci",
+    "operator_id": "autosci-evaluator-worker",
+    "timestamp": "2026-07-10T18:50:01Z"
+  },
+  "schema_version": "solar.eval.v1",
+  "sprint_id": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce",
+  "status": "passed",
+  "summary": "AutoSci scientific evidence gate passed.",
+  "verdict": "PASS",
+  "warnings": [],
+  "workspace_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout"
+}

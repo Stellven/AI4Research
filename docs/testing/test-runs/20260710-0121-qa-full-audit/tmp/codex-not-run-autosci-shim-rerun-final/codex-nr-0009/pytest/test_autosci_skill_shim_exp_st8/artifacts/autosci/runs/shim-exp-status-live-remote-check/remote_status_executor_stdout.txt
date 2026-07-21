@@ -1,0 +1,23 @@
+{
+  "allowlist_status": "command allowlisted by commands",
+  "approval_ref": "approval-live-remote-status-provider",
+  "checked_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_st8/live-remote-status-run/status_command_stdout.txt",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_st8/live-remote-status-run/status_command_stderr.txt"
+  ],
+  "command": "check",
+  "evidence_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_st8/live-remote-status-run/status_command_stdout.txt",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_st8/live-remote-status-run/status_command_stderr.txt"
+  ],
+  "experiment": "exp-live-remote-check",
+  "live_remote_poll": true,
+  "ok": true,
+  "poll_scope": "live",
+  "remote_state": "running",
+  "schema": "autosci_remote_cli.v1",
+  "session_id": "ssh-session-123",
+  "status": "completed",
+  "status_command_exit_code": 0,
+  "transport": "ssh"
+}

@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-bench-driver.XXXXXX.qaG0qVNC8j.py", line 51, in <module>
+    assert any(t["id"] == "hello-world-cli" for t in tasks)
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+test-terminal-bench-adapter.sh: FAIL

@@ -1,0 +1,22 @@
+{
+  "post_pk": 1,
+  "post_id": "1790012345678901234",
+  "handle": "karpathy",
+  "text_snippet": "The best way to learn a new field is to teach it. Drafting a chapter on KV cache compression — feedback welcome.",
+  "metrics": {
+    "reply_count": 312,
+    "repost_count": 1240,
+    "like_count": 9873,
+    "view_count": 521004
+  },
+  "links": [],
+  "semantic": {
+    "socket_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0265/pytest/test_pipeline_second_scan_dedu0/thunderomlx.sock",
+    "reused_instance": true,
+    "new_instance_spawned": false,
+    "status": "socket_present_mock_passthrough"
+  },
+  "propagation_score": 0.021928814366108513,
+  "collected_at": "2026-07-10T18:53:52.237816+00:00",
+  "backend": "browser_agent"
+}

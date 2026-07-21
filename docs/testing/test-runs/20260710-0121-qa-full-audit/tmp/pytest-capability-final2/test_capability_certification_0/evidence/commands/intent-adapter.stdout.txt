@@ -1,0 +1,5 @@
+PASS: direct intent detection: confirm/execute
+PASS: legacy hint detection: Superpowers/gstack precedence
+PASS: learned intent DB: write/read
+PASS: skills inject includes solar-intent-context
+PROBES_PASSED=4 PROBES_FAILED=0

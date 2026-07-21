@@ -1,0 +1,28 @@
+# Source adapter feature toggles for the Social Signal Plane.
+# MVP scope: only x_backend + youtube_transcript are enabled. Every other source
+# is present but disabled so the toggle surface is explicit and S3 migration tests
+# can assert the on/off contract.
+adapters:
+  x_backend:
+    enabled: true
+    role: source_collection_slice   # NOT a standalone product (contract invariant)
+    adapts_script: scripts/ai_influence_digest.py
+  youtube_transcript:
+    enabled: true
+    role: long_form_evidence_slice
+    adapts_script: scripts/youtube_influence_digest.py
+  bluesky:
+    enabled: false
+    role: future_source
+  hackernews:
+    enabled: false
+    role: future_source
+  blog_rss:
+    enabled: false
+    role: future_source
+  gdelt:
+    enabled: false
+    role: future_source
+  sec_filings:
+    enabled: false
+    role: future_source

@@ -1,0 +1,18 @@
+{
+  "sprint_id": "test_import_survey_search_resu1",
+  "generated_at": "2026-07-10T14:06:52Z",
+  "document_word_count": 1449,
+  "document_char_count": 3011,
+  "total_token_consumption": 42536,
+  "total_tokens": 42536,
+  "input_tokens": 41783,
+  "output_tokens": 753,
+  "token_usage_source": "estimated_from_report_artifacts",
+  "token_usage_is_estimated": true,
+  "usage_source": "estimated_from_report_artifacts",
+  "estimated": true,
+  "fallback_reason": "no_provider_usage",
+  "token_usage_files": [],
+  "ledger_path": "",
+  "ledger_lines": 0
+}

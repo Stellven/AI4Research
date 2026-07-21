@@ -1,0 +1,8 @@
+{
+  "name": "desktop_frontend_scenarios_after_install_with_repo_harness",
+  "command": [
+    "cd desktop && SOLAR_STATUS_SERVER=../harness/lib/symphony/status-server.py SOLAR_HARNESS_LIB=../harness/lib PLAYWRIGHT_BROWSERS_PATH=0 node frontend-scenarios.test.js"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 3
+}

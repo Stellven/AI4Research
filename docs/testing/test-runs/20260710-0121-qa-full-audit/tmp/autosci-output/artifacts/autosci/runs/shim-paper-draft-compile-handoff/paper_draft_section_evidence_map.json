@@ -1,0 +1,280 @@
+{
+  "citation_count": 5,
+  "citation_ids": [
+    "arxiv:2601.00003",
+    "wiki:artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+    "wiki:artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+    "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+    "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen.md"
+  ],
+  "limitations": [
+    "Section evidence map records evidence ids and source sections; it does not upgrade unsupported claims."
+  ],
+  "report_id": "report-skillgen-operator-smoke",
+  "schema": "autosci_paper_draft_section_evidence_map.v1",
+  "section_count": 6,
+  "sections": [
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "figure_ids": [],
+      "section_id": "summary",
+      "table_ids": [],
+      "title": "Summary"
+    },
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "figure_ids": [
+        "fig.optional-poster"
+      ],
+      "section_id": "findings",
+      "table_ids": [],
+      "title": "Findings"
+    },
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "figure_ids": [],
+      "section_id": "evidence-map",
+      "table_ids": [
+        "table.evidence-map"
+      ],
+      "title": "Evidence Map"
+    },
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001",
+        "review:paper-draft",
+        "arxiv:2601.00003",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen.md"
+      ],
+      "figure_ids": [],
+      "section_id": "final-manuscript-boundary",
+      "table_ids": [],
+      "title": "Final Manuscript Boundary"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf"
+      ],
+      "figure_ids": [],
+      "section_id": "compiled-paper",
+      "table_ids": [],
+      "title": "Compiled Paper"
+    },
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "figure_ids": [],
+      "section_id": "limitations",
+      "table_ids": [],
+      "title": "Limitations"
+    }
+  ],
+  "standard_section_count": 5,
+  "standard_sections": [
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001",
+        "review:paper-draft",
+        "arxiv:2601.00003",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen.md"
+      ],
+      "path": "paper/sections/introduction.tex",
+      "section_id": "introduction",
+      "source_section_ids": [
+        "summary",
+        "findings",
+        "evidence-map",
+        "final-manuscript-boundary",
+        "compiled-paper",
+        "limitations"
+      ],
+      "title": "Introduction"
+    },
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001",
+        "review:paper-draft",
+        "arxiv:2601.00003",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen.md"
+      ],
+      "path": "paper/sections/related-work.tex",
+      "section_id": "related_work",
+      "source_section_ids": [
+        "summary",
+        "findings",
+        "evidence-map",
+        "final-manuscript-boundary",
+        "compiled-paper",
+        "limitations"
+      ],
+      "title": "Related Work"
+    },
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001",
+        "review:paper-draft",
+        "arxiv:2601.00003",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen.md"
+      ],
+      "path": "paper/sections/method.tex",
+      "section_id": "method",
+      "source_section_ids": [
+        "summary",
+        "findings",
+        "evidence-map",
+        "final-manuscript-boundary",
+        "compiled-paper",
+        "limitations"
+      ],
+      "title": "Method"
+    },
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001",
+        "review:paper-draft",
+        "arxiv:2601.00003",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen.md"
+      ],
+      "path": "paper/sections/experiments.tex",
+      "section_id": "experiments",
+      "source_section_ids": [
+        "summary",
+        "findings",
+        "evidence-map",
+        "final-manuscript-boundary",
+        "compiled-paper",
+        "limitations"
+      ],
+      "title": "Experiments"
+    },
+    {
+      "evidence_ids": [
+        "lit-paper-draft",
+        "review-paper-draft",
+        "paper-draft-compile-handoff",
+        "runtime:paper-draft-compile",
+        "paper-draft-compile-runtime",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-compile-runtime.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/compiled/main.pdf",
+        "claim-001",
+        "exp-supported-001",
+        "review:paper-draft",
+        "arxiv:2601.00003",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+        "wiki:artifacts/autosci/workspace/wiki/papers/paper-skillgen.md"
+      ],
+      "path": "paper/sections/conclusion.tex",
+      "section_id": "conclusion",
+      "source_section_ids": [
+        "summary",
+        "findings",
+        "evidence-map",
+        "final-manuscript-boundary",
+        "compiled-paper",
+        "limitations"
+      ],
+      "title": "Conclusion"
+    }
+  ],
+  "status": "completed"
+}

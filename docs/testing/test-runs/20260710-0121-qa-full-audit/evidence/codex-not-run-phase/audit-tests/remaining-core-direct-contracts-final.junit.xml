@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="4" time="1.229" timestamp="2026-07-13T12:35:52.912062-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="evidence.codex-not-run-phase.audit-tests.test_remaining_core_direct_contracts" name="test_models_show_is_read_only_and_lists_roles" time="0.395" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_remaining_core_direct_contracts" name="test_models_invalid_alias_is_rejected_with_allowed_options" time="0.261"><failure message="AssertionError: assert ('opus' in 'unsupported model alias: qa-invalid-model\n')">tmp_path = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-remaining-core-final/test_models_invalid_alias_is_r0')
+
+    def test_models_invalid_alias_is_rejected_with_allowed_options(tmp_path: Path) -&gt; None:
+        proc = run([str(SOLAR_HARNESS), "models", "set-main", "qa-invalid-model"], tmp_path)
+        assert proc.returncode != 0
+        text = (proc.stdout + proc.stderr).lower()
+&gt;       assert "opus" in text and "anthropic-sonnet" in text
+E       AssertionError: assert ('opus' in 'unsupported model alias: qa-invalid-model\n')
+
+evidence/codex-not-run-phase/audit-tests/test_remaining_core_direct_contracts.py:73: AssertionError</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_remaining_core_direct_contracts" name="test_models_set_main_without_apply_does_not_write_config" time="0.402"><failure message="AssertionError: models set-main mutated config without --apply&#10;assert b'{\n  &quot;versi...um&quot;\n  }\n}\n' == b'{\n  &quot;versi...um&quot;\n  }\n}\n'&#10;  &#10;  At index 52 diff: b'5' != b'0'&#10;  Use -v to get more diff">tmp_path = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-remaining-core-final/test_models_set_main_without_a0')
+
+    def test_models_set_main_without_apply_does_not_write_config(tmp_path: Path) -&gt; None:
+        env = isolated_env(tmp_path)
+        config = Path(env["SOLAR_USER_CONFIG"])
+        before = config.read_bytes()
+        proc = run([str(SOLAR_HARNESS), "models", "set-main", "opus"], tmp_path)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+&gt;       assert config.read_bytes() == before, "models set-main mutated config without --apply"
+E       AssertionError: models set-main mutated config without --apply
+E       assert b'{\n  "versi...um"\n  }\n}\n' == b'{\n  "versi...um"\n  }\n}\n'
+E         
+E         At index 52 diff: b'5' != b'0'
+E         Use -v to get more diff
+
+evidence/codex-not-run-phase/audit-tests/test_remaining_core_direct_contracts.py:82: AssertionError</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_remaining_core_direct_contracts" name="test_benchmark_doctor_list_and_status_banner_are_typed" time="0.140"><failure message="AssertionError: assert ('terminal-bench@2.0' and 'ok' in {'adapter_id': 'terminal-bench@2.0', 'harbor_available': True, 'harbor_kind': 'uvx', 'docker_available': False, ...})&#10; +  where 'terminal-bench@2.0' = &lt;built-in method get of dict object at 0x10bb2c040&gt;('adapter_id')&#10; +    where &lt;built-in method get of dict object at 0x10bb2c040&gt; = {'adapter_id': 'terminal-bench@2.0', 'harbor_available': True, 'harbor_kind': 'uvx', 'docker_available': False, ...}.get">tmp_path = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-remaining-core-final/test_benchmark_doctor_list_and0')
+
+    def test_benchmark_doctor_list_and_status_banner_are_typed(tmp_path: Path) -&gt; None:
+        base = [str(PYTHON), "-m", "tools.benchmark.runner"]
+        doctor = run([*base, "doctor", "--json"], tmp_path)
+        assert doctor.returncode in {0, 2}, doctor.stdout + doctor.stderr
+        doctor_payload = json.loads(doctor.stdout)
+&gt;       assert doctor_payload.get("adapter_id") and "ok" in doctor_payload
+E       AssertionError: assert ('terminal-bench@2.0' and 'ok' in {'adapter_id': 'terminal-bench@2.0', 'harbor_available': True, 'harbor_kind': 'uvx', 'docker_available': False, ...})
+E        +  where 'terminal-bench@2.0' = &lt;built-in method get of dict object at 0x10bb2c040&gt;('adapter_id')
+E        +    where &lt;built-in method get of dict object at 0x10bb2c040&gt; = {'adapter_id': 'terminal-bench@2.0', 'harbor_available': True, 'harbor_kind': 'uvx', 'docker_available': False, ...}.get
+
+evidence/codex-not-run-phase/audit-tests/test_remaining_core_direct_contracts.py:90: AssertionError</failure></testcase></testsuite></testsuites>

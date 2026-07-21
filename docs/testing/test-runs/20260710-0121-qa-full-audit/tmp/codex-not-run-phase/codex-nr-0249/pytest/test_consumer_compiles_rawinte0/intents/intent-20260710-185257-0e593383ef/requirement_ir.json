@@ -1,0 +1,39 @@
+{
+  "schema_version": "solar.requirement_ir.v1",
+  "intent_id": "intent-20260710-185257-0e593383ef",
+  "source": {
+    "channel": "test",
+    "actor": "user",
+    "device": "",
+    "session_id": "",
+    "thread_ref": ""
+  },
+  "source_inputs": {
+    "raw_request": "新增 intent consumer，把 RawIntent 自动编译成 PM/Planner sprint package。",
+    "repo_context": []
+  },
+  "title": "新增 intent consumer，把 RawIntent 自动编译成 PM/Planner sprint package。",
+  "problem": "新增 intent consumer，把 RawIntent 自动编译成 PM/Planner sprint package。",
+  "objective": "新增 intent consumer，把 RawIntent 自动编译成 PM/Planner sprint package。",
+  "outcome": "A compiled, dispatchable Solar-Harness work item with acceptance evidence.",
+  "constraints": [
+    "All execution must enter Solar-Harness through RawIntent and requirement compilation.",
+    "Do not bypass task_graph, operator runtime, quota-aware fallback, or evidence logging."
+  ],
+  "non_goals": [
+    "Do not dispatch raw natural language directly to builder panes."
+  ],
+  "acceptance": [
+    "RawIntent, rewritten_intent, requirement_ir, and requirement_trace artifacts are persisted.",
+    "Compiled work is routable through PM/Planner/task_graph and multi-task operator runtime.",
+    "Completion requires evidence artifacts and verifier-visible status."
+  ],
+  "lane": "delivery",
+  "logical_operators": [
+    "RequirementCompiler",
+    "Planner",
+    "ImplementationWorker",
+    "Verifier"
+  ],
+  "compiler_next": "pm_planner_task_graph"
+}

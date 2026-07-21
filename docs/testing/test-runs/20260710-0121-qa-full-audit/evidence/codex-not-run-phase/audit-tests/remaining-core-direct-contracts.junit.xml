@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="4" time="1.178" timestamp="2026-07-13T12:35:00.218510-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="evidence.codex-not-run-phase.audit-tests.test_remaining_core_direct_contracts" name="test_models_show_is_read_only_and_lists_roles" time="0.376" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_remaining_core_direct_contracts" name="test_models_invalid_alias_is_rejected_with_allowed_options" time="0.291"><failure message="AssertionError: assert ('opus' in 'unsupported model alias: qa-invalid-model\n')">tmp_path = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-remaining-core/test_models_invalid_alias_is_r0')
+
+    def test_models_invalid_alias_is_rejected_with_allowed_options(tmp_path: Path) -&gt; None:
+        proc = run([str(SOLAR_HARNESS), "models", "set-main", "qa-invalid-model"], tmp_path)
+        assert proc.returncode != 0
+        text = (proc.stdout + proc.stderr).lower()
+&gt;       assert "opus" in text and "anthropic-sonnet" in text
+E       AssertionError: assert ('opus' in 'unsupported model alias: qa-invalid-model\n')
+
+evidence/codex-not-run-phase/audit-tests/test_remaining_core_direct_contracts.py:69: AssertionError</failure></testcase><testcase classname="evidence.codex-not-run-phase.audit-tests.test_remaining_core_direct_contracts" name="test_models_set_main_without_apply_does_not_write_config" time="0.351" /><testcase classname="evidence.codex-not-run-phase.audit-tests.test_remaining_core_direct_contracts" name="test_benchmark_doctor_list_and_status_banner_are_typed" time="0.133"><failure message="AssertionError: assert ('verdict' in {'adapter_id': 'terminal-bench@2.0', 'harbor_available': True, 'harbor_kind': 'uvx', 'docker_available': False, ...})">tmp_path = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-remaining-core/test_benchmark_doctor_list_and0')
+
+    def test_benchmark_doctor_list_and_status_banner_are_typed(tmp_path: Path) -&gt; None:
+        base = [str(PYTHON), "-m", "tools.benchmark.runner"]
+        doctor = run([*base, "doctor", "--json"], tmp_path)
+        assert doctor.returncode in {0, 2}, doctor.stdout + doctor.stderr
+        doctor_payload = json.loads(doctor.stdout)
+&gt;       assert "verdict" in doctor_payload and "limitations" in doctor_payload
+E       AssertionError: assert ('verdict' in {'adapter_id': 'terminal-bench@2.0', 'harbor_available': True, 'harbor_kind': 'uvx', 'docker_available': False, ...})
+
+evidence/codex-not-run-phase/audit-tests/test_remaining_core_direct_contracts.py:85: AssertionError</failure></testcase></testsuite></testsuites>

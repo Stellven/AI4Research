@@ -1,0 +1,34 @@
+{
+  "feature_count": 2117,
+  "status_counts": {
+    "PASS": 210,
+    "NOT_RUN": 1724,
+    "FAIL": 117,
+    "SKIPPED_ENV": 27,
+    "BLOCKED_EXPECTED": 39
+  },
+  "by_part": {
+    "workflow": {
+      "PASS": 123,
+      "NOT_RUN": 415,
+      "FAIL": 95,
+      "SKIPPED_ENV": 18,
+      "BLOCKED_EXPECTED": 1
+    },
+    "foundations": {
+      "NOT_RUN": 751,
+      "PASS": 69,
+      "FAIL": 12,
+      "BLOCKED_EXPECTED": 9,
+      "SKIPPED_ENV": 3
+    },
+    "misc.": {
+      "SKIPPED_ENV": 6,
+      "NOT_RUN": 558,
+      "PASS": 18,
+      "BLOCKED_EXPECTED": 29,
+      "FAIL": 10
+    }
+  },
+  "method": "Conservative executed-evidence join: only high-confidence direct mappings can PASS/FAIL automatically; indirect/partial evidence remains NOT_RUN unless explicitly classified."
+}

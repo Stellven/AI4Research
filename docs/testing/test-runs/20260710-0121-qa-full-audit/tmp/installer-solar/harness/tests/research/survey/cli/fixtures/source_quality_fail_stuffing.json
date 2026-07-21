@@ -1,0 +1,23 @@
+{
+  "section_id": "s2",
+  "source_type_counts": {"web": 5, "blog": 3},
+  "primary_ratio": 0.0,
+  "stuffing_alerts": [
+    {
+      "domain": "example.com",
+      "count": 4,
+      "source_ids": ["src_0", "src_1", "src_2", "src_3"],
+      "confidence": "medium",
+      "schema_version": "survey.schemas.v1"
+    }
+  ],
+  "canonical_coverage": {"paper": false, "code": false, "official": false, "benchmark": false},
+  "verdict": "fail",
+  "verdict_reasons": [
+    "no_primary_sources",
+    "missing_canonical_types:paper,code,official,benchmark",
+    "stuffing_detected:example.com"
+  ],
+  "taxonomy_version": "paper,code,official,benchmark,web,blog,wiki",
+  "schema_version": "survey.schemas.v1"
+}

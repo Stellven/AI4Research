@@ -1,0 +1,10 @@
+.F..                                                                     [100%]
+=================================== FAILURES ===================================
+__________ test_pipeline_real_browser_unwired_reports_lease_fallback ___________
+harness/tests/test_pipeline_mock.py:89: in test_pipeline_real_browser_unwired_reports_lease_fallback
+    assert "operator_not_ready" in result.scans[0].error
+E   assert 'operator_not_ready' in 'lease_ops_error: browser_wait_failed:TimeoutError: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator("article[data-testid=\'tweet\']") to be visible\n'
+E    +  where 'lease_ops_error: browser_wait_failed:TimeoutError: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator("article[data-testid=\'tweet\']") to be visible\n' = AccountScan(account_id='karpathy', handle='karpathy', tier=1, profile_url='https://x.com/karpathy', backend='browser_a...all log:\n  - waiting for locator("article[data-testid=\'tweet\']") to be visible\n', skipped=False, ledger_entries=[]).error
+=========================== short test summary info ============================
+FAILED harness/tests/test_pipeline_mock.py::test_pipeline_real_browser_unwired_reports_lease_fallback
+1 failed, 3 passed in 11.88s

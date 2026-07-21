@@ -1,0 +1,5759 @@
+{
+  "version": 2,
+  "updated_at": "2026-06-02T01:59:19Z",
+  "actors": {
+    "mini-claude-opus-planner": {
+      "actor_id": "mini-claude-opus-planner",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-opus-planner",
+      "aliases": [
+        "mini-claude-opus-planner"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Claude Opus planner",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-opus-planner/inbox",
+        "outbox": "actors/mini-claude-opus-planner/outbox",
+        "logs": "actors/mini-claude-opus-planner/logs",
+        "state_json": "actors/mini-claude-opus-planner/state.json",
+        "heartbeat_json": "actors/mini-claude-opus-planner/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-opus-planner/evidence"
+      },
+      "capability": {
+        "planning": 5,
+        "coding": 4,
+        "debugging": 4,
+        "testing": 3,
+        "research": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 5,
+        "code_impl": 4,
+        "root_cause_debug": 4,
+        "test_generation": 2,
+        "test_execution": 1,
+        "research_synthesis": 4,
+        "academic_critique": 4,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 4,
+        "speed": 2
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "planning",
+          "architecture",
+          "schema-design"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "cheap-background"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "monthly",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-claude-opus-planner at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-planner-print",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-claude-sonnet-builder": {
+      "actor_id": "mini-claude-sonnet-builder",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-sonnet-builder",
+      "aliases": [
+        "mini-claude-sonnet-builder"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Claude Sonnet builder",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-sonnet-builder/inbox",
+        "outbox": "actors/mini-claude-sonnet-builder/outbox",
+        "logs": "actors/mini-claude-sonnet-builder/logs",
+        "state_json": "actors/mini-claude-sonnet-builder/state.json",
+        "heartbeat_json": "actors/mini-claude-sonnet-builder/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-sonnet-builder/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "debugging",
+          "tests",
+          "refactor"
+        ],
+        "avoid_for": [
+          "bulk-extraction"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "monthly",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-claude-sonnet-builder at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-thunderomlx-qwen36-knowledge",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-claude-opus-evaluator": {
+      "actor_id": "mini-claude-opus-evaluator",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-opus-evaluator",
+      "aliases": [
+        "mini-claude-opus-evaluator"
+      ],
+      "role": "evaluator",
+      "display_meta": {
+        "display_name": "Mac mini Claude Opus evaluator",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-opus-evaluator/inbox",
+        "outbox": "actors/mini-claude-opus-evaluator/outbox",
+        "logs": "actors/mini-claude-opus-evaluator/logs",
+        "state_json": "actors/mini-claude-opus-evaluator/state.json",
+        "heartbeat_json": "actors/mini-claude-opus-evaluator/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-opus-evaluator/evidence"
+      },
+      "capability": {
+        "planning": 4,
+        "coding": 4,
+        "debugging": 5,
+        "testing": 5,
+        "reliability": 5
+      },
+      "capability_profile": {
+        "architecture_reasoning": 4,
+        "code_impl": 4,
+        "root_cause_debug": 5,
+        "test_generation": 4,
+        "test_execution": 5,
+        "research_synthesis": 4,
+        "academic_critique": 5,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 2,
+        "speed": 2
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness_readonly",
+        "allowed_shell_scope": "read_only",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_commit",
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "review",
+          "verification",
+          "evidence"
+        ],
+        "avoid_for": [
+          "bulk-extraction"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "monthly",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-claude-opus-evaluator at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "evaluator",
+        "persona_file": "personas/evaluator.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-evaluator-print",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "mini-thunderomlx-qwen36-knowledge": {
+      "actor_id": "mini-thunderomlx-qwen36-knowledge",
+      "host_id": "mini",
+      "operator_alias": "mini-thunderomlx-qwen36-knowledge",
+      "aliases": [
+        "mini-thunderomlx-qwen36-knowledge"
+      ],
+      "role": "knowledge-extractor",
+      "display_meta": {
+        "display_name": "Mac mini ThunderOMLX Qwen3.6 knowledge",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 60,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-thunderomlx-qwen36-knowledge/inbox",
+        "outbox": "actors/mini-thunderomlx-qwen36-knowledge/outbox",
+        "logs": "actors/mini-thunderomlx-qwen36-knowledge/logs",
+        "state_json": "actors/mini-thunderomlx-qwen36-knowledge/state.json",
+        "heartbeat_json": "actors/mini-thunderomlx-qwen36-knowledge/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-thunderomlx-qwen36-knowledge/evidence"
+      },
+      "capability": {
+        "coding": 3,
+        "research": 4,
+        "long_context": 4,
+        "local_privacy": 5,
+        "knowledge_extraction": 5
+      },
+      "capability_profile": {
+        "architecture_reasoning": 2,
+        "code_impl": 3,
+        "root_cause_debug": 2,
+        "test_generation": 2,
+        "test_execution": 1,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 1,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "denied",
+        "allowed_secrets": "denied",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_commit",
+          "git_push",
+          "payment_or_external_action",
+          "allowed_shell_scope",
+          "allowed_network"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "none",
+        "reserve_ratio": 0.0,
+        "effort": "light",
+        "prefer_for": [
+          "knowledge-extraction",
+          "wiki",
+          "bulk-extraction"
+        ],
+        "avoid_for": [
+          "critical-review",
+          "complex-refactor"
+        ]
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "denied",
+        "network": "denied",
+        "secrets_access": "denied",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-thunderomlx-qwen36-knowledge at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": []
+    },
+    "mini-antigravity-gemini35-flash-high": {
+      "actor_id": "mini-antigravity-gemini35-flash-high",
+      "host_id": "mini",
+      "operator_alias": "mini-antigravity-gemini35-flash-high",
+      "aliases": [
+        "mini-antigravity-gemini35-flash-high"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Antigravity Gemini 3.5 Flash High",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 60,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-antigravity-gemini35-flash-high/inbox",
+        "outbox": "actors/mini-antigravity-gemini35-flash-high/outbox",
+        "logs": "actors/mini-antigravity-gemini35-flash-high/logs",
+        "state_json": "actors/mini-antigravity-gemini35-flash-high/state.json",
+        "heartbeat_json": "actors/mini-antigravity-gemini35-flash-high/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-antigravity-gemini35-flash-high/evidence"
+      },
+      "capability": {
+        "coding": 4,
+        "speed": 5,
+        "cost_efficiency": 5,
+        "reliability": 3
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 4,
+        "root_cause_debug": 3,
+        "test_generation": 3,
+        "test_execution": 3,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 5
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "daily",
+        "reserve_ratio": 0.0,
+        "effort": "light",
+        "prefer_for": [
+          "parallel-experiment",
+          "fast-prototype",
+          "google-ecosystem"
+        ],
+        "avoid_for": [
+          "root-debug",
+          "critical-code-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "google-account",
+        "period": "daily",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-antigravity-gemini35-flash-high at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "mini-antigravity-gemini35-flash-image": {
+      "actor_id": "mini-antigravity-gemini35-flash-image",
+      "host_id": "mini",
+      "operator_alias": "mini-antigravity-gemini35-flash-image",
+      "aliases": [
+        "mini-antigravity-gemini35-flash-image"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Antigravity Gemini 3.5 Flash multimodal image",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 60,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-antigravity-gemini35-flash-image/inbox",
+        "outbox": "actors/mini-antigravity-gemini35-flash-image/outbox",
+        "logs": "actors/mini-antigravity-gemini35-flash-image/logs",
+        "state_json": "actors/mini-antigravity-gemini35-flash-image/state.json",
+        "heartbeat_json": "actors/mini-antigravity-gemini35-flash-image/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-antigravity-gemini35-flash-image/evidence"
+      },
+      "capability": {
+        "coding": 4,
+        "multimodal": 0,
+        "speed": 5,
+        "cost_efficiency": 5,
+        "reliability": 1
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 4,
+        "root_cause_debug": 3,
+        "test_generation": 3,
+        "test_execution": 3,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 2,
+        "speed": 5
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "daily",
+        "reserve_ratio": 0.0,
+        "effort": "light",
+        "prefer_for": [],
+        "avoid_for": [
+          "bulk-text-extraction",
+          "critical-code-review",
+          "diagram-analysis",
+          "image",
+          "multimodal",
+          "ocr",
+          "screenshot",
+          "ui-check",
+          "vision"
+        ]
+      },
+      "quota": {
+        "quota_type": "google-account",
+        "period": "daily",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": "2026-05-31T04:15:00Z",
+        "last_smoke_result": "FAILED: true image smoke produced placeholder/non-final output and Antigravity CLI log showed media=0; blocked from image routing",
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": "fail",
+        "provenance": "migrated from physical-operators.json:mini-antigravity-gemini35-flash-image at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-antigravity-gemini31-pro-image",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "mini-antigravity-gemini31-pro": {
+      "actor_id": "mini-antigravity-gemini31-pro",
+      "host_id": "mini",
+      "operator_alias": "mini-antigravity-gemini31-pro",
+      "aliases": [
+        "mini-antigravity-gemini31-pro"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Antigravity Gemini 3.1 Pro",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 90,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-antigravity-gemini31-pro/inbox",
+        "outbox": "actors/mini-antigravity-gemini31-pro/outbox",
+        "logs": "actors/mini-antigravity-gemini31-pro/logs",
+        "state_json": "actors/mini-antigravity-gemini31-pro/state.json",
+        "heartbeat_json": "actors/mini-antigravity-gemini31-pro/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-antigravity-gemini31-pro/evidence"
+      },
+      "capability": {
+        "planning": 5,
+        "coding": 4,
+        "debugging": 4,
+        "testing": 4,
+        "research": 5,
+        "long_context": 5,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 5,
+        "code_impl": 4,
+        "root_cause_debug": 4,
+        "test_generation": 3,
+        "test_execution": 2,
+        "research_synthesis": 5,
+        "academic_critique": 4,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 5,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "large",
+        "quota_period": "daily",
+        "reserve_ratio": 0.15,
+        "effort": "heavy",
+        "prefer_for": [
+          "google-specific-planning",
+          "emergency-planner-fallback"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "planning-primary",
+          "prd-primary",
+          "quota-sensitive-planning"
+        ]
+      },
+      "quota": {
+        "quota_type": "google-account",
+        "period": "daily",
+        "reserve_for": [
+          "EMERGENCY_PLANNER_FALLBACK",
+          "GOOGLE_SPECIFIC_PLANNING"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": "2026-05-22T14:36:00Z",
+        "last_smoke_result": "agy --dangerously-skip-permissions --print \"Reply exactly: SOLAR_PROBE_OK\" succeeded",
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-antigravity-gemini31-pro at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "condition": "quota_exhausted"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner-print",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "mini-antigravity-gemini31-pro-image": {
+      "actor_id": "mini-antigravity-gemini31-pro-image",
+      "host_id": "mini",
+      "operator_alias": "mini-antigravity-gemini31-pro-image",
+      "aliases": [
+        "mini-antigravity-gemini31-pro-image"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Antigravity Gemini 3.1 Pro multimodal image",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 90,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-antigravity-gemini31-pro-image/inbox",
+        "outbox": "actors/mini-antigravity-gemini31-pro-image/outbox",
+        "logs": "actors/mini-antigravity-gemini31-pro-image/logs",
+        "state_json": "actors/mini-antigravity-gemini31-pro-image/state.json",
+        "heartbeat_json": "actors/mini-antigravity-gemini31-pro-image/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-antigravity-gemini31-pro-image/evidence"
+      },
+      "capability": {
+        "planning": 5,
+        "coding": 4,
+        "debugging": 4,
+        "testing": 4,
+        "research": 5,
+        "long_context": 5,
+        "multimodal": 5,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 5,
+        "code_impl": 4,
+        "root_cause_debug": 4,
+        "test_generation": 3,
+        "test_execution": 2,
+        "research_synthesis": 5,
+        "academic_critique": 4,
+        "browser_use": 3,
+        "gui_use": 4,
+        "long_context": 5,
+        "multi_agent_coordination": 3,
+        "speed": 2
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "large",
+        "quota_period": "daily",
+        "reserve_ratio": 0.15,
+        "effort": "heavy",
+        "prefer_for": [
+          "image",
+          "vision",
+          "multimodal",
+          "architecture"
+        ],
+        "avoid_for": [
+          "bulk-text-extraction",
+          "critical-code-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "google-account",
+        "period": "daily",
+        "reserve_for": [
+          "ARCH_DESIGN",
+          "ROOT_CAUSE_DEBUG",
+          "RESEARCH_SYNTHESIS",
+          "FINAL_REVIEW"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-antigravity-gemini31-pro-image at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "mini-glm51-knowledge": {
+      "actor_id": "mini-glm51-knowledge",
+      "host_id": "mini",
+      "operator_alias": "mini-glm51-knowledge",
+      "aliases": [
+        "mini-glm51-knowledge"
+      ],
+      "role": "knowledge-extractor",
+      "display_meta": {
+        "display_name": "Mac mini GLM-5.1 knowledge",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 60,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-glm51-knowledge/inbox",
+        "outbox": "actors/mini-glm51-knowledge/outbox",
+        "logs": "actors/mini-glm51-knowledge/logs",
+        "state_json": "actors/mini-glm51-knowledge/state.json",
+        "heartbeat_json": "actors/mini-glm51-knowledge/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-glm51-knowledge/evidence"
+      },
+      "capability": {
+        "coding": 3,
+        "research": 4,
+        "long_context": 4,
+        "local_privacy": 5
+      },
+      "capability_profile": {
+        "architecture_reasoning": 2,
+        "code_impl": 3,
+        "root_cause_debug": 2,
+        "test_generation": 2,
+        "test_execution": 1,
+        "research_synthesis": 4,
+        "academic_critique": 3,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 1,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "denied",
+        "allowed_secrets": "denied",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_commit",
+          "git_push",
+          "payment_or_external_action",
+          "allowed_shell_scope",
+          "allowed_network"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "none",
+        "reserve_ratio": 0.0,
+        "effort": "light",
+        "prefer_for": [
+          "knowledge-extraction",
+          "wiki",
+          "bulk-extraction"
+        ],
+        "avoid_for": [
+          "critical-review",
+          "complex-refactor"
+        ]
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "denied",
+        "network": "denied",
+        "secrets_access": "denied",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-glm51-knowledge at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-thunderomlx-qwen36-knowledge",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "mini-local-scan": {
+      "actor_id": "mini-local-scan",
+      "host_id": "mini",
+      "operator_alias": "mini-local-scan",
+      "aliases": [
+        "mini-local-scan"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini local scan",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 30,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-local-scan/inbox",
+        "outbox": "actors/mini-local-scan/outbox",
+        "logs": "actors/mini-local-scan/logs",
+        "state_json": "actors/mini-local-scan/state.json",
+        "heartbeat_json": "actors/mini-local-scan/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-local-scan/evidence"
+      },
+      "capability": {
+        "shell": 5,
+        "local_privacy": 5,
+        "speed": 5,
+        "cost_efficiency": 5
+      },
+      "capability_profile": {
+        "architecture_reasoning": 0,
+        "code_impl": 1,
+        "root_cause_debug": 2,
+        "test_generation": 0,
+        "test_execution": 3,
+        "research_synthesis": 1,
+        "academic_critique": 0,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 1,
+        "multi_agent_coordination": 0,
+        "speed": 5
+      },
+      "risk_profile": {
+        "allowed_write_scope": "denied",
+        "allowed_shell_scope": "read_only",
+        "allowed_network": "denied",
+        "allowed_secrets": "denied",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "allowed_shell_scope",
+          "git_commit",
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "small",
+        "quota_period": "none",
+        "reserve_ratio": 0.0,
+        "effort": "light",
+        "prefer_for": [
+          "local-scan",
+          "search",
+          "regex-search"
+        ],
+        "avoid_for": [
+          "reasoning",
+          "planning"
+        ]
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "policy": {
+        "write_files": "denied",
+        "run_shell": "allowed",
+        "network": "denied",
+        "secrets_access": "denied",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-local-scan at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": []
+    },
+    "mini-router": {
+      "actor_id": "mini-router",
+      "host_id": "mini",
+      "operator_alias": "mini-router",
+      "aliases": [
+        "mini-router"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Router",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 30,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-router/inbox",
+        "outbox": "actors/mini-router/outbox",
+        "logs": "actors/mini-router/logs",
+        "state_json": "actors/mini-router/state.json",
+        "heartbeat_json": "actors/mini-router/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-router/evidence"
+      },
+      "capability": {
+        "planning": 5,
+        "reliability": 5,
+        "speed": 5
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 0,
+        "root_cause_debug": 1,
+        "test_generation": 0,
+        "test_execution": 0,
+        "research_synthesis": 2,
+        "academic_critique": 0,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 2,
+        "multi_agent_coordination": 5,
+        "speed": 5
+      },
+      "risk_profile": {
+        "allowed_write_scope": "denied",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "internal_only",
+        "allowed_secrets": "denied",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_commit",
+          "git_push",
+          "payment_or_external_action",
+          "allowed_network"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "small",
+        "quota_period": "none",
+        "reserve_ratio": 0.0,
+        "effort": "light",
+        "prefer_for": [
+          "routing",
+          "dispatch",
+          "fallback"
+        ],
+        "avoid_for": [
+          "coding",
+          "deep-reasoning"
+        ]
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "policy": {
+        "write_files": "denied",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "denied",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-router at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": []
+    },
+    "mini-audit": {
+      "actor_id": "mini-audit",
+      "host_id": "mini",
+      "operator_alias": "mini-audit",
+      "aliases": [
+        "mini-audit"
+      ],
+      "role": "auditor",
+      "display_meta": {
+        "display_name": "Mac mini Audit Ledger",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 30,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-audit/inbox",
+        "outbox": "actors/mini-audit/outbox",
+        "logs": "actors/mini-audit/logs",
+        "state_json": "actors/mini-audit/state.json",
+        "heartbeat_json": "actors/mini-audit/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-audit/evidence"
+      },
+      "capability": {
+        "reliability": 5,
+        "testing": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 1,
+        "code_impl": 0,
+        "root_cause_debug": 3,
+        "test_generation": 2,
+        "test_execution": 4,
+        "research_synthesis": 2,
+        "academic_critique": 3,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 3,
+        "multi_agent_coordination": 1,
+        "speed": 4
+      },
+      "risk_profile": {
+        "allowed_write_scope": "denied",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "denied",
+        "allowed_secrets": "denied",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_commit",
+          "git_push",
+          "payment_or_external_action",
+          "allowed_network",
+          "allowed_shell_scope"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "small",
+        "quota_period": "none",
+        "reserve_ratio": 0.0,
+        "effort": "light",
+        "prefer_for": [
+          "auditing",
+          "ledger-log",
+          "compliance"
+        ],
+        "avoid_for": [
+          "planning",
+          "coding"
+        ]
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "policy": {
+        "write_files": "denied",
+        "run_shell": "denied",
+        "network": "denied",
+        "secrets_access": "denied",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-audit at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "evaluator",
+        "persona_file": "personas/evaluator.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": []
+    },
+    "mini-claude-opus-planner-print": {
+      "actor_id": "mini-claude-opus-planner-print",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-opus-planner-print",
+      "aliases": [
+        "mini-claude-opus-planner-print"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Claude Opus planner programmatic print (reserve)",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 30,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-opus-planner-print/inbox",
+        "outbox": "actors/mini-claude-opus-planner-print/outbox",
+        "logs": "actors/mini-claude-opus-planner-print/logs",
+        "state_json": "actors/mini-claude-opus-planner-print/state.json",
+        "heartbeat_json": "actors/mini-claude-opus-planner-print/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-opus-planner-print/evidence"
+      },
+      "capability": {
+        "planning": 5,
+        "coding": 4,
+        "debugging": 4,
+        "testing": 3,
+        "research": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 5,
+        "code_impl": 4,
+        "root_cause_debug": 4,
+        "test_generation": 2,
+        "test_execution": 1,
+        "research_synthesis": 4,
+        "academic_critique": 4,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "planning",
+          "architecture",
+          "schema-design"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "FANOUT",
+          "BULK_EDIT",
+          "TEST_RUN",
+          "LOW_VALUE_SCAN"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-agent-credit",
+        "period": "monthly",
+        "reserve_for": [
+          "ARCH_DECISION",
+          "ROOT_CAUSE_DEBUG",
+          "FINAL_REVIEW",
+          "SMALL_HIGH_VALUE_BATCH"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-claude-opus-planner-print at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-claude-sonnet-builder-print": {
+      "actor_id": "mini-claude-sonnet-builder-print",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-sonnet-builder-print",
+      "aliases": [
+        "mini-claude-sonnet-builder-print"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Claude Sonnet builder programmatic print (reserve)",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 30,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-sonnet-builder-print/inbox",
+        "outbox": "actors/mini-claude-sonnet-builder-print/outbox",
+        "logs": "actors/mini-claude-sonnet-builder-print/logs",
+        "state_json": "actors/mini-claude-sonnet-builder-print/state.json",
+        "heartbeat_json": "actors/mini-claude-sonnet-builder-print/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-sonnet-builder-print/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 2,
+        "speed": 4
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "debugging",
+          "tests"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "FANOUT",
+          "BULK_EDIT",
+          "TEST_RUN",
+          "LOW_VALUE_SCAN"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-agent-credit",
+        "period": "monthly",
+        "reserve_for": [
+          "ROOT_CAUSE_DEBUG",
+          "FINAL_REVIEW",
+          "SMALL_HIGH_VALUE_BATCH"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-claude-sonnet-builder-print at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-antigravity-gemini35-flash-high",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-claude-opus-evaluator-print": {
+      "actor_id": "mini-claude-opus-evaluator-print",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-opus-evaluator-print",
+      "aliases": [
+        "mini-claude-opus-evaluator-print"
+      ],
+      "role": "evaluator",
+      "display_meta": {
+        "display_name": "Mac mini Claude Opus evaluator programmatic print (reserve)",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": false,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 30,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-opus-evaluator-print/inbox",
+        "outbox": "actors/mini-claude-opus-evaluator-print/outbox",
+        "logs": "actors/mini-claude-opus-evaluator-print/logs",
+        "state_json": "actors/mini-claude-opus-evaluator-print/state.json",
+        "heartbeat_json": "actors/mini-claude-opus-evaluator-print/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-opus-evaluator-print/evidence"
+      },
+      "capability": {
+        "planning": 4,
+        "coding": 4,
+        "debugging": 5,
+        "testing": 5,
+        "reliability": 5
+      },
+      "capability_profile": {
+        "architecture_reasoning": 4,
+        "code_impl": 4,
+        "root_cause_debug": 5,
+        "test_generation": 4,
+        "test_execution": 5,
+        "research_synthesis": 4,
+        "academic_critique": 5,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 2,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness_readonly",
+        "allowed_shell_scope": "read_only",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_commit",
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "review",
+          "verification",
+          "evidence"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "FANOUT",
+          "BULK_EDIT",
+          "TEST_RUN",
+          "LOW_VALUE_SCAN"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-agent-credit",
+        "period": "monthly",
+        "reserve_for": [
+          "FINAL_REVIEW",
+          "ROOT_CAUSE_DEBUG",
+          "ARCH_DECISION"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "migrated from physical-operators.json:mini-claude-opus-evaluator-print at 2026-05-23T01:06:55Z; profiles added 2026-05-23T01:30:00Z"
+      },
+      "persona_binding": {
+        "persona_id": "evaluator",
+        "persona_file": "personas/evaluator.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": []
+    },
+    "mini-reasonix-deepseek-v4-builder": {
+      "actor_id": "mini-reasonix-deepseek-v4-builder",
+      "host_id": "mini",
+      "operator_alias": "mini-reasonix-deepseek-v4-builder",
+      "aliases": [
+        "mini-reasonix-deepseek-v4-builder",
+        "reasonix-deepseek-v4",
+        "deepseek-v4-advisory"
+      ],
+      "role": "evaluator",
+      "display_meta": {
+        "display_name": "Reasonix DeepSeek V4 Advisory Reviewer",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-reasonix-deepseek-v4-builder/inbox",
+        "outbox": "actors/mini-reasonix-deepseek-v4-builder/outbox",
+        "logs": "actors/mini-reasonix-deepseek-v4-builder/logs",
+        "state_json": "actors/mini-reasonix-deepseek-v4-builder/state.json",
+        "heartbeat_json": "actors/mini-reasonix-deepseek-v4-builder/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-reasonix-deepseek-v4-builder/evidence"
+      },
+      "capability": {
+        "planning": 4,
+        "coding": 0,
+        "debugging": 2,
+        "testing": 1,
+        "research": 3,
+        "long_context": 4,
+        "speed": 4,
+        "cost_efficiency": 5,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 4,
+        "code_impl": 0,
+        "root_cause_debug": 3,
+        "test_generation": 1,
+        "test_execution": 0,
+        "research_synthesis": 3,
+        "academic_critique": 3,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 2,
+        "speed": 4
+      },
+      "risk_profile": {
+        "allowed_write_scope": "denied",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "api_balance",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "prd-review",
+          "requirements-review",
+          "acceptance-review",
+          "architecture-review",
+          "decision-review",
+          "counterargument",
+          "root-cause"
+        ],
+        "avoid_for": [
+          "implementation",
+          "code-edit",
+          "repo-modification",
+          "tests",
+          "test-execution",
+          "final-quality-gate",
+          "critical-security-review",
+          "bulk-extraction"
+        ]
+      },
+      "quota": {
+        "quota_type": "api_balance",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "denied",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": "2026-05-30T22:40:00Z",
+        "last_smoke_result": "user-reported: Reasonix installed, key configured, manual smoke succeeded",
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "added for Reasonix DeepSeek V4 physical operator on 2026-05-30"
+      },
+      "persona_binding": {
+        "persona_id": "evaluator",
+        "persona_file": "personas/evaluator.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": []
+    },
+    "mini-reasonix-deepseek-v4-pro-prd-evaluator": {
+      "actor_id": "mini-reasonix-deepseek-v4-pro-prd-evaluator",
+      "host_id": "mini",
+      "operator_alias": "mini-reasonix-deepseek-v4-pro-prd-evaluator",
+      "aliases": [
+        "mini-reasonix-deepseek-v4-pro-prd-evaluator",
+        "reasonix-deepseek-v4-pro-prd",
+        "deepseek-v4-pro-evaluator"
+      ],
+      "role": "evaluator",
+      "display_meta": {
+        "display_name": "Reasonix DeepSeek V4 Pro PRD/Eval Reviewer",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-reasonix-deepseek-v4-pro-prd-evaluator/inbox",
+        "outbox": "actors/mini-reasonix-deepseek-v4-pro-prd-evaluator/outbox",
+        "logs": "actors/mini-reasonix-deepseek-v4-pro-prd-evaluator/logs",
+        "state_json": "actors/mini-reasonix-deepseek-v4-pro-prd-evaluator/state.json",
+        "heartbeat_json": "actors/mini-reasonix-deepseek-v4-pro-prd-evaluator/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-reasonix-deepseek-v4-pro-prd-evaluator/evidence"
+      },
+      "capability": {
+        "planning": 4,
+        "coding": 0,
+        "debugging": 2,
+        "testing": 1,
+        "research": 3,
+        "long_context": 4,
+        "speed": 4,
+        "cost_efficiency": 5,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 4,
+        "code_impl": 0,
+        "root_cause_debug": 3,
+        "test_generation": 1,
+        "test_execution": 0,
+        "research_synthesis": 3,
+        "academic_critique": 3,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 2,
+        "speed": 4
+      },
+      "risk_profile": {
+        "allowed_write_scope": "denied",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "api_balance",
+        "reserve_ratio": 0.1,
+        "effort": "high",
+        "prefer_for": [
+          "prd-review",
+          "requirements-review",
+          "acceptance-review",
+          "architecture-review",
+          "decision-review",
+          "counterargument",
+          "root-cause"
+        ],
+        "avoid_for": [
+          "implementation",
+          "code-edit",
+          "repo-modification",
+          "tests",
+          "test-execution",
+          "final-quality-gate",
+          "critical-security-review",
+          "bulk-extraction"
+        ]
+      },
+      "quota": {
+        "quota_type": "api_balance",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "denied",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": "2026-06-02T00:00:00Z",
+        "last_smoke_result": "reasonix CLI available; advisory-only routing validated by pytest",
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "added for DeepSeek V4 Pro PRD/eval advisory routing on 2026-06-02"
+      },
+      "persona_binding": {
+        "persona_id": "evaluator",
+        "persona_file": "personas/evaluator.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": []
+    },
+    "browser_agent_session": {
+      "actor_id": "browser_agent_session",
+      "host_id": "browser_profile_host",
+      "operator_alias": "webapp_research_operator",
+      "aliases": [
+        "browser_agent_session",
+        "webapp_research_operator",
+        "mini-browser-deepresearch"
+      ],
+      "role": "knowledge-extractor",
+      "display_meta": {
+        "display_name": "Browser Agent Session",
+        "tmux_session": null,
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/browser_agent_session/inbox",
+        "outbox": "actors/browser_agent_session/outbox",
+        "logs": "actors/browser_agent_session/logs",
+        "state_json": "actors/browser_agent_session/state.json",
+        "heartbeat_json": "actors/browser_agent_session/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/browser_agent_session/evidence"
+      },
+      "capability": {
+        "research": 5,
+        "browser": 5,
+        "multimodal": 4,
+        "reliability": 3
+      },
+      "capability_profile": {
+        "architecture_reasoning": 2,
+        "code_impl": 1,
+        "root_cause_debug": 2,
+        "test_generation": 1,
+        "test_execution": 2,
+        "research_synthesis": 5,
+        "academic_critique": 3,
+        "browser_use": 5,
+        "gui_use": 4,
+        "long_context": 4,
+        "multi_agent_coordination": 2,
+        "speed": 2
+      },
+      "risk_profile": {
+        "allowed_write_scope": "project",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "denied",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "external_login",
+          "reauth_required",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.25,
+        "effort": "heavy",
+        "prefer_for": [
+          "deep-research",
+          "browser-research"
+        ],
+        "avoid_for": [
+          "code-implementation"
+        ]
+      },
+      "quota": {
+        "quota_type": "browser-session",
+        "period": "unknown",
+        "on_exhausted": "manual_review"
+      },
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "denied",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "browser agent operator registry bootstrap 2026-05-28"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-gemini-deep-research",
+          "condition": "quota_exhausted"
+        },
+        {
+          "actor_id": "mini-chatgpt-deep-research",
+          "condition": "reauth_required"
+        }
+      ]
+    },
+    "mini-gemini-deep-research": {
+      "actor_id": "mini-gemini-deep-research",
+      "host_id": "mini",
+      "operator_alias": "mini-gemini-deep-research",
+      "aliases": [
+        "mini-gemini-deep-research"
+      ],
+      "role": "knowledge-extractor",
+      "display_meta": {
+        "display_name": "Gemini Deep Research",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-gemini-deep-research/inbox",
+        "outbox": "actors/mini-gemini-deep-research/outbox",
+        "logs": "actors/mini-gemini-deep-research/logs",
+        "state_json": "actors/mini-gemini-deep-research/state.json",
+        "heartbeat_json": "actors/mini-gemini-deep-research/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-gemini-deep-research/evidence"
+      },
+      "capability": {
+        "research": 5,
+        "browser": 2,
+        "multimodal": 3,
+        "reliability": 3
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 1,
+        "root_cause_debug": 2,
+        "test_generation": 1,
+        "test_execution": 1,
+        "research_synthesis": 5,
+        "academic_critique": 3,
+        "browser_use": 2,
+        "gui_use": 1,
+        "long_context": 5,
+        "multi_agent_coordination": 2,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "project",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "deep-research",
+          "competitive-analysis"
+        ],
+        "avoid_for": [
+          "code-implementation"
+        ]
+      },
+      "quota": {
+        "quota_type": "webapp-account",
+        "period": "unknown",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "browser agent operator registry bootstrap 2026-05-28"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-chatgpt-deep-research": {
+      "actor_id": "mini-chatgpt-deep-research",
+      "host_id": "mini",
+      "operator_alias": "mini-chatgpt-deep-research",
+      "aliases": [
+        "mini-chatgpt-deep-research"
+      ],
+      "role": "knowledge-extractor",
+      "display_meta": {
+        "display_name": "ChatGPT Deep Research",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-chatgpt-deep-research/inbox",
+        "outbox": "actors/mini-chatgpt-deep-research/outbox",
+        "logs": "actors/mini-chatgpt-deep-research/logs",
+        "state_json": "actors/mini-chatgpt-deep-research/state.json",
+        "heartbeat_json": "actors/mini-chatgpt-deep-research/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-chatgpt-deep-research/evidence"
+      },
+      "capability": {
+        "research": 5,
+        "browser": 2,
+        "multimodal": 3,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 4,
+        "code_impl": 1,
+        "root_cause_debug": 2,
+        "test_generation": 1,
+        "test_execution": 1,
+        "research_synthesis": 5,
+        "academic_critique": 4,
+        "browser_use": 2,
+        "gui_use": 1,
+        "long_context": 5,
+        "multi_agent_coordination": 2,
+        "speed": 2
+      },
+      "risk_profile": {
+        "allowed_write_scope": "project",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "deep-research",
+          "strategic-insight"
+        ],
+        "avoid_for": [
+          "code-implementation"
+        ]
+      },
+      "quota": {
+        "quota_type": "webapp-account",
+        "period": "unknown",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "browser agent operator registry bootstrap 2026-05-28"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-youtube-transcript-extractor": {
+      "actor_id": "mini-youtube-transcript-extractor",
+      "host_id": "mini",
+      "operator_alias": "mini-youtube-transcript-extractor",
+      "aliases": [
+        "mini-youtube-transcript-extractor"
+      ],
+      "role": "knowledge-extractor",
+      "display_meta": {
+        "display_name": "YouTube Transcript Extractor",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-youtube-transcript-extractor/inbox",
+        "outbox": "actors/mini-youtube-transcript-extractor/outbox",
+        "logs": "actors/mini-youtube-transcript-extractor/logs",
+        "state_json": "actors/mini-youtube-transcript-extractor/state.json",
+        "heartbeat_json": "actors/mini-youtube-transcript-extractor/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-youtube-transcript-extractor/evidence"
+      },
+      "capability": {
+        "research": 3,
+        "browser": 4,
+        "data_extraction": 4,
+        "reliability": 3
+      },
+      "capability_profile": {
+        "architecture_reasoning": 1,
+        "code_impl": 1,
+        "root_cause_debug": 1,
+        "test_generation": 1,
+        "test_execution": 1,
+        "research_synthesis": 2,
+        "academic_critique": 1,
+        "browser_use": 4,
+        "gui_use": 3,
+        "long_context": 2,
+        "multi_agent_coordination": 1,
+        "data_extraction": 4,
+        "speed": 4
+      },
+      "risk_profile": {
+        "allowed_write_scope": "project",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "small",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "light",
+        "prefer_for": [
+          "transcript-extraction",
+          "youtube-data"
+        ],
+        "avoid_for": [
+          "code-implementation",
+          "deep-research"
+        ]
+      },
+      "quota": {
+        "quota_type": "webapp-account",
+        "period": "unknown",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "youtube transcript extractor operator bootstrap 2026-05-30"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "browser_agent_session",
+          "condition": "quota_exhausted"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "op.browser.webwright.playwright.01": {
+      "actor_id": "op.browser.webwright.playwright.01",
+      "host_id": "mini",
+      "operator_alias": "op.browser.webwright.playwright.01",
+      "aliases": [
+        "op.browser.webwright.playwright.01"
+      ],
+      "role": "knowledge-extractor",
+      "display_meta": {
+        "display_name": "Webwright Playwright Operator",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/webwright-playwright/inbox",
+        "outbox": "actors/webwright-playwright/outbox",
+        "logs": "actors/webwright-playwright/logs",
+        "state_json": "actors/webwright-playwright/state.json",
+        "heartbeat_json": "actors/webwright-playwright/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/webwright-playwright/evidence"
+      },
+      "capability": {
+        "research": 5,
+        "browser": 5,
+        "multimodal": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 2,
+        "code_impl": 3,
+        "root_cause_debug": 2,
+        "test_generation": 2,
+        "test_execution": 3,
+        "research_synthesis": 5,
+        "academic_critique": 3,
+        "browser_use": 5,
+        "gui_use": 4,
+        "long_context": 5,
+        "multi_agent_coordination": 3,
+        "data_extraction": 4,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "project",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "deep-research",
+          "browser-research"
+        ],
+        "avoid_for": [
+          "code-implementation"
+        ]
+      },
+      "quota": {
+        "quota_type": "webapp-account",
+        "period": "unknown",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "webwright operator bootstrap 2026-05-30"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "browser_agent_session",
+          "condition": "quota_exhausted"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "op.browser.browser_use_mcp.quick.01": {
+      "actor_id": "op.browser.browser_use_mcp.quick.01",
+      "host_id": "mini",
+      "operator_alias": "op.browser.browser_use_mcp.quick.01",
+      "aliases": [
+        "op.browser.browser_use_mcp.quick.01"
+      ],
+      "role": "knowledge-extractor",
+      "display_meta": {
+        "display_name": "Browser-use MCP Operator",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/browser-use-mcp/inbox",
+        "outbox": "actors/browser-use-mcp/outbox",
+        "logs": "actors/browser-use-mcp/logs",
+        "state_json": "actors/browser-use-mcp/state.json",
+        "heartbeat_json": "actors/browser-use-mcp/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/browser-use-mcp/evidence"
+      },
+      "capability": {
+        "research": 3,
+        "browser": 4,
+        "multimodal": 3,
+        "reliability": 3
+      },
+      "capability_profile": {
+        "architecture_reasoning": 1,
+        "code_impl": 1,
+        "root_cause_debug": 1,
+        "test_generation": 1,
+        "test_execution": 2,
+        "research_synthesis": 3,
+        "academic_critique": 1,
+        "browser_use": 4,
+        "gui_use": 3,
+        "long_context": 3,
+        "multi_agent_coordination": 2,
+        "data_extraction": 4,
+        "speed": 5
+      },
+      "risk_profile": {
+        "allowed_write_scope": "project",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "light",
+        "prefer_for": [
+          "browser-research",
+          "quick-snapshot"
+        ],
+        "avoid_for": [
+          "code-implementation"
+        ]
+      },
+      "quota": {
+        "quota_type": "webapp-account",
+        "period": "unknown",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "browser-use mcp operator bootstrap 2026-05-30"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "browser_agent_session",
+          "condition": "quota_exhausted"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "condition": "unavailable"
+        }
+      ]
+    },
+    "technology-diagram-painter": {
+      "actor_id": "technology-diagram-painter",
+      "host_id": "mini",
+      "operator_alias": "technology-diagram-painter",
+      "aliases": [
+        "technology-diagram-painter",
+        "technology_diagram_painter"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Technology Diagram Painter Browser Agent",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": true,
+        "heartbeat_timeout_sec": 180,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/technology-diagram-painter/inbox",
+        "outbox": "actors/technology-diagram-painter/outbox",
+        "logs": "actors/technology-diagram-painter/logs",
+        "state_json": "actors/technology-diagram-painter/state.json",
+        "heartbeat_json": "actors/technology-diagram-painter/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/technology-diagram-painter/evidence"
+      },
+      "capability": {
+        "research": 2,
+        "browser": 5,
+        "multimodal": 4,
+        "reliability": 3
+      },
+      "capability_profile": {
+        "architecture_reasoning": 2,
+        "code_impl": 1,
+        "root_cause_debug": 1,
+        "test_generation": 1,
+        "test_execution": 1,
+        "research_synthesis": 2,
+        "academic_critique": 1,
+        "browser_use": 5,
+        "gui_use": 5,
+        "long_context": 3,
+        "multi_agent_coordination": 2,
+        "data_extraction": 2,
+        "speed": 2
+      },
+      "risk_profile": {
+        "allowed_write_scope": "project",
+        "allowed_shell_scope": "denied",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "heavy",
+        "prefer_for": [
+          "technology-diagram",
+          "architecture-figure",
+          "report-figure",
+          "browser-asset-generation"
+        ],
+        "avoid_for": [
+          "code-implementation",
+          "vision-analysis",
+          "ocr"
+        ]
+      },
+      "quota": {
+        "quota_type": "webapp-account",
+        "period": "unknown",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "restricted_operator_command",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "technology diagram painter browser-agent operator bootstrap 2026-05-31"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "op.browser.webwright.playwright.01",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "op.browser.browser_use_mcp.quick.01",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-claude-opus-planner-2": {
+      "actor_id": "mini-claude-opus-planner-2",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-opus-planner-2",
+      "aliases": [
+        "mini-claude-opus-planner-2"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Claude Opus planner (instance 2)",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-opus-planner-2/inbox",
+        "outbox": "actors/mini-claude-opus-planner-2/outbox",
+        "logs": "actors/mini-claude-opus-planner-2/logs",
+        "state_json": "actors/mini-claude-opus-planner-2/state.json",
+        "heartbeat_json": "actors/mini-claude-opus-planner-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-opus-planner-2/evidence"
+      },
+      "capability": {
+        "planning": 5,
+        "coding": 4,
+        "debugging": 4,
+        "testing": 3,
+        "research": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 5,
+        "code_impl": 4,
+        "root_cause_debug": 4,
+        "test_generation": 2,
+        "test_execution": 1,
+        "research_synthesis": 4,
+        "academic_critique": 4,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 4,
+        "speed": 2
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "planning",
+          "architecture",
+          "schema-design"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "cheap-background"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "monthly",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-claude-opus-planner-2 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-planner-print",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-claude-opus-planner-3": {
+      "actor_id": "mini-claude-opus-planner-3",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-opus-planner-3",
+      "aliases": [
+        "mini-claude-opus-planner-3"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Claude Opus planner (instance 3)",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-opus-planner-3/inbox",
+        "outbox": "actors/mini-claude-opus-planner-3/outbox",
+        "logs": "actors/mini-claude-opus-planner-3/logs",
+        "state_json": "actors/mini-claude-opus-planner-3/state.json",
+        "heartbeat_json": "actors/mini-claude-opus-planner-3/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-opus-planner-3/evidence"
+      },
+      "capability": {
+        "planning": 5,
+        "coding": 4,
+        "debugging": 4,
+        "testing": 3,
+        "research": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 5,
+        "code_impl": 4,
+        "root_cause_debug": 4,
+        "test_generation": 2,
+        "test_execution": 1,
+        "research_synthesis": 4,
+        "academic_critique": 4,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 4,
+        "speed": 2
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "high",
+        "token_budget_class": "large",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.2,
+        "effort": "heavy",
+        "prefer_for": [
+          "planning",
+          "architecture",
+          "schema-design"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "cheap-background"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "monthly",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-claude-opus-planner-3 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-planner-print",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-antigravity-gemini35-flash-builder-1": {
+      "actor_id": "mini-antigravity-gemini35-flash-builder-1",
+      "host_id": "mini",
+      "operator_alias": "mini-antigravity-gemini35-flash-builder-1",
+      "aliases": [
+        "mini-antigravity-gemini35-flash-builder-1"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Antigravity Gemini 3.5 Flash builder pool slot 1",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-antigravity-gemini35-flash-builder-1/inbox",
+        "outbox": "actors/mini-antigravity-gemini35-flash-builder-1/outbox",
+        "logs": "actors/mini-antigravity-gemini35-flash-builder-1/logs",
+        "state_json": "actors/mini-antigravity-gemini35-flash-builder-1/state.json",
+        "heartbeat_json": "actors/mini-antigravity-gemini35-flash-builder-1/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-antigravity-gemini35-flash-builder-1/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "parallel",
+          "prototype",
+          "google",
+          "implementation",
+          "tests",
+          "ui",
+          "multimodal"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "google-account",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-antigravity-gemini35-flash-builder-1 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-antigravity-gemini35-flash-builder-2": {
+      "actor_id": "mini-antigravity-gemini35-flash-builder-2",
+      "host_id": "mini",
+      "operator_alias": "mini-antigravity-gemini35-flash-builder-2",
+      "aliases": [
+        "mini-antigravity-gemini35-flash-builder-2"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Antigravity Gemini 3.5 Flash builder pool slot 2",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-antigravity-gemini35-flash-builder-2/inbox",
+        "outbox": "actors/mini-antigravity-gemini35-flash-builder-2/outbox",
+        "logs": "actors/mini-antigravity-gemini35-flash-builder-2/logs",
+        "state_json": "actors/mini-antigravity-gemini35-flash-builder-2/state.json",
+        "heartbeat_json": "actors/mini-antigravity-gemini35-flash-builder-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-antigravity-gemini35-flash-builder-2/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "parallel",
+          "prototype",
+          "google",
+          "implementation",
+          "tests",
+          "ui",
+          "multimodal"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "google-account",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-antigravity-gemini35-flash-builder-2 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-claude-sonnet-builder-2": {
+      "actor_id": "mini-claude-sonnet-builder-2",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-sonnet-builder-2",
+      "aliases": [
+        "mini-claude-sonnet-builder-2"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Claude Sonnet builder pool slot 2",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-sonnet-builder-2/inbox",
+        "outbox": "actors/mini-claude-sonnet-builder-2/outbox",
+        "logs": "actors/mini-claude-sonnet-builder-2/logs",
+        "state_json": "actors/mini-claude-sonnet-builder-2/state.json",
+        "heartbeat_json": "actors/mini-claude-sonnet-builder-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-sonnet-builder-2/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "builder",
+          "implementation",
+          "debugging"
+        ],
+        "avoid_for": [
+          "bulk-extraction"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "monthly",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-claude-sonnet-builder-2 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-claude-sonnet-builder-3": {
+      "actor_id": "mini-claude-sonnet-builder-3",
+      "host_id": "mini",
+      "operator_alias": "mini-claude-sonnet-builder-3",
+      "aliases": [
+        "mini-claude-sonnet-builder-3"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Claude Sonnet builder pool slot 3",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-claude-sonnet-builder-3/inbox",
+        "outbox": "actors/mini-claude-sonnet-builder-3/outbox",
+        "logs": "actors/mini-claude-sonnet-builder-3/logs",
+        "state_json": "actors/mini-claude-sonnet-builder-3/state.json",
+        "heartbeat_json": "actors/mini-claude-sonnet-builder-3/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-sonnet-builder-3/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "builder",
+          "implementation",
+          "debugging"
+        ],
+        "avoid_for": [
+          "bulk-extraction"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "monthly",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-claude-sonnet-builder-3 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt55-medium-builder-1": {
+      "actor_id": "mini-codex-gpt55-medium-builder-1",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt55-medium-builder-1",
+      "aliases": [
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.5 medium builder pool slot 1",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt55-medium-builder-1/inbox",
+        "outbox": "actors/mini-codex-gpt55-medium-builder-1/outbox",
+        "logs": "actors/mini-codex-gpt55-medium-builder-1/logs",
+        "state_json": "actors/mini-codex-gpt55-medium-builder-1/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt55-medium-builder-1/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt55-medium-builder-1/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "code-edit",
+          "tests",
+          "refactor",
+          "codex",
+          "gpt"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt55-medium-builder-1 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt55-medium-builder-2": {
+      "actor_id": "mini-codex-gpt55-medium-builder-2",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt55-medium-builder-2",
+      "aliases": [
+        "mini-codex-gpt55-medium-builder-2"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.5 medium builder pool slot 2",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt55-medium-builder-2/inbox",
+        "outbox": "actors/mini-codex-gpt55-medium-builder-2/outbox",
+        "logs": "actors/mini-codex-gpt55-medium-builder-2/logs",
+        "state_json": "actors/mini-codex-gpt55-medium-builder-2/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt55-medium-builder-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt55-medium-builder-2/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "code-edit",
+          "tests",
+          "refactor",
+          "codex",
+          "gpt"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt55-medium-builder-2 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt53-spark-builder-1": {
+      "actor_id": "mini-codex-gpt53-spark-builder-1",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt53-spark-builder-1",
+      "aliases": [
+        "mini-codex-gpt53-spark-builder-1"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 1",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt53-spark-builder-1/inbox",
+        "outbox": "actors/mini-codex-gpt53-spark-builder-1/outbox",
+        "logs": "actors/mini-codex-gpt53-spark-builder-1/logs",
+        "state_json": "actors/mini-codex-gpt53-spark-builder-1/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt53-spark-builder-1/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt53-spark-builder-1/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "code-edit",
+          "tests",
+          "refactor",
+          "codex",
+          "spark"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt53-spark-builder-1 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt53-spark-builder-2": {
+      "actor_id": "mini-codex-gpt53-spark-builder-2",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt53-spark-builder-2",
+      "aliases": [
+        "mini-codex-gpt53-spark-builder-2"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 2",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt53-spark-builder-2/inbox",
+        "outbox": "actors/mini-codex-gpt53-spark-builder-2/outbox",
+        "logs": "actors/mini-codex-gpt53-spark-builder-2/logs",
+        "state_json": "actors/mini-codex-gpt53-spark-builder-2/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt53-spark-builder-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt53-spark-builder-2/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "code-edit",
+          "tests",
+          "refactor",
+          "codex",
+          "spark"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt53-spark-builder-2 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt53-spark-builder-3": {
+      "actor_id": "mini-codex-gpt53-spark-builder-3",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt53-spark-builder-3",
+      "aliases": [
+        "mini-codex-gpt53-spark-builder-3"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 3",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt53-spark-builder-3/inbox",
+        "outbox": "actors/mini-codex-gpt53-spark-builder-3/outbox",
+        "logs": "actors/mini-codex-gpt53-spark-builder-3/logs",
+        "state_json": "actors/mini-codex-gpt53-spark-builder-3/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt53-spark-builder-3/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt53-spark-builder-3/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "code-edit",
+          "tests",
+          "refactor",
+          "codex",
+          "spark"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt53-spark-builder-3 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt53-spark-builder-4": {
+      "actor_id": "mini-codex-gpt53-spark-builder-4",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt53-spark-builder-4",
+      "aliases": [
+        "mini-codex-gpt53-spark-builder-4"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 4",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt53-spark-builder-4/inbox",
+        "outbox": "actors/mini-codex-gpt53-spark-builder-4/outbox",
+        "logs": "actors/mini-codex-gpt53-spark-builder-4/logs",
+        "state_json": "actors/mini-codex-gpt53-spark-builder-4/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt53-spark-builder-4/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt53-spark-builder-4/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "code-edit",
+          "tests",
+          "refactor",
+          "codex",
+          "spark"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt53-spark-builder-4 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt53-spark-builder-5": {
+      "actor_id": "mini-codex-gpt53-spark-builder-5",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt53-spark-builder-5",
+      "aliases": [
+        "mini-codex-gpt53-spark-builder-5"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 5",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt53-spark-builder-5/inbox",
+        "outbox": "actors/mini-codex-gpt53-spark-builder-5/outbox",
+        "logs": "actors/mini-codex-gpt53-spark-builder-5/logs",
+        "state_json": "actors/mini-codex-gpt53-spark-builder-5/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt53-spark-builder-5/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt53-spark-builder-5/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "code-edit",
+          "tests",
+          "refactor",
+          "codex",
+          "spark"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt53-spark-builder-5 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt53-spark-builder-6": {
+      "actor_id": "mini-codex-gpt53-spark-builder-6",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt53-spark-builder-6",
+      "aliases": [
+        "mini-codex-gpt53-spark-builder-6"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 6",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt53-spark-builder-6/inbox",
+        "outbox": "actors/mini-codex-gpt53-spark-builder-6/outbox",
+        "logs": "actors/mini-codex-gpt53-spark-builder-6/logs",
+        "state_json": "actors/mini-codex-gpt53-spark-builder-6/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt53-spark-builder-6/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt53-spark-builder-6/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "implementation",
+          "code-edit",
+          "tests",
+          "refactor",
+          "codex",
+          "spark"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt53-spark-builder-6 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-glm51-builder-1": {
+      "actor_id": "mini-glm51-builder-1",
+      "host_id": "mini",
+      "operator_alias": "mini-glm51-builder-1",
+      "aliases": [
+        "mini-glm51-builder-1"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini GLM-5.1 builder pool slot 1",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-glm51-builder-1/inbox",
+        "outbox": "actors/mini-glm51-builder-1/outbox",
+        "logs": "actors/mini-glm51-builder-1/logs",
+        "state_json": "actors/mini-glm51-builder-1/state.json",
+        "heartbeat_json": "actors/mini-glm51-builder-1/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-glm51-builder-1/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "builder",
+          "implementation",
+          "debugging",
+          "glm",
+          "local-gateway"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "none",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-glm51-builder-1 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-glm51-builder-2": {
+      "actor_id": "mini-glm51-builder-2",
+      "host_id": "mini",
+      "operator_alias": "mini-glm51-builder-2",
+      "aliases": [
+        "mini-glm51-builder-2"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini GLM-5.1 builder pool slot 2",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-glm51-builder-2/inbox",
+        "outbox": "actors/mini-glm51-builder-2/outbox",
+        "logs": "actors/mini-glm51-builder-2/logs",
+        "state_json": "actors/mini-glm51-builder-2/state.json",
+        "heartbeat_json": "actors/mini-glm51-builder-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-glm51-builder-2/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "builder",
+          "implementation",
+          "debugging",
+          "glm",
+          "local-gateway"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "none",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-glm51-builder-2 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-glm51-builder-3": {
+      "actor_id": "mini-glm51-builder-3",
+      "host_id": "mini",
+      "operator_alias": "mini-glm51-builder-3",
+      "aliases": [
+        "mini-glm51-builder-3"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini GLM-5.1 builder pool slot 3",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-glm51-builder-3/inbox",
+        "outbox": "actors/mini-glm51-builder-3/outbox",
+        "logs": "actors/mini-glm51-builder-3/logs",
+        "state_json": "actors/mini-glm51-builder-3/state.json",
+        "heartbeat_json": "actors/mini-glm51-builder-3/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-glm51-builder-3/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "builder",
+          "implementation",
+          "debugging",
+          "glm",
+          "local-gateway"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "none",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-glm51-builder-3 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-reasonix-deepseek-v4-flash-builder-1": {
+      "actor_id": "mini-reasonix-deepseek-v4-flash-builder-1",
+      "host_id": "mini",
+      "operator_alias": "mini-reasonix-deepseek-v4-flash-builder-1",
+      "aliases": [
+        "mini-reasonix-deepseek-v4-flash-builder-1"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Reasonix DeepSeek V4 Flash builder pool slot 1",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-reasonix-deepseek-v4-flash-builder-1/inbox",
+        "outbox": "actors/mini-reasonix-deepseek-v4-flash-builder-1/outbox",
+        "logs": "actors/mini-reasonix-deepseek-v4-flash-builder-1/logs",
+        "state_json": "actors/mini-reasonix-deepseek-v4-flash-builder-1/state.json",
+        "heartbeat_json": "actors/mini-reasonix-deepseek-v4-flash-builder-1/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-reasonix-deepseek-v4-flash-builder-1/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "root-cause",
+          "architecture-review",
+          "counterargument",
+          "decision-review",
+          "deepseek",
+          "reasonix"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-reasonix-deepseek-v4-flash-builder-1 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-reasonix-deepseek-v4-flash-builder-2": {
+      "actor_id": "mini-reasonix-deepseek-v4-flash-builder-2",
+      "host_id": "mini",
+      "operator_alias": "mini-reasonix-deepseek-v4-flash-builder-2",
+      "aliases": [
+        "mini-reasonix-deepseek-v4-flash-builder-2"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini Reasonix DeepSeek V4 Flash builder pool slot 2",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-reasonix-deepseek-v4-flash-builder-2/inbox",
+        "outbox": "actors/mini-reasonix-deepseek-v4-flash-builder-2/outbox",
+        "logs": "actors/mini-reasonix-deepseek-v4-flash-builder-2/logs",
+        "state_json": "actors/mini-reasonix-deepseek-v4-flash-builder-2/state.json",
+        "heartbeat_json": "actors/mini-reasonix-deepseek-v4-flash-builder-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-reasonix-deepseek-v4-flash-builder-2/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "denied",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "root-cause",
+          "architecture-review",
+          "counterargument",
+          "decision-review",
+          "deepseek",
+          "reasonix"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "critical-security-review"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-reasonix-deepseek-v4-flash-builder-2 at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-thunderomlx-qwen36-builder": {
+      "actor_id": "mini-thunderomlx-qwen36-builder",
+      "host_id": "mini",
+      "operator_alias": "mini-thunderomlx-qwen36-builder",
+      "aliases": [
+        "mini-thunderomlx-qwen36-builder"
+      ],
+      "role": "builder",
+      "display_meta": {
+        "display_name": "Mac mini ThunderOMLX Qwen3.6 builder pool slot 1",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-thunderomlx-qwen36-builder/inbox",
+        "outbox": "actors/mini-thunderomlx-qwen36-builder/outbox",
+        "logs": "actors/mini-thunderomlx-qwen36-builder/logs",
+        "state_json": "actors/mini-thunderomlx-qwen36-builder/state.json",
+        "heartbeat_json": "actors/mini-thunderomlx-qwen36-builder/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-thunderomlx-qwen36-builder/evidence"
+      },
+      "capability": {
+        "planning": 3,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 3,
+        "code_impl": 5,
+        "root_cause_debug": 4,
+        "test_generation": 4,
+        "test_execution": 4,
+        "research_synthesis": 3,
+        "academic_critique": 2,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "low",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "medium",
+        "prefer_for": [
+          "builder",
+          "local",
+          "draft-implementation",
+          "knowledge-assisted-coding",
+          "thunderomlx"
+        ],
+        "avoid_for": [
+          "critical-refactor",
+          "security-sensitive-code",
+          "final-quality-gate"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "none",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-thunderomlx-qwen36-builder at 2026-06-02T01:30:00Z for registry sync"
+      },
+      "persona_binding": {
+        "persona_id": "builder",
+        "persona_file": "personas/builder.md",
+        "knobs_override": {}
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "condition": "unavailable"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "condition": "quota_exhausted"
+        }
+      ]
+    },
+    "mini-codex-gpt55-medium-planner-1": {
+      "actor_id": "mini-codex-gpt55-medium-planner-1",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt55-medium-planner-1",
+      "aliases": [
+        "mini-codex-gpt55-medium-planner-1"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.5 medium planner support slot 1",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt55-medium-planner-1/inbox",
+        "outbox": "actors/mini-codex-gpt55-medium-planner-1/outbox",
+        "logs": "actors/mini-codex-gpt55-medium-planner-1/logs",
+        "state_json": "actors/mini-codex-gpt55-medium-planner-1/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt55-medium-planner-1/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt55-medium-planner-1/evidence"
+      },
+      "capability": {
+        "planning": 4,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 3,
+        "research": 3,
+        "long_context": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 4,
+        "code_impl": 5,
+        "root_cause_debug": 3,
+        "test_generation": 3,
+        "test_execution": 2,
+        "research_synthesis": 3,
+        "academic_critique": 3,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "high",
+        "prefer_for": [
+          "planning",
+          "requirements",
+          "prd",
+          "schema-design",
+          "code-aware-architecture",
+          "codex",
+          "gpt"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "cheap-background",
+          "critical-security-review",
+          "final-acceptance-signoff"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt55-medium-planner-1 at 2026-06-02T01:59:19Z for GPT-5.5 PRD/planner support routing"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {
+          "mode": "planner_support",
+          "final_architecture_signoff": false
+        }
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "condition": "needs_architecture_signoff"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner-print",
+          "condition": "quota_exhausted"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "condition": "emergency_only"
+        }
+      ]
+    },
+    "mini-codex-gpt55-medium-planner-2": {
+      "actor_id": "mini-codex-gpt55-medium-planner-2",
+      "host_id": "mini",
+      "operator_alias": "mini-codex-gpt55-medium-planner-2",
+      "aliases": [
+        "mini-codex-gpt55-medium-planner-2"
+      ],
+      "role": "planner",
+      "display_meta": {
+        "display_name": "Mac mini Codex GPT 5.5 medium planner support slot 2",
+        "tmux_session": "solar-harness-multi-task",
+        "tmux_window": null,
+        "tmux_pane_index": null
+      },
+      "lease": {
+        "acquired_at": null,
+        "expires_at": null,
+        "renewable": true,
+        "preemptible": false,
+        "heartbeat_timeout_sec": 120,
+        "lease_id": null,
+        "holder_sprint": null
+      },
+      "mailbox": {
+        "inbox": "actors/mini-codex-gpt55-medium-planner-2/inbox",
+        "outbox": "actors/mini-codex-gpt55-medium-planner-2/outbox",
+        "logs": "actors/mini-codex-gpt55-medium-planner-2/logs",
+        "state_json": "actors/mini-codex-gpt55-medium-planner-2/state.json",
+        "heartbeat_json": "actors/mini-codex-gpt55-medium-planner-2/heartbeat.json"
+      },
+      "context_packet_ref": {
+        "path": null,
+        "packet_id": null
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-codex-gpt55-medium-planner-2/evidence"
+      },
+      "capability": {
+        "planning": 4,
+        "coding": 5,
+        "debugging": 4,
+        "testing": 3,
+        "research": 3,
+        "long_context": 4,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 4,
+        "code_impl": 5,
+        "root_cause_debug": 3,
+        "test_generation": 3,
+        "test_execution": 2,
+        "research_synthesis": 3,
+        "academic_critique": 3,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 3,
+        "speed": 3
+      },
+      "risk_profile": {
+        "allowed_write_scope": "harness",
+        "allowed_shell_scope": "allowed",
+        "allowed_network": "allowed",
+        "allowed_secrets": "secret_ref_only",
+        "destructive_actions": "denied",
+        "git_commit": "allowed",
+        "git_push": "denied",
+        "payment_or_external_action": "denied",
+        "requires_human_for": [
+          "git_push",
+          "payment_or_external_action"
+        ]
+      },
+      "cost_profile": {
+        "cost_tier": "medium",
+        "token_budget_class": "medium",
+        "quota_period": "monthly",
+        "reserve_ratio": 0.1,
+        "effort": "high",
+        "prefer_for": [
+          "planning",
+          "requirements",
+          "prd",
+          "schema-design",
+          "code-aware-architecture",
+          "codex",
+          "gpt"
+        ],
+        "avoid_for": [
+          "bulk-extraction",
+          "cheap-background",
+          "critical-security-review",
+          "final-acceptance-signoff"
+        ]
+      },
+      "quota": {
+        "quota_type": "monthly-subscription-interactive",
+        "period": "api_balance",
+        "on_exhausted": "disable_and_fallback"
+      },
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "allowed"
+      },
+      "evidence": {
+        "last_smoke_at": null,
+        "last_smoke_result": null,
+        "last_task_at": null,
+        "last_task_id": null,
+        "last_task_result": null,
+        "provenance": "generated from physical-operators.json:mini-codex-gpt55-medium-planner-2 at 2026-06-02T01:59:19Z for GPT-5.5 PRD/planner support routing"
+      },
+      "persona_binding": {
+        "persona_id": "planner",
+        "persona_file": "personas/planner.md",
+        "knobs_override": {
+          "mode": "planner_support",
+          "final_architecture_signoff": false
+        }
+      },
+      "fallback_ladder": [
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "condition": "needs_architecture_signoff"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner-print",
+          "condition": "quota_exhausted"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "condition": "emergency_only"
+        }
+      ]
+    }
+  }
+}

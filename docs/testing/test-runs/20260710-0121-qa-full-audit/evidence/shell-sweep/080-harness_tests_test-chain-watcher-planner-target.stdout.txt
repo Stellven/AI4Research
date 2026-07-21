@@ -1,0 +1,1 @@
+PASS chain-watcher resolves Planner pane dynamically

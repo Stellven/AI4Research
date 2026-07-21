@@ -29,12 +29,20 @@ export interface DaemonConfig {
 
 const DEFAULT_CONFIG: DaemonConfig = {
   socketPath: "/tmp/solar.sock",
-  dbPath: `${process.env.HOME}/.solar/solar.db`,
+  dbPath: process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`,
   cacheDir: `${process.env.HOME}/.solar/cache`,
   pluginDir: `${process.env.HOME}/.solar/plugins`,
   syncInterval: 1000,
   healthCheckInterval: 5000,
 };
+
+// The risk-gated debate/vote orchestration is scaffolding, not a working
+// feature: estimateRisk() returns 0 and the graph is single-node, so these
+// knobs never fire. They stay in the code (and behind this flag) for future
+// wiring, but the API reports them honestly as not-implemented by default
+// instead of accepting settings that do nothing.
+const ORCHESTRATOR_EXPERIMENTAL =
+  process.env.SOLAR_ORCHESTRATOR_EXPERIMENTAL === "true";
 
 // ==================== Daemon 主类 ====================
 
@@ -348,9 +356,14 @@ export class SolarDaemon {
     // ========== 渲染 API ==========
 
     if (path === "/render" && method === "POST") {
-      const { template, context } = await req.json();
-      // TODO: 调用渲染引擎
-      return Response.json({ output: `Rendered: ${template}` });
+      // Render engine is not wired yet. The route is reserved (kept as a stub
+      // so the contract is stable for later), but it must not return a fake
+      // `Rendered: <template>` string as if it had rendered anything.
+      await req.json().catch(() => ({}));
+      return Response.json(
+        { ok: false, error: "render is not implemented" },
+        { status: 501 },
+      );
     }
 
     // ========== Orchestrator API ==========
@@ -359,7 +372,14 @@ export class SolarDaemon {
       const taskId = url.searchParams.get("taskId") || undefined;
       const eventType = url.searchParams.get("type") || undefined;
       const since = url.searchParams.get("since") || undefined;
-      return Response.json(this.messageExecutor.getOrchestrationEvents(limit, taskId, eventType, since));
+      return Response.json(
+        this.messageExecutor.getOrchestrationEvents(
+          limit,
+          taskId,
+          eventType,
+          since,
+        ),
+      );
     }
 
     if (path === "/orchestrator/state" && method === "GET") {
@@ -374,7 +394,10 @@ export class SolarDaemon {
     if (path === "/orchestrator/graph" && method === "GET") {
       const taskId = url.searchParams.get("taskId");
       if (!taskId) {
-        return Response.json({ ok: false, error: "taskId is required" }, { status: 400 });
+        return Response.json(
+          { ok: false, error: "taskId is required" },
+          { status: 400 },
+        );
       }
       const graph = this.messageExecutor.getTaskGraph(taskId);
       return Response.json({ ok: true, graph });
@@ -383,17 +406,26 @@ export class SolarDaemon {
     if (path === "/orchestrator/diagnostics" && method === "GET") {
       const taskId = url.searchParams.get("taskId");
       if (!taskId) {
-        return Response.json({ ok: false, error: "taskId is required" }, { status: 400 });
+        return Response.json(
+          { ok: false, error: "taskId is required" },
+          { status: 400 },
+        );
       }
-      return Response.json({ ok: true, diagnostics: this.messageExecutor.getTaskDiagnostics(taskId) });
+      return Response.json({
+        ok: true,
+        diagnostics: this.messageExecutor.getTaskDiagnostics(taskId),
+      });
     }
 
     if (path === "/orchestrator/retry-policy" && method === "GET") {
-      return Response.json({ ok: true, policy: this.messageExecutor.getRetryPolicy() });
+      return Response.json({
+        ok: true,
+        policy: this.messageExecutor.getRetryPolicy(),
+      });
     }
 
     if (path === "/orchestrator/retry-policy" && method === "POST") {
-      const body = await req.json() as {
+      const body = (await req.json()) as {
         baseDelayMs?: number;
         maxDelayMs?: number;
         maxAttempts?: number;
@@ -405,8 +437,15 @@ export class SolarDaemon {
     }
 
     if (path === "/orchestrator/control" && method === "POST") {
-      const body = await req.json() as {
-        action: "pause" | "resume" | "reroute" | "debate" | "policy" | "retry" | "repair";
+      const body = (await req.json()) as {
+        action:
+          | "pause"
+          | "resume"
+          | "reroute"
+          | "debate"
+          | "policy"
+          | "retry"
+          | "repair";
         taskId: string;
         nodeId?: string;
         target?: string;
@@ -418,7 +457,10 @@ export class SolarDaemon {
       };
 
       if (body.action !== "policy" && !body.taskId) {
-        return Response.json({ ok: false, error: "taskId is required" }, { status: 400 });
+        return Response.json(
+          { ok: false, error: "taskId is required" },
+          { status: 400 },
+        );
       }
 
       switch (body.action) {
@@ -430,17 +472,58 @@ export class SolarDaemon {
           return Response.json({ ok: true });
         case "reroute":
           if (!body.nodeId || !body.target) {
-            return Response.json({ ok: false, error: "nodeId and target are required for reroute" }, { status: 400 });
+            return Response.json(
+              {
+                ok: false,
+                error: "nodeId and target are required for reroute",
+              },
+              { status: 400 },
+            );
           }
-          this.messageExecutor.rerouteNode(body.taskId, body.nodeId, body.target);
+          this.messageExecutor.rerouteNode(
+            body.taskId,
+            body.nodeId,
+            body.target,
+          );
           return Response.json({ ok: true });
         case "debate":
-          if (!body.rounds || body.rounds < 1) {
-            return Response.json({ ok: false, error: "rounds >= 1 is required for debate" }, { status: 400 });
+          // Risk/debate orchestration never fires (single-node graph,
+          // estimateRisk()=0). Report honestly unless explicitly enabled for
+          // development; the executor call is kept for future wiring.
+          if (!ORCHESTRATOR_EXPERIMENTAL) {
+            return Response.json(
+              {
+                ok: false,
+                error: "debate orchestration is not implemented in this build",
+              },
+              { status: 501 },
+            );
           }
-          this.messageExecutor.setDebateRounds(body.taskId, body.rounds, body.nodeId);
+          if (!body.rounds || body.rounds < 1) {
+            return Response.json(
+              { ok: false, error: "rounds >= 1 is required for debate" },
+              { status: 400 },
+            );
+          }
+          this.messageExecutor.setDebateRounds(
+            body.taskId,
+            body.rounds,
+            body.nodeId,
+          );
           return Response.json({ ok: true });
         case "policy":
+          // Same: the risk/debate policy knobs do nothing today. Honest 501
+          // by default; the update call is preserved behind the flag.
+          if (!ORCHESTRATOR_EXPERIMENTAL) {
+            return Response.json(
+              {
+                ok: false,
+                error:
+                  "orchestration risk/debate policy is not implemented in this build",
+              },
+              { status: 501 },
+            );
+          }
           this.messageExecutor.updateOrchestrationPolicy({
             defaultDebateRounds: body.defaultDebateRounds,
             highRiskThreshold: body.highRiskThreshold,
@@ -449,12 +532,20 @@ export class SolarDaemon {
           return Response.json({ ok: true });
         case "retry":
           if (!body.nodeId) {
-            return Response.json({ ok: false, error: "nodeId is required for retry" }, { status: 400 });
+            return Response.json(
+              { ok: false, error: "nodeId is required for retry" },
+              { status: 400 },
+            );
           }
-          return Response.json(this.messageExecutor.retryNode(body.taskId, body.nodeId));
+          return Response.json(
+            this.messageExecutor.retryNode(body.taskId, body.nodeId),
+          );
         case "repair":
           if (!body.nodeId) {
-            return Response.json({ ok: false, error: "nodeId is required for repair" }, { status: 400 });
+            return Response.json(
+              { ok: false, error: "nodeId is required for repair" },
+              { status: 400 },
+            );
           }
           return Response.json(
             this.messageExecutor.createRepairTask(body.taskId, body.nodeId, {
@@ -463,7 +554,10 @@ export class SolarDaemon {
             }),
           );
         default:
-          return Response.json({ ok: false, error: "unknown action" }, { status: 400 });
+          return Response.json(
+            { ok: false, error: "unknown action" },
+            { status: 400 },
+          );
       }
     }
 

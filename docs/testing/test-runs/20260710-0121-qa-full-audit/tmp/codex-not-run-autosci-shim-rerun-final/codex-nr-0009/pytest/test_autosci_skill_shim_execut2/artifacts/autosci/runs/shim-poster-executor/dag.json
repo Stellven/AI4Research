@@ -1,0 +1,40 @@
+{
+  "nodes": [
+    {
+      "name": "Approved Poster Executor",
+      "content": "Research Team",
+      "edge": [
+        "Introduction",
+        "Method",
+        "Results"
+      ],
+      "level": 0,
+      "visual_node": [],
+      "resolution": ""
+    },
+    {
+      "name": "Introduction",
+      "content": "Approved poster rendering needs native HTML.",
+      "edge": [],
+      "level": 1,
+      "visual_node": [],
+      "resolution": ""
+    },
+    {
+      "name": "Method",
+      "content": "The bridge builds poster content from paper source.",
+      "edge": [],
+      "level": 1,
+      "visual_node": [],
+      "resolution": ""
+    },
+    {
+      "name": "Results",
+      "content": "The renderer exports a verified PNG.",
+      "edge": [],
+      "level": 1,
+      "visual_node": [],
+      "resolution": ""
+    }
+  ]
+}

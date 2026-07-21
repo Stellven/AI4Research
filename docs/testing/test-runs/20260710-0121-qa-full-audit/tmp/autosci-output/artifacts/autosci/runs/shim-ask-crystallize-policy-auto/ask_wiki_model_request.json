@@ -1,0 +1,81 @@
+{
+  "action": "ask_wiki",
+  "context": {
+    "gap_annotations": {
+      "annotations": [
+        {
+          "source": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/workspace/wiki/graph/open_questions.md",
+          "status": "open_questions_missing",
+          "text": "open_questions.md was not available, so gap matching could not run."
+        }
+      ],
+      "schema": "autosci_ask_gap_annotations.v1",
+      "status": "no_matching_open_questions"
+    },
+    "query": "What supports SkillGen?",
+    "retrieval_hits": [
+      {
+        "matched_terms": [
+          "skillgen"
+        ],
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/workspace/wiki/papers/skillgen.md",
+        "score": 4,
+        "snippet": "# SkillGen"
+      }
+    ],
+    "wiki_context": {
+      "limitations": [
+        "Ask context evidence is partial because one or more native context files are missing."
+      ],
+      "query_terms": [
+        "supports",
+        "skillgen"
+      ],
+      "schema": "autosci_ask_wiki_context.v1",
+      "sources": {
+        "context_brief": {
+          "matched_lines": [],
+          "matched_terms": [],
+          "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/workspace/wiki/graph/context_brief.md",
+          "status": "missing"
+        },
+        "edges": {
+          "matched_edge_count": 0,
+          "matched_edges": [],
+          "matched_terms": [],
+          "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+          "status": "missing"
+        },
+        "index": {
+          "matched_lines": [],
+          "matched_terms": [],
+          "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/workspace/wiki/index.md",
+          "status": "missing"
+        },
+        "open_questions": {
+          "matched_lines": [],
+          "matched_terms": [],
+          "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/workspace/wiki/graph/open_questions.md",
+          "status": "missing"
+        }
+      },
+      "status": "partial",
+      "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/workspace/wiki"
+    }
+  },
+  "prompt": "What supports SkillGen?",
+  "required_response_schema": {
+    "outputs": {
+      "answer": "source-grounded answer or assessment",
+      "confidence": "number between 0 and 1",
+      "evidence_ids": [
+        "source id used by the answer"
+      ],
+      "findings": [],
+      "ideas": []
+    },
+    "schema": "autosci_model_response.v1",
+    "status": "completed"
+  },
+  "schema": "autosci_model_request.v1"
+}

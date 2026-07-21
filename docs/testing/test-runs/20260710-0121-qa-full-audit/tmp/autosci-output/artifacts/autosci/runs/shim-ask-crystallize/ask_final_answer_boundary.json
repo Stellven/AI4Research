@@ -1,0 +1,24 @@
+{
+  "answer_status": "completed",
+  "blocking_reasons": [],
+  "final_answer_ready": true,
+  "limitations": [],
+  "model_confidence": 0.88,
+  "model_evidence_ids": [
+    "model:skillgen-crystallize"
+  ],
+  "model_name": "test-model",
+  "model_provider": "command",
+  "model_source": "model-command",
+  "model_status": "completed",
+  "query": "What supports SkillGen?",
+  "request_sha256": "624e85baf982855153d8fe95ce336646e6dd257383675452d1f51044acf29abf",
+  "response_sha256": "a5b99a9ac892f3694a0625f1b8c876fb7ba85874560c40c0d48827a255a6ae82",
+  "retrieval_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr0/artifacts/autosci/workspace/wiki/papers/skillgen.md"
+  ],
+  "retrieval_source_count": 1,
+  "retrieval_status": "completed",
+  "schema": "autosci_ask_final_answer_boundary.v1",
+  "status": "final_answer_ready"
+}

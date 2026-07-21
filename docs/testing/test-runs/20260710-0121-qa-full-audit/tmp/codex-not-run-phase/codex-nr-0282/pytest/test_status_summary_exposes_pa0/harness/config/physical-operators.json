@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "operators": {
+    "technology-diagram-painter": {
+      "role": "visual-generator",
+      "backend": "browser_agent",
+      "provider": "chatgpt",
+      "model": "gpt-image",
+      "enabled": true,
+      "available": true
+    }
+  }
+}

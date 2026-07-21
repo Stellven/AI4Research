@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-07-10T19:27:15Z",
+  "configured_keys": [],
+  "dotenv_exists": false,
+  "dotenv_path": "runtime/.env",
+  "schema": "autosci_setup_before_snapshot.v1",
+  "secret_values_recorded": false,
+  "status": "snapshot"
+}

@@ -1,0 +1,94 @@
+capability_capsule_id: cap.research-paper-analyze
+capsule_kind: capability
+metadata:
+  name: Scientific Paper Analyze
+  description: Extract reviewable paper metadata, sections, results, limitations, and analysis summaries from normalized paper evidence.
+applicability:
+  task_types:
+    - scientific-research
+    - paper-analysis
+  positive_signals:
+    - analyze paper
+    - extract paper metadata
+    - summarize scientific paper
+  negative_signals:
+    - discover papers
+    - execute experiment
+contract:
+  inputs:
+    required:
+      - name: research_paper
+        schema_ref: schemas/evidence/research_paper.v1.schema.json
+    optional:
+      - name: analysis_focus
+        description: Optional focus such as datasets, limitations, results, or contributions.
+  outputs:
+    required:
+      - name: analyzed_research_paper
+        schema_ref: schemas/evidence/research_paper.v1.schema.json
+    optional:
+      - name: analysis_notes
+        description: Review notes linked to source anchors.
+  preconditions:
+    - check: normalized_paper_available
+      description: Input paper evidence exists and has parse_status.
+  postconditions:
+    - check: source_anchored_analysis
+      description: Analysis fields cite paper sections or artifacts.
+  invariants:
+    - Does not mark claims verified.
+    - Analysis limitations remain explicit.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: Normalized paper evidence.
+  produces:
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: Analyzed paper evidence with enriched outputs.
+  compatible_with:
+    - cap.research-method-extract
+    - cap.research-claim-extract
+    - cap.research-graph-update
+  incompatible_with: []
+  requires_after:
+    - cap.research-paper-ingest
+effects:
+  read:
+    - normalized paper evidence
+    - schemas/evidence/research_paper.v1.schema.json
+  write:
+    - artifacts/scientific/research_paper_analysis/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - none by default
+  cost:
+    - bounded analysis cost
+  risk:
+    - summary may omit nuance if source parse is partial
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.paper_analyze
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/research_paper.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against research_paper.v1.schema.json.
+    - Confirm source anchors or limitations are present for analysis fields.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Fixture paper analysis emits valid evidence with provenance.
+    - Unsupported analysis is represented as a limitation.
+operator_compatibility:
+  preferred:
+    - ScientificPaperAnalyzer
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

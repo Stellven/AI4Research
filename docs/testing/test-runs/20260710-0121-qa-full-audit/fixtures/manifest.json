@@ -1,0 +1,607 @@
+{
+  "schema": "ai4research_fixture_manifest.v1",
+  "created_for_commit": "fb3f589b08e4167ac3cb0043fb3d59801a0f110b",
+  "fixture_only_not_live_parity": true,
+  "fixtures": [
+    {
+      "id": "fixture-approvals-after-json",
+      "path": "approvals/after.json",
+      "supports_feature_ids": [],
+      "kind": "approvals",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-approvals-allowlist-json",
+      "path": "approvals/allowlist.json",
+      "supports_feature_ids": [],
+      "kind": "approvals",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-approvals-approval-ref-json",
+      "path": "approvals/approval-ref.json",
+      "supports_feature_ids": [],
+      "kind": "approvals",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-approvals-before-json",
+      "path": "approvals/before.json",
+      "supports_feature_ids": [],
+      "kind": "approvals",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-approvals-runtime-json",
+      "path": "approvals/runtime.json",
+      "supports_feature_ids": [],
+      "kind": "approvals",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-invalid-generic-v1-json",
+      "path": "evidence/invalid-generic-v1.json",
+      "supports_feature_ids": [],
+      "kind": "evidence",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schema-fixture-validation-json",
+      "path": "evidence/schema-fixture-validation.json",
+      "supports_feature_ids": [],
+      "kind": "evidence",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-artifact_review-v1-invalid-json",
+      "path": "evidence/schemas/artifact_review.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-artifact_review-v1-valid-json",
+      "path": "evidence/schemas/artifact_review.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-autosci_feature_parity-v1-invalid-json",
+      "path": "evidence/schemas/autosci_feature_parity.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-autosci_feature_parity-v1-valid-json",
+      "path": "evidence/schemas/autosci_feature_parity.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-autosci_operator_smoke-v1-invalid-json",
+      "path": "evidence/schemas/autosci_operator_smoke.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-autosci_operator_smoke-v1-valid-json",
+      "path": "evidence/schemas/autosci_operator_smoke.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-autosci_runtime_evidence-v1-invalid-json",
+      "path": "evidence/schemas/autosci_runtime_evidence.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-autosci_runtime_evidence-v1-valid-json",
+      "path": "evidence/schemas/autosci_runtime_evidence.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-autosci_skill_run-v1-invalid-json",
+      "path": "evidence/schemas/autosci_skill_run.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-autosci_skill_run-v1-valid-json",
+      "path": "evidence/schemas/autosci_skill_run.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-claim_verdict-v1-invalid-json",
+      "path": "evidence/schemas/claim_verdict.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-claim_verdict-v1-valid-json",
+      "path": "evidence/schemas/claim_verdict.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-code_evidence_map-v1-invalid-json",
+      "path": "evidence/schemas/code_evidence_map.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-code_evidence_map-v1-valid-json",
+      "path": "evidence/schemas/code_evidence_map.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-experiment_plan-v1-invalid-json",
+      "path": "evidence/schemas/experiment_plan.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-experiment_plan-v1-valid-json",
+      "path": "evidence/schemas/experiment_plan.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-experiment_result-v1-invalid-json",
+      "path": "evidence/schemas/experiment_result.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-experiment_result-v1-valid-json",
+      "path": "evidence/schemas/experiment_result.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-experiment_status-v1-invalid-json",
+      "path": "evidence/schemas/experiment_status.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-experiment_status-v1-valid-json",
+      "path": "evidence/schemas/experiment_status.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-idea_candidate-v1-invalid-json",
+      "path": "evidence/schemas/idea_candidate.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-idea_candidate-v1-valid-json",
+      "path": "evidence/schemas/idea_candidate.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-idea_evaluation-v1-invalid-json",
+      "path": "evidence/schemas/idea_evaluation.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-idea_evaluation-v1-valid-json",
+      "path": "evidence/schemas/idea_evaluation.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-literature_discovery-v1-invalid-json",
+      "path": "evidence/schemas/literature_discovery.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-literature_discovery-v1-valid-json",
+      "path": "evidence/schemas/literature_discovery.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-publication_bundle-v1-invalid-json",
+      "path": "evidence/schemas/publication_bundle.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-publication_bundle-v1-valid-json",
+      "path": "evidence/schemas/publication_bundle.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_claims-v1-invalid-json",
+      "path": "evidence/schemas/research_claims.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_claims-v1-valid-json",
+      "path": "evidence/schemas/research_claims.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_graph_update-v1-invalid-json",
+      "path": "evidence/schemas/research_graph_update.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_graph_update-v1-valid-json",
+      "path": "evidence/schemas/research_graph_update.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_memory_update-v1-invalid-json",
+      "path": "evidence/schemas/research_memory_update.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_memory_update-v1-valid-json",
+      "path": "evidence/schemas/research_memory_update.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_method-v1-invalid-json",
+      "path": "evidence/schemas/research_method.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_method-v1-valid-json",
+      "path": "evidence/schemas/research_method.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_paper-v1-invalid-json",
+      "path": "evidence/schemas/research_paper.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-research_paper-v1-valid-json",
+      "path": "evidence/schemas/research_paper.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-scientific_report-v1-invalid-json",
+      "path": "evidence/schemas/scientific_report.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-scientific_report-v1-valid-json",
+      "path": "evidence/schemas/scientific_report.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-workflow_evolution-v1-invalid-json",
+      "path": "evidence/schemas/workflow_evolution.v1.invalid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-schemas-workflow_evolution-v1-valid-json",
+      "path": "evidence/schemas/workflow_evolution.v1.valid.json",
+      "supports_feature_ids": [],
+      "kind": "schemas",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-evidence-valid-generic-v1-json",
+      "path": "evidence/valid-generic-v1.json",
+      "supports_feature_ids": [],
+      "kind": "evidence",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-experiments-missing-result-directory-readme",
+      "path": "experiments/missing-result-directory.README",
+      "supports_feature_ids": [],
+      "kind": "experiments",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-experiments-plan-json",
+      "path": "experiments/plan.json",
+      "supports_feature_ids": [],
+      "kind": "experiments",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-experiments-result-json",
+      "path": "experiments/result.json",
+      "supports_feature_ids": [],
+      "kind": "experiments",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-experiments-runtime-log",
+      "path": "experiments/runtime.log",
+      "supports_feature_ids": [],
+      "kind": "experiments",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-papers-malformed-paper-md",
+      "path": "papers/malformed-paper.md",
+      "supports_feature_ids": [],
+      "kind": "papers",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-papers-malformed-pdf",
+      "path": "papers/malformed.pdf",
+      "supports_feature_ids": [],
+      "kind": "papers",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-papers-source-tex",
+      "path": "papers/source.tex",
+      "supports_feature_ids": [],
+      "kind": "papers",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-papers-valid-paper-md",
+      "path": "papers/valid-paper.md",
+      "supports_feature_ids": [],
+      "kind": "papers",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-papers-valid-paper-pdf",
+      "path": "papers/valid-paper.pdf",
+      "supports_feature_ids": [],
+      "kind": "papers",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-providers-arxiv-json",
+      "path": "providers/arxiv.json",
+      "supports_feature_ids": [],
+      "kind": "providers",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-providers-deepxiv-json",
+      "path": "providers/deepxiv.json",
+      "supports_feature_ids": [],
+      "kind": "providers",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-providers-paper-copilot-venue-json",
+      "path": "providers/paper-copilot-venue.json",
+      "supports_feature_ids": [],
+      "kind": "providers",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-providers-provider-unavailable-json",
+      "path": "providers/provider-unavailable.json",
+      "supports_feature_ids": [],
+      "kind": "providers",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-providers-semantic-scholar-json",
+      "path": "providers/semantic-scholar.json",
+      "supports_feature_ids": [],
+      "kind": "providers",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-review-invalid-review-json",
+      "path": "review/invalid-review.json",
+      "supports_feature_ids": [],
+      "kind": "review",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-review-missing-review-json",
+      "path": "review/missing-review.json",
+      "supports_feature_ids": [],
+      "kind": "review",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-review-valid-review-json",
+      "path": "review/valid-review.json",
+      "supports_feature_ids": [],
+      "kind": "review",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-ui-status-missing-runtime-json",
+      "path": "ui/status-missing-runtime.json",
+      "supports_feature_ids": [],
+      "kind": "ui",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-ui-status-ok-json",
+      "path": "ui/status-ok.json",
+      "supports_feature_ids": [],
+      "kind": "ui",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-ui-status-stalled-json",
+      "path": "ui/status-stalled.json",
+      "supports_feature_ids": [],
+      "kind": "ui",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-wiki-broken-wikilink-md",
+      "path": "wiki/broken-wikilink.md",
+      "supports_feature_ids": [],
+      "kind": "wiki",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-wiki-empty-readme-md",
+      "path": "wiki/empty/README.md",
+      "supports_feature_ids": [],
+      "kind": "empty",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-wiki-invalid-graph-jsonl",
+      "path": "wiki/invalid-graph.jsonl",
+      "supports_feature_ids": [],
+      "kind": "wiki",
+      "positive_or_negative": "negative",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-wiki-minimal-claim-md",
+      "path": "wiki/minimal/Claim.md",
+      "supports_feature_ids": [],
+      "kind": "minimal",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    },
+    {
+      "id": "fixture-wiki-minimal-home-md",
+      "path": "wiki/minimal/Home.md",
+      "supports_feature_ids": [],
+      "kind": "minimal",
+      "positive_or_negative": "positive",
+      "notes": "fixture_source=true; local deterministic control material; never count as live parity"
+    }
+  ]
+}

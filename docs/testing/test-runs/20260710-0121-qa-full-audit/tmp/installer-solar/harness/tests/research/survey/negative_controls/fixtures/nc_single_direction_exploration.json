@@ -1,0 +1,10 @@
+{
+  "run_id": "single-direction-run",
+  "directions": [
+    {
+      "direction_id": "dir-only",
+      "direction_name": "only direction",
+      "query": "one direction only"
+    }
+  ]
+}

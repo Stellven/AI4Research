@@ -1,0 +1,43 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/operator-smoke/skillgen/experiment_status.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "execution_mode": "fixture",
+    "experiment_plan_evidence": "artifacts/autosci/operator-smoke/skillgen/experiment_plan.json",
+    "experiment_result_evidence": "artifacts/autosci/operator-smoke/skillgen/experiment_result.json"
+  },
+  "limitations": [
+    "Status is derived from local result evidence only."
+  ],
+  "node_id": "node-monitor-experiment",
+  "outputs": {
+    "status_report": {
+      "evidence_ids": [
+        "task-autosci-skillgen-run_experiment",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger"
+      ],
+      "experiment_id": "exp-001",
+      "next_actions": [
+        "Collect result evidence for claim verification."
+      ],
+      "observations": [
+        "Observed experiment result outcome: supports."
+      ],
+      "state": "completed"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T14:05:10Z"
+  },
+  "schema": "experiment_status.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-monitor_experiment"
+}

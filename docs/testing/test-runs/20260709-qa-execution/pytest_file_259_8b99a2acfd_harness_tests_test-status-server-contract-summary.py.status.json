@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_259_8b99a2acfd_harness_tests_test-status-server-contract-summary.py",
+  "source": "harness/tests/test-status-server-contract-summary.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-status-server-contract-summary.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.196,
+  "timeout": false
+}

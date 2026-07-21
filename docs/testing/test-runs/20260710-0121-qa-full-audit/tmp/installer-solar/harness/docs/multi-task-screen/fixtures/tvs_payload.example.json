@@ -1,0 +1,65 @@
+{
+  "kind": "screen",
+  "layout": "stacked",
+  "header": "◉ Solar Harness  ·  warn  ·  80×20",
+  "canvas": {"width": 80},
+  "style": "solar_default",
+  "sections": [
+    {
+      "id": "panes",
+      "type": "table",
+      "label": "Panes",
+      "columns": [
+        {"key": "slot",   "label": "slot",   "width": 6},
+        {"key": "role",   "label": "role",   "width": 6},
+        {"key": "state",  "label": "state",  "width": 8},
+        {"key": "model",  "label": "model",  "width": 7},
+        {"key": "marker", "label": "·",      "width": 1}
+      ],
+      "rows": [
+        {"slot": "main:0", "role": "PM",    "state": "ready",   "model": "Opus",   "marker": " "},
+        {"slot": "main:1", "role": "PLAN",  "state": "ready",   "model": "Opus",   "marker": " "},
+        {"slot": "main:2", "role": "BUILD", "state": "working", "model": "Opus",   "marker": ">"},
+        {"slot": "main:3", "role": "EVAL",  "state": "ready",   "model": "Opus",   "marker": " "},
+        {"slot": "lab:0",  "role": "LAB",   "state": "ready",   "model": "GLM",    "marker": " "},
+        {"slot": "lab:1",  "role": "LAB",   "state": "ready",   "model": "GLM",    "marker": " "},
+        {"slot": "lab:2",  "role": "LAB",   "state": "ready",   "model": "GLM",    "marker": " "},
+        {"slot": "lab:3",  "role": "LAB",   "state": "ready",   "model": "Sonnet", "marker": " "}
+      ]
+    },
+    {
+      "id": "workers",
+      "type": "kv",
+      "label": "Workers",
+      "items": [
+        {"key": "active",  "value": "0 / 8"},
+        {"key": "dry_run", "value": "8"},
+        {"key": "idle",    "value": "0"},
+        {"key": "blocked", "value": "0"}
+      ]
+    },
+    {
+      "id": "last_dispatch",
+      "type": "kv",
+      "label": "Last Dispatch",
+      "items": [
+        {"key": "time",   "value": "20:01"},
+        {"key": "pane",   "value": "main:3"},
+        {"key": "role",   "value": "evaluator"},
+        {"key": "sprint", "value": "S04"},
+        {"key": "node",   "value": "N8-eval"}
+      ]
+    },
+    {
+      "id": "dag",
+      "type": "kv",
+      "label": "DAG · S04",
+      "items": [
+        {"key": "pass",      "value": "7"},
+        {"key": "pending",   "value": "1"},
+        {"key": "reviewing", "value": "1"},
+        {"key": "ready",     "value": "N/A"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+---
+id: autoresearch
+name: "Autoresearch Pane Optimizer"
+version: "0.1.0"
+description: "Safe Solar-Harness integration for smallnest/autoresearch: pane-level execution optimization, local issue files, multi-agent implementation iterations, scoring and explicit execution. It improves PM/Planner/Builder/Evaluator output quality but does not replace Builder; execution requires --execute."
+status: enabled
+
+write_scope:
+  - "vendor/autoresearch"
+  - "state/autoresearch"
+  - "reports/autoresearch"
+  - "<target-project>/.autoresearch/issues"
+
+read_scope:
+  - "vendor/autoresearch"
+  - "<target-project>"
+
+capabilities:
+  - "autoresearch.pane_optimizer"
+  - "autoresearch.dispatch_advisor"
+  - "autoresearch.issue_loop"
+  - "autoresearch.local_issue"
+  - "autoresearch.agent_iteration"
+  - "autoresearch.score_gate"
+
+commands:
+  - "solar-harness integrations autoresearch-status --json"
+  - "solar-harness integrations autoresearch-doctor --json"
+  - "solar-harness integrations autoresearch-vendor --json"
+  - "solar-harness integrations autoresearch-run-local --project <repo> --issue-title <title> --issue-body <body> --json"
+
+background_safety:
+  mode: bounded
+  idle_only: false
+  rate_limit: "manual --execute only"
+  max_runtime_s: 3600
+  max_memory_mb: 2048
+
+stop_rules:
+  - "Never replace Builder. Use autoresearch as a pane optimizer/advisor unless explicitly executing an approved local issue loop."
+  - "Default to dry-run. Real execution requires explicit user approval and the --execute flag."
+  - "Do not execute against an ambiguous, dirty, or non-isolated target repository."
+  - "Always bound max iterations and record issue file, command, score/test evidence and rollback path."
+
+stop_rules:
+  - "Never run from Planner/Builder automatically; route only as a visible capability recommendation."
+  - "Default to dry-run. Real execution requires explicit user approval and the --execute flag."
+  - "Do not execute against an ambiguous, dirty, or non-isolated target repository."
+  - "Always bound max iterations and record issue file, command, score/test evidence and rollback path."
+
+eval_packs:
+  - "tests/plugins/test-autoresearch-integration.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable autoresearch"
+
+integration_level: basic_usable
+
+entry: "vendor/autoresearch/README.md"
+
+events:
+  - "autoresearch.vendor_verified"
+  - "autoresearch.local_issue_planned"
+  - "autoresearch.run_local_executed"
+
+depends_on: []
+
+tags:
+  - "issue-loop"
+  - "implementation"
+  - "multi-agent"
+  - "local-issue"

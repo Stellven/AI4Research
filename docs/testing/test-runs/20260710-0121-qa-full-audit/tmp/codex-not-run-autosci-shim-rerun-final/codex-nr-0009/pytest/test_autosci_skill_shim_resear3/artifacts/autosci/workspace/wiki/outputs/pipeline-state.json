@@ -1,0 +1,334 @@
+{
+  "approval_contract": {
+    "action": "run_research_lifecycle",
+    "after_artifacts": [],
+    "after_ready": false,
+    "allowlist_evidence": [],
+    "allowlist_ready": false,
+    "approval_ref": "",
+    "approval_state": "approval_required",
+    "approved": false,
+    "authorization_request": {
+      "action": "run_research_lifecycle",
+      "approval_state": "approval_required",
+      "continuation": {
+        "access_patch": {
+          "after_artifacts": [
+            "<after-artifact>"
+          ],
+          "allowlist_evidence": [
+            "<allowlist-evidence.json>"
+          ],
+          "approval_ref": "<approval-ref>",
+          "before_artifacts": [
+            "<before-artifact>"
+          ],
+          "execute_approved_side_effect": true,
+          "runtime_evidence": [
+            "<runtime-evidence.json>"
+          ]
+        },
+        "request_fingerprint": "4f1c8e667ac65cd6c3cb3d37c9686dc06aae0a2b4904e33277128c8690258abb",
+        "resume_strategy": "rerun_same_action_with_approval_patch",
+        "retriable": true,
+        "same_envelope_supported": true,
+        "schema": "autosci_gate_continuation.v1",
+        "status": "awaiting_authorization"
+      },
+      "missing": [
+        "approval_ref",
+        "allowlist_evidence",
+        "before_artifacts",
+        "runtime_evidence",
+        "after_artifacts"
+      ],
+      "non_error_contract": {
+        "approval_state": "approval_required",
+        "blocked_runs_exit_successfully": true,
+        "evidence_status": "inconclusive"
+      },
+      "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+      "requested_access": {
+        "after_artifacts": true,
+        "allowlist_evidence": true,
+        "approval_ref": true,
+        "before_artifacts": true,
+        "runtime_evidence": true
+      },
+      "requested_side_effects": [
+        "multi_step_execution",
+        "network_fetch",
+        "workspace_mutation",
+        "experiment_deploy",
+        "paper_compile"
+      ],
+      "schema": "autosci_gate_authorization_request.v1",
+      "status": "awaiting_authorization"
+    },
+    "before_artifacts": [],
+    "before_ready": false,
+    "execution_verified": false,
+    "missing": [
+      "approval_ref",
+      "allowlist_evidence",
+      "before_artifacts",
+      "runtime_evidence",
+      "after_artifacts"
+    ],
+    "ready_for_execution": false,
+    "runtime_evidence": [],
+    "runtime_ready": false,
+    "schema": "autosci_approval_contract.v1",
+    "side_effects": [
+      "multi_step_execution",
+      "network_fetch",
+      "workspace_mutation",
+      "experiment_deploy",
+      "paper_compile"
+    ]
+  },
+  "current_stage": "completed",
+  "evidence_report": {
+    "approval_evidence_refs": [],
+    "artifacts": [
+      {
+        "path": "scientific-lifecycle-summary.json",
+        "type": "research_lifecycle_stage_evidence_json"
+      }
+    ],
+    "compile_runtime": {
+      "action": "compile_paper",
+      "checks": [
+        {
+          "check": "approval_contract_execution_verified",
+          "detail": "Approval contract path-level verification is incomplete.",
+          "status": "error"
+        },
+        {
+          "check": "runtime_records_loaded",
+          "detail": "0 runtime record(s) loaded.",
+          "status": "error"
+        },
+        {
+          "check": "compile_exit_ok",
+          "detail": "False",
+          "status": "error"
+        },
+        {
+          "check": "compiled_pdf_verified",
+          "detail": "No compiled PDF artifact passed structural integrity checks.",
+          "status": "error"
+        }
+      ],
+      "detail": {
+        "compile_exit_ok": false,
+        "compiled_pdf_verified": false,
+        "errors": [],
+        "evidence_ids": [],
+        "pdf_integrity": [],
+        "records_loaded": 0
+      },
+      "schema": "autosci_runtime_semantic_verification.v1",
+      "status": "incomplete",
+      "verified": false
+    },
+    "discovery_completed": false,
+    "discovery_evidence_refs": [],
+    "errors": [],
+    "experiment_runtime": {
+      "action": "run_experiment",
+      "checks": [
+        {
+          "check": "approval_contract_execution_verified",
+          "detail": "Approval contract path-level verification is incomplete.",
+          "status": "error"
+        },
+        {
+          "check": "runtime_records_loaded",
+          "detail": "0 runtime record(s) loaded.",
+          "status": "error"
+        },
+        {
+          "check": "experiment_exit_ok",
+          "detail": "False",
+          "status": "error"
+        },
+        {
+          "check": "experiment_result_collected",
+          "detail": "False",
+          "status": "error"
+        }
+      ],
+      "detail": {
+        "command_run": "approved-runtime-evidence",
+        "errors": [],
+        "evidence_ids": [],
+        "experiment_exit_ok": false,
+        "logs": [],
+        "metric_aggregates": [],
+        "metrics": [],
+        "outcome": "inconclusive",
+        "records_loaded": 0,
+        "result_collected": false
+      },
+      "schema": "autosci_runtime_semantic_verification.v1",
+      "status": "incomplete",
+      "verified": false
+    },
+    "external_novelty_completed": false,
+    "has_stage_evidence": true,
+    "integrated_pdf": {
+      "reason": "compile runtime or approval contract is not verified",
+      "status": "not_materialized"
+    },
+    "novelty_evidence_refs": [],
+    "paper_exists": false,
+    "paper_path": "",
+    "review_llm_completed": false,
+    "review_llm_evidence_refs": [],
+    "runtime_evidence_refs": [],
+    "scheduler_lifecycle": {
+      "job_id": "job-scheduler-lifecycle-strict",
+      "lifecycle_runtime_gate_status": "passed",
+      "node_count": 20,
+      "required_node_count": 20,
+      "schema": "scientific_lifecycle.v1",
+      "source_path": "scientific-lifecycle-summary.json",
+      "status": "completed",
+      "workflow_config_alignment_status": "aligned",
+      "workflow_id": "scientific_research_lifecycle_full_v1"
+    },
+    "scheduler_lifecycle_completed": true,
+    "wiki_counts": {
+      "compiled_pdfs": 0,
+      "experiments": 0,
+      "ideas": 0,
+      "latex_sources": 0,
+      "outputs": 0,
+      "papers": 0
+    }
+  },
+  "generated_at": "2026-07-10T19:23:55.564974Z",
+  "pipeline": {
+    "auto": false,
+    "pipeline_id": "skillgen-main",
+    "requested_start_from": "setup",
+    "resume_from": "setup",
+    "skip_paper": false,
+    "status": "completed",
+    "target": "skillgen-main",
+    "venue": "N/A"
+  },
+  "policy_decision": {
+    "action": "run_research_lifecycle",
+    "allow_destructive": false,
+    "allow_email": false,
+    "allow_network": false,
+    "allow_remote": false,
+    "allowed": false,
+    "allowed_write_roots": [
+      "artifacts/autosci",
+      "artifacts/scientific"
+    ],
+    "blocked": true,
+    "execute_side_effects": false,
+    "mode": "strict_hitl",
+    "proof_best_effort": false,
+    "proof_required": true,
+    "reasons": [
+      "read_local is allowed in strict_hitl.",
+      "write_artifact is allowed in strict_hitl.",
+      "network_fetch requires HITL approval in strict_hitl.",
+      "local_command requires HITL approval in strict_hitl.",
+      "wiki_mutation requires HITL approval in strict_hitl.",
+      "remote_execution requires HITL approval in strict_hitl.",
+      "tex_compile requires HITL approval in strict_hitl."
+    ],
+    "require_approval_ref": true,
+    "require_before_after_artifacts": true,
+    "require_hitl": true,
+    "require_runtime_evidence": true,
+    "sandbox_required": false,
+    "side_effects": [
+      "read_local",
+      "write_artifact",
+      "network_fetch",
+      "local_command",
+      "wiki_mutation",
+      "remote_execution",
+      "tex_compile"
+    ],
+    "synthetic_approval_ref": "",
+    "warnings": []
+  },
+  "schema": "autosci_research_pipeline_state.v1",
+  "side_effect_access_request": null,
+  "stage_plan": [
+    {
+      "order": 1,
+      "stage_id": "setup",
+      "state": "completed",
+      "title": "Setup and topic initialization"
+    },
+    {
+      "order": 2,
+      "stage_id": "ingest",
+      "state": "completed",
+      "title": "Source ingest and wiki paper registration"
+    },
+    {
+      "order": 3,
+      "stage_id": "discover",
+      "state": "completed",
+      "title": "Landscape scan and source evidence fetch"
+    },
+    {
+      "order": 4,
+      "stage_id": "ideate",
+      "state": "completed",
+      "title": "Gap map and idea generation"
+    },
+    {
+      "order": 5,
+      "stage_id": "novelty-review",
+      "state": "completed",
+      "title": "Novelty and Review LLM gates"
+    },
+    {
+      "order": 6,
+      "stage_id": "experiment-design",
+      "state": "completed",
+      "title": "Experiment design"
+    },
+    {
+      "order": 7,
+      "stage_id": "experiment-run",
+      "state": "completed",
+      "title": "Experiment deployment"
+    },
+    {
+      "order": 8,
+      "stage_id": "collect",
+      "state": "completed",
+      "title": "Result collection"
+    },
+    {
+      "order": 9,
+      "stage_id": "review",
+      "state": "completed",
+      "title": "Result and artifact review"
+    },
+    {
+      "order": 10,
+      "stage_id": "paper-plan",
+      "state": "completed",
+      "title": "Publication plan"
+    },
+    {
+      "order": 11,
+      "stage_id": "paper-compile",
+      "state": "completed",
+      "title": "LaTeX/PDF compile and checklist"
+    }
+  ]
+}

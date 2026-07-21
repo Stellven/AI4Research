@@ -184,6 +184,7 @@ tvs_root = resolve_tvs_root()
 tvs_cli = os.path.join(HARNESS_DIR, "lib", "tvs_render_cli.ts")
 tvs_result = {
     "status": "missing",
+    "optional": True,
     "bun": result["bins"].get("bun", "missing"),
     "cli": "ok" if os.path.isfile(tvs_cli) else "missing",
     "root": "ok" if tvs_root else "missing",
@@ -192,14 +193,14 @@ tvs_result = {
 }
 
 if tvs_result["cli"] == "missing":
-    tvs_result["status"] = "missing"
-    result["warnings"].append("tvs renderer bridge missing: lib/tvs_render_cli.ts")
+    tvs_result["status"] = "optional_missing"
+    result["warnings"].append("optional tvs renderer bridge missing: lib/tvs_render_cli.ts")
 elif tvs_result["bun"] == "missing":
-    tvs_result["status"] = "missing"
-    result["warnings"].append("tvs renderer missing required dependency: bun")
+    tvs_result["status"] = "optional_missing"
+    result["warnings"].append("optional tvs renderer dependency missing: bun")
 elif tvs_result["root"] == "missing":
-    tvs_result["status"] = "missing"
-    result["warnings"].append("tvs renderer missing required dependency: TVS root; set SOLAR_TVS_ROOT")
+    tvs_result["status"] = "optional_missing"
+    result["warnings"].append("optional tvs renderer root missing; set SOLAR_TVS_ROOT to enable")
 else:
     payload = json.dumps({
         "canvas": {"width": 40},
@@ -309,8 +310,6 @@ critical_bins = [
 
 if any(v == "missing" for v in critical_paths) or any(v == "missing" for v in critical_bins):
     result["verdict"] = "fail"
-elif result["services"].get("tvs_renderer", {}).get("status") != "ok":
-    result["verdict"] = "fail"
 elif len(result["warnings"]) > 3:
     result["verdict"] = "degraded"
 else:
@@ -323,7 +322,10 @@ PYEOF
 # ── Summary mode ──────────────────────────────────────────────────────────
 doctor_summary() {
   local json_output
-  json_output=$(doctor_json)
+  # Reuse the entry point's single sweep when provided (DOCTOR_JSON_CACHE), so
+  # the --summary path does not run the expensive doctor_json (bin probes +
+  # bun TVS render) a second time just to recompute the verdict for the exit.
+  json_output="${DOCTOR_JSON_CACHE:-$(doctor_json)}"
 
   local verdict os_kind os_ver bins_ok bins_total paths_ok paths_total
   verdict=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin)['verdict'])" 2>/dev/null)
@@ -389,12 +391,26 @@ for w in json.load(sys.stdin).get('warnings', []):
 }
 
 # ── entry ─────────────────────────────────────────────────────────────────
+# Exit nonzero unless the verdict is "ok", so callers can branch on the exit
+# code (matches `solar doctor`). Output is unchanged.
+doctor_exit_for() {
+  _verdict="$(printf '%s' "$1" | python3 -c \
+    "import json,sys
+try: print(json.load(sys.stdin).get('verdict','fail'))
+except Exception: print('fail')" 2>/dev/null || echo fail)"
+  [ "$_verdict" = "ok" ] || exit 1
+}
+
 case "${1:-}" in
   --json|"")
-    doctor_json
+    _out="$(doctor_json)"
+    printf '%s\n' "$_out"
+    doctor_exit_for "$_out"
     ;;
   --summary|-s)
-    doctor_summary
+    _out="$(doctor_json)"
+    DOCTOR_JSON_CACHE="$_out" doctor_summary
+    doctor_exit_for "$_out"
     ;;
   --help|-h)
     echo "Solar Product Doctor — Design §2.2 schema"

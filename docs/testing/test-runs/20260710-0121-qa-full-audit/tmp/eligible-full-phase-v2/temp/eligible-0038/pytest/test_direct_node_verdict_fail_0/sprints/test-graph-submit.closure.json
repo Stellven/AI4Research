@@ -1,0 +1,17 @@
+{
+  "schema_version": "solar.closure_record.v1",
+  "sprint_id": "test-graph-submit",
+  "graph_ref": "test-graph-submit.task_graph.json",
+  "graph_state_ref": "test-graph-submit.task_graph.json",
+  "status": "pending",
+  "all_nodes_passed": false,
+  "all_required_gates_passed": true,
+  "acceptance_traceability_coverage": 0,
+  "open_nodes": [
+    "N1",
+    "N2"
+  ],
+  "failed_nodes": [],
+  "missing_gates": [],
+  "updated_at": "2026-07-10T14:06:32Z"
+}

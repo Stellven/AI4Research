@@ -1,0 +1,18 @@
+{
+  "sprint_id": "test_section_scorecard_ranks_r0",
+  "generated_at": "2026-07-10T18:50:39Z",
+  "document_word_count": 7506,
+  "document_char_count": 25616,
+  "total_token_consumption": 26346,
+  "total_tokens": 26346,
+  "input_tokens": 19942,
+  "output_tokens": 6404,
+  "token_usage_source": "estimated_from_report_artifacts",
+  "token_usage_is_estimated": true,
+  "usage_source": "estimated_from_report_artifacts",
+  "estimated": true,
+  "fallback_reason": "no_provider_usage",
+  "token_usage_files": [],
+  "ledger_path": "",
+  "ledger_lines": 0
+}

@@ -204,6 +204,26 @@ def trusted_autodispatch_channels() -> set[str]:
     return {item.strip() for item in values if item.strip()}
 
 
+def codex_pane_runtime_suppresses_pm_operator_dispatch() -> bool:
+    runtime = os.environ.get("SOLAR_PANE_RUNTIME", "").strip().lower()
+    allow = os.environ.get("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", "").strip().lower()
+    return runtime == "codex" and allow not in {"1", "true", "yes", "on"}
+
+
+def suppress_pm_operator_dispatch_for_codex(handoff: dict[str, Any]) -> dict[str, Any]:
+    if not handoff.get("requested"):
+        return handoff
+    if not codex_pane_runtime_suppresses_pm_operator_dispatch():
+        return handoff
+    return {
+        **handoff,
+        "requested": False,
+        "suppressed_requested": True,
+        "suppressed_reason": handoff.get("reason"),
+        "reason": "codex_pane_runtime_uses_coordinator_planner_pane",
+    }
+
+
 def planner_handoff_policy(
     raw: dict[str, Any],
     *,
@@ -242,7 +262,7 @@ def planner_handoff_policy(
 
 def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
     base = str(SPRINTS_DIR / sprint_id)
-    return textwrap.dedent(
+    objective = textwrap.dedent(
         f"""\
         请接手 {sprint_id}：RawIntent 已经通过 Intent Gateway 和 Requirement Compiler 生成需求编译包。
 
@@ -261,6 +281,19 @@ def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
         4. 如果 compiled package 缺失关键字段，先写明 blocker 和修正建议。
         """
     ).strip()
+    # P5 G2: teach the planner the compile rules it will be checked against
+    # (env-gated inside the helper; "" when SOLAR_PLAN_VALIDATOR is off, so
+    # legacy prompts stay byte-identical). Prompt enrichment must never break
+    # dispatch — enforcement lives at the compile/dispatch seams.
+    try:
+        import plan_validator  # noqa: WPS433
+
+        policy_block = plan_validator.planner_compile_policy_block(SPRINTS_DIR, sprint_id)
+    except Exception:
+        policy_block = ""
+    if policy_block:
+        objective = f"{objective}\n\n{policy_block}"
+    return objective
 
 
 def submit_planner_handoff(sprint_id: str, requirement_ir_path: Path, *, dry_run: bool = False) -> dict[str, Any]:
@@ -319,6 +352,7 @@ def consume_one(
         explicit_dispatch_planner=dispatch_planner,
         auto_dispatch_planner=auto_dispatch_planner,
     )
+    handoff = suppress_pm_operator_dispatch_for_codex(handoff)
     if research_required and not research:
         payload = {
             "ok": False,

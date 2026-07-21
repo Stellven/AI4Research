@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solar 技术演进报告</title>
+  <style>
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      background: #1a1a1a;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    /* 基础 Slide */
+    .slide {
+      width: 100vw;
+      height: 100vh;
+      padding: 50px 70px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFC 100%);
+      display: none;
+      flex-direction: column;
+      position: relative;
+      page-break-after: always;
+    }
+    .slide.active { display: flex; }
+
+    /* 封面页 */
+    .slide-title {
+      background: linear-gradient(135deg, #C7000B 0%, #E31937 100%);
+      color: white;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .slide-title h1 {
+      font-size: 3.2rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      margin-bottom: 30px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .slide-title .author { font-size: 1.3rem; opacity: 0.95; margin: 8px 0; }
+    .slide-title .date { font-size: 1.1rem; opacity: 0.8; }
+    .slide-title .footer-logo {
+      position: absolute;
+      bottom: 30px;
+      left: 70px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      opacity: 0.7;
+    }
+
+    /* 章节页 */
+    .slide-section {
+      background: linear-gradient(135deg, #0052D9 0%, #0066FF 100%);
+      color: white;
+      justify-content: center;
+      align-items: flex-start;
+      padding-left: 120px;
+    }
+    .slide-section .section-number {
+      font-size: 6rem;
+      font-weight: 800;
+      opacity: 0.15;
+      position: absolute;
+      right: 100px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .slide-section h2 {
+      font-size: 2.8rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+    }
+
+    /* 内容页 Header */
+    .slide-header {
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 3px solid #C7000B;
+    }
+    .slide-header h2 {
+      font-size: 1.9rem;
+      font-weight: 600;
+      color: #333333;
+    }
+    .slide-header h3 {
+      font-size: 1.1rem;
+      color: #666666;
+      margin-top: 8px;
+      font-weight: 400;
+    }
+
+    /* 内容区 */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow: hidden;
+    }
+
+    /* 列表 */
+    .content-list {
+      list-style: none;
+      padding: 0;
+    }
+    .content-list li {
+      font-size: 1.35rem;
+      line-height: 1.7;
+      margin: 14px 0;
+      padding-left: 35px;
+      position: relative;
+      color: #444;
+    }
+    .content-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 10px;
+      height: 10px;
+      background: #C7000B;
+      border-radius: 2px;
+    }
+    .content-list li.level-1 {
+      padding-left: 60px;
+      font-size: 1.15rem;
+      color: #666;
+    }
+    .content-list li.level-1::before {
+      left: 35px;
+      width: 6px;
+      height: 6px;
+      background: #0052D9;
+      border-radius: 50%;
+    }
+    .content-list li.level-2 {
+      padding-left: 85px;
+      font-size: 1rem;
+      color: #888;
+    }
+    .content-list li.level-2::before {
+      left: 65px;
+      width: 4px;
+      height: 4px;
+      background: #999;
+      border-radius: 50%;
+    }
+
+    /* 表格 */
+    .table-container {
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 1.1rem;
+    }
+    .data-table th {
+      background: #C7000B;
+      color: white;
+      padding: 14px 18px;
+      text-align: left;
+      font-weight: 600;
+    }
+    .data-table td {
+      padding: 12px 18px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .data-table tr:nth-child(even) { background: #f8f9fa; }
+    .data-table tr:hover { background: #f0f4f8; }
+
+    /* 代码块/架构图 */
+    .code-block, .ascii-diagram {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px 25px;
+      border-radius: 8px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.95rem;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+    .ascii-diagram {
+      background: #f5f7fa;
+      color: #333;
+      border: 1px solid #e0e0e0;
+      font-size: 0.85rem;
+      line-height: 1.3;
+    }
+
+    /* 两栏布局 */
+    .two-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      flex: 1;
+    }
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .column p { font-size: 1.2rem; color: #444; }
+
+    /* 关键指标 */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 30px;
+      padding: 20px 0;
+    }
+    .metric-item {
+      text-align: center;
+      padding: 25px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+    .metric-value {
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: #C7000B;
+    }
+    .metric-label {
+      font-size: 1rem;
+      color: #666;
+      margin-top: 8px;
+    }
+    .metric-item.trend-up .metric-value { color: #00a854; }
+    .metric-item.trend-down .metric-value { color: #C7000B; }
+    .trend-icon { font-size: 1.5rem; margin-left: 5px; }
+
+    /* 结论/建议框 */
+    .conclusion-box {
+      background: linear-gradient(135deg, #fff9e6 0%, #fff 100%);
+      border-left: 5px solid #F5A623;
+      padding: 20px 25px;
+      border-radius: 0 8px 8px 0;
+      margin: 15px 0;
+    }
+    .conclusion-box.suggestion {
+      background: linear-gradient(135deg, #e6f7ff 0%, #fff 100%);
+      border-left-color: #0052D9;
+    }
+    .conclusion-header {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .conclusion-content {
+      font-size: 1.15rem;
+      color: #555;
+      line-height: 1.7;
+    }
+
+    /* 时间轴 */
+    .timeline-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      padding-left: 30px;
+    }
+    .timeline-container::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 5px;
+      bottom: 5px;
+      width: 3px;
+      background: linear-gradient(180deg, #C7000B, #0052D9);
+    }
+    .timeline-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 15px 0;
+      position: relative;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -26px;
+      top: 20px;
+      width: 14px;
+      height: 14px;
+      background: #C7000B;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 0 0 3px #C7000B33;
+    }
+    .timeline-year {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #C7000B;
+      min-width: 80px;
+    }
+    .timeline-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #333;
+    }
+    .timeline-desc {
+      font-size: 1rem;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    /* 引用块 */
+    .quote-block {
+      font-size: 1.3rem;
+      font-style: italic;
+      color: #555;
+      padding: 20px 30px;
+      border-left: 4px solid #0052D9;
+      background: #f8f9fa;
+      margin: 15px 0;
+    }
+
+    /* 文本块 */
+    .text-block {
+      font-size: 1.2rem;
+      color: #444;
+      line-height: 1.8;
+    }
+    h4.text-block {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #333333;
+      margin-top: 15px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #eee;
+    }
+
+    /* 页脚 */
+    .slide-footer {
+      position: absolute;
+      bottom: 25px;
+      right: 50px;
+      left: 50px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      font-size: 0.9rem;
+      color: #999;
+    }
+    .slide-title .slide-footer,
+    .slide-section .slide-footer {
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* 进度条 */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 4px;
+      background: #C7000B;
+      transition: width 0.3s ease;
+      z-index: 1000;
+    }
+
+    /* 帮助提示 */
+    .help-tip {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.75);
+      color: white;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    .help-tip.show { opacity: 1; }
+
+    /* 打印样式 */
+    @media print {
+      .slide { display: flex !important; page-break-after: always; height: 100vh; }
+      body { background: white; }
+      .progress-bar, .help-tip { display: none; }
+    }
+  
+  </style>
+</head>
+<body>
+  <div class="progress-bar" id="progress"></div>
+  <div class="help-tip" id="help">← → 翻页 | F 全屏 | P 打印 | G 跳页</div>
+
+  
+    <div class="slide slide-title" id="slide-1">
+      <div class="slide-content">
+        <h1>Solar 技术演进报告</h1>
+        <p class="author">Solar Team</p>
+        <p class="date">2026-02-03</p>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-logo">HUAWEI STYLE</div>
+        <span class="page-num">1 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-2">
+      <div class="slide-content">
+        <div class="section-number">01</div>
+        <h2>一、项目概述</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">2 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide layout-metrics" id="slide-3">
+      <div class="slide-header">
+        <h2>核心目标与关键指标</h2>
+        
+      </div>
+      <div class="slide-body">
+        <div class="metrics-grid">
+      <div class="metric-item trend-down">
+        <div class="metric-value">40%<span class="trend-icon">↓</span></div>
+        <div class="metric-label">Token 成本降低</div>
+      </div>
+
+      <div class="metric-item trend-up">
+        <div class="metric-value">60%<span class="trend-icon">↑</span></div>
+        <div class="metric-label">开发效率提升</div>
+      </div>
+
+      <div class="metric-item ">
+        <div class="metric-value">95%</div>
+        <div class="metric-label">代码质量覆盖率</div>
+      </div>
+
+      <div class="metric-item trend-up">
+        <div class="metric-value">3.2<span class="trend-icon">↑</span></div>
+        <div class="metric-label">x: 响应速度提升</div>
+      </div></div>
+
+    <div class="conclusion-box conclusion">
+      <div class="conclusion-header">📌 结论</div>
+      <div class="conclusion-content">Solar 是一个 AI Native OS，通过多大脑调度和五阶段流程，实现了显著的效率提升和成本优化。</div>
+    </div>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">3 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-4">
+      <div class="slide-content">
+        <div class="section-number">03</div>
+        <h2>二、技术架构</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">4 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide " id="slide-5">
+      <div class="slide-header">
+        <h2>系统架构图</h2>
+        
+      </div>
+      <div class="slide-body">
+        <pre class="ascii-diagram"><code>┌─────────────────────────────────────────────────────────────┐
+│                      Solar Core                              │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        │
+│  │ Claude  │  │  GPT    │  │ Gemini  │  │DeepSeek │        │
+│  │  Opus   │  │  4.5    │  │  2.0    │  │  V3     │        │
+│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘        │
+│       └────────────┴────────────┴────────────┘              │
+│                         │                                    │
+│              ┌──────────┴──────────┐                        │
+│              │   Brain Router      │                        │
+│              │  (智能调度引擎)      │                        │
+│              └──────────┬──────────┘                        │
+│                         │                                    │
+│       ┌─────────────────┼─────────────────┐                 │
+│       │                 │                 │                 │
+│  ┌────┴────┐      ┌────┴────┐      ┌────┴────┐            │
+│  │ Agents  │      │ Skills  │      │   MCP   │            │
+│  └─────────┘      └─────────┘      └─────────┘            │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">5 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide " id="slide-6">
+      <div class="slide-header">
+        <h2>多大脑调度策略</h2>
+        
+      </div>
+      <div class="slide-body">
+        
+    <div class="table-container">
+      <table class="data-table">
+        <thead><tr><th>任务类型</th><th>推荐模型</th><th>成本</th><th>延迟</th><th>质量</th></tr></thead>
+        <tbody><tr><td>简单问答</td><td>Haiku</td><td>低</td><td>50ms</td><td>85%</td></tr>
+<tr><td>代码生成</td><td>Sonnet</td><td>中</td><td>200ms</td><td>92%</td></tr>
+<tr><td>复杂推理</td><td>Opus</td><td>高</td><td>500ms</td><td>98%</td></tr>
+<tr><td>中文任务</td><td>DeepSeek</td><td>低</td><td>150ms</td><td>95%</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="conclusion-box suggestion">
+      <div class="conclusion-header">💡 建议</div>
+      <div class="conclusion-content">根据任务复杂度动态选择模型，简单任务用 Haiku，复杂任务用 Opus，可降低 40% 成本。</div>
+    </div>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">6 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-7">
+      <div class="slide-content">
+        <div class="section-number">06</div>
+        <h2>三、开发流程</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">7 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide " id="slide-8">
+      <div class="slide-header">
+        <h2>五阶段流程</h2>
+        
+      </div>
+      <div class="slide-body">
+        <div class="timeline-container">
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2024</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q1</div>
+        <div class="timeline-desc">P1 研究</div>
+      </div>
+    </div>
+  
+
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2024</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q2</div>
+        <div class="timeline-desc">P2 设计</div>
+      </div>
+    </div>
+  
+
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2024</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q3</div>
+        <div class="timeline-desc">P3 实现</div>
+      </div>
+    </div>
+  
+
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2024</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q4</div>
+        <div class="timeline-desc">P4 验证</div>
+      </div>
+    </div>
+  
+
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2025</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q1</div>
+        <div class="timeline-desc">P5 收尾</div>
+      </div>
+    </div>
+  </div>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">8 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide " id="slide-9">
+      <div class="slide-header">
+        <h2>Agent 协作机制</h2>
+        
+      </div>
+      <div class="slide-body">
+        <ul class="content-list"><li class="level-0"><strong>@Researcher</strong> - 技术调研与可行性分析</li>
+<li class="level-1">论文阅读与总结</li>
+<li class="level-1">技术方案对比</li>
+<li class="level-1">风险评估</li>
+<li class="level-0"><strong>@Architect</strong> - 架构设计与方案评审</li>
+<li class="level-1">系统设计</li>
+<li class="level-1">接口定义</li>
+<li class="level-1">性能规划</li>
+<li class="level-0"><strong>@Coder</strong> - 代码开发与实现</li>
+<li class="level-1">功能开发</li>
+<li class="level-1">单元测试</li>
+<li class="level-1">代码优化</li>
+<li class="level-0"><strong>@Tester</strong> - 测试验证与质量保证</li>
+<li class="level-1">集成测试</li>
+<li class="level-1">性能测试</li>
+<li class="level-1">回归测试</li></ul>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">9 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-10">
+      <div class="slide-content">
+        <div class="section-number">09</div>
+        <h2>四、关键成果</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">10 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide " id="slide-11">
+      <div class="slide-header">
+        <h2>性能对比分析</h2>
+        
+      </div>
+      <div class="slide-body">
+        
+    <div class="table-container">
+      <table class="data-table">
+        <thead><tr><th>指标</th><th>优化前</th><th>优化后</th><th>提升</th></tr></thead>
+        <tbody><tr><td>Token 成本</td><td>$100/天</td><td>$60/天</td><td>40% ↓</td></tr>
+<tr><td>响应延迟</td><td>2.5s</td><td>0.8s</td><td>68% ↓</td></tr>
+<tr><td>代码质量</td><td>75%</td><td>95%</td><td>27% ↑</td></tr>
+<tr><td>开发周期</td><td>10天</td><td>4天</td><td>60% ↓</td></tr></tbody>
+      </table>
+    </div>
+<blockquote class="quote-block">&quot;Solar 彻底改变了我们的开发方式，效率提升显著。&quot; —— 开发团队反馈</blockquote>
+
+    <div class="conclusion-box conclusion">
+      <div class="conclusion-header">📌 结论</div>
+      <div class="conclusion-content">通过多大脑调度和五阶段流程，Solar 实现了：
+- Token 成本降低 40%
+- 开发效率提升 60%
+- 代码质量提升至 95%</div>
+    </div>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">11 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-12">
+      <div class="slide-content">
+        <div class="section-number">11</div>
+        <h2>五、下一步规划</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">12 / 13</span>
+      </div>
+    </div>
+
+    <div class="slide " id="slide-13">
+      <div class="slide-header">
+        <h2>2025 路线图</h2>
+        
+      </div>
+      <div class="slide-body">
+        <div class="timeline-container">
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2025</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q1</div>
+        <div class="timeline-desc">增强记忆系统</div>
+      </div>
+    </div>
+  
+
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2025</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q2</div>
+        <div class="timeline-desc">优化 TVS 引擎</div>
+      </div>
+    </div>
+  
+
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2025</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q3</div>
+        <div class="timeline-desc">扩展 MCP 生态</div>
+      </div>
+    </div>
+  
+
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-year">2025</div>
+      <div class="timeline-content">
+        <div class="timeline-title">Q4</div>
+        <div class="timeline-desc">自动化测试</div>
+      </div>
+    </div>
+  </div>
+
+    <div class="conclusion-box suggestion">
+      <div class="conclusion-header">💡 建议</div>
+      <div class="conclusion-content">建议优先投入记忆系统增强，这将显著提升 Agent 的上下文理解能力和任务连续性。</div>
+    </div>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">13 / 13</span>
+      </div>
+    </div>
+
+  <script>
+    
+    (function() {
+      const slides = document.querySelectorAll('.slide');
+      const progress = document.getElementById('progress');
+      const help = document.getElementById('help');
+      let current = 0;
+
+      function showSlide(n) {
+        if (n < 0) n = 0;
+        if (n >= slides.length) n = slides.length - 1;
+        current = n;
+        slides.forEach((s, i) => s.classList.toggle('active', i === current));
+        progress.style.width = ((current + 1) / slides.length * 100) + '%';
+        location.hash = 'slide-' + (current + 1);
+      }
+
+      document.addEventListener('keydown', (e) => {
+        switch(e.key) {
+          case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+            showSlide(current + 1); e.preventDefault(); break;
+          case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+            showSlide(current - 1); e.preventDefault(); break;
+          case 'Home': showSlide(0); break;
+          case 'End': showSlide(slides.length - 1); break;
+          case 'f': case 'F': document.documentElement.requestFullscreen?.(); break;
+          case 'p': case 'P': window.print(); break;
+          case 'g': case 'G':
+            const page = prompt('跳转到页码 (1-' + slides.length + '):');
+            if (page) showSlide(parseInt(page) - 1);
+            break;
+          case 'h': case 'H': case '?': help.classList.toggle('show'); break;
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('a, button, input')) return;
+        const x = e.clientX / window.innerWidth;
+        if (x > 0.5) showSlide(current + 1);
+        else showSlide(current - 1);
+      });
+
+      let touchStartX = 0;
+      document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+      document.addEventListener('touchend', (e) => {
+        const diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) {
+          if (diff > 0) showSlide(current + 1);
+          else showSlide(current - 1);
+        }
+      });
+
+      const hash = location.hash.match(/slide-(\d+)/);
+      showSlide(hash ? parseInt(hash[1]) - 1 : 0);
+
+      setTimeout(() => {
+        help.classList.add('show');
+        setTimeout(() => help.classList.remove('show'), 3000);
+      }, 500);
+    })();
+  
+  </script>
+</body>
+</html>

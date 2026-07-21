@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-07-10T19:22:37Z",
+  "proofs": [
+    {
+      "categories": [
+        "external_runtime_evidence",
+        "approval_boundary_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Verified approval/runtime evidence for AutoSci `exp-pilot-eval` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-pilot-eval-parity-writeback/claim_verdict_writeback.json",
+        "artifacts/autosci/runs/shim-pilot-eval-parity-writeback/evaluate_pilot_result_approval_contract.json",
+        "artifacts/autosci/runs/shim-pilot-eval-parity-writeback/evaluate_pilot_result_gate_policy_allowlist.json",
+        "pilot-runtime-parity-write.json",
+        "artifacts/autosci/runs/shim-pilot-eval-parity-writeback/evaluate_pilot_result_local_mutation_runtime_evidence.json",
+        "artifacts/autosci/runs/shim-pilot-eval-parity-writeback/evaluate_pilot_result_gate_policy_decision.json",
+        "artifacts/autosci/workspace/wiki/ideas/pilot-claim-parity-write.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+        "artifacts/autosci/workspace/wiki/graph/open_questions.md"
+      ],
+      "native_skill": "exp-pilot-eval",
+      "production_ready": true,
+      "proof_id": "runtime:exp-pilot-eval:approval-contract:20260710T192237Z",
+      "provenance": {
+        "artifact_kind": "claim_verdict_writeback",
+        "captured_at": "2026-07-10T19:22:37Z",
+        "command": "evaluate_pilot_result:approved_mutation",
+        "source": "approval_contract"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

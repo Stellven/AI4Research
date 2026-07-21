@@ -1,0 +1,9 @@
+....F                                                                    [100%]
+=================================== FAILURES ===================================
+_________________ test_gemini_adapter_enhanced_search_forwards _________________
+harness/tests/test_gemini_enhanced_search.py:118: in test_gemini_adapter_enhanced_search_forwards
+    monkeypatch.setattr(gemini_adapter, "gemini_enhanced_search_main", fake_main)
+E   AttributeError: <module 'gemini_adapter' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/gemini_adapter.py'> has no attribute 'gemini_enhanced_search_main'
+=========================== short test summary info ============================
+FAILED harness/tests/test_gemini_enhanced_search.py::test_gemini_adapter_enhanced_search_forwards
+1 failed, 4 passed in 0.04s

@@ -1,0 +1,8 @@
+{
+  "stage": "builder",
+  "leaf_backend": "deterministic-repair",
+  "return_code": 0,
+  "stdout": "{\"stage\": \"repair\", \"applied\": true, \"reason\": \"filter_js_from_html_sanitizer_contract\", \"path\": \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0021/pytest/test_dag_backend_known_repair_0/workspace/filter.py\"}",
+  "stderr": "",
+  "repair_reason": "filter_js_from_html_sanitizer_contract"
+}

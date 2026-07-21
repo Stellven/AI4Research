@@ -1,0 +1,2 @@
+PASS N2-NC-7 winner=A1(committed) loser=A2(lease_denied) ledger_events=15
+OK test-vnext-concurrent-write.sh

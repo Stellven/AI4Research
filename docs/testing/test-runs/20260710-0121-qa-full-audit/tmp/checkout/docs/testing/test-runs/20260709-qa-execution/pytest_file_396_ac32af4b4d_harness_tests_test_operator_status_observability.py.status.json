@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_396_ac32af4b4d_harness_tests_test_operator_status_observability.py",
+  "source": "harness/tests/test_operator_status_observability.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_operator_status_observability.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.487,
+  "timeout": false
+}

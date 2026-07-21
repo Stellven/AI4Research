@@ -1,0 +1,47 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "review_llm status is `unavailable`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-target-generated-skills-for-inference-time-agents",
+        "target:user-supplied",
+        "external:web:https://example.invalid/generated-skills"
+      ],
+      "external_novelty_provenance_status": "passed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-target-generated-skills-for-inference-time-agents",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.405,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "endpoint": "file:///Users/jamesyuan/Developer/Github%20Repos%20%28On%20Git%29/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_novelt4/web-novelty.json",
+          "fetched_at": "2026-07-10T19:27:08Z",
+          "provider": "web",
+          "query": "generated skills for inference-time agents",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_novelt4/artifacts/autosci/runs/shim-novelty-online-web/external_novelty_payloads/web-400af197d1d81e32.json",
+          "raw_payload_archive_status": "completed",
+          "raw_payload_ref": "file:///Users/jamesyuan/Developer/Github%20Repos%20%28On%20Git%29/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_novelt4/web-novelty.json",
+          "raw_payload_sha256": "400af197d1d81e32029436cb8e066ef48ee31ccab788ead7692818062fc54c20",
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": false,
+      "review_invocation_mode": "unavailable",
+      "review_llm_status": "unavailable",
+      "review_mode": "local_surrogate",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

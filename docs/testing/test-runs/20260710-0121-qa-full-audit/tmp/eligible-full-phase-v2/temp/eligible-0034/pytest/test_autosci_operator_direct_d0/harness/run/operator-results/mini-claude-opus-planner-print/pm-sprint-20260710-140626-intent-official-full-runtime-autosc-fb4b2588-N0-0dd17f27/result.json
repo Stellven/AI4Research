@@ -1,0 +1,21 @@
+{
+  "task_id": "pm-sprint-20260710-140626-intent-official-full-runtime-autosc-fb4b2588-N0-0dd17f27",
+  "operator_id": "mini-claude-opus-planner-print",
+  "sprint_id": "sprint-20260710-140626-intent-official-full-runtime-autosc-fb4b2588",
+  "node_id": "N0",
+  "status": "failed_missing_pm_result",
+  "exit_code": 65,
+  "started_at": "2026-07-10T14:06:27Z",
+  "finished_at": "2026-07-10T14:06:27Z",
+  "log_tail": "\nSessionEnd hook [/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude/solar/hooks/state-auto-updater.sh] failed: /bin/sh: -c: line 0: syntax error near unexpected token `('\n/bin/sh: -c: line 0: `/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude/solar/hooks/state-auto-updater.sh'\n[ERROR] missing pm_result: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0034/pytest/test_autosci_operator_direct_d0/harness/sprints/sprint-20260710-140626-intent-official-full-runtime-autosc-fb4b2588.N0.pm-result.md",
+  "model_route": {
+    "requested_model": "opus",
+    "routing_model": "opus",
+    "effective_provider": "anthropic",
+    "effective_model": "opus"
+  },
+  "requested_model": "opus",
+  "routing_model": "opus",
+  "effective_provider": "anthropic",
+  "effective_model": "opus"
+}

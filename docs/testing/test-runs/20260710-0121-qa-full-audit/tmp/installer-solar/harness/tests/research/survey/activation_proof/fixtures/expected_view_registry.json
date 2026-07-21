@@ -1,0 +1,9 @@
+{
+  "view_names": [
+    "argument_density",
+    "contradiction_matrix",
+    "exploration",
+    "gate_report",
+    "source_quality"
+  ]
+}

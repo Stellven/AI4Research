@@ -1,0 +1,85 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/shim-paper-compile-pdflatex-executor/compile_paper_executor_stdout.txt",
+      "type": "executor_stdout"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-paper-compile-pdflatex-executor/compile_paper_executor_stderr.txt",
+      "type": "executor_stderr"
+    },
+    {
+      "path": "approved-pdflatex-paper/main.pdf",
+      "type": "compiled_pdf"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "approval-execute-pdflatex-compile"
+  },
+  "limitations": [
+    "Approved paper compile executor ran pdflatex locally."
+  ],
+  "node_id": "node-compile-paper",
+  "outputs": {
+    "runtime": {
+      "action": "compile_paper",
+      "approval_ref": "approval-execute-pdflatex-compile",
+      "available_tex_executors": [
+        "pdflatex",
+        "xelatex",
+        "lualatex"
+      ],
+      "checks": [
+        {
+          "check": "command_allowlisted",
+          "detail": "executable allowlisted: pdflatex",
+          "status": "ok"
+        },
+        {
+          "check": "tex_executor",
+          "detail": "pdflatex",
+          "status": "ok"
+        },
+        {
+          "check": "exit_code",
+          "detail": "exit_code=0",
+          "status": "ok"
+        },
+        {
+          "check": "pdf_generated",
+          "detail": "approved-pdflatex-paper/main.pdf",
+          "status": "ok"
+        }
+      ],
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_execut1/bin/pdflatex -interaction=nonstopmode -halt-on-error main.tex",
+      "evidence_ids": [
+        "paper-compile-runtime:pdflatex",
+        "approved-pdflatex-paper/main.tex"
+      ],
+      "exit_code": 0,
+      "pdf_generated": true,
+      "pdf_integrity": {
+        "detail": "PDF artifact has a readable PDF header, xref trailer, and EOF marker.",
+        "eof_ok": true,
+        "exists": true,
+        "header_ok": true,
+        "path": "approved-pdflatex-paper/main.pdf",
+        "size_bytes": 105,
+        "startxref_ok": true,
+        "valid": true
+      },
+      "pdf_path": "approved-pdflatex-paper/main.pdf",
+      "status": "completed",
+      "tex_executor": "pdflatex"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-approved-side-effect-executor",
+    "timestamp": "2026-07-10T19:26:52Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-compile_paper"
+}

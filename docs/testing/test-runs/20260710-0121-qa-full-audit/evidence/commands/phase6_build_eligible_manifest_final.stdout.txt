@@ -1,0 +1,33 @@
+{
+  "schema": "qa.eligible_full_phase_manifest.v1",
+  "definition": {
+    "included_coverage": [
+      "direct",
+      "indirect",
+      "partial"
+    ],
+    "excluded": [
+      "coverage missing/gated/manual-only/not-applicable",
+      "approval or authorization gate",
+      "external credentials/provider/network/remote/browser-profile environment",
+      "no tracked executable test",
+      "heuristic mapping not semantically supported by committed testcase/file names"
+    ]
+  },
+  "eligible_feature_count": 1120,
+  "excluded_feature_count": 997,
+  "execution_target_count": 274,
+  "target_kind_counts": {
+    "pytest": 269,
+    "shell": 5
+  },
+  "exclusion_reason_counts": {
+    "approval_or_authorization_gate": 101,
+    "coverage_gated": 73,
+    "coverage_manual-only": 16,
+    "coverage_missing": 618,
+    "external_environment_or_credentials": 30,
+    "no_semantically_relevant_executable_test": 158,
+    "no_tracked_executable_test": 1
+  }
+}

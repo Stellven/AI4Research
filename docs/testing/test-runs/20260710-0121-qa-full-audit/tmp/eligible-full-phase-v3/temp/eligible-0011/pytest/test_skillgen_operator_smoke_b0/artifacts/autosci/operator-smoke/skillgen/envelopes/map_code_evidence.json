@@ -1,0 +1,18 @@
+{
+  "inputs": {
+    "claim_id": "claim-001",
+    "claims_evidence": "artifacts/autosci/operator-smoke/skillgen/research_claims.json",
+    "repo_path": "artifacts/autosci/operator-smoke/skillgen/sample_repo"
+  },
+  "mode": "fixture",
+  "node_id": "node-map-code-evidence",
+  "output_dir": "artifacts/autosci/operator-smoke/skillgen",
+  "outputs": {
+    "evidence_jsonl": "artifacts/autosci/operator-smoke/skillgen/evidence.jsonl",
+    "evidence_payload_path": "artifacts/autosci/operator-smoke/skillgen/code_evidence_map.json",
+    "handoff_path": "artifacts/autosci/operator-smoke/skillgen/code_evidence_handoff.md",
+    "result_path": "artifacts/autosci/operator-smoke/skillgen/map_code_evidence.result.json"
+  },
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "task_id": "task-autosci-skillgen-map_code_evidence"
+}

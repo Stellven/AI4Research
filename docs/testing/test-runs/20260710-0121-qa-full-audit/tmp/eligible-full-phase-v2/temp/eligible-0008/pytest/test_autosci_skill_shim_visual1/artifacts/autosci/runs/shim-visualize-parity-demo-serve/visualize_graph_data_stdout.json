@@ -1,0 +1,15 @@
+{
+  "edges": [],
+  "nodes": [
+    {
+      "group": "ideas",
+      "id": "ideas/skillgen.md",
+      "label": "SkillGen",
+      "path": "ideas/skillgen.md"
+    }
+  ],
+  "ok": true,
+  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_visual1/artifacts/autosci/runs/shim-visualize-parity-demo-serve/autosci_web_graph.json",
+  "schema": "autosci_web_graph.v1",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_visual1/artifacts/autosci/workspace/wiki"
+}

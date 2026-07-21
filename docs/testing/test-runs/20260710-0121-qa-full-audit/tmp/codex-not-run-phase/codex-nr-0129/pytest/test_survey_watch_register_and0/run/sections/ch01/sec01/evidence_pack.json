@@ -1,0 +1,23 @@
+{
+  "section_id": "ch01/sec01",
+  "status": "ready",
+  "claim_ids": [
+    "cl_1",
+    "cl_2",
+    "cl_3"
+  ],
+  "evidence_ids": [
+    "ev_1",
+    "ev_2",
+    "ev_3",
+    "ev_4"
+  ],
+  "source_ids": [
+    "src_1",
+    "src_2"
+  ],
+  "source_types": [
+    "paper",
+    "code"
+  ]
+}

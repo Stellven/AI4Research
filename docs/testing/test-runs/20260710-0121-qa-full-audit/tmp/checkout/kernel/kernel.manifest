@@ -1,0 +1,24 @@
+# OpenSolar kernel manifest — ordered fragments for kernel-gen.sh.
+# Format: <fragment-path-relative-to-kernel/> | <requires>
+#   requires = "always"  -> included in every assembly
+#   requires = <component> -> included only when that component is selected
+# Lines starting with # and blank lines are ignored.
+
+fragments/identity.md|always
+fragments/memory.md|always
+fragments/iron-rules.md|always
+fragments/self-check.md|always
+fragments/dod.md|always
+fragments/checkpoints.md|always
+fragments/lazy-load.md|always
+fragments/rules-index.md|always
+fragments/agents-base.md|always
+fragments/announce.md|always
+components/core-runtime.md|core-runtime
+components/harness.md|harness
+components/skills-md.md|skills-md
+components/codex-bridge.md|codex-bridge
+# Solar-Max is an opt-in project mode (off by default). It instructs Claude to
+# cd into a personal ~/Solar-MAX project dir, so it must NOT load on a default
+# install. Gated behind the solar-max component.
+fragments/solar-max.md|solar-max

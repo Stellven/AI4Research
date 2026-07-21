@@ -1,0 +1,527 @@
+{
+  "approval_contract": {
+    "action": "compile_paper",
+    "after_artifacts": [],
+    "after_ready": false,
+    "allowlist_evidence": [],
+    "allowlist_ready": false,
+    "approval_ref": "",
+    "approval_state": "approval_required",
+    "approved": false,
+    "authorization_request": {
+      "action": "compile_paper",
+      "approval_state": "approval_required",
+      "continuation": {
+        "access_patch": {
+          "after_artifacts": [
+            "<after-artifact>"
+          ],
+          "allowlist_evidence": [
+            "<allowlist-evidence.json>"
+          ],
+          "approval_ref": "<approval-ref>",
+          "before_artifacts": [
+            "<before-artifact>"
+          ],
+          "execute_approved_side_effect": true,
+          "runtime_evidence": [
+            "<runtime-evidence.json>"
+          ]
+        },
+        "request_fingerprint": "77e3e44b9f50d0778d835cd983316a7b4a9588132babf17d0021d2588ab11809",
+        "resume_strategy": "rerun_same_action_with_approval_patch",
+        "retriable": true,
+        "same_envelope_supported": true,
+        "schema": "autosci_gate_continuation.v1",
+        "status": "awaiting_authorization"
+      },
+      "missing": [
+        "approval_ref",
+        "allowlist_evidence",
+        "before_artifacts",
+        "runtime_evidence",
+        "after_artifacts"
+      ],
+      "non_error_contract": {
+        "approval_state": "approval_required",
+        "blocked_runs_exit_successfully": true,
+        "evidence_status": "inconclusive"
+      },
+      "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+      "requested_access": {
+        "after_artifacts": true,
+        "allowlist_evidence": true,
+        "approval_ref": true,
+        "before_artifacts": true,
+        "runtime_evidence": true
+      },
+      "requested_side_effects": [
+        "tex_executor_execution",
+        "source_auto_fix",
+        "pdf_generation"
+      ],
+      "schema": "autosci_gate_authorization_request.v1",
+      "status": "awaiting_authorization"
+    },
+    "before_artifacts": [],
+    "before_ready": false,
+    "execution_verified": false,
+    "missing": [
+      "approval_ref",
+      "allowlist_evidence",
+      "before_artifacts",
+      "runtime_evidence",
+      "after_artifacts"
+    ],
+    "ready_for_execution": false,
+    "runtime_evidence": [],
+    "runtime_ready": false,
+    "schema": "autosci_approval_contract.v1",
+    "semantic_runtime": {
+      "action": "compile_paper",
+      "checks": [
+        {
+          "check": "approval_contract_execution_verified",
+          "detail": "Approval contract path-level verification is incomplete.",
+          "status": "error"
+        },
+        {
+          "check": "runtime_records_loaded",
+          "detail": "0 runtime record(s) loaded.",
+          "status": "error"
+        },
+        {
+          "check": "compile_exit_ok",
+          "detail": "False",
+          "status": "error"
+        },
+        {
+          "check": "compiled_pdf_verified",
+          "detail": "No compiled PDF artifact passed structural integrity checks.",
+          "status": "error"
+        }
+      ],
+      "detail": {
+        "compile_exit_ok": false,
+        "compiled_pdf_verified": false,
+        "errors": [],
+        "evidence_ids": [],
+        "pdf_integrity": [],
+        "records_loaded": 0
+      },
+      "schema": "autosci_runtime_semantic_verification.v1",
+      "status": "incomplete",
+      "verified": false
+    },
+    "side_effects": [
+      "tex_executor_execution",
+      "source_auto_fix",
+      "pdf_generation"
+    ]
+  },
+  "bibliography_files": [],
+  "checks": [
+    {
+      "check": "target_resolved",
+      "detail": "Resolved to /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_accept7/paper",
+      "evidence": [
+        "paper"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "latex_source_present",
+      "detail": "1 LaTeX source file(s) found.",
+      "evidence": [
+        "paper/main.tex"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "compiled_pdf_present",
+      "detail": "No structurally valid compiled PDF was found.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "bibliography_present",
+      "detail": "No .bib files were found.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "latexmk_available",
+      "detail": "latexmk was not found on PATH; approved execution may use another allowlisted TeX executor.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "tex_executor_available",
+      "detail": "pdflatex=/Library/TeX/texbin/pdflatex, xelatex=/Library/TeX/texbin/xelatex, lualatex=/Library/TeX/texbin/lualatex",
+      "evidence": [
+        "/Library/TeX/texbin/pdflatex",
+        "/Library/TeX/texbin/xelatex",
+        "/Library/TeX/texbin/lualatex"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "checklist_requested",
+      "detail": "Checklist mode was requested.",
+      "evidence": [
+        "artifacts/autosci/runs/shim-paper-compile-native/paper_compile_checklist.json",
+        "artifacts/autosci/runs/shim-paper-compile-native/paper_compile_diagnostics.md"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "auto_fix_requested",
+      "detail": "Auto-fix was not requested.",
+      "evidence": [],
+      "status": "ok"
+    },
+    {
+      "check": "compile_execution",
+      "detail": "The bridge produced compile diagnostics only; it did not run a TeX executor or mutate sources.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "approval_contract_verified",
+      "detail": "Approval/runtime contract is incomplete; compile side effects were not executed by this bridge.",
+      "evidence": [
+        "artifacts/autosci/runs/shim-paper-compile-native/compile_paper_approval_contract.json"
+      ],
+      "status": "warn"
+    },
+    {
+      "check": "runtime_semantic_verified",
+      "detail": "Runtime evidence did not pass compile-specific semantic checks.",
+      "evidence": [
+        "artifacts/autosci/runs/shim-paper-compile-native/compile_paper_approval_contract.json"
+      ],
+      "status": "warn"
+    },
+    {
+      "check": "unconfirmed_marker_scan",
+      "detail": "No [UNCONFIRMED] markers were found in scanned source files.",
+      "evidence": [],
+      "status": "ok"
+    },
+    {
+      "check": "anonymity_check",
+      "detail": "Anonymous/double-blind submission mode was not requested, so anonymity is not claimed.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "page_limit_check",
+      "detail": "Page limit compliance is unconfirmed; supply page_limit and verified_page_count evidence.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "font_size_check",
+      "detail": "Font-size compliance is unconfirmed; supply minimum font-size evidence from a PDF checker.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "venue_submission_profile",
+      "detail": "Venue submission profile is missing, invalid, or conflicts with CLI evidence.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "pdf_inspection",
+      "detail": "PDF inspection evidence is missing or invalid; page/font proof may be CLI-only.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "publication_submission_audit",
+      "detail": "Publication submission audit evidence is missing, invalid, or has blocking checks.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "publication_submission_boundary",
+      "detail": "Submission readiness boundary is incomplete; see publication_submission_boundary.json.",
+      "evidence": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_accept7/artifacts/autosci/runs/shim-paper-compile-native/publication_submission_boundary.json"
+      ],
+      "status": "warn"
+    }
+  ],
+  "fix_writeback": null,
+  "latex_files": [
+    "paper/main.tex"
+  ],
+  "limitations": [
+    "Paper compile currently performs a bounded checklist and diagnostics pass only.",
+    "The bridge does not run a TeX executor, mutate source files, or claim PDF compilation without explicit approved execution.",
+    "Approval/runtime evidence contract is not fully verified: approval_ref, allowlist_evidence, before_artifacts, runtime_evidence, after_artifacts",
+    "No structurally valid compiled PDF was found in the target path.",
+    "Submission readiness includes warnings or unconfirmed checks; see submission_checks in the compile checklist.",
+    "Publication compile evidence does not prove submission readiness; review blocking_checks and submission_checks.",
+    "Venue submission readiness is not proven; supply a valid submission_profile and pdf_inspection evidence.",
+    "Publication submission audit readiness is not proven; supply valid submission_audit evidence."
+  ],
+  "markdown_files": [],
+  "pdf_files": [],
+  "pdf_inspection": {
+    "applied_fields": [],
+    "evidence_ids": [],
+    "inspection_loaded": false,
+    "inspection_valid": false,
+    "invalid_reasons": [
+      "No pdf_inspection evidence path was supplied."
+    ],
+    "min_font_size": null,
+    "page_count": null,
+    "path": "",
+    "pdf_path": "",
+    "pdf_sha256": "",
+    "schema": "autosci_pdf_inspection_boundary.v1",
+    "sha256": "",
+    "status": "missing"
+  },
+  "pdf_integrity": [],
+  "policy_decision": {
+    "action": "compile_paper",
+    "allow_destructive": false,
+    "allow_email": false,
+    "allow_network": false,
+    "allow_remote": false,
+    "allowed": false,
+    "allowed_write_roots": [
+      "artifacts/autosci",
+      "artifacts/scientific"
+    ],
+    "blocked": true,
+    "execute_side_effects": false,
+    "mode": "strict_hitl",
+    "proof_best_effort": false,
+    "proof_required": true,
+    "reasons": [
+      "read_local is allowed in strict_hitl.",
+      "write_artifact is allowed in strict_hitl.",
+      "tex_compile requires HITL approval in strict_hitl.",
+      "local_command requires HITL approval in strict_hitl."
+    ],
+    "require_approval_ref": true,
+    "require_before_after_artifacts": true,
+    "require_hitl": true,
+    "require_runtime_evidence": true,
+    "sandbox_required": false,
+    "side_effects": [
+      "read_local",
+      "write_artifact",
+      "tex_compile",
+      "local_command"
+    ],
+    "synthetic_approval_ref": "",
+    "warnings": []
+  },
+  "requested": {
+    "checklist": true,
+    "fix": false,
+    "title": ""
+  },
+  "runtime_semantic": {
+    "action": "compile_paper",
+    "checks": [
+      {
+        "check": "approval_contract_execution_verified",
+        "detail": "Approval contract path-level verification is incomplete.",
+        "status": "error"
+      },
+      {
+        "check": "runtime_records_loaded",
+        "detail": "0 runtime record(s) loaded.",
+        "status": "error"
+      },
+      {
+        "check": "compile_exit_ok",
+        "detail": "False",
+        "status": "error"
+      },
+      {
+        "check": "compiled_pdf_verified",
+        "detail": "No compiled PDF artifact passed structural integrity checks.",
+        "status": "error"
+      }
+    ],
+    "detail": {
+      "compile_exit_ok": false,
+      "compiled_pdf_verified": false,
+      "errors": [],
+      "evidence_ids": [],
+      "pdf_integrity": [],
+      "records_loaded": 0
+    },
+    "schema": "autosci_runtime_semantic_verification.v1",
+    "status": "incomplete",
+    "verified": false
+  },
+  "schema": "paper_compile_checklist.v1",
+  "status": "inconclusive",
+  "submission_audit": {
+    "audit_loaded": false,
+    "audit_verified": false,
+    "blocking_checks": [],
+    "checks": [],
+    "evidence_ids": [],
+    "invalid_reasons": [
+      "No submission_audit evidence path was supplied."
+    ],
+    "path": "",
+    "portal_submission_completed": false,
+    "schema": "autosci_publication_submission_audit_boundary.v1",
+    "sha256": "",
+    "status": "missing",
+    "venue": ""
+  },
+  "submission_boundary": {
+    "blocking_checks": [
+      "anonymity_check",
+      "font_size_check",
+      "page_limit_check",
+      "compiled_pdf_verified"
+    ],
+    "check_statuses": {
+      "anonymity_check": "warn",
+      "font_size_check": "warn",
+      "page_limit_check": "warn",
+      "unconfirmed_marker_scan": "ok"
+    },
+    "compiled_pdf_verified": false,
+    "limitations": [
+      "Publication compile evidence does not prove submission readiness; review blocking_checks and submission_checks.",
+      "Venue submission readiness is not proven; supply a valid submission_profile and pdf_inspection evidence.",
+      "Publication submission audit readiness is not proven; supply valid submission_audit evidence."
+    ],
+    "pdf_files": [],
+    "pdf_inspection": {
+      "applied_fields": [],
+      "evidence_ids": [],
+      "inspection_loaded": false,
+      "inspection_valid": false,
+      "invalid_reasons": [
+        "No pdf_inspection evidence path was supplied."
+      ],
+      "min_font_size": null,
+      "page_count": null,
+      "path": "",
+      "pdf_path": "",
+      "pdf_sha256": "",
+      "schema": "autosci_pdf_inspection_boundary.v1",
+      "sha256": "",
+      "status": "missing"
+    },
+    "portal_submission_completed": false,
+    "runtime_semantic_verified": false,
+    "schema": "autosci_publication_submission_boundary.v1",
+    "status": "submission_incomplete",
+    "submission_audit": {
+      "audit_loaded": false,
+      "audit_verified": false,
+      "blocking_checks": [],
+      "checks": [],
+      "evidence_ids": [],
+      "invalid_reasons": [
+        "No submission_audit evidence path was supplied."
+      ],
+      "path": "",
+      "portal_submission_completed": false,
+      "schema": "autosci_publication_submission_audit_boundary.v1",
+      "sha256": "",
+      "status": "missing",
+      "venue": ""
+    },
+    "submission_audit_blocking_checks": [
+      "venue_submission_ready",
+      "publication_submission_audit"
+    ],
+    "submission_audit_ready": false,
+    "submission_audit_status": "submission_audit_missing",
+    "submission_profile": {
+      "applied_fields": [],
+      "conflicts": [],
+      "evidence_ids": [],
+      "invalid_reasons": [
+        "No submission_profile evidence path was supplied."
+      ],
+      "path": "",
+      "profile_loaded": false,
+      "profile_valid": false,
+      "requirements": {},
+      "schema": "autosci_submission_profile_boundary.v1",
+      "sha256": "",
+      "status": "missing",
+      "venue": ""
+    },
+    "submission_ready": false,
+    "venue_blocking_checks": [
+      "venue_submission_profile",
+      "pdf_inspection"
+    ],
+    "venue_status": "venue_profile_missing",
+    "venue_submission_ready": false
+  },
+  "submission_checks": [
+    {
+      "check": "unconfirmed_marker_scan",
+      "detail": "No [UNCONFIRMED] markers were found in scanned source files.",
+      "evidence": [],
+      "status": "ok"
+    },
+    {
+      "check": "anonymity_check",
+      "detail": "Anonymous/double-blind submission mode was not requested, so anonymity is not claimed.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "page_limit_check",
+      "detail": "Page limit compliance is unconfirmed; supply page_limit and verified_page_count evidence.",
+      "evidence": [],
+      "status": "warn"
+    },
+    {
+      "check": "font_size_check",
+      "detail": "Font-size compliance is unconfirmed; supply minimum font-size evidence from a PDF checker.",
+      "evidence": [],
+      "status": "warn"
+    }
+  ],
+  "submission_profile": {
+    "applied_fields": [],
+    "conflicts": [],
+    "evidence_ids": [],
+    "invalid_reasons": [
+      "No submission_profile evidence path was supplied."
+    ],
+    "path": "",
+    "profile_loaded": false,
+    "profile_valid": false,
+    "requirements": {},
+    "schema": "autosci_submission_profile_boundary.v1",
+    "sha256": "",
+    "status": "missing",
+    "venue": ""
+  },
+  "target_raw": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_accept7/paper",
+  "target_resolved": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_accept7/paper",
+  "toolchain": {
+    "latexmk_available": false,
+    "latexmk_path": "",
+    "selected_executor": "",
+    "tex_executors": {
+      "lualatex": "/Library/TeX/texbin/lualatex",
+      "pdflatex": "/Library/TeX/texbin/pdflatex",
+      "xelatex": "/Library/TeX/texbin/xelatex"
+    }
+  },
+  "verified_pdf_files": []
+}

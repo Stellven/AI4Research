@@ -65,6 +65,115 @@ def _timeout_seconds() -> float:
         return 900.0
 
 
+def _truthy_env(name: str, default: str = "1") -> bool:
+    return os.environ.get(name, default).strip().lower() not in {"0", "false", "off", "no", ""}
+
+
+def _prepend_env_path(env: dict[str, str], name: str, entries: list[Path | str]) -> None:
+    existing = [part for part in env.get(name, "").split(os.pathsep) if part]
+    prefix = [str(Path(part).expanduser()) for part in entries if str(part)]
+    seen: set[str] = set()
+    merged: list[str] = []
+    for part in prefix + existing:
+        if part and part not in seen:
+            merged.append(part)
+            seen.add(part)
+    env[name] = os.pathsep.join(merged)
+
+
+def _install_harness_command_shims(task_dir: Path, harness_dir: Path) -> Path:
+    shim_dir = task_dir / "cmd-shims"
+    shim_dir.mkdir(parents=True, exist_ok=True)
+    solar_harness = shim_dir / "solar-harness"
+    solar_harness.write_text(
+        (
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "exec \"${HARNESS_DIR}/solar-harness.sh\" \"$@\"\n"
+        ),
+        encoding="utf-8",
+    )
+    solar_harness.chmod(0o755)
+    return shim_dir
+
+
+def _codex_exec_env(task_dir: Path) -> dict[str, str]:
+    """Build a deterministic environment for non-interactive Codex operator runs.
+
+    Keep the user's CODEX_HOME/Auth as-is, but give Codex's SQLite/app-server
+    state a harness-owned writable home by default. Without this, daemonized
+    runs can inherit a cwd/sandbox context where Codex fails before the model
+    starts with read-only filesystem errors. The model shell must also resolve
+    Solar helper commands from this active harness, not from any installed
+    ~/.solar runtime left on the developer machine.
+    """
+    env = os.environ.copy()
+    harness_dir = Path(env.get("HARNESS_DIR") or Path.home() / ".solar" / "harness").expanduser().resolve(strict=False)
+    shim_dir = _install_harness_command_shims(task_dir, harness_dir)
+    state_home = Path(
+        env.get("CODEX_SQLITE_HOME")
+        or env.get("SOLAR_CODEX_STATE_HOME")
+        or harness_dir / "run" / "codex-state"
+    ).expanduser()
+    state_home.mkdir(parents=True, exist_ok=True)
+    sprints_dir = Path(
+        env.get("SPRINTS_DIR")
+        or env.get("HARNESS_SPRINTS_DIR")
+        or harness_dir / "sprints"
+    ).expanduser().resolve(strict=False)
+    env["HARNESS_DIR"] = str(harness_dir)
+    env["SOLAR_HARNESS_DIR"] = str(harness_dir)
+    env["SPRINTS_DIR"] = str(sprints_dir)
+    env["HARNESS_SPRINTS_DIR"] = str(sprints_dir)
+    env["SOLAR_HARNESS_SPRINTS_DIR"] = str(sprints_dir)
+    env["SOLAR_HARNESS_CMD"] = str(shim_dir / "solar-harness")
+    env["CODEX_SQLITE_HOME"] = str(state_home)
+    _prepend_env_path(env, "PATH", [shim_dir, harness_dir / "bin", harness_dir])
+    _prepend_env_path(env, "PYTHONPATH", [harness_dir / "lib", harness_dir / "tools"])
+    return env
+
+
+def _codex_live_search_requested() -> bool:
+    """Project the dashboard's search setting onto the safe CLI capability.
+
+    ``SOLAR_CODEX_EXTRA_FLAGS`` is assembled by ``solar-harness.sh`` for
+    interactive panes, but the operator backend must not blindly forward that
+    shell-shaped string.  Codex exposes live search as a global option, so the
+    only supported projection here is the exact ``--search`` token placed
+    before ``exec``.  Reasoning effort already has its own typed argument.
+    """
+    raw = os.environ.get("SOLAR_CODEX_EXTRA_FLAGS", "").strip()
+    if not raw:
+        return False
+    try:
+        tokens = shlex.split(raw)
+    except ValueError:
+        return False
+    return "--search" in tokens
+
+
+def _codex_exec_command(model: str, effort: str, cwd: str, output_file: Path) -> list[str]:
+    cmd = ["codex"]
+    if _codex_live_search_requested():
+        cmd.append("--search")
+    cmd.append("exec")
+    if _truthy_env("SOLAR_CODEX_OPERATOR_EPHEMERAL", "1"):
+        cmd.append("--ephemeral")
+    cmd.extend([
+        "--model",
+        model,
+        "--config",
+        f"model_reasoning_effort={effort}",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--cd",
+        cwd,
+        "--output-last-message",
+        str(output_file),
+        "-",
+    ])
+    return cmd
+
+
 def _pm_result_ready(started_wall: float) -> bool:
     result_path = os.environ.get("PM_RESULT_PATH") or os.environ.get("RESULT_PATH")
     if not result_path:
@@ -86,6 +195,48 @@ def _terminate_process_group(proc: subprocess.Popen[str]) -> None:
             return
 
 
+def _register_codex_process_group(pid: int) -> bool:
+    """Give the run registry ownership of Codex's detached session.
+
+    The operatord owns its outer worker, but Codex is intentionally launched
+    in a separate session so task timeouts can terminate the complete CLI
+    group. Register that second boundary before sending the dispatch; otherwise
+    product teardown can kill the outer wrapper and orphan Codex.
+    """
+    harness_dir = Path(
+        os.environ.get("HARNESS_DIR")
+        or os.environ.get("SOLAR_HARNESS_DIR")
+        or Path.home() / ".solar" / "harness"
+    ).expanduser()
+    lib_dir = Path(__file__).resolve().parents[1] / "lib"
+    lib_text = str(lib_dir)
+    if lib_text not in sys.path:
+        sys.path.insert(0, lib_text)
+    try:
+        import run_process_registry as registry
+
+        registry.register(
+            "harness",
+            "operator-task-child",
+            int(pid),
+            meta={
+                "task_id": str(os.environ.get("TASK_ID") or ""),
+                "sprint_id": str(os.environ.get("SID") or ""),
+                "node_id": str(os.environ.get("NODE_ID") or ""),
+                "backend": "codex",
+            },
+            harness_dir=harness_dir,
+            signal_scope="process_group",
+        )
+        return True
+    except Exception as exc:
+        print(
+            f"ERROR: unable to register Codex process group pid={pid}: {exc}",
+            file=sys.stderr,
+        )
+        return False
+
+
 def main() -> int:
     dispatch = _read_dispatch().strip()
     if not dispatch:
@@ -97,24 +248,22 @@ def main() -> int:
     output_file = task_dir / "codex-last-message.md"
     model = os.environ.get("CODEX_MODEL", "gpt-5.5").strip() or "gpt-5.5"
     effort = os.environ.get("CODEX_REASONING_EFFORT", "medium").strip() or "medium"
-    cwd = os.environ.get("CODEX_WORKDIR") or os.environ.get("WORK_DIR") or os.getcwd()
+    cwd = str(Path(os.environ.get("CODEX_WORKDIR") or os.environ.get("WORK_DIR") or os.getcwd()).expanduser())
+    if not Path(cwd).is_dir():
+        print(f"ERROR: Codex work_dir does not exist: {cwd}", file=sys.stderr)
+        return 72
 
-    cmd = [
-        "codex",
-        "exec",
-        "--model",
-        model,
-        "--config",
-        f"model_reasoning_effort={effort}",
-        "--dangerously-bypass-approvals-and-sandbox",
-        "--cd",
-        cwd,
-        "--output-last-message",
-        str(output_file),
-        "-",
-    ]
+    codex_env = _codex_exec_env(task_dir)
+    cmd = _codex_exec_command(model, effort, cwd, output_file)
     timeout_seconds = _timeout_seconds()
     pm_result_grace = float(os.environ.get("CODEX_PM_RESULT_GRACE_SECONDS", "20"))
+    print(
+        "codex_operator: env "
+        f"cwd={shlex.quote(cwd)} "
+        f"task_dir={shlex.quote(str(task_dir))} "
+        f"CODEX_HOME={shlex.quote(codex_env.get('CODEX_HOME') or str(Path.home() / '.codex'))} "
+        f"CODEX_SQLITE_HOME={shlex.quote(codex_env.get('CODEX_SQLITE_HOME') or '')}"
+    )
     print("codex_operator: invoking " + " ".join(shlex.quote(part) for part in cmd[:-1]) + " <dispatch>")
     cli_log = task_dir / "codex-cli-output.log"
     started = time.monotonic()
@@ -127,7 +276,19 @@ def main() -> int:
             stderr=subprocess.STDOUT,
             text=True,
             start_new_session=True,
+            env=codex_env,
         )
+        if not _register_codex_process_group(proc.pid):
+            _terminate_process_group(proc)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except Exception:
+                    proc.kill()
+                proc.wait(timeout=5)
+            return 75
         try:
             assert proc.stdin is not None
             proc.stdin.write(dispatch)

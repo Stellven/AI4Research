@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_132_1dcd8ce4de_harness_tests_livework_test_events.py",
+  "source": "harness/tests/livework/test_events.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/livework/test_events.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.203,
+  "timeout": false
+}

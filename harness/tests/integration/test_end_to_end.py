@@ -3,7 +3,7 @@
 Drives real action_contracts through the live N3 ExecutionBroker, observes
 the N2 EventLedger, rebuilds sprint status via the N8 projection, and
 asserts the N9 activation-proof broker_coverage meets PASS criteria
-(coverage_ratio == 1.0, uncontracted == 0, unscoped == 0, by_kind covers
+(coverage_pct == 100.0, uncontracted == 0, unscoped == 0, by_kind covers
 all three action kinds).
 
 No mocks are used for the runtime modules under test:
@@ -200,7 +200,7 @@ def test_full_chain_action_event_projection_proof(ledger, sandbox_root):
         f"broker_coverage missing/extra keys: {sorted(coverage.keys())}"
     )
     assert coverage["health"] == "PASS"
-    assert coverage["coverage_ratio"] == 1.0
+    assert coverage["coverage_pct"] == 100.0
     assert coverage["uncontracted_action_count"] == 0
     assert coverage["unscoped_write_count"] == 0
     assert coverage["total_actions"] == 3
@@ -259,7 +259,7 @@ def test_uncontracted_action_drives_health_fail(ledger):
     coverage = compute_broker_coverage(ledger.replay(SPRINT_ID))
     assert coverage["uncontracted_action_count"] == 1
     assert coverage["health"] == "FAIL"
-    assert coverage["coverage_ratio"] == 1.0  # 0/0 -> 1.0 by convention
+    assert coverage["coverage_pct"] == 0.0
     assert coverage["total_actions"] == 0
     assert coverage["contracted_actions"] == 0
 
@@ -445,7 +445,7 @@ def test_activation_proof_runner_cli_exit_zero(tmp_path, sandbox_root):
     assert proc.returncode == 0, f"runner exit={proc.returncode}\n{proc.stdout}\n{proc.stderr}"
     report = json.loads(out_path.read_text())
     assert report["broker_coverage"]["health"] == "PASS"
-    assert report["broker_coverage"]["coverage_ratio"] == 1.0
+    assert report["broker_coverage"]["coverage_pct"] == 100.0
     assert report["event_ledger_lag_seconds"] < 5.0
 
 

@@ -1,0 +1,19 @@
+{
+  "schema_version": "solar.understand_anything.semantic_proof.v1",
+  "semantic_backend_declared": "ThunderOMLX",
+  "semantic_operator_id": "mini-thunderomlx-qwen36-knowledge",
+  "semantic_operator_block_state": {},
+  "execution_surface": "deterministic_scan_and_thunderomlx_semantic",
+  "skill_command_template": "/understand --language {language} {repo_path}",
+  "rendered_skill_command": "/understand --language zh /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo",
+  "pane_target": "0",
+  "pane_resolution": {
+    "strategy": "explicit_legacy_target"
+  },
+  "repo_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/repo",
+  "language": "",
+  "semantic_phase_request_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/understand-anything-semantic-phase-request.json",
+  "semantic_phase_prompt_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0285/pytest/test_run_request_uses_local_pi0/understand-anything-semantic-phase-prompt.md",
+  "enforcement_mode": "contract_and_runtime_gate",
+  "proof_note": "This artifact proves Solar Harness enforced ThunderOMLX at the capsule/runtime/operator level before executing understand-anything through the governed execution surface."
+}

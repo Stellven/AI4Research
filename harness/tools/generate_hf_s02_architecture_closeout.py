@@ -16,7 +16,7 @@ from hf_s02_architecture_closeout import auto_closeout_hf_s02_architecture
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runtime-root", default="/Users/lisihao/.solar/harness")
+    parser.add_argument("--runtime-root", default="~/.solar/harness")
     args = parser.parse_args()
 
     result = auto_closeout_hf_s02_architecture(Path(args.runtime_root))

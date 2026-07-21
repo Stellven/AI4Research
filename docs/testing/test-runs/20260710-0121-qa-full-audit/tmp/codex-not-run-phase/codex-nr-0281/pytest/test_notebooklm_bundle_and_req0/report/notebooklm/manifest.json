@@ -1,0 +1,18 @@
+{
+  "date": "2026-05-26",
+  "report_title": "测试报告",
+  "video_count": 1,
+  "videos": [
+    {
+      "video_ref": "V001",
+      "title": "What's new in Google AI",
+      "channel": "Google for Developers",
+      "url": "https://www.youtube.com/watch?v=SSe1VmVrtw0",
+      "published_at": "2026-05-23T00:45:21+00:00"
+    }
+  ],
+  "source_files": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0281/pytest/test_notebooklm_bundle_and_req0/report/notebooklm/local-transcripts.md",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0281/pytest/test_notebooklm_bundle_and_req0/report/notebooklm/local-transcripts.txt"
+  ]
+}

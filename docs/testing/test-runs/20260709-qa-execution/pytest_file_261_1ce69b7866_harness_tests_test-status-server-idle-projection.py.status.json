@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_261_1ce69b7866_harness_tests_test-status-server-idle-projection.py",
+  "source": "harness/tests/test-status-server-idle-projection.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-status-server-idle-projection.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.2,
+  "timeout": false
+}

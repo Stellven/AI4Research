@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "rsync $*" >> "$CALLS_LOG"
+exit 0

@@ -17,7 +17,7 @@ import { $ } from 'bun';
 import { ReplySender } from '../reply/reply-sender';
 import { getGuardianImessageHandle, getNotificationEmail } from '../config/privacy';
 
-const DB_PATH = `${process.env.HOME}/.solar/solar.db`;
+const DB_PATH = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
 
 // 风险级别
 type RiskLevel = 'info' | 'warning' | 'critical' | 'emergency';

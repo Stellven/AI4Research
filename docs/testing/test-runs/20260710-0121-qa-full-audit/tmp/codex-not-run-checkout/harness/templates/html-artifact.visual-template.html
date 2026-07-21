@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}}</title>
+  <style>
+    :root{
+      --bg:#0f1320;
+      --panel:#1a1f33;
+      --panel-2:#20253b;
+      --border:#2c3350;
+      --text:#e6eaf3;
+      --muted:#9aa3bf;
+      --accent:#6cc4ff;
+      --accent-2:#ffb86b;
+      --good:#7ee787;
+      --warn:#f0b86e;
+      --bad:#ff8585;
+      --code-bg:#11172a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Helvetica Neue",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.65;
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:32px 28px 80px}
+    header.hero{
+      background:linear-gradient(135deg,#1c2444 0%,#2a1f4a 100%);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:24px 28px;
+      margin-bottom:28px;
+    }
+    header.hero h1{margin:0 0 6px 0;font-size:26px;color:#fff;letter-spacing:.3px}
+    header.hero .meta{color:var(--muted);font-size:13px;margin-top:8px}
+    header.hero .badges{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+    .badge{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      border:1px solid var(--border);
+      background:var(--panel-2);
+      color:var(--text);
+    }
+    .badge.p0{background:#4a1a1a;border-color:#6b2424;color:#ffb3b3}
+    .badge.lane{background:#1a3a4a;border-color:#25586b;color:#9fd9ff}
+    .badge.role{background:#2a1a4a;border-color:#3a256b;color:#c4b3ff}
+    .badge.warn{background:#3a2a1a;border-color:#5b3a24;color:#ffce8a}
+    nav.toc{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:18px 22px;
+      margin-bottom:28px;
+    }
+    nav.toc h2{
+      margin:0 0 8px 0;
+      font-size:14px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.1em;
+    }
+    nav.toc ol{columns:2;column-gap:28px;margin:0;padding-left:22px}
+    nav.toc a{color:var(--accent);text-decoration:none;font-size:14px}
+    nav.toc a:hover{text-decoration:underline}
+    section{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:22px 26px;
+      margin-bottom:22px;
+    }
+    section h2{
+      margin:0 0 14px 0;
+      font-size:19px;
+      color:#fff;
+      border-bottom:1px solid var(--border);
+      padding-bottom:10px;
+    }
+    section h3{margin:18px 0 8px 0;font-size:15px;color:var(--accent)}
+    p{margin:8px 0}
+    ul,ol{padding-left:22px}
+    li{margin:4px 0}
+    .grid-2,.grid-3{
+      display:grid;
+      gap:14px;
+    }
+    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .card{
+      background:var(--panel-2);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:14px 16px;
+    }
+    .card h3,.card h4{margin:0 0 8px 0;color:#fff}
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      background:var(--panel-2);
+      border:1px solid var(--border);
+      border-radius:10px;
+      overflow:hidden;
+    }
+    th,td{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{background:#151b2e;color:#fff}
+    code{
+      background:var(--code-bg);
+      border:1px solid var(--border);
+      border-radius:4px;
+      padding:1px 6px;
+      font-size:13px;
+      color:var(--accent-2);
+      font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    }
+    pre{
+      background:var(--code-bg);
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:14px 16px;
+      overflow:auto;
+      color:#dfe7ff;
+      font-size:12px;
+    }
+    .diagram{
+      background:#12182a;
+      border:1px dashed #42507a;
+      border-radius:10px;
+      padding:16px;
+      color:#d9e2ff;
+      white-space:pre-wrap;
+      font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+      font-size:12px;
+    }
+    .muted{color:var(--muted)}
+    .good{color:var(--good)}
+    .warn{color:var(--warn)}
+    .bad{color:var(--bad)}
+    @media (max-width:900px){
+      nav.toc ol{columns:1}
+      .grid-2,.grid-3{grid-template-columns:1fr}
+      .wrap{padding:20px 16px 56px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>{{TITLE}}</h1>
+      <div class="meta">{{META_LINE}}</div>
+      <div class="badges">
+        <span class="badge p0">{{PRIORITY}}</span>
+        <span class="badge lane">{{LANE}}</span>
+        <span class="badge role">{{ROLE}}</span>
+        <span class="badge warn">{{STATE_HINT}}</span>
+      </div>
+    </header>
+
+    <nav class="toc">
+      <h2>目录</h2>
+      <ol>
+        <li><a href="#summary">摘要</a></li>
+        <li><a href="#architecture">架构设计</a></li>
+        <li><a href="#flow">流程 / DAG</a></li>
+        <li><a href="#contracts">合约 / 约束</a></li>
+        <li><a href="#stack">技术栈 / 算子绑定</a></li>
+        <li><a href="#validation">验证 / 风险</a></li>
+      </ol>
+    </nav>
+
+    <section id="summary">
+      <h2>摘要</h2>
+      <p>在这里填 sprint 的目的、边界、为什么现在做。</p>
+    </section>
+
+    <section id="architecture">
+      <h2>架构设计</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>核心结构</h3>
+          <p>放组件图、层次说明或关键模块。</p>
+        </div>
+        <div class="card">
+          <h3>设计决策</h3>
+          <p>放 trade-off、约束、兼容策略。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="flow">
+      <h2>流程 / DAG</h2>
+      <div class="diagram">User Input -> Compiler -> Planner -> Builder -> Evaluator</div>
+    </section>
+
+    <section id="contracts">
+      <h2>合约 / 约束</h2>
+      <table>
+        <thead>
+          <tr><th>类别</th><th>约束</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>数据</td><td>schema-valid</td><td>结构化真值优先</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="stack">
+      <h2>技术栈 / 算子绑定</h2>
+      <div class="grid-3">
+        <div class="card"><h4>Planner</h4><p>说明 planner / PM / strategy lane。</p></div>
+        <div class="card"><h4>Builder</h4><p>说明 builder / runtime / 执行器。</p></div>
+        <div class="card"><h4>Verifier</h4><p>说明 evaluator / evidence / gate。</p></div>
+      </div>
+    </section>
+
+    <section id="validation">
+      <h2>验证 / 风险</h2>
+      <table>
+        <thead>
+          <tr><th>项</th><th>内容</th><th>状态</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>验证命令</td><td>在这里列命令</td><td class="good">required</td></tr>
+          <tr><td>风险矩阵</td><td>在这里列主要风险与 stop rules</td><td class="warn">required</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</body>
+</html>

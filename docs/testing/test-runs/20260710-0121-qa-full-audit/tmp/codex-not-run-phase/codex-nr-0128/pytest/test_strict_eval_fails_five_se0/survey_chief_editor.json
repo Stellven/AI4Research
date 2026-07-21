@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "complete_context": false,
+  "finalized_sections": 0,
+  "total_sections": 5,
+  "chapter_final_coverage": 0.0,
+  "section_duplicate_rate": 1.0,
+  "terminology_profile": "latent_reasoning",
+  "terminology_counts": {
+    "latent_reasoning": 0,
+    "continuous_thought": 0,
+    "chain_of_thought": 0,
+    "coconut": 0,
+    "hidden_state": 0
+  },
+  "terminology_variants": [],
+  "chapters": [
+    {
+      "chapter_id": "ch1",
+      "title": "Brief",
+      "section_count": 5,
+      "finalized_sections": 0,
+      "ready_for_chief_edit": false
+    }
+  ],
+  "warnings": [],
+  "issues": []
+}

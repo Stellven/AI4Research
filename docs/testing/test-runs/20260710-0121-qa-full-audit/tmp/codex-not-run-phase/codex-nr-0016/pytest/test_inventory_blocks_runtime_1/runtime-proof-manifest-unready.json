@@ -1,0 +1,1 @@
+{"schema": "autosci_runtime_proof_manifest.v1", "proofs": [{"native_skill": "daily-arxiv", "proof_id": "runtime:daily-arxiv:unready", "categories": ["external_runtime_evidence"], "evidence_refs": ["artifacts/runtime/daily-arxiv/result.json"], "description": "Runtime proof without production provenance must stay blocked."}]}

@@ -1,0 +1,56 @@
+---
+# Solar Plugin Manifest — QMD Index
+id: qmd
+name: "QMD Incremental Index"
+version: "1.0.0"
+description: "Manages incremental QMD (Quarto Markdown / embedding) index rebuilds. Monitors new/changed files, verifies wiki link integrity, and triggers rebuilds without breaking existing links."
+status: enabled
+
+write_scope:
+  - "state/qmd"
+
+read_scope:
+  - "~/Knowledge"
+  - "_sources/ingested"
+  - "state/qmd"
+
+capabilities:
+  - "qmd.rebuild"
+  - "qmd.check_links"
+  - "qmd.status"
+
+commands:
+  - "solar-harness wiki qmd-status"
+  - "solar-harness wiki qmd-search"
+
+background_safety:
+  mode: idle
+  idle_only: true
+  rate_limit: "idle-worker"
+  max_runtime_s: 1800
+  max_memory_mb: 2048
+
+eval_packs:
+  - "tests/external-integrations/test_schema_health.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable qmd"
+
+integration_level: default_usable
+
+entry: "lib/qmd_adapter.py"
+
+events:
+  - "qmd.rebuild_started"
+  - "qmd.rebuild_complete"
+  - "qmd.link_broken"
+
+depends_on:
+  - "obsidian"
+
+tags:
+  - "knowledge"
+  - "search"
+  - "index"

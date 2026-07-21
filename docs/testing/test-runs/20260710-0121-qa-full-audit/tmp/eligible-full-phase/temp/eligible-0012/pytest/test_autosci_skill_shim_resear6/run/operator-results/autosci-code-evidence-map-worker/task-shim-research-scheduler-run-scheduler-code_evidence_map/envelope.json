@@ -1,0 +1,33 @@
+{
+  "task_id": "task-shim-research-scheduler-run-scheduler-code_evidence_map",
+  "sprint_id": "shim-research-scheduler-run-scheduler",
+  "node_id": "code_evidence_map",
+  "operator_id": "autosci-code-evidence-map-worker",
+  "task_type": "scientific-code-evidence-map",
+  "objective": "Scheduler-dispatched bounded smoke for ScientificCodeEvidenceMapper.",
+  "mode": "bounded_runtime_smoke",
+  "runner_contract": "bounded_node_smoke",
+  "output_dir": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map",
+  "inputs": {
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "paper_id": "paper-shim-research-scheduler-run-scheduler",
+    "allow_network_fetch": false,
+    "smoke_mode": true,
+    "claims_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/claim_extract/task-shim-research-scheduler-run-scheduler-claim_extract/research_claims.json",
+    "method_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/method_extract/task-shim-research-scheduler-run-scheduler-method_extract/research_method.json",
+    "repo_path": "plugins/autosci/tests/fixtures/sample_repo"
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/map_code_evidence.result.json",
+    "evidence_payload_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/code_evidence_map.json",
+    "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/evidence.jsonl",
+    "memory_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/research_memory_update.json",
+    "graph_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/code_evidence_map/task-shim-research-scheduler-run-scheduler-code_evidence_map/research_graph_update.json"
+  },
+  "expected_schema": "code_evidence_map.v1",
+  "expected_action": "map_code_evidence",
+  "logical_operator": "ScientificCodeEvidenceMapper",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T13:59:06Z",
+  "lease_expires_at": "2026-07-10T14:01:06Z"
+}

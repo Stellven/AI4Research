@@ -1,0 +1,15 @@
+{
+  "schema_version": "solar.closure_record.v1",
+  "sprint_id": "projection-closeout",
+  "graph_ref": "projection-closeout.task_graph.json",
+  "graph_state_ref": "projection-closeout.task_graph.json",
+  "status": "closed",
+  "all_nodes_passed": true,
+  "all_required_gates_passed": true,
+  "acceptance_traceability_coverage": 0,
+  "open_nodes": [],
+  "failed_nodes": [],
+  "missing_gates": [],
+  "updated_at": "2026-07-10T14:06:36Z",
+  "closed_at": "2026-07-10T14:06:36Z"
+}

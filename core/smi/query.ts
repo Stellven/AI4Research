@@ -66,7 +66,7 @@ export interface SMISearchResult {
 export class SMIQuery {
   private db: Database;
 
-  constructor(dbPath: string = `${process.env.HOME}/.solar/solar.db`) {
+  constructor(dbPath: string = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`) {
     this.db = new Database(dbPath, { readonly: true });
   }
 

@@ -1,0 +1,47 @@
+{
+  "sprint_id": "test-graph-submit",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "Test goal",
+      "depends_on": [],
+      "write_scope": [
+        "/tmp/test"
+      ],
+      "required_skills": [
+        "bash"
+      ],
+      "acceptance": [
+        "test acceptance"
+      ],
+      "status": "failed",
+      "repair_attempts": 1,
+      "max_repair_attempts": 1,
+      "updated_at": "2026-07-10T14:14:17Z",
+      "artifacts": {
+        "handoff_md": "test-graph-submit.N1-handoff.md",
+        "eval_json": "test-graph-submit.N1-eval.json"
+      },
+      "handoff_md": "test-graph-submit.N1-handoff.md",
+      "eval_json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0029/pytest/test_direct_node_verdict_fail_1/sprints/test-graph-submit.N1-eval.json",
+      "capability_effect": {}
+    },
+    {
+      "id": "N2",
+      "goal": "Test goal 2",
+      "depends_on": [
+        "N1"
+      ],
+      "write_scope": [
+        "/tmp/test2"
+      ],
+      "required_skills": [
+        "bash"
+      ],
+      "acceptance": [
+        "test acceptance 2"
+      ],
+      "status": "pending"
+    }
+  ]
+}

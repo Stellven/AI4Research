@@ -1,0 +1,48 @@
+{
+  "action_count": 1,
+  "actions": [
+    {
+      "action": "prefill_foundations",
+      "evidence_ids": [
+        "artifacts/autosci/runs/shim-prefill-online-disabled/prefill_plan.json",
+        "prefill_plan_json",
+        "artifacts/autosci/runs/shim-prefill-online-disabled/research_memory_update.prefill.json",
+        "solar_evidence_json",
+        "LoRA Disabled Fetch",
+        "NLP",
+        "add",
+        "Prefill creates proposed memory-update evidence only; it does not create or modify wiki files.",
+        "Deduplication is limited to the provided target text unless wiki source evidence is supplied.",
+        "node-prefill-foundations",
+        "foundation-lora-disabled-fetch",
+        "foundation",
+        "prefill:foundation-lora-disabled-fetch",
+        "propose",
+        "artifacts/autosci/workspace/wiki/foundations/foundation-lora-disabled-fetch.md",
+        "Propose 1 foundation page scaffold(s); no wiki mutation is applied.",
+        "plugins/autosci",
+        "autosci-bridge",
+        "2026-07-10T19:26:11Z",
+        "research_memory_update.v1",
+        "phase19-skillgen-operator-smoke",
+        "completed",
+        "task-autosci-skillgen-prefill_foundations"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_prefil4/artifacts/autosci/runs/shim-prefill-online-disabled/research_memory_update.prefill.json",
+      "gate_status": "passed",
+      "reasons": [],
+      "schema": "research_memory_update.v1",
+      "status": "passed",
+      "warnings": []
+    }
+  ],
+  "completed_count": 1,
+  "current_action": "",
+  "remaining_actions": [],
+  "run_id": "shim-prefill-online-disabled",
+  "schema": "autosci_skill_run_progress.v1",
+  "skill": "prefill",
+  "status": "inconclusive",
+  "updated_at": "2026-07-10T19:26:12Z",
+  "work_dir": "artifacts/autosci/runs/shim-prefill-online-disabled"
+}

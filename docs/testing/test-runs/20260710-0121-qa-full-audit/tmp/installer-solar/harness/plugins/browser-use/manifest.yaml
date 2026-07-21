@@ -1,0 +1,55 @@
+---
+id: browser-use
+name: "Browser-use MCP"
+version: "1.0.0"
+description: "Local browser-use MCP server plus Codex Browser Use plugin. Solar uses it as a browser automation capability provider when dispatches explicitly need browser-use/MCP automation."
+status: enabled
+
+write_scope:
+  - "state/browser-use"
+  - "logs/browser-use"
+
+read_scope:
+  - "~/.claude/mcp-servers/browser-use"
+  - "~/.codex/plugins/cache/openai-bundled/browser-use"
+
+capabilities:
+  - "browser.mcp"
+  - "browser.automation"
+  - "browser.screenshot"
+  - "browser.localhost_test"
+
+commands:
+  - "~/.claude/mcp-servers/browser-use/.venv/bin/python ~/.claude/mcp-servers/browser-use/server.py"
+  - "codex Browser Use plugin"
+
+background_safety:
+  mode: bounded
+  idle_only: false
+  rate_limit: "local-browser"
+  max_runtime_s: 600
+  max_memory_mb: 2048
+
+eval_packs:
+  - "tests/integrations/test-expanded-capability-plane-e2e.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable browser-use"
+
+integration_level: default_usable
+
+entry: "~/.claude/mcp-servers/browser-use/server.py"
+
+events:
+  - "browser_use.mcp_checked"
+  - "browser_use.dispatch_selected"
+
+depends_on:
+  - "gstack"
+
+tags:
+  - "browser"
+  - "mcp"
+  - "automation"

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/task-graph-state.schema.json",
+  "title": "Solar Task Graph State",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "sprint_id",
+    "graph_ref",
+    "node_results",
+    "gate_results",
+    "leases",
+    "dispatch_ids",
+    "events"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "solar.task_graph_state.v1"
+    },
+    "sprint_id": { "type": "string", "minLength": 1 },
+    "graph_ref": { "type": "string", "minLength": 1 },
+    "node_results": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "gate_results": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "leases": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "dispatch_ids": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  }
+}

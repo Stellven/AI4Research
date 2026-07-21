@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/research-lab.v1.draft.json",
+  "title": "Research Lab v1",
+  "description": "Draft schema for ResearchLab - managing computational experiment suites and resource isolation.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": [
+    "lab_id",
+    "name",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "lab_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "paused",
+        "maintenance",
+        "depleted"
+      ]
+    },
+    "runner_slots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Assigned physical operator slot paths/names."
+      }
+    },
+    "active_experiments": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Identifiers of currently active research runs."
+      }
+    },
+    "allowed_models": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "telemetry_config": {
+      "type": "object",
+      "properties": {
+        "log_level": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "token_limit_per_run": {
+          "type": "integer"
+        },
+        "budget_cap_usd": {
+          "type": "number"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

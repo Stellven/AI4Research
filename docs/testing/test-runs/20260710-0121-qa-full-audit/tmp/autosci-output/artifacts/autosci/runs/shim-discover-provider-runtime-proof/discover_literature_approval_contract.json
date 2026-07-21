@@ -1,0 +1,172 @@
+{
+  "action": "discover_literature",
+  "after_artifacts": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/after.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/after.json",
+      "verifiable": true
+    }
+  ],
+  "after_ready": true,
+  "allowlist_evidence": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/allowlist.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/allowlist.json",
+      "verifiable": true
+    }
+  ],
+  "allowlist_ready": true,
+  "approval_ref": "approval-source-runtime-provider",
+  "approval_state": "verified",
+  "approved": true,
+  "authorization_request": {
+    "action": "discover_literature",
+    "approval_state": "verified",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [],
+        "allowlist_evidence": [],
+        "approval_ref": "",
+        "before_artifacts": [],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": []
+      },
+      "request_fingerprint": "102213671cc8e2d535427baf8a5c9b0fc5d9c1236abe50271dc19b67564afdbd",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": false,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "ready"
+    },
+    "missing": [],
+    "non_error_contract": {
+      "approval_state": "verified",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": false,
+      "allowlist_evidence": false,
+      "approval_ref": false,
+      "before_artifacts": false,
+      "runtime_evidence": false
+    },
+    "requested_side_effects": [
+      "network_source_fetch",
+      "source_manifest_ingest"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "authorized"
+  },
+  "before_artifacts": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/before.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/before.json",
+      "verifiable": true
+    }
+  ],
+  "before_ready": true,
+  "execution_verified": true,
+  "missing": [],
+  "ready_for_execution": true,
+  "runtime_evidence": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/source-runtime.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/source-runtime.json",
+      "verifiable": true
+    }
+  ],
+  "runtime_ready": true,
+  "schema": "autosci_approval_contract.v1",
+  "semantic_runtime": {
+    "action": "discover_literature",
+    "checks": [
+      {
+        "check": "approval_contract_execution_verified",
+        "detail": "Approval, allowlist, runtime, and before/after artifact paths are present.",
+        "status": "ok"
+      },
+      {
+        "check": "runtime_records_loaded",
+        "detail": "1 runtime record(s) loaded.",
+        "status": "ok"
+      },
+      {
+        "check": "source_fetch_ok",
+        "detail": "True",
+        "status": "ok"
+      },
+      {
+        "check": "candidates_present",
+        "detail": "1",
+        "status": "ok"
+      },
+      {
+        "check": "source_provider_boundary",
+        "detail": "",
+        "status": "ok"
+      }
+    ],
+    "detail": {
+      "candidates": [
+        {
+          "candidate_id": "runtime-source-001",
+          "dedup_status": "new",
+          "fetch_status": "fetched",
+          "ranking_rationale": "Approved source runtime returned this source.",
+          "ranking_score": 0.93,
+          "source_channels": [
+            "search_s2"
+          ],
+          "source_ref": "https://arxiv.org/abs/2601.00005",
+          "title": "Runtime Verified Skill Generation Source"
+        }
+      ],
+      "errors": [],
+      "evidence_ids": [
+        "task-source-runtime-provider",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/source-runtime.json"
+      ],
+      "records_loaded": 1,
+      "source_fetch_ok": true,
+      "source_provider_boundary": {
+        "action": "discover_literature",
+        "candidate_count": 1,
+        "candidate_ids": [
+          "runtime-source-001"
+        ],
+        "completed": true,
+        "generic_channels": [],
+        "invalid_reasons": [],
+        "limitations": [],
+        "provider_channels": [
+          "search_s2"
+        ],
+        "runtime_record_sources": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/external-discover-provider-runtime/source-runtime.json"
+        ],
+        "schema": "autosci_source_provider_boundary.v1",
+        "source_channels": [
+          "search_s2"
+        ],
+        "status": "completed"
+      }
+    },
+    "schema": "autosci_runtime_semantic_verification.v1",
+    "status": "verified",
+    "verified": true
+  },
+  "side_effects": [
+    "network_source_fetch",
+    "source_manifest_ingest"
+  ]
+}

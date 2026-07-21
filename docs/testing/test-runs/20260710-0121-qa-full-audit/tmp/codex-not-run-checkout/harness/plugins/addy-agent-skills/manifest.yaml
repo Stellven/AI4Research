@@ -1,0 +1,53 @@
+---
+id: addy-agent-skills
+name: "addyosmani/agent-skills"
+version: "1.0.0"
+description: "Local addyosmani/agent-skills marketplace checkout. Solar uses the agents, skills and command patterns as a read-only specialist routing and workflow methodology catalog."
+status: enabled
+
+write_scope:
+  - "state/addy-agent-skills"
+  - "logs/addy-agent-skills"
+
+read_scope:
+  - "~/.claude/plugins/marketplaces/addy-agent-skills"
+
+capabilities:
+  - "agent_skills.catalog"
+  - "workflow.spec_driven"
+  - "workflow.code_review"
+  - "workflow.test_driven"
+
+commands:
+  - "solar-harness skills inventory"
+  - "solar-harness skills doctor"
+
+background_safety:
+  mode: none
+  idle_only: false
+  rate_limit: "none"
+  max_runtime_s: 30
+  max_memory_mb: 128
+
+eval_packs:
+  - "tests/integrations/test-expanded-capability-plane-e2e.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable addy-agent-skills"
+
+integration_level: default_usable
+
+entry: "~/.claude/plugins/marketplaces/addy-agent-skills/README.md"
+
+events:
+  - "addy_agent_skills.catalog_selected"
+
+depends_on:
+  - "agency-agents"
+
+tags:
+  - "agents"
+  - "skills"
+  - "workflow"

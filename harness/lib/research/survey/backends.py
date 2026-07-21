@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -187,19 +188,36 @@ class PanePacketSurveyWriterBackend:
             raise LocalCommandWriterError("pane_target_missing")
         self._guard_pane_target()
         prompt = f"读取并执行 {dispatch}; 完成后只把正文写入 {response}"
-        try:
-            result = subprocess.run(
-                ["tmux", "send-keys", "-t", self.pane_target, prompt, "Enter"],
-                text=True,
-                capture_output=True,
-                timeout=self.timeout_seconds,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise LocalCommandWriterError(f"pane_send_timeout:{self.timeout_seconds}") from exc
-        if result.returncode != 0:
-            stderr = (result.stderr or "").strip().replace("\n", " ")[:500]
-            raise LocalCommandWriterError(f"pane_send_exit_{result.returncode}:{stderr}")
+        # A prompt and Enter in the same tmux invocation can arrive as one
+        # paste event in Claude/Codex TUIs, leaving the text editable but never
+        # submitted. Use the same literal-send boundary as graph dispatch:
+        # clear stale input, paste literal text, let the composer settle, then
+        # submit Enter in a distinct call.
+        steps = (
+            (["tmux", "send-keys", "-t", self.pane_target, "C-u"], 0.2),
+            (["tmux", "send-keys", "-t", self.pane_target, "-l", prompt], 0.8),
+            (["tmux", "send-keys", "-t", self.pane_target, "Enter"], 0.0),
+        )
+        for command, settle_seconds in steps:
+            try:
+                result = subprocess.run(
+                    command,
+                    text=True,
+                    capture_output=True,
+                    timeout=self.timeout_seconds,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise LocalCommandWriterError(
+                    f"pane_send_timeout:{self.timeout_seconds}"
+                ) from exc
+            if result.returncode != 0:
+                stderr = (result.stderr or "").strip().replace("\n", " ")[:500]
+                raise LocalCommandWriterError(
+                    f"pane_send_exit_{result.returncode}:{stderr}"
+                )
+            if settle_seconds:
+                time.sleep(settle_seconds)
         return True
 
     def _guard_pane_target(self) -> None:

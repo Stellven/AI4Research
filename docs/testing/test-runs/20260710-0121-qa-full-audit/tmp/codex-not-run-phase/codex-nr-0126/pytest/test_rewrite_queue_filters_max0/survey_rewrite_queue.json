@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "queue_count": 1,
+  "max_severity": "P0",
+  "min_risk_score": 25,
+  "items": [
+    {
+      "queue_id": "rewrite_ch01_sec01",
+      "section_id": "ch01/sec01",
+      "priority": "P0",
+      "risk_score": 200,
+      "issues": [
+        {
+          "severity": "P0",
+          "code": "unknown_claim_ids",
+          "detail": [
+            "cl_bad"
+          ]
+        },
+        {
+          "severity": "P0",
+          "code": "grounding_failures",
+          "detail": [
+            {
+              "evidence_id": "ev_1"
+            }
+          ]
+        }
+      ],
+      "section_spec": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0126/pytest/test_rewrite_queue_filters_max0/sections/ch01/sec01/section.spec.json",
+      "evidence_pack": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0126/pytest/test_rewrite_queue_filters_max0/sections/ch01/sec01/evidence_pack.json",
+      "current_final": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0126/pytest/test_rewrite_queue_filters_max0/sections/ch01/sec01/final.md",
+      "target_response": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0126/pytest/test_rewrite_queue_filters_max0/sections/ch01/sec01/human_responses/round_01.md",
+      "writer_backend": "human-packet",
+      "action": "rewrite_section_from_scorecard"
+    }
+  ],
+  "scorecard_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0126/pytest/test_rewrite_queue_filters_max0/survey_section_scorecard.json",
+  "queue_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0126/pytest/test_rewrite_queue_filters_max0/survey_rewrite_queue.json"
+}

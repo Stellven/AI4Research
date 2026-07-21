@@ -1,0 +1,143 @@
+{
+  "schema_version": "solar.requirement_trace.v1",
+  "requirement_ir_id": "req-a0064f75fcbf",
+  "sprint_id": "sprint-20260710-185002-intent-official-full-runtime-autosc-560568db",
+  "items": [
+    {
+      "requirement_id": "REQ-000",
+      "source_text": "Official full-runtime AutoSci integration test through normal solar intake. Do not call a",
+      "success_criteria": [
+        "Official full-runtime AutoSci integration test through normal solar intake. Do not call a"
+      ],
+      "verification_method": "task_graph_closeout",
+      "mapped_nodes": [
+        "literature_discover",
+        "paper_ingest",
+        "paper_analyze",
+        "memory_update_initial",
+        "graph_update",
+        "claim_extract",
+        "method_extract",
+        "code_evidence_map",
+        "idea_generate",
+        "idea_evaluate",
+        "experiment_design",
+        "experiment_run",
+        "experiment_monitor",
+        "claim_verify",
+        "report_plan",
+        "report_draft",
+        "artifact_review",
+        "publication_produce",
+        "memory_update_final",
+        "workflow_evolve"
+      ],
+      "expected_artifacts": [
+        "artifact.md"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-001",
+      "source_text": "Normal Solar intake emits a research.autosci.v1 task graph.",
+      "success_criteria": [
+        "Normal Solar intake emits a research.autosci.v1 task graph."
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "literature_discover",
+        "paper_ingest",
+        "paper_analyze",
+        "memory_update_initial",
+        "graph_update",
+        "claim_extract",
+        "method_extract",
+        "code_evidence_map",
+        "idea_generate",
+        "idea_evaluate",
+        "experiment_design",
+        "experiment_run",
+        "experiment_monitor",
+        "claim_verify",
+        "report_plan",
+        "report_draft",
+        "artifact_review",
+        "publication_produce",
+        "memory_update_final",
+        "workflow_evolve"
+      ],
+      "expected_artifacts": [
+        "artifact.md"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-002",
+      "source_text": "Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.",
+      "success_criteria": [
+        "Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators."
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "literature_discover",
+        "paper_ingest",
+        "paper_analyze",
+        "memory_update_initial",
+        "graph_update",
+        "claim_extract",
+        "method_extract",
+        "code_evidence_map",
+        "idea_generate",
+        "idea_evaluate",
+        "experiment_design",
+        "experiment_run",
+        "experiment_monitor",
+        "claim_verify",
+        "report_plan",
+        "report_draft",
+        "artifact_review",
+        "publication_produce",
+        "memory_update_final",
+        "workflow_evolve"
+      ],
+      "expected_artifacts": [
+        "artifact.md"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-003",
+      "source_text": "Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.",
+      "success_criteria": [
+        "Autopilot can dispatch ready graph nodes without a manual AutoSci shim call."
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "literature_discover",
+        "paper_ingest",
+        "paper_analyze",
+        "memory_update_initial",
+        "graph_update",
+        "claim_extract",
+        "method_extract",
+        "code_evidence_map",
+        "idea_generate",
+        "idea_evaluate",
+        "experiment_design",
+        "experiment_run",
+        "experiment_monitor",
+        "claim_verify",
+        "report_plan",
+        "report_draft",
+        "artifact_review",
+        "publication_produce",
+        "memory_update_final",
+        "workflow_evolve"
+      ],
+      "expected_artifacts": [
+        "artifact.md"
+      ],
+      "final_status": "missing"
+    }
+  ]
+}

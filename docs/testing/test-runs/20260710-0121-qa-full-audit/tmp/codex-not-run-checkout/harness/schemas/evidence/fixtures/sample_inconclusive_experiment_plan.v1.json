@@ -1,0 +1,47 @@
+{
+  "schema": "experiment_plan.v1",
+  "task_id": "task.phase1.inconclusive.experiment_plan",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.experiment_design",
+  "status": "inconclusive",
+  "inputs": {
+    "claim_id": "claim.inconclusive.001"
+  },
+  "outputs": {
+    "experiment_plan": {
+      "experiment_id": "experiment.inconclusive.needs-baseline",
+      "objective": "Draft a fixture experiment once baseline evidence is available.",
+      "hypothesis": "The candidate intervention may improve the measured outcome, pending baseline recovery.",
+      "variables": [
+        "intervention_mode"
+      ],
+      "metrics": [
+        "primary_outcome"
+      ],
+      "procedure": [
+        "Recover baseline definition",
+        "Confirm dataset availability",
+        "Run fixture-mode comparison only after approval"
+      ],
+      "approval_required": true,
+      "expected_artifacts": [
+        "baseline_definition.md",
+        "fixture_comparison.json"
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "type": "draft_experiment_plan",
+      "path": "artifacts/scientific/fixtures/inconclusive_experiment_plan.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificExperimentDesigner",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T21:00:00Z"
+  },
+  "limitations": [
+    "The plan is not runnable until baseline and dataset assumptions are verified."
+  ]
+}

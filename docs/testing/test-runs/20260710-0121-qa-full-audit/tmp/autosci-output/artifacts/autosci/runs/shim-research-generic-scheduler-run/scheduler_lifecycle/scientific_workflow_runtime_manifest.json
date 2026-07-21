@@ -1,0 +1,7 @@
+{
+  "generated_by": "harness.tools.run_scientific_workflow",
+  "job_id": "shim-research-generic-scheduler-run-scheduler",
+  "proofs": [],
+  "schema": "scientific_workflow_runtime_manifest.v1",
+  "workflow_id": "scientific_research_lifecycle_full_v1"
+}

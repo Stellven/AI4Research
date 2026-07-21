@@ -1,0 +1,15 @@
+{
+  "inputs": {
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+  },
+  "mode": "fixture",
+  "node_id": "node-analyze-paper",
+  "output_dir": "artifacts/autosci/operator-smoke/skillgen",
+  "outputs": {
+    "evidence_jsonl": "artifacts/autosci/operator-smoke/skillgen/evidence.jsonl",
+    "evidence_payload_path": "artifacts/autosci/operator-smoke/skillgen/research_paper.analyzed.json",
+    "result_path": "artifacts/autosci/operator-smoke/skillgen/analyze_paper.result.json"
+  },
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "task_id": "task-autosci-skillgen-analyze_paper"
+}

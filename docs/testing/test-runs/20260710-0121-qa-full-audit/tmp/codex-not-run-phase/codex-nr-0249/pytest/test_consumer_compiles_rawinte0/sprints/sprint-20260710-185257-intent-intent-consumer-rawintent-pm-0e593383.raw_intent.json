@@ -1,0 +1,36 @@
+{
+  "schema_version": "solar.raw_intent.v1",
+  "intent_id": "intent-20260710-185257-0e593383ef",
+  "source": {
+    "channel": "test",
+    "actor": "user",
+    "device": "",
+    "session_id": "",
+    "thread_ref": ""
+  },
+  "raw": {
+    "text": "新增 intent consumer，把 RawIntent 自动编译成 PM/Planner sprint package。",
+    "attachments": [],
+    "quoted_context": [],
+    "received_at": "2026-07-10T18:52:57Z"
+  },
+  "context": {
+    "repo": "",
+    "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout",
+    "related_sprints": [],
+    "knowledge_query": ""
+  },
+  "routing_hints": {
+    "urgency": "normal",
+    "mode": "delivery",
+    "allow_autodispatch": true,
+    "requires_human_confirm": false,
+    "require_research_artifact": false
+  },
+  "trust": {
+    "source_trust": "test",
+    "prompt_injection_risk": "unknown",
+    "contains_secrets": "unknown"
+  },
+  "sprint_id": "sprint-20260710-185257-intent-intent-consumer-rawintent-pm-0e593383"
+}

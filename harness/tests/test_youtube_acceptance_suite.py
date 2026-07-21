@@ -16,7 +16,7 @@ from youtube.acceptance_suite import (
 
 
 def test_generate_reports_and_traceability(tmp_path):
-    root = Path("/Users/lisihao/Solar/harness")
+    root = Path("~/Solar/harness")
     report_dir = tmp_path / "reports"
     reports = generate_acceptance_reports(root, report_dir)
     assert set(reports) == set(REPORT_NAMES)
@@ -35,7 +35,7 @@ def test_generate_reports_and_traceability(tmp_path):
 
 
 def test_build_closeout_eval_payloads_and_auto_closeout(monkeypatch, tmp_path):
-    root = Path("/Users/lisihao/Solar/harness")
+    root = Path("~/Solar/harness")
     report_dir = tmp_path / "reports"
     reports = generate_acceptance_reports(root, report_dir)
     runtime_root = tmp_path / "runtime"
@@ -112,7 +112,7 @@ def test_build_closeout_eval_payloads_and_auto_closeout(monkeypatch, tmp_path):
 
 
 def test_run_pollution_report_uses_schema_aware_audit(tmp_path):
-    root = Path("/Users/lisihao/Solar/harness")
+    root = Path("~/Solar/harness")
     report = run_pollution_report(root, tmp_path)
     assert report["ok"] is True
     assert report["seed_count"] == 165

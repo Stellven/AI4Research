@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_157_1a472eef60_harness_tests_research_survey_cli_test_argument_density_view.py",
+  "source": "harness/tests/research/survey/cli/test_argument_density_view.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research/survey/cli/test_argument_density_view.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.2,
+  "timeout": false
+}

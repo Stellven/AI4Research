@@ -1,0 +1,7 @@
+[build] Building solar-harness v1.0.0 …
+[build] Tarball: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/release-package-run/solar-harness-1.0.0.tar.gz
+[build] SHA256: aeaa590d57b99f79dfded70431015d2e1b8d734939cc302a0f9fde7edcf4f5cf
+[32mBuild complete: solar-harness v1.0.0[0m
+[32m  tarball : /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/release-package-run/solar-harness-1.0.0.tar.gz[0m
+[32m  checksum: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/release-package-run/solar-harness-1.0.0.sha256[0m
+[32m  manifest: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/release-package-run/MANIFEST-1.0.0.json[0m

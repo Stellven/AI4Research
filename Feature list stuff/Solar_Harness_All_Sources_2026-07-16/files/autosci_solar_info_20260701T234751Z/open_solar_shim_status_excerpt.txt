@@ -1,0 +1,141 @@
+                "topic": str(args.topic or ""),
+                "target": str(args.target or ""),
+                "run_id": run_id,
+                "work_dir": work_dir,
+                "route_config": str(route_config.resolve()),
+                "binding_config": str(binding_config.resolve()),
+            },
+            "outputs": {
+                "skill_run": {
+                    "selected_skill": skill,
+                    "autosci_command": f"/{skill}",
+                    "execution_status": "failed",
+                    "side_effect_policy": "unavailable",
+                    "action_count": 0,
+                    "passed_count": 0,
+                    "schema_only_count": 0,
+                    "failed_count": 0,
+                    "actions": [],
+                    "route": {},
+                }
+            },
+            "artifacts": [
+                {"type": "route_config", "path": str(route_config.resolve())},
+                {"type": "binding_config", "path": str(binding_config.resolve())},
+            ],
+            "provenance": {
+                "operator_id": "AutoSciSkillShim",
+                "implementation_package": "harness.plugins.autosci",
+                "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            },
+            "limitations": [f"No Solar AutoSci route is configured for skill: {skill}"],
+        }
+        return payload, out_path
+
+    paper_path = normalize_source_path(source_paper_ref(skill, args))
+    sample_repo = make_sample_repo(work_dir)
+    envelope_dir = OUTPUT_HARNESS / work_dir / "envelopes"
+    actions = selected_actions(skill, route, binding)
+    if skill == "ideate" and not args.paper and not args.smoke:
+        actions = ["generate_ideas"] if args.skip_validation else ["generate_ideas", "evaluate_ideas"]
+    if skill == "novelty" and not args.paper and not args.smoke:
+        actions = ["evaluate_ideas"]
+    if skill == "review" and not args.smoke:
+        actions = ["review_artifact"]
+    if skill == "paper-compile" and (args.checklist or args.fix or target_ref(args) or args.paper) and not args.smoke:
+        actions = ["compile_paper"]
+    if skill == "exp-run" and args.full and not args.smoke:
+        actions = ["design_experiment", "run_experiment", "monitor_experiment"]
+    elif skill == "exp-run" and args.collect and not args.smoke:
+        actions = ["monitor_experiment"]
+    if skill == "exp-status" and not args.smoke:
+        actions = ["monitor_experiment"]
+    if skill == "exp-eval" and not args.smoke:
+        actions = ["verify_claim"]
+    if skill == "exp-design" and not args.smoke:
+        actions = ["design_experiment"]
+    if skill == "paper-plan" and not args.smoke:
+        actions = ["plan_report"]
+    if skill == "paper-draft" and not args.smoke:
+        actions = ["write_report"]
+    if skill == "survey" and not args.smoke:
+        actions = ["write_survey"]
+    if skill == "rebuttal" and not args.smoke:
+        actions = ["draft_rebuttal"]
+    if skill == "poster" and not args.smoke:
+        actions = ["build_poster"]
+    if skill == "prefill" and not args.smoke:
+        actions = ["prefill_foundations"]
+    if skill == "edit" and not args.smoke:
+        actions = ["edit_wiki_plan"]
+    if skill == "setup" and not args.smoke:
+        actions = ["setup_status"]
+    if skill == "reset" and not args.smoke:
+        actions = ["reset_plan"]
+    if skill == "ask" and not args.smoke:
+        actions = ["ask_wiki"]
+    if skill == "check" and not args.smoke:
+        actions = ["check_wiki_health"]
+    if skill == "init" and not args.smoke:
+        actions = ["init_sources"]
+    if skill == "daily-arxiv" and not args.smoke:
+        actions = ["daily_arxiv_prepare_finalize"]
+    if skill == "exp-pilot-eval" and not args.smoke:
+        actions = ["evaluate_pilot_result"]
+    if skill == "exp-pilot-run" and not args.smoke:
+        actions = ["run_pilot_experiment"]
+    if skill == "refine" and not args.smoke:
+        actions = ["refine_artifact"]
+    if skill == "research" and not args.smoke:
+        actions = ["run_research_lifecycle"]
+    if skill == "visualize" and not args.smoke:
+        actions = ["visualize_graph"]
+    scheduler_lifecycle: dict[str, Any] = {}
+    if skill == "research" and args.scheduler_run and not args.smoke:
+        scheduler_lifecycle = run_research_scheduler_lifecycle(args, run_id=run_id, work_dir=work_dir)
+        if scheduler_lifecycle.get("summary_path"):
+            args.lifecycle_summary = [
+                *list(args.lifecycle_summary or []),
+                str(scheduler_lifecycle["summary_path"]),
+            ]
+    can_run_actions, skip_reason = should_run_actions(actions, args)
+    action_results: list[dict[str, Any]] = []
+    for action in (actions if can_run_actions else []):
+        envelope = build_envelope(action, paper_path=paper_path, base_rel=work_dir, sample_repo=sample_repo)
+        envelope = maybe_customize_envelope(envelope, action, args)
+        envelope_path = envelope_dir / f"{action}.json"
+        action_results.append(run_bridge_action(action, envelope, envelope_path))
+
+    failed_count = count_results(action_results, "failed")
+    scheduler_failed = bool(scheduler_lifecycle and scheduler_lifecycle.get("status") == "failed")
+    failed_total = failed_count + (1 if scheduler_failed else 0)
+    operator_status = str((binding or {}).get("operator_status") or route.get("coverage_status") or "partial")
+    side_effect_policy = str(route.get("side_effect_policy") or "unavailable")
+    if failed_total:
+        execution_status = "failed"
+    elif operator_status == "gated" or side_effect_policy == "approval_required":
+        execution_status = "gated"
+    elif operator_status == "partial" or route.get("coverage_status") == "partial":
+        execution_status = "partial"
+    else:
+        execution_status = "completed"
+    payload_status = (
+        "failed"
+        if failed_total
+        else ("completed" if execution_status == "completed" else "inconclusive")
+    )
+
+    limitations = [
+        *[str(item) for item in route.get("limitations") or []],
+        *[str(item) for item in (binding or {}).get("limitations") or []],
+    ]
+    if side_effect_policy == "approval_required":
+        limitations.append("Approval-gated external effects were not executed by the shim.")
+    if not actions:
+        limitations.append("This skill route has no bounded local bridge action; shim emitted route evidence only.")
+    if skip_reason:
+        limitations.append(skip_reason)
+    if not args.smoke:
+        limitations.append("Fixture bridge fallback is disabled unless --smoke is passed explicitly.")
+
+    payload = {

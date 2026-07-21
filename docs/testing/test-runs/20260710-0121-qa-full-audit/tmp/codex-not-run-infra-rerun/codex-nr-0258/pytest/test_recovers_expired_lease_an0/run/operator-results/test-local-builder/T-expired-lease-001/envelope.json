@@ -1,0 +1,10 @@
+{
+  "task_id": "T-expired-lease-001",
+  "sprint_id": "sprint-test-n3",
+  "node_id": "N3",
+  "operator_id": "test-local-builder",
+  "task_type": "dummy",
+  "objective": "Verify operatord daemon end-to-end lifecycle.",
+  "submitted_at": "2026-07-10T19:01:05Z",
+  "lease_expires_at": "2026-07-10T20:01:05Z"
+}

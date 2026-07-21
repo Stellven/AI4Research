@@ -15,12 +15,12 @@ set -euo pipefail
 
 LOCAL_HOME="${LOCAL_HOME:-$HOME}"
 LOCAL_CODEX="${LOCAL_CODEX:-$LOCAL_HOME/.codex}"
-REMOTE_HOST="${REMOTE_HOST:-lisihao@100.122.223.55}"
-REMOTE_CODEX="${REMOTE_CODEX:-/Users/lisihao/.codex}"
+REMOTE_HOST="${REMOTE_HOST:-solar@example-host}"
+REMOTE_CODEX="${REMOTE_CODEX:-${HOME}/.codex}"
 HARNESS_DIR="${HARNESS_DIR:-$LOCAL_HOME/.solar/harness}"
-REMOTE_HARNESS="${REMOTE_HARNESS:-/Users/lisihao/.solar/harness}"
+REMOTE_HARNESS="${REMOTE_HARNESS:-${HOME}/.solar/harness}"
 FROM_PREFIX="${FROM_PREFIX:-$LOCAL_HOME}"
-TO_PREFIX="${TO_PREFIX:-/Users/lisihao}"
+TO_PREFIX="${TO_PREFIX:-${HOME}}"
 
 UTC="$(date -u +%Y%m%dT%H%M%SZ)"
 TMP="$(mktemp -d)"

@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-d3-builder-worktree-consistency.sh",
+  "source": "harness/tests/test-d3-builder-worktree-consistency.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-d3-builder-worktree-consistency.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.024,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-e5w0e8z4"
+}

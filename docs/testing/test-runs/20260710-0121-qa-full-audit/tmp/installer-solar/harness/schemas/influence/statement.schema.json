@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "influence.statement.v1",
+  "title": "Statement",
+  "type": "object",
+  "required": ["schema_version", "statement_id", "source", "text", "author"],
+  "properties": {
+    "schema_version": {"const": "influence.statement.v1"},
+    "statement_id": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "source_url": {"type": "string"},
+    "author": {
+      "type": "object",
+      "required": ["platform", "handle"],
+      "properties": {
+        "platform": {"type": "string"},
+        "handle": {"type": "string"},
+        "display_name": {"type": "string"}
+      }
+    },
+    "timestamp": {"type": "string"},
+    "text": {"type": "string", "minLength": 1},
+    "language": {"type": "string"},
+    "entities": {"type": "array", "items": {"type": "string"}},
+    "entities_source": {"type": "string"},
+    "quality_flags": {
+      "type": "object",
+      "properties": {
+        "is_quote": {"type": "boolean"},
+        "is_reply": {"type": "boolean"},
+        "is_joke_or_meme": {"type": "boolean"},
+        "is_marketing": {"type": "boolean"},
+        "transcript_quality": {"type": ["string", "null"]}
+      }
+    },
+    "raw_metadata": {"type": "object"}
+  }
+}

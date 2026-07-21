@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="7" skipped="0" tests="15" time="0.114" timestamp="2026-07-13T12:41:06.418646-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_help_contains_install_commands_examples_and_warnings" time="0.000" /><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_install_accepts_file_url_get_solar_override" time="0.023" /><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_install_accepts_legacy_get_solar_override" time="0.023" /><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_install_forwards_arguments_exactly_and_preserves_env" time="0.022" /><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_installed_solar_commands_delegate_to_lifecycle" time="0.001"><failure message="AssertionError: 1 != 0">self = &lt;test_cli.OpenSolarCliTests testMethod=test_installed_solar_commands_delegate_to_lifecycle&gt;
+
+    def test_installed_solar_commands_delegate_to_lifecycle(self) -&gt; None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            solar_bin = home / ".solar" / "bin" / "solar"
+            solar_bin.parent.mkdir(parents=True)
+            capture = Path(tmp) / "delegated.json"
+            write_executable(
+                solar_bin,
+                """\
+                #!/usr/bin/env bash
+                set -eu
+                python3 - "$@" &lt;&lt;'PY'
+                import json
+                import os
+                import sys
+                from pathlib import Path
+    
+                path = Path(os.environ["CAPTURE"])
+                rows = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+                rows.append(sys.argv[1:])
+                path.write_text(json.dumps(rows), encoding="utf-8")
+                PY
+                """,
+            )
+    
+            with mock.patch.dict(os.environ, {"HOME": str(home), "CAPTURE": str(capture)}, clear=False):
+&gt;               self.assertEqual(cli.main(["status", "--json"]), 0)
+E               AssertionError: 1 != 0
+
+distribution/pipx/tests/test_cli.py:173: AssertionError</failure></testcase><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_missing_installed_solar_has_clear_error_for_lifecycle_commands" time="0.013"><failure message="AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpr4vs3xss/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'">self = &lt;test_cli.OpenSolarCliTests testMethod=test_missing_installed_solar_has_clear_error_for_lifecycle_commands&gt;
+
+    def test_missing_installed_solar_has_clear_error_for_lifecycle_commands(self) -&gt; None:
+        for command in ("status", "doctor", "harness", "components", "update", "uninstall"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp) / "home"
+                stderr = io.StringIO()
+                with mock.patch.dict(os.environ, {"HOME": str(home)}, clear=False):
+                    with contextlib.redirect_stderr(stderr):
+                        code = cli.main([command])
+                self.assertNotEqual(code, 0)
+                text = stderr.getvalue()
+&gt;               self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E               AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpr4vs3xss/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+
+distribution/pipx/tests/test_cli.py:202: AssertionError</failure><failure message="AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpc66x6erb/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'">self = &lt;test_cli.OpenSolarCliTests testMethod=test_missing_installed_solar_has_clear_error_for_lifecycle_commands&gt;
+
+    def test_missing_installed_solar_has_clear_error_for_lifecycle_commands(self) -&gt; None:
+        for command in ("status", "doctor", "harness", "components", "update", "uninstall"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp) / "home"
+                stderr = io.StringIO()
+                with mock.patch.dict(os.environ, {"HOME": str(home)}, clear=False):
+                    with contextlib.redirect_stderr(stderr):
+                        code = cli.main([command])
+                self.assertNotEqual(code, 0)
+                text = stderr.getvalue()
+&gt;               self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E               AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpc66x6erb/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+
+distribution/pipx/tests/test_cli.py:202: AssertionError</failure><failure message="AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpitxjcoo3/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'">self = &lt;test_cli.OpenSolarCliTests testMethod=test_missing_installed_solar_has_clear_error_for_lifecycle_commands&gt;
+
+    def test_missing_installed_solar_has_clear_error_for_lifecycle_commands(self) -&gt; None:
+        for command in ("status", "doctor", "harness", "components", "update", "uninstall"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp) / "home"
+                stderr = io.StringIO()
+                with mock.patch.dict(os.environ, {"HOME": str(home)}, clear=False):
+                    with contextlib.redirect_stderr(stderr):
+                        code = cli.main([command])
+                self.assertNotEqual(code, 0)
+                text = stderr.getvalue()
+&gt;               self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E               AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpitxjcoo3/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+
+distribution/pipx/tests/test_cli.py:202: AssertionError</failure><failure message="AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpjupg_qti/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'">self = &lt;test_cli.OpenSolarCliTests testMethod=test_missing_installed_solar_has_clear_error_for_lifecycle_commands&gt;
+
+    def test_missing_installed_solar_has_clear_error_for_lifecycle_commands(self) -&gt; None:
+        for command in ("status", "doctor", "harness", "components", "update", "uninstall"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp) / "home"
+                stderr = io.StringIO()
+                with mock.patch.dict(os.environ, {"HOME": str(home)}, clear=False):
+                    with contextlib.redirect_stderr(stderr):
+                        code = cli.main([command])
+                self.assertNotEqual(code, 0)
+                text = stderr.getvalue()
+&gt;               self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E               AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpjupg_qti/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+
+distribution/pipx/tests/test_cli.py:202: AssertionError</failure><failure message="AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmppcc3gd0b/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'">self = &lt;test_cli.OpenSolarCliTests testMethod=test_missing_installed_solar_has_clear_error_for_lifecycle_commands&gt;
+
+    def test_missing_installed_solar_has_clear_error_for_lifecycle_commands(self) -&gt; None:
+        for command in ("status", "doctor", "harness", "components", "update", "uninstall"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp) / "home"
+                stderr = io.StringIO()
+                with mock.patch.dict(os.environ, {"HOME": str(home)}, clear=False):
+                    with contextlib.redirect_stderr(stderr):
+                        code = cli.main([command])
+                self.assertNotEqual(code, 0)
+                text = stderr.getvalue()
+&gt;               self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E               AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmppcc3gd0b/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+
+distribution/pipx/tests/test_cli.py:202: AssertionError</failure><failure message="AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpbif5m7mo/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'">self = &lt;test_cli.OpenSolarCliTests testMethod=test_missing_installed_solar_has_clear_error_for_lifecycle_commands&gt;
+
+    def test_missing_installed_solar_has_clear_error_for_lifecycle_commands(self) -&gt; None:
+        for command in ("status", "doctor", "harness", "components", "update", "uninstall"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp) / "home"
+                stderr = io.StringIO()
+                with mock.patch.dict(os.environ, {"HOME": str(home)}, clear=False):
+                    with contextlib.redirect_stderr(stderr):
+                        code = cli.main([command])
+                self.assertNotEqual(code, 0)
+                text = stderr.getvalue()
+&gt;               self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E               AssertionError: '/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmpbif5m7mo/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /private/tmp/qa-pipx-home/.solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+
+distribution/pipx/tests/test_cli.py:202: AssertionError</failure></testcase><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_native_windows_guard_fails_loud" time="0.000" /><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_source_not_found_is_nonzero" time="0.001" /><testcase classname="tests.test_cli.OpenSolarCliTests" name="test_source_prints_env_checkout_when_present" time="0.001" /></testsuite></testsuites>

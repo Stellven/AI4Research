@@ -1,0 +1,264 @@
+{
+  "artifact_roots": {
+    "aliases": [],
+    "canonical": "sprints/golden-sid/workdir/",
+    "publish_rule": "none (workdir is canonical for code tasks)"
+  },
+  "dag_variant": "short",
+  "gate_results": {},
+  "node_results": {},
+  "nodes": [
+    {
+      "acceptance": [],
+      "allowed_capsules": [
+        "cap.requirement-compiler-implementation"
+      ],
+      "allowed_operators": {
+        "providers": [
+          "openai"
+        ],
+        "role": "builder"
+      },
+      "capability_capsule_id": "cap.requirement-compiler-implementation",
+      "dashboard_label": "S1 \u00b7 Implement",
+      "depends_on": [],
+      "dispatch_task_type": "implementation",
+      "evaluator_gate": {
+        "kind": "llm_eval",
+        "on_capacity_unavailable": "wait",
+        "on_human_review": "block_dependents",
+        "repair": {
+          "generation_fenced": true,
+          "max_attempts": 1,
+          "single_flight": true
+        },
+        "role": "evaluator",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
+      },
+      "gate_family": "G_BUILD",
+      "goal": "S1 \u00b7 Implement",
+      "id": "S1",
+      "logical_operator": "ImplementationWorker",
+      "node_kind": "code",
+      "on_human_review": "block_dependents",
+      "outputs": [
+        {
+          "path": "sprints/golden-sid/workdir/wordfreq.py",
+          "type": "python"
+        },
+        {
+          "path": "sprints/golden-sid/workdir/README.md",
+          "type": "markdown"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "field": "wordfreq.py",
+          "kind": "postcondition",
+          "proof_kind": "artifact_presence",
+          "requirement": "output_present"
+        },
+        {
+          "field": "patch_diff",
+          "kind": "postcondition",
+          "proof_kind": "patch_proof",
+          "requirement": "output_present"
+        },
+        {
+          "kind": "self_check",
+          "proof_kind": "patch_proof",
+          "requirement": "check.patch_within_scope"
+        },
+        {
+          "field": "handoff_md",
+          "kind": "postcondition",
+          "proof_kind": "artifact_presence",
+          "requirement": "output_present"
+        }
+      ],
+      "status": "pending",
+      "task_type": "implementation",
+      "timeouts": {
+        "result_timeout_sec": 1200
+      },
+      "write_scope": [
+        "sprints/golden-sid/workdir/wordfreq.py",
+        "sprints/golden-sid/workdir/README.md"
+      ]
+    },
+    {
+      "acceptance": [
+        "tests_executed_exit_0"
+      ],
+      "allowed_capsules": [
+        "cap.requirement-compiler-implementation"
+      ],
+      "allowed_operators": {
+        "providers": [
+          "openai"
+        ],
+        "role": "builder"
+      },
+      "capability_capsule_id": "cap.requirement-compiler-implementation",
+      "dashboard_label": "S2 \u00b7 Smoke",
+      "depends_on": [
+        "S1"
+      ],
+      "dispatch_task_type": "implementation",
+      "evaluator_gate": {
+        "kind": "llm_eval",
+        "on_capacity_unavailable": "wait",
+        "on_human_review": "block_dependents",
+        "repair": {
+          "generation_fenced": true,
+          "max_attempts": 1,
+          "single_flight": true
+        },
+        "role": "evaluator",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
+      },
+      "gate_family": "G_SMOKE",
+      "goal": "S2 \u00b7 Smoke",
+      "id": "S2",
+      "logical_operator": "TestRunner",
+      "node_kind": "code",
+      "on_human_review": "block_dependents",
+      "outputs": [
+        {
+          "path": "sprints/golden-sid/workdir/tests/test_wordfreq.py",
+          "type": "python"
+        },
+        {
+          "path": "sprints/golden-sid/workdir/test-report.md",
+          "type": "markdown"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "field": "tests/test_wordfreq.py",
+          "kind": "postcondition",
+          "proof_kind": "artifact_presence",
+          "requirement": "output_present"
+        },
+        {
+          "field": "patch_diff",
+          "kind": "postcondition",
+          "proof_kind": "patch_proof",
+          "requirement": "output_present"
+        },
+        {
+          "kind": "acceptance",
+          "proof_kind": "artifact_presence",
+          "requirement": "tests_executed_exit_0"
+        }
+      ],
+      "status": "pending",
+      "task_type": "implementation",
+      "timeouts": {
+        "result_timeout_sec": 1200
+      },
+      "write_scope": [
+        "sprints/golden-sid/workdir/tests/test_wordfreq.py",
+        "sprints/golden-sid/workdir/test-report.md"
+      ]
+    },
+    {
+      "acceptance": [
+        "structured_output_parses"
+      ],
+      "allowed_capsules": [
+        "cap.requirement-compiler-audit"
+      ],
+      "allowed_operators": {
+        "providers": [
+          "openai"
+        ],
+        "role": "builder"
+      },
+      "capability_capsule_id": "cap.requirement-compiler-audit",
+      "dashboard_label": "S3 \u00b7 Review",
+      "depends_on": [
+        "S2"
+      ],
+      "dispatch_task_type": "evidence",
+      "evaluator_gate": {
+        "kind": "llm_eval",
+        "on_capacity_unavailable": "wait",
+        "on_human_review": "block_dependents",
+        "role": "evaluator",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
+      },
+      "gate_family": "G_REVIEW",
+      "goal": "S3 \u00b7 Review",
+      "id": "S3",
+      "logical_operator": "Verifier",
+      "node_kind": "verify",
+      "on_human_review": "block_dependents",
+      "outputs": [
+        {
+          "path": "sprints/golden-sid/workdir/golden-sid.review_decision.yaml",
+          "type": "yaml"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "field": "golden-sid.review_decision.yaml",
+          "kind": "postcondition",
+          "proof_kind": "artifact_presence",
+          "requirement": "output_present"
+        },
+        {
+          "kind": "acceptance",
+          "note": "the Run-G/Run-H class: closeout YAML must parse (9f2d7f35)",
+          "parser": "yaml.safe_load",
+          "proof_kind": "artifact_presence",
+          "requirement": "structured_output_parses"
+        }
+      ],
+      "status": "pending",
+      "task_type": "evidence",
+      "timeouts": {
+        "result_timeout_sec": 1200
+      },
+      "write_scope": [
+        "sprints/golden-sid/workdir/golden-sid.review_decision.yaml"
+      ]
+    }
+  ],
+  "provider_policy": {
+    "allowed_providers": [
+      "openai"
+    ],
+    "route_proof_required": true,
+    "route_records": "per_stage_execution_append_only",
+    "runtime": "codex"
+  },
+  "required_artifacts": [
+    "wordfreq.py",
+    "tests/test_wordfreq.py",
+    "golden-sid.review_decision.yaml"
+  ],
+  "required_gates": [
+    "G_BUILD",
+    "G_SMOKE",
+    "G_REVIEW"
+  ],
+  "sprint_id": "sprint-golden",
+  "title": "Code smoke / CLI artifact",
+  "validator_command": "python3 -m pytest sprints/golden-sid/workdir/tests -q",
+  "workflow_contract_hash": "sha256:f37a9c2deb55a318f2fe6f56f736d02c891620f93e8c9e99dba9b205b02ed791",
+  "workflow_contract_id": "code.cli_smoke",
+  "workflow_contract_version": "1.0"
+}

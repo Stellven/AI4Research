@@ -1,0 +1,8 @@
+PASS: runtime adoption modules compile
+PASS: adopt_sprint creates session log and projects passed
+PASS: record_legacy_event dual-writes dispatch as command
+PASS: runtime doctor adopts legacy sprint before checks
+
+========================
+PASS=4 FAIL=0
+PASS

@@ -1,0 +1,16 @@
+{
+  "citation_count": 1,
+  "citations": [
+    {
+      "citation_id": "arxiv:2601.00001",
+      "evidence_id": "lit-skillgen-plan-compile",
+      "source": "literature_discovery",
+      "source_channels": [],
+      "source_ref": "https://arxiv.org/abs/2601.00001",
+      "title": "SkillGen: Generating Skills for Agents"
+    }
+  ],
+  "limitations": [],
+  "schema": "autosci_publication_citation_map.v1",
+  "status": "completed"
+}

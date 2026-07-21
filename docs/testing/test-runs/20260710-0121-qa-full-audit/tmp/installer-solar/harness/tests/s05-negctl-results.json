@@ -1,0 +1,61 @@
+{
+  "schema": "solar.s05.negative_control_results.v1",
+  "generated_at": "2026-06-02T09:57:01Z",
+  "checks": [
+    {
+      "name": "physical_registry_meta_read_only",
+      "status": "passed",
+      "evidence": {
+        "meta": {
+          "transition_status": "read_only",
+          "deprecated_at": "2026-06-02",
+          "sunset_target": "S05 acceptance complete"
+        }
+      }
+    },
+    {
+      "name": "physical_schema_marks_read_only",
+      "status": "passed",
+      "evidence": {
+        "transition_status": {
+          "type": "string",
+          "enum": [
+            "read_only",
+            "deprecated",
+            "sunset"
+          ],
+          "const": "read_only"
+        }
+      }
+    },
+    {
+      "name": "all_physical_operators_deprecated",
+      "status": "passed",
+      "evidence": {
+        "operator_count": 45,
+        "deprecated_missing": []
+      }
+    },
+    {
+      "name": "all_physical_operators_have_compat_map",
+      "status": "passed",
+      "evidence": {
+        "compat_missing": [],
+        "compat_mismatch": []
+      }
+    },
+    {
+      "name": "compat_mapping_pytest_passes",
+      "status": "passed",
+      "evidence": {
+        "exit_code": 0,
+        "output": ".......                                                                  [100%]\n7 passed in 0.07s\n"
+      }
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0
+  }
+}

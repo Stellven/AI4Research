@@ -1,0 +1,42 @@
+....F....                                                          [100%]
+=================================== FAILURES ===================================
+____ OpenSolarCliTests.test_installed_solar_commands_delegate_to_lifecycle _____
+distribution/pipx/tests/test_cli.py:173: in test_installed_solar_commands_delegate_to_lifecycle
+    self.assertEqual(cli.main(["status", "--json"]), 0)
+E   AssertionError: 1 != 0
+----------------------------- Captured stderr call -----------------------------
+openjiuwen-solar: OpenSolar lifecycle command not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/solar/bin/solar
+Install OpenSolar first with: openjiuwen-solar install --yes
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='status') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/tmpdo5_q059/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='doctor') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/tmp9rekvjb8/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='harness') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/tmp_16zlzju/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='components') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/tmpuj2f5rqk/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='update') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/tmpq6ymyvk2/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+_ OpenSolarCliTests.test_missing_installed_solar_has_clear_error_for_lifecycle_commands (command='uninstall') _
+distribution/pipx/tests/test_cli.py:202: in test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+    self.assertIn(str(home / ".solar" / "bin" / "solar"), text)
+E   AssertionError: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/tmpv4lkmj7k/home/.solar/bin/solar' not found in 'openjiuwen-solar: OpenSolar lifecycle command not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/solar/bin/solar\nInstall OpenSolar first with: openjiuwen-solar install --yes\n'
+=========================== short test summary info ============================
+FAILED distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_installed_solar_commands_delegate_to_lifecycle
+SUBFAILED(command='status') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='doctor') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='harness') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='components') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='update') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+SUBFAILED(command='uninstall') distribution/pipx/tests/test_cli.py::OpenSolarCliTests::test_missing_installed_solar_has_clear_error_for_lifecycle_commands
+7 failed, 8 passed in 0.12s

@@ -1,0 +1,13 @@
+{
+  "command_id": "phase6_reconcile_after_target_rerun",
+  "phase": "eligible-full-phase-v3",
+  "linked_feature_ids": "",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar",
+  "command": "docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/reconcile_eligible_full_phase.py docs/testing/test-runs/20260710-0121-qa-full-audit eligible-full-phase-v3",
+  "start_time": "2026-07-10T10:21:40-04:00",
+  "end_time": "2026-07-10T10:21:40-04:00",
+  "duration_seconds": "0.188",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase6_reconcile_after_target_rerun.stdout.txt",
+  "stderr_path": "evidence/commands/phase6_reconcile_after_target_rerun.stderr.txt"
+}

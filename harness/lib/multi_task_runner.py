@@ -16,13 +16,45 @@ import subprocess
 import sys
 import time
 import unicodedata
+import uuid
 from pathlib import Path
 from typing import Any
 
-try:
-    import readline  # type: ignore
-except Exception:  # pragma: no cover - readline may be unavailable in minimal Python builds
-    readline = None  # type: ignore
+from executable_node import (
+    dispatch_role as executable_dispatch_role,
+    logical_operator as executable_logical_operator,
+    physical_role as executable_physical_role,
+)
+
+_READLINE: Any | None = None
+_READLINE_CHECKED = False
+
+
+def _screen_readline() -> Any | None:
+    """Load readline only for interactive screen history.
+
+    Some packaged Python builds can segfault importing ``readline`` when the
+    process inherits an unavailable locale such as ``en_US.UTF-8``. The worker
+    scheduler does not need readline, so keep it off the module import path.
+    """
+    global _READLINE, _READLINE_CHECKED
+    if _READLINE_CHECKED:
+        return _READLINE
+    _READLINE_CHECKED = True
+    if not sys.stdin.isatty():
+        return None
+    try:
+        import locale
+
+        locale.setlocale(locale.LC_CTYPE, "")
+    except Exception:
+        return None
+    try:
+        import readline as readline_module  # type: ignore
+    except Exception:  # pragma: no cover - readline may be unavailable in minimal Python builds
+        return None
+    _READLINE = readline_module
+    return _READLINE
 
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
@@ -41,12 +73,24 @@ DEFAULT_INTERVAL = int(os.environ.get("SOLAR_MULTI_TASK_INTERVAL_SEC", "15") or 
 DEFAULT_COOLDOWN = int(os.environ.get("SOLAR_MULTI_TASK_LAUNCH_COOLDOWN_SEC", "30") or "30")
 DEFAULT_MEMORY_RESERVE_GB = float(os.environ.get("SOLAR_MULTI_TASK_MEMORY_RESERVE_GB", "4") or "4")
 DEFAULT_QUOTA_BACKOFF = int(os.environ.get("SOLAR_MULTI_TASK_QUOTA_BACKOFF_SEC", "900") or "900")
+AUTO_CLOSE_TERMINAL_WINDOWS = str(
+    os.environ.get("SOLAR_MULTI_TASK_AUTO_CLOSE_TERMINAL_WINDOWS", "1") or "1"
+).lower() not in {"0", "false", "no", "off"}
+AUTO_CLOSE_DELAY_SEC = max(
+    0, int(os.environ.get("SOLAR_MULTI_TASK_AUTO_CLOSE_DELAY_SEC", "3") or "3")
+)
+REUSE_TERMINAL_WINDOWS = str(
+    os.environ.get("SOLAR_MULTI_TASK_REUSE_TERMINAL_WINDOWS", "1") or "1"
+).lower() not in {"0", "false", "no", "off"}
+REUSABLE_WINDOW_COMMANDS = {"bash", "zsh", "sh", "fish"}
+IDLE_WINDOW_POOL_TARGET = max(
+    0, int(os.environ.get("SOLAR_MULTI_TASK_IDLE_WINDOW_POOL_TARGET", "1") or "1")
+)
 OPERATORD_SUBMIT_ENABLED = os.environ.get("SOLAR_OPERATORD_SUBMIT_ENABLED", "1").lower() not in {"0", "false", "off", "no"}
 OPERATORD_RESULT_TIMEOUT_SEC = float(os.environ.get("SOLAR_OPERATORD_RESULT_TIMEOUT_SEC", "0") or "0")
 OPERATORD_RESULT_POLL_INTERVAL_SEC = float(os.environ.get("SOLAR_OPERATORD_RESULT_POLL_INTERVAL_SEC", "1") or "1")
 GRAPH_SUMMARY_CACHE_TTL_SEC = int(os.environ.get("SOLAR_MULTI_TASK_GRAPH_SUMMARY_CACHE_TTL_SEC", "5") or "5")
 PROBE_CACHE_PATH = Path(os.environ.get("SOLAR_MULTI_TASK_PROBE_CACHE", RUN_DIR / "capability-probes.json"))
-CODEX_FIRST_ROUTING_BOOST = int(os.environ.get("SOLAR_CODEX_FIRST_ROUTING_BOOST", "80") or "80")
 
 # Normalized fallback ladders for observability surfaces such as
 # ``solar_monitor_bridge``. Keep these lightweight and model-agnostic enough
@@ -152,10 +196,21 @@ from graph_scheduler import (  # noqa: E402
     set_node_status,
     write_scope_conflict,
 )
+from task_lifecycle import (  # noqa: E402
+    ACTIVE_TASK_STATUSES,
+    EFFECTIVE_TERMINAL_TASK_STATUSES,
+    TERMINAL_TASK_STATUSES,
+    activate_execution_attempt,
+    correlated_terminal_result,
+)
 
-ACTIVE_TASK_STATUSES = {"queued", "dispatched", "running"}
-TERMINAL_TASK_STATUSES = {"completed", "failed", "failed_missing_handoff", "failed_stale_handoff", "cancelled"}
-EFFECTIVE_TERMINAL_TASK_STATUSES = TERMINAL_TASK_STATUSES | {"completed_aligned", "failed_aligned"}
+try:  # Lane 3 gate ledger seam (round-4 G3): pool-side node-status writes must
+    # record like every other C4 writer; guarded so a partial install never
+    # breaks the pool. No-op unless SOLAR_GATE_LEDGER=1.
+    from graph_scheduler import _ledger_transition as _gs_ledger_transition
+except Exception:  # pragma: no cover
+    _gs_ledger_transition = None
+
 TASK_STALE_WARN_SEC = int(os.environ.get("SOLAR_MULTI_TASK_STALE_WARN_SEC", "1800") or "1800")
 SCHEDULER_PID_DIR = RUN_DIR / "schedulers"
 _SCHED_GRAPH_TERMINAL = frozenset({"passed", "failed", "skipped", "done", "completed", "cancelled", "canceled"})
@@ -324,6 +379,10 @@ def model_provider(model: str, backend: str = "") -> str:
     value = str(model or "").strip().lower()
     if str(backend or "").strip().lower() in {"gemini-cli", "gemini-sdk"} or "gemini" in value:
         return "gemini"
+    if "codex" in value or value.startswith("gpt-") or value.startswith("gpt_") or value in {"gpt", "openai"}:
+        return "openai"
+    if re.match(r"^o[134](?:[-_.].*)?$", value):
+        return "openai"
     if "deepseek" in value or value.startswith("ds"):
         return "deepseek"
     if "glm" in value or "zhipu" in value:
@@ -430,7 +489,28 @@ def capability_for_profile(profile: dict[str, Any], include_probe: bool = True) 
             status = "error"
             evidence = f"gemini doctor failed:{type(exc).__name__}"
     elif backend == "command":
-        if profile.get("command") or os.environ.get("SOLAR_MULTI_TASK_AGENT_CMD") or env.get("solar_agent_cmd"):
+        command = str(profile.get("command") or "").strip()
+        if provider == "openai":
+            codex = shutil.which("codex")
+            driver = HARNESS_DIR / "tools" / "codex_operator.py"
+            if codex and driver.exists():
+                evidence = f"cli={codex} driver={driver}"
+            else:
+                status = "error"
+                missing = []
+                if not codex:
+                    missing.append("codex cli")
+                if not driver.exists():
+                    missing.append(str(driver))
+                evidence = "missing " + ", ".join(missing)
+        elif provider == "gemini":
+            gemini = shutil.which("gemini")
+            if gemini:
+                evidence = f"cli={gemini}"
+            else:
+                status = "error"
+                evidence = "gemini cli missing"
+        elif command or os.environ.get("SOLAR_MULTI_TASK_AGENT_CMD") or env.get("solar_agent_cmd"):
             evidence = "command configured"
         else:
             status = "error"
@@ -576,7 +656,15 @@ def operator_dispatchable(operator: dict[str, Any]) -> tuple[bool, str]:
         try:
             import operator_runtime
             dyn_state = operator_runtime.get_operator_runtime_state(op_id)
-            if dyn_state in {"disabled", "quota_exhausted", "auth_expired"}:
+            if dyn_state in {
+                "disabled",
+                "leased",
+                "running",
+                "draining",
+                "cooldown",
+                "quota_exhausted",
+                "auth_expired",
+            }:
                 return False, f"dynamic_state_{dyn_state}"
         except Exception:
             pass
@@ -905,32 +993,185 @@ def operator_matches_class(operator: dict[str, Any], class_name: str) -> bool:
     return str(op_class).lower() == class_name.lower()
 
 
-def codex_first_routing_enabled() -> bool:
-    return os.environ.get("SOLAR_CODEX_FIRST_ROUTING", "1").strip().lower() not in {"0", "false", "off", "no"}
+# --- Role-compatible operator selection -----------------------------------------------------------
+# A node's role-ish fields sometimes hold a backend/model token (e.g. owner="codex") instead of a real
+# role. role_from_node() returns that token verbatim, and operator_score() then rewards a planner operator
+# whose id contains "codex" -> a planner-role operator wins a builder node (Run G: S1/S2 ran on
+# mini-codex-gpt55-medium-planner-2). This is SELECTION-only role resolution: it skips backend/model/
+# provider tokens so the real role surfaces, then a hard-role mismatch is heavily penalized. role_from_node
+# (and therefore profile selection) is intentionally left unchanged for now.
+_HARD_ROLES = frozenset({"builder", "planner", "evaluator", "pm"})
+_SELECTION_ROLE_ALIASES = {
+    "builder-main": "builder", "build": "builder", "implementation": "builder", "implementer": "builder",
+    "implementationworker": "builder",
+    "judge": "evaluator", "reviewer": "evaluator", "verifier": "evaluator", "critic": "evaluator",
+    "artifact-curator": "evaluator", "testrunner": "evaluator",
+    "product": "pm", "product-manager": "pm",
+    "planning": "planner", "architect": "planner", "deeparchitect": "planner",
+}
+_SELECTION_NON_ROLE_TOKENS = frozenset({
+    "codex", "claude", "gpt", "gpt-5.5", "gpt5", "sonnet", "opus", "haiku", "gemini", "glm", "deepseek",
+    "thunderomlx", "antigravity", "claude-cli", "gemini-cli", "gemini-sdk", "command", "anthropic",
+    "openai", "google", "zhipu", "local", "mistral", "qwen",
+})
+_SELECTION_NON_ROLE_PREFIXES = (
+    "gpt-", "gpt5", "gemini-", "gemini3", "glm-", "claude-", "deepseek-", "thunderomlx-", "antigravity-", "codex-",
+)
 
 
-def operator_is_codex(operator: dict[str, Any]) -> bool:
-    values: list[str] = [
-        str(operator.get("operator_id") or ""),
-        str(operator.get("actor_id") or ""),
-        str(operator.get("profile") or ""),
-        str(operator.get("provider") or ""),
-        str(operator.get("vendor") or ""),
-        str(operator.get("model") or ""),
-        str(operator.get("model_config") or ""),
-        str(operator.get("base_url") or ""),
-        str(operator.get("backend") or ""),
-        str(operator.get("operator_class") or ""),
-    ]
-    for key in ("preferred_for", "task_classes", "roles", "strengths", "capabilities"):
-        raw = operator.get(key) or []
-        if isinstance(raw, str):
-            values.append(raw)
-        elif isinstance(raw, dict):
-            values.extend(str(item) for item in raw.keys())
-        else:
-            values.extend(str(item) for item in raw)
-    return "codex" in " ".join(values).lower()
+def _is_non_role_token(value: str) -> bool:
+    v = str(value or "").strip().lower()
+    if not v:
+        return False
+    if v in _SELECTION_NON_ROLE_TOKENS:
+        return True
+    return any(v.startswith(p) for p in _SELECTION_NON_ROLE_PREFIXES)
+
+
+def _normalize_selection_role(value: Any) -> str:
+    v = str(value or "").strip().lower().replace("_", "-")
+    return _SELECTION_ROLE_ALIASES.get(v, v)
+
+
+def _selection_node_role(node: dict[str, Any]) -> str:
+    """Resolve a node's INTENDED role for operator selection, skipping backend/model/provider tokens.
+
+    Returns the first field that resolves to a recognized HARD role (builder/planner/evaluator/pm), or ""
+    when none does -- in which case the mismatch guard does not fire and selection is unchanged. Backend/
+    model/provider tokens and other non-role junk (e.g. owner="codex", owner="solar-harness") are skipped so
+    the real role (e.g. logical_operator="ImplementationWorker"->builder, "Verifier"->evaluator) surfaces.
+    Does NOT touch role_from_node/profile selection."""
+    if executable_logical_operator(node):
+        role = executable_dispatch_role(node)
+        if role in _HARD_ROLES:
+            return role
+    elif isinstance(node.get("allowed_operators"), dict):
+        role = executable_physical_role(node)
+        if role in _HARD_ROLES:
+            return role
+
+    for field in ("target_role", "role", "owner", "persona", "worker_role", "handoff_to", "logical_operator"):
+        raw = node.get(field)
+        if raw is None or str(raw).strip() == "":
+            continue
+        if _is_non_role_token(raw):
+            continue
+        role = _normalize_selection_role(raw)
+        if role in _HARD_ROLES:
+            return role
+    return ""
+
+
+# --- Default provider policy: prefer Claude/Anthropic + Codex/OpenAI for normal dispatch ------------
+# Non-default providers (gemini/google, glm/zhipu, deepseek, local/thunderomlx, browser, ...) stay fully
+# functional but are deprioritized in OPERATOR selection unless the dispatch explicitly wants them:
+#   * pinned          -> node.preferred_operator (bypasses scoring entirely; unaffected)
+#   * profile/backend -> the base profile already targets a non-default provider (--profile gemini-builder,
+#                        --backend gemini-cli, --model gemini, node.preferred_profile=...) -> policy is off
+#   * requested       -> the node's operator_selector names that provider/vendor/model/operator id
+# Configurable; SOLAR_MULTI_TASK_DEFAULT_PROVIDERS="" disables the policy (all providers equal).
+DEFAULT_OPERATOR_PROVIDER_ORDER = tuple(
+    p.strip().lower()
+    for p in os.environ.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS", "anthropic,openai").split(",")
+    if p.strip()
+)
+DEFAULT_OPERATOR_PROVIDERS = frozenset(DEFAULT_OPERATOR_PROVIDER_ORDER)
+_NON_DEFAULT_PROVIDER_PROFILE_TOKENS = ("gemini", "glm", "zhipu", "deepseek", "thunder", "omlx", "antigravity")
+
+
+def _profile_targets_nondefault_provider(profile: dict[str, Any]) -> bool:
+    """True when the base profile explicitly targets a non-default provider (explicit override -> don't
+    apply the default-provider policy)."""
+    backend = str(profile.get("backend") or "").strip().lower()
+    if backend in {"gemini-cli", "gemini-sdk"}:
+        return True
+    blob = f"{backend} {str(profile.get('model') or '').lower()} {str(profile.get('name') or '').lower()}"
+    return any(token in blob for token in _NON_DEFAULT_PROVIDER_PROFILE_TOKENS)
+
+
+def _profile_provider_name(profile: dict[str, Any]) -> str:
+    return model_provider(str(profile.get("model") or ""), str(profile.get("backend") or ""))
+
+
+def _profile_allowed_by_default_provider(profile: dict[str, Any]) -> bool:
+    # Default mixed policy ("anthropic,openai") is a preference, not a wall; keep non-default profiles
+    # available as fallbacks. A single-provider mode ("openai" or "anthropic") is a product contract and
+    # must fail closed rather than silently crossing providers.
+    if not DEFAULT_OPERATOR_PROVIDERS or len(DEFAULT_OPERATOR_PROVIDERS) != 1:
+        return True
+    provider = _profile_provider_name(profile)
+    return not provider or provider in DEFAULT_OPERATOR_PROVIDERS
+
+
+def _select_profile_for_role(role: str, profiles: dict[str, Any], provider_policy_required: bool = False) -> str:
+    """Select a role-compatible profile while honoring the default-provider policy.
+
+    This is separate from physical-operator selection. A normal DAG node without an operator_selector used to
+    pick the first matching profile (`builder` -> Claude) before provider policy had any chance to apply. In
+    Codex-only mode that silently consumed Claude. Here the provider policy is applied at profile selection too.
+    """
+    role_value = str(role or "").strip().lower()
+    if not role_value:
+        return ""
+
+    if DEFAULT_OPERATOR_PROVIDER_ORDER:
+        for provider in DEFAULT_OPERATOR_PROVIDER_ORDER:
+            for name, spec in profiles.items():
+                if str((spec or {}).get("role", "")).lower() != role_value:
+                    continue
+                profile = dict(spec or {})
+                profile["name"] = str(name)
+                if _profile_provider_name(profile) == provider:
+                    return str(name)
+        if provider_policy_required:
+            return ""
+
+    for name, spec in profiles.items():
+        if str((spec or {}).get("role", "")).lower() == role_value and not str(name).startswith(("gemini-", "deepseek-", "glm-", "thunder")):
+            return str(name)
+    return ""
+
+
+def _operator_provider_requested(operator: dict[str, Any], selector_values: set[str]) -> bool:
+    """True when the node's operator_selector explicitly names this operator's provider/vendor/model/id."""
+    if not selector_values:
+        return False
+    for key in ("provider", "vendor", "model", "operator_id"):
+        value = str(operator.get(key) or "").strip().lower()
+        if value and value in selector_values:
+            return True
+    return False
+
+
+# --- Proactive operator backend health: deprioritize operators whose CLI is not installed ----------
+# operator_dispatchable() can't tell a configured operator whose backend CLI is missing (e.g. a
+# gemini/antigravity `command` operator on a host with no gemini CLI -> exit 1) from a working one. This
+# is the proactive complement to the post-failure cooldown: deprioritize BEFORE the first wasted attempt.
+_CLI_AVAILABLE_CACHE: dict[str, bool] = {}
+
+
+def _cli_available(name: str) -> bool:
+    if name not in _CLI_AVAILABLE_CACHE:
+        _CLI_AVAILABLE_CACHE[name] = shutil.which(name) is not None
+    return _CLI_AVAILABLE_CACHE[name]
+
+
+def _operator_backend_runnable(operator: dict[str, Any]) -> bool:
+    """Best-effort, cheap (cached which()) check that the operator's backend CLI exists. Conservative:
+    returns True for backends we cannot cheaply verify, so it only deprioritizes a known-missing CLI."""
+    backend = str(operator.get("backend") or "").strip().lower()
+    provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower()
+    if backend == "claude-cli":
+        return _cli_available("claude")
+    if backend in {"gemini-cli", "gemini-sdk"}:
+        return _cli_available("gemini")
+    if backend == "command":
+        if provider == "openai":
+            return _cli_available("codex")
+        if provider == "google":
+            return _cli_available("gemini")
+        return True  # deepseek/glm/local/browser command operators: cannot cheaply verify -> don't penalize
+    return True
 
 
 def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
@@ -979,6 +1220,10 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
     ]
     
     scored: list[tuple[int, dict[str, Any]]] = []
+    selection_node_role = _selection_node_role(node)
+    # Default-provider policy is active only for normal dispatch; an explicitly non-default base profile
+    # (e.g. --profile gemini-builder / --backend gemini-cli) turns it off so the override is preserved.
+    provider_policy_active = bool(DEFAULT_OPERATOR_PROVIDERS) and not _profile_targets_nondefault_provider(base_profile)
     selector_values = set(_selector_values(selector))
     if task_type:
         selector_values.update(_expand_str(task_type))
@@ -987,6 +1232,8 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
     modality_required = bool(selector_values & modality_values)
     
     for operator in operators:
+        if bool(operator.get("deprecated")):
+            continue
         ok, _reason = operator_dispatchable(operator)
         if not ok:
             continue
@@ -1023,28 +1270,46 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
             continue
             
         score = operator_score(operator, node, selector)
-        
+
+        # Deprioritize operators that recently failed at runtime (e.g. an unconfigured backend CLI that
+        # exits non-zero). operator_dispatchable can't see this. Heavy penalty, not a hard exclude, so a
+        # cooled-down operator is still a last resort if nothing healthy matches.
+        if operator_in_failure_cooldown(str(operator.get("operator_id") or "")):
+            score -= 100000
+
+        # Hard role-mismatch guard: a builder node must not prefer a planner/evaluator/pm operator just
+        # because of keyword overlap (e.g. node owner="codex" matching a "...codex...planner" operator id).
+        # Penalty, not a hard exclude, so a mismatched operator is still a last resort if nothing matches.
+        if selection_node_role in _HARD_ROLES:
+            op_role = _normalize_selection_role(operator.get("role"))
+            if op_role in _HARD_ROLES and op_role != selection_node_role:
+                score -= 100000
+
+        # Default-provider policy: deprioritize non-default providers (gemini/glm/deepseek/local/browser/...)
+        # for normal dispatch, unless this node explicitly requests this operator's provider/vendor/model/id.
+        # Penalty, not a hard exclude, so a provider that is the only viable option (e.g. vision-only) still wins.
+        if provider_policy_active:
+            op_provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower()
+            if op_provider and op_provider not in DEFAULT_OPERATOR_PROVIDERS and not _operator_provider_requested(operator, selector_values):
+                score -= 100000
+
+        # Proactive backend health: an operator whose backend CLI is not installed will fail at runtime;
+        # deprioritize it before the first wasted attempt (complements the post-failure cooldown).
+        if not _operator_backend_runnable(operator):
+            score -= 100000
+
         if pref_classes:
             classes_list = [pref_classes] if isinstance(pref_classes, str) else list(pref_classes)
             for c in classes_list:
                 if operator_matches_class(operator, str(c)):
                     score += 100
-        if codex_first_routing_enabled() and operator_is_codex(operator):
-            score += CODEX_FIRST_ROUTING_BOOST
                     
         scored.append((score, operator))
         
     if not scored:
         return None, "operator_selector_no_match"
         
-    scored.sort(
-        key=lambda item: (
-            1 if codex_first_routing_enabled() and operator_is_codex(item[1]) else 0,
-            item[0],
-            str(item[1].get("operator_id") or ""),
-        ),
-        reverse=True,
-    )
+    scored.sort(key=lambda item: (item[0], str(item[1].get("operator_id") or "")), reverse=True)
     return scored[0][1], ""
 
 
@@ -1202,6 +1467,7 @@ def quota_fallback_candidates(node: dict[str, Any], failed_profile: str, profile
     candidates.extend(_as_string_list(base.get("fallback_profiles")))
     if role == "builder":
         candidates.extend([
+            "codex-builder",
             "antigravity-multimodal",
             "gemini-builder",
             "deepseek-builder",
@@ -1210,9 +1476,9 @@ def quota_fallback_candidates(node: dict[str, Any], failed_profile: str, profile
             "knowledge-extractor",
         ])
     elif role == "planner":
-        candidates.extend(["glm-planner", "planner", "gemini-builder", "thunderomlx-local"])
+        candidates.extend(["codex-planner", "glm-planner", "planner", "gemini-builder", "thunderomlx-local"])
     elif role == "evaluator":
-        candidates.extend(["gemini-evaluator", "antigravity-multimodal", "evaluator", "thunderomlx-local"])
+        candidates.extend(["codex-evaluator", "gemini-evaluator", "antigravity-multimodal", "evaluator", "thunderomlx-local"])
     else:
         candidates.extend([role, "builder", "thunderomlx-local"])
 
@@ -1261,6 +1527,8 @@ def select_quota_fallback_profile(node: dict[str, Any], failed_profile: str, pro
             continue
         profile = dict(profiles[name])
         profile["name"] = name
+        if not _profile_allowed_by_default_provider(profile):
+            continue
         allowed, _reason = profile_allowed_for_quota_fallback(profile)
         if not allowed:
             continue
@@ -1290,6 +1558,8 @@ def select_capability_fallback_profile(node: dict[str, Any], failed_profile: str
             continue
         profile = dict(profiles[name])
         profile["name"] = name
+        if not _profile_allowed_by_default_provider(profile):
+            continue
         suitable, _suitability_reason = profile_suitable_for_node(name, profile, node)
         if not suitable:
             continue
@@ -1347,7 +1617,29 @@ def run_capability_probe(profile_name: str, timeout_sec: int) -> dict[str, Any]:
         except subprocess.TimeoutExpired:
             result = {"status": "error", "evidence": f"probe_timeout>{timeout_sec}s", "checked_at": started, "exit_code": 124}
     elif backend == "command":
-        result = {"status": "warn", "evidence": "command backend probes are user-command specific", "checked_at": started}
+        command = str(profile.get("command") or "").strip()
+        if provider == "openai":
+            codex = shutil.which("codex")
+            driver = HARNESS_DIR / "tools" / "codex_operator.py"
+            if codex and driver.exists():
+                result = {"status": "ok", "evidence": f"cli={codex} driver={driver}", "checked_at": started}
+            else:
+                missing = []
+                if not codex:
+                    missing.append("codex cli")
+                if not driver.exists():
+                    missing.append(str(driver))
+                result = {"status": "error", "evidence": "missing " + ", ".join(missing), "checked_at": started}
+        elif provider == "gemini":
+            gemini = shutil.which("gemini")
+            if gemini:
+                result = {"status": "ok", "evidence": f"cli={gemini}", "checked_at": started}
+            else:
+                result = {"status": "error", "evidence": "gemini cli missing", "checked_at": started}
+        elif command:
+            result = {"status": "ok", "evidence": "command configured", "checked_at": started}
+        else:
+            result = {"status": "error", "evidence": "command missing", "checked_at": started}
     else:
         result = {"status": "error", "evidence": f"unsupported backend={backend}", "checked_at": started}
     cache = read_probe_cache()
@@ -1357,6 +1649,10 @@ def run_capability_probe(profile_name: str, timeout_sec: int) -> dict[str, Any]:
 
 
 def role_from_node(node: dict[str, Any]) -> str:
+    if executable_logical_operator(node):
+        return executable_dispatch_role(node)
+    if isinstance(node.get("allowed_operators"), dict):
+        return executable_physical_role(node)
     raw = (
         node.get("target_role")
         or node.get("role")
@@ -1396,10 +1692,10 @@ def select_profile(node: dict[str, Any], profile_override: str = "", model_overr
     profile_name = normalize_profile_name(requested_profile, profiles)
     if not profile_name:
         role = role_from_node(node)
-        for name, spec in profiles.items():
-            if str(spec.get("role", "")).lower() == role and not str(name).startswith(("gemini-", "deepseek-", "glm-", "thunder")):
-                profile_name = str(name)
-                break
+        profile_name = _select_profile_for_role(role, profiles, provider_policy_required=role in {"builder", "planner", "evaluator"})
+        if not profile_name and DEFAULT_OPERATOR_PROVIDERS and role in {"builder", "planner", "evaluator"}:
+            providers = ",".join(DEFAULT_OPERATOR_PROVIDER_ORDER)
+            raise ValueError(f"no multi-task profile for role={role} within SOLAR_MULTI_TASK_DEFAULT_PROVIDERS={providers}")
     profile_name = normalize_profile_name(profile_name or str((config.get("defaults") or {}).get("profile") or "builder"), profiles)
     quota_fallback_from = ""
     quota_blocked = {normalize_profile_name(v, profiles) for v in _as_string_list(node.get("quota_blocked_profiles"))}
@@ -1552,7 +1848,11 @@ def task_id(sid: str, node_id: str) -> str:
     stamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%d-%H%M%S")
     safe_sid = re.sub(r"[^A-Za-z0-9_.-]+", "-", sid)[:36] or "sprint"
     safe_node = re.sub(r"[^A-Za-z0-9_.-]+", "-", node_id)[:24] or "node"
-    return f"mt-{stamp}-{safe_sid}-{safe_node}"
+    # Two schedulers can legitimately replace the same node within one second.
+    # The timestamp keeps ids sortable while the nonce prevents those attempts
+    # from sharing a status directory and silently overwriting one another.
+    nonce = uuid.uuid4().hex[:10]
+    return f"mt-{stamp}-{safe_sid}-{safe_node}-{nonce}"
 
 
 def short_window(name: str) -> str:
@@ -1839,6 +2139,9 @@ def effective_task_status(row: dict[str, Any]) -> str:
     consuming a worker slot in the scheduler/status view.
     """
     current = str(row.get("status") or "").lower()
+    exact_result = correlated_terminal_result(row)
+    if exact_result is not None:
+        return str(exact_result.get("status") or current).strip().lower()
     graph_status = str(row.get("graph_status") or "N/A").lower()
     if current in ACTIVE_TASK_STATUSES:
         if graph_status in {"passed", "done", "completed"}:
@@ -1900,7 +2203,7 @@ def tmux_session_exists() -> bool:
         return False
 
 
-def tmux_window_map() -> dict[str, dict[str, str]]:
+def tmux_window_records() -> list[dict[str, str]]:
     try:
         out = subprocess.check_output(
             [
@@ -1909,29 +2212,41 @@ def tmux_window_map() -> dict[str, dict[str, str]]:
                 "-t",
                 SESSION,
                 "-F",
-                "#{window_name}\t#{window_active}\t#{pane_current_command}\t#{pane_dead}\t#{pane_pid}",
+                "#{window_id}\t#{window_name}\t#{window_active}\t#{pane_current_command}\t#{pane_dead}\t#{pane_pid}",
             ],
             text=True,
             stderr=subprocess.DEVNULL,
             timeout=3,
         )
     except Exception:
-        return {}
-    windows: dict[str, dict[str, str]] = {}
+        return []
+    windows: list[dict[str, str]] = []
     for line in out.splitlines():
         if not line.strip():
             continue
         parts = line.split("\t")
-        name = parts[0].strip() if parts else ""
+        window_id = parts[0].strip() if parts else ""
+        name = parts[1].strip() if len(parts) > 1 else ""
         if not name:
             continue
-        windows[name] = {
+        windows.append({
+            "window_id": window_id,
             "window": name,
-            "active": parts[1].strip() if len(parts) > 1 else "",
-            "command": parts[2].strip() if len(parts) > 2 else "",
-            "dead": parts[3].strip() if len(parts) > 3 else "",
-            "pane_pid": parts[4].strip() if len(parts) > 4 else "",
-        }
+            "target": f"{SESSION}:{window_id}" if window_id else f"{SESSION}:{name}",
+            "active": parts[2].strip() if len(parts) > 2 else "",
+            "command": parts[3].strip() if len(parts) > 3 else "",
+            "dead": parts[4].strip() if len(parts) > 4 else "",
+            "pane_pid": parts[5].strip() if len(parts) > 5 else "",
+        })
+    return windows
+
+
+def tmux_window_map() -> dict[str, dict[str, str]]:
+    windows: dict[str, dict[str, str]] = {}
+    for record in tmux_window_records():
+        # Status rendering is name-based for compatibility. Lifecycle code
+        # uses tmux_window_records() so duplicate names retain distinct IDs.
+        windows.setdefault(str(record.get("window") or ""), record)
     return windows
 
 
@@ -2114,6 +2429,45 @@ def enrich_task_row(row: dict[str, Any], windows: dict[str, dict[str, str]]) -> 
     return enriched
 
 
+def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
+    """Durably backfill the node-keyed completion attribution (exit_code/status) for a terminal task.
+
+    The tmux runner writes the final exit_code to the worker's RUN_DIR status.json but never co-locates it
+    with the sprint; this mirrors it into the durable per-node snapshot. Idempotent (skips when the snapshot
+    already records this completion) so the hot status path does not write-amplify. Best-effort."""
+    try:
+        status = str(row.get("status") or "").lower()
+        if status not in TERMINAL_TASK_STATUSES:
+            return
+        sid = str(row.get("sprint_id") or "").strip()
+        node_id = str(row.get("node_id") or "").strip()
+        if not sid or not node_id:
+            return
+        import node_runstate
+
+        snap = node_runstate.read_snapshot(SPRINTS_DIR, sid, node_id)
+        attr = snap.get("build_attribution") if isinstance(snap.get("build_attribution"), dict) else {}
+        if not attr:
+            attr = snap.get("attribution") if isinstance(snap.get("attribution"), dict) else {}
+        if attr.get("phase") == "completed" and attr.get("status") == status and attr.get("exit_code") == row.get("exit_code"):
+            return
+        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+            "phase": "completed",
+            "status": status,
+            "exit_code": row.get("exit_code"),
+            "backend": row.get("backend"),
+            "vendor": row.get("operator_vendor") or row.get("provider"),
+            "model": row.get("operator_model") or row.get("model"),
+            "provider": row.get("provider"),
+            "operator_id": row.get("operator_id"),
+            "profile": row.get("profile"),
+            "role": row.get("role"),
+            "dispatch_id": row.get("id"),
+        })
+    except Exception:
+        pass
+
+
 def list_task_rows() -> list[dict[str, Any]]:
     if not RUN_DIR.exists():
         return []
@@ -2122,12 +2476,392 @@ def list_task_rows() -> list[dict[str, Any]]:
     for path in sorted(RUN_DIR.glob("*/status.json"), key=lambda p: p.stat().st_mtime, reverse=True):
         row = read_task_status(path)
         if row:
+            _finalize_terminal_attribution(row)
             rows.append(enrich_task_row(row, windows))
     return rows
 
 
 def active_tasks() -> list[dict[str, Any]]:
     return [row for row in list_task_rows() if str(row.get("effective_status") or row.get("status", "")).lower() in ACTIVE_TASK_STATUSES]
+
+
+def idle_tmux_window_candidates(
+    tasks: list[dict[str, Any]] | None = None,
+    windows: list[dict[str, str]] | None = None,
+) -> list[dict[str, Any]]:
+    """Return terminal-task and orphan shell windows that are safe to reuse."""
+    rows = tasks if tasks is not None else list_task_rows()
+    window_records = windows if windows is not None else tmux_window_records()
+    candidates: list[dict[str, Any]] = []
+    tracked_targets: set[str] = set()
+    seen_targets: set[str] = set()
+    client_window_ids = {
+        str(client.get("window_id") or "")
+        for client in tmux_client_records()
+        if str(client.get("window_id") or "")
+    }
+
+    for row in rows:
+        effective_status = str(row.get("effective_status") or row.get("status") or "").lower()
+        if (
+            effective_status not in EFFECTIVE_TERMINAL_TASK_STATUSES
+            and not effective_status.startswith("reaped")
+        ):
+            continue
+        window = str(row.get("window") or "").strip()
+        if not window:
+            continue
+        updated_at = str(row.get("updated_at") or row.get("created_at") or "")
+        updated_ts = parse_iso(updated_at)
+        for info in window_records:
+            if str(info.get("window") or "") != window:
+                continue
+            if str(info.get("window_id") or "") in client_window_ids:
+                continue
+            if str(info.get("dead") or "") == "1" or str(info.get("active") or "") == "1":
+                continue
+            command = str(info.get("command") or "").strip().lower()
+            if command not in REUSABLE_WINDOW_COMMANDS:
+                continue
+            target = str(info.get("target") or f"{SESSION}:{window}")
+            if target in seen_targets:
+                continue
+            tracked_targets.add(target)
+            seen_targets.add(target)
+            candidates.append({
+                "window": window,
+                "window_target": target,
+                "window_id": str(info.get("window_id") or ""),
+                "task_id": str(row.get("id") or ""),
+                "kind": "tracked",
+                "effective_status": effective_status,
+                "updated_at": updated_at or "N/A",
+                "updated_ts": updated_ts if updated_ts is not None else -1.0,
+                "command": command,
+            })
+
+    for info in window_records:
+        target = str(info.get("target") or "")
+        if target in tracked_targets or target in seen_targets:
+            continue
+        if str(info.get("window_id") or "") in client_window_ids:
+            continue
+        if str(info.get("dead") or "") == "1" or str(info.get("active") or "") == "1":
+            continue
+        command = str(info.get("command") or "").strip().lower()
+        if command not in REUSABLE_WINDOW_COMMANDS:
+            continue
+        seen_targets.add(target)
+        window = str(info.get("window") or "")
+        candidates.append({
+            "window": window,
+            "window_target": target or f"{SESSION}:{window}",
+            "window_id": str(info.get("window_id") or ""),
+            "task_id": "N/A",
+            "kind": "orphan",
+            "effective_status": "orphan_shell",
+            "updated_at": "N/A",
+            "updated_ts": -1.0,
+            "command": command,
+        })
+
+    return candidates
+
+
+def historical_active_tmux_windows(
+    tasks: list[dict[str, Any]] | None = None,
+    windows: list[dict[str, str]] | None = None,
+) -> list[dict[str, Any]]:
+    """Return terminal task shells occupying the session's active window."""
+    rows = tasks if tasks is not None else list_task_rows()
+    window_records = windows if windows is not None else tmux_window_records()
+    records_by_name: dict[str, list[dict[str, str]]] = {}
+    for info in window_records:
+        records_by_name.setdefault(str(info.get("window") or ""), []).append(info)
+
+    seen_targets: set[str] = set()
+    results: list[dict[str, Any]] = []
+    for row in rows:
+        effective_status = str(row.get("effective_status") or row.get("status") or "").lower()
+        if (
+            effective_status not in EFFECTIVE_TERMINAL_TASK_STATUSES
+            and not effective_status.startswith("reaped")
+        ):
+            continue
+        window = str(row.get("window") or "").strip()
+        if not window:
+            continue
+        for info in records_by_name.get(window, []):
+            if str(info.get("active") or "") != "1" or str(info.get("dead") or "") == "1":
+                continue
+            command = str(info.get("command") or "").strip().lower()
+            if command not in REUSABLE_WINDOW_COMMANDS:
+                continue
+            target = str(info.get("target") or f"{SESSION}:{window}")
+            if target in seen_targets:
+                continue
+            seen_targets.add(target)
+            results.append({
+                "window": window,
+                "window_target": target,
+                "window_id": str(info.get("window_id") or ""),
+                "task_id": str(row.get("id") or ""),
+                "effective_status": effective_status,
+                "command": command,
+            })
+    return results
+
+
+def tmux_client_records() -> list[dict[str, str]]:
+    try:
+        out = subprocess.check_output(
+            [
+                "tmux", "list-clients", "-t", SESSION, "-F",
+                "#{client_tty}\t#{window_id}\t#{session_name}",
+            ],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+        )
+    except Exception:
+        return []
+    rows: list[dict[str, str]] = []
+    for line in out.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        tty = parts[0].strip() if parts else ""
+        if not tty:
+            continue
+        rows.append({
+            "tty": tty,
+            "window_id": parts[1].strip() if len(parts) > 1 else "",
+            "session": parts[2].strip() if len(parts) > 2 else "",
+        })
+    return rows
+
+
+def _anchor_window_name() -> str:
+    return short_window("mt-idle-anchor")
+
+
+def ensure_tmux_anchor_window(cwd: Path | None = None) -> tuple[str, bool]:
+    for info in tmux_window_records():
+        if str(info.get("window") or "") == _anchor_window_name():
+            return str(info.get("target") or f"{SESSION}:{_anchor_window_name()}"), False
+    workdir = str(cwd or Path.cwd())
+    command = "exec ${SHELL:-/bin/sh}"
+    if tmux_session_exists():
+        subprocess.check_call([
+            "tmux", "new-window", "-d", "-t", SESSION, "-n",
+            _anchor_window_name(), "-c", workdir, command,
+        ])
+    else:
+        subprocess.check_call([
+            "tmux", "new-session", "-d", "-s", SESSION, "-n",
+            _anchor_window_name(), "-c", workdir, command,
+        ])
+    for info in tmux_window_records():
+        if str(info.get("window") or "") == _anchor_window_name():
+            return str(info.get("target") or f"{SESSION}:{_anchor_window_name()}"), True
+    return f"{SESSION}:{_anchor_window_name()}", True
+
+
+def detach_and_anchor(cwd: Path | None = None, dry_run: bool = False) -> dict[str, Any]:
+    target = f"{SESSION}:{_anchor_window_name()}"
+    created = False
+    if not dry_run:
+        target, created = ensure_tmux_anchor_window(cwd=cwd)
+        subprocess.run(
+            ["tmux", "select-window", "-t", target],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    return {
+        "target": target,
+        "created_anchor": created,
+        "action": "dry-run" if dry_run else "selected",
+    }
+
+
+def select_reusable_tmux_window(
+    preferred_window: str,
+    tasks: list[dict[str, Any]] | None = None,
+    windows: list[dict[str, str]] | None = None,
+) -> tuple[str, bool, str, str]:
+    """Select one safe historical shell without reusing active agent panes."""
+    if not REUSE_TERMINAL_WINDOWS:
+        return preferred_window, False, "", ""
+    candidates = idle_tmux_window_candidates(tasks=tasks, windows=windows)
+    candidates.sort(key=lambda item: (
+        0 if item.get("kind") == "tracked" else 1,
+        -float(item.get("updated_ts") or -1.0),
+        str(item.get("window") or ""),
+    ))
+    for candidate in candidates:
+        return (
+            str(candidate.get("window") or preferred_window),
+            True,
+            str(candidate.get("task_id") or ""),
+            str(candidate.get("window_target") or ""),
+        )
+    return preferred_window, False, "", ""
+
+
+def prune_idle_tmux_windows(
+    target_keep: int = IDLE_WINDOW_POOL_TARGET,
+    dry_run: bool = False,
+    keep_windows: set[str] | None = None,
+    tasks: list[dict[str, Any]] | None = None,
+    windows: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    keep = set(keep_windows or set())
+    candidates = idle_tmux_window_candidates(tasks=tasks, windows=windows)
+    protected = [row for row in candidates if str(row.get("window_target") or "") in keep]
+    prunable = [row for row in candidates if str(row.get("window_target") or "") not in keep]
+    retain_budget = max(0, max(0, int(target_keep)) - len(protected))
+    prunable.sort(key=lambda item: (
+        0 if item.get("kind") == "orphan" else 1,
+        float(item.get("updated_ts") or -1.0),
+        str(item.get("window") or ""),
+    ))
+    keepers = prunable[-retain_budget:] if retain_budget > 0 else []
+    keeper_targets = {str(item.get("window_target") or "") for item in keepers}
+    killed: list[dict[str, Any]] = []
+    kept: list[dict[str, Any]] = []
+
+    for candidate in prunable:
+        window_target = str(candidate.get("window_target") or "")
+        if window_target in keeper_targets:
+            kept.append(candidate)
+            continue
+        action = "dry-run"
+        if not dry_run and window_target:
+            returncode = subprocess.run(
+                ["tmux", "kill-window", "-t", window_target],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            ).returncode
+            action = "killed-window" if returncode == 0 else "missing-window"
+        elif not dry_run:
+            action = "no-window"
+        result = dict(candidate)
+        result["action"] = action
+        killed.append(result)
+
+    return {
+        "target_keep": max(0, int(target_keep)),
+        "candidate_count": len(candidates),
+        "protected": protected,
+        "kept": kept + protected,
+        "killed": killed,
+    }
+
+
+def compact_tmux_session(
+    target_keep: int = IDLE_WINDOW_POOL_TARGET,
+    dry_run: bool = False,
+    cwd: Path | None = None,
+) -> dict[str, Any]:
+    tasks = list_task_rows()
+    windows = tmux_window_records()
+    historical = historical_active_tmux_windows(tasks=tasks, windows=windows)
+    reusable = idle_tmux_window_candidates(tasks=tasks, windows=windows)
+
+    destination_target = ""
+    created_anchor = False
+    historical_targets = {str(item.get("window_target") or "") for item in historical}
+    orphan_targets = [
+        str(item.get("window_target") or "")
+        for item in reusable
+        if str(item.get("kind") or "") == "orphan"
+        and str(item.get("window_target") or "") not in historical_targets
+    ]
+    if orphan_targets:
+        destination_target = orphan_targets[0]
+    elif historical and not dry_run:
+        destination_target, created_anchor = ensure_tmux_anchor_window(cwd=cwd)
+
+    switches: list[dict[str, str]] = []
+    if historical and destination_target:
+        active_window_ids = {str(item.get("window_id") or "") for item in historical}
+        for client in tmux_client_records():
+            if str(client.get("window_id") or "") not in active_window_ids:
+                continue
+            tty = str(client.get("tty") or "")
+            action = "dry-run"
+            if not dry_run and tty:
+                subprocess.run(
+                    ["tmux", "switch-client", "-c", tty, "-t", destination_target],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                action = "switched"
+            switches.append({
+                "tty": tty or "N/A",
+                "from_window_id": str(client.get("window_id") or ""),
+                "to_target": destination_target,
+                "action": action,
+            })
+        if not dry_run:
+            subprocess.run(
+                ["tmux", "select-window", "-t", destination_target],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+    closed: list[dict[str, str]] = []
+    for item in historical:
+        target = str(item.get("window_target") or "")
+        action = "dry-run"
+        if not dry_run and target:
+            returncode = subprocess.run(
+                ["tmux", "kill-window", "-t", target],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            ).returncode
+            action = "killed-window" if returncode == 0 else "missing-window"
+        closed.append({
+            "window": str(item.get("window") or ""),
+            "window_target": target or "N/A",
+            "task_id": str(item.get("task_id") or "N/A"),
+            "action": action,
+        })
+
+    shrink = prune_idle_tmux_windows(
+        target_keep=target_keep,
+        dry_run=dry_run,
+        keep_windows={destination_target} if destination_target else set(),
+        tasks=list_task_rows() if not dry_run else tasks,
+        windows=tmux_window_records() if not dry_run else windows,
+    )
+    return {
+        "historical_active": historical,
+        "destination_target": destination_target or "N/A",
+        "created_anchor": created_anchor,
+        "switches": switches,
+        "closed": closed,
+        "shrink": shrink,
+        "dry_run": dry_run,
+        "target_keep": target_keep,
+    }
+
+
+def active_task_for_node(sid: str, node_id: str, tasks: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
+    """Return an active worker row for this exact graph node, if one already exists."""
+    sid = str(sid or "").strip()
+    node_id = str(node_id or "").strip()
+    if not sid or not node_id:
+        return None
+    for task in tasks if tasks is not None else active_tasks():
+        if str(task.get("sprint_id") or "").strip() != sid:
+            continue
+        if str(task.get("node_id") or "").strip() != node_id:
+            continue
+        status = str(task.get("effective_status") or task.get("status") or "").strip().lower()
+        if status in ACTIVE_TASK_STATUSES:
+            return task
+    return None
 
 
 def active_parallel_counts(tasks: list[dict[str, Any]] | None = None) -> dict[str, dict[str, int]]:
@@ -2467,6 +3201,17 @@ def recover_quota_failed_nodes(graph_path: Path, graph: dict[str, Any]) -> int:
             if isinstance(graph.get("node_results"), dict):
                 graph["node_results"].pop(node_id, None)
             node["status"] = "pending"
+            # Round-4 G3: this terminal->pending reopen (plus the node_results
+            # pop above) changes effective status and must leave a ledger record.
+            if _gs_ledger_transition is not None:
+                try:
+                    _gs_ledger_transition(
+                        graph, node_id, str(current_status or ""), "pending",
+                        "recover_quota_failed_nodes",
+                        note=f"quota_fallback:{profile_name or 'unknown'}->{fallback}",
+                    )
+                except Exception:
+                    pass
             node["updated_at"] = now_iso()
             node.pop("assigned_to", None)
             node.pop("dispatch_id", None)
@@ -2658,6 +3403,34 @@ def build_dispatch_text(graph_path: Path, graph: dict[str, Any], node: dict[str,
             return "\n".join(f"- {k}: {v}" for k, v in value.items()) if value else "- N/A"
         return f"- {value}"
 
+    def _structured_validation_block(write_scope: Any) -> str:
+        # Closeout/review nodes emit machine-parsed files (e.g. review_decision.yaml). A common LLM error
+        # is malformed YAML/JSON (e.g. a mapping key at the same indent as block-sequence items), which the
+        # evaluator correctly fails. Require the worker to validate each structured deliverable parses.
+        items = write_scope if isinstance(write_scope, (list, tuple)) else ([write_scope] if write_scope else [])
+        cmds: list[str] = []
+        for raw in items:
+            path = str(raw).strip()
+            low = path.lower()
+            if low.endswith((".yaml", ".yml")):
+                cmds.append('python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1])); print(\'YAML_OK\')" ' + path)
+            elif low.endswith(".json"):
+                cmds.append('python3 -c "import json,sys; json.load(open(sys.argv[1])); print(\'JSON_OK\')" ' + path)
+        if not cmds:
+            return ""
+        body = "\n".join(cmds)
+        return (
+            "\n## Structured Output Validation (REQUIRED)\n\n"
+            "Your Write Scope includes machine-parsed file(s). BEFORE writing the handoff you MUST run the"
+            " check(s) below and FIX any syntax error until each prints OK:\n\n"
+            "```bash\n" + body + "\n```\n\n"
+            "A structured deliverable that does not parse FAILS acceptance even if its content is correct."
+            " Common YAML error: a mapping key (`key:`) at the SAME indent as block-sequence items (`- item`)"
+            " under the same parent -- give the mapping its own key or nest it correctly.\n"
+        )
+
+    structured_validation = _structured_validation_block(node.get("write_scope"))
+
     return f"""<!-- SOLAR_MULTI_TASK_DISPATCH -->
 # Solar Harness Multi-Task DAG Dispatch
 
@@ -2701,7 +3474,7 @@ Persona file: `{persona_path}`
 ## Write Scope
 
 {lines(node.get("write_scope"))}
-
+{structured_validation}
 ## Required Skills
 
 {lines(node.get("required_skills"))}
@@ -2749,6 +3522,47 @@ EOF
 """
 
 
+# Product-env allowlist embedded into generated worker runners (P2 smoke
+# 20260707T180639Z): pool workers execute in tmux windows whose environment
+# comes from the tmux SERVER, so flag-gated product behavior (gate-ledger route
+# records, product mode, provider pinning) silently degrades unless the runner
+# script carries a generation-time snapshot of these values itself.
+_PRODUCT_ENV_ALLOWLIST = (
+    "SOLAR_GATE_LEDGER",
+    "SOLAR_PRODUCT_MODE",
+    "SOLAR_WORKFLOW_ROUTER",
+    "SOLAR_MULTI_TASK_DEFAULT_PROVIDERS",
+    "SOLAR_PM_DEFAULT_PROVIDERS",
+    "HARNESS_SPRINTS_DIR",
+)
+
+
+def _product_env_exports() -> str:
+    lines: list[str] = []
+    for var in _PRODUCT_ENV_ALLOWLIST:
+        value = os.environ.get(var)
+        if value is not None and str(value).strip() != "":
+            lines.append(f"export {var}={shlex.quote(str(value))}")
+    return "\n".join(lines)
+
+
+def _product_env_prefix() -> str:
+    """Inline VAR=value prefix for tmux window commands.
+
+    tmux windows inherit the tmux SERVER's environment, not the spawning
+    process's — on a machine with a long-lived server, flag-gated product
+    behavior silently degrades in anything tmux hosts (and in anything those
+    processes auto-kick, e.g. operatord). Prefixing the command itself makes
+    propagation independent of server state (P2 smoke 20260707T190540Z:
+    second consecutive zero-route-record run)."""
+    parts: list[str] = []
+    for var in _PRODUCT_ENV_ALLOWLIST:
+        value = os.environ.get(var)
+        if value is not None and str(value).strip() != "":
+            parts.append(f"{var}={shlex.quote(str(value))}")
+    return (" ".join(parts) + " ") if parts else ""
+
+
 def runner_script(task_dir: Path, payload: dict[str, Any]) -> Path:
     runner = task_dir / "runner.sh"
     dispatch_file = task_dir / "dispatch.md"
@@ -2765,6 +3579,8 @@ def runner_script(task_dir: Path, payload: dict[str, Any]) -> Path:
     provider = str(payload.get("provider") or model_provider(model, backend))
     capability_status = str(payload.get("capability_status") or "N/A")
     approval_mode = str(payload.get("approval_mode") or "auto_edit")
+    window_name = str(payload.get("window") or "")
+    window_target = str(payload.get("window_target") or "")
     agent_cmd = str(payload.get("command") or os.environ.get("SOLAR_MULTI_TASK_AGENT_CMD", "")).strip()
     work_dir = str(payload.get("work_dir") or os.getcwd())
     adapter = HARNESS_DIR / "lib" / "gemini_adapter.py"
@@ -2776,6 +3592,7 @@ def runner_script(task_dir: Path, payload: dict[str, Any]) -> Path:
         agent_line = f"SOLAR_MULTI_TASK_DISPATCH_FILE=\"$DISPATCH_FILE\" bash -lc {shlex.quote(agent_cmd)}"
     else:
         agent_line = claude_agent_line(model)
+    product_env_exports = _product_env_exports()
     script = f"""#!/usr/bin/env bash
 set -u
 TASK_DIR={shlex.quote(str(task_dir))}
@@ -2798,15 +3615,36 @@ CAPABILITY_STATUS={shlex.quote(capability_status)}
 HANDOFF={shlex.quote(str(handoff))}
 HARNESS={shlex.quote(str(harness))}
 WORK_DIR={shlex.quote(work_dir)}
-export TASK_DIR STATUS_FILE DISPATCH_FILE OUTPUT_LOG RUN_STARTED_MARKER HARNESS_DIR HARNESS_BIN SPRINTS_DIR GRAPH NODE_ID SID ROLE PROFILE BACKEND MODEL PROVIDER CAPABILITY_STATUS HANDOFF HARNESS WORK_DIR
+MT_SESSION={shlex.quote(SESSION)}
+WINDOW_NAME={shlex.quote(window_name)}
+WINDOW_TARGET={shlex.quote(window_target)}
+AUTO_CLOSE_TERMINAL_WINDOWS={"1" if AUTO_CLOSE_TERMINAL_WINDOWS else "0"}
+AUTO_CLOSE_DELAY_SEC={shlex.quote(str(AUTO_CLOSE_DELAY_SEC))}
+export TASK_DIR STATUS_FILE DISPATCH_FILE OUTPUT_LOG RUN_STARTED_MARKER HARNESS_DIR HARNESS_BIN SPRINTS_DIR GRAPH NODE_ID SID ROLE PROFILE BACKEND MODEL PROVIDER CAPABILITY_STATUS HANDOFF HARNESS WORK_DIR MT_SESSION WINDOW_NAME WINDOW_TARGET AUTO_CLOSE_TERMINAL_WINDOWS AUTO_CLOSE_DELAY_SEC
 export PATH="$HARNESS_BIN:$PATH"
 export SOLAR_SAFE_FIND_ROOT="$WORK_DIR"
+{product_env_exports}
 
 pane_title() {{
   local title="$1"
   if [[ -n "${{TMUX:-}}" ]]; then
     tmux select-pane -T "$title" >/dev/null 2>&1 || true
   fi
+}}
+
+auto_close_window() {{
+  local reason="${{1:-terminal}}"
+  [[ "$AUTO_CLOSE_TERMINAL_WINDOWS" == "1" ]] || return 0
+  [[ -n "$WINDOW_NAME" || -n "$WINDOW_TARGET" ]] || return 0
+  [[ -n "${{TMUX:-}}" ]] || return 0
+  (
+    sleep "$AUTO_CLOSE_DELAY_SEC"
+    if [[ -n "$WINDOW_TARGET" ]]; then
+      tmux kill-window -t "$WINDOW_TARGET" >/dev/null 2>&1 || true
+    else
+      tmux kill-window -t "${{MT_SESSION}}:${{WINDOW_NAME}}" >/dev/null 2>&1 || true
+    fi
+  ) >/dev/null 2>&1 &
 }}
 
 write_status() {{
@@ -2929,6 +3767,7 @@ else
   pane_title "MT $ROLE/$PROFILE | 模型:$MODEL | provider:$PROVIDER | 状态:failed"
 fi
 echo "[solar-harness multi-task] sid=$SID node=$NODE_ID exit=$rc end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$OUTPUT_LOG"
+auto_close_window "terminal"
 exit "$rc"
 """
     runner.write_text(script, encoding="utf-8")
@@ -2936,21 +3775,72 @@ exit "$rc"
     return runner
 
 
-def tmux_start(window: str, runner: Path, cwd: Path, dry_run: bool = False) -> None:
+def tmux_start(
+    window: str,
+    runner: Path,
+    cwd: Path,
+    dry_run: bool = False,
+    reuse: bool = False,
+    reuse_target: str = "",
+) -> None:
     if dry_run:
         return
-    cmd = f"bash {shlex.quote(str(runner))}; exec ${{SHELL:-/bin/zsh}}"
+    cmd = f"{_product_env_prefix()}bash {shlex.quote(str(runner))}; exec ${{SHELL:-/bin/zsh}}"
+    reuse_window_target = reuse_target or f"{SESSION}:{window}"
+    previous_active_target = ""
+    if reuse:
+        for info in tmux_window_records():
+            candidate = str(info.get("target") or "")
+            if str(info.get("active") or "") == "1" and candidate != reuse_window_target:
+                previous_active_target = candidate
+                break
     if subprocess.run(["tmux", "has-session", "-t", SESSION], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-        subprocess.check_call(["tmux", "new-window", "-d", "-t", SESSION, "-n", window, "-c", str(cwd), cmd])
+        if reuse:
+            subprocess.check_call([
+                "tmux", "respawn-window", "-k", "-t",
+                reuse_window_target, "-c", str(cwd), cmd,
+            ])
+            # tmux makes a respawned window current even when it was selected
+            # only as an idle pool member. Restore the previous current window
+            # so background dispatch never steals an attached user's focus.
+            if previous_active_target:
+                subprocess.run(
+                    ["tmux", "select-window", "-t", previous_active_target],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+        else:
+            subprocess.check_call(["tmux", "new-window", "-d", "-t", SESSION, "-n", window, "-c", str(cwd), cmd])
     else:
         subprocess.check_call(["tmux", "new-session", "-d", "-s", SESSION, "-n", window, "-c", str(cwd), cmd])
-    target = f"{SESSION}:{window}"
+    target = reuse_window_target if reuse else f"{SESSION}:{window}"
     subprocess.run(["tmux", "set-window-option", "-t", target, "pane-border-status", "bottom"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(
         ["tmux", "set-window-option", "-t", target, "pane-border-format", "#[fg=cyan] #T #[default]"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def prepare_tmux_window(preferred_window: str, dry_run: bool = False) -> tuple[str, bool, str, str]:
+    """Select a reusable shell and prune only excess idle windows."""
+    if dry_run:
+        return preferred_window, False, "", ""
+    tasks = list_task_rows()
+    windows = tmux_window_records()
+    actual_window, reused, reused_task_id, reused_window_target = select_reusable_tmux_window(
+        preferred_window,
+        tasks=tasks,
+        windows=windows,
+    )
+    prune_idle_tmux_windows(
+        target_keep=IDLE_WINDOW_POOL_TARGET,
+        dry_run=False,
+        keep_windows={reused_window_target} if reused and reused_window_target else set(),
+        tasks=tasks,
+        windows=windows,
+    )
+    return actual_window, reused, reused_task_id, reused_window_target
 
 
 def _operator_submit_eligible(profile: dict[str, Any], dry_run: bool = False) -> bool:
@@ -2960,6 +3850,62 @@ def _operator_submit_eligible(profile: dict[str, Any], dry_run: bool = False) ->
         and not dry_run
         and operator_id not in {"", "N/A"}
     )
+
+
+def _operator_submit_rejection_reason(error: Exception) -> str:
+    """Classify an operatord refusal that must never launch duplicate work."""
+    reason = str(getattr(error, "reason", "") or "").strip()
+    if reason in {"operator_busy", "operator_unavailable"}:
+        return reason
+    text = str(error or "").strip().lower()
+    if "duplicate active lease" in text:
+        return "operator_busy"
+    if "not dispatchable" in text and any(
+        marker in text
+        for marker in (
+            "state=leased",
+            "state=running",
+            "state=draining",
+        )
+    ):
+        return "operator_busy"
+    if "not dispatchable" in text and any(
+        marker in text
+        for marker in (
+            "state=disabled",
+            "state=cooldown",
+            "state=quota_exhausted",
+            "state=auth_expired",
+        )
+    ):
+        return "operator_unavailable"
+    return ""
+
+
+def _profile_attribution_operator_id(profile: dict[str, Any]) -> str:
+    """Return a durable operator label for status/runstate without changing submit routing.
+
+    Physical-operator dispatch requires a concrete profile["operator_id"]. Command-backed
+    multi-task profiles such as codex-evaluator intentionally lack one, so they should stay on
+    the legacy command/tmux path. Still, recording "N/A" erases provider proof for successful
+    command-backed runs. Use the profile name as a stable attribution label only for command
+    profiles; _operator_submit_eligible continues to use the raw operator_id.
+    """
+    operator_id = str(profile.get("operator_id") or "").strip()
+    if operator_id and operator_id != "N/A":
+        return operator_id
+    if str(profile.get("backend") or "").strip().lower() == "command":
+        name = str(profile.get("name") or "").strip()
+        if name:
+            return name
+    return "N/A"
+
+
+def _profile_dispatch_mode(profile: dict[str, Any]) -> str:
+    backend = str(profile.get("backend") or "").strip().lower()
+    if backend == "command":
+        return "multi_task_command"
+    return "multi_task_tmux"
 
 
 def _operator_result_path(operator_id: str, dispatch_id: str) -> Path:
@@ -2988,6 +3934,8 @@ def _build_operator_envelope(
         "write_scope": payload.get("write_scope") or [],
         "handoff_path": payload.get("handoff"),
         "dispatch_file": payload.get("dispatch_file"),
+        "graph_path": payload.get("graph"),
+        "work_dir": payload.get("work_dir"),
         "approval_mode": profile.get("approval_mode"),
     }
 
@@ -3005,17 +3953,111 @@ def _poll_operator_result(result_path: Path, timeout_sec: float, interval_sec: f
     return None
 
 
+def _record_node_attribution(sid: str, node_id: str, payload: dict[str, Any], task_dir: Path, phase: str) -> None:
+    """Persist a durable, node-keyed worker-attribution record next to the sprint.
+
+    The same facts already live in RUN_DIR/<dispatch_id>/status.json, but that is keyed by dispatch_id
+    and reaped after SOLAR_MULTI_TASK_REAP_TTL_MIN. This co-locates a node-keyed copy with the sprint so
+    "node N1 ran on backend/vendor/model/operator X (exit_code Y)" stays provable after reaping. Best-effort."""
+    try:
+        import node_runstate
+
+        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+            "dispatch_id": payload.get("id"),
+            "backend": payload.get("backend"),
+            "vendor": payload.get("operator_vendor") or payload.get("provider"),
+            "model": payload.get("operator_model") or payload.get("model"),
+            "provider": payload.get("provider"),
+            "operator_id": payload.get("operator_id"),
+            "profile": payload.get("profile"),
+            "role": payload.get("role"),
+            "dispatch_mode": payload.get("dispatch_mode") or payload.get("submit_mode"),
+            "submit_mode": payload.get("submit_mode"),
+            "work_dir": payload.get("work_dir"),
+            "status_path": str(status_path(task_dir)),
+            "phase": phase or payload.get("status"),
+            "status": payload.get("status"),
+            "exit_code": payload.get("exit_code"),
+            "created_at": payload.get("created_at"),
+        })
+    except Exception:
+        pass
+
+
+def _plan_validator_env_on() -> bool:
+    # G4 default-on: the validator is the runtime default; explicit 0 kills it.
+    return str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _plan_validator_launch_refusal(graph: dict[str, Any]) -> dict[str, Any] | None:
+    """Validator dispatch guard shared by schedule_once and launch_node.
+
+    launch_node() is a public dispatch surface: a direct caller skips the
+    schedule_once guard, so the check must run again BEFORE any dispatch/
+    status/runstate write (G2b fix-round 2 finding 1). Returns a refusal
+    record ({reason, errors}) or None when dispatch may proceed."""
+    try:
+        import plan_validator  # type: ignore
+
+        plan_guard = plan_validator.check_planner_graph_dispatchable(
+            graph,
+            sprints_dir=SPRINTS_DIR,
+            sid=str(graph.get("sprint_id") or ""),
+        )
+    except Exception as guard_exc:
+        if _plan_validator_env_on():
+            return {
+                "reason": "plan_validator_dispatch_refused",
+                "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"],
+            }
+        return None
+    if plan_guard.get("ok"):
+        return None
+    try:
+        # G3 fix: a PASS-certified graph refused for hash mismatch is
+        # unrecoverable at dispatch time — terminalize the sprint truthfully
+        # instead of re-refusing every scheduler tick (helper is scoped to
+        # PLAN_CERTIFICATE_HASH_MISMATCH; uncertified refusals untouched).
+        plan_validator.record_certificate_mismatch_refusal(
+            SPRINTS_DIR, graph, plan_guard.get("errors")
+        )
+    except Exception:
+        pass
+    errors = []
+    for error in plan_guard.get("errors") or []:
+        if isinstance(error, dict):
+            errors.append(f"{error.get('code')}:{error.get('node_id', '?')}")
+        else:
+            errors.append(str(error))
+    return {"reason": "plan_validator_dispatch_refused", "errors": errors}
+
+
 def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], args: argparse.Namespace,
                 dry_run: bool = False) -> dict[str, Any]:
+    refusal = _plan_validator_launch_refusal(graph)
+    if refusal is not None:
+        return {
+            "status": "plan_validator_dispatch_refused",
+            "graph": str(graph_path),
+            "sprint_id": sprint_id_for(graph, graph_path),
+            "node_id": str(node.get("id") or ""),
+            **refusal,
+        }
     sid = sprint_id_for(graph, graph_path)
     node_id = str(node.get("id") or "")
     profile = select_profile(node, getattr(args, "profile", "") or "", getattr(args, "model", "") or "", getattr(args, "backend", "") or "")
     capability = capability_for_profile(profile)
     dispatch_id = task_id(sid, node_id)
-    window = short_window(f"{dispatch_id}-{profile.get('role')}-{node_id}")
+    requested_window = short_window(f"{dispatch_id}-{profile.get('role')}-{node_id}")
+    window = requested_window
     task_dir = RUN_DIR / dispatch_id
     handoff = SPRINTS_DIR / f"{sid}.{node_id}-handoff.md"
     task_dir.mkdir(parents=True, exist_ok=True)
+    # Default the agent's working directory to a clean per-sprint workspace so produced
+    # deliverables land predictably (and the dashboard's SPRINTS_DIR scan finds them),
+    # instead of wherever multi-task happened to be launched (os.getcwd()).
+    sprint_workdir = SPRINTS_DIR / sid / "workdir"
+    sprint_workdir.mkdir(parents=True, exist_ok=True)
 
     dispatch = build_dispatch_text(graph_path, graph, node, dispatch_id, window, profile)
     (task_dir / "dispatch.md").write_text(dispatch, encoding="utf-8")
@@ -3024,6 +4066,10 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         "status": "dry_run" if dry_run else "dispatched",
         "session": SESSION,
         "window": window,
+        "window_target": f"{SESSION}:{window}",
+        "requested_window": requested_window,
+        "window_reused": False,
+        "window_reused_from_task": "N/A",
         "profile": profile.get("name"),
         "role": profile.get("role"),
         "persona": profile.get("persona"),
@@ -3033,12 +4079,14 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         "provider": capability.get("provider"),
         "capability_status": capability.get("status"),
         "approval_mode": profile.get("approval_mode"),
-        "operator_id": profile.get("operator_id") or "N/A",
+        "operator_id": _profile_attribution_operator_id(profile),
         "operator_vendor": profile.get("operator_vendor") or capability.get("provider") or "N/A",
         "operator_model": profile.get("operator_model") or profile.get("model") or "N/A",
         "operator_pane": profile.get("operator_pane") or "N/A",
         "operator_quota_refresh_at": profile.get("operator_quota_refresh_at") or "N/A",
         "operator_fallback_reason": profile.get("operator_fallback_reason") or "",
+        "dispatch_mode": _profile_dispatch_mode(profile),
+        "submit_mode": "",
         "quota_fallback_from": profile.get("quota_fallback_from") or node.get("quota_fallback_from") or "",
         "quota_fallback_reason": profile.get("quota_fallback_reason") or node.get("quota_fallback_reason") or "",
         "graph": str(graph_path),
@@ -3048,12 +4096,13 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         "write_scope": node.get("write_scope") or [],
         "handoff": str(handoff),
         "dispatch_file": str(task_dir / "dispatch.md"),
-        "work_dir": str(Path.cwd()),
+        "work_dir": str(os.environ.get("SOLAR_MULTI_TASK_WORK_DIR") or sprint_workdir),
         "created_at": now_iso(),
         "updated_at": now_iso(),
         "exit_code": None,
     }
     json_write(status_path(task_dir), payload)
+    _record_node_attribution(sid, node_id, payload, task_dir, "dispatched")
 
     if _operator_submit_eligible(profile, dry_run=dry_run):
         try:
@@ -3065,9 +4114,24 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
             result_path = _operator_result_path(operator_id, dispatch_id)
             payload.update(submit_result)
             payload["submit_mode"] = "operatord"
+            payload["dispatch_mode"] = "operatord"
             payload["result_path"] = str(result_path)
             payload["updated_at"] = now_iso()
             json_write(status_path(task_dir), payload)
+            activate_execution_attempt(
+                node,
+                task_id=dispatch_id,
+                dispatch_id=dispatch_id,
+                operator_id=operator_id,
+                source="multi_task_operatord",
+                logical_role=str(profile.get("role") or "builder"),
+                status=str(payload.get("status") or "submitted"),
+                requires_operator_result=True,
+                sprint_id=sid,
+                node_id=node_id,
+                result_path=str(result_path),
+                now=str(payload.get("updated_at") or ""),
+            )
             set_node_status(graph, node_id, "dispatched", pane=f"operator:{operator_id}", dispatch_id=dispatch_id)
             save_graph(graph_path, graph)
             set_last_launch()
@@ -3079,25 +4143,83 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
                     OPERATORD_RESULT_POLL_INTERVAL_SEC,
                 )
                 if result is None:
+                    # The result can land between the poller's final read and
+                    # the timeout write.  Re-read and correlate the exact
+                    # task identity so a stale timeout never overwrites a
+                    # durable terminal result.
+                    result = correlated_terminal_result(
+                        {**payload, "result_path": str(result_path)}
+                    )
+                if result is None:
                     payload["status"] = "result_timeout"
+                    _record_operator_runtime_failure(operator_id, "result_timeout")
                 else:
                     payload["status"] = str(result.get("status") or "completed")
                     payload["exit_code"] = result.get("exit_code")
                     payload["operator_result"] = result
+                    if str(payload["status"]).lower() in {"failed", "error"} or (
+                        result.get("exit_code") not in (0, None)
+                    ):
+                        _record_operator_runtime_failure(operator_id, f"status={payload['status']} exit={result.get('exit_code')}")
                 payload["updated_at"] = now_iso()
                 json_write(status_path(task_dir), payload)
+                _record_node_attribution(sid, node_id, payload, task_dir, "completed")
             return payload
         except (RuntimeError, ValueError) as exc:
+            rejection_reason = _operator_submit_rejection_reason(exc)
+            if rejection_reason:
+                payload["status"] = "submit_rejected"
+                payload["submit_mode"] = "operatord"
+                payload["dispatch_mode"] = "operatord"
+                payload["operator_submit_reason"] = rejection_reason
+                payload["operator_submit_error"] = str(exc)
+                payload["updated_at"] = now_iso()
+                json_write(status_path(task_dir), payload)
+                _record_node_attribution(
+                    sid,
+                    node_id,
+                    payload,
+                    task_dir,
+                    "submit_rejected",
+                )
+                return payload
             payload["operator_submit_fallback"] = "legacy"
+            payload["submit_mode"] = ""
+            payload["dispatch_mode"] = _profile_dispatch_mode(profile)
             payload["operator_submit_error"] = str(exc)
             payload["updated_at"] = now_iso()
             json_write(status_path(task_dir), payload)
 
+    # Tmux lifecycle applies only to the legacy pane path. Operatord tasks do
+    # not own a tmux window, so selecting/pruning one before submit would be an
+    # unrelated side effect. If operatord falls back, choose a safe shell now
+    # and rebuild the dispatch text with the actual window identity.
+    window, reused_window, reused_task_id, reused_window_target = prepare_tmux_window(
+        requested_window,
+        dry_run=dry_run,
+    )
+    if window != requested_window:
+        dispatch = build_dispatch_text(graph_path, graph, node, dispatch_id, window, profile)
+        (task_dir / "dispatch.md").write_text(dispatch, encoding="utf-8")
+    payload.update({
+        "window": window,
+        "window_target": reused_window_target or f"{SESSION}:{window}",
+        "window_reused": reused_window,
+        "window_reused_from_task": reused_task_id or "N/A",
+        "updated_at": now_iso(),
+    })
+    json_write(status_path(task_dir), payload)
     runner = runner_script(task_dir, payload)
 
     if not dry_run:
         try:
-            tmux_start(window, runner, Path.cwd())
+            tmux_start(
+                window,
+                runner,
+                Path.cwd(),
+                reuse=reused_window,
+                reuse_target=reused_window_target,
+            )
         except Exception as exc:
             payload["status"] = "failed_launch"
             payload["updated_at"] = now_iso()
@@ -3105,6 +4227,19 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
             json_write(status_path(task_dir), payload)
             (task_dir / "output.log").write_text(f"ERROR: tmux launch failed: {exc}\n", encoding="utf-8")
             return payload
+        activate_execution_attempt(
+            node,
+            task_id=dispatch_id,
+            dispatch_id=dispatch_id,
+            operator_id=str(payload.get("operator_id") or ""),
+            source="multi_task_tmux",
+            logical_role=str(profile.get("role") or "builder"),
+            status="dispatched",
+            requires_operator_result=False,
+            sprint_id=sid,
+            node_id=node_id,
+            now=str(payload.get("updated_at") or ""),
+        )
         set_node_status(graph, node_id, "dispatched", pane=f"multi-task:{window}", dispatch_id=dispatch_id)
         save_graph(graph_path, graph)
         set_last_launch()
@@ -3112,9 +4247,133 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
     return payload
 
 
+# --- Operator runtime-failure cooldown -------------------------------------------------------------
+# operator_dispatchable() only checks config/quota/auth, not whether the backend actually runs. An
+# operator whose CLI fails at runtime (e.g. an unconfigured gemini/antigravity command -> exit 1) would
+# otherwise keep getting selected over a working Claude builder. Record runtime failures and deprioritize
+# recently-failed operators in selection (cooldown auto-expires; never a hard exclude).
+OPERATOR_FAILURE_LEDGER_PATH = Path(os.environ.get("SOLAR_MULTI_TASK_OPERATOR_FAILURE_LEDGER", RUN_DIR / "operator-failures.json"))
+OPERATOR_FAILURE_COOLDOWN_SEC = int(os.environ.get("SOLAR_MULTI_TASK_OPERATOR_FAILURE_COOLDOWN_SEC", "900") or "900")
+
+
+def _read_operator_failures() -> dict[str, Any]:
+    try:
+        data = json.loads(OPERATOR_FAILURE_LEDGER_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _record_operator_runtime_failure(operator_id: str, reason: str = "") -> None:
+    op = str(operator_id or "").strip()
+    if not op or op == "N/A":
+        return
+    try:
+        data = _read_operator_failures()
+        prior = data.get(op) if isinstance(data.get(op), dict) else {}
+        data[op] = {"at": now_iso(), "reason": str(reason)[:200], "count": int(prior.get("count") or 0) + 1}
+        json_write(OPERATOR_FAILURE_LEDGER_PATH, data)
+    except Exception:
+        pass
+
+
+def operator_in_failure_cooldown(operator_id: str) -> bool:
+    if OPERATOR_FAILURE_COOLDOWN_SEC <= 0:
+        return False
+    op = str(operator_id or "").strip()
+    if not op:
+        return False
+    rec = _read_operator_failures().get(op)
+    if not isinstance(rec, dict):
+        return False
+    ts = parse_iso(str(rec.get("at") or ""))
+    if ts is None:
+        return False
+    return (time.time() - ts) < OPERATOR_FAILURE_COOLDOWN_SEC
+
+
+# --- Auto-advance: make a multi-task DAG self-complete build -> eval -> verdict -> next node ---------
+AUTO_ADVANCE_ENABLED = os.environ.get("SOLAR_MULTI_TASK_AUTO_ADVANCE", "1").strip().lower() not in {"0", "false", "off", "no"}
+# Consecutive no-progress ticks (no active task, nothing ready, not all-terminal, no eval/reconcile
+# progress) before the loop exits cleanly instead of spinning on a FAIL/needs_human_review deadlock.
+STUCK_EXIT_TICKS = int(os.environ.get("SOLAR_MULTI_TASK_STUCK_EXIT_TICKS", "3") or "3")
+
+
+def _advance_graph(graph_path: Path | str) -> dict[str, Any]:
+    """Self-advance one multi-task DAG by a step the build scheduler does NOT do: dispatch evals for
+    `reviewing` nodes (through the operator pool) and reconcile results (apply eval verdicts ->
+    passed/failed, reset failed builds to pending + cooldown their operator, escalate stuck evals).
+    Dispatch of newly-ready downstream nodes stays with schedule_once. Best-effort; never raises.
+    Does NOT weaken gates -- it just runs the same dispatch_node_evals + reconcile the coordinator would."""
+    summary: dict[str, Any] = {"graph": str(graph_path), "eval_dispatched": [], "reconciled": [], "terminalized": []}
+    try:
+        # Auto-advance evaluates multi-task DAG nodes that finish in `reviewing` with no cockpit
+        # evaluator pane; route those evals through the operatord evaluator pool (builder-safe flag).
+        os.environ.setdefault("SOLAR_GRAPH_EVAL_OPERATOR_POOL", "1")
+        import graph_node_dispatcher as gnd
+
+        try:
+            ev = gnd.dispatch_node_evals(str(graph_path))
+            summary["eval_dispatched"] = [str(x.get("node")) for x in (ev.get("dispatched") or [])]
+            summary["terminalized"] = ev.get("terminalized") or []
+        except Exception as exc:
+            summary["eval_error"] = f"{type(exc).__name__}: {exc}"
+        try:
+            graph = gnd.load_graph(str(graph_path))
+            reconciled = gnd._reconcile_existing_dispatches(graph, str(graph_path))
+            if reconciled:
+                gnd.save_graph(str(graph_path), graph)
+                summary["reconciled"] = [
+                    {"node": r.get("node"), "status": r.get("status"), "reason": r.get("reason")}
+                    for r in reconciled
+                ]
+                # Cooldown operators whose build closeout failed, so re-dispatch avoids them.
+                for r in reconciled:
+                    closeout = r.get("last_operator_closeout_failure") if isinstance(r, dict) else None
+                    op_id = ""
+                    if isinstance(closeout, dict):
+                        op_id = str(closeout.get("operator_id") or "")
+                    if op_id:
+                        _record_operator_runtime_failure(op_id, str(r.get("reason") or "closeout"))
+            # Projection sync must NOT be gated on `if reconciled` — when a
+            # concurrent loop (the coordinator's dispatch-ready tick) consumes
+            # the final node's eval first, this reconcile is empty and the
+            # parent projection would never converge (P3 run 4: status.json
+            # froze at active with a fully-passed graph until wrapper timeout).
+            # The sync is idempotent; run it every advance tick.
+            try:
+                import graph_scheduler
+
+                summary["status_sync"] = graph_scheduler.sync_status_cache_from_graph(
+                    graph,
+                    str(graph_path),
+                    actor="multi_task_runner",
+                    event="multi_task_auto_advance_reconciled",
+                )
+            except Exception as sync_exc:
+                summary["status_sync_error"] = f"{type(sync_exc).__name__}: {sync_exc}"
+        except Exception as exc:
+            summary["reconcile_error"] = f"{type(exc).__name__}: {exc}"
+    except Exception as exc:
+        summary["error"] = f"{type(exc).__name__}: {exc}"
+    return summary
+
+
+def _advance_graphs(graph_arg: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for graph_path in graph_files(graph_arg):
+        out.append(_advance_graph(graph_path))
+    return out
+
+
 def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     max_workers = effective_scheduler_max_workers(max(1, int(args.max_workers)))
+    # Self-advance reviewing nodes (eval dispatch + verdict reconcile) BEFORE dispatching builds, so a
+    # node that just passed unblocks its downstream in the same tick. Gated + best-effort.
+    advance: list[dict[str, Any]] = []
+    if AUTO_ADVANCE_ENABLED and getattr(args, "graph", None):
+        advance = _advance_graphs(getattr(args, "graph", []))
     recovered_quota_failures = 0
     for graph_path in graph_files(args.graph):
         try:
@@ -3150,6 +4409,7 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
             "dispatches": recent_dispatch_rows(),
             "capability": cap_summary,
             "recovered_quota_failures": recovered_quota_failures,
+            "advance": advance,
         }
 
     for graph_path in graph_files(args.graph):
@@ -3158,13 +4418,28 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
         try:
             graph = load_graph(graph_path)
             summaries.append(status_summary_for_graph(graph_path))
+            refusal = _plan_validator_launch_refusal(graph)
+            if refusal is not None:
+                skipped.append({"graph": str(graph_path), **refusal})
+                continue
             candidates = ready_nodes(graph)
         except Exception as exc:
             skipped.append({"graph": str(graph_path), "reason": "graph_error", "error": str(exc)})
             continue
+        sid = sprint_id_for(graph, graph_path)
         for node in candidates:
             if slots <= 0 and not args.dry_run:
                 break
+            already_active = active_task_for_node(sid, str(node.get("id") or ""), active_rows)
+            if already_active:
+                skipped.append({
+                    "graph": str(graph_path),
+                    "node": node.get("id"),
+                    "reason": "node_already_active",
+                    "task": already_active.get("id"),
+                    "status": already_active.get("effective_status") or already_active.get("status"),
+                })
+                continue
             if scope_conflicts_with_active(node):
                 skipped.append({"graph": str(graph_path), "node": node.get("id"), "reason": "write_scope_conflict_with_active"})
                 continue
@@ -3220,6 +4495,7 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
         "dispatches": recent_dispatch_rows(),
         "capability": cap_summary,
         "recovered_quota_failures": recovered_quota_failures,
+        "advance": advance,
     }
 
 
@@ -3949,6 +5225,7 @@ def command_log_path() -> Path:
 
 
 def load_screen_history() -> None:
+    readline = _screen_readline()
     if readline is None:
         return
     try:
@@ -3961,6 +5238,7 @@ def load_screen_history() -> None:
 
 
 def save_screen_history() -> None:
+    readline = _screen_readline()
     if readline is None:
         return
     try:
@@ -3975,6 +5253,7 @@ def remember_screen_input(text: str) -> None:
     raw = text.strip()
     if not raw:
         return
+    readline = _screen_readline()
     if readline is not None:
         try:
             last = readline.get_history_item(readline.get_current_history_length()) or ""
@@ -4204,14 +5483,6 @@ def _task_status_message() -> str:
     return f"当前任务: {dag_summary}; {bg_summary}{ready_text}; workers=" + "; ".join(parts)
 
 
-def _looks_like_greeting(text: str) -> bool:
-    lowered = text.lower().strip()
-    if lowered in {"hi", "hello", "hey", "嗨", "你好"}:
-        return True
-    normalized = re.sub(r"\s+", " ", lowered)
-    return bool(re.search(r"\b(can\s+(?:you|u)\s+say\s+(?:hi|hello)|say\s+(?:hi|hello))\b", normalized))
-
-
 def handle_screen_input(text: str, args: argparse.Namespace) -> tuple[str, str]:
     raw = text.strip()
     if not raw:
@@ -4246,11 +5517,6 @@ def handle_screen_input(text: str, args: argparse.Namespace) -> tuple[str, str]:
         matched = _intent_label(intent)
         append_screen_command(raw, intent, "doctor", "ok", matched)
         return "doctor", "显示 doctor"
-    if _looks_like_greeting(raw):
-        intent = local_intent(raw, "greeting")
-        matched = _intent_label(intent)
-        append_screen_command(raw, intent, "greeting", "ok", matched)
-        return "message", "Hi 👋（来自 main-screen 的本地问候处理）"
     if _looks_like_profile_switch(raw):
         intent = local_intent(raw, "profile_switch")
         matched = _intent_label(intent)
@@ -4607,6 +5873,14 @@ def build_parser() -> argparse.ArgumentParser:
     reap_p.add_argument("--ttl-min", "--ttl-minutes", dest="ttl_min", type=int, default=int(os.environ.get("SOLAR_MULTI_TASK_REAP_TTL_MIN", "120") or "120"))
     reap_p.add_argument("--stale-active-min", type=int, default=int(os.environ.get("SOLAR_MULTI_TASK_STALE_ACTIVE_MIN", "0") or "0"))
     reap_p.add_argument("--dry-run", action="store_true")
+    shrink_p = sub.add_parser("shrink-idle", help="prune reusable idle/orphan multi-task shell windows")
+    shrink_p.add_argument("--target-keep", type=int, default=IDLE_WINDOW_POOL_TARGET)
+    shrink_p.add_argument("--dry-run", action="store_true")
+    compact_p = sub.add_parser("compact-session", help="safely close historical active shells and compact the multi-task session")
+    compact_p.add_argument("--target-keep", type=int, default=IDLE_WINDOW_POOL_TARGET)
+    compact_p.add_argument("--dry-run", action="store_true")
+    anchor_p = sub.add_parser("detach-and-anchor", help="select the neutral anchor window for the multi-task session")
+    anchor_p.add_argument("--dry-run", action="store_true")
     stale_p = sub.add_parser("stale-schedulers", help="report or terminate exact stale multi-task scheduler processes")
     stale_p.add_argument("--apply", action="store_true", help="send SIGTERM to exact stale completed-graph scheduler runners")
     stale_p.add_argument("--json", action="store_true")
@@ -4646,6 +5920,53 @@ def main(argv: list[str] | None = None) -> int:
         if not rows:
             rows = [["N/A", "N/A", "N/A", "N/A", "none"]]
         print_table(["task", "old_status", "age_s", "window", "action"], rows)
+        return 0
+    if args.cmd == "shrink-idle":
+        result = prune_idle_tmux_windows(args.target_keep, args.dry_run)
+        rows = [[
+            str(row.get("window", "N/A"))[:48],
+            str(row.get("kind", "N/A")),
+            str(row.get("effective_status", "N/A")),
+            str(row.get("task_id", "N/A"))[:36],
+            str(row.get("action", "N/A")),
+        ] for row in result.get("killed", [])]
+        print_table(
+            ["window", "kind", "status", "task", "action"],
+            rows or [["N/A", "N/A", "N/A", "N/A", "none"]],
+        )
+        return 0
+    if args.cmd == "compact-session":
+        result = compact_tmux_session(args.target_keep, args.dry_run, cwd=Path.cwd())
+        rows = [[
+            str(row.get("window", "N/A"))[:48],
+            str(row.get("task_id", "N/A"))[:36],
+            str(row.get("action", "N/A")),
+        ] for row in result.get("closed", [])]
+        print_table(
+            ["window", "task", "close"],
+            rows or [["N/A", "N/A", "none"]],
+        )
+        switch_rows = [[
+            str(row.get("tty", "N/A"))[:18],
+            str(row.get("from_window_id", "N/A")),
+            str(row.get("to_target", "N/A"))[:28],
+            str(row.get("action", "N/A")),
+        ] for row in result.get("switches", [])]
+        print_table(
+            ["tty", "from", "to", "action"],
+            switch_rows or [["N/A", "N/A", "N/A", "none"]],
+        )
+        return 0
+    if args.cmd == "detach-and-anchor":
+        result = detach_and_anchor(cwd=Path.cwd(), dry_run=args.dry_run)
+        print_table(
+            ["target", "created_anchor", "action"],
+            [[
+                str(result.get("target", "N/A")),
+                str(result.get("created_anchor", False)),
+                str(result.get("action", "N/A")),
+            ]],
+        )
         return 0
     if args.cmd == "stale-schedulers":
         rows = detect_stale_scheduler_runners(apply_cleanup=bool(args.apply))
@@ -4750,6 +6071,7 @@ def main(argv: list[str] | None = None) -> int:
             if explicit_graphs:
                 _register_scheduler_pid(explicit_graphs)
                 registered = True
+            no_progress_ticks = 0
             while True:
                 result = schedule_once(args)
                 render_result(result, args)
@@ -4758,6 +6080,27 @@ def main(argv: list[str] | None = None) -> int:
                 if explicit_graphs and _all_graphs_terminal(explicit_graphs) and not active_tasks():
                     _append_scheduler_log("all_graphs_terminal_no_active_tasks_exit")
                     return 0
+                # Stuck/deadlock exit: a FAIL or needs_human_review blocks all remaining nodes (none
+                # active, nothing ready, not all-terminal) and there is no eval/reconcile/launch progress.
+                # Without this the loop would spin forever. Require STUCK_EXIT_TICKS consecutive dead ticks
+                # to avoid exiting on a transient settle window.
+                if explicit_graphs and not args.dry_run:
+                    states = [_graph_runner_state(gp) for gp in graph_files(explicit_graphs)]
+                    deadlocked = bool(states) and all(
+                        s.get("ok") and not s.get("has_active") and not s.get("ready_nodes") and not s.get("all_terminal")
+                        for s in states
+                    ) and not active_tasks()
+                    progressed = bool(result.get("launched")) or any(
+                        a.get("eval_dispatched") or a.get("reconciled") or a.get("terminalized")
+                        for a in (result.get("advance") or [])
+                    )
+                    if deadlocked and not progressed:
+                        no_progress_ticks += 1
+                    else:
+                        no_progress_ticks = 0
+                    if no_progress_ticks >= STUCK_EXIT_TICKS:
+                        _append_scheduler_log(f"multi_task_dag_deadlocked_no_progress_exit:{no_progress_ticks}_ticks")
+                        return 0
                 time.sleep(max(1, int(args.interval)))
         finally:
             if registered:

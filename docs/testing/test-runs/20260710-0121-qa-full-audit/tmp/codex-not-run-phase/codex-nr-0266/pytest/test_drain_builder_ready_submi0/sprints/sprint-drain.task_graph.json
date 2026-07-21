@@ -1,0 +1,24 @@
+{
+  "sprint_id": "sprint-drain",
+  "nodes": [
+    {
+      "id": "B1",
+      "goal": "Implement approved change.",
+      "logical_operator": "ImplementationWorker",
+      "dispatch_task_type": "implementation",
+      "acceptance": [
+        "handoff exists"
+      ],
+      "requirement_ids": [
+        "REQ-1"
+      ],
+      "status": "dispatched",
+      "updated_at": "2026-07-10T18:53:52Z",
+      "assigned_to": "mini-codex-gpt53-spark-builder-1",
+      "dispatch_id": "pm-sprint-drain-B1-test",
+      "dispatched_via": "pm_dispatch",
+      "pm_task_id": "pm-sprint-drain-B1-test",
+      "operator_id": "mini-codex-gpt53-spark-builder-1"
+    }
+  ]
+}

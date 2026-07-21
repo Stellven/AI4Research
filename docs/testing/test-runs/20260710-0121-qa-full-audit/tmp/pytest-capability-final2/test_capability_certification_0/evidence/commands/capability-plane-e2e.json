@@ -1,0 +1,16 @@
+{
+  "id": "capability-plane-e2e",
+  "name": "Capability plane E2E",
+  "cmd": [
+    "bash",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tests/integrations/test-capability-plane-e2e.sh"
+  ],
+  "exit_code": 1,
+  "duration_s": 4.567,
+  "status": "error",
+  "dimensions": [
+    "complete",
+    "usable"
+  ],
+  "allow_fail_reason": ""
+}

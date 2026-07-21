@@ -1,0 +1,21 @@
+{
+  "task_id": "pm-sprint-20260710-185001-intent-official-full-runtime-autosc-d317c0bf-N0-c9f4695b",
+  "operator_id": "mini-claude-opus-planner-print",
+  "sprint_id": "sprint-20260710-185001-intent-official-full-runtime-autosc-d317c0bf",
+  "node_id": "N0",
+  "status": "failed",
+  "exit_code": 1,
+  "started_at": "2026-07-10T18:50:02Z",
+  "finished_at": "2026-07-10T18:50:02Z",
+  "log_tail": "Not logged in \u00b7 Please run /login\n[flow-control] runtime_state=auth_expired",
+  "model_route": {
+    "requested_model": "opus",
+    "routing_model": "opus",
+    "effective_provider": "anthropic",
+    "effective_model": "opus"
+  },
+  "requested_model": "opus",
+  "routing_model": "opus",
+  "effective_provider": "anthropic",
+  "effective_model": "opus"
+}

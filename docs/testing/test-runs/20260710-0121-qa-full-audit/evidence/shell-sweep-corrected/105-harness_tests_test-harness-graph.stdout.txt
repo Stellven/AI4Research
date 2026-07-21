@@ -1,0 +1,7 @@
+JSON validation OK
+  nodes: 18, edges: 18
+  existing: 18, missing: 0
+PASS: graph JSON — nodes/edges/stats structure valid
+PASS: graph JSON — core dependencies present
+PASS: graph Mermaid — key nodes present with subgraphs
+PROBES_PASSED=3 PROBES_FAILED=0

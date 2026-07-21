@@ -1,0 +1,1 @@
+{"outcome": "supports", "metrics": [{"name": "accuracy", "value": 0.9, "seed": 2}], "evidence_ids": ["result:exp-multiseed:seed-2"], "logs": ["seed 2 complete"]}

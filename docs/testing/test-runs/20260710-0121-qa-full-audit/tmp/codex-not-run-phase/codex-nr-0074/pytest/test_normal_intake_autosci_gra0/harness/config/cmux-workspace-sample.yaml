@@ -1,0 +1,92 @@
+# Sample: cmux monitoring workspace (solar-harness)
+# Usage:
+#   render-cmux-workspace config/cmux-workspace-sample.yaml
+#   cmux-monitor-up config/cmux-workspace-sample.yaml
+#   cmux-monitor-doctor config/cmux-workspace-sample.yaml
+#   cmux-monitor-down config/cmux-workspace-sample.yaml
+
+workspace_name: "solar-runtime"
+
+ssh_profiles:
+  mini:
+    host: "mini"
+    user: "solar"
+    control_master: true
+
+tabs:
+  # Tab 1: quad 2x2 default — 4 panes monitoring solar harness
+  - id: "solar-quad"
+    title: "Solar Harness (quad)"
+    layout: "quad"
+    panes:
+      - title: "planner"
+        source: "local"
+        tmux_target: "solar-harness:0.0"
+        mode: "capture"
+        lines: 60
+        interval_sec: 2
+
+      - title: "builder"
+        source: "local"
+        tmux_target: "solar-harness:0.1"
+        mode: "capture"
+        lines: 60
+        interval_sec: 2
+
+      - title: "evaluator"
+        source: "local"
+        tmux_target: "solar-harness:0.2"
+        mode: "capture"
+        lines: 60
+        interval_sec: 2
+
+      - title: "architect"
+        source: "local"
+        tmux_target: "solar-harness:0.3"
+        mode: "capture"
+        lines: 60
+        interval_sec: 2
+
+  # Tab 2: logs (tail mode)
+  - id: "solar-logs"
+    title: "Build Logs (tail)"
+    layout: "split"
+    panes:
+      - title: "harness-log"
+        source: "local"
+        tmux_target: "solar-harness:0.0"
+        mode: "tail"
+        log_path: "~/.solar/harness/.chain-watcher.log"
+
+      - title: "sprint-log"
+        source: "local"
+        tmux_target: "solar-harness:0.1"
+        mode: "tail"
+        log_path: "~/.solar/session-state.jsonl"
+
+  # Tab 3: remote mini (capture) — enable when remote is available
+  # - id: "mini-remote"
+  #   title: "Mac Mini Remote"
+  #   layout: "quad"
+  #   panes:
+  #     - title: "planner-remote"
+  #       source: "remote"
+  #       ssh_profile: "mini"
+  #       tmux_target: "solar:0.0"
+  #       mode: "capture"
+  #     - title: "builder-remote"
+  #       source: "remote"
+  #       ssh_profile: "mini"
+  #       tmux_target: "solar:0.1"
+  #       mode: "capture"
+  #     - title: "evaluator-remote"
+  #       source: "remote"
+  #       ssh_profile: "mini"
+  #       tmux_target: "solar:0.2"
+  #       mode: "capture"
+  #     - title: "logs-remote"
+  #       source: "remote"
+  #       ssh_profile: "mini"
+  #       tmux_target: "solar:0.2"
+  #       mode: "tail"
+  #       log_path: "~/.tmux-pane-logs/solar-0-2.log"

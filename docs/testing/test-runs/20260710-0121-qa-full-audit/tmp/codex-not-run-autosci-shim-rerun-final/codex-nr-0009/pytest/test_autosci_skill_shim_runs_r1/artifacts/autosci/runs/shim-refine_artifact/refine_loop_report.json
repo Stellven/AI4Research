@@ -1,0 +1,24 @@
+{
+  "approved_after_artifact_applied": false,
+  "auto_review_rounds": [],
+  "difficulty": "",
+  "final_score": null,
+  "final_verdict": "missing_review",
+  "fixed_issues": [],
+  "focus": "",
+  "limitations": [
+    "Refine loop requires completed Review LLM evidence and approved after_artifact application before final completion."
+  ],
+  "max_rounds": 4,
+  "review_evidence_completed": false,
+  "review_evidence_count": 0,
+  "review_llm_requested": false,
+  "rounds": [],
+  "schema": "autosci_refine_loop_report.v1",
+  "score_history": [],
+  "status": "incomplete",
+  "target": "report-001",
+  "target_score": 8.0,
+  "termination_reason": "review_evidence_missing",
+  "unresolved_issues": []
+}

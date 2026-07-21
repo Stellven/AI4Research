@@ -1,0 +1,1 @@
+{"outcome": "partially_supports", "metrics": [{"name": "accuracy", "value": 0.94}], "evidence_ids": ["result:exp-remote-collect"], "logs": ["remote pull-results collected metrics"]}

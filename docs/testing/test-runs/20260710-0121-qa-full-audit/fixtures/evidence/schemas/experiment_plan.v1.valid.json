@@ -1,0 +1,27 @@
+{
+  "schema": "experiment_plan.v1",
+  "task_id": "f",
+  "sprint_id": "f",
+  "node_id": "f",
+  "status": "completed",
+  "inputs": {},
+  "outputs": {
+    "experiment_plan": {
+      "experiment_id": "f",
+      "objective": "f",
+      "hypothesis": "f",
+      "variables": [],
+      "metrics": [],
+      "procedure": [],
+      "approval_required": false,
+      "expected_artifacts": []
+    }
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "f",
+    "implementation_package": "f",
+    "timestamp": "2026-07-10T00:00:00Z"
+  },
+  "limitations": []
+}

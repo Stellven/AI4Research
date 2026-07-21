@@ -1,0 +1,1 @@
+harness plan-verdict sprint-active approve scope ok

@@ -31,6 +31,15 @@ from requirement_coverage import (
 )
 from apo_plan_compiler import build_capsule_plan_ir
 from capability_capsules import default_capability_plan_for_logical_operator
+from autosci_intake_contract import (
+    WORKFLOW_CONTRACT_ID as AUTOSCI_WORKFLOW_CONTRACT_ID,
+    build_autosci_design_markdown,
+    build_autosci_plan_markdown,
+    build_autosci_task_graph,
+    is_autosci_research_intake_text,
+)
+from intent_gateway import infer_mode as infer_intent_mode
+from research.source_pack import CANONICAL_SOURCE_TYPES
 
 try:
     import yaml  # type: ignore
@@ -420,7 +429,13 @@ def _node_enrichment(request_type: str, lane_hint: str, node: dict[str, Any]) ->
     enriched.setdefault("owner", owner)
     enriched.setdefault("inputs", ["requirement_ir.json"] if not node.get("depends_on") else ["upstream_artifact"])
     enriched.setdefault("outputs", [validation_target])
-    enriched.setdefault("validation", [{"kind": "artifact", "target": validation_target, "required": True}])
+    enriched.setdefault(
+        "validation",
+        [
+            {"kind": "artifact", "target": output, "required": True}
+            for output in enriched.get("outputs") or [validation_target]
+        ],
+    )
     enriched.setdefault("risk", "high" if node["logical_operator"] in {"Verifier", "Critic"} else ("medium" if request_type != SHORT_IMPL else "low"))
     enriched.setdefault("uncertainty", 0.2 if request_type == SHORT_IMPL else (0.45 if request_type == FULL_SPEC else 0.55))
     enriched.setdefault("parallelizable", request_type != SHORT_IMPL and node["logical_operator"] not in {"Verifier", "Critic"})
@@ -530,19 +545,48 @@ def _make_prd_view(
     open_questions: list[str],
     risks: list[dict[str, str]],
 ) -> dict[str, Any]:
+    acceptance_body = "\n".join(f"- {item}" for item in acceptance) or "- N/A"
+    non_goals_body = "\n".join(f"- {item}" for item in non_goals) or "- N/A"
+    open_questions_body = "\n".join(f"- {item}" for item in open_questions) or "- N/A"
+    risks_body = "\n".join(
+        f"- [{risk['level']}] {risk['title']} -> {risk['mitigation']}" for risk in risks
+    ) or "- N/A"
+    source_context = (
+        "相关上下文: " + ", ".join(source_inputs["repo_context"] + source_inputs["logs"])
+        if source_inputs["repo_context"] or source_inputs["logs"]
+        else "基于当前请求直接定位到交付范围。"
+    )
     if request_type == "implementation":
         sections = [
-            {"title": "Goal", "body": normalized_goal},
-            {"title": "Context", "body": "相关上下文: " + ", ".join(source_inputs["repo_context"] + source_inputs["logs"]) if source_inputs["repo_context"] or source_inputs["logs"] else "基于当前请求直接定位到局部改动范围。"},
+            {"title": "背景 / Context", "body": source_context},
+            {"title": "用户问题 / Problem", "body": normalized_goal},
+            {"title": "用户目标 / Goals", "body": f"- {normalized_goal}"},
+            {"title": "用户故事 / User Stories", "body": f"- As the requester, I need {normalized_goal} so the result is directly usable and verifiable."},
+            {"title": "功能需求 / Requirements", "body": acceptance_body},
+            {"title": "验收标准 / Acceptance Criteria", "body": acceptance_body},
+            {"title": "非目标 / Non-Goals", "body": non_goals_body},
+            {"title": "约束 / Constraints", "body": "- Keep changes inside the declared sprint workspace and write scope.\n- Builder execution must go through task_graph dispatch.\n- Record evaluator-visible execution evidence before closeout."},
+            {"title": "风险 / Risks", "body": risks_body},
+            {"title": "开放问题 / Open Questions", "body": open_questions_body},
+            {"title": "架构交接 / Planner Handoff", "body": "Planner must preserve the declared write scope, map every acceptance criterion to a graph node, and require executable verification before builder closeout."},
             {"title": "Scope", "body": f"- {normalized_goal}"},
-            {"title": "Non-goals", "body": "\n".join(f"- {item}" for item in non_goals)},
-            {"title": "Acceptance Criteria", "body": "\n".join(f"- {item}" for item in acceptance)},
             {"title": "Validation", "body": "- 运行测试或 smoke check\n- 记录 diff / 风险 / 验证证据"},
             {"title": "Rollback", "body": "如验证失败，回退到变更前状态并保留失败证据。"},
         ]
         return {"variant": "short", "sections": sections}
     if request_type == "research":
         sections = [
+            {"title": "背景 / Context", "body": "The request requires source-backed research rather than unsupported model recall."},
+            {"title": "用户问题 / Problem", "body": normalized_goal},
+            {"title": "用户目标 / Goals", "body": f"- Produce a traceable, evidence-backed answer to: {normalized_goal}"},
+            {"title": "用户故事 / User Stories", "body": "- As the requester, I need claims tied to inspectable sources so I can distinguish evidence from synthesis."},
+            {"title": "功能需求 / Requirements", "body": "- Inventory relevant sources.\n- Extract claims and supporting evidence.\n- Preserve provenance and confidence.\n- Synthesize only from verified evidence."},
+            {"title": "验收标准 / Acceptance Criteria", "body": acceptance_body},
+            {"title": "非目标 / Non-Goals", "body": non_goals_body},
+            {"title": "约束 / Constraints", "body": "- Requirement IR remains the source of truth.\n- Every material claim must resolve to source evidence.\n- Unsupported claims must be omitted or labeled as unresolved."},
+            {"title": "风险 / Risks", "body": risks_body},
+            {"title": "开放问题 / Open Questions", "body": open_questions_body},
+            {"title": "架构交接 / Planner Handoff", "body": "Planner must convert the source, evidence, synthesis, and verification stages into an acyclic research DAG with explicit artifacts and closeout gates."},
             {"title": "Research Question", "body": normalized_goal},
             {"title": "Paper Inventory", "body": "\n".join(f"- {paper}" for paper in source_inputs["papers"]) or "- 待补充来源"},
             {"title": "Claim Extraction", "body": "对每篇论文提取核心 claim、方法、benchmark、限制条件。"},
@@ -551,22 +595,22 @@ def _make_prd_view(
             {"title": "Design Candidates", "body": "基于证据链生成候选设计方案，并明确 pros / cons。"},
             {"title": "Experiment Plan", "body": "定义 baseline、metric、threshold 和失败退出条件。"},
             {"title": "Build Plan", "body": "只有通过 eval gate 的研究结论才能进入实现 DAG。"},
-            {"title": "Adoption Criteria", "body": "\n".join(f"- {item}" for item in acceptance)},
-            {"title": "Rejection Criteria", "body": "\n".join(f"- [{risk['level']}] {risk['title']} -> {risk['mitigation']}" for risk in risks)},
+            {"title": "Adoption Criteria", "body": acceptance_body},
+            {"title": "Rejection Criteria", "body": risks_body},
         ]
         return {"variant": "research", "sections": sections}
     sections = [
-        {"title": "1. Problem", "body": normalized_goal},
-        {"title": "2. Users / Stakeholders", "body": "- PM\n- Planner\n- Builder\n- Evaluator"},
-        {"title": "3. Goals / Non-goals", "body": "Goals:\n- " + normalized_goal + "\n\nNon-goals:\n" + "\n".join(f"- {item}" for item in non_goals)},
-        {"title": "4. User Scenarios", "body": "用户输入需求后，需要被结构化、合约化、任务图化，然后再派给执行链路。"},
-        {"title": "5. Functional Requirements", "body": "\n".join(f"- {item}" for item in acceptance)},
-        {"title": "6. Non-functional Requirements", "body": "- 可验证\n- 可追溯\n- 与现有 PM -> Planner -> Builder 主链兼容"},
-        {"title": "7. UX / Interaction Model", "body": "首批仅提供编译结果视图与 handoff bar，不重做完整 UI。"},
-        {"title": "8. Data Model", "body": "Requirement IR 为唯一事实源，PRD/contract/DAG/handoff 均从 IR 派生。"},
-        {"title": "9. Acceptance Criteria", "body": "\n".join(f"- {item}" for item in acceptance)},
-        {"title": "10. Risks / Open Questions", "body": "\n".join(f"- [{risk['level']}] {risk['title']} -> {risk['mitigation']}" for risk in risks) + "\n\nOpen Questions:\n" + ("\n".join(f"- {item}" for item in open_questions) if open_questions else "- N/A")},
-        {"title": "11. Release Plan", "body": "先交付后端编译底座，再逐步扩展 PM pane UI 与 eval loop。"},
+        {"title": "背景 / Context", "body": "Compiled from RawIntent into Requirement IR, contract artifacts, and a dispatchable task graph."},
+        {"title": "用户问题 / Problem", "body": normalized_goal},
+        {"title": "用户目标 / Goals", "body": "- " + normalized_goal},
+        {"title": "用户故事 / User Stories", "body": "- As the Solar operator, I need the request structured into PM, Planner, Builder, and Evaluator handoffs so execution stays inside the product workflow."},
+        {"title": "功能需求 / Requirements", "body": "\n".join(f"- {item}" for item in acceptance)},
+        {"title": "验收标准 / Acceptance Criteria", "body": "\n".join(f"- {item}" for item in acceptance)},
+        {"title": "非目标 / Non-Goals", "body": "\n".join(f"- {item}" for item in non_goals)},
+        {"title": "约束 / Constraints", "body": "- Requirement IR remains the source of truth.\n- Builder execution must go through task_graph dispatch.\n- Evaluator-visible evidence is required before closeout."},
+        {"title": "风险 / Risks", "body": "\n".join(f"- [{risk['level']}] {risk['title']} -> {risk['mitigation']}" for risk in risks)},
+        {"title": "开放问题 / Open Questions", "body": "\n".join(f"- {item}" for item in open_questions) if open_questions else "- N/A"},
+        {"title": "架构交接 / Planner Handoff", "body": "Planner must use `requirement_ir.json`, `contract.md`, and `task_graph.json` to verify DAG boundaries, write scopes, gates, and evaluator evidence requirements before builder execution."},
     ]
     return {"variant": "standard", "sections": sections}
 
@@ -623,23 +667,43 @@ def _build_contracts(
     }
     research = {
         "enabled": classification == RESEARCH,
+        "question": normalized_goal if classification == RESEARCH else "",
         "hypothesis": normalized_goal,
         "source_papers": papers,
-        "experiments": [
-            {
-                "name": "dag_quality_eval",
-                "dataset": "golden_cases.jsonl",
-                "metric": ["cycle_rate", "acceptance_coverage", "human_edit_distance"],
-            }
+        "evidence_contract": {
+            "source_pack": ["sources.jsonl", "evidence.jsonl", "extracts/"],
+            "report_artifacts": [
+                "sources.jsonl",
+                "evidence.jsonl",
+                "extracts/",
+                "synthesis_plan.json",
+                "evidence_gaps.json",
+                "claims.jsonl",
+                "claim_evidence.jsonl",
+                "sections.jsonl",
+                "section_checks.jsonl",
+                "report_ast.json",
+                "final.bibliography.json",
+                "final.md",
+                "research_eval.json",
+            ],
+            "citation_syntax": "[cite:ev_<id>]",
+            "source_type_vocabulary": list(CANONICAL_SOURCE_TYPES),
+        } if classification == RESEARCH else {},
+        "quality_gates": [
+            "Each retrieval source pack passes deterministic retrieval closeout.",
+            "Every material factual claim resolves to verified evidence spans.",
+            "The consolidated report passes deterministic final closeout.",
         ] if classification == RESEARCH else [],
-        "adoption_threshold": {
-            "cycle_rate": "< 2%",
-            "acceptance_coverage": "> 95%",
-            "human_edit_reduction": "> 25%",
+        "failure_policy": {
+            "fabricate_missing_evidence": False,
+            "insufficient_evidence": "state_bounded_gap_or_fail",
+            "retrieval_failure": "repair_or_fail",
         } if classification == RESEARCH else {},
         "rejection_criteria": [
-            "No evidence ledger available",
-            "No verifier/critique gate",
+            "No provenance-complete source pack is available.",
+            "A material claim lacks resolvable evidence.",
+            "The deterministic retrieval or final closeout gate fails.",
         ] if classification == RESEARCH else [],
     }
     return {
@@ -818,15 +882,9 @@ def _render_product_brief_markdown(brief: dict[str, Any]) -> str:
     )
 
 
-def emit_requirement_package(
-    payload: dict[str, Any],
-    *,
-    workspace_root: Path,
-    sprint_root: Path | None = None,
-    sprint_id: str = "",
-) -> dict[str, str]:
-    workspace_root = Path(workspace_root)
-    pm_dir = workspace_root / ".pm"
+def _emit_compiled_pm_tree(pm_dir: Path, payload: dict[str, Any]) -> None:
+    """Write only compiler-owned PM inputs beneath ``pm_dir``."""
+
     contracts_dir = pm_dir / "contracts"
     handoff_dir = pm_dir / "handoff"
     evals_dir = pm_dir / "evals"
@@ -845,9 +903,29 @@ def emit_requirement_package(
     _write_yaml(contracts_dir / "research.yaml", artifacts["contract_files"]["research"])
     _write_json(pm_dir / "task_dag.json", artifacts["task_dag"])
     _write_json(pm_dir / "capsule_plan.json", artifacts["capsule_plan"])
+    if artifacts.get("plan_markdown"):
+        _write_text(pm_dir / "plan.md", artifacts["plan_markdown"])
+    if artifacts.get("design_markdown"):
+        _write_text(pm_dir / "design.md", artifacts["design_markdown"])
     _write_text(handoff_dir / "codex_handoff.md", artifacts["handoff_markdown"]["codex"])
     _write_text(handoff_dir / "solar_harness_handoff.md", artifacts["handoff_markdown"]["solar_harness"])
     _write_text(evals_dir / "golden_cases.jsonl", "\n".join(json.dumps(case, ensure_ascii=False) for case in artifacts["eval_seed_cases"]) + "\n")
+
+
+def emit_requirement_package(
+    payload: dict[str, Any],
+    *,
+    workspace_root: Path,
+    sprint_root: Path | None = None,
+    sprint_id: str = "",
+) -> dict[str, str]:
+    workspace_root = Path(workspace_root)
+    pm_dir = workspace_root / ".pm"
+    contracts_dir = pm_dir / "contracts"
+    handoff_dir = pm_dir / "handoff"
+    artifacts = payload["compiled_artifacts"]
+    requirement_ir = payload["requirement_ir"]
+    _emit_compiled_pm_tree(pm_dir, payload)
 
     emitted = {
         "pm_dir": str(pm_dir),
@@ -864,10 +942,16 @@ def emit_requirement_package(
     }
     if sprint_root and sprint_id:
         sprint_root = Path(sprint_root)
+        staging_pm_dir = sprint_root / sprint_id / "workdir" / "workspace" / ".pm"
+        _emit_compiled_pm_tree(staging_pm_dir, payload)
         _write_text(sprint_root / f"{sprint_id}.prd.md", artifacts["prd_markdown"])
         _write_text(sprint_root / f"{sprint_id}.contract.md", artifacts["contract_markdown"])
         _write_json(sprint_root / f"{sprint_id}.task_graph.json", artifacts["task_dag"])
         _write_json(sprint_root / f"{sprint_id}.capsule_plan.json", artifacts["capsule_plan"])
+        if artifacts.get("plan_markdown"):
+            _write_text(sprint_root / f"{sprint_id}.plan.md", artifacts["plan_markdown"])
+        if artifacts.get("design_markdown"):
+            _write_text(sprint_root / f"{sprint_id}.design.md", artifacts["design_markdown"])
         _write_text(sprint_root / f"{sprint_id}.product-brief.md", artifacts["product_brief_markdown"])
         _write_text(sprint_root / f"{sprint_id}.handoff.md", artifacts["handoff_markdown"]["solar_harness"])
         _write_json(sprint_root / f"{sprint_id}.requirement_ir.json", requirement_ir)
@@ -881,11 +965,14 @@ def emit_requirement_package(
                 "sprint_contract": str(sprint_root / f"{sprint_id}.contract.md"),
                 "sprint_task_graph": str(sprint_root / f"{sprint_id}.task_graph.json"),
                 "sprint_capsule_plan": str(sprint_root / f"{sprint_id}.capsule_plan.json"),
+                "sprint_plan": str(sprint_root / f"{sprint_id}.plan.md") if artifacts.get("plan_markdown") else "",
+                "sprint_design": str(sprint_root / f"{sprint_id}.design.md") if artifacts.get("design_markdown") else "",
                 "sprint_requirement_trace": str(sprint_root / f"{sprint_id}.requirement_trace.json"),
                 "sprint_coverage_report": str(sprint_root / f"{sprint_id}.coverage_report.json"),
                 "sprint_acceptance_verdict": str(sprint_root / f"{sprint_id}.acceptance_verdict.json"),
                 "sprint_product_brief": str(sprint_root / f"{sprint_id}.product-brief.md"),
                 "sprint_handoff": str(sprint_root / f"{sprint_id}.handoff.md"),
+                "sprint_workspace_pm_dir": str(staging_pm_dir),
             }
         )
     return emitted
@@ -900,6 +987,13 @@ def classify_request_type(text: str, papers: list[str] | None = None) -> str:
     normalized = _normalized_text(text)
     lowered = normalized.lower()
     if papers:
+        return RESEARCH
+    # RawIntent and the PM compiler are one product front door. Reuse the
+    # gateway's evidence-seeking classifier so a prompt cannot enter as
+    # research and silently become a short implementation task downstream.
+    # Engineering requests containing the product name "Deep Research" remain
+    # strategy/delivery because infer_mode resolves those before research.
+    if infer_intent_mode(normalized) == "research":
         return RESEARCH
 
     full_spec_markers = [
@@ -920,11 +1014,6 @@ def classify_request_type(text: str, papers: list[str] | None = None) -> str:
         or any(marker in normalized for marker in ("修复单", "架构整改单", "整改单"))
     ):
         return FULL_SPEC
-
-    if re.search(r"\b(arxiv|doi|paper|study|literature|survey|iclr|neurips|mlsys|benchmark comparison)\b", lowered):
-        return RESEARCH
-    if re.search(r"(论文|调研|研究|综述|文献|citation)", normalized):
-        return RESEARCH
 
     short_markers = [
         "fix", "bug", "add", "change", "rename", "check", "trace",
@@ -1171,6 +1260,11 @@ def _research_task_graph() -> dict[str, Any]:
     return {
         "dag_variant": "research",
         "research_mode": True,
+        "quality_gates": {
+            "parallelism": {
+                "min_ready_width": 1,
+            }
+        },
         "evidence_policy": {
             "ledger_required": True,
             "unsupported_claim_guard": True,
@@ -1180,50 +1274,81 @@ def _research_task_graph() -> dict[str, Any]:
         "nodes": [
             {
                 "id": "R1",
-                "goal": "Ingest papers, links, and source metadata into the research run.",
+                "goal": "Retrieve authoritative primary sources and persist provenance-complete source pack A.",
                 "logical_operator": "ResearchScout",
                 "depends_on": [],
-                "acceptance": ["Source manifest is recorded."],
-                "estimated_cost": 1,
+                "outputs": [
+                    "workspace/research/source-pack-a/sources.jsonl",
+                    "workspace/research/source-pack-a/evidence.jsonl",
+                    "workspace/research/source-pack-a/extracts",
+                ],
+                "acceptance": ["Source pack A passes deterministic retrieval closeout."],
+                "estimated_cost": 2,
             },
             {
                 "id": "R2",
-                "goal": "Extract claims, findings, and relevant technical levers.",
+                "goal": "Independently retrieve complementary and contradictory sources into source pack B.",
                 "logical_operator": "ResearchScout",
-                "depends_on": ["R1"],
-                "acceptance": ["Claims ledger is produced."],
+                "depends_on": [],
+                "outputs": [
+                    "workspace/research/source-pack-b/sources.jsonl",
+                    "workspace/research/source-pack-b/evidence.jsonl",
+                    "workspace/research/source-pack-b/extracts",
+                ],
+                "acceptance": ["Source pack B passes deterministic retrieval closeout and is independent of pack A."],
                 "estimated_cost": 2,
             },
             {
                 "id": "R3",
-                "goal": "Scan contradictions, gaps, and unsupported assumptions.",
+                "goal": "Compare both verified source packs and enumerate contradictions, gaps, and unsupported assumptions.",
                 "logical_operator": "Critic",
-                "depends_on": ["R2"],
+                "depends_on": ["R1", "R2"],
+                "outputs": [
+                    "workspace/research/evidence-review/contradictions.jsonl",
+                    "workspace/research/evidence-review/gaps.md",
+                ],
                 "acceptance": ["Contradictions or gaps are enumerated."],
                 "estimated_cost": 2,
             },
             {
                 "id": "R4",
-                "goal": "Synthesize the research into actionable insights.",
+                "goal": "Synthesize only verified evidence into claims, a structured report AST, and a cited final report.",
                 "logical_operator": "ResearchSynthesizer",
-                "depends_on": ["R2", "R3"],
-                "acceptance": ["Synthesis report is drafted."],
+                "depends_on": ["R1", "R2", "R3"],
+                "outputs": [
+                    "workspace/research/report/sources.jsonl",
+                    "workspace/research/report/evidence.jsonl",
+                    "workspace/research/report/extracts",
+                    "workspace/research/report/synthesis_plan.json",
+                    "workspace/research/report/evidence_gaps.json",
+                    "workspace/research/report/claims.jsonl",
+                    "workspace/research/report/claim_evidence.jsonl",
+                    "workspace/research/report/sections.jsonl",
+                    "workspace/research/report/section_checks.jsonl",
+                    "workspace/research/report/report_ast.json",
+                    "workspace/research/report/final.bibliography.json",
+                    "workspace/research/report/final.md",
+                    "workspace/research/report/research_eval.json",
+                ],
+                "acceptance": ["Every material claim in final.md cites evidence that resolves to a verified source span."],
                 "estimated_cost": 3,
             },
             {
                 "id": "R5",
-                "goal": "Perform independent critique and evidence verification.",
+                "goal": "Independently verify claim support, citation resolution, source quality, and report completeness.",
                 "logical_operator": "Verifier",
                 "depends_on": ["R4"],
-                "acceptance": ["Critique and verifier decision are recorded."],
+                "outputs": ["workspace/research/report/critique.md"],
+                "acceptance": ["Critique and deterministic final-report closeout decision are recorded."],
                 "estimated_cost": 2,
             },
             {
                 "id": "R6",
-                "goal": "Translate research findings into PRD/DAG implications.",
+                "goal": "Curate the verified report, limitations, and user-facing delivery summary without changing supported claims.",
                 "logical_operator": "ArtifactCurator",
                 "depends_on": ["R5"],
-                "acceptance": ["Final implications document is produced."],
+                "outputs": ["workspace/research/report/delivery.md"],
+                "acceptance": ["The final deliverable links the verified report and states material evidence limitations."],
                 "estimated_cost": 1,
             },
         ],
@@ -1304,14 +1429,24 @@ def _apply_default_gate_assignments(graph: dict[str, Any]) -> dict[str, Any]:
 
 def build_task_graph_skeleton(request_type: str, lane_hint: str, request_text: str = "") -> dict[str, Any]:
     if request_type == SHORT_IMPL:
-        return _apply_default_gate_assignments(_short_task_graph())
-    if request_type == RESEARCH:
-        return _apply_default_gate_assignments(_research_task_graph())
-    if _is_parallel_spec_request(request_type, request_text):
-        return _apply_default_gate_assignments(_parallel_spec_task_graph())
-    if _is_parallel_delivery_request(request_type, request_text):
-        return _apply_default_gate_assignments(_parallel_delivery_task_graph())
-    return _apply_default_gate_assignments(_standard_task_graph(strategy_lane=lane_hint == "strategy"))
+        graph = _apply_default_gate_assignments(_short_task_graph())
+    elif request_type == RESEARCH:
+        graph = _apply_default_gate_assignments(_research_task_graph())
+    elif _is_parallel_spec_request(request_type, request_text):
+        graph = _apply_default_gate_assignments(_parallel_spec_task_graph())
+    elif _is_parallel_delivery_request(request_type, request_text):
+        graph = _apply_default_gate_assignments(_parallel_delivery_task_graph())
+    else:
+        graph = _apply_default_gate_assignments(_standard_task_graph(strategy_lane=lane_hint == "strategy"))
+    # Intake birth marker (G4 blocker 2): sprints born through the requirement
+    # compiler are the GOVERNED population — plan_validator classifies an
+    # uncontracted graph as generic (certificate demanded) only when this
+    # marker is present, so hand-authored/legacy graphs stay grandfathered
+    # under default-on. The planner edits this file in place, so the marker
+    # persists through planning; it sits outside the certificate's governed
+    # subset, so stamping is unaffected.
+    graph["plan_compile_required"] = True
+    return graph
 
 
 def build_pm_intake(
@@ -1331,20 +1466,35 @@ def build_pm_intake(
     goal_text = effective_text["goal_text"] or compile_text
     problem_text = effective_text["problem_text"] or compile_text
     raw_user_text = effective_text["raw_user_text"] or compile_text
-    request_type = classify_request_type(compile_text, papers)
+    autosci_contract = is_autosci_research_intake_text(compile_text)
+    request_type = RESEARCH if autosci_contract else classify_request_type(compile_text, papers)
     canonical_request_type = CLASS_TO_CANONICAL[request_type]
     lane_hint = choose_lane_hint(request_type, compile_text)
     output_mode = choose_output_mode(request_type)
     priority = choose_priority(compile_text, request_type)
-    task_graph = build_task_graph_skeleton(request_type, lane_hint, compile_text)
+    title = _safe_title(goal_text or compile_text)
+    if autosci_contract:
+        task_graph = build_autosci_task_graph(
+            sprint_id=sprint_id or "N/A",
+            title=title,
+            request_text=compile_text,
+            harness_dir=HARNESS_ROOT,
+        )
+    else:
+        task_graph = build_task_graph_skeleton(request_type, lane_hint, compile_text)
     if _is_code_understanding_request(compile_text, repo_context):
         task_graph = _adapt_graph_for_code_understanding(task_graph, request_type)
     task_graph["nodes"] = [_node_enrichment(request_type, lane_hint, node) for node in task_graph["nodes"]]
     normalized_goal = _normalized_text(goal_text)[:400]
     normalized_problem = _normalized_text(problem_text)[:400]
     normalized_user_intent = _normalized_text(raw_user_text)[:400]
-    title = _safe_title(goal_text or compile_text)
     acceptance = _default_acceptance(request_type)
+    if autosci_contract:
+        acceptance = [
+            "Normal Solar intake emits a research.autosci.v1 task graph.",
+            "Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.",
+            "Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.",
+        ]
     non_goals = _default_non_goals(request_type)
     stop_rules = _default_stop_rules(request_type)
     open_questions = _derive_open_questions(request_type, compile_text, papers)
@@ -1415,6 +1565,9 @@ def build_pm_intake(
         },
         "evidence_policy": task_graph.get("evidence_policy", {}),
     }
+    if autosci_contract:
+        requirement_ir["workflow_contract"] = AUTOSCI_WORKFLOW_CONTRACT_ID
+        requirement_ir["autosci_contract_bound"] = True
     task_graph = _apply_requirement_mapping(task_graph, requirements, request_type)
     task_graph = enrich_task_graph_defaults(task_graph, requirement_ir, sprint_id=sprint_id or "N/A")
     requirement_ir["dag_view"] = task_graph
@@ -1446,6 +1599,15 @@ def build_pm_intake(
         ),
         "notes": "Requirement Compiler produced canonical IR, compiled contracts, and a task DAG proposal.",
     }
+    if autosci_contract:
+        product_brief.update(
+            {
+                "source": "autosci-intake-contract",
+                "handoff_to": "builder_main",
+                "template_variant": "autosci",
+                "notes": "Normal intake selected the contract-bound AutoSci research lifecycle.",
+            }
+        )
     prd_markdown = _render_prd_markdown(title, prd_view)
     contract_markdown = _render_contract_markdown(title, contracts)
     codex_handoff_md = _render_handoff_markdown(
@@ -1463,11 +1625,23 @@ def build_pm_intake(
     solar_handoff_md = _render_handoff_markdown(
         title,
         "solar-harness",
-        "Read compiled PRD / contract / task graph proposal, then produce planner artifacts without skipping governance.",
+        (
+            "Dispatch the contract-bound AutoSci scientific task graph; planner artifacts are already generated by the workflow contract."
+            if autosci_contract
+            else "Read compiled PRD / contract / task graph proposal, then produce planner artifacts without skipping governance."
+        ),
         _sprint_handoff_artifacts(sprint_id or "", "solar_harness"),
         [
-            "Planner produces design.md and plan.md.",
-            "Planner may refine task_graph.json but must preserve compiled governance constraints and explicit requirement_ids mapping.",
+            (
+                "Use graph_scheduler/autopilot to dispatch ready Scientific* nodes."
+                if autosci_contract
+                else "Planner produces design.md and plan.md."
+            ),
+            (
+                "Do not route this sprint back through a generic planner unless the task_graph is invalid."
+                if autosci_contract
+                else "Planner may refine task_graph.json but must preserve compiled governance constraints and explicit requirement_ids mapping."
+            ),
             "No direct builder dispatch from raw request.",
         ],
         [
@@ -1476,6 +1650,8 @@ def build_pm_intake(
         ],
     )
     product_brief_markdown = _render_product_brief_markdown(product_brief)
+    plan_markdown = build_autosci_plan_markdown(sprint_id or "N/A", title, task_graph) if autosci_contract else ""
+    design_markdown = build_autosci_design_markdown(sprint_id or "N/A", title, task_graph) if autosci_contract else ""
     requirement_trace = build_requirement_trace(requirement_ir, task_graph)
     coverage_report = build_coverage_report(requirement_trace, task_graph)
     acceptance_verdict = build_acceptance_verdict(
@@ -1510,6 +1686,8 @@ def build_pm_intake(
         "priority": priority,
         "acceptance_profile": choose_acceptance_profile(request_type),
         "target_system": target_system,
+        "workflow_contract": AUTOSCI_WORKFLOW_CONTRACT_ID if autosci_contract else "",
+        "autosci_contract_bound": autosci_contract,
         "handoff_package": {
             "sprint_id": sprint_id or "N/A",
             "artifacts": [
@@ -1519,12 +1697,22 @@ def build_pm_intake(
                 "task_graph.json",
             ],
             "research_artifacts": [
-                "source_manifest.json",
-                "claims.jsonl",
-                "contradictions.jsonl",
-                "evidence_ledger.json",
-                "synthesis.md",
-                "critique.md",
+                "workspace/research/source-pack-a/sources.jsonl",
+                "workspace/research/source-pack-a/evidence.jsonl",
+                "workspace/research/source-pack-a/extracts",
+                "workspace/research/source-pack-b/sources.jsonl",
+                "workspace/research/source-pack-b/evidence.jsonl",
+                "workspace/research/source-pack-b/extracts",
+                "workspace/research/report/synthesis_plan.json",
+                "workspace/research/report/evidence_gaps.json",
+                "workspace/research/report/claims.jsonl",
+                "workspace/research/report/claim_evidence.jsonl",
+                "workspace/research/report/sections.jsonl",
+                "workspace/research/report/section_checks.jsonl",
+                "workspace/research/report/report_ast.json",
+                "workspace/research/report/final.bibliography.json",
+                "workspace/research/report/final.md",
+                "workspace/research/report/research_eval.json",
             ] if request_type == RESEARCH else [],
         },
         "task_graph_skeleton": task_graph,
@@ -1540,6 +1728,8 @@ def build_pm_intake(
             "acceptance_verdict": acceptance_verdict,
             "product_brief": product_brief,
             "product_brief_markdown": product_brief_markdown,
+            "plan_markdown": plan_markdown,
+            "design_markdown": design_markdown,
             "handoff_markdown": {
                 "codex": codex_handoff_md,
                 "solar_harness": solar_handoff_md,
@@ -1635,7 +1825,15 @@ def validate_compiled_package(payload: dict[str, Any]) -> dict[str, Any]:
         errors.append("task_graph_cycle_detected")
 
     graph_variant = str(graph.get("dag_variant") or payload.get("dag_variant") or "").strip().lower()
-    nonlinear = graph_variant not in {"", "linear", "serial", "sequential", "single", "single_node"}
+    nonlinear = graph_variant not in {
+        "",
+        "linear",
+        "serial",
+        "sequential",
+        "single",
+        "single_node",
+        "standard",
+    }
     quality = graph.get("quality_gates") if isinstance(graph.get("quality_gates"), dict) else {}
     parallelism = quality.get("parallelism") if isinstance(quality.get("parallelism"), dict) else {}
     explicit_min = parallelism.get("min_ready_width") or quality.get("min_ready_width") or graph.get("min_ready_width")

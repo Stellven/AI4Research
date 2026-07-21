@@ -1,0 +1,1 @@
+/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/test-coordinator-pidfile.sh: line 106: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/harness/.coordinator.log: No such file or directory

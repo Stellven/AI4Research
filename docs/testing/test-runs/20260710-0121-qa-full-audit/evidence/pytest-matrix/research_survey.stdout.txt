@@ -1,0 +1,98 @@
+..FF.........F...F.................FF.F..............F.................. [ 61%]
+....FF.F.....................................                            [100%]
+=================================== FAILURES ===================================
+____________________ test_continue_survey_cli_allow_pending ____________________
+harness/tests/research_survey/test_auto_continue.py:85: in test_continue_survey_cli_allow_pending
+    rc = main([
+harness/lib/research/cli.py:4464: in main
+    return handler(args)
+           ^^^^^^^^^^^^^
+harness/lib/research/cli.py:3482: in cmd_survey_continue
+    payload = continue_survey_run(
+E   TypeError: continue_survey_run() got an unexpected keyword argument 'narrative_backend'
+______ test_continue_survey_cli_requires_completion_without_allow_pending ______
+harness/tests/research_survey/test_auto_continue.py:100: in test_continue_survey_cli_requires_completion_without_allow_pending
+    rc = main([
+harness/lib/research/cli.py:4464: in main
+    return handler(args)
+           ^^^^^^^^^^^^^
+harness/lib/research/cli.py:3482: in cmd_survey_continue
+    payload = continue_survey_run(
+E   TypeError: continue_survey_run() got an unexpected keyword argument 'narrative_backend'
+___________ test_chief_editor_local_command_records_real_usage_json ____________
+harness/tests/research_survey/test_chief_editor.py:128: in test_chief_editor_local_command_records_real_usage_json
+    payload = chief_editor.run_chief_editor(
+harness/lib/research/survey/chief_editor.py:335: in run_chief_editor
+    chapter_text, chapter_usage = _normalize_model_result(_run_command(command, prompt, timeout))
+                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/lib/research/survey/chief_editor.py:100: in _run_command
+    raise RuntimeError(f"chief_editor_command_failed:{result.returncode}:{stderr}")
+E   RuntimeError: chief_editor_command_failed:2:/bin/sh: -c: line 0: syntax error near unexpected token `(' /bin/sh: -c: line 0: `/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-15/test_chief_editor_local_comman0/chief_json.py'
+____________ test_survey_eval_cli_require_complete_fails_plan_only _____________
+harness/tests/research_survey/test_cli_survey.py:44: in test_survey_eval_cli_require_complete_fails_plan_only
+    rc = main([
+harness/lib/research/cli.py:4464: in main
+    return handler(args)
+           ^^^^^^^^^^^^^
+harness/lib/research/cli.py:3606: in cmd_survey_eval
+    payload = evaluate_survey(
+E   TypeError: evaluate_survey() got an unexpected keyword argument 'require_golden_style'
+____________ test_survey_eval_includes_enabled_golden_style_issues _____________
+harness/tests/research_survey/test_golden_style_gate.py:72: in test_survey_eval_includes_enabled_golden_style_issues
+    assert result["golden_style"]["enabled"] is True
+           ^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'golden_style'
+_________ test_survey_eval_can_require_golden_style_without_benchmark __________
+harness/tests/research_survey/test_golden_style_gate.py:88: in test_survey_eval_can_require_golden_style_without_benchmark
+    result = evaluate_survey(tmp_path, strict=True, require_golden_style=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: evaluate_survey() got an unexpected keyword argument 'require_golden_style'
+____________ test_survey_eval_strict_fails_on_audience_hygiene_leak ____________
+harness/tests/research_survey/test_golden_style_gate.py:125: in test_survey_eval_strict_fails_on_audience_hygiene_leak
+    assert result["audience_hygiene"]["ok"] is False
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'audience_hygiene'
+_______________ test_survey_pack_attaches_matching_paper_trends ________________
+harness/tests/research_survey/test_paper_enrichment.py:136: in test_survey_pack_attaches_matching_paper_trends
+    assert pack["paper_trend_ids"] == ["trend_agent"]
+           ^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'paper_trend_ids'
+__________________ test_local_command_backend_consumes_stdout __________________
+harness/tests/research_survey/test_section_compiler.py:234: in test_local_command_backend_consumes_stdout
+    assert result["ok"] is True
+E   assert False is True
+______________ test_local_command_backend_records_real_usage_json ______________
+harness/tests/research_survey/test_section_compiler.py:277: in test_local_command_backend_records_real_usage_json
+    assert result["ok"] is True
+E   assert False is True
+_______________ test_local_command_backend_reports_nonzero_exit ________________
+harness/tests/research_survey/test_section_compiler.py:306: in test_local_command_backend_reports_nonzero_exit
+    assert result["writer_error"].startswith("exit_7:")
+E   assert False
+E    +  where False = <built-in method startswith of str object at 0x1074b2e20>('exit_7:')
+E    +    where <built-in method startswith of str object at 0x1074b2e20> = 'exit_2:/bin/sh: -c: line 0: syntax error near unexpected token `(\' /bin/sh: -c: line 0: `/Users/jamesyuan/Developer/...60710-0121-qa-full-audit/tmp/checkout/.venv/bin/python -c \'import sys; print("bad", file=sys.stderr); sys.exit(7)\'\''.startswith
+=============================== warnings summary ===============================
+harness/tests/research_survey/test_cli_survey.py::test_survey_plan_cli
+harness/tests/research_survey/test_cli_survey.py::test_survey_eval_cli_require_complete_fails_plan_only
+harness/tests/research_survey/test_cli_survey.py::test_survey_eval_cli_require_complete_fails_plan_only
+harness/tests/research_survey/test_cli_survey.py::test_survey_diagnose_cli_reports_issue_groups_and_next_action
+harness/tests/research_survey/test_cli_survey.py::test_survey_diagnose_cli_reports_issue_groups_and_next_action
+harness/tests/research_survey/test_cli_survey.py::test_survey_watch_responses_allow_pending
+harness/tests/research_survey/test_finalize_run.py::test_finalize_run_cli
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/research/cli.py:3095: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "generated_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED harness/tests/research_survey/test_auto_continue.py::test_continue_survey_cli_allow_pending
+FAILED harness/tests/research_survey/test_auto_continue.py::test_continue_survey_cli_requires_completion_without_allow_pending
+FAILED harness/tests/research_survey/test_chief_editor.py::test_chief_editor_local_command_records_real_usage_json
+FAILED harness/tests/research_survey/test_cli_survey.py::test_survey_eval_cli_require_complete_fails_plan_only
+FAILED harness/tests/research_survey/test_golden_style_gate.py::test_survey_eval_includes_enabled_golden_style_issues
+FAILED harness/tests/research_survey/test_golden_style_gate.py::test_survey_eval_can_require_golden_style_without_benchmark
+FAILED harness/tests/research_survey/test_golden_style_gate.py::test_survey_eval_strict_fails_on_audience_hygiene_leak
+FAILED harness/tests/research_survey/test_paper_enrichment.py::test_survey_pack_attaches_matching_paper_trends
+FAILED harness/tests/research_survey/test_section_compiler.py::test_local_command_backend_consumes_stdout
+FAILED harness/tests/research_survey/test_section_compiler.py::test_local_command_backend_records_real_usage_json
+FAILED harness/tests/research_survey/test_section_compiler.py::test_local_command_backend_reports_nonzero_exit
+11 failed, 106 passed, 7 warnings in 4.85s

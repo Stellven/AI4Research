@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "sidecar_version": 2,
+  "dispatch_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0034/pytest/test_dispatch_node_evals_autos0/harness/sprints/sprint-autosci-eval-red.paper_ingest-eval-dispatch-q1.md",
+  "session_id": "sprint-autosci-eval-red",
+  "pane": "operator:autosci-evaluator-worker",
+  "dispatch_id": "graph-eval-sprint-autosci-eval-red-paper_ingest-20260710T140628Z-q1",
+  "query": "Ingest supplied paper sources into Solar research paper evidence. N/A [ ] Emits or validates research_paper.v1 evidence.",
+  "changed": true,
+  "context_event_id": "94c0f361-4cec-42be-ba3f-44341de63a92",
+  "duplicate": false,
+  "kb_hit_count": 4,
+  "included_event_count": 0,
+  "context_sources": {
+    "default": 3
+  },
+  "source_counts": {
+    "default": 3
+  },
+  "degraded_sources": [
+    "mirage:nonzero"
+  ],
+  "lineage_refs": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge",
+    "qmd://solar-wiki"
+  ],
+  "source_hash_refs": [],
+  "task_kind": "paper",
+  "required_sources": [
+    "understanding"
+  ],
+  "used_sources": [
+    "default"
+  ],
+  "required_source_policy_ok": false
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/request-envelope.schema.json",
+  "title": "Solar Request Envelope",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "request_id",
+    "raw_text",
+    "source",
+    "classification",
+    "attachments",
+    "repo_context",
+    "created_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "solar.request_envelope.v1"
+    },
+    "request_id": { "type": "string", "minLength": 1 },
+    "raw_text": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "classification": {
+      "type": "object",
+      "required": ["legacy_request_type", "canonical_request_type"],
+      "properties": {
+        "legacy_request_type": {
+          "type": "string",
+          "enum": ["short_impl", "full_spec", "research"]
+        },
+        "canonical_request_type": {
+          "type": "string",
+          "enum": ["implementation", "full_prd", "research"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "attachments": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "repo_context": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "browser.session_contract.v1",
+  "session_id": "chatgpt/alice:9404c2cf70524b7682a970f96e532cd0",
+  "status": "completed",
+  "runtime": "browser_use",
+  "mode": "exclusive",
+  "acquired_at": "2026-07-10T18:49:44Z",
+  "profile_ref": {
+    "schema": "browser.profile_ref.v1",
+    "profile_id": "chatgpt/alice",
+    "storage_state_ref": null,
+    "allowed_account_identifiers": [
+      "alice@example.com"
+    ]
+  },
+  "metadata": {
+    "service": "chatgpt",
+    "wrapper_kind": "chatgpt",
+    "control_modes": {
+      "browser_use_session": true,
+      "playwright_cdp_attach": false,
+      "webwright_bridge": false
+    },
+    "cdp_url": "http://127.0.0.1:9222",
+    "browser_session_ref": "browser-use-session://chatgpt/chatgpt/alice",
+    "login_recovery_report": "login-recovery-report.json",
+    "lease_released": true
+  },
+  "created_at": "2026-07-10T18:49:44Z"
+}

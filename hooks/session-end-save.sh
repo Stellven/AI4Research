@@ -16,14 +16,14 @@ fi
 
 # 2. 检查是否有未文档化的重要讨论
 # 通过检测关键词来判断
-if [ -f "$HOME/.solar/solar.db" ]; then
+if [ -f "$HOME/.solar/db/solar.db" ]; then
   SESSION_ID="$SESSION_ID" PROJECT_DIR="$PROJECT_DIR" python3 - <<'PY' || true
 import json
 import os
 import sqlite3
 from pathlib import Path
 
-db = Path.home() / ".solar" / "solar.db"
+db = Path.home() / ".solar" / "db" / "solar.db"
 session_id = os.environ.get("SESSION_ID") or "unknown"
 project_dir = os.environ.get("PROJECT_DIR") or ""
 memory_id = f"session_end_{session_id}"
@@ -51,7 +51,14 @@ PY
 fi
 
 # 3. 自动 git checkpoint (WIP commit)
+# Disabled by default: this used git add -A on SessionEnd and could sweep
+# unrelated in-progress work into unsolicited WIP commits.
 auto_git_checkpoint() {
+  if [ "${SOLAR_SESSION_END_GIT_CHECKPOINT:-0}" != "1" ]; then
+    echo "[SessionEnd] Git checkpoint disabled (set SOLAR_SESSION_END_GIT_CHECKPOINT=1 to opt in)"
+    return
+  fi
+
   # 检查是否在 git 仓库中
   if ! git rev-parse --is-inside-work-tree &>/dev/null; then
     return

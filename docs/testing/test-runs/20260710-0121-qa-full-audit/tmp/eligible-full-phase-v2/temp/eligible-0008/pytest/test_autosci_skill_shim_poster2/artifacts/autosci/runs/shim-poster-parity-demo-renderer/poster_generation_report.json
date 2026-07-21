@@ -1,0 +1,111 @@
+{
+  "commands": [
+    {
+      "command": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/wiki2dag.py",
+        "build",
+        "--paper-dir",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/poster-parity-paper",
+        "--output",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/dag.json"
+      ],
+      "exit_code": 0,
+      "status": "completed",
+      "stderr": "",
+      "stdout": "[ok] wrote /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/dag.json\n  root: 'Parity Poster Executor'\n  sections: 3\n  visuals: 0\n"
+    },
+    {
+      "command": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/poster.py",
+        "build",
+        "--template",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_template.html",
+        "--outline",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/outline.html",
+        "--output",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html"
+      ],
+      "exit_code": 0,
+      "status": "completed",
+      "stderr": "",
+      "stdout": "{\n  \"command\": \"build\",\n  \"mode\": \"native_template_outline\",\n  \"ok\": true,\n  \"path\": \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html\",\n  \"schema\": \"autosci_poster_cli.v1\",\n  \"status\": \"completed\"\n}\n"
+    },
+    {
+      "command": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/poster.py",
+        "inject-title",
+        "--dag",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/dag.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html"
+      ],
+      "exit_code": 0,
+      "status": "completed",
+      "stderr": "",
+      "stdout": "[ok] title + authors injected into /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html\n"
+    },
+    {
+      "command": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/poster.py",
+        "inject-header",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html"
+      ],
+      "exit_code": 0,
+      "status": "completed",
+      "stderr": "",
+      "stdout": "[ok] header injected into /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html\n  layout:      corners\n  venue:       (none)\n  affiliation: (none)\n  conference:  (none)\n"
+    },
+    {
+      "command": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/poster.py",
+        "inject-figures",
+        "--dag",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/dag.json",
+        "--paper-dir",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/poster-parity-paper",
+        "--poster-dir",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer"
+      ],
+      "exit_code": 0,
+      "status": "completed",
+      "stderr": "",
+      "stdout": "[ok] figures processed:\n  copied:    0\n  converted: 0 (PDF\u2192PNG)\n  missing:   0\n"
+    },
+    {
+      "command": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/poster.py",
+        "validate",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html"
+      ],
+      "exit_code": 0,
+      "status": "completed",
+      "stderr": "",
+      "stdout": "{\n  \"bytes\": 2148,\n  \"command\": \"validate\",\n  \"issues\": [],\n  \"ok\": true,\n  \"path\": \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html\",\n  \"schema\": \"autosci_poster_cli.v1\",\n  \"status\": \"completed\"\n}\n"
+    }
+  ],
+  "dag_path": "artifacts/autosci/runs/shim-poster-parity-demo-renderer/dag.json",
+  "distillation_mode": "extractive_local",
+  "html_path": "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html",
+  "limitations": [
+    "Critique/revise Review LLM pass was not requested; content distillation is extractive and source-bound."
+  ],
+  "outline_path": "artifacts/autosci/runs/shim-poster-parity-demo-renderer/outline.html",
+  "paper_dir": "poster-parity-paper",
+  "schema": "autosci_poster_generation_report.v1",
+  "status": "completed",
+  "template_path": "artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster_template.html",
+  "validation": {
+    "bytes": 2148,
+    "command": "validate",
+    "issues": [],
+    "ok": true,
+    "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_poster2/artifacts/autosci/runs/shim-poster-parity-demo-renderer/poster.html",
+    "schema": "autosci_poster_cli.v1",
+    "status": "completed"
+  }
+}

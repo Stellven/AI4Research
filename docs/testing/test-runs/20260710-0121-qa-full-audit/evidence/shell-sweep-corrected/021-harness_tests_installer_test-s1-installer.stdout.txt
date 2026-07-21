@@ -1,0 +1,81 @@
+
+▶ T1: File inventory
+[32m  ✓ installer/install.sh exists[0m
+[32m  ✓ installer/upgrade.sh exists[0m
+[32m  ✓ installer/doctor.sh exists[0m
+[32m  ✓ installer/restore.sh exists[0m
+[32m  ✓ config/defaults.yaml exists[0m
+[31m  ✗ .env.example MISSING[0m
+[32m  ✓ .gitignore exists[0m
+[32m  ✓ gitleaks.toml exists[0m
+[32m  ✓ docker/Dockerfile exists[0m
+[32m  ✓ docker/smoke-test.sh exists[0m
+[32m  ✓ hooks/pre-commit-secret-scan exists[0m
+[32m  ✓ hooks/pre-push-secret-scan exists[0m
+
+▶ T2: Installer executables
+[32m  ✓ installer/install.sh is executable[0m
+[32m  ✓ installer/upgrade.sh is executable[0m
+[32m  ✓ installer/doctor.sh is executable[0m
+[32m  ✓ installer/restore.sh is executable[0m
+
+▶ T3: Docker & hook executables
+[32m  ✓ docker/smoke-test.sh is executable[0m
+[32m  ✓ hooks/pre-commit-secret-scan is executable[0m
+[32m  ✓ hooks/pre-push-secret-scan is executable[0m
+
+▶ T4: Bash syntax check
+[32m  ✓ installer/install.sh: bash -n PASS[0m
+[32m  ✓ installer/upgrade.sh: bash -n PASS[0m
+[32m  ✓ installer/doctor.sh: bash -n PASS[0m
+[32m  ✓ installer/restore.sh: bash -n PASS[0m
+[32m  ✓ docker/smoke-test.sh: bash -n PASS[0m
+[32m  ✓ hooks/pre-commit-secret-scan: bash -n PASS[0m
+[32m  ✓ hooks/pre-push-secret-scan: bash -n PASS[0m
+
+▶ T5: Doctor --json schema
+[32m  ✓ doctor --json schema valid, no secret leaks[0m
+
+▶ T6: .env.example secret check
+[32m  ✓ .env.example clean (no API key patterns)[0m
+
+▶ T7: defaults.yaml secret check
+[32m  ✓ defaults.yaml clean (no real secrets)[0m
+
+▶ T8: .gitignore coverage
+[31m  ✗ .gitignore missing: .env[0m
+[31m  ✗ .gitignore missing: *.key[0m
+[31m  ✗ .gitignore missing: *.pem[0m
+[31m  ✗ .gitignore missing: run/state.db[0m
+
+▶ T9: gitleaks.toml rule coverage
+[32m  ✓ gitleaks.toml has all required rules[0m
+
+▶ T10: Upgrade --help
+[32m  ✓ upgrade.sh --help works[0m
+
+▶ T11: Restore --list
+[restore] Available snapshots:
+  (no snapshots directory)
+[32m  ✓ restore.sh --list works[0m
+
+▶ T12: Hook structure
+[32m  ✓ pre-commit-secret-scan has proper shebang[0m
+[32m  ✓ pre-push-secret-scan has proper shebang[0m
+
+▶ T13: Cross-slice isolation
+[32m  ✓ S1 scope files only (15 files)[0m
+
+▶ T14: Dockerfile secret check
+[32m  ✓ Dockerfile clean (no secrets)[0m
+
+▶ T15: Smoke test fake keys
+[32m  ✓ smoke-test.sh uses fake keys[0m
+
+┌──────────────────────────────────────────┐
+│  S1 Installer Test Results               │
+├──────────────────────────────────────────┤
+│  PASS: 36   FAIL: 5                     │
+└──────────────────────────────────────────┘
+
+[31m  ✗ S1 TESTS FAILED (5 failures)[0m

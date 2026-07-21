@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_142_eaf3e76689_harness_tests_livework_test_ui_template.py",
+  "source": "harness/tests/livework/test_ui_template.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/livework/test_ui_template.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.146,
+  "timeout": false
+}

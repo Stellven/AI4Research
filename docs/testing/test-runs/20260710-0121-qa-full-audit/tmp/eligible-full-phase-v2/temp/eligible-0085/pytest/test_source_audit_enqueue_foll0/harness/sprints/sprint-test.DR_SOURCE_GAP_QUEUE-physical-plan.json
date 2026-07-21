@@ -1,0 +1,14 @@
+{
+  "schema_version": "solar.physical_plan_node.v1",
+  "node_id": "DR_SOURCE_GAP_QUEUE",
+  "logical_operator": "",
+  "capability_capsule_id": null,
+  "dispatch_task_type": null,
+  "artifact_types": {},
+  "effect_union": {},
+  "proof_obligations": [],
+  "selected_operator_id": "",
+  "execution_candidates": [],
+  "attached_capsules": [],
+  "verifier_plans": []
+}

@@ -1,0 +1,23 @@
+{
+  "sprint_id": "test-sprint-001",
+  "generated_at": "2026-07-10T14:06:48Z",
+  "file_count": 3,
+  "files": {
+    "test-sprint-001.contract.md": {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0066/pytest/test_write_manifest_creates_fi0/sprints/test-sprint-001.contract.md",
+      "size": 38,
+      "sha256": "015fb2c39baba18857424955bc47a17f6d818e6b02dba28902a5b15ae3f14883"
+    },
+    "test-sprint-001.status.json": {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0066/pytest/test_write_manifest_creates_fi0/sprints/test-sprint-001.status.json",
+      "size": 46,
+      "sha256": "2684001b0a4b6b69ba1f768c1d4ce5aadf276c691f1ec42adda7f314bf1a1323"
+    },
+    "test-sprint-001.task_graph.json": {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0066/pytest/test_write_manifest_creates_fi0/sprints/test-sprint-001.task_graph.json",
+      "size": 46,
+      "sha256": "ad45263c27bd2b17fc33f15117ced6e5fce24ac0528b5c26d36fcd8cfd7491fc"
+    }
+  },
+  "manifest_sha256": "18d50401e15b315b2e647e5a6eda58dd7478ea88d746093bb7dfbae2e34c74f2"
+}

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/living-report.v1.draft.json",
+  "title": "Living Report v1",
+  "description": "Draft schema for LivingReport - a research report that updates dynamically with incoming evidence.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": [
+    "report_id",
+    "topic",
+    "active_ast_id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "report_id": {
+      "type": "string"
+    },
+    "topic": {
+      "type": "string"
+    },
+    "active_ast_id": {
+      "type": "string",
+      "description": "The active ReportAST ID associated with the current version of the report."
+    },
+    "watch_schedules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schedule_type",
+          "expression"
+        ],
+        "properties": {
+          "schedule_type": {
+            "type": "string",
+            "enum": [
+              "cron",
+              "trigger",
+              "event"
+            ]
+          },
+          "expression": {
+            "type": "string",
+            "description": "Cron expression or event filter condition."
+          }
+        }
+      }
+    },
+    "update_policy": {
+      "type": "object",
+      "required": [
+        "merge_strategy"
+      ],
+      "properties": {
+        "merge_strategy": {
+          "type": "string",
+          "enum": [
+            "strict_overwrite",
+            "differential_append",
+            "human_review"
+          ]
+        },
+        "auto_promote": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ast_id",
+          "timestamp",
+          "change_summary"
+        ],
+        "properties": {
+          "ast_id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "change_summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "section_id": "ch06/sec03",
+  "chapter_id": "ch06",
+  "title": "工程实现与部署约束：证据链与代表工作",
+  "order": 28,
+  "target_chars": 1666,
+  "research_question": "latent reasoning 在“工程实现与部署约束/证据链与代表工作”上的证据、架构取舍和争议是什么？",
+  "required_source_types": [
+    "paper",
+    "benchmark"
+  ],
+  "min_evidence": 4,
+  "min_claims": 3,
+  "schema_version": "solar.research.survey.v1"
+}

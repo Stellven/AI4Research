@@ -1,0 +1,15 @@
+{
+  "section_id": "ch03/sec01",
+  "chapter_id": "ch03",
+  "title": "核心架构范式：研究问题与术语边界",
+  "order": 9,
+  "target_chars": 1562,
+  "research_question": "latent reasoning 在“核心架构范式/研究问题与术语边界”上的证据、架构取舍和争议是什么？",
+  "required_source_types": [
+    "paper",
+    "official_doc"
+  ],
+  "min_evidence": 4,
+  "min_claims": 3,
+  "schema_version": "solar.research.survey.v1"
+}

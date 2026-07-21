@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_031_006362578c_harness_tests_data_plane_test_mineru_canonical_sources.py",
+  "source": "harness/tests/data_plane/test_mineru_canonical_sources.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/data_plane/test_mineru_canonical_sources.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.253,
+  "timeout": false
+}

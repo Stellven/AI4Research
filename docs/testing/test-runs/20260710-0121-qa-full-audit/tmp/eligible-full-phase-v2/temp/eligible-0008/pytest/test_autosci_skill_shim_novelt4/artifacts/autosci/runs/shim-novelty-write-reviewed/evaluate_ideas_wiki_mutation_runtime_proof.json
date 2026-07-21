@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-07-10T14:04:50Z",
+  "proofs": [
+    {
+      "categories": [
+        "wiki_mutation_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed wiki mutation writeback sidecar for AutoSci parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-novelty-write-reviewed/novelty_writeback.json",
+        "artifacts/autosci/workspace/wiki/ideas/skillgen-writeback.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+        "artifacts/autosci/workspace/wiki/graph/open_questions.md"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:wiki-writeback-sidecar:20260710T140450Z",
+      "provenance": {
+        "artifact_kind": "novelty_writeback.v1",
+        "captured_at": "2026-07-10T14:04:50Z",
+        "command": "evaluate_ideas:wiki_writeback",
+        "source": "wiki_writeback_sidecar"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

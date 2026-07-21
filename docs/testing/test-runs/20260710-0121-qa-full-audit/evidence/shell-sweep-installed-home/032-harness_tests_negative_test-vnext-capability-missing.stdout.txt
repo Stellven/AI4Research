@@ -1,0 +1,2 @@
+PASS N2-NC-4 final=exec_failed reason=capability_missing ledger_events=7
+OK test-vnext-capability-missing.sh

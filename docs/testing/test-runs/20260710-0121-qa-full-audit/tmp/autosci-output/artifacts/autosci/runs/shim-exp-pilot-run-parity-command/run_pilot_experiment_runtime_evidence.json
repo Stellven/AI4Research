@@ -1,0 +1,109 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_executor_stdout.txt",
+      "type": "executor_stdout"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_executor_stderr.txt",
+      "type": "executor_stderr"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_result.json",
+      "type": "pilot_run_result"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/experiment_deploy_report.json",
+      "type": "experiment_deploy_report_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/experiment_run_report.json",
+      "type": "experiment_run_report_json"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "policy:auto:parity_demo:run_pilot_experiment:2026-07-10T05:54:29Z"
+  },
+  "limitations": [
+    "Approved pilot experiment executor ran a real command locally (subject to allowlist and approval contract)."
+  ],
+  "node_id": "node-run-pilot-experiment",
+  "outputs": {
+    "runtime": {
+      "action": "run_pilot_experiment",
+      "approval_ref": "policy:auto:parity_demo:run_pilot_experiment:2026-07-10T05:54:29Z",
+      "checks": [
+        {
+          "check": "command_allowlisted",
+          "detail": "Experiment command selected from allowlist:commands: command allowlist template matched by commands",
+          "status": "ok"
+        },
+        {
+          "check": "exit_code",
+          "detail": "exit_code=2",
+          "status": "error"
+        },
+        {
+          "check": "result_collected",
+          "detail": "False",
+          "status": "warn"
+        },
+        {
+          "check": "result_payload_source",
+          "detail": "not-structured",
+          "status": "warn"
+        }
+      ],
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_pi1/pilot_parity_command.py --experiment-id pilot-parity-001 --marker /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_pi1/pilot-parity-marker.txt",
+      "evidence_ids": [
+        "pilot-runtime:pilot-parity-001"
+      ],
+      "exit_code": 2,
+      "logs": [
+        "Pilot experiment command executed without parseable experiment payload."
+      ],
+      "metric_aggregates": [],
+      "metrics": [
+        {
+          "name": "experiment_exit_code",
+          "value": 2
+        }
+      ],
+      "outcome": "failed",
+      "parsed_record_count": 0,
+      "remote_runtime_evidence_path": "",
+      "result": {
+        "evidence_ids": [
+          "pilot-runtime:pilot-parity-001"
+        ],
+        "experiment_id": "pilot-parity-001",
+        "logs": [
+          "Pilot experiment command executed without parseable experiment payload."
+        ],
+        "metrics": [
+          {
+            "name": "experiment_exit_code",
+            "value": 2
+          }
+        ],
+        "outcome": "failed"
+      },
+      "result_artifacts": [
+        "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_result.json"
+      ],
+      "result_collected": false,
+      "result_path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_result.json",
+      "session_registry_path": "",
+      "status": "failed"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-approved-side-effect-executor",
+    "timestamp": "2026-07-10T05:54:29Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "failed",
+  "task_id": "task-autosci-skillgen-run_pilot_experiment"
+}

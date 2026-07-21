@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_359_a50410ef13_harness_tests_test_graph_dispatcher_multi_task_reconcile.py",
+  "source": "harness/tests/test_graph_dispatcher_multi_task_reconcile.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_graph_dispatcher_multi_task_reconcile.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.355,
+  "timeout": false
+}

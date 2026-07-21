@@ -1,0 +1,23 @@
+{
+  "abstract_excerpt": "This document only describes a historical context.",
+  "allow_network_fetch": false,
+  "arxiv_id": "",
+  "candidate_id": "local:input-no-method-md",
+  "canonical_ingest_path": "raw/input/no-method.md",
+  "entry_id": "local:input-no-method-md",
+  "ingest_format": "directory",
+  "ok": true,
+  "original_format": "md",
+  "prepared_path": null,
+  "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/manual-oracle-phase/pytest-temp/test_missing_method_reports_in0/artifacts/autosci/workspace/raw",
+  "repository_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness",
+  "resolved_source_path": "raw/input/no-method.md",
+  "schema": "autosci_prepare_paper_source_cli.v1",
+  "source_kind": "paper",
+  "source_path": "raw/input/no-method.md",
+  "status": "completed",
+  "title": "no method",
+  "usable": true,
+  "warnings": [],
+  "workspace_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/manual-oracle-phase/pytest-temp/test_missing_method_reports_in0"
+}

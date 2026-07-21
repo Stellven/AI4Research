@@ -1,0 +1,13 @@
+{
+  "edges_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+  "generated_at": "2026-07-10T14:02:39.649030Z",
+  "limitations": [],
+  "projected_edge_count": 2,
+  "run_id": "shim-dollar-skill-ingest",
+  "schema": "autosci_workspace_graph_projection.v1",
+  "source_evidence": [
+    "artifacts/autosci/runs/shim-dollar-skill-ingest/research_graph_update.json"
+  ],
+  "status": "projected",
+  "written_edge_count": 2
+}

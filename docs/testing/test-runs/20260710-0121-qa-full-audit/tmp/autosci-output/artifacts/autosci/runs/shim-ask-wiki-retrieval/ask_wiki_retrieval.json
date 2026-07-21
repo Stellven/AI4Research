@@ -1,0 +1,143 @@
+{
+  "answer_lines": [
+    "- SkillGen validates generated skills with evidence-linked regression tests. Source: [[skillgen]] (`/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki/papers/skillgen.md`)."
+  ],
+  "answer_status": "completed",
+  "crystallize_recommendation": {
+    "gap_status": "no_matching_open_questions",
+    "model_status": "unavailable",
+    "reason": "Crystallize requires retrieved source evidence and completed model synthesis with evidence ids.",
+    "recommendation": "blocked",
+    "retrieval_source_count": 1,
+    "schema": "autosci_ask_crystallize_recommendation.v1",
+    "source": "ask_final_answer_boundary",
+    "status": "blocked"
+  },
+  "final_answer_boundary": {
+    "answer_status": "completed",
+    "blocking_reasons": [
+      "model synthesis status is `unavailable`, not completed with answer and evidence ids"
+    ],
+    "final_answer_ready": false,
+    "limitations": [
+      "Final ask answer requires retrieved source evidence and completed model-backed synthesis with evidence ids."
+    ],
+    "model_confidence": "N/A",
+    "model_evidence_ids": [],
+    "model_name": "",
+    "model_provider": "",
+    "model_source": "",
+    "model_status": "unavailable",
+    "query": "What evidence validates SkillGen skills?",
+    "request_sha256": "",
+    "response_sha256": "",
+    "retrieval_paths": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki/papers/skillgen.md"
+    ],
+    "retrieval_source_count": 1,
+    "retrieval_status": "completed",
+    "schema": "autosci_ask_final_answer_boundary.v1",
+    "status": "ask_final_answer_incomplete"
+  },
+  "gap_annotations": {
+    "annotations": [
+      {
+        "source": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki/graph/open_questions.md",
+        "status": "open_questions_missing",
+        "text": "open_questions.md was not available, so gap matching could not run."
+      }
+    ],
+    "schema": "autosci_ask_gap_annotations.v1",
+    "status": "no_matching_open_questions"
+  },
+  "hits": [
+    {
+      "matched_terms": [
+        "evidence",
+        "validates",
+        "skillgen",
+        "skills"
+      ],
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki/papers/skillgen.md",
+      "score": 8,
+      "snippet": "SkillGen validates generated skills with evidence-linked regression tests."
+    }
+  ],
+  "limitations": [
+    "Extractive answer is grounded in retrieved wiki snippets.",
+    "Model synthesis is included only when explicit model evidence or a model command was supplied."
+  ],
+  "model_output": {
+    "checked_paths": [],
+    "reason": "No model evidence or model command was supplied.",
+    "status": "unavailable"
+  },
+  "query": "What evidence validates SkillGen skills?",
+  "requested_format": "bullets",
+  "status": "completed",
+  "wiki_context": {
+    "limitations": [
+      "Ask context evidence is partial because one or more native context files are missing."
+    ],
+    "query_terms": [
+      "evidence",
+      "validates",
+      "skillgen",
+      "skills"
+    ],
+    "schema": "autosci_ask_wiki_context.v1",
+    "sources": {
+      "context_brief": {
+        "matched_lines": [],
+        "matched_terms": [],
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki/graph/context_brief.md",
+        "status": "missing"
+      },
+      "edges": {
+        "line_count": 1,
+        "matched_edge_count": 1,
+        "matched_edges": [
+          {
+            "edge": {
+              "evidence_ids": [
+                "paper:skillgen"
+              ],
+              "from": "paper:skillgen",
+              "operation": "confirm",
+              "to": "concept:generated-skills",
+              "type": "supports"
+            },
+            "line": 1,
+            "matched_terms": [
+              "evidence",
+              "skillgen",
+              "skills"
+            ]
+          }
+        ],
+        "matched_terms": [
+          "evidence",
+          "skillgen",
+          "skills"
+        ],
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "sha256": "598c88f10beaedd5818557b2906e487ab5f6d06417eb8b981cee2fab343309d2",
+        "status": "present"
+      },
+      "index": {
+        "matched_lines": [],
+        "matched_terms": [],
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki/index.md",
+        "status": "missing"
+      },
+      "open_questions": {
+        "matched_lines": [],
+        "matched_terms": [],
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki/graph/open_questions.md",
+        "status": "missing"
+      }
+    },
+    "status": "partial",
+    "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki"
+  }
+}

@@ -1,0 +1,11 @@
+T1: coordinator syntax
+  PASS: coordinator bash -n
+T2: graph_dispatch_active guarded before parent builder dispatch
+  PASS: graph_dispatch_active condition present
+  PASS: missing graph refuses parent builder dispatch before generic parent builder dispatch
+T3: startup recovery covers active/planning_complete DAG states
+  PASS: startup recovery replays active/planning_complete DAG handoff
+T4: DAG failed_review suppresses legacy builder repair
+  PASS: failed_review DAG guard blocks legacy builder repair before dispatch
+
+=== Graph Active Guard: PASS=5 FAIL=0 ===

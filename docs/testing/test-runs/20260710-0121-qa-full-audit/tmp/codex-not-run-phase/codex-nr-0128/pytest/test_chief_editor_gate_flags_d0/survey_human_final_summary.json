@@ -1,0 +1,93 @@
+{
+  "ok": true,
+  "human_final_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0128/pytest/test_chief_editor_gate_flags_d0/human_final.md",
+  "char_count": 830,
+  "chapter_count": 8,
+  "evidence_note_count": 0,
+  "template_heading_count": 0,
+  "chapter_metrics": [
+    {
+      "chapter_id": "ch01",
+      "positions": 0,
+      "mechanisms": 0,
+      "comparisons": 0,
+      "risks": 0,
+      "open_problems": 0
+    },
+    {
+      "chapter_id": "ch02",
+      "positions": 0,
+      "mechanisms": 0,
+      "comparisons": 0,
+      "risks": 0,
+      "open_problems": 0
+    },
+    {
+      "chapter_id": "ch03",
+      "positions": 0,
+      "mechanisms": 0,
+      "comparisons": 0,
+      "risks": 0,
+      "open_problems": 0
+    },
+    {
+      "chapter_id": "ch04",
+      "positions": 0,
+      "mechanisms": 0,
+      "comparisons": 0,
+      "risks": 0,
+      "open_problems": 0
+    },
+    {
+      "chapter_id": "ch05",
+      "positions": 0,
+      "mechanisms": 0,
+      "comparisons": 0,
+      "risks": 0,
+      "open_problems": 0
+    },
+    {
+      "chapter_id": "ch06",
+      "positions": 0,
+      "mechanisms": 0,
+      "comparisons": 0,
+      "risks": 0,
+      "open_problems": 0
+    },
+    {
+      "chapter_id": "ch07",
+      "positions": 0,
+      "mechanisms": 0,
+      "comparisons": 0,
+      "risks": 0,
+      "open_problems": 0
+    },
+    {
+      "chapter_id": "ch08",
+      "positions": 0,
+      "mechanisms": 0,
+      "comparisons": 0,
+      "risks": 0,
+      "open_problems": 0
+    }
+  ],
+  "execution_metrics": {
+    "sprint_id": "test_chief_editor_gate_flags_d0",
+    "generated_at": "2026-07-10T18:50:39Z",
+    "document_word_count": 287,
+    "document_char_count": 830,
+    "total_token_consumption": 5312,
+    "total_tokens": 5312,
+    "input_tokens": 5104,
+    "output_tokens": 208,
+    "token_usage_source": "estimated_from_report_artifacts",
+    "token_usage_is_estimated": true,
+    "usage_source": "estimated_from_report_artifacts",
+    "estimated": true,
+    "fallback_reason": "no_provider_usage",
+    "token_usage_files": [],
+    "ledger_path": "",
+    "ledger_lines": 0
+  },
+  "execution_metrics_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0128/pytest/test_chief_editor_gate_flags_d0/survey_human_execution_metrics.json"
+}

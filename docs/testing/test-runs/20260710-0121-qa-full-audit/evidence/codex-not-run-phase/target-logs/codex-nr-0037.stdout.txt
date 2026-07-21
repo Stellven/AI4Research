@@ -1,0 +1,2 @@
+=== test-telemetry.sh ===
+Fixture SID: test-telemetry-49739

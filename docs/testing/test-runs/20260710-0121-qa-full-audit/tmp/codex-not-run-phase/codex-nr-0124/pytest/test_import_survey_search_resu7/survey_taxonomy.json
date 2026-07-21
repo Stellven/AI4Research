@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "taxonomy_depth_score": 1.0,
+  "chapter_axes": [
+    "architecture",
+    "contradiction",
+    "definition",
+    "engineering",
+    "evaluation",
+    "history",
+    "risk",
+    "roadmap"
+  ],
+  "required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "observed_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "method_axis_present": true,
+  "evaluation_axis_present": true,
+  "contradiction_axis_present": true
+}

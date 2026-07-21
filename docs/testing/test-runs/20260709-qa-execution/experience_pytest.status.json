@@ -1,0 +1,15 @@
+{
+  "name": "experience_pytest",
+  "command": [
+    "env",
+    "PYTHONPATH=harness",
+    "AUTOSCI_DISABLE_NETWORK_FETCH=1",
+    "harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/experience"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0
+}

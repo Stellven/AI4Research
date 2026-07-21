@@ -1,0 +1,19 @@
+{
+  "id": "sprint-20260710-140625-intent-official-full-runtime-autosc-08181304",
+  "title": "Official full-runtime AutoSci integration test through normal solar intake. Do n",
+  "summary": "Official full-runtime AutoSci integration test through normal solar intake. Do not call a manual autosci shim. The workflow must ingest papers, extract claims, generate ideas, run ",
+  "created_at": "2026-07-10T14:06:26Z",
+  "round": 0,
+  "history": [
+    {
+      "ts": "2026-07-10T14:06:26Z",
+      "event": "compiled_requirement_package_created",
+      "by": "codex-pm-router"
+    }
+  ],
+  "status": "active",
+  "phase": "planning_complete",
+  "handoff_to": "builder_main",
+  "target_role": "builder_main",
+  "updated_at": "2026-07-10T14:06:26Z"
+}

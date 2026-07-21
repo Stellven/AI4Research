@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_210_269a88421b_harness_tests_research_unit_test_citation_span.py",
+  "source": "harness/tests/research_unit/test_citation_span.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research_unit/test_citation_span.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.192,
+  "timeout": false
+}

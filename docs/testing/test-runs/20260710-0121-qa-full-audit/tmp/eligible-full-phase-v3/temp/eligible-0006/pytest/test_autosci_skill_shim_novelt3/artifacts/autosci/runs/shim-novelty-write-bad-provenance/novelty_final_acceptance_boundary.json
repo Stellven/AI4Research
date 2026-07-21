@@ -1,0 +1,61 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "external_novelty provenance status is `failed`, not `passed`",
+        "review_llm status is `unavailable`, not `completed`"
+      ],
+      "evidence_ids": [
+        "skillgen-writeback",
+        "artifacts/autosci/workspace/wiki/ideas/skillgen-writeback.md",
+        "external:semantic_scholar:semantic-scholar-bad-provenance:001",
+        "wiki:ideas/skillgen-writeback",
+        "wiki:papers/skillgen"
+      ],
+      "external_novelty_provenance_status": "failed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "skillgen-writeback",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.645,
+      "novelty_score": 4,
+      "provider_statuses": [
+        {
+          "fetched_at": "",
+          "provider": "supplied_evidence",
+          "query": "",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_novelt3/artifacts/autosci/runs/shim-novelty-write-bad-provenance/external_novelty_payloads/supplied_evidence-78c934fc6927c695.json",
+          "raw_payload_archive_paths": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_novelt3/artifacts/autosci/runs/shim-novelty-write-bad-provenance/external_novelty_payloads/supplied_evidence-78c934fc6927c695.json"
+          ],
+          "raw_payload_archive_status": "completed",
+          "raw_payload_archive_statuses": [
+            "completed"
+          ],
+          "raw_payload_ref": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_novelt3/semantic-scholar-bad-provenance.json",
+          "raw_payload_refs": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_novelt3/semantic-scholar-bad-provenance.json"
+          ],
+          "raw_payload_sha256": "78c934fc6927c695d6333a8258e8092b9650233d9751df5828eb54dfffeec081",
+          "raw_payload_sha256s": [
+            "78c934fc6927c695d6333a8258e8092b9650233d9751df5828eb54dfffeec081"
+          ],
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": false,
+      "review_invocation_mode": "unavailable",
+      "review_llm_status": "unavailable",
+      "review_mode": "local_surrogate",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

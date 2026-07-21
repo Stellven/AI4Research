@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_030_1327640041_harness_tests_control_plane_test-pm-dispatch-builder-ready-dedupe.py",
+  "source": "harness/tests/control_plane/test-pm-dispatch-builder-ready-dedupe.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/control_plane/test-pm-dispatch-builder-ready-dedupe.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.205,
+  "timeout": false
+}

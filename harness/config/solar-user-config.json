@@ -1,27 +1,27 @@
 {
   "version": 1,
-  "updated_at": "2026-05-24T18:09:44Z",
+  "updated_at": "2026-07-02T20:21:53Z",
   "setup_complete": true,
   "user": {
     "display_name": "Solar-Harness",
-    "timezone": "America/Toronto"
+    "timezone": "UTC"
   },
   "paths": {
-    "knowledge_vault": "/Users/lisihao/Knowledge",
-    "raw_dir": "/Users/lisihao/Knowledge/_raw",
-    "harness_dir": "/Users/lisihao/.solar/harness"
+    "knowledge_vault": "~/Knowledge",
+    "raw_dir": "~/Knowledge/_raw",
+    "harness_dir": "~/.solar/harness"
   },
   "models": {
     "planner": "opus",
     "builder": "opus",
     "evaluator": "opus",
-    "lab_builder_matrix": "glm,glm,glm,anthropic-sonnet",
+    "lab_builder_matrix": "anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet",
     "pm": "opus"
   },
   "providers": {
     "zhipu_base_url": "https://api.z.ai/api/anthropic",
     "deepseek_base_url": "https://api.deepseek.com/anthropic",
-    "prefer_zhipu": true
+    "prefer_zhipu": false
   },
   "wiki": {
     "qmd_collection": "solar-wiki",
@@ -29,16 +29,21 @@
     "capture_server_port": 8788
   },
   "mirage": {
-    "enabled": true,
+    "enabled": false,
     "workspace_id": "solar-default",
-    "config_path": "/Users/lisihao/.solar/harness/config/mirage.solar.yaml"
+    "config_path": "~/.solar/harness/config/mirage.solar.yaml"
   },
   "apple_notes": {
-    "enabled": true,
+    "enabled": false,
     "folder": "Solar Inbox",
     "interval_seconds": 7200
   },
   "ui": {
     "open_on_first_run": true
+  },
+  "runtime": "codex",
+  "codex": {
+    "search": true,
+    "effort": "medium"
   }
 }

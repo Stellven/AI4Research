@@ -1,0 +1,36 @@
+---
+skill: browse
+namespace: builtin
+status: stable
+min_score: 0.75
+version: "1.0"
+created_at: "2026-05-09T00:00:00Z"
+
+cases:
+  - id: browse-01
+    description: "Uses playwright MCP not WebSearch"
+    input: "打开 https://example.com 并截图"
+    expect:
+      - uses_playwright: true
+      - not_uses_websearch: true
+    weight: 0.5
+
+  - id: browse-02
+    description: "Extracts page content structurally"
+    input: "获取页面主标题和正文摘要"
+    expect:
+      - has_title: true
+      - has_summary: true
+    weight: 0.3
+
+  - id: browse-03
+    description: "Falls back to browser-use if playwright unavailable"
+    input: "playwright not available"
+    expect:
+      - fallback_to_browser_use: true
+      - not_uses_websearch: true
+    weight: 0.2
+
+scoring:
+  method: weighted_sum
+  pass_threshold: 0.75

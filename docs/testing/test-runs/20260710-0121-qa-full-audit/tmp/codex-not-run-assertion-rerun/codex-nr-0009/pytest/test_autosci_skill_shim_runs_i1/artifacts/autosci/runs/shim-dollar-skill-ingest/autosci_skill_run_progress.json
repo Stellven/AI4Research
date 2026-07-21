@@ -1,0 +1,42 @@
+{
+  "action_count": 2,
+  "actions": [
+    {
+      "action": "ingest_paper",
+      "evidence_ids": [
+        "failed:ingest_paper"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_i1/artifacts/autosci/runs/shim-dollar-skill-ingest/envelopes/ingest_paper.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "analyze_paper",
+      "evidence_ids": [
+        "failed:analyze_paper"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_i1/artifacts/autosci/runs/shim-dollar-skill-ingest/envelopes/analyze_paper.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    }
+  ],
+  "completed_count": 2,
+  "current_action": "",
+  "remaining_actions": [],
+  "run_id": "shim-dollar-skill-ingest",
+  "schema": "autosci_skill_run_progress.v1",
+  "skill": "ingest",
+  "status": "failed",
+  "updated_at": "2026-07-10T19:15:20Z",
+  "work_dir": "artifacts/autosci/runs/shim-dollar-skill-ingest"
+}

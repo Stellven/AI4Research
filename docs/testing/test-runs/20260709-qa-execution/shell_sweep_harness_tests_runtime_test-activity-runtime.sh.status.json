@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_runtime_test-activity-runtime.sh",
+  "source": "harness/tests/runtime/test-activity-runtime.sh",
+  "command": [
+    "bash",
+    "harness/tests/runtime/test-activity-runtime.sh"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.259,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-qb_7bueq"
+}

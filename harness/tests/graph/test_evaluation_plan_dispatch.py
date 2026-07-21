@@ -139,6 +139,75 @@ def test_dispatch_node_evals_keeps_dual_plan_when_quorum_capacity_exists(monkeyp
     assert graph["nodes"][0]["eval_assignments"][1]["role"] == "secondary"
 
 
+def test_busy_evaluator_dispatch_is_backpressure_not_a_failed_dispatch(monkeypatch, tmp_path) -> None:
+    graph = {
+        "sprint_id": "sid-eval-busy",
+        "nodes": [
+            {
+                "id": "N5",
+                "goal": "review blocked by busy evaluator",
+                "status": "reviewing",
+            }
+        ],
+        "node_results": {"N5": {"status": "reviewing"}},
+    }
+    emitted: list[tuple[str, str]] = []
+    saved: dict[str, object] = {}
+
+    monkeypatch.setattr(gnd, "GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES", 1)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path / "sprints")
+    gnd.SPRINTS_DIR.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(gnd, "load_graph", lambda path: graph)
+    monkeypatch.setattr(gnd, "save_graph", lambda path, data: saved.setdefault("graph", data))
+    monkeypatch.setattr(gnd, "_node_eval_needed", lambda *args, **kwargs: True)
+    monkeypatch.setattr(gnd, "_emit_node_proof_sidecars", lambda sid, node: emitted.append((sid, node["id"])) or {"patch_diff": "/tmp/patch.diff"})
+    monkeypatch.setattr(
+        gnd,
+        "_discover_evaluators",
+        lambda dry_run=False: [
+            {"pane": "operator-pool:evaluator.0", "busy": True, "models": ["gpt-5.5"], "skills": ["review"]},
+        ],
+    )
+
+    result = gnd.dispatch_node_evals(str(tmp_path / "sid-eval-busy.task_graph.json"), dry_run=False)
+
+    assert emitted == [("sid-eval-busy", "N5")]
+    assert result["dispatched"] == []
+    assert result["skipped"][0]["reason"] == "evaluator_temporarily_busy"
+    assert result["terminalized"] == []
+    assert "eval_dispatch_failures" not in graph["nodes"][0]
+    assert graph["nodes"][0]["status"] == "reviewing"
+    assert graph["node_results"]["N5"]["status"] == "reviewing"
+    assert saved["graph"] is graph
+
+
+def test_missing_evaluator_capacity_still_escalates_at_the_configured_bound(monkeypatch) -> None:
+    graph = {
+        "sprint_id": "sid-eval-absent",
+        "nodes": [{"id": "N6", "status": "reviewing"}],
+        "node_results": {"N6": {"status": "reviewing"}},
+    }
+    monkeypatch.setattr(gnd, "GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES", 1)
+    monkeypatch.setattr(gnd, "_append_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(gnd, "_record_node_runstate", lambda *args, **kwargs: None)
+
+    terminalized = gnd._account_eval_dispatch_failures(
+        graph,
+        "sid-eval-absent",
+        [{"node": "N6", "reason": "no_available_evaluator"}],
+        False,
+    )
+
+    assert terminalized == [
+        {
+            "node": "N6",
+            "status": "needs_human_review",
+            "reason": "eval_dispatch_unavailable:no_available_evaluator:1_consecutive_failures",
+        }
+    ]
+    assert graph["nodes"][0]["status"] == "needs_human_review"
+
+
 def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path) -> None:
     graph = {"sprint_id": "sid-eval-text"}
     node = {
@@ -166,3 +235,51 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     assert "## Evaluation Plan" in text
     assert "Review Mode: `single`" in text
     assert '"evaluation_plan": {' in text
+
+
+def _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid: str, node_id: str) -> None:
+    handoff = tmp_path / f"{sid}.{node_id}-handoff.md"
+    dispatch = tmp_path / f"{sid}.{node_id}-dispatch.md"
+    monkeypatch.setattr(gnd, "_existing_node_handoff", lambda sid, node, graph: handoff)
+    monkeypatch.setattr(gnd, "_node_handoff_candidates", lambda sid, node, graph: [handoff])
+    monkeypatch.setattr(gnd, "_eval_md_file", lambda sid, node_id: tmp_path / f"{node_id}-eval.md")
+    monkeypatch.setattr(gnd, "_eval_json_file", lambda sid, node_id: tmp_path / f"{node_id}-eval.json")
+    monkeypatch.setattr(gnd, "_dispatch_file", lambda sid, node_id: dispatch)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path)
+    (tmp_path / f"{sid}.contract.md").write_text("# contract\n", encoding="utf-8")
+
+
+def test_build_eval_dispatch_text_does_not_require_research_gate_for_local_audit(monkeypatch, tmp_path) -> None:
+    sid = "sid-local-audit"
+    node = {
+        "id": "N4_compile_audit",
+        "goal": "Compile a local packaging-readiness audit from inspected repository files",
+        "required_capabilities": ["harness.reporting", "report.compile", "source.local.read"],
+        "write_scope": [f"harness/sprints/{sid}.packaging-readiness-audit.md"],
+    }
+    _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid, "N4_compile_audit")
+
+    text = gnd.build_eval_dispatch_text({"sprint_id": sid}, "/tmp/graph.json", node, "solar-harness:0.3", "did")
+
+    assert "DeepResearch deterministic artifact gate is **not required**" in text
+    assert "Do not run `solar-harness research eval-artifacts`" in text
+    assert "generic `report.compile` outputs are judged by this node's acceptance criteria" in text
+    assert "没有 `research_quality_gate.ok=true` 不允许 PASS" not in text
+
+
+def test_build_eval_dispatch_text_requires_research_gate_for_deepresearch_node(monkeypatch, tmp_path) -> None:
+    sid = "sid-deepresearch"
+    node = {
+        "id": "R8_section_fact_check",
+        "goal": "Evaluate DeepResearch citation and factuality quality",
+        "required_capabilities": ["research.report_ast", "citation.verify"],
+        "artifacts": {"research_eval": "out/run-research_eval.json", "report_ast": "out/report_ast.json"},
+    }
+    _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid, "R8_section_fact_check")
+
+    text = gnd.build_eval_dispatch_text({"sprint_id": sid}, "/tmp/graph.json", node, "solar-harness:0.3", "did")
+
+    assert "This node declares DeepResearch claims or report artifacts" in text
+    assert "solar-harness research eval-artifacts --eval-json" in text
+    assert "Do not PASS unless `research_quality_gate.ok=true`" in text
+    assert "DeepResearch deterministic artifact gate is **not required**" not in text

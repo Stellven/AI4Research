@@ -1,0 +1,15 @@
+{
+  "section_id": "ch08/sec02",
+  "chapter_id": "ch08",
+  "title": "产业生态与开源实现：关键机制与设计空间",
+  "order": 30,
+  "target_chars": 1562,
+  "research_question": "latent reasoning 在“产业生态与开源实现/关键机制与设计空间”上的证据、架构取舍和争议是什么？",
+  "required_source_types": [
+    "paper",
+    "code"
+  ],
+  "min_evidence": 4,
+  "min_claims": 3,
+  "schema_version": "solar.research.survey.v1"
+}

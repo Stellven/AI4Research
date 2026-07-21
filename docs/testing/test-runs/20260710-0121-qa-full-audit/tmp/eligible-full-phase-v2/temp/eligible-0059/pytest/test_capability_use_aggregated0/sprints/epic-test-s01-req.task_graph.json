@@ -1,0 +1,1 @@
+{"schema_version": "solar.task_graph.v1", "sprint_id": "epic-test-s01-req", "nodes": [{"id": "N1", "goal": "A", "depends_on": [], "required_capabilities": ["python", "testing"]}, {"id": "N2", "goal": "B", "depends_on": [], "required_capabilities": ["python", "docs"]}], "node_results": {}}

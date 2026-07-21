@@ -1,0 +1,12 @@
+{
+  "backend": "local-command",
+  "model": "claude-opus-4-7",
+  "prompt_tokens": 1520,
+  "completion_tokens": 840,
+  "total_tokens": 2360,
+  "input_tokens": 1520,
+  "output_tokens": 840,
+  "token_usage_source": "provider_usage_ledger",
+  "token_usage_is_estimated": false,
+  "request_id": "fixture-test-real-usage-001"
+}

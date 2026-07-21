@@ -1,0 +1,1251 @@
+version: 1
+name: Tech Hotspot Radar
+description: Unified tech hotspot scanner across YouTube, social media, and GitHub
+
+timezone: America/Toronto
+schedule:
+  daily:
+    hour: 7
+    minute: 17
+  # social boost for high-tier accounts (optional, not always-on default)
+  social_boost:
+    enabled: false
+    interval_hours: 4
+    tier_filter: [tier1]
+
+mac_mini_only: true
+allowed_hostnames:
+  - solar-host.local
+  - solar-host
+  - solar-host.local
+  - solar-host
+
+output:
+  raw_dir: ~/Knowledge/_raw/tech-hotspot-radar
+  state_dir: ~/.solar/harness/state/tech-hotspot-radar
+  database: ~/.solar/harness/state/tech-hotspot-radar/tech-hotspot-radar.sqlite
+  retention_days: 120
+  # legacy output dirs preserved
+  legacy_raw_dirs:
+    youtube: ~/Knowledge/_raw/youtube-influence-digest
+    social: ~/Knowledge/_raw/ai-influence-daily-digest
+
+fetch:
+  timeout_seconds: 20
+  sleep_between_requests_seconds: 3
+  min_source_interval_hours: 6
+  user_agent: Solar-Tech-Hotspot-Radar/1.0 (+local knowledge capture)
+  github_token_env: GITHUB_TOKEN
+
+# ── YouTube source ──────────────────────────────────────────────────
+youtube:
+  enabled: true
+  lookback_hours: 336       # 14 days default
+  hot_track_hours: 720      # 30 days for hot videos
+  max_videos_per_run: 30
+  per_channel_limit: 3
+  history_backfill_days: 90       # first historical import window
+  incremental_backfill_days: 7    # default window after initial backfill
+  backfill_per_channel_limit: 100 # yt-dlp playlist cap per channel
+  keep_seen_days: 45
+  transcript_max_chars: 60000
+  min_transcript_duration_seconds: 600  # do not spend transcript/browser-capture budget on videos under 10 minutes
+  phase_report_reasoner:
+    provider: browser_agent_chatgpt
+    model: chatgpt-5.5
+    reasoning_effort: high
+    frontdoor: chatgpt
+    operator: browser_agent
+    chatgpt_project: 杂项
+    profile_directory: Profile 1
+    target_account_email: ""
+    headless: true
+    scrub_client_state: true
+    open_project_first: true
+    require_project: true
+    timeout_seconds: 1200
+    max_prompt_chars: 180000
+  ai_influence_report_flow:
+    enabled: true
+    planner:
+      provider: browser_agent_chatgpt
+      model: chatgpt-5.5
+      reasoning_effort: high
+      max_catalog_videos: 160
+      input_policy: channel_title_summary_time_only
+    report_writer:
+      provider: browser_agent_chatgpt
+      model: chatgpt-5.5
+      reasoning_effort: high
+      max_prompt_chars: 180000
+      require_plan_file: true
+      chatgpt_project: 杂项
+    notebooklm:
+      enabled: true
+      notebook_name: ""
+      timeout_seconds: 1800
+  asr:
+    enabled: false
+    max_per_run: 0
+    backend: mlx-whisper
+    whisper_model: mlx-community/whisper-small-mlx
+    openai_whisper_model: small
+    language: auto
+    language_strategy: auto-by-channel
+    archive_audio_dir: /Volumes/RAID0-Main/SolarArchive/tech-hotspot-radar/asr-audio
+  languages_priority: [en, zh, auto]
+  channels:
+    - name: "硅谷101"
+      url: "https://www.youtube.com/@valley101podcast"
+      channel_id: UCKV2yWPB3wn0RTZh3cTD8YA
+      category: "AI / Tech / China"
+      priority: tier1
+      scan_rotation_group: 1
+      enabled: true
+    - name: "Google DeepMind"
+      url: "https://www.youtube.com/@googledeepmind"
+      channel_id: UCP7jMXSY2xbc3KCAE0MHQ-A
+      category: "AI / Tech"
+      priority: tier1
+      scan_rotation_group: 1
+      enabled: true
+    - name: "Dwarkesh Clips"
+      url: "https://www.youtube.com/@DwarkeshPatel"
+      channel_id: UCZa18YV7qayTh-MRIrBhDpA
+      category: "AI / Tech"
+      priority: tier1
+      scan_rotation_group: 1
+      enabled: true
+    - name: "a16z Deep Dives"
+      url: "https://www.youtube.com/@a16z"
+      channel_id: UCQ1VQj-37kl2yS_VUhfQHsw
+      category: "AI / Tech"
+      priority: tier1
+      scan_rotation_group: 1
+      enabled: true
+    - name: "All-In Podcast"
+      url: "https://www.youtube.com/@allin"
+      channel_id: UCESLZhusAkFfsNsApnjF_Cg
+      category: "AI / Tech"
+      priority: tier1
+      scan_rotation_group: 1
+      enabled: true
+    - name: "No Priors"
+      url: "https://www.youtube.com/@NoPriorsPodcast"
+      channel_id: UCSI7h9hydQ40K5MJHnCrQvw
+      category: "AI / Tech"
+      priority: tier1
+      scan_rotation_group: 2
+      enabled: true
+    - name: "Y Combinator"
+      url: "https://www.youtube.com/@ycombinator"
+      channel_id: UCxIJaCMEptJjxmmQgGFsnCg
+      category: "AI / Tech"
+      priority: tier1
+      scan_rotation_group: 2
+      enabled: true
+    - name: "AI Engineer"
+      url: "https://www.youtube.com/@aiDotEngineer"
+      channel_id: UCLKPca3kwwd-B59HNr-_lvA
+      category: "AI / Tech"
+      priority: tier1
+      scan_rotation_group: 2
+      enabled: true
+    - name: "Stanford Online"
+      url: "https://www.youtube.com/@stanfordonline"
+      channel_id: UCBa5G_ESCn8Yd4vw5U-gIcg
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 3
+      enabled: true
+    - name: "Microsoft Research"
+      url: "https://www.youtube.com/@MicrosoftResearch"
+      channel_id: UCFtEEv80fQVKkD4h1PF-Xqw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 3
+      enabled: true
+    - name: "UC Berkeley EECS"
+      url: "https://www.youtube.com/@BerkeleyEECS"
+      channel_id: UCYN8R_LpgxCkeVTO_YdVJoA
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 3
+      enabled: true
+    - name: "Databricks"
+      url: "https://www.youtube.com/@Databricks"
+      channel_id: UC3q8O3Bh2Le8Rj1-Q-_UUbA
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 3
+      enabled: true
+    - name: "Google Cloud"
+      url: "https://www.youtube.com/@googlecloudtech"
+      channel_id: UCTMRxtyHoE3LPcrl-kT4AQQ
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 4
+      enabled: true
+    - name: "Google for Developers"
+      url: "https://www.youtube.com/@GoogleDevelopers"
+      channel_id: UC_x5XG1OV2P6uZZ5FSM9Ttw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 4
+      enabled: true
+    - name: "Google"
+      url: "https://www.youtube.com/@Google"
+      channel_id: UCK8sQmJBp8GCxrOtXWBpyEA
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 4
+      enabled: true
+    - name: "Anyscale"
+      url: "https://www.youtube.com/@anyscale"
+      channel_id: UC7L1tZw52rtgmIB4fr_f40w
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 4
+      enabled: true
+    - name: "Sequoia Capital"
+      url: "https://www.youtube.com/@sequoiacapital"
+      channel_id: UCWrF0oN6unbXrWsTN7RctTw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 5
+      enabled: true
+    - name: "Welch Labs"
+      url: "https://www.youtube.com/@WelchLabs"
+      channel_id: UConVfxXodg78Tzh5nNu85Ew
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 5
+      enabled: true
+    - name: "Prime Intellect AI"
+      url: "https://www.youtube.com/@PrimeIntellect"
+      channel_id: UC6rGTty1DwOmGtervkm0ZdQ
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 5
+      enabled: true
+    - name: "Foresight Institute"
+      url: "https://www.youtube.com/@ForesightInstitute"
+      channel_id: UCg5UVUMqXeCQ03MelT_RXMg
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 5
+      enabled: true
+    - name: "Bg2 Pod"
+      url: "https://www.youtube.com/@Bg2Pod"
+      channel_id: UC-yRDvpR99LUc5l7i7jLzew
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 5
+      enabled: true
+    - name: "Beyond the Prompt"
+      url: "https://www.youtube.com/@BeyondthePrompt"
+      channel_id: UCf6iikF27PMQtucPPk5Se6A
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 5
+      enabled: true
+    - name: "Hannah Fry"
+      url: "https://www.youtube.com/@fryrsquared"
+      channel_id: UCsX5upzW0Tk2riDY1WB887w
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 6
+      enabled: true
+    - name: "CSIS"
+      url: "https://www.youtube.com/@csis"
+      channel_id: UCr5jq6MC_VCe1c5ciIZtk_w
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 6
+      enabled: true
+    - name: "USENIX"
+      url: "https://www.youtube.com/@UsenixOrg"
+      channel_id: UC4-GrpQBx6WCGwmwozP744Q
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 6
+      enabled: true
+    - name: "MLOps Clips"
+      url: "https://www.youtube.com/@MLOps"
+      channel_id: UCLAh-x7caEkg2jsbhNmg-3Q
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 6
+      enabled: true
+    - name: "Open Compute Project"
+      url: "https://www.youtube.com/@OpencomputeOrg"
+      channel_id: UCXtmeGWbySLShhGV8ooyMzA
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 6
+      enabled: true
+    - name: "Computer History Museum"
+      url: "https://www.youtube.com/@ComputerHistory"
+      channel_id: UCHDr4RtxwA1KqKGwxgdK4Vg
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 6
+      enabled: true
+    - name: "HubSpot"
+      url: "https://www.youtube.com/@HubSpotLive"
+      channel_id: UCaAx1xeTgF3rs4rBPDq6-Kw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 7
+      enabled: true
+    - name: "Microsoft Azure"
+      url: "https://www.youtube.com/@MicrosoftAzure"
+      channel_id: UCSgzRJMqIiCNtoM6Q7Q9Lqw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 7
+      enabled: true
+    - name: "ODSC"
+      url: "https://www.youtube.com/@ODSCAI"
+      channel_id: UCDS20hpBFiv_Kdp5Ibh0vew
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 7
+      enabled: true
+    - name: "GOTO Conferences"
+      url: "https://www.youtube.com/@GOTO-"
+      channel_id: UCKrD_GYN3iDpG_uMmADPzJQ
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 7
+      enabled: true
+    - name: "ITU AI for Good"
+      url: "https://www.youtube.com/@AIforGood"
+      channel_id: UCQdZWRxu7uCjkCay0OCnvWw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 7
+      enabled: true
+    - name: "Tech Field Day Plus"
+      url: "https://www.youtube.com/@Techfieldday"
+      channel_id: UCisaHnBrJzPtxd5PcCOoSSw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 7
+      enabled: true
+    - name: "ACM India"
+      url: "https://www.youtube.com/@TheOfficialACM"
+      channel_id: UCYoCgErzdpduSIH3Gn9eEFw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 7
+      enabled: true
+    - name: "Silicon Valley Vector"
+      url: "https://www.youtube.com/@SiliconValleyVector"
+      channel_id: UCsiOlr6emY5OxXF848EYqGw
+      category: "AI / Tech / China"
+      priority: rotation
+      scan_rotation_group: 7
+      enabled: true
+    - name: "The Information Bottleneck"
+      url: "https://www.youtube.com/@information_bottleneck"
+      channel_id: UCFPYHur5LvervD60Aba-9cw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 8
+      enabled: true
+    - name: "Alex Kantrowitz"
+      url: "https://www.youtube.com/@Alex.kantrowitz"
+      channel_id: UCye1YedIypHffYb8k6Gp9wg
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 8
+      enabled: true
+    - name: "Joe Lonsdale Clips"
+      url: "https://www.youtube.com/@Joe_Lonsdale"
+      channel_id: UCDsI6JSuLRNjPGzSqEmya-Q
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 8
+      enabled: true
+    - name: "Lightspeed VP"
+      url: "https://www.youtube.com/@lightspeedvp"
+      channel_id: UCbBKrunbELcj5firUyU3jag
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 8
+      enabled: true
+    - name: "Berkeley RDI"
+      url: "https://www.youtube.com/@BerkeleyRDI"
+      channel_id: UCB67PxhB5LAWEbI4etQS7aw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 8
+      enabled: true
+    - name: "S3 | Science, Startups, & Stories"
+      url: "https://www.youtube.com/@sciencestartupsandstories"
+      channel_id: UC0-7PyfpOIJpNyi8WrHiyXA
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 8
+      enabled: true
+    - name: "Moonshots Clips"
+      url: "https://www.youtube.com/@peterdiamandis"
+      channel_id: UCCpNQKYvrnWQNjZprabMJlw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 8
+      enabled: true
+    - name: "PeopleReign"
+      url: "https://www.youtube.com/@peoplereign"
+      channel_id: UCAx_FhZKhp1oVCuedd_nrtg
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 9
+      enabled: true
+    - name: "Connected DMV"
+      url: "https://www.youtube.com/@connecteddmv3554"
+      channel_id: UC5C-hbqp9M3paU-l6QaNYqw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 9
+      enabled: true
+    - name: "Funding the Commons"
+      url: "https://www.youtube.com/@Funding-the-Commons"
+      channel_id: UCjxkd3ik9DFb7DTV5MMRygQ
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 9
+      enabled: true
+    - name: "London Clojurians"
+      url: "https://www.youtube.com/@LondonClojurians"
+      channel_id: UC-pYfofTyvVDMwM4ttfFGqw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 9
+      enabled: true
+    - name: "NYT Events"
+      url: "https://www.youtube.com/@NewYorkTimesEvents"
+      channel_id: UCtZNqEGzfQ6jO4SXWz51bRw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 9
+      enabled: true
+    - name: "Interesting Times"
+      url: "https://www.youtube.com/@InterestingTimesNYT"
+      channel_id: UCJugC7hlL5uNoii46ICyUvw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 9
+      enabled: true
+    - name: "WhynotTV"
+      url: "https://www.youtube.com/@whynottv1999"
+      channel_id: UC5xLV_gJAP9psKcyrJ3ZIcw
+      category: "AI / Tech"
+      priority: rotation
+      scan_rotation_group: 9
+      enabled: true
+  hot_score_weights:
+    view_velocity: 0.30
+    engagement_velocity: 0.20
+    channel_weight: 0.20
+    semantic_importance: 0.15
+    novelty: 0.10
+    cross_source_signal: 0.05
+
+# ── Social / X source ──────────────────────────────────────────────
+social:
+  enabled: true
+  lookback_hours: 36
+  max_items_per_run: 120
+  per_account_limit: 3
+  keep_seen_days: 21
+  rotation_accounts_per_run: 45
+  cluster_window_hours: 48
+  fetch:
+    timeout_seconds: 12
+    sleep_between_accounts_seconds: 0.2
+    rss_templates:
+      - "https://nitter.net/{handle}/rss"
+      - "https://xcancel.com/{handle}/rss"
+      - "https://rsshub.app/twitter/user/{handle}"
+    duckduckgo_enabled: true
+    duckduckgo_limit_per_account: 2
+  rss_failure_policy:
+    # These high-value accounts have repeatedly broken public RSS mirrors.
+    # Do not mark the whole social run partial for them; enqueue browser fallback
+    # so the expensive/profile-dependent path can recover them separately.
+    browser_fallback_handles:
+      - clemens_
+      - jimkellerpa
+      - mustafasuleyman
+    browser_fallback_after_failures: 8
+    browser_fallback_retry_hours: 6
+  category_weights:
+    core_leader: 1.50
+    paper_research: 1.30
+    ai_lab: 1.40
+    open_source: 1.25
+    chip_semiconductor: 1.20
+    agent_coding: 1.25
+    multimodal: 1.10
+    investment_trend: 1.00
+    chinese_circle: 1.10
+    deepseek_supplement: 1.15
+    safety_governance: 1.20
+  tier_weights:
+    tier1: 1.50
+    tier2: 1.00
+  event_types:
+    - model_release
+    - paper_release
+    - product_launch
+    - open_source_release
+    - agent_workflow
+    - chip_compute
+    - funding_market
+    - safety_governance
+    - china_ai
+    - multimodal
+    - infra_systems
+  accounts:
+    # Tier 1 — core leaders & top labs
+    - handle: sama
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: karpathy
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: ylecun
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: demishassabis
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: gdb
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: ilyasut
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: AndrewYNg
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: drfeifei
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: aravind
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: AnthropicAI
+      category: ai_lab
+      tier: tier1
+      enabled: true
+    - handle: OpenAI
+      category: ai_lab
+      tier: tier1
+      enabled: true
+    - handle: GoogleDeepMind
+      category: ai_lab
+      tier: tier1
+      enabled: true
+    - handle: deepseek_ai
+      category: ai_lab
+      tier: tier1
+      enabled: true
+    - handle: GoogleAI
+      category: ai_lab
+      tier: tier1
+      enabled: true
+    - handle: Alibaba_Qwen
+      category: ai_lab
+      tier: tier1
+      enabled: true
+    - handle: Kimi_Moonshot
+      category: ai_lab
+      tier: tier1
+      enabled: true
+    - handle: NVIDIA
+      category: chip_semiconductor
+      tier: tier1
+      enabled: true
+    - handle: AMD
+      category: chip_semiconductor
+      tier: tier1
+      enabled: true
+    - handle: LisaSu
+      category: chip_semiconductor
+      tier: tier1
+      enabled: true
+    - handle: JeffDean
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: fchollet
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: darioamodei
+      category: core_leader
+      tier: tier1
+      enabled: true
+    - handle: _akhaliq
+      category: paper_research
+      tier: tier1
+      enabled: true
+    - handle: DrJimFan
+      category: paper_research
+      tier: tier1
+      enabled: true
+    - handle: ThomasWolf7
+      category: open_source
+      tier: tier1
+      enabled: true
+    - handle: ggerganov
+      category: open_source
+      tier: tier1
+      enabled: true
+    - handle: swyx
+      category: agent_coding
+      tier: tier1
+      enabled: true
+    - handle: rowancheung
+      category: agent_coding
+      tier: tier1
+      enabled: true
+    - handle: GergelyOrosz
+      category: investment_trend
+      tier: tier1
+      enabled: true
+    - handle: dotey
+      category: chinese_circle
+      tier: tier1
+      enabled: true
+    # Tier 2 — chip, research, infra, agents, multimodal, investment
+    - handle: dylan522p
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: MyNameIs_Sravan
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: dnystedt
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: fool_investor
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: stacyrasgon
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: PatrickMoorhead
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: IanCutress
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: _hemanth
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: TheChipLetter
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: CrMiller
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: Asianometry
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: NVIDIAGBD
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: PGelsinger
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: Arm
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: ReneHaas
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: asmlholding
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: JamesS_Waterson
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: _Komiya_kj
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: risc_v
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: SK_Kwon
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: _jasonwei
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: chrmanning
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: AidanGomez
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: NoamBrown
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: quocle
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: OriolVinyalsML
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: hardmaru
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: denny_zhou
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: MiniMax_AI
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: Hailuo_AI
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: midjourney
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: MetaAI
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: AmandaAskell
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: model_mechanic
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: LiamFedus
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: miramurati
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: shanelegG
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: ArthurMensch
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: abacaj
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: answerdotai
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: ocoleman
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: Teknium1
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: dzhulgakov
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: tri_dao
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: itak_
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: may_ferris
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: mckaywrigley
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: amanrsanger
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: an_p_
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: shans_
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: HassanElMghari
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: Varun_Mayya
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: EMostaque
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: c_valenzuelab
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: Runwayml
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: LumaLabsAI
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: pika_art
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: LinusEkenstam
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: _j_howard
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: levelsio
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: TheRealAdamG
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: bilawalsidhu
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: krea_ai
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: BenjaminDEKR
+      category: multimodal
+      tier: tier2
+      enabled: true
+    - handle: altcap
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: GavinSBaker
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: arjunsethi
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: benedictevans
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: eladgil
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: natfriedman
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: danielnewmanUV
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: chamath
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: jason
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: danielgross
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: benthompson
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: vkhosla
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: bindureddy
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: the_wildindex
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: skirano
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: rileygoodside
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: minchoi
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: aisera
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: TheRundownAI
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: Superhuman_AI
+      category: agent_coding
+      tier: tier2
+      enabled: true
+    - handle: wx_lanxi
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: muyao
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: guizang9
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: keshuo
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: oran_ge
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: nunu_li
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: _will_fang
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: _forrestli
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: float_spirit
+      category: chinese_circle
+      tier: tier2
+      enabled: true
+    - handle: katecrawford
+      category: safety_governance
+      tier: tier2
+      enabled: true
+    - handle: mmitchell_ai
+      category: safety_governance
+      tier: tier2
+      enabled: true
+    - handle: paulchristiano
+      category: safety_governance
+      tier: tier2
+      enabled: true
+    - handle: StanfordHAI
+      category: safety_governance
+      tier: tier2
+      enabled: true
+    - handle: roboticsth
+      category: deepseek_supplement
+      tier: tier2
+      enabled: true
+    - handle: andyzeng
+      category: deepseek_supplement
+      tier: tier2
+      enabled: true
+    - handle: Scale_AI
+      category: deepseek_supplement
+      tier: tier2
+      enabled: true
+    - handle: snorkelai
+      category: deepseek_supplement
+      tier: tier2
+      enabled: true
+    - handle: GoogleHealth
+      category: deepseek_supplement
+      tier: tier2
+      enabled: true
+    - handle: SalKhan
+      category: deepseek_supplement
+      tier: tier2
+      enabled: true
+    - handle: SonyAI_global
+      category: deepseek_supplement
+      tier: tier2
+      enabled: true
+    - handle: PreferredNet
+      category: deepseek_supplement
+      tier: tier2
+      enabled: true
+    - handle: MistralAI
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: AlephAlpha
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: Cohere
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: "01-ai"
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: BAAI_Beijing
+      category: ai_lab
+      tier: tier2
+      enabled: true
+    - handle: yudapearl
+      category: core_leader
+      tier: tier2
+      enabled: true
+    - handle: iamtrask
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: mlpowered
+      category: paper_research
+      tier: tier2
+      enabled: true
+    - handle: tim_dettmers
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: soumithchintala
+      category: core_leader
+      tier: tier2
+      enabled: true
+    - handle: jeremyphoward
+      category: open_source
+      tier: tier2
+      enabled: true
+    - handle: CathieDWood
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: ruchirshah_
+      category: investment_trend
+      tier: tier2
+      enabled: true
+    - handle: jimkellerpa
+      category: chip_semiconductor
+      tier: tier2
+      enabled: true
+    - handle: mustafasuleyman
+      category: core_leader
+      tier: tier2
+      enabled: true
+    - handle: clemens_
+      category: core_leader
+      tier: tier2
+      enabled: true
+  hot_score_weights:
+    engagement_velocity: 0.25
+    account_weight: 0.20
+    semantic_importance: 0.20
+    network_spread: 0.15
+    novelty: 0.10
+    cross_source_signal: 0.10
+
+# ── GitHub source ──────────────────────────────────────────────────
+github:
+  enabled: true
+  github_token_env: GITHUB_TOKEN
+  snapshot_append_only: true
+  external_sources:
+    trendshift:
+      enabled: true
+      base_url: https://trendshift.io
+      periods: [daily, weekly, monthly]
+      limit: 25
+      collect_topics: true
+      topic_limit: 25
+      max_topics: 0
+      role: external_rank_cross_signal
+  trend_buckets:
+    - agent_runtime
+    - agent_skill
+    - coding_agent
+    - context_engineering
+    - inference_compute
+    - training_framework
+    - infra_os
+    - robotics_physical_ai
+    - market_signal
+  topics:
+    - name: ai
+      category: ai
+      query: "ai OR llm OR agent"
+      enabled: true
+    - name: large-model
+      category: ai
+      query: "llm OR transformer OR reasoning"
+      enabled: true
+    - name: training-framework
+      category: training_framework
+      query: "training OR finetune OR distributed"
+      enabled: true
+    - name: compute-framework
+      category: compute_framework
+      query: "cuda OR triton OR inference OR mlx"
+      enabled: true
+    - name: agent-skill
+      category: agent
+      query: "agent OR mcp OR skill"
+      enabled: true
+    - name: infra-software
+      category: infra_os
+      query: "os OR db OR compiler OR middleware"
+      enabled: true
+    - name: context-engineering
+      category: agent
+      query: "context engineering OR agent memory OR knowledge graph"
+      enabled: true
+    - name: ai-coding-agent
+      category: agent
+      query: "claude code OR codex OR coding agent OR mcp"
+      enabled: true
+    - name: physical-ai-robotics
+      category: ai
+      query: "robotics OR physical ai OR vla OR embodied ai"
+      enabled: true
+  tracked_repos:
+    - anthropics/claude-plugins-official
+    - mattpocock/skills
+    - addyosmani/agent-skills
+    - colbymchenry/codegraph
+    - ChromeDevTools/chrome-devtools-mcp
+    - obra/superpowers
+    - rohitg00/agentmemory
+    - multica-ai/andrej-karpathy-skills
+    - TauricResearch/TradingAgents
+
+# ── Research paper source ─────────────────────────────────────────
+huggingface_papers:
+  enabled: true
+  daily_url: https://huggingface.co/papers
+  trending_url: https://huggingface.co/papers/trending
+  periods: [daily, weekly, monthly]
+  timeout_seconds: 30
+  user_agent: "Mozilla/5.0 TechHotspotRadar/1.0"
+  hot_score_weights:
+    star_growth: 0.30
+    recent_activity: 0.20
+    release_signal: 0.15
+    semantic_relevance: 0.15
+    social_cross_signal: 0.10
+    maintainer_quality: 0.10
+  alert_rules:
+    tracked_repo_24h_star_growth_pct:
+      threshold_pct: 10
+      severity: high
+    new_release:
+      severity: medium
+    new_repo_7d_topic_top5:
+      severity: high
+    tier1_social_mention:
+      severity: high
+    cross_source_youtube_social:
+      severity: critical
+    readme_keywords:
+      keywords: [mcp, "agent memory", codex, triton, vla]
+      severity: medium
+    repo_archived_deleted:
+      severity: high
+
+hf_paper_insight:
+  reporting:
+    cadence: weekly
+    lookback_days: 7
+    merge_daily_hotspots: true
+    core_paper_limit: 12
+    supporting_paper_limit: 24
+  high_reasoning:
+    mode: browser_agent
+    model: chatgpt-5.5
+    reasoning_effort: high
+    operator_kind: chapter_writer
+    profile_directory: Profile 1
+    target_account_email: ""
+    headless: true
+    scrub_client_state: false
+    open_project_first: false
+    require_project: false
+    force_new_chat: true
+    require_isolated_conversation: true

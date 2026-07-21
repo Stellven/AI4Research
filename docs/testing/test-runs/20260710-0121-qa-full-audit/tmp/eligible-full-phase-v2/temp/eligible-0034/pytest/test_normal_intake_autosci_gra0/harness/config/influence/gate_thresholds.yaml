@@ -1,0 +1,7 @@
+# Quantitative thresholds consumed by lib/influence/gates.py.
+# Loaded as a plain dict and passed into gate functions; no file I/O inside gates.
+statement_min_chars: 12
+thesis_min_confidence: 0.3
+thesis_min_claim_chars: 20
+evidence_min_local_scores: 7
+transcript_min_quality: low

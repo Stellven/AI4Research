@@ -1,0 +1,9 @@
+{
+  "name": "script_check_dry_run",
+  "command": [
+    "bash",
+    "scripts/check-dry-run.sh"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0
+}

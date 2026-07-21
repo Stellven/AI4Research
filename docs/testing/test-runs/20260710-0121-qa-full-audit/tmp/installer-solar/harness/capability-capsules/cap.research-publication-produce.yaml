@@ -1,0 +1,96 @@
+capability_capsule_id: cap.research-publication-produce
+capsule_kind: capability
+metadata:
+  name: Scientific Publication Produce
+  description: Produce publication bundles such as papers, posters, rebuttals, slides, or supplements from report evidence.
+applicability:
+  task_types:
+    - scientific-research
+    - publication-production
+  positive_signals:
+    - produce publication
+    - compile paper
+    - create poster
+    - write rebuttal
+  negative_signals:
+    - extract claims
+    - run experiment
+contract:
+  inputs:
+    required:
+      - name: scientific_report
+        schema_ref: schemas/evidence/scientific_report.v1.schema.json
+    optional:
+      - name: publication_target
+        description: Paper, poster, rebuttal, slides, supplement, or mixed bundle.
+  outputs:
+    required:
+      - name: publication_bundle
+        schema_ref: schemas/evidence/publication_bundle.v1.schema.json
+    optional:
+      - name: build_logs
+        description: Compile, render, or export logs as artifacts.
+  preconditions:
+    - check: report_evidence_available
+      description: Source report evidence exists and unsupported claims are explicit.
+  postconditions:
+    - check: bundle_manifest_emitted
+      description: Publication files, source report id, and evidence ids are recorded.
+  invariants:
+    - Publication output remains traceable to report and evidence ids.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      purpose: Source report or paper draft evidence.
+  produces:
+    - schema_ref: schemas/evidence/publication_bundle.v1.schema.json
+      purpose: Publication bundle evidence.
+  compatible_with:
+    - cap.research-report-draft
+  incompatible_with:
+    - cap.research-experiment-run
+  requires_after:
+    - cap.research-report-draft
+effects:
+  read:
+    - report artifacts and source evidence
+    - schemas/evidence/publication_bundle.v1.schema.json
+  write:
+    - artifacts/scientific/publication_bundle/
+    - optional build outputs
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - none by default
+  cost:
+    - bounded render and compile cost
+  risk:
+    - publication artifacts can hide unsupported claims if source report is weak
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.publication_produce
+      - autosci.poster
+      - autosci.rebuttal
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/publication_bundle.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against publication_bundle.v1.schema.json.
+    - Confirm bundle files point back to source_report_id and evidence ids.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - Fixture bundle emits valid publication_bundle.v1 evidence.
+    - Missing build outputs produce failed or inconclusive evidence.
+operator_compatibility:
+  preferred:
+    - ScientificPublicationProducer
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

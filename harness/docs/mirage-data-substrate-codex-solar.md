@@ -10,8 +10,8 @@ Make `solar-harness mirage` the canonical read/search surface for Codex, Solar H
 Codex / Claude / Solar panes
   │
   ├─ read/search → solar-harness mirage search|exec
-  │                 ├─ /knowledge → /Users/sihaoli/Knowledge
-  │                 ├─ /raw       → /Users/sihaoli/Knowledge/_raw
+  │                 ├─ /knowledge → ~/Knowledge
+  │                 ├─ /raw       → ~/Knowledge/_raw
   │                 ├─ /sprints   → Solar sprint artifacts
   │                 ├─ /cortex    → Cortex store/code
   │                 ├─ /qmd       → qmd/mineru semantic search

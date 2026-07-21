@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_419_2707e74f83_harness_tests_test_reasonix_advisory_routing.py",
+  "source": "harness/tests/test_reasonix_advisory_routing.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_reasonix_advisory_routing.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.2,
+  "timeout": false
+}

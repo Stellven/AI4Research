@@ -1,0 +1,34 @@
+{
+  "schema": "idea_evaluation.v1",
+  "task_id": "task.phase1.sample.idea_eval",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.idea_evaluate",
+  "status": "completed",
+  "inputs": {
+    "idea_id": "idea.sample.001"
+  },
+  "outputs": {
+    "evaluations": [
+      {
+        "idea_id": "idea.sample.001",
+        "novelty": 0.66,
+        "feasibility": 0.78,
+        "recommendation": "advance",
+        "risks": ["Fixture data does not prove external novelty."],
+        "evidence_ids": ["idea.sample.001", "claim.sample.001"]
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "idea_evaluation",
+      "path": "artifacts/scientific/fixtures/idea_evaluation.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificIdeaEvaluator",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": ["Fixture evaluation is bounded to sample evidence."]
+}

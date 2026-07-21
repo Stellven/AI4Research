@@ -1,0 +1,18 @@
+{
+  "schema_version": "solar.epic.traceability.v1",
+  "epic_id": "epic-20260710-official-full-runtime-autosci-integration-test",
+  "title": "Official full-runtime AutoSci integration test",
+  "created_at": "2026-07-10T18:52:32Z",
+  "workflow_contract": "research.autosci.v1",
+  "raw_request_chars": 802,
+  "children": [
+    {
+      "node_id": "S01_autosci_workflow",
+      "sprint_id": "sprint-20260710-official-full-runtime-autosci-integration-test-s01-autosci-workflow",
+      "slice": "autosci-workflow",
+      "title": "AutoSci 合同化研究工作流",
+      "depends_on": [],
+      "status": "active"
+    }
+  ]
+}

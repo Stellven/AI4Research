@@ -1,0 +1,7 @@
+{
+  "stage": "builder",
+  "leaf_backend": "codex",
+  "return_code": 0,
+  "stdout": "builder ok\n",
+  "stderr": ""
+}

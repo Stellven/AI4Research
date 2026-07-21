@@ -1,0 +1,43 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/workflow-runs/priority-a-scientific-root-contract/paper_ingest/task-priority-a-scientific-root-contract-paper_ingest/research_memory_update.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allow_network_fetch": false,
+    "paper_id": "paper-priority-a-scientific-root-contract",
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0114/pytest/test_scientific_workflow_runne0/harness/raw/priority-a-paper.md",
+    "workflow_id": "scientific_research_lifecycle_full_v1",
+    "workflow_runner": "generic_workflow_runner"
+  },
+  "limitations": [
+    "Fixture proposes a memory update; it does not mutate wiki state."
+  ],
+  "node_id": "paper_ingest",
+  "outputs": {
+    "changes": [
+      {
+        "confidence": 0.9,
+        "entity_id": "paper-priority-a-scientific-root-contract",
+        "entity_type": "paper",
+        "evidence_ids": [
+          "paper-priority-a-scientific-root-contract"
+        ],
+        "operation": "propose",
+        "path": "knowledge/research/papers/paper-priority-a-scientific-root-contract.md",
+        "summary": "Propose recording normalized metadata for Priority A Scientific Root."
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T14:07:02Z"
+  },
+  "schema": "research_memory_update.v1",
+  "sprint_id": "priority-a-scientific-root-contract",
+  "status": "completed",
+  "task_id": "task-priority-a-scientific-root-contract-paper_ingest"
+}

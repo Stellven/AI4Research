@@ -1,0 +1,270 @@
+{
+  "ok": false,
+  "mode": "fast",
+  "generated_at": "2026-07-13T16:26:52Z",
+  "harness": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness",
+  "evidence_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence",
+  "dimensions": {
+    "complete": "能力清单、插件、skill、capability registry 有覆盖。",
+    "default": "默认 dispatch/coordinator/DAG 路径会注入能力上下文。",
+    "automatic": "无需人工挑 skill，任务文本自动命中 intent/capability。",
+    "usable": "CLI、脚本、runtime、pane 配置能实际运行。",
+    "effective": "正例命中、负例不乱命中，benchmark 有分数和证据。",
+    "evidence": "每个判断都有 JSON/Markdown/命令输出证据。"
+  },
+  "summary": {
+    "total": 10,
+    "ok": 5,
+    "warn": 0,
+    "error": 5,
+    "blocking_ids": [
+      "graph-dispatcher",
+      "model-call-runtime",
+      "capability-plane-e2e",
+      "expanded-capability-plane",
+      "ruflo-integration"
+    ],
+    "warn_ids": [],
+    "dimensions": {
+      "complete": {
+        "description": "能力清单、插件、skill、capability registry 有覆盖。",
+        "total": 3,
+        "ok": 0,
+        "warn": 0,
+        "error": 3
+      },
+      "default": {
+        "description": "默认 dispatch/coordinator/DAG 路径会注入能力上下文。",
+        "total": 4,
+        "ok": 1,
+        "warn": 0,
+        "error": 3
+      },
+      "automatic": {
+        "description": "无需人工挑 skill，任务文本自动命中 intent/capability。",
+        "total": 3,
+        "ok": 2,
+        "warn": 0,
+        "error": 1
+      },
+      "usable": {
+        "description": "CLI、脚本、runtime、pane 配置能实际运行。",
+        "total": 6,
+        "ok": 2,
+        "warn": 0,
+        "error": 4
+      },
+      "effective": {
+        "description": "正例命中、负例不乱命中，benchmark 有分数和证据。",
+        "total": 3,
+        "ok": 3,
+        "warn": 0,
+        "error": 0
+      },
+      "evidence": {
+        "description": "每个判断都有 JSON/Markdown/命令输出证据。",
+        "total": 2,
+        "ok": 1,
+        "warn": 0,
+        "error": 1
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "syntax-core",
+      "name": "Core syntax gate",
+      "status": "ok",
+      "ok": true,
+      "blocking": false,
+      "exit_code": 0,
+      "duration_s": 0.054,
+      "dimensions": [
+        "usable"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/syntax-core.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/syntax-core.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/syntax-core.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "bash-syntax",
+      "name": "solar-harness.sh bash syntax",
+      "status": "ok",
+      "ok": true,
+      "blocking": false,
+      "exit_code": 0,
+      "duration_s": 0.012,
+      "dimensions": [
+        "usable"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/bash-syntax.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/bash-syntax.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/bash-syntax.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "intent-adapter",
+      "name": "Intent adapter direct/hint/learned DB",
+      "status": "ok",
+      "ok": true,
+      "blocking": false,
+      "exit_code": 0,
+      "duration_s": 0.785,
+      "dimensions": [
+        "automatic",
+        "effective"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/intent-adapter.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/intent-adapter.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/intent-adapter.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "skills-inject",
+      "name": "Skills/context/capability/intent inject idempotency",
+      "status": "ok",
+      "ok": true,
+      "blocking": false,
+      "exit_code": 0,
+      "duration_s": 0.741,
+      "dimensions": [
+        "default",
+        "automatic",
+        "effective"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/skills-inject.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/skills-inject.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/skills-inject.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "graph-dispatcher",
+      "name": "DAG graph node dispatcher inject path",
+      "status": "error",
+      "ok": false,
+      "blocking": true,
+      "exit_code": 1,
+      "duration_s": 0.689,
+      "dimensions": [
+        "default",
+        "automatic"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/graph-dispatcher.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/graph-dispatcher.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/graph-dispatcher.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "model-call-runtime",
+      "name": "Model-call runtime event bridge",
+      "status": "error",
+      "ok": false,
+      "blocking": true,
+      "exit_code": 2,
+      "duration_s": 0.035,
+      "dimensions": [
+        "default",
+        "usable",
+        "evidence"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/model-call-runtime.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/model-call-runtime.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/model-call-runtime.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "capability-plane-e2e",
+      "name": "Capability plane E2E",
+      "status": "error",
+      "ok": false,
+      "blocking": true,
+      "exit_code": 1,
+      "duration_s": 4.567,
+      "dimensions": [
+        "complete",
+        "usable"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/capability-plane-e2e.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/capability-plane-e2e.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/capability-plane-e2e.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "expanded-capability-plane",
+      "name": "Expanded capability plane E2E",
+      "status": "error",
+      "ok": false,
+      "blocking": true,
+      "exit_code": 1,
+      "duration_s": 4.232,
+      "dimensions": [
+        "complete",
+        "usable"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/expanded-capability-plane.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/expanded-capability-plane.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/expanded-capability-plane.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "ruflo-integration",
+      "name": "Ruflo safe vendor capability",
+      "status": "error",
+      "ok": false,
+      "blocking": true,
+      "exit_code": 1,
+      "duration_s": 0.306,
+      "dimensions": [
+        "complete",
+        "default",
+        "usable"
+      ],
+      "evidence": {
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/ruflo-integration.json",
+        "stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/ruflo-integration.stdout.txt",
+        "stderr": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/commands/ruflo-integration.stderr.txt"
+      },
+      "allow_fail_reason": ""
+    },
+    {
+      "id": "negative-controls",
+      "name": "Negative controls",
+      "status": "ok",
+      "ok": true,
+      "blocking": false,
+      "exit_code": 0,
+      "duration_s": 0,
+      "dimensions": [
+        "effective",
+        "evidence"
+      ],
+      "checks": {
+        "inject_ok": true,
+        "has_context": true,
+        "no_false_provider": true,
+        "fake_missing_capability_fails": true
+      },
+      "evidence": {
+        "injected": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/negative/negative.injected.md",
+        "fake_query_stdout": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_certification_0/evidence/negative/fake-query.stdout.txt"
+      }
+    }
+  ]
+}

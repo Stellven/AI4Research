@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-06-29T00:00:00Z",
+  "proofs": [
+    {
+      "categories": [
+        "wiki_mutation_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed wiki mutation writeback sidecar for AutoSci parity.",
+      "evidence_refs": [
+        "artifacts/runtime/novelty/novelty-writeback.json",
+        "artifacts/autosci/workspace/wiki/ideas/skillgen.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:wiki_writeback_sidecar:20260629T000000Z",
+      "provenance": {
+        "artifact_kind": "novelty_writeback.v1",
+        "captured_at": "2026-06-29T00:00:00Z",
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/wiki_mutation_runtime_proof.py from-writeback /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0024/pytest/test_completed_wiki_writeback_0/artifacts/runtime/novelty/novelty-writeback.json --native-skill novelty --runtime-proof-out /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0024/pytest/test_completed_wiki_writeback_0/artifacts/runtime/novelty/wiki-mutation.proof.json",
+        "source": "wiki_writeback_sidecar"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -509,7 +509,7 @@ CONFIGURE_CHATGPT_UI_JS = r"""(settings) => new Promise(async (resolve) => {
     const selected = clickFirst((text, aria, el) => {
       if (!isActionNode(el) || rejectChromeNoise(text, aria)) return false;
       if ((text + " " + aria).length > 180) return false;
-      if (/个人资料|profile|Li Sihao Pro/i.test(text + " " + aria)) return false;
+      if (/个人资料|profile/i.test(text + " " + aria)) return false;
       return modelMatches(text, aria, el);
     });
     steps.push({ step: "select_model_mode", mode: modelMode || "thinking", ok: !!selected, clicked: selected });

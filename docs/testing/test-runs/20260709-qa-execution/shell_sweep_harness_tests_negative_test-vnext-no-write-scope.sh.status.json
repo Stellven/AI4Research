@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_negative_test-vnext-no-write-scope.sh",
+  "source": "harness/tests/negative/test-vnext-no-write-scope.sh",
+  "command": [
+    "bash",
+    "harness/tests/negative/test-vnext-no-write-scope.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.012,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-qzybptb_"
+}

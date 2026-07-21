@@ -1,0 +1,42 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/paper_ingest/task-shim-research-human-gate-scheduler-paper_ingest/research_memory_update.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allow_network_fetch": false,
+    "paper_id": "paper-shim-research-human-gate-scheduler",
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "smoke_mode": true
+  },
+  "limitations": [
+    "Fixture proposes a memory update; it does not mutate wiki state."
+  ],
+  "node_id": "paper_ingest",
+  "outputs": {
+    "changes": [
+      {
+        "confidence": 0.9,
+        "entity_id": "paper-shim-research-human-gate-scheduler",
+        "entity_type": "paper",
+        "evidence_ids": [
+          "paper-shim-research-human-gate-scheduler"
+        ],
+        "operation": "propose",
+        "path": "knowledge/research/papers/paper-shim-research-human-gate-scheduler.md",
+        "summary": "Propose recording normalized metadata for AutoSci Adapter Fixture Paper."
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T19:24:31Z"
+  },
+  "schema": "research_memory_update.v1",
+  "sprint_id": "shim-research-human-gate-scheduler",
+  "status": "completed",
+  "task_id": "task-shim-research-human-gate-scheduler-paper_ingest"
+}

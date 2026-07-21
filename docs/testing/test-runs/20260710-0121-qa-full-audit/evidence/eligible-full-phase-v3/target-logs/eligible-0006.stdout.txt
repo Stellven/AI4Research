@@ -1,0 +1,19 @@
+....F.........................F                                          [100%]
+=================================== FAILURES ===================================
+_ test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command _
+harness/plugins/autosci/tests/test_autosci_skill_shim.py:2866: in test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command
+    assert result["status"] == "completed"
+E   AssertionError: assert 'inconclusive' == 'completed'
+E     
+E     - completed
+E     + inconclusive
+_ test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_secret_leakage _
+harness/plugins/autosci/tests/test_autosci_skill_shim.py:12623: in test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_secret_leakage
+    assert proc.returncode == 0, proc.stderr
+E   AssertionError: 
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...etup",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-setup-autosci-native-write"\n}\n', stderr='').returncode
+=========================== short test summary info ============================
+FAILED harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command
+FAILED harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_secret_leakage
+2 failed, 29 passed, 142 deselected in 37.45s

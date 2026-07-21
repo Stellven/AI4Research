@@ -1,0 +1,6 @@
+{"kind":"workbook","id":"wb/k8lp8g","sheets":1,"tables":1}
+{"kind":"sheet","id":"ws/adnxsm","name":"Report","index":0,"range":"A1:A3","address":"A1:A3","tables":1}
+{"kind":"table","sheet":"Report","address":"A1:A3","rows":3,"cols":1,"values":[["Same"],["Same"],["Same"]]}
+{"kind":"computedStyle","sheet":"Report","for":"A1","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"fontSize":11,"typeface":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}
+{"kind":"computedStyle","sheet":"Report","for":"A2","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"fontSize":11,"typeface":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}
+{"kind":"computedStyle","sheet":"Report","for":"A3","style":{"fill":{"type":3,"gradientStops":[],"pattern":{"patternType":1},"pictureEffects":[]},"font":{"fontSize":11,"typeface":"Carlito"},"border":{},"wrapText":false,"horizontalAlignment":"general","styleId":0}}

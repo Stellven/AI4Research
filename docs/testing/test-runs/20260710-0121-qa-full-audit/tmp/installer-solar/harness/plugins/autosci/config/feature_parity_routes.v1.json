@@ -1,0 +1,907 @@
+{
+  "schema": "autosci_feature_parity_routes.v1",
+  "version": "phase19.v1",
+  "description": "Solar-native routes for AutoSci native skills. This config records route coverage and side-effect policy; it does not grant destructive or external side effects.",
+  "routes": [
+    {
+      "native_skill": "ask",
+      "autosci_command": "/ask",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/ask/SKILL.md"
+      ],
+      "solar_capability": "cap.research-memory-update",
+      "solar_logical_operator": "ScientificMemoryUpdater",
+      "solar_backend_action": "ask_wiki",
+      "coverage_status": "partial",
+      "backend_mode": "external_optional",
+      "side_effect_policy": "none",
+      "evidence_schema": "research_memory_update.v1",
+      "primary_tools": [
+        "tools/research_wiki.py query",
+        "tools/research_wiki.py neighbors",
+        "tools/research_wiki.py resolve",
+        "tools/review_model_runtime_proof.py from-evidence",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "wiki retrieval",
+        "context brief/open questions/index evidence",
+        "gap annotations",
+        "answer synthesis",
+        "source attribution",
+        "crystallize recommendation",
+        "native output format modes",
+        "typed crystallize target selection",
+        "optional crystallize writeback",
+        "wiki output mutation proof"
+      ],
+      "limitations": [
+        "Retrieval-backed ask answers now record context_brief/open_questions/index/edge context evidence, gap annotations, explicit model evidence or model-command synthesis with persisted request/response provenance, and an evidence-bound crystallize recommendation. --format table/timeline/bullets changes only the evidence-backed answer presentation. ask_final_answer_boundary requires retrieved source evidence plus completed model-backed synthesis with evidence ids before an answer is final, and missing retrieval/model evidence remains visible as incomplete rather than inferred. Optional crystallize write-back is approval-gated and can target outputs, concepts, ideas, methods, topics, or explicit wiki markdown paths while recording wiki output/log/edge/rebuild mutation evidence."
+      ]
+    },
+    {
+      "native_skill": "check",
+      "autosci_command": "/check",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/check/SKILL.md",
+        "tools/lint.py"
+      ],
+      "solar_capability": "cap.research-workflow-evolve",
+      "solar_logical_operator": "ScientificWorkflowEvolver",
+      "solar_backend_action": "check_wiki_health",
+      "coverage_status": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "none",
+      "evidence_schema": "workflow_evolution.v1",
+      "primary_tools": [
+        "tools/lint.py",
+        "tools/research_wiki.py stats",
+        "tools/research_wiki.py resolve",
+        "tools/review_model_runtime_proof.py from-evidence"
+      ],
+      "required_capabilities": [
+        "wiki lint",
+        "graph consistency check",
+        "tiered recommendations"
+      ],
+      "limitations": [
+        "LLM-assisted content quality checks can be backed by explicit model evidence or a model command with persisted request/response provenance; check_final_quality_boundary requires passing local wiki checks plus completed model-backed recommendation evidence, and absent model evidence is not treated as deterministic pass/fail."
+      ]
+    },
+    {
+      "native_skill": "daily-arxiv",
+      "autosci_command": "/daily-arxiv",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/daily-arxiv/SKILL.md",
+        "tools/daily_arxiv.py",
+        "config/daily-arxiv.yml.example"
+      ],
+      "solar_capability": "cap.research-literature-discover",
+      "solar_logical_operator": "ScientificLiteratureDiscoverer",
+      "solar_backend_action": "daily_arxiv_prepare_finalize",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "semantic_parity": "partial",
+      "evidence_schema": "literature_discovery.v1",
+      "primary_tools": [
+        "tools/daily_arxiv.py prepare",
+        "tools/daily_arxiv.py finalize",
+        "tools/send_email.py",
+        "tools/review_model_runtime_proof.py from-evidence",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "arXiv feed collection",
+        "Semantic Scholar enrichment",
+        "LLM ranking",
+        "email digest",
+        "optional ingest"
+      ],
+      "limitations": [
+        "Native daily arXiv recommendation semantics are complete behind explicit approval/provider boundaries: one-off inform runs can use provider/runtime evidence plus Review LLM ranking, while SMTP delivery, GitHub Actions scheduling, and auto-ingest fan-in remain approval/provider-gated side effects. daily_arxiv_final_provider_delivery_boundary must verify provider candidates, ranking evidence, and either explicit delivery or approved wiki ingest/fan-in before a digest is final; semantic full parity is attached only through route-level audit evidence."
+      ]
+    },
+    {
+      "native_skill": "discover",
+      "autosci_command": "/discover",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/discover/SKILL.md",
+        "tools/discover.py"
+      ],
+      "solar_capability": "cap.research-literature-discover",
+      "solar_logical_operator": "ScientificLiteratureDiscoverer",
+      "solar_backend_action": "discover_literature",
+      "coverage_status": "partial",
+      "backend_mode": "solar_native",
+      "side_effect_policy": "none",
+      "evidence_schema": "literature_discovery.v1",
+      "primary_tools": [
+        "tools/discover.py from-anchors",
+        "tools/discover.py from-topic",
+        "tools/discover.py from-wiki",
+        "tools/discover.py from-venue",
+        "tools/fetch_paper_copilot.py venue"
+      ],
+      "required_capabilities": [
+        "shortlist generation",
+        "deduplication",
+        "ranking signals",
+        "source manifest"
+      ],
+            "limitations": [
+                "Live API failures must be represented as incomplete source evidence rather than synthetic recommendations.",
+                "Root discover CLI now covers topic, anchor, wiki, and venue modes; source runtime completion requires a non-placeholder source channel boundary, and discover_final_shortlist_boundary requires non-empty candidates backed by provider or local wiki source channels. Live provider proof remains optional/provider-mode; local wiki source proof must not be labeled as live_provider."
+            ]
+        },
+    {
+      "native_skill": "edit",
+      "autosci_command": "/edit",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/edit/SKILL.md"
+      ],
+      "solar_capability": "cap.research-memory-update",
+      "solar_logical_operator": "ScientificMemoryUpdater",
+      "solar_backend_action": "edit_wiki_plan",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "research_memory_update.v1",
+      "primary_tools": [
+        "tools/research_wiki.py resolve",
+        "tools/research_wiki.py set-meta",
+        "tools/research_wiki.py add-edge",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "bounded edit plan",
+        "wiki page update",
+        "raw source add",
+        "raw source delete",
+        "existing raw read-only guard",
+        "source mutation audit",
+        "navigation rebuild"
+      ],
+      "limitations": [
+        "Actual raw or wiki mutations require explicit user approval and must produce before/after evidence. Raw source add/delete is implemented only for explicit `raw/...` targets; existing raw files remain read-only unless an explicit approved delete path is used."
+      ]
+    },
+    {
+      "native_skill": "exp-design",
+      "autosci_command": "/exp-design",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/exp-design/SKILL.md"
+      ],
+      "solar_capability": "cap.research-experiment-design",
+      "solar_logical_operator": "ScientificExperimentDesigner",
+      "solar_backend_action": "design_experiment",
+      "coverage_status": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "dry_run_only",
+      "evidence_schema": "experiment_plan.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action design_experiment",
+        "tools/review_model_runtime_proof.py from-evidence"
+      ],
+      "required_capabilities": [
+        "hypothesis grounding",
+        "experiment blocks",
+        "success criteria",
+        "artifact plan"
+      ],
+      "limitations": [
+        "Current experiment design path emits evidence-linked local plans, can attach Review LLM design validation, and records experiment_design_final_execution_boundary requiring resolved target evidence, completed Review LLM validation, approval preflight, command handoff, and expected artifact handoff before a plan is execution-ready. Local design-readiness proof is wired, but native experiment wiki page writes, master design document creation, graph edge projection, context/open-question rebuilds, and end-to-end approved execution audit remain partial."
+      ]
+    },
+    {
+      "native_skill": "exp-eval",
+      "autosci_command": "/exp-eval",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/exp-eval/SKILL.md"
+      ],
+      "solar_capability": "cap.research-claim-verify",
+      "solar_logical_operator": "ScientificClaimVerifier",
+      "solar_backend_action": "verify_claim",
+      "coverage_status": "partial",
+      "backend_mode": "external_optional",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "claim_verdict.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action verify_claim",
+        "tools/review_model_runtime_proof.py from-evidence",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "result review",
+        "four-path verdict",
+        "idea status update proposal",
+        "cross-model review binding"
+      ],
+      "limitations": [
+        "Experiment result, claim, code, and Review LLM evidence can be supplied explicitly for review-backed verdicts; approved --write can update linked wiki idea/experiment status, while unapproved mutation remains blocked; experiment_evaluation_final_verdict_boundary requires completed experiment_result.v1 evidence, linked claim/code evidence, completed Review LLM proof, and completed approved wiki writeback before a verdict is treated as final."
+      ]
+    },
+    {
+      "native_skill": "exp-pilot-eval",
+      "autosci_command": "/exp-pilot-eval",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/exp-pilot-eval/SKILL.md"
+      ],
+      "solar_capability": "cap.research-claim-verify",
+      "solar_logical_operator": "ScientificClaimVerifier",
+      "solar_backend_action": "evaluate_pilot_result",
+      "coverage_status": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "claim_verdict.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action evaluate_pilot_result",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "pilot-specific criteria",
+        "lenient verdict",
+        "idea update proposal"
+      ],
+      "limitations": [
+        "Pilot result/runtime evidence can produce completed lenient verdicts; approved --write can update linked wiki idea/experiment status, while unapproved mutation remains blocked; pilot_eval_final_acceptance_boundary requires linked pilot runtime/result evidence, a non-inconclusive pilot verdict, and completed approved wiki writeback before pilot evaluation is treated as final."
+      ]
+    },
+    {
+      "native_skill": "exp-pilot-run",
+      "autosci_command": "/exp-pilot-run",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/exp-pilot-run/SKILL.md"
+      ],
+      "solar_capability": "cap.research-experiment-run",
+      "solar_logical_operator": "ScientificExperimentRunner",
+      "solar_backend_action": "run_pilot_experiment",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "experiment_result.v1",
+    "primary_tools": [
+      "plugins/autosci/bin/autosci_bridge.py run --action run_pilot_experiment",
+      "tools/remote.py",
+      "tools/approval_runtime_proof.py from-contract"
+    ],
+      "required_capabilities": [
+        "pilot code preparation",
+        "local execution",
+        "remote execution",
+        "result collection"
+      ],
+    "limitations": [
+      "Code execution and remote execution require approval; approved runtime evidence can be supplied or produced by an allowlisted local/remote command before marking pilot runtime complete. $exp-pilot-run writes pilot runtime/result evidence only, does not judge pass/fail, and does not mutate wiki pages; $exp-pilot-eval owns verdict assessment and approved wiki updates."
+    ]
+  },
+    {
+      "native_skill": "exp-run",
+      "autosci_command": "/exp-run",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/exp-run/SKILL.md",
+        "tools/remote.py"
+      ],
+      "solar_capability": "cap.research-experiment-run",
+      "solar_logical_operator": "ScientificExperimentRunner",
+      "solar_backend_action": "run_experiment",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "experiment_result.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action run_experiment",
+        "tools/remote.py launch",
+        "tools/remote.py pull-results",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "deploy",
+        "monitor",
+        "collect",
+        "local default mode",
+        "optional remote mode"
+      ],
+      "limitations": [
+        "Local default mode is approval-gated and can be proven without remote/provider configuration when approval_ref, allowlist evidence, before-state evidence, runtime evidence, deploy/run reports, collection ledger where applicable, and wiki mutation evidence are present. SSH, rsync, screen sessions, remote launch/pull-results, distributed session exactly-once collection, and live provider/remote connectivity remain optional remote-mode follow-up proof and must not block local default parity; local result-dir reads remain local collection only and must not be counted as live SSH/provider collection."
+      ]
+    },
+    {
+      "native_skill": "exp-status",
+      "autosci_command": "/exp-status",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/exp-status/SKILL.md"
+      ],
+      "solar_capability": "cap.research-experiment-monitor",
+      "solar_logical_operator": "ScientificExperimentMonitor",
+      "solar_backend_action": "monitor_experiment",
+      "coverage_status": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "none",
+      "evidence_schema": "experiment_status.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action monitor_experiment",
+        "tools/remote.py check"
+      ],
+      "required_capabilities": [
+        "status read",
+        "collect-ready detection",
+        "anomaly summary"
+      ],
+      "limitations": [
+        "Local status parity covers wiki/run-state lookup, local session registry status, supplied approved runtime evidence, collect-ready detection, and local collection identity evidence without requiring remote/provider configuration. `$exp-status` emits an explicit remote poll boundary so local run-dir status-file checks are not counted as live SSH/provider polling; live SSH/provider polling, approved provider status commands, and distributed exactly-once remote collection remain optional remote-mode follow-up proof."
+      ]
+    },
+    {
+      "native_skill": "ideate",
+      "autosci_command": "/ideate",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/ideate/SKILL.md"
+      ],
+      "solar_capability": "cap.research-idea-generate",
+      "solar_logical_operator": "ScientificIdeaGenerator",
+      "solar_backend_action": "generate_ideas",
+      "coverage_status": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "idea_candidate.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action generate_ideas",
+        "plugins/autosci/bin/autosci_bridge.py run --action evaluate_ideas",
+        "tools/research_wiki.py resolve",
+        "tools/review_model_runtime_proof.py from-evidence"
+      ],
+      "required_capabilities": [
+        "idea generation",
+        "deduplication",
+        "novelty scoring",
+        "pilot handoff"
+      ],
+      "limitations": [
+        "Explicit model-command/model-evidence brainstorming is wired for source-grounded candidates with persisted request/response provenance, ideate_final_promotion_boundary records wiki maturity scan, failed-idea banlist, source evidence, model provenance, and novelty/review gate requirements before ideas are promotable, and completed pilot handoff/runtime evidence can close phase 5. Approved durable idea-page projection now requires the full ideate pipeline to be ready, projects generated_from/has_pilot_handoff graph edges, and records those graph edges in wiki mutation proof; side-effect execution is approval-gated and strict/safe modes emit side_effect_access_request evidence instead of silently passing as dry-run. Full native ideation still requires audited provider-backed dual-model brainstorming, external discovery evidence, novelty/review gates, pilot handoff evidence or explicit --skip-pilot, and explicit bounded-test mode for sample-content runs."
+      ]
+    },
+    {
+      "native_skill": "ingest",
+      "autosci_command": "/ingest",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/ingest/SKILL.md",
+        "tools/prepare_paper_source.py"
+      ],
+      "solar_capability": "cap.research-paper-ingest",
+      "solar_logical_operator": "ScientificPaperIngestor",
+      "solar_backend_action": "ingest_paper",
+      "coverage_status": "partial",
+      "backend_mode": "solar_native",
+      "side_effect_policy": "dry_run_only",
+      "evidence_schema": "research_paper.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action prepare_paper_source",
+        "plugins/autosci/bin/autosci_bridge.py run --action ingest_paper",
+        "tools/prepare_paper_source.py",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "source preparation",
+        "metadata extraction",
+        "memory sidecars",
+        "graph sidecars"
+      ],
+      "limitations": [
+        "PDF and arXiv source preparation writes explicit raw/tmp artifacts; set allow_network_fetch=false for offline synthetic-TeX fallback.",
+        "Source-grounded PDF extraction, sample-content leakage guards, and phase9 memory/graph sidecars are covered; ingest_final_source_registration_boundary requires verified source preparation, parse quality, raw provenance, memory/graph handoff, and wiki paper/log/graph/index/context registration before a source is treated as fully registered."
+      ]
+    },
+    {
+      "native_skill": "init",
+      "autosci_command": "/init",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/init/SKILL.md",
+        "tools/init_discovery.py"
+      ],
+      "solar_capability": "cap.research-literature-discover",
+      "solar_logical_operator": "ScientificLiteratureDiscoverer",
+      "solar_backend_action": "init_sources",
+      "coverage_status": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "literature_discovery.v1",
+      "primary_tools": [
+        "tools/init_discovery.py prepare",
+        "tools/init_discovery.py plan",
+        "tools/init_discovery.py fetch",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "raw source preparation",
+        "discovery plan",
+        "fan-in ingest",
+        "best-effort visualization"
+      ],
+      "limitations": [
+        "Approved runtime source manifests can complete init evidence only with production-shaped provider or local source-channel boundary proof, and --write can fan candidates into wiki papers/log/graph; init_sources_final_fan_in_boundary requires provider/local source candidates, approved wiki fan-in, graph/log/index rebuild evidence, and verified approval/runtime evidence before initialization is final; native network fetch and bulk ingest execution remain approval/provider-gated."
+      ]
+    },
+    {
+      "native_skill": "novelty",
+      "autosci_command": "/novelty",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/novelty/SKILL.md"
+      ],
+      "solar_capability": "cap.research-idea-evaluate",
+      "solar_logical_operator": "ScientificIdeaEvaluator",
+      "solar_backend_action": "evaluate_ideas",
+      "coverage_status": "partial",
+      "backend_mode": "external_optional",
+      "side_effect_policy": "dry_run_only",
+      "evidence_schema": "idea_evaluation.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action evaluate_ideas",
+        "tools/fetch_s2.py search",
+        "tools/fetch_deepxiv.py search",
+        "tools/review_model_runtime_proof.py from-evidence",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "wiki comparison",
+        "web search evidence",
+        "Semantic Scholar evidence",
+        "Review LLM second opinion"
+      ],
+      "limitations": [
+        "S2 and DeepXiv source CLIs now emit explicit provider evidence; unavailable sources and Review LLM remain warnings/inconclusive evidence, not deterministic substitutes; novelty_final_acceptance_boundary requires completed external novelty evidence, passed provider provenance, and completed Review LLM proof before promotion/writeback is treated as final."
+      ]
+    },
+    {
+      "native_skill": "paper-compile",
+      "autosci_command": "/paper-compile",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/paper-compile/SKILL.md"
+      ],
+      "solar_capability": "cap.research-publication-produce",
+      "solar_logical_operator": "ScientificPublicationProducer",
+      "solar_backend_action": "compile_paper",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "publication_bundle.v1",
+      "primary_tools": [
+        "latexmk",
+        "pdflatex",
+        "xelatex",
+        "lualatex",
+        "tools/rasterize_latex.py",
+        "tools/approval_runtime_proof.py from-contract"
+      ],
+      "required_capabilities": [
+        "LaTeX compile",
+        "PDF structural integrity verification",
+        "PDF checks",
+        "submission checklist",
+        "venue submission profile boundary",
+        "PDF inspection evidence",
+        "publication submission audit boundary",
+        "auto-fix proposal"
+      ],
+      "limitations": [
+        "Native paper compile semantics are complete behind the explicit approval boundary: TeX execution requires allowlist, approval, before/after artifacts, and runtime evidence; compile readiness requires structurally valid PDF output; venue submission readiness requires source-backed --submission-profile plus --pdf-inspection; submission audit readiness requires explicit --submission-audit evidence and does not imply portal upload unless that evidence says portal_submission_completed=true. The route remains coverage_status=gated because compilation and source auto-fix are side effects, while semantic full parity is attached through route-level audit evidence."
+      ],
+      "semantic_parity": "partial"
+    },
+    {
+      "native_skill": "paper-draft",
+      "autosci_command": "/paper-draft",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/paper-draft/SKILL.md"
+      ],
+      "solar_capability": "cap.research-report-draft",
+      "solar_logical_operator": "ScientificReportDrafter",
+      "solar_backend_action": "write_report",
+      "coverage_status": "partial",
+      "semantic_parity": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "dry_run_only",
+      "evidence_schema": "scientific_report.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action write_report",
+        "tools/review_model_runtime_proof.py from-evidence",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "section drafting",
+        "evidence citation",
+        "figure/table references",
+        "review hooks"
+      ],
+      "limitations": [
+        "Paper draft final manuscript readiness is gated by source-backed citation evidence, completed Review LLM proof, verified compile/PDF handoff, paper directory artifacts, and workspace wiki projection proof; semantic full parity still requires an explicit completed route audit."
+      ]
+    },
+    {
+      "native_skill": "paper-plan",
+      "autosci_command": "/paper-plan",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/paper-plan/SKILL.md"
+      ],
+      "solar_capability": "cap.research-report-plan",
+      "solar_logical_operator": "ScientificReportPlanner",
+      "solar_backend_action": "plan_report",
+      "coverage_status": "partial",
+      "semantic_parity": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "dry_run_only",
+      "evidence_schema": "scientific_report.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action plan_report",
+        "tools/review_model_runtime_proof.py from-evidence"
+      ],
+      "required_capabilities": [
+        "outline planning",
+        "citation plan",
+        "figure plan",
+        "review gate"
+      ],
+      "limitations": [
+        "Paper plan final acceptance is gated by source-backed citation planning, explicit Review LLM proof, and verified downstream compile/PDF handoff; semantic full parity still requires an explicit completed route audit."
+      ]
+    },
+    {
+      "native_skill": "poster",
+      "autosci_command": "/poster",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/poster/SKILL.md",
+        "tools/wiki2dag.py",
+        "tools/poster.py"
+      ],
+      "solar_capability": "cap.research-publication-produce",
+      "solar_logical_operator": "ScientificPublicationProducer",
+      "solar_backend_action": "build_poster",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "publication_bundle.v1",
+      "primary_tools": [
+        "tools/wiki2dag.py build",
+        "tools/poster.py build",
+        "tools/poster.py validate",
+        "tools/poster.py render",
+        "tools/review_model_runtime_proof.py from-evidence",
+        "tools/approval_runtime_proof.py from-contract"
+      ],
+      "required_capabilities": [
+        "PaperX DAG",
+        "HTML poster",
+        "figure extraction",
+        "Review LLM critique/refine",
+        "overflow probe",
+        "PNG render"
+      ],
+      "limitations": [
+        "Browser rendering and image conversion run only through explicit approved renderer configuration; root and bridge render paths emit runtime evidence and keep unavailable renderers inconclusive."
+      ]
+    },
+    {
+      "native_skill": "prefill",
+      "autosci_command": "/prefill",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/prefill/SKILL.md"
+      ],
+      "solar_capability": "cap.research-memory-update",
+      "solar_logical_operator": "ScientificMemoryUpdater",
+      "solar_backend_action": "prefill_foundations",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "research_memory_update.v1",
+      "primary_tools": [
+        "tools/fetch_wikipedia.py summary",
+        "tools/fetch_wikipedia.py sections",
+        "tools/fetch_wikipedia.py section",
+        "tools/fetch_wikipedia.py wikitext",
+        "tools/research_wiki.py log",
+        "tools/research_wiki.py rebuild-index",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "native add mode",
+        "domain/catalog seed selection",
+        "foundation catalog read",
+        "Wikipedia fetch attempt evidence",
+        "source evidence rendering",
+        "foundation page proposal",
+        "terminal foundation template",
+        "wiki foundation mutation proof",
+        "dedup guard"
+      ],
+      "limitations": [
+        "Foundation creation mutates local wiki state only with explicit approval; no-approval runs remain proposal evidence. Prefill now records add/catalog mode, domain resolution, selected seeds, existing-foundation dedup state, supplied source/Wikipedia evidence status, Wikipedia fetch attempts, and terminal foundation page metadata before any approved writeback. Failed or disabled live fetches remain visible in prefill_plan.json and are not promoted to source-backed rendering."
+      ]
+    },
+    {
+      "native_skill": "rebuttal",
+      "autosci_command": "/rebuttal",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/rebuttal/SKILL.md"
+      ],
+      "solar_capability": "cap.research-publication-produce",
+      "solar_logical_operator": "ScientificPublicationProducer",
+      "solar_backend_action": "draft_rebuttal",
+      "coverage_status": "partial",
+      "backend_mode": "external_optional",
+      "side_effect_policy": "dry_run_only",
+      "evidence_schema": "publication_bundle.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action draft_rebuttal",
+        "tools/review_model_runtime_proof.py from-evidence"
+      ],
+      "required_capabilities": [
+        "review comment atomization",
+        "evidence mapping",
+        "response drafting",
+        "stress-test",
+        "reviewer-thread ingestion",
+        "formal rebuttal export",
+        "submission audit boundary"
+      ],
+      "limitations": [
+        "Reviewer-thread evidence is atomized into RvX-CY concerns, mapped to wiki/source evidence, rendered as rich/formal rebuttal artifacts, and gated by Review LLM stress-test plus supplied submission audit evidence; portal submission itself is not claimed unless external audit evidence records it."
+      ]
+    },
+    {
+      "native_skill": "refine",
+      "autosci_command": "/refine",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/refine/SKILL.md"
+      ],
+      "solar_capability": "cap.research-workflow-evolve",
+      "solar_logical_operator": "ScientificWorkflowEvolver",
+      "solar_backend_action": "refine_artifact",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "workflow_evolution.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action refine_artifact",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/review_model_runtime_proof.py from-evidence"
+      ],
+      "required_capabilities": [
+        "review loop evidence",
+        "Review LLM evidence boundary",
+        "actionable issue classification",
+        "score trajectory",
+        "termination reason",
+        "bounded fixes",
+        "iteration report"
+      ],
+      "limitations": [
+        "Applying edits requires explicit approval; verified --execute-approved runs can replace a target artifact from after_artifact evidence, while refine_loop_report records supplied or command/provider Review LLM evidence, post-apply quality-gate score trajectory, actionable items, fixed/unresolved issue buckets, and termination reason. Additional autonomous fix-generation cycles remain approval-gated."
+      ]
+    },
+    {
+      "native_skill": "research",
+      "autosci_command": "/research",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/research/SKILL.md"
+      ],
+      "solar_capability": "cap.research-workflow-evolve",
+      "solar_logical_operator": "ScientificWorkflowEvolver",
+      "solar_backend_action": "run_research_lifecycle",
+      "coverage_status": "partial",
+      "backend_mode": "route_plan",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "workflow_evolution.v1",
+      "primary_tools": [
+        "harness/workflows/scientific_research_lifecycle_full_v1.json",
+        "harness/tools/run_scientific_workflow.py",
+        "harness/tools/run_scientific_lifecycle_smoke.py",
+        "tools/review_model_runtime_proof.py from-evidence",
+        "tools/approval_runtime_proof.py from-contract"
+      ],
+      "required_capabilities": [
+        "idea discovery",
+        "human gates",
+        "experiment lifecycle",
+        "paper lifecycle",
+        "resume state"
+      ],
+      "limitations": [
+        "Evidence-aware lifecycle completion is supported when wiki/source, Review LLM, experiment runtime, collection, and compile/PDF evidence are supplied.",
+        "`$research --scheduler-run` now defaults to `run_scientific_workflow.py`, a config-driven generic workflow runner that dispatches selected workflow nodes through operator_runtime and records `runner_contract=generic_workflow_runner`; the old bounded lifecycle smoke runner remains available only through `--scheduler-legacy-smoke-runner`.",
+        "Scheduler resume runs on the legacy smoke path still emit `autosci_scheduler_resume_boundary.v1` with reused-node fingerprints and no-rerun checks; generic workflow lifecycle summaries emit `scientific_workflow_runtime_manifest.v1`, but production scheduler parity still requires complete non-fixture node selection plus distributed lease/quota/runtime audit.",
+        "`--scheduler-require-workflow-config-alignment` passes only for the full supplied-evidence tail; partial/default runs surface workflow_config_alignment drift or inconclusive status rather than full parity.",
+        "`--scheduler-require-production-dispatch` now fails when the selected scheduler runner reports fixture/smoke input markers or blocked provider/runtime evidence.",
+        "`--scheduler-include-human-gates` records idea/results approval pauses as scheduler-visible blocked nodes, `--online` can carry supplied approval/runtime source evidence into strict scheduler source mode with non-fixture provider channel boundary checks, scheduler experiment stages can carry explicit `--experiment-*` approval/runtime evidence without reusing source evidence paths, `--experiment-execute-approved` can run an allowlisted approved local experiment command, and scheduler publication compile can use compile-specific approved runtime evidence or `--compile-execute-approved`.",
+        "Full parity still requires real provider evidence, audited remote/session stage runners, production scheduler dispatch, and submission/anonymity checks."
+      ]
+    },
+    {
+      "native_skill": "reset",
+      "autosci_command": "/reset",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/reset/SKILL.md",
+        "tools/reset_wiki.py"
+      ],
+      "solar_capability": "cap.research-workflow-evolve",
+      "solar_logical_operator": "ScientificWorkflowEvolver",
+      "solar_backend_action": "reset_plan",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "workflow_evolution.v1",
+      "primary_tools": [
+        "tools/reset_wiki.py",
+        "tools/approval_runtime_proof.py from-contract",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "dry-run deletion plan",
+        "confirmation gate",
+        "wiki scaffold mutation proof",
+        "scaffold rebuild",
+        "audit log"
+      ],
+      "limitations": [
+        "Destructive reset execution is never automatic; Solar route emits a dry-run plan until explicit approval."
+      ]
+    },
+    {
+      "native_skill": "review",
+      "autosci_command": "/review",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/review/SKILL.md",
+        "mcp-servers/llm-review"
+      ],
+      "solar_capability": "cap.research-artifact-review",
+      "solar_logical_operator": "ScientificArtifactReviewer",
+      "solar_backend_action": "review_artifact",
+      "coverage_status": "partial",
+      "backend_mode": "external_optional",
+      "side_effect_policy": "dry_run_only",
+      "evidence_schema": "artifact_review.v1",
+      "primary_tools": [
+        "mcp__llm-review__chat",
+        "plugins/autosci/bin/autosci_bridge.py run --action review_artifact",
+        "tools/review_model_runtime_proof.py from-evidence"
+      ],
+      "required_capabilities": [
+        "independent reviewer prompt",
+        "score rubric",
+        "entity mapping",
+        "actionable suggestions"
+      ],
+      "limitations": [
+        "Read-only diagnostic review output is available for every resolved artifact, but final_acceptance_ready requires configured OpenAI-compatible Review LLM provider, command bridge, or supplied Review LLM evidence; --require-review-llm records non-Review-LLM diagnostics as insufficient for final acceptance."
+      ]
+    },
+    {
+      "native_skill": "setup",
+      "autosci_command": "/setup",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/setup/SKILL.md",
+        "config/setup-guide.md"
+      ],
+      "solar_capability": "cap.research-workflow-evolve",
+      "solar_logical_operator": "ScientificWorkflowEvolver",
+      "solar_backend_action": "setup_status",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "workflow_evolution.v1",
+      "primary_tools": [
+        "config/setup-guide.md",
+        ".env.example",
+        "tools/approval_runtime_proof.py from-contract"
+      ],
+      "required_capabilities": [
+        "secret presence check",
+        "configuration guide",
+        "verification checklist"
+      ],
+      "limitations": [
+        "Solar must not write secrets or credentials without explicit user-provided values and approval."
+      ]
+    },
+    {
+      "native_skill": "survey",
+      "autosci_command": "/survey",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/survey/SKILL.md"
+      ],
+      "solar_capability": "cap.research-report-plan",
+      "solar_logical_operator": "ScientificReportPlanner",
+      "solar_backend_action": "write_survey",
+      "coverage_status": "partial",
+      "semantic_parity": "partial",
+      "backend_mode": "solar_native",
+      "side_effect_policy": "dry_run_only",
+      "evidence_schema": "scientific_report.v1",
+      "primary_tools": [
+        "plugins/autosci/bin/autosci_bridge.py run --action write_survey",
+        "tools/research_wiki.py add-edge",
+        "tools/research_wiki.py log",
+        "tools/fetch_s2.py search",
+        "tools/wiki_mutation_runtime_proof.py from-writeback"
+      ],
+      "required_capabilities": [
+        "related work grouping",
+        "gap analysis",
+        "citation-backed survey",
+        "max-papers cap",
+        "BibTeX coverage",
+        "wiki output archive",
+        "derived_from graph edges",
+        "wiki log writeback"
+      ],
+      "limitations": [
+        "Survey synthesis is bounded to supplied wiki/discovery citation evidence and records exhaustive_coverage_verified=false; external exhaustive literature search is not claimed without provider evidence."
+      ]
+    },
+    {
+      "native_skill": "visualize",
+      "autosci_command": "/visualize",
+      "feature_kind": "skill",
+      "native_paths": [
+        "i18n/en/skills/visualize/SKILL.md",
+        "tools/visualize.py",
+        "tools/serve.py"
+      ],
+      "solar_capability": "cap.research-graph-update",
+      "solar_logical_operator": "ScientificGraphUpdater",
+      "solar_backend_action": "visualize_graph",
+      "coverage_status": "gated",
+      "backend_mode": "side_effect_gated",
+      "side_effect_policy": "approval_required",
+      "evidence_schema": "research_graph_update.v1",
+      "primary_tools": [
+        "tools/visualize.py generate-obsidian-config",
+        "tools/visualize.py generate-canvas",
+        "tools/serve.py",
+        "tools/approval_runtime_proof.py from-contract"
+      ],
+      "required_capabilities": [
+        "Obsidian graph config",
+        "Canvas graph",
+        "SPA graph runbook",
+        "recommendations"
+      ],
+      "limitations": [
+        "Serving a local web UI or opening a browser is an external side effect; generated local artifacts must remain explicit."
+      ]
+    }
+  ]
+}

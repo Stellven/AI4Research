@@ -1,0 +1,88 @@
+{
+  "action": "generate_ideas",
+  "after_artifacts": [],
+  "after_ready": false,
+  "allowlist_evidence": [],
+  "allowlist_ready": false,
+  "approval_ref": "",
+  "approval_state": "approval_required",
+  "approved": false,
+  "authorization_request": {
+    "action": "generate_ideas",
+    "approval_state": "approval_required",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [
+          "<after-artifact>"
+        ],
+        "allowlist_evidence": [
+          "<allowlist-evidence.json>"
+        ],
+        "approval_ref": "<approval-ref>",
+        "before_artifacts": [
+          "<before-artifact>"
+        ],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": [
+          "<runtime-evidence.json>"
+        ]
+      },
+      "request_fingerprint": "437e3e72b92dfe452c073b4fb8a49b02b5c63bdae0bd493294ca1c53563626bf",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": true,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "awaiting_authorization"
+    },
+    "missing": [
+      "approval_ref",
+      "allowlist_evidence",
+      "before_artifacts",
+      "runtime_evidence",
+      "after_artifacts"
+    ],
+    "non_error_contract": {
+      "approval_state": "approval_required",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": true,
+      "allowlist_evidence": true,
+      "approval_ref": true,
+      "before_artifacts": true,
+      "runtime_evidence": true
+    },
+    "requested_side_effects": [
+      "source_discovery",
+      "model_brainstorm",
+      "novelty_review",
+      "wiki_writeback",
+      "pilot_handoff"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "awaiting_authorization"
+  },
+  "before_artifacts": [],
+  "before_ready": false,
+  "execution_verified": false,
+  "missing": [
+    "approval_ref",
+    "allowlist_evidence",
+    "before_artifacts",
+    "runtime_evidence",
+    "after_artifacts"
+  ],
+  "ready_for_execution": false,
+  "runtime_evidence": [],
+  "runtime_ready": false,
+  "schema": "autosci_approval_contract.v1",
+  "side_effects": [
+    "source_discovery",
+    "model_brainstorm",
+    "novelty_review",
+    "wiki_writeback",
+    "pilot_handoff"
+  ]
+}

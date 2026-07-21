@@ -1,0 +1,230 @@
+{
+  "action": "ingest_paper",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/scientific/no-log/prepare_paper_source_native_stdout.json",
+        "type": "prepare_paper_source_native_stdout_json"
+      },
+      {
+        "path": "artifacts/scientific/no-log/prepare_paper_source_native_stderr.txt",
+        "type": "prepare_paper_source_native_stderr"
+      },
+      {
+        "path": "artifacts/scientific/no-log/prepare_paper_source_native_payload.json",
+        "type": "prepare_paper_source_native_payload_json"
+      },
+      {
+        "path": "artifacts/scientific/no-log/research_memory_update.json",
+        "type": "research_memory_update_json"
+      },
+      {
+        "path": "artifacts/scientific/no-log/research_graph_update.json",
+        "type": "research_graph_update_json"
+      },
+      {
+        "path": "artifacts/scientific/no-log/ingest_final_source_registration_boundary.json",
+        "type": "ingest_final_source_registration_boundary_json"
+      },
+      {
+        "path": "artifacts/scientific/no-log/ingest_paper_source_provider_runtime_proof.json",
+        "type": "provider_source_runtime_proof_manifest_json"
+      },
+      {
+        "path": "artifacts/scientific/no-log/ingest_paper_wiki_mutation_runtime_proof.json",
+        "type": "wiki_mutation_runtime_proof_manifest_json"
+      },
+      {
+        "path": "artifacts/scientific/no-log/research_paper.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0010/pytest/test_phase9_ingest_registratio0/raw/registered_skillgen.md",
+      "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0010/pytest/test_phase9_ingest_registratio0/wiki"
+    },
+    "limitations": [
+      "Solar AutoSci prepared the source without warnings."
+    ],
+    "node_id": "node-ingest-no-log",
+    "outputs": {
+      "final_source_registration_boundary": {
+        "checks": [
+          {
+            "name": "source_preparation_verified",
+            "status": "ok"
+          },
+          {
+            "name": "parse_quality_ready",
+            "status": "ok"
+          },
+          {
+            "name": "raw_artifact_provenance_ready",
+            "status": "ok"
+          },
+          {
+            "name": "downstream_handoff_ready",
+            "status": "ok"
+          },
+          {
+            "name": "wiki_registration_ready",
+            "status": "ok"
+          }
+        ],
+        "downstream_handoff_ready": true,
+        "final_registration_ready": true,
+        "graph_sidecar_ready": true,
+        "memory_sidecar_ready": true,
+        "missing": [],
+        "paper_id": "paper-registered-skillgen",
+        "parse_quality_ready": true,
+        "raw_artifact_provenance_ready": true,
+        "schema": "autosci_ingest_final_source_registration_boundary.v1",
+        "sidecar_evidence_paths": [
+          "artifacts/scientific/no-log/research_memory_update.json",
+          "artifacts/scientific/no-log/research_graph_update.json"
+        ],
+        "source_preparation_verified": true,
+        "status": "ingest_source_registration_ready",
+        "wiki_registration": {
+          "context_brief_path": "wiki/graph/context_brief.md",
+          "context_rebuilt": true,
+          "graph_edges_path": "wiki/graph/edges.jsonl",
+          "graph_registered": true,
+          "index_path": "wiki/index.md",
+          "index_rebuilt": true,
+          "log_path": "wiki/log.md",
+          "log_registered": false,
+          "paper_page": "wiki/papers/registered-skillgen-source.md",
+          "paper_registered": true,
+          "wiki_root": "wiki"
+        },
+        "wiki_registration_ready": true
+      },
+      "paper": {
+        "abstract": "This source is already represented in the wiki paper page and graph.",
+        "final_source_registration_boundary": {
+          "checks": [
+            {
+              "name": "source_preparation_verified",
+              "status": "ok"
+            },
+            {
+              "name": "parse_quality_ready",
+              "status": "ok"
+            },
+            {
+              "name": "raw_artifact_provenance_ready",
+              "status": "ok"
+            },
+            {
+              "name": "downstream_handoff_ready",
+              "status": "ok"
+            },
+            {
+              "name": "wiki_registration_ready",
+              "status": "ok"
+            }
+          ],
+          "downstream_handoff_ready": true,
+          "final_registration_ready": true,
+          "graph_sidecar_ready": true,
+          "memory_sidecar_ready": true,
+          "missing": [],
+          "paper_id": "paper-registered-skillgen",
+          "parse_quality_ready": true,
+          "raw_artifact_provenance_ready": true,
+          "schema": "autosci_ingest_final_source_registration_boundary.v1",
+          "sidecar_evidence_paths": [
+            "artifacts/scientific/no-log/research_memory_update.json",
+            "artifacts/scientific/no-log/research_graph_update.json"
+          ],
+          "source_preparation_verified": true,
+          "status": "ingest_source_registration_ready",
+          "wiki_registration": {
+            "context_brief_path": "wiki/graph/context_brief.md",
+            "context_rebuilt": true,
+            "graph_edges_path": "wiki/graph/edges.jsonl",
+            "graph_registered": true,
+            "index_path": "wiki/index.md",
+            "index_rebuilt": true,
+            "log_path": "wiki/log.md",
+            "log_registered": false,
+            "paper_page": "wiki/papers/registered-skillgen-source.md",
+            "paper_registered": true,
+            "wiki_root": "wiki"
+          },
+          "wiki_registration_ready": true
+        },
+        "identifiers": {
+          "native_prepare_status": "completed",
+          "source_fetch_status": "not_applicable",
+          "source_prepare_status": "completed"
+        },
+        "paper_id": "paper-registered-skillgen",
+        "parse_status": "parsed",
+        "preparation": {
+          "abstract_excerpt": "",
+          "artifacts": [],
+          "arxiv_id": "",
+          "canonical_ingest_path": "raw/registered_skillgen.md",
+          "extracted_text_path": null,
+          "ingest_format": "md",
+          "native_prepare_paper_source": {
+            "allow_network_fetch": true,
+            "canonical_ingest_path": "raw/input/registered_skillgen.md",
+            "ok": true,
+            "prepared_path": null,
+            "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0010/pytest/test_phase9_ingest_registratio0/artifacts/autosci/workspace/raw",
+            "schema": "autosci_prepare_paper_source_cli.v1",
+            "source_path": "raw/input/registered_skillgen.md",
+            "status": "completed"
+          },
+          "original_format": "md",
+          "prepared_path": null,
+          "source_fetch_status": "not_applicable",
+          "source_path": "raw/registered_skillgen.md",
+          "status": "completed",
+          "title": "",
+          "warnings": []
+        },
+        "sections": [
+          {
+            "section_id": "abstract",
+            "source_anchor": "registered_skillgen.md#abstract",
+            "text": "This source is already represented in the wiki paper page and graph.",
+            "title": "Abstract"
+          },
+          {
+            "section_id": "method",
+            "source_anchor": "registered_skillgen.md#method",
+            "text": "It verifies that log.md is optional registration evidence.",
+            "title": "Method"
+          }
+        ],
+        "source_ref": "raw/registered_skillgen.md",
+        "source_type": "markdown",
+        "title": "Registered SkillGen Source"
+      }
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T19:22:42Z"
+    },
+    "schema": "research_paper.v1",
+    "sprint_id": "sprint-phase20",
+    "status": "completed",
+    "task_id": "task-ingest-no-log"
+  },
+  "evidence_jsonl": "artifacts/scientific/no-log/evidence.jsonl",
+  "evidence_path": "artifacts/scientific/no-log/research_paper.json",
+  "ok": true,
+  "result_path": "artifacts/scientific/no-log/ingest_paper.result.json",
+  "schema": "research_paper.v1",
+  "sidecar_evidence_paths": [
+    "artifacts/scientific/no-log/research_memory_update.json",
+    "artifacts/scientific/no-log/research_graph_update.json"
+  ],
+  "status": "completed"
+}

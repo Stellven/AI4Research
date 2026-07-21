@@ -1,0 +1,22 @@
+{
+  "id": "F-CLASS-12",
+  "class": 12,
+  "title": "A second submit against an already-leased operator is rejected (single-flight)",
+  "retires": "F-CLASS-12 (repair lifecycle races); R4 single-flight",
+  "release_proof_level": "P1.5",
+  "mode": "pre_lease_then_submit",
+  "operator_id": "fake-builder",
+  "envelope": {
+    "fake_behavior": {
+      "exit_code": 0,
+      "stdout_lines": ["second dispatch should not run"]
+    }
+  },
+  "expect": [
+    { "fact": "submit_ok", "op": "falsy" },
+    { "fact": "submit_error", "op": "contains", "value": "not dispatchable" },
+    { "fact": "submit_error", "op": "contains", "value": "leased" }
+  ],
+  "fault": { "skip_pre_lease": true },
+  "notes": "GREEN: an active lease is acquired first, so the operator is 'leased' and submit() rejects the duplicate (operator_runtime.py:474 via get_operator_runtime_state -> 'leased'; acquire_operator_lease also rejects a live duplicate at :215). RED: skip_pre_lease removes the first lease -> submit succeeds -> submit_ok=true fails the expect."
+}

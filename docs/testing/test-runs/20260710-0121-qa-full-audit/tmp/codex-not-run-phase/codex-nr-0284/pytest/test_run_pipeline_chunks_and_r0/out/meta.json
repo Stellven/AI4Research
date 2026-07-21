@@ -1,0 +1,27 @@
+{
+  "schema_version": "solar.understand_anything.meta.v1",
+  "generated_at": "2026-07-10T18:54:04Z",
+  "backend": "ThunderOMLX",
+  "base_url": "http://127.0.0.1:8002",
+  "proxy_model": "Qwen3.6-35b-a3b",
+  "usage": {
+    "prompt_tokens": 20,
+    "completion_tokens": 20
+  },
+  "chunk_usage": [
+    {
+      "prompt_tokens": 10
+    },
+    {
+      "prompt_tokens": 10
+    }
+  ],
+  "final_usage": {
+    "completion_tokens": 20
+  },
+  "file_count_scanned": 7,
+  "scan_limit_reached": false,
+  "chunks_total": 2,
+  "chunks_completed": 2,
+  "resumed": true
+}

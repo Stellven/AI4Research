@@ -21,12 +21,22 @@ def _write_hygiene(path: Path, pane: str, state: str) -> None:
     )
 
 
-def test_dirty_pane_is_unavailable_before_dispatch(tmp_path, monkeypatch):
+def test_dirty_busy_pane_is_unavailable_before_dispatch(tmp_path, monkeypatch):
     hygiene = tmp_path / "pane-hygiene.json"
     _write_hygiene(hygiene, "solar-harness-lab:0.2", "dirty")
     monkeypatch.setattr(gnd, "_pane_hygiene_file", lambda: hygiene)
+    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda _pane: True)
 
     assert gnd._pane_hygiene_unavailable_reason("solar-harness-lab:0.2") == "pane_hygiene_dirty"
+
+
+def test_dirty_idle_pane_is_recovered_for_dispatch(tmp_path, monkeypatch):
+    hygiene = tmp_path / "pane-hygiene.json"
+    _write_hygiene(hygiene, "solar-harness-lab:0.2", "dirty")
+    monkeypatch.setattr(gnd, "_pane_hygiene_file", lambda: hygiene)
+    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda _pane: False)
+
+    assert gnd._pane_hygiene_unavailable_reason("solar-harness-lab:0.2") == ""
 
 
 def test_needs_respawn_pane_is_not_auto_recovered(tmp_path, monkeypatch):
@@ -38,7 +48,7 @@ def test_needs_respawn_pane_is_not_auto_recovered(tmp_path, monkeypatch):
     assert gnd._pane_hygiene_unavailable_reason("solar-harness-lab:0.2") == "pane_hygiene_needs_respawn"
 
 
-def test_assigned_pane_guard_checks_hygiene_before_tui_busy(tmp_path, monkeypatch):
+def test_assigned_pane_guard_blocks_busy_dirty_hygiene_state(tmp_path, monkeypatch):
     hygiene = tmp_path / "pane-hygiene.json"
     pane = "solar-harness-lab:0.2"
     _write_hygiene(hygiene, pane, "dirty")
@@ -50,7 +60,7 @@ def test_assigned_pane_guard_checks_hygiene_before_tui_busy(tmp_path, monkeypatc
     monkeypatch.setattr(gnd, "_quota_exhausted_models", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(gnd, "_pane_cooldown_reason", lambda _pane: "")
     monkeypatch.setattr(gnd, "_multi_task_direct_dispatch_unavailable_reason", lambda _pane, **_kwargs: "")
-    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda _pane: (_ for _ in ()).throw(AssertionError("hygiene should short-circuit before TUI busy probe")))
+    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda _pane: True)
 
     assert gnd._assigned_pane_unavailable_reason(pane) == "pane_hygiene_dirty"
 
@@ -62,8 +72,8 @@ def test_feedback_survey_prompt_is_recoverable_dispatch_prompt():
   1: Bad   2: Fine   3: Good  0: Dismiss
 """
 
-    assert gnd._pane_dispatch_prompt_reason(tail) == "feedback_survey_prompt"
-    assert "feedback_survey_prompt" in gnd.RECOVERABLE_DISPATCH_PROMPT_REASONS
+    assert gnd._pane_dispatch_prompt_reason(tail) == "survey_prompt_blocked"
+    assert "survey_prompt_blocked" in gnd.RECOVERABLE_DISPATCH_PROMPT_REASONS
 
 
 def test_rewind_prompt_is_recoverable_dispatch_prompt():

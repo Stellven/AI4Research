@@ -1,0 +1,25 @@
+{
+  "eligible_features": 448,
+  "execution_targets": 107,
+  "all_targets_attempted": true,
+  "target_status_counts": {
+    "FAIL": 15,
+    "PASS": 92
+  },
+  "testcase_status_counts": {
+    "PASS": 522,
+    "FAIL": 16,
+    "ERROR": 3,
+    "SKIPPED": 1
+  },
+  "feature_execution_result_counts": {
+    "PASS": 403,
+    "FAIL": 45
+  },
+  "feature_interpretation_counts": {
+    "INCONCLUSIVE_EXPECTED": 402,
+    "FAIL": 5,
+    "PASS": 41
+  },
+  "reclassified_missing_features": 355
+}

@@ -1,0 +1,7 @@
+--- sample 1: clean pane with prompt ---
+█ claude-code v4.6
+> 
+--- sample 2: clean pane minimal ---
+>
+--- sample 3: clean pane with whitespace ---
+    > 

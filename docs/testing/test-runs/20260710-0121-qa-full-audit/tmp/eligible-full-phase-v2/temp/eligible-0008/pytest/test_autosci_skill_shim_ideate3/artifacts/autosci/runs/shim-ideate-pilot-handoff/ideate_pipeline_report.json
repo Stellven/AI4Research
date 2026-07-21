@@ -1,0 +1,101 @@
+{
+  "blocking_reasons": [],
+  "generation_path_coverage": {
+    "missing_paths": [],
+    "present_paths": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "required_paths": {
+      "A": "landscape-driven",
+      "B": "incremental",
+      "C": "combination",
+      "D": "innovation",
+      "E": "cross-domain-transfer"
+    },
+    "status": "complete"
+  },
+  "idea_count": 5,
+  "limitations": [],
+  "max_ideas": 0,
+  "phase_count": 5,
+  "phases": [
+    {
+      "blocking_reasons": [],
+      "completed": true,
+      "evidence_refs": [],
+      "name": "phase1_landscape_scan",
+      "status": "completed"
+    },
+    {
+      "blocking_reasons": [],
+      "completed": true,
+      "evidence_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate3/ideate-review-llm.json",
+        "wiki:papers/skillgen",
+        "external:web:ideate-001"
+      ],
+      "name": "phase2_dual_model_brainstorm",
+      "status": "completed"
+    },
+    {
+      "blocking_reasons": [],
+      "completed": true,
+      "evidence_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate3/ideate-external-novelty.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate3/ideate-review-llm.json"
+      ],
+      "name": "phase3_filter_and_validation",
+      "status": "completed"
+    },
+    {
+      "blocking_reasons": [],
+      "completed": true,
+      "evidence_refs": [
+        "approval-ideate-pilot-handoff"
+      ],
+      "name": "phase4_wiki_write",
+      "status": "completed"
+    },
+    {
+      "blocking_reasons": [],
+      "completed": true,
+      "evidence_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate3/ideate-pilot-handoff.json"
+      ],
+      "name": "phase5_pilot_handoff",
+      "status": "completed"
+    }
+  ],
+  "pilot_handoff_state": {
+    "blocking_reasons": [],
+    "evidence_ids": [
+      "pilot-handoff:ideate"
+    ],
+    "evidence_refs": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate3/ideate-pilot-handoff.json"
+    ],
+    "handoff_evidence_count": 1,
+    "handoff_ready": true,
+    "ready": true,
+    "runtime_evidence_count": 0,
+    "runtime_ready": false,
+    "status": "completed"
+  },
+  "pipeline_ready": true,
+  "promotion_boundary_status": "final_promotion_ready",
+  "required_generation_paths": {
+    "A": "landscape-driven",
+    "B": "incremental",
+    "C": "combination",
+    "D": "innovation",
+    "E": "cross-domain-transfer"
+  },
+  "review_llm_evidence_completed": true,
+  "schema": "autosci_ideate_pipeline_report.v1",
+  "selected_for_write_count": 5,
+  "status": "completed"
+}

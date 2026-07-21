@@ -1,0 +1,73 @@
+name: Windows WSL2 install (Tier 2)
+
+# Tier-2 verification of the Windows path WITHOUT a VM or self-hosted box. GitHub-hosted Windows
+# runners have nested virtualization since Jan 2024 (Dadsv5 hardware), so they can run WSL2 — the
+# same approach the ddev project uses to CI a Windows installer that provisions WSL2.
+#
+# What this proves: a fresh WSL2 Ubuntu installs the Solar runtime and the Windows HOST can reach
+# the WSL-hosted status-server — i.e. the 3A bind keystone (host -> WSL reachability) on the real
+# NAT path that GitHub runners use (mirrored networking is not available on hosted runners, so this
+# exercises the 0.0.0.0-bind fallback).
+#
+# NOT proven here (irreducible manual / Tier 3): autostart firing on a real interactive logon
+# (Task Scheduler trigger), and anything requiring a real user session bus.
+#
+# Manual-dispatch until validated on a runner — the wsl.exe provisioning + cross-boundary curl have
+# documented runner-specific friction (distro registration timing, default user, silent install).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-wsl2:
+    name: Fresh WSL2 install + host reachability
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Provision a clean WSL2 Ubuntu
+        uses: Vampire/setup-wsl@v3
+        with:
+          distribution: Ubuntu-24.04
+          wsl-version: 2
+          set-as-default: "true"
+          additional-packages: python3 curl
+
+      - name: Confirm WSL2 + show networking mode
+        shell: pwsh
+        run: |
+          wsl --status
+          wsl -d Ubuntu-24.04 -- bash -lc "uname -a; (wslinfo --networking-mode || echo 'no wslinfo')"
+
+      - name: Install the Solar runtime inside WSL
+        shell: pwsh
+        run: |
+          # Translate the Windows checkout path to a WSL path with wslpath, copy it into the WSL
+          # home (avoids /mnt perf + CRLF issues), then install.
+          $wslPath = (wsl -d Ubuntu-24.04 -- wslpath "$env:GITHUB_WORKSPACE").Trim()
+          Write-Host "WSL path: $wslPath"
+          wsl -d Ubuntu-24.04 -- bash -lc "cp -r '$wslPath' ~/solar && cd ~/solar && ./install.sh --yes --components kernel,harness --fake-keys --skip-llm-cli"
+
+      - name: Start the status-server in WSL
+        shell: pwsh
+        run: |
+          wsl -d Ubuntu-24.04 -- bash -lc "cd ~/.solar/harness && setsid nohup python3 lib/symphony/status-server.py >/tmp/solar-srv.log 2>&1 & for i in \$(seq 1 30); do [ -s run/status-server.port ] && break; sleep 0.5; done; echo 'port:' \$(cat run/status-server.port); echo 'bind line:'; grep -i listening /tmp/solar-srv.log"
+
+      - name: Assert the WINDOWS host reaches the WSL runtime (the 3A keystone)
+        shell: pwsh
+        run: |
+          $port = (wsl -d Ubuntu-24.04 -- bash -lc "cat ~/.solar/harness/run/status-server.port").Trim()
+          $wslip = (wsl -d Ubuntu-24.04 -- bash -lc "hostname -I | awk '{print \$1}'").Trim()
+          Write-Host "WSL port=$port  WSL IP=$wslip"
+          $ok = $false
+          # 1) localhostForwarding path (what the desktop app uses)
+          try { $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 "http://127.0.0.1:$port/healthz"; if ($r.Content -match 'ok') { Write-Host '127.0.0.1 -> ok'; $ok = $true } } catch { Write-Host "127.0.0.1 failed: $_" }
+          # 2) direct WSL-IP path (the 0.0.0.0-bind fallback for when forwarding drops)
+          try { $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 "http://${wslip}:$port/healthz"; if ($r.Content -match 'ok') { Write-Host "$wslip -> ok"; $ok = $true } } catch { Write-Host "WSL-IP failed: $_" }
+          if (-not $ok) { Write-Error 'host could not reach the WSL runtime on either path'; exit 1 }
+          Write-Host 'KEYSTONE OK: Windows host reached the WSL-hosted status-server'

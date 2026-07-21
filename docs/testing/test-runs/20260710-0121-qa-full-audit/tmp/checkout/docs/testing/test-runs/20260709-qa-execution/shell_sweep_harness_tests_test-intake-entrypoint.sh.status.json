@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-intake-entrypoint.sh",
+  "source": "harness/tests/test-intake-entrypoint.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-intake-entrypoint.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.881,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-xacb04u8"
+}

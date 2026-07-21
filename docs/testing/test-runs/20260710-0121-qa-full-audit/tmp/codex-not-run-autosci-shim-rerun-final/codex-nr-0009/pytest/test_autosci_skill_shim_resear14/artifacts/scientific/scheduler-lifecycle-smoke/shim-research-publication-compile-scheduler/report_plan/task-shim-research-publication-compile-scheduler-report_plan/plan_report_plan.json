@@ -1,0 +1,520 @@
+{
+  "citation_map": {
+    "citation_count": 2,
+    "citations": [
+      {
+        "citation_id": "candidate-autosci-fixture-paper",
+        "evidence_id": "task-shim-research-publication-compile-scheduler-literature_discover",
+        "source": "literature_discovery",
+        "source_channels": [
+          "local_fixture"
+        ],
+        "source_ref": "plugins/autosci/tests/fixtures/sample_paper.md",
+        "title": "AutoSci Adapter Fixture Paper"
+      },
+      {
+        "citation_id": "paper-shim-research-publication-compile-scheduler",
+        "evidence_id": "task-shim-research-publication-compile-scheduler-paper_ingest",
+        "source": "research_paper",
+        "source_channels": [],
+        "source_ref": "plugins/autosci/tests/fixtures/sample_paper.md",
+        "title": "AutoSci Adapter Fixture Paper"
+      }
+    ],
+    "limitations": [],
+    "schema": "autosci_publication_citation_map.v1",
+    "status": "completed"
+  },
+  "compile_handoff": {
+    "approval_state": "verified",
+    "evidence_ids": [
+      "paper-draft-compile-handoff",
+      "paper-compile-runtime:latexmk",
+      "external-publication-compile/compile_target/main.tex",
+      "task-shim-research-publication-compile-scheduler-report_plan",
+      "report_plan",
+      "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+      "external-publication-compile/compile_target/main.pdf"
+    ],
+    "executor_result": {
+      "executed": true,
+      "executor": "latexmk",
+      "exit_code": 0,
+      "pdf_path": "external-publication-compile/compile_target/main.pdf",
+      "runtime_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json"
+    },
+    "limitations": [
+      "Paper draft includes verified compile/PDF handoff evidence."
+    ],
+    "pdf_paths": [
+      "external-publication-compile/compile_target/main.pdf"
+    ],
+    "schema": "paper_draft_compile_handoff.v1",
+    "semantic_runtime": {
+      "action": "compile_paper",
+      "checks": [
+        {
+          "check": "approval_contract_execution_verified",
+          "detail": "Approval, allowlist, runtime, and before/after artifact paths are present.",
+          "status": "ok"
+        },
+        {
+          "check": "runtime_records_loaded",
+          "detail": "1 runtime record(s) loaded.",
+          "status": "ok"
+        },
+        {
+          "check": "compile_exit_ok",
+          "detail": "True",
+          "status": "ok"
+        },
+        {
+          "check": "compiled_pdf_verified",
+          "detail": "At least one compiled PDF artifact passed structural integrity checks.",
+          "status": "ok"
+        }
+      ],
+      "detail": {
+        "compile_exit_ok": true,
+        "compiled_pdf_verified": true,
+        "errors": [],
+        "evidence_ids": [
+          "paper-compile-runtime:latexmk",
+          "external-publication-compile/compile_target/main.tex",
+          "task-shim-research-publication-compile-scheduler-report_plan",
+          "report_plan",
+          "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json"
+        ],
+        "pdf_integrity": [
+          {
+            "detail": "PDF artifact has a readable PDF header, xref trailer, and EOF marker.",
+            "eof_ok": true,
+            "exists": true,
+            "header_ok": true,
+            "path": "external-publication-compile/compile_target/main.pdf",
+            "size_bytes": 105,
+            "startxref_ok": true,
+            "valid": true
+          }
+        ],
+        "records_loaded": 1
+      },
+      "schema": "autosci_runtime_semantic_verification.v1",
+      "status": "verified",
+      "verified": true
+    },
+    "status": "completed",
+    "verified": true
+  },
+  "evidence_ids": [
+    "task-shim-research-publication-compile-scheduler-literature_discover",
+    "task-review-llm-publication-compile-shim",
+    "task-shim-research-publication-compile-scheduler-claim_verify",
+    "claim-001",
+    "paper-shim-research-publication-compile-scheduler",
+    "sample_paper.md#results",
+    "task-shim-research-publication-compile-scheduler-experiment_run",
+    "exp-001",
+    "evidence:autosci-fixture-result",
+    "evidence:autosci-fixture-ledger",
+    "task-shim-research-publication-compile-scheduler-code_evidence_map",
+    "map-001",
+    "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+    "task-shim-research-publication-compile-scheduler-claim_extract",
+    "claim-002",
+    "sample_paper.md#abstract",
+    "task-shim-research-publication-compile-scheduler-idea_evaluate",
+    "idea-001",
+    "method-001",
+    "task-shim-research-publication-compile-scheduler-paper_ingest",
+    "task-shim-research-publication-compile-scheduler-method_extract",
+    "idea-duplicate-001",
+    "exp-supported-001",
+    "scheduler-lifecycle-resume",
+    "candidate-autosci-fixture-paper",
+    "review-llm:publication-compile-shim",
+    "paper-draft-compile-handoff",
+    "paper-compile-runtime:latexmk",
+    "external-publication-compile/compile_target/main.tex",
+    "task-shim-research-publication-compile-scheduler-report_plan",
+    "report_plan",
+    "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+    "external-publication-compile/compile_target/main.pdf"
+  ],
+  "final_acceptance_boundary": {
+    "blocking_reasons": [
+      "validated idea graph with succeeded experiment evidence is missing"
+    ],
+    "citation_count": 2,
+    "citation_ids": [
+      "candidate-autosci-fixture-paper",
+      "paper-shim-research-publication-compile-scheduler"
+    ],
+    "compile_handoff_status": "completed",
+    "compile_handoff_verified": true,
+    "compiled_pdf_paths": [
+      "external-publication-compile/compile_target/main.pdf"
+    ],
+    "draft_compile_ready": false,
+    "figure_citation_plan_present": true,
+    "final_plan_accepted": false,
+    "idea_count": 0,
+    "idea_graph_ready": false,
+    "limitations": [
+      "Paper plan final acceptance requires validated idea graph evidence, source-backed citation planning, completed Review LLM proof, and verified downstream compile/PDF handoff."
+    ],
+    "plan_scope": "plan_scaffold",
+    "review_boundary_status": "completed",
+    "review_evidence_ids": [
+      "review-llm:publication-compile-shim"
+    ],
+    "review_llm_completed": true,
+    "schema": "autosci_paper_plan_final_acceptance_boundary.v1",
+    "source_evidence_supplied": true,
+    "status": "paper_plan_final_acceptance_incomplete",
+    "supporting_experiment_count": 0
+  },
+  "idea_graph_map": {
+    "checked_roots": [
+      "artifacts/autosci/workspace/wiki",
+      "wiki",
+      "harness/artifacts/autosci/workspace/wiki"
+    ],
+    "idea_graph_ready": false,
+    "ideas": [],
+    "limitations": [
+      "Paper plan requires at least one validated/in-progress idea with a succeeded linked experiment."
+    ],
+    "referenced_entities": [],
+    "schema": "autosci_paper_plan_idea_graph_map.v1",
+    "status": "incomplete",
+    "supporting_experiments": [],
+    "target": "scheduler-lifecycle-resume",
+    "target_slugs": [
+      "scheduler-lifecycle-resume"
+    ]
+  },
+  "limitations": [
+    "Paper plan is generated from local Solar evidence, request metadata, and supplied source/review evidence.",
+    "Paper plan requires at least one validated/in-progress idea with a succeeded linked experiment.",
+    "Review LLM evidence was supplied externally; hosted provider or command provenance is not claimed.",
+    "Paper plan final acceptance requires validated idea graph evidence, source-backed citation planning, completed Review LLM proof, and verified downstream compile/PDF handoff."
+  ],
+  "review_boundary": {
+    "checked_reviews": [
+      "task-review-llm-publication-compile-shim"
+    ],
+    "completed": true,
+    "evidence_ids": [
+      "review-llm:publication-compile-shim"
+    ],
+    "invalid_reasons": [],
+    "invocation_mode": "evidence",
+    "limitations": [
+      "Review LLM evidence was supplied externally; hosted provider or command provenance is not claimed."
+    ],
+    "model": "",
+    "provider": "",
+    "recommendation": "inconclusive",
+    "request_sha256": "",
+    "response_sha256": "",
+    "review_available": true,
+    "review_mode": "review_llm",
+    "schema": "autosci_publication_review_boundary.v1",
+    "score": 0.87,
+    "source_path": "task-review-llm-publication-compile-shim",
+    "source_task_id": "task-review-llm-publication-compile-shim",
+    "status": "completed"
+  },
+  "review_llm_completed": true,
+  "sections": [
+    {
+      "evidence_ids": [
+        "task-shim-research-publication-compile-scheduler-literature_discover",
+        "task-review-llm-publication-compile-shim",
+        "task-shim-research-publication-compile-scheduler-claim_verify",
+        "claim-001",
+        "paper-shim-research-publication-compile-scheduler",
+        "sample_paper.md#results",
+        "task-shim-research-publication-compile-scheduler-experiment_run",
+        "exp-001",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger",
+        "task-shim-research-publication-compile-scheduler-code_evidence_map",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "task-shim-research-publication-compile-scheduler-claim_extract",
+        "claim-002",
+        "sample_paper.md#abstract",
+        "task-shim-research-publication-compile-scheduler-idea_evaluate",
+        "idea-001",
+        "method-001",
+        "task-shim-research-publication-compile-scheduler-paper_ingest",
+        "task-shim-research-publication-compile-scheduler-method_extract",
+        "idea-duplicate-001",
+        "exp-supported-001",
+        "scheduler-lifecycle-resume",
+        "candidate-autosci-fixture-paper",
+        "review-llm:publication-compile-shim",
+        "paper-draft-compile-handoff",
+        "paper-compile-runtime:latexmk",
+        "external-publication-compile/compile_target/main.tex",
+        "task-shim-research-publication-compile-scheduler-report_plan",
+        "report_plan",
+        "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+        "external-publication-compile/compile_target/main.pdf"
+      ],
+      "section_id": "outline",
+      "title": "Outline Plan"
+    },
+    {
+      "evidence_ids": [
+        "task-shim-research-publication-compile-scheduler-literature_discover",
+        "task-review-llm-publication-compile-shim",
+        "task-shim-research-publication-compile-scheduler-claim_verify",
+        "claim-001",
+        "paper-shim-research-publication-compile-scheduler",
+        "sample_paper.md#results",
+        "task-shim-research-publication-compile-scheduler-experiment_run",
+        "exp-001",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger",
+        "task-shim-research-publication-compile-scheduler-code_evidence_map",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "task-shim-research-publication-compile-scheduler-claim_extract",
+        "claim-002",
+        "sample_paper.md#abstract",
+        "task-shim-research-publication-compile-scheduler-idea_evaluate",
+        "idea-001",
+        "method-001",
+        "task-shim-research-publication-compile-scheduler-paper_ingest",
+        "task-shim-research-publication-compile-scheduler-method_extract",
+        "idea-duplicate-001",
+        "exp-supported-001",
+        "scheduler-lifecycle-resume",
+        "candidate-autosci-fixture-paper",
+        "review-llm:publication-compile-shim",
+        "paper-draft-compile-handoff",
+        "paper-compile-runtime:latexmk",
+        "external-publication-compile/compile_target/main.tex",
+        "task-shim-research-publication-compile-scheduler-report_plan",
+        "report_plan",
+        "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+        "external-publication-compile/compile_target/main.pdf"
+      ],
+      "section_id": "idea-evidence-map",
+      "title": "Idea Evidence Map"
+    },
+    {
+      "evidence_ids": [
+        "task-shim-research-publication-compile-scheduler-literature_discover",
+        "task-review-llm-publication-compile-shim",
+        "task-shim-research-publication-compile-scheduler-claim_verify",
+        "claim-001",
+        "paper-shim-research-publication-compile-scheduler",
+        "sample_paper.md#results",
+        "task-shim-research-publication-compile-scheduler-experiment_run",
+        "exp-001",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger",
+        "task-shim-research-publication-compile-scheduler-code_evidence_map",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "task-shim-research-publication-compile-scheduler-claim_extract",
+        "claim-002",
+        "sample_paper.md#abstract",
+        "task-shim-research-publication-compile-scheduler-idea_evaluate",
+        "idea-001",
+        "method-001",
+        "task-shim-research-publication-compile-scheduler-paper_ingest",
+        "task-shim-research-publication-compile-scheduler-method_extract",
+        "idea-duplicate-001",
+        "exp-supported-001",
+        "scheduler-lifecycle-resume",
+        "candidate-autosci-fixture-paper",
+        "review-llm:publication-compile-shim",
+        "paper-draft-compile-handoff",
+        "paper-compile-runtime:latexmk",
+        "external-publication-compile/compile_target/main.tex",
+        "task-shim-research-publication-compile-scheduler-report_plan",
+        "report_plan",
+        "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+        "external-publication-compile/compile_target/main.pdf"
+      ],
+      "section_id": "evidence-map",
+      "title": "Evidence Map"
+    },
+    {
+      "evidence_ids": [
+        "task-shim-research-publication-compile-scheduler-literature_discover",
+        "task-review-llm-publication-compile-shim",
+        "task-shim-research-publication-compile-scheduler-claim_verify",
+        "claim-001",
+        "paper-shim-research-publication-compile-scheduler",
+        "sample_paper.md#results",
+        "task-shim-research-publication-compile-scheduler-experiment_run",
+        "exp-001",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger",
+        "task-shim-research-publication-compile-scheduler-code_evidence_map",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "task-shim-research-publication-compile-scheduler-claim_extract",
+        "claim-002",
+        "sample_paper.md#abstract",
+        "task-shim-research-publication-compile-scheduler-idea_evaluate",
+        "idea-001",
+        "method-001",
+        "task-shim-research-publication-compile-scheduler-paper_ingest",
+        "task-shim-research-publication-compile-scheduler-method_extract",
+        "idea-duplicate-001",
+        "exp-supported-001",
+        "scheduler-lifecycle-resume",
+        "candidate-autosci-fixture-paper",
+        "review-llm:publication-compile-shim",
+        "paper-draft-compile-handoff",
+        "paper-compile-runtime:latexmk",
+        "external-publication-compile/compile_target/main.tex",
+        "task-shim-research-publication-compile-scheduler-report_plan",
+        "report_plan",
+        "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+        "external-publication-compile/compile_target/main.pdf"
+      ],
+      "section_id": "figure-citation-plan",
+      "title": "Figure And Citation Plan"
+    },
+    {
+      "evidence_ids": [
+        "task-shim-research-publication-compile-scheduler-literature_discover",
+        "task-review-llm-publication-compile-shim",
+        "task-shim-research-publication-compile-scheduler-claim_verify",
+        "claim-001",
+        "paper-shim-research-publication-compile-scheduler",
+        "sample_paper.md#results",
+        "task-shim-research-publication-compile-scheduler-experiment_run",
+        "exp-001",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger",
+        "task-shim-research-publication-compile-scheduler-code_evidence_map",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "task-shim-research-publication-compile-scheduler-claim_extract",
+        "claim-002",
+        "sample_paper.md#abstract",
+        "task-shim-research-publication-compile-scheduler-idea_evaluate",
+        "idea-001",
+        "method-001",
+        "task-shim-research-publication-compile-scheduler-paper_ingest",
+        "task-shim-research-publication-compile-scheduler-method_extract",
+        "idea-duplicate-001",
+        "exp-supported-001",
+        "scheduler-lifecycle-resume",
+        "candidate-autosci-fixture-paper",
+        "review-llm:publication-compile-shim",
+        "paper-draft-compile-handoff",
+        "paper-compile-runtime:latexmk",
+        "external-publication-compile/compile_target/main.tex",
+        "task-shim-research-publication-compile-scheduler-report_plan",
+        "report_plan",
+        "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+        "external-publication-compile/compile_target/main.pdf"
+      ],
+      "section_id": "review-gates",
+      "title": "Review Gates"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "paper-compile-runtime:latexmk",
+        "external-publication-compile/compile_target/main.tex",
+        "task-shim-research-publication-compile-scheduler-report_plan",
+        "report_plan",
+        "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+        "external-publication-compile/compile_target/main.pdf"
+      ],
+      "section_id": "compile-audit",
+      "title": "Compile Audit"
+    },
+    {
+      "evidence_ids": [
+        "task-shim-research-publication-compile-scheduler-literature_discover",
+        "task-review-llm-publication-compile-shim",
+        "task-shim-research-publication-compile-scheduler-claim_verify",
+        "claim-001",
+        "paper-shim-research-publication-compile-scheduler",
+        "sample_paper.md#results",
+        "task-shim-research-publication-compile-scheduler-experiment_run",
+        "exp-001",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger",
+        "task-shim-research-publication-compile-scheduler-code_evidence_map",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "task-shim-research-publication-compile-scheduler-claim_extract",
+        "claim-002",
+        "sample_paper.md#abstract",
+        "task-shim-research-publication-compile-scheduler-idea_evaluate",
+        "idea-001",
+        "method-001",
+        "task-shim-research-publication-compile-scheduler-paper_ingest",
+        "task-shim-research-publication-compile-scheduler-method_extract",
+        "idea-duplicate-001",
+        "exp-supported-001",
+        "scheduler-lifecycle-resume",
+        "candidate-autosci-fixture-paper",
+        "review-llm:publication-compile-shim",
+        "paper-draft-compile-handoff",
+        "paper-compile-runtime:latexmk",
+        "external-publication-compile/compile_target/main.tex",
+        "task-shim-research-publication-compile-scheduler-report_plan",
+        "report_plan",
+        "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+        "external-publication-compile/compile_target/main.pdf"
+      ],
+      "section_id": "final-plan-acceptance-boundary",
+      "title": "Final Plan Acceptance Boundary"
+    },
+    {
+      "evidence_ids": [
+        "task-shim-research-publication-compile-scheduler-literature_discover",
+        "task-review-llm-publication-compile-shim",
+        "task-shim-research-publication-compile-scheduler-claim_verify",
+        "claim-001",
+        "paper-shim-research-publication-compile-scheduler",
+        "sample_paper.md#results",
+        "task-shim-research-publication-compile-scheduler-experiment_run",
+        "exp-001",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger",
+        "task-shim-research-publication-compile-scheduler-code_evidence_map",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "task-shim-research-publication-compile-scheduler-claim_extract",
+        "claim-002",
+        "sample_paper.md#abstract",
+        "task-shim-research-publication-compile-scheduler-idea_evaluate",
+        "idea-001",
+        "method-001",
+        "task-shim-research-publication-compile-scheduler-paper_ingest",
+        "task-shim-research-publication-compile-scheduler-method_extract",
+        "idea-duplicate-001",
+        "exp-supported-001",
+        "scheduler-lifecycle-resume",
+        "candidate-autosci-fixture-paper",
+        "review-llm:publication-compile-shim",
+        "paper-draft-compile-handoff",
+        "paper-compile-runtime:latexmk",
+        "external-publication-compile/compile_target/main.tex",
+        "task-shim-research-publication-compile-scheduler-report_plan",
+        "report_plan",
+        "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json",
+        "external-publication-compile/compile_target/main.pdf"
+      ],
+      "section_id": "limitations",
+      "title": "Limitations"
+    }
+  ],
+  "target": "scheduler-lifecycle-resume",
+  "title": "Scheduler Lifecycle Resumed Paper Plan"
+}

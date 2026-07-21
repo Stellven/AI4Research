@@ -1,0 +1,1 @@
+{"sprint_id": "child-graph-passed-status-stale", "required_gates": [], "nodes": [{"id": "N1", "depends_on": [], "status": "passed"}], "node_results": {"N1": {"status": "passed"}}, "gate_results": {}}

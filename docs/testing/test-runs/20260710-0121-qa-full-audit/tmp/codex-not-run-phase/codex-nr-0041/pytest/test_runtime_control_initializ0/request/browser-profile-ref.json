@@ -1,0 +1,8 @@
+{
+  "schema": "browser.profile_ref.v1",
+  "profile_id": "chatgpt/alice",
+  "storage_state_ref": null,
+  "allowed_account_identifiers": [
+    "alice@example.com"
+  ]
+}

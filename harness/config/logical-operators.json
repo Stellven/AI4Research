@@ -378,6 +378,272 @@
         "max_parallel": 1,
         "singleton": false
       }
+    },
+    "ScientificLiteratureDiscoverer": {
+      "operator_type": "ScientificLiteratureDiscoverer",
+      "description": "AutoSci literature discovery and source shortlist preparation through bounded Solar-native bridge evidence.",
+      "primary_role": "scientific-literature-discoverer",
+      "required_capabilities": {
+        "research_synthesis": 3,
+        "scientific_evidence": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificPaperIngestor": {
+      "operator_type": "ScientificPaperIngestor",
+      "description": "AutoSci source preparation, paper parsing, and ingest evidence generation.",
+      "primary_role": "scientific-paper-ingestor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "data_extraction": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificPaperAnalyzer": {
+      "operator_type": "ScientificPaperAnalyzer",
+      "description": "AutoSci paper analysis evidence generation from parsed source evidence.",
+      "primary_role": "scientific-paper-ingestor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "research_synthesis": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificMemoryUpdater": {
+      "operator_type": "ScientificMemoryUpdater",
+      "description": "AutoSci research memory sidecar generation and final memory update projection.",
+      "primary_role": "scientific-memory-updater",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "artifact_curation": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificGraphUpdater": {
+      "operator_type": "ScientificGraphUpdater",
+      "description": "AutoSci research graph sidecar generation and graph evidence projection.",
+      "primary_role": "scientific-memory-updater",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "artifact_curation": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificClaimExtractor": {
+      "operator_type": "ScientificClaimExtractor",
+      "description": "AutoSci paper claim extraction into schema-gated claim evidence.",
+      "primary_role": "scientific-claim-extractor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "data_extraction": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificMethodExtractor": {
+      "operator_type": "ScientificMethodExtractor",
+      "description": "AutoSci method extraction into schema-gated method evidence.",
+      "primary_role": "scientific-claim-extractor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "data_extraction": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificCodeEvidenceMapper": {
+      "operator_type": "ScientificCodeEvidenceMapper",
+      "description": "AutoSci code and artifact evidence mapping for source-backed claims.",
+      "primary_role": "scientific-code-evidence-mapper",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "code_impl": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificIdeaGenerator": {
+      "operator_type": "ScientificIdeaGenerator",
+      "description": "AutoSci source-grounded idea generation with explicit promotion boundary evidence.",
+      "primary_role": "lab-builder",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "research_synthesis": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificIdeaEvaluator": {
+      "operator_type": "ScientificIdeaEvaluator",
+      "description": "AutoSci novelty and review gate evaluation evidence for candidate ideas.",
+      "primary_role": "lab-evaluator",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "academic_critique": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificExperimentDesigner": {
+      "operator_type": "ScientificExperimentDesigner",
+      "description": "AutoSci experiment design evidence and execution-readiness boundary generation.",
+      "primary_role": "scientific-experiment-designer",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "test_generation": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificExperimentRunner": {
+      "operator_type": "ScientificExperimentRunner",
+      "description": "AutoSci approved experiment runtime and result evidence generation.",
+      "primary_role": "scientific-experiment-runner",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "test_execution": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificExperimentMonitor": {
+      "operator_type": "ScientificExperimentMonitor",
+      "description": "AutoSci experiment status monitoring and approved collection evidence generation.",
+      "primary_role": "scientific-experiment-runner",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "test_execution": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificClaimVerifier": {
+      "operator_type": "ScientificClaimVerifier",
+      "description": "AutoSci claim verification using experiment, code, and Review LLM evidence.",
+      "primary_role": "scientific-claim-verifier",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "academic_critique": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificReportPlanner": {
+      "operator_type": "ScientificReportPlanner",
+      "description": "AutoSci paper/report plan evidence with citation and Review LLM readiness boundaries.",
+      "primary_role": "scientific-report-writer",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "research_synthesis": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificReportDrafter": {
+      "operator_type": "ScientificReportDrafter",
+      "description": "AutoSci source-backed scientific report or manuscript draft evidence generation.",
+      "primary_role": "scientific-report-writer",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "research_synthesis": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificArtifactReviewer": {
+      "operator_type": "ScientificArtifactReviewer",
+      "description": "AutoSci artifact review and Review LLM final acceptance boundary generation.",
+      "primary_role": "lab-evaluator",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "academic_critique": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificPublicationProducer": {
+      "operator_type": "ScientificPublicationProducer",
+      "description": "AutoSci publication compile bundle and submission-readiness evidence generation.",
+      "primary_role": "lab-builder",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "test_execution": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificWorkflowEvolver": {
+      "operator_type": "ScientificWorkflowEvolver",
+      "description": "AutoSci lifecycle closeout, memory-finalization, and workflow evolution evidence generation.",
+      "primary_role": "planner",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "artifact_curation": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
     }
   },
   "workflow_vocabulary": {
@@ -1171,6 +1437,234 @@
       ],
       "selection_policy": "priority_first",
       "fallback_policy": "queue"
+    },
+    "ScientificLiteratureDiscoverer": {
+      "operator_type": "ScientificLiteratureDiscoverer",
+      "candidates": [
+        {
+          "actor_id": "autosci-literature-discover-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificPaperIngestor": {
+      "operator_type": "ScientificPaperIngestor",
+      "candidates": [
+        {
+          "actor_id": "autosci-paper-ingest-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificPaperAnalyzer": {
+      "operator_type": "ScientificPaperAnalyzer",
+      "candidates": [
+        {
+          "actor_id": "autosci-paper-analyze-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificMemoryUpdater": {
+      "operator_type": "ScientificMemoryUpdater",
+      "candidates": [
+        {
+          "actor_id": "autosci-memory-update-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificGraphUpdater": {
+      "operator_type": "ScientificGraphUpdater",
+      "candidates": [
+        {
+          "actor_id": "autosci-graph-update-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificClaimExtractor": {
+      "operator_type": "ScientificClaimExtractor",
+      "candidates": [
+        {
+          "actor_id": "autosci-claim-extract-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificMethodExtractor": {
+      "operator_type": "ScientificMethodExtractor",
+      "candidates": [
+        {
+          "actor_id": "autosci-method-extract-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificCodeEvidenceMapper": {
+      "operator_type": "ScientificCodeEvidenceMapper",
+      "candidates": [
+        {
+          "actor_id": "autosci-code-evidence-map-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificIdeaGenerator": {
+      "operator_type": "ScientificIdeaGenerator",
+      "candidates": [
+        {
+          "actor_id": "autosci-idea-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificIdeaEvaluator": {
+      "operator_type": "ScientificIdeaEvaluator",
+      "candidates": [
+        {
+          "actor_id": "autosci-idea-evaluate-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificExperimentDesigner": {
+      "operator_type": "ScientificExperimentDesigner",
+      "candidates": [
+        {
+          "actor_id": "autosci-experiment-design-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificExperimentRunner": {
+      "operator_type": "ScientificExperimentRunner",
+      "candidates": [
+        {
+          "actor_id": "autosci-experiment-run-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificExperimentMonitor": {
+      "operator_type": "ScientificExperimentMonitor",
+      "candidates": [
+        {
+          "actor_id": "autosci-experiment-monitor-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificClaimVerifier": {
+      "operator_type": "ScientificClaimVerifier",
+      "candidates": [
+        {
+          "actor_id": "autosci-claim-verify-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificReportPlanner": {
+      "operator_type": "ScientificReportPlanner",
+      "candidates": [
+        {
+          "actor_id": "autosci-report-plan-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificReportDrafter": {
+      "operator_type": "ScientificReportDrafter",
+      "candidates": [
+        {
+          "actor_id": "autosci-report-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificArtifactReviewer": {
+      "operator_type": "ScientificArtifactReviewer",
+      "candidates": [
+        {
+          "actor_id": "autosci-artifact-review-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificPublicationProducer": {
+      "operator_type": "ScientificPublicationProducer",
+      "candidates": [
+        {
+          "actor_id": "autosci-publication-compile-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificWorkflowEvolver": {
+      "operator_type": "ScientificWorkflowEvolver",
+      "candidates": [
+        {
+          "actor_id": "autosci-workflow-evolve-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
     }
   }
 }

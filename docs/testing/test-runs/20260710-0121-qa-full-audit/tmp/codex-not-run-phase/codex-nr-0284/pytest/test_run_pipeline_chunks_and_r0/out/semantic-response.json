@@ -1,0 +1,12 @@
+{
+  "choices": [
+    {
+      "message": {
+        "content": "最终汇总摘要"
+      }
+    }
+  ],
+  "usage": {
+    "completion_tokens": 20
+  }
+}

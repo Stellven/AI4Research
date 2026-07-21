@@ -1,0 +1,95 @@
+capability_capsule_id: cap.research-code-evidence-map
+capsule_kind: capability
+metadata:
+  name: Scientific Code Evidence Map
+  description: Map scientific claims or methods to code files, repositories, and runnable entrypoints with evidence ids.
+applicability:
+  task_types:
+    - scientific-research
+    - code-evidence
+  positive_signals:
+    - map code evidence
+    - link claim to implementation
+    - identify runnable entrypoint
+  negative_signals:
+    - discover papers
+    - draft publication
+contract:
+  inputs:
+    required:
+      - name: claim_or_method_ref
+        description: Claim or method identifier that needs code evidence mapping.
+    optional:
+      - name: code_source_ref
+        description: Local path, repository URL, or artifact reference.
+  outputs:
+    required:
+      - name: code_evidence_map
+        schema_ref: schemas/evidence/code_evidence_map.v1.schema.json
+    optional:
+      - name: unmapped_items
+        description: Claims or methods with no grounded code mapping.
+  preconditions:
+    - check: target_ref_present
+      description: Claim or method target is identified.
+  postconditions:
+    - check: mapping_traceable
+      description: Each mapping includes files, repo or path, and evidence ids.
+  invariants:
+    - Does not execute unreviewed code.
+    - Code mapping does not imply claim verification.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_claims.v1.schema.json
+      purpose: Claims needing code mapping.
+    - schema_ref: schemas/evidence/research_method.v1.schema.json
+      purpose: Methods needing implementation mapping.
+  produces:
+    - schema_ref: schemas/evidence/code_evidence_map.v1.schema.json
+      purpose: Claim-to-code or method-to-code mapping evidence.
+  compatible_with:
+    - cap.research-experiment-design
+    - cap.research-experiment-run
+    - cap.research-claim-verify
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+    - source code files or repository metadata
+    - schemas/evidence/code_evidence_map.v1.schema.json
+  write:
+    - artifacts/scientific/code_evidence_map/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - optional repository metadata access when physical operator permits
+  cost:
+    - bounded code scan and mapping cost
+  risk:
+    - mapping may identify code that is not runnable or not faithful to the paper
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.code_evidence_map
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/code_evidence_map.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against code_evidence_map.v1.schema.json.
+    - Confirm no unreviewed code execution occurred.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Fixture mapping emits valid code_evidence_map.v1 evidence.
+    - Missing runnable entrypoints are reported as limitations.
+operator_compatibility:
+  preferred:
+    - ScientificCodeEvidenceMapper
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

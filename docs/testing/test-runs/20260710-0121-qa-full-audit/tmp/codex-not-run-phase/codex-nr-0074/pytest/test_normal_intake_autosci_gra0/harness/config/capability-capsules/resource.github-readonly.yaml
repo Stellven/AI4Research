@@ -1,0 +1,83 @@
+capability_capsule_id: resource.github-readonly
+version: 0.1.0
+capsule_kind: resource
+metadata:
+  name: GitHub Readonly Resource
+  description: Resource capsule that provides readonly GitHub/repo access prerequisites.
+applicability:
+  task_types:
+    - planning
+    - architecture
+    - requirements
+    - PERFORMANCE_REGRESSION
+    - ROOT_CAUSE_DEBUG
+    - verification
+    - review
+    - knowledge-extraction
+    - research
+    - evidence
+  positive_signals:
+    - github
+    - repo
+  negative_signals: []
+contract:
+  inputs:
+    required: []
+    optional: []
+  outputs:
+    required:
+      - name: resource_binding
+        type: json
+    optional: []
+  preconditions:
+    - check: task_type_in
+      values:
+        - PERFORMANCE_REGRESSION
+        - ROOT_CAUSE_DEBUG
+  postconditions:
+    - check: output_present
+      field: resource_binding
+  invariants:
+    - Only readonly repo access is granted.
+composition:
+  consumes: []
+  produces:
+    - type: artifact.resource_binding
+  compatible_with:
+    - cap.flashmlx-performance-debugger
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+    - github.readonly
+  write: []
+  execute: []
+  network: []
+  cost: []
+  risk: []
+bindings:
+  skills:
+    required: []
+    optional: []
+  mcp_capabilities:
+    git.read:
+      - readonly
+  data_refs:
+    - data.repo.snapshot
+  secret_refs: []
+  required_guard_capsules: []
+  required_resource_capsules: []
+verification:
+  self_check:
+    - check.resource_binding_written
+  external_verifier:
+    required: false
+  pass_conditions:
+    - resource_binding exists
+operator_compatibility:
+  preferred:
+    - mini-claude-sonnet-builder
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-05-24T00:00:00Z"

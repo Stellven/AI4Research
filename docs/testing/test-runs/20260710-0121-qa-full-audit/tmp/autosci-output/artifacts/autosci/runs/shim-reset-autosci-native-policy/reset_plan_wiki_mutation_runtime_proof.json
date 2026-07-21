@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-07-10T05:54:59Z",
+  "proofs": [
+    {
+      "categories": [
+        "wiki_mutation_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed approved wiki mutation evidence for AutoSci `reset` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/workflow_evolution.reset.json",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_dry_run_stdout.json",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_dry_run_stderr.txt",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_dry_run_plan.json",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_execute_stdout.json",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_execute_stderr.txt",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_runtime_evidence.json",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_runtime_evidence.json.plan.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_2/reset-native-project/wiki/log.md",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_after_snapshot.json"
+      ],
+      "native_skill": "reset",
+      "production_ready": true,
+      "proof_id": "runtime:reset:wiki-writeback:20260710T055459Z",
+      "provenance": {
+        "artifact_kind": "reset_wiki_runtime",
+        "captured_at": "2026-07-10T05:54:59Z",
+        "command": "reset_plan:approved_mutation",
+        "source": "wiki_writeback"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

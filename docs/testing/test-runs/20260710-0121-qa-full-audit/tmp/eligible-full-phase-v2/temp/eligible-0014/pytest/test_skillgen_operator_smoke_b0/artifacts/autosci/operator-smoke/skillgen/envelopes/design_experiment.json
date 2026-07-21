@@ -1,0 +1,17 @@
+{
+  "inputs": {
+    "claim_id": "claim-001",
+    "execution_mode": "fixture",
+    "idea_id": "idea-001"
+  },
+  "mode": "fixture",
+  "node_id": "node-design-experiment",
+  "output_dir": "artifacts/autosci/operator-smoke/skillgen",
+  "outputs": {
+    "evidence_jsonl": "artifacts/autosci/operator-smoke/skillgen/evidence.jsonl",
+    "evidence_payload_path": "artifacts/autosci/operator-smoke/skillgen/experiment_plan.json",
+    "result_path": "artifacts/autosci/operator-smoke/skillgen/design_experiment.result.json"
+  },
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "task_id": "task-autosci-skillgen-design_experiment"
+}

@@ -1,0 +1,11 @@
+A1 — modules compile
+  PASS: autoresearch modules compile
+  PASS: coordinator injects autoresearch optimizer
+A2 — status is readable even before vendor
+  PASS: autoresearch status schema
+A3 — dry-run local issue creates controlled issue file and does not execute
+  PASS: autoresearch dry-run issue plan
+A4 — plugin manifest validates and capability sync sees provider
+  PASS: autoresearch manifest valid
+  PASS: autoresearch capability found
+A5 — planner/builder dispatch can see autoresearch but does not auto-execute

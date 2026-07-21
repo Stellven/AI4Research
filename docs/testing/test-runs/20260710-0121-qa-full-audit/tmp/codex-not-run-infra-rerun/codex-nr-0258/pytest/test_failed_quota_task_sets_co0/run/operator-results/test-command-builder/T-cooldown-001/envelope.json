@@ -1,0 +1,11 @@
+{
+  "task_id": "T-cooldown-001",
+  "sprint_id": "sprint-command",
+  "node_id": "N1",
+  "operator_id": "test-command-builder",
+  "task_type": "dummy",
+  "objective": "exercise failure flow control",
+  "command": "python3 -c \"print(\\\"You've hit your limit · resets 1:40pm\\\", flush=True); raise SystemExit(1)\"",
+  "submitted_at": "2026-07-10T19:01:06Z",
+  "lease_expires_at": "2026-07-10T20:01:06Z"
+}

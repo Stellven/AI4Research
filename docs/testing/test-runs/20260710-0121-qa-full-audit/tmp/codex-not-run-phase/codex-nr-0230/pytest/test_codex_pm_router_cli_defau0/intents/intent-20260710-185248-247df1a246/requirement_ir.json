@@ -1,0 +1,41 @@
+{
+  "schema_version": "solar.requirement_ir.v1",
+  "intent_id": "intent-20260710-185248-247df1a246",
+  "source": {
+    "channel": "codex_pm_router",
+    "actor": "user",
+    "device": "codex_pm_router_cli",
+    "session_id": "",
+    "thread_ref": ""
+  },
+  "source_inputs": {
+    "raw_request": "把 codex_pm_router 入口接到 RawIntent 主链。",
+    "repo_context": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness"
+    ]
+  },
+  "title": "把 codex_pm_router 入口接到 RawIntent 主链。",
+  "problem": "把 codex_pm_router 入口接到 RawIntent 主链。",
+  "objective": "把 codex_pm_router 入口接到 RawIntent 主链。",
+  "outcome": "A compiled, dispatchable Solar-Harness work item with acceptance evidence.",
+  "constraints": [
+    "All execution must enter Solar-Harness through RawIntent and requirement compilation.",
+    "Do not bypass task_graph, operator runtime, quota-aware fallback, or evidence logging."
+  ],
+  "non_goals": [
+    "Do not dispatch raw natural language directly to builder panes."
+  ],
+  "acceptance": [
+    "RawIntent, rewritten_intent, requirement_ir, and requirement_trace artifacts are persisted.",
+    "Compiled work is routable through PM/Planner/task_graph and multi-task operator runtime.",
+    "Completion requires evidence artifacts and verifier-visible status."
+  ],
+  "lane": "delivery",
+  "logical_operators": [
+    "RequirementCompiler",
+    "Planner",
+    "ImplementationWorker",
+    "Verifier"
+  ],
+  "compiler_next": "pm_planner_task_graph"
+}

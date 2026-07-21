@@ -1,0 +1,339 @@
+{
+  "ok": false,
+  "source_count": 12,
+  "min_sources": 8,
+  "source_type_counts": {
+    "web": 12
+  },
+  "required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "missing_required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "paper_like_source_count": 0,
+  "min_paper_like_sources": 4,
+  "high_authority_source_count": 0,
+  "min_high_authority_sources": 4,
+  "source_authority_average": 0.35,
+  "low_value_source_count": 12,
+  "low_value_source_ratio": 1.0,
+  "cited_source_ratio": 1.0,
+  "source_audit": {
+    "ok": false,
+    "output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0128/pytest/test_strict_eval_fails_low_aut0",
+    "research_profile": "technical_architecture",
+    "strict_profile": true,
+    "policy_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/research/policies/source_authority.json",
+    "source_count": 12,
+    "source_type_counts": {
+      "web": 12
+    },
+    "source_type_count": 1,
+    "missing_required_source_types": [
+      "paper"
+    ],
+    "missing_recommended_source_types": [
+      "benchmark",
+      "code",
+      "official_doc"
+    ],
+    "source_authority_average": 0.35,
+    "source_high_authority_count": 0,
+    "source_high_authority_threshold": 0.75,
+    "invalid_source_type_count": 0,
+    "low_authority_source_count": 12,
+    "sources": [
+      {
+        "source_id": "src_0",
+        "source_type": "web",
+        "title": "SEO blog 0",
+        "url": "https://blog.example.com/latent-0",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_1",
+        "source_type": "web",
+        "title": "SEO blog 1",
+        "url": "https://blog.example.com/latent-1",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_2",
+        "source_type": "web",
+        "title": "SEO blog 2",
+        "url": "https://blog.example.com/latent-2",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_3",
+        "source_type": "web",
+        "title": "SEO blog 3",
+        "url": "https://blog.example.com/latent-3",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_4",
+        "source_type": "web",
+        "title": "SEO blog 4",
+        "url": "https://blog.example.com/latent-4",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_5",
+        "source_type": "web",
+        "title": "SEO blog 5",
+        "url": "https://blog.example.com/latent-5",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_6",
+        "source_type": "web",
+        "title": "SEO blog 6",
+        "url": "https://blog.example.com/latent-6",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_7",
+        "source_type": "web",
+        "title": "SEO blog 7",
+        "url": "https://blog.example.com/latent-7",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_8",
+        "source_type": "web",
+        "title": "SEO blog 8",
+        "url": "https://blog.example.com/latent-8",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_9",
+        "source_type": "web",
+        "title": "SEO blog 9",
+        "url": "https://blog.example.com/latent-9",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_10",
+        "source_type": "web",
+        "title": "SEO blog 10",
+        "url": "https://blog.example.com/latent-10",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      },
+      {
+        "source_id": "src_11",
+        "source_type": "web",
+        "title": "SEO blog 11",
+        "url": "https://blog.example.com/latent-11",
+        "authority_score": 0.35,
+        "high_authority": false,
+        "valid_source_type": true,
+        "matched_rule": {
+          "index": 0,
+          "score": 0.35,
+          "default": true,
+          "host_hits": [],
+          "host_prefix_hits": [],
+          "text_hits": [],
+          "rule": {
+            "score": 0.35,
+            "default": true
+          }
+        }
+      }
+    ],
+    "replacement_suggestions": [
+      "Add paper source for profile technical_architecture",
+      "Add benchmark source for profile technical_architecture",
+      "Add code source for profile technical_architecture",
+      "Add official_doc source for profile technical_architecture",
+      "Prefer canonical/high-authority source for: src_0",
+      "Prefer canonical/high-authority source for: src_1",
+      "Prefer canonical/high-authority source for: src_2",
+      "Prefer canonical/high-authority source for: src_3",
+      "Prefer canonical/high-authority source for: src_4"
+    ],
+    "errors": [
+      "source_type_count_too_low:1<2",
+      "missing_required_source_types:paper",
+      "source_authority_average_too_low:0.3500<0.5500",
+      "high_authority_sources_too_low:0<2"
+    ],
+    "warnings": [
+      "missing_recommended_source_types:benchmark,code,official_doc",
+      "low_authority_sources:src_0,src_1,src_2,src_3,src_4"
+    ]
+  },
+  "issues": [
+    "survey_missing_required_source_types:benchmark,code,official_doc,paper",
+    "paper_like_source_count_low:0<4",
+    "high_authority_source_count_low:0<4",
+    "source_authority_average_low:0.3500<0.5500",
+    "low_value_source_ratio_high:1.0000>0.4000",
+    "source_type_count_too_low:1<2",
+    "missing_required_source_types:paper",
+    "source_authority_average_too_low:0.3500<0.5500",
+    "high_authority_sources_too_low:0<2"
+  ]
+}

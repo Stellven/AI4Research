@@ -2780,7 +2780,7 @@ def _execution_plan_summary(sid: str) -> dict:
         try:
             physical_data = json.loads(physical_path.read_text(encoding="utf-8"))
             if isinstance(physical_data, dict):
-                selected_operator_id = str(physical_data.get("selected_operator_id") or "")
+                selected_operator_id = str(physical_data.get("suggested_operator_id") or physical_data.get("selected_operator_id") or "")
                 capability_capsule_id = str(physical_data.get("capability_capsule_id") or "")
         except Exception:
             selected_operator_id = ""

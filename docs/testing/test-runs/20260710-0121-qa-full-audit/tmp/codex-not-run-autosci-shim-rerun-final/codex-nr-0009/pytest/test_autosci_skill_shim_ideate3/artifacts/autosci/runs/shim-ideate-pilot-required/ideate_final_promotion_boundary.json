@@ -1,0 +1,106 @@
+{
+  "active_idea_count": 1,
+  "active_idea_dedup_checked": true,
+  "blocking_reasons": [],
+  "discovery_source_count": 0,
+  "external_novelty_evidence_completed": true,
+  "failed_idea_banlist_checked": true,
+  "failed_idea_count": 0,
+  "final_promotion_ready": true,
+  "generation_path_coverage": {
+    "missing_paths": [],
+    "present_paths": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "required_paths": {
+      "A": "landscape-driven",
+      "B": "incremental",
+      "C": "combination",
+      "D": "innovation",
+      "E": "cross-domain-transfer"
+    },
+    "status": "complete"
+  },
+  "idea_boundaries": [
+    {
+      "blocking_reasons": [],
+      "duplicate_status": "new",
+      "generation_path": "A:landscape-driven",
+      "idea_id": "idea-pilot-path-001",
+      "promotion_ready": true,
+      "schema": "autosci_ideate_idea_promotion_boundary.v1",
+      "source_mode": "wiki",
+      "status": "idea_promotion_ready"
+    },
+    {
+      "blocking_reasons": [],
+      "duplicate_status": "new",
+      "generation_path": "B:incremental",
+      "idea_id": "idea-pilot-path-002",
+      "promotion_ready": true,
+      "schema": "autosci_ideate_idea_promotion_boundary.v1",
+      "source_mode": "wiki",
+      "status": "idea_promotion_ready"
+    },
+    {
+      "blocking_reasons": [],
+      "duplicate_status": "new",
+      "generation_path": "C:combination",
+      "idea_id": "idea-pilot-path-003",
+      "promotion_ready": true,
+      "schema": "autosci_ideate_idea_promotion_boundary.v1",
+      "source_mode": "wiki",
+      "status": "idea_promotion_ready"
+    },
+    {
+      "blocking_reasons": [],
+      "duplicate_status": "new",
+      "generation_path": "D:innovation",
+      "idea_id": "idea-pilot-path-004",
+      "promotion_ready": true,
+      "schema": "autosci_ideate_idea_promotion_boundary.v1",
+      "source_mode": "wiki",
+      "status": "idea_promotion_ready"
+    },
+    {
+      "blocking_reasons": [],
+      "duplicate_status": "new",
+      "generation_path": "E:cross-domain-transfer",
+      "idea_id": "idea-pilot-path-005",
+      "promotion_ready": true,
+      "schema": "autosci_ideate_idea_promotion_boundary.v1",
+      "source_mode": "wiki",
+      "status": "idea_promotion_ready"
+    }
+  ],
+  "limitations": [],
+  "model_brainstorm_completed": true,
+  "model_evidence_ids": [
+    "wiki:papers/skillgen",
+    "external:web:ideate-001"
+  ],
+  "model_name": "gpt-5.5-test-double",
+  "model_provider": "test-model-provider",
+  "model_source": "ideate-model-evidence.json",
+  "model_status": "completed",
+  "novelty_review_gate_ready": true,
+  "novelty_review_gate_references": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_ideate3/ideate-external-novelty.json",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_ideate3/ideate-review-llm.json"
+  ],
+  "novelty_review_gate_references_present": true,
+  "review_llm_evidence_completed": true,
+  "schema": "autosci_ideate_final_promotion_boundary.v1",
+  "source_evidence_ready": true,
+  "source_mode": "wiki",
+  "status": "final_promotion_ready",
+  "wiki_fallback_used": false,
+  "wiki_maturity_scan_completed": true,
+  "wiki_resolution_status": "completed",
+  "wiki_source_count": 4,
+  "wiki_target_type": "unresolved"
+}

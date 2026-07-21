@@ -1,0 +1,38 @@
+{
+  "schema": "research_claims.v1",
+  "task_id": "task.phase1.inconclusive.claims",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.claim_extract",
+  "status": "inconclusive",
+  "inputs": {
+    "paper_evidence": "sample_inconclusive_research_paper.v1.json"
+  },
+  "outputs": {
+    "claims": [
+      {
+        "claim_id": "claim.inconclusive.001",
+        "text": "The partial source appears to mention an improvement, but the metric and baseline are unavailable.",
+        "source_anchor": "fixtures/partial_paper.pdf#page=1",
+        "testability": "unknown",
+        "verification_status": "unverified",
+        "evidence_ids": [
+          "paper.inconclusive.partial-parse"
+        ]
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "partial_claim_table",
+      "path": "artifacts/scientific/fixtures/inconclusive_research_claims.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificClaimExtractor",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T21:00:00Z"
+  },
+  "limitations": [
+    "The claim is not accepted as testable until source anchors and metrics are recovered."
+  ]
+}

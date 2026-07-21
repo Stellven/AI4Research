@@ -1,0 +1,6 @@
+{
+  "upstream": "https://github.com/smallnest/autoresearch.git",
+  "commit": "12f4f23",
+  "vendored_at": "2026-05-19T17:44:00Z",
+  "vendored_by": "solar-harness autoresearch_adapter"
+}

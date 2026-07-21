@@ -1,0 +1,2 @@
+FAIL: models doctor did not report live pane route evidence
+/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/test-model-live-route-doctor.sh: line 44: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/solar-harness.sh: No such file or directory

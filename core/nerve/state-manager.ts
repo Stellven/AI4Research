@@ -705,7 +705,7 @@ let _instance: StateManager | null = null;
 export function getStateManager(config?: StateManagerConfig): StateManager {
   if (!_instance) {
     const defaultConfig: StateManagerConfig = {
-      dbPath: `${process.env.HOME}/.solar/solar.db`,
+      dbPath: process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`,
       autoInit: true,
     };
     _instance = new StateManager(config || defaultConfig);

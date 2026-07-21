@@ -1,0 +1,28 @@
+{
+  "approval_contract_verified": true,
+  "approval_state": "verified",
+  "artifact_types": [
+    "approval_contract_json",
+    "experiment_runtime_evidence_json",
+    "wiki_experiment_state",
+    "wiki_graph_edges",
+    "wiki_log"
+  ],
+  "collection_ledger_recorded": false,
+  "experiment_id": "exp-001",
+  "final_runtime_audit_ready": false,
+  "limitations": [
+    "Final collect audit requires a collection ledger entry.",
+    "Final collect audit requires live remote/provider collection boundary proof."
+  ],
+  "live_remote_collection_verified": false,
+  "remote_collection_boundary_status": "N/A",
+  "result_collected": true,
+  "runtime_semantic_status": "verified",
+  "runtime_semantic_verified": true,
+  "schema": "autosci_experiment_run_final_runtime_audit_boundary.v1",
+  "stage": "collect",
+  "stage_audit_ready": false,
+  "status": "runtime_audit_incomplete",
+  "wiki_state_mutated": true
+}

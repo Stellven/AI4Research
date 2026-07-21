@@ -1,0 +1,28 @@
+{
+  "approval_ref": "approval-exp-live-remote-collect",
+  "approval_state": "approved_pending_runtime",
+  "collection_duplicate": false,
+  "collection_identity": "3d22a26b68898e630f2575b408df55357de3eaf1",
+  "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/remote.py pull-results --result-dir /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_co3/live-remote-results --approval-ref approval-live-remote-pull-provider --allowlist-evidence /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_co3/live-remote-provider-allowlist.json --pull-command '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python' '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_co3/fake_live_pull_results_provider.py' --transport ssh --session-id ssh-session-collect-123 --execute-approved",
+  "evidence_ids": [
+    "remote-collect:exp-live-remote-collect",
+    "live-remote-results/results.json",
+    "result:exp-live-remote-collect"
+  ],
+  "exit_code": 0,
+  "experiment_id": "exp-live-remote-collect",
+  "limitations": [
+    "Run report records approved executor observations only; route readiness is still decided by runtime semantic verification and final audit boundary."
+  ],
+  "metric_count": 1,
+  "result_collected": true,
+  "result_paths": [
+    "live-remote-results/results.json"
+  ],
+  "runtime_evidence_path": "artifacts/autosci/runs/shim-exp-live-remote-collect/monitor_experiment_runtime_evidence.json",
+  "schema": "autosci_experiment_run_report.v1",
+  "stage": "collect",
+  "status": "completed",
+  "stderr_path": "artifacts/autosci/runs/shim-exp-live-remote-collect/monitor_experiment_executor_stderr.txt",
+  "stdout_path": "artifacts/autosci/runs/shim-exp-live-remote-collect/monitor_experiment_executor_stdout.txt"
+}

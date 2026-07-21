@@ -1,0 +1,21 @@
+{
+  "task_id": "task-shim-research-scheduler-strict-config-scheduler-claim_verify",
+  "operator_id": "autosci-claim-verify-worker",
+  "sprint_id": "shim-research-scheduler-strict-config-scheduler",
+  "node_id": "claim_verify",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T14:12:40Z",
+  "finished_at": "2026-07-10T14:12:40Z",
+  "log_tail": "            \"evidence:autosci-fixture-ledger\"\n          ],\n          \"experiment_id\": \"exp-001\",\n          \"final_verdict_boundary\": {\n            \"claim_evidence_ids\": [\n              \"claim-001\",\n              \"paper-shim-research-scheduler-strict-config-scheduler\",\n              \"sample_paper.md#results\"\n            ],\n            \"claim_evidence_linked\": true,\n            \"claim_id\": \"claim-001\",\n            \"code_evidence_ids\": [\n              \"task-shim-research-scheduler-strict-config-scheduler-code_evidence_map\",\n              \"map-001\",\n              \"plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py\",\n              \"claim-001\"\n            ],\n            \"code_evidence_linked\": true,\n            \"evidence_ids\": [\n              \"claim-001\",\n              \"paper-shim-research-scheduler-strict-config-scheduler\",\n              \"sample_paper.md#results\",\n              \"task-shim-research-scheduler-strict-config-scheduler-experiment_run\",\n              \"exp-001\",\n              \"evidence:autosci-fixture-result\",\n              \"evidence:autosci-fixture-ledger\",\n              \"task-shim-research-scheduler-strict-config-scheduler-code_evidence_map\",\n              \"map-001\",\n              \"plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py\"\n            ],\n            \"experiment_evidence_ids\": [\n              \"task-shim-research-scheduler-strict-config-scheduler-experiment_run\",\n              \"exp-001\",\n              \"evidence:autosci-fixture-result\",\n              \"evidence:autosci-fixture-ledger\"\n            ],\n            \"experiment_result_ready\": true,\n            \"experiment_schema\": \"experiment_result.v1\",\n            \"experiment_status\": \"completed\",\n            \"final_verdict_ready\": false,\n            \"limitations\": [\n              \"Final experiment evaluation requires completed Review LLM proof.\",\n              \"Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final.\"\n            ],\n            \"review_llm_completed\": false,\n            \"review_llm_status\": \"unavailable\",\n            \"schema\": \"autosci_experiment_evaluation_final_verdict_boundary.v1\",\n            \"status\": \"final_verdict_incomplete\",\n            \"verdict\": \"supported\",\n            \"writeback_completed\": false,",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

@@ -1,0 +1,21 @@
+{
+  "task_id": "task-job-scientific-lifecycle-blocked-test-claim_extract",
+  "operator_id": "autosci-claim-extract-worker",
+  "sprint_id": "job-scientific-lifecycle-blocked-test",
+  "node_id": "claim_extract",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T14:13:53Z",
+  "finished_at": "2026-07-10T14:13:54Z",
+  "log_tail": "{\n  \"action\": \"extract_claims\",",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

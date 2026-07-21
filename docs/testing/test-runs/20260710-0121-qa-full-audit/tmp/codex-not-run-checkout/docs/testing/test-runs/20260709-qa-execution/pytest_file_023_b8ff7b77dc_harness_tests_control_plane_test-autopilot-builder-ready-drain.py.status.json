@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_023_b8ff7b77dc_harness_tests_control_plane_test-autopilot-builder-ready-drain.py",
+  "source": "harness/tests/control_plane/test-autopilot-builder-ready-drain.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/control_plane/test-autopilot-builder-ready-drain.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.2,
+  "timeout": false
+}

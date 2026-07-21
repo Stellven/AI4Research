@@ -37,7 +37,7 @@ sqlite3 ~/.solar/solar.db "SELECT COUNT(*) FROM cortex_sources"
 
 Binary resolution order:
 1. `$QMD_BIN` environment variable (if set and exists as a file)
-2. `/Users/sihaoli/.npm-global/bin/qmd` (hardcoded known path)
+2. `~/.npm-global/bin/qmd` (hardcoded known path)
 3. `shutil.which("qmd")` (PATH search)
 
 Collection used: `solar-wiki`

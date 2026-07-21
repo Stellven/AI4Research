@@ -1,0 +1,1 @@
+{"schema": "literature_discovery.v1", "task_id": "lit-weak-review-boundary", "status": "completed", "outputs": {"query": "skill generation", "candidates": [{"candidate_id": "arxiv:2601.00002", "title": "Skill Learning for Agents", "arxiv_id": "2601.00002", "source_ref": "https://arxiv.org/abs/2601.00002"}]}}

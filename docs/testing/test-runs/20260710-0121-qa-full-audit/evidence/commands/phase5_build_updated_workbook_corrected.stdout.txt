@@ -1,0 +1,27 @@
+Inspect result written to file: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_UPDATED.xlsx.inspect.ndjson
+{
+  "output": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_UPDATED.xlsx",
+  "originalSheetCount": 10,
+  "originalSheetNames": [
+    "Recursive Split",
+    "Summary",
+    "Split Rules",
+    "Feature IDs",
+    "Function Inventory",
+    "Entrypoint Map",
+    "Existing Test Map",
+    "Missing Test Plan",
+    "Pass Fail Criteria",
+    "Severity Rubric"
+  ],
+  "finalSheetCount": 14,
+  "addedSheets": [
+    "Audit Summary",
+    "Audit Results",
+    "Audit Commands",
+    "Audit Defects"
+  ],
+  "featureResultRows": 2117,
+  "commandRows": 49,
+  "defectRows": 19
+}

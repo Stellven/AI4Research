@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-07-10T19:26:27Z",
+  "proofs": [
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed model response evidence for AutoSci `check` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-check-model-command/workflow_evolution.check.json",
+        "artifacts/autosci/runs/shim-check-model-command/check_wiki_health_model_stdout.json"
+      ],
+      "native_skill": "check",
+      "production_ready": true,
+      "proof_id": "runtime:check:command:20260710T192627Z",
+      "provenance": {
+        "artifact_kind": "model_response",
+        "captured_at": "2026-07-10T19:26:27Z",
+        "command": "'/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python' '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_check_0/check_model_command.py'",
+        "source": "command"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -1,0 +1,127 @@
+[
+  {
+    "path": "desktop/package.json",
+    "script": "start",
+    "command": "electron ."
+  },
+  {
+    "path": "desktop/package.json",
+    "script": "selftest",
+    "command": "SOLAR_DESKTOP_SELFTEST=1 electron ."
+  },
+  {
+    "path": "desktop/package.json",
+    "script": "gate",
+    "command": "node verify.js"
+  },
+  {
+    "path": "desktop/package.json",
+    "script": "build:renderer",
+    "command": "bash build-renderer.sh"
+  },
+  {
+    "path": "desktop/package.json",
+    "script": "prepackage-check",
+    "command": "node prepackage-check.js"
+  },
+  {
+    "path": "desktop/package.json",
+    "script": "build:win",
+    "command": "bash build-renderer.sh && node prepackage-check.js && electron-builder --win portable"
+  },
+  {
+    "path": "desktop/package.json",
+    "script": "build:mac",
+    "command": "bash build-renderer.sh && node prepackage-check.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg"
+  },
+  {
+    "path": "desktop/package.json",
+    "script": "build:linux",
+    "command": "bash build-renderer.sh && node prepackage-check.js && electron-builder --linux AppImage"
+  },
+  {
+    "path": "harness/status-server/react-app/package.json",
+    "script": "build",
+    "command": "vite build"
+  },
+  {
+    "path": "harness/status-server/react-app/package.json",
+    "script": "typecheck",
+    "command": "tsc --noEmit"
+  },
+  {
+    "path": "harness/status-server/react-app/package.json",
+    "script": "dev",
+    "command": "vite --host 127.0.0.1"
+  },
+  {
+    "path": "package.json",
+    "script": "dev",
+    "command": "bun run core/daemon/server.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "daemon",
+    "command": "bun run core/daemon/server.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "extract:skills",
+    "command": "bun run scripts/extract-skills.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "knowledge:repair",
+    "command": "bun run scripts/repair-solar-knowledge-graph.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "smoke:skills",
+    "command": "bun run scripts/smoke-skills.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "smoke:health-monitor",
+    "command": "bun run scripts/smoke-health-monitor.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "skills:reindex",
+    "command": "bun run scripts/rebuild-skills-index.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "matrix:skills",
+    "command": "bun run scripts/generate-skills-matrix.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "dashboard",
+    "command": "bun run core/dashboard/server.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "dashboard:web",
+    "command": "bun run core/dashboard/server.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "test",
+    "command": "bun test"
+  },
+  {
+    "path": "package.json",
+    "script": "test:ui",
+    "command": "bun run tests/ui-engine.test.ts"
+  },
+  {
+    "path": "package.json",
+    "script": "test:llm",
+    "command": "bun run tests/llm-integration.test.ts"
+  },
+  {
+    "path": "skills/fast-browser-use/package.json",
+    "script": "format",
+    "command": "prettier --write ."
+  }
+]

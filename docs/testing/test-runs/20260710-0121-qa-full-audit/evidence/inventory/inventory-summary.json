@@ -1,0 +1,50 @@
+{
+  "features": 2117,
+  "part_counts": {
+    "workflow": 652,
+    "foundations": 844,
+    "misc.": 621
+  },
+  "tracked_files": 5259,
+  "source_files": 4929,
+  "inventory_items": 31463,
+  "test_files": 1752,
+  "package_scripts": 25,
+  "classification_counts": {
+    "mapped": 22556,
+    "test-only": 8729,
+    "missing-feature-row": 15,
+    "support-only": 162,
+    "generated": 1
+  },
+  "coverage_counts": {
+    "missing": 973,
+    "indirect": 608,
+    "direct": 232,
+    "partial": 215,
+    "gated": 73,
+    "manual-only": 16
+  },
+  "features_without_mapped_items": 1150,
+  "candidate_stale_rows": 0,
+  "unmapped_public_entrypoints": 15,
+  "duplicate_feature_paths": 0,
+  "duplicate_atomic_labels": 236,
+  "eligibility_validation": {
+    "phase": "eligible-full-phase-v3",
+    "eligible_executed": 448,
+    "excluded": 1669,
+    "execution_targets": 107,
+    "all_targets_attempted": true,
+    "reclassified_missing": 355,
+    "exclusion_reason_counts": {
+      "approval_or_authorization_gate": 513,
+      "coverage_gated": 73,
+      "coverage_manual-only": 16,
+      "coverage_missing": 618,
+      "external_environment_or_credentials": 94,
+      "no_semantically_relevant_executable_test": 354,
+      "no_tracked_executable_test": 1
+    }
+  }
+}

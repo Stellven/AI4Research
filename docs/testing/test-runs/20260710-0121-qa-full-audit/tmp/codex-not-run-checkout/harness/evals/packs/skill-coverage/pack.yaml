@@ -1,0 +1,45 @@
+---
+# Eval Pack: skill-coverage
+# Tests that skill registry is healthy and stable skills pass eval
+id: skill-coverage
+name: "Skill Coverage Eval"
+version: "1.0.0"
+target: "skill-platform"
+min_score: 0.80
+description: "Validates skill registry integrity, stable skill count, and metric emission."
+
+cases:
+  - id: sc-1
+    name: "registry has 5+ stable skills"
+    cmd: "python3 lib/solar_skills.py registry --json"
+    expect_field: "stable_count"
+    expect_min: 5
+    weight: 2.0
+
+  - id: sc-2
+    name: "skill_metrics compiles"
+    cmd: "python3 -m py_compile lib/skill_metrics.py"
+    expect_exit: 0
+    weight: 1.0
+
+  - id: sc-3
+    name: "skill_export compiles"
+    cmd: "python3 -m py_compile lib/skill_export.py"
+    expect_exit: 0
+    weight: 1.0
+
+  - id: sc-4
+    name: "skills inventory works"
+    cmd: "python3 lib/solar_skills.py inventory --json"
+    expect_field: "ok"
+    expect_value: true
+    weight: 1.5
+
+  - id: sc-5
+    name: "skill metrics emit works"
+    cmd: "python3 lib/skill_metrics.py emit --skill plan --event invoke --json"
+    expect_field: "ok"
+    expect_value: true
+    weight: 1.5
+
+regression_suite: "tests/skills/test-s2-skill-lifecycle.sh"

@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RuntimeHandV1",
+  "description": "Schema for hand execution command/result envelopes",
+  "definitions": {
+    "command_envelope": {
+      "type": "object",
+      "required": ["command_name", "input", "idempotency_key", "hand_type"],
+      "properties": {
+        "command_name": { "type": "string" },
+        "input": { "type": "object" },
+        "idempotency_key": { "type": "string" },
+        "hand_type": { "type": "string", "enum": ["mock", "shell", "pane", "remote", "mcp"] },
+        "hand_ref": { "type": ["string", "null"] },
+        "metadata": { "type": "object" }
+      }
+    },
+    "result_envelope": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["ok", "error", "timeout", "cancelled", "duplicate_suppressed"] },
+        "output": {},
+        "error": { "type": ["string", "null"] },
+        "duration_ms": { "type": ["number", "null"] },
+        "side_effects": { "type": "array", "items": { "type": "string" } },
+        "redacted_secrets": { "type": "array", "items": { "type": "string" } },
+        "metadata": { "type": "object" }
+      }
+    },
+    "hand_ref": {
+      "type": "object",
+      "required": ["hand_id", "hand_type", "provisioned_at"],
+      "properties": {
+        "hand_id": { "type": "string" },
+        "hand_type": { "type": "string", "enum": ["mock", "shell", "pane", "remote", "mcp"] },
+        "provisioned_at": { "type": "string", "format": "date-time" },
+        "capabilities": { "type": "array", "items": { "type": "string" } },
+        "location": { "type": ["string", "null"] },
+        "metadata": { "type": "object" }
+      }
+    }
+  }
+}

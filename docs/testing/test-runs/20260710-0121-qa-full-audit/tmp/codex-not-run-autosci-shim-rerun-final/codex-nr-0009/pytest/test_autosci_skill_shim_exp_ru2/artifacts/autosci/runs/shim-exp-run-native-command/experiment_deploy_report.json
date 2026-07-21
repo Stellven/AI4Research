@@ -1,0 +1,20 @@
+{
+  "after_artifact_count": 1,
+  "approval_ref": "approval-exp-native-001",
+  "approval_state": "approved_pending_runtime",
+  "before_artifact_count": 1,
+  "command_reason": "Experiment command selected from allowlist:commands: command allowlist template matched by commands",
+  "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru2/exp_native_command.py --experiment-id exp-native-001 --marker /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_ru2/exp-native-marker.txt",
+  "deploy_mode": "local_command",
+  "execution_verified": false,
+  "exit_code": 2,
+  "experiment_id": "exp-native-001",
+  "limitations": [
+    "Deploy report is audit evidence only; final runtime readiness still depends on approval/runtime semantic verification."
+  ],
+  "ready_for_execution": true,
+  "result_collected": false,
+  "runtime_evidence_path": "artifacts/autosci/runs/shim-exp-run-native-command/run_experiment_runtime_evidence.json",
+  "schema": "autosci_experiment_deploy_report.v1",
+  "status": "failed"
+}

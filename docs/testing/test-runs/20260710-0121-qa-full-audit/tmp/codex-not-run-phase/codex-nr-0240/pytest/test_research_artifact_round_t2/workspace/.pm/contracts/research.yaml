@@ -1,0 +1,17 @@
+enabled: true
+hypothesis: antigravity 入口的研究 artifact 必须出现在 compiled package。
+source_papers: []
+experiments:
+- name: dag_quality_eval
+  dataset: golden_cases.jsonl
+  metric:
+  - cycle_rate
+  - acceptance_coverage
+  - human_edit_distance
+adoption_threshold:
+  cycle_rate: < 2%
+  acceptance_coverage: '> 95%'
+  human_edit_reduction: '> 25%'
+rejection_criteria:
+- No evidence ledger available
+- No verifier/critique gate

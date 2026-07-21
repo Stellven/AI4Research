@@ -16,7 +16,7 @@ from compiled_sprint_review_closeout import closeout_compiled_sprint
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runtime-root", default="/Users/lisihao/.solar/harness")
+    parser.add_argument("--runtime-root", default="~/.solar/harness")
     parser.add_argument("--sprint-id", required=True)
     args = parser.parse_args()
 

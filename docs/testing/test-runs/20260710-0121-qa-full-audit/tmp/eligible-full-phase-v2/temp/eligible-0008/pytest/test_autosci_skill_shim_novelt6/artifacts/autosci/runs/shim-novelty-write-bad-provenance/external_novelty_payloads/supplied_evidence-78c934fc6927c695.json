@@ -1,0 +1,1 @@
+{"schema": "external_novelty_sources.v1", "status": "completed", "outputs": {"sources": [{"provider": "semantic_scholar", "title": "SkillGen Writeback Prior Work", "summary": "A source row without durable identifiers or retrieval metadata."}]}}

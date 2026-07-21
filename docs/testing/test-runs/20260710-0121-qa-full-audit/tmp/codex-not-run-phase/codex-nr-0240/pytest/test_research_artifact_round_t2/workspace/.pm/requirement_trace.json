@@ -1,0 +1,99 @@
+{
+  "schema_version": "solar.requirement_trace.v1",
+  "requirement_ir_id": "req-a442de134d69",
+  "sprint_id": "sprint-20260710-185254-intent-antigravity-artifact-compile-0017d47d",
+  "items": [
+    {
+      "requirement_id": "REQ-000",
+      "source_text": "antigravity 入口的研究 artifact 必须出现在 compiled package。",
+      "success_criteria": [
+        "antigravity 入口的研究 artifact 必须出现在 compiled package。"
+      ],
+      "verification_method": "task_graph_closeout",
+      "mapped_nodes": [
+        "R1",
+        "R2",
+        "R3",
+        "R5",
+        "R6"
+      ],
+      "expected_artifacts": [
+        "claims.jsonl",
+        "contradictions.jsonl",
+        "critique.md",
+        "final_prd_implications.md",
+        "source_manifest.json"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-001",
+      "source_text": "paper/source inventory 完整可追溯。",
+      "success_criteria": [
+        "paper/source inventory 完整可追溯。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "expected_artifacts": [
+        "claims.jsonl",
+        "contradictions.jsonl",
+        "critique.md",
+        "final_prd_implications.md",
+        "synthesis.md"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-002",
+      "source_text": "claim -> evidence -> implication 映射完整。",
+      "success_criteria": [
+        "claim -> evidence -> implication 映射完整。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "expected_artifacts": [
+        "claims.jsonl",
+        "contradictions.jsonl",
+        "critique.md",
+        "final_prd_implications.md",
+        "synthesis.md"
+      ],
+      "final_status": "missing"
+    },
+    {
+      "requirement_id": "REQ-003",
+      "source_text": "研究结论具备 adoption/rejection criteria。",
+      "success_criteria": [
+        "研究结论具备 adoption/rejection criteria。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "mapped_nodes": [
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "expected_artifacts": [
+        "claims.jsonl",
+        "contradictions.jsonl",
+        "critique.md",
+        "final_prd_implications.md",
+        "synthesis.md"
+      ],
+      "final_status": "missing"
+    }
+  ]
+}

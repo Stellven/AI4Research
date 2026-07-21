@@ -1,0 +1,31 @@
+{
+  "aggregate_ready": true,
+  "aggregates": [
+    {
+      "mean": 0.8500000000000001,
+      "name": "accuracy",
+      "sample_count": 2,
+      "seed_count": 2,
+      "seeds": [
+        "1",
+        "2"
+      ],
+      "std": 0.07071067811865474,
+      "values": [
+        0.8,
+        0.9
+      ]
+    }
+  ],
+  "experiment_id": "exp-multiseed",
+  "limitations": [],
+  "metric_count": 2,
+  "result_paths": [
+    "remote-multiseed-results/seed-1.json",
+    "remote-multiseed-results/seed-2.json"
+  ],
+  "schema": "autosci_experiment_metric_aggregate_report.v1",
+  "seed_metric_count": 2,
+  "stage": "collect",
+  "status": "completed"
+}

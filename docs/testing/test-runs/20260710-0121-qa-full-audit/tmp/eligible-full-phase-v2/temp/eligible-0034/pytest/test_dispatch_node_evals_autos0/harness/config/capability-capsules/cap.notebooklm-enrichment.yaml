@@ -1,0 +1,101 @@
+capability_capsule_id: cap.notebooklm-enrichment
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: NotebookLM Enrichment
+  description: Upload curated local sources into NotebookLM and emit reusable enrichment artifacts such as notebook metadata, source inventory, mindmaps, and infographic outputs.
+applicability:
+  task_types:
+    - notebooklm
+    - evidence
+  positive_signals:
+    - notebooklm
+    - mindmap
+    - infographic
+    - source bundle
+    - notebook
+  negative_signals:
+    - refactor
+contract:
+  inputs:
+    required:
+      - name: source_files
+        type: json
+    optional:
+      - name: notebook_name
+        type: string
+      - name: mindmap
+        type: json
+      - name: infographics
+        type: json
+  outputs:
+    required:
+      - name: notebooklm_result
+        type: json
+    optional:
+      - name: source_summary
+        type: markdown
+  preconditions:
+    - check: task_type_in
+      values:
+        - notebooklm
+        - evidence
+  postconditions:
+    - check: output_present
+      field: notebooklm_result
+  invariants:
+    - NotebookLM uploads must come from local curated source files, not copied-text fallback by default.
+composition:
+  consumes:
+    - type: artifact.source_bundle
+  produces:
+    - type: artifact.notebooklm_result
+  compatible_with:
+    - guard.secret-leak-guard
+    - resource.repo-workspace
+  incompatible_with: []
+  requires_after:
+    - cap.requirement-research-scout
+effects:
+  read:
+    - artifacts.research
+  write:
+    - artifacts.notebooklm
+  execute:
+    - browser_wrapper
+  network:
+    - notebooklm.google.com
+  cost:
+    - browser_runtime
+  risk:
+    - auth_expiry
+    - browser_quota
+bindings:
+  skills:
+    required:
+      - skill.browser-automation
+    optional: []
+  mcp_capabilities: {}
+  data_refs:
+    - data.source_bundle
+  secret_refs: []
+  required_guard_capsules:
+    - guard.secret-leak-guard
+  required_resource_capsules:
+    - resource.repo-workspace
+verification:
+  self_check:
+    - check.notebooklm_result_written
+  external_verifier:
+    required: false
+    preferred_capsules:
+      - cap.requirement-compiler-verification
+  pass_conditions:
+    - notebooklm_result exists
+operator_compatibility:
+  preferred:
+    - mini-browser-notebooklm
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-05-27T00:00:00Z"

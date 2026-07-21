@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/prepare_paper_source.py", line 23, in <module>
+    import requests
+ModuleNotFoundError: No module named 'requests'

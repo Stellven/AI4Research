@@ -1,0 +1,78 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "external_novelty status is `N/A`, not `completed`",
+        "external_novelty provenance status is `missing`, not `passed`",
+        "review_llm status is `N/A`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-001",
+        "claim-003",
+        "method-001",
+        "task-autosci-skillgen-ingest_paper",
+        "task-autosci-skillgen-extract_claims",
+        "claim-001",
+        "claim-002",
+        "task-autosci-skillgen-extract_methods",
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "external_novelty_provenance_status": "missing",
+      "external_novelty_status": "N/A",
+      "external_source_count": "N/A",
+      "final_acceptance_ready": false,
+      "idea_id": "idea-001",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.68,
+      "novelty_score": 4,
+      "provider_statuses": [],
+      "recommendation": "advance",
+      "review_available": false,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "N/A",
+      "review_mode": "N/A",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    },
+    {
+      "blocking_reasons": [
+        "external_novelty status is `missing`, not `completed`",
+        "external_novelty provenance status is `missing`, not `passed`",
+        "review_llm status is `missing`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-duplicate-001",
+        "claim-003",
+        "method-001",
+        "task-autosci-skillgen-ingest_paper",
+        "task-autosci-skillgen-extract_claims",
+        "claim-001",
+        "claim-002",
+        "task-autosci-skillgen-extract_methods",
+        "paper-skillgen-operator-smoke-paper"
+      ],
+      "external_novelty_provenance_status": "missing",
+      "external_novelty_status": "missing",
+      "external_source_count": "N/A",
+      "final_acceptance_ready": false,
+      "idea_id": "idea-duplicate-001",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.15,
+      "novelty_score": 2,
+      "provider_statuses": [],
+      "recommendation": "reject",
+      "review_available": false,
+      "review_invocation_mode": "N/A",
+      "review_llm_status": "missing",
+      "review_mode": "N/A",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

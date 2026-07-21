@@ -1,0 +1,9 @@
+{
+  "name": "shell_state_read_preflight",
+  "command": [
+    "bash",
+    "harness/tests/test-state-read-preflight.sh"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0
+}

@@ -1,0 +1,2 @@
+libomp import guard: PASS
+libomp import guard regression: PASS

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "influence.output.deep_research_seed_pack.v1",
+  "title": "DeepResearchSeedPack",
+  "type": "object",
+  "required": ["schema_version", "asset_type", "packet_id", "thesis_id"],
+  "properties": {
+    "schema_version": {"const": "influence.output.deep_research_seed_pack.v1"},
+    "asset_type": {"const": "deep_research_seed_pack"},
+    "packet_id": {"type": "string"},
+    "thesis_id": {"type": "string"},
+    "questions": {"type": "array", "items": {"type": "string"}},
+    "coverage_gap": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "artifacts": [],
+  "inputs": {
+    "approval_ref": "approval-pilot"
+  },
+  "limitations": [
+    "Pilot experiment executor did not run because no allowlisted command was selected."
+  ],
+  "node_id": "node-run-pilot-experiment",
+  "outputs": {
+    "runtime": {
+      "action": "run_pilot_experiment",
+      "approval_ref": "approval-pilot",
+      "checks": [
+        {
+          "check": "command_allowlisted",
+          "detail": "No experiment command was selected",
+          "status": "error"
+        }
+      ],
+      "command_run": "blocked:experiment-command-availability",
+      "evidence_ids": [
+        "pilot-runtime:blocked"
+      ],
+      "exit_code": 1,
+      "result_collected": false,
+      "status": "inconclusive"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-approved-side-effect-executor",
+    "timestamp": "2026-07-10T19:26:48Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "inconclusive",
+  "task_id": "task-autosci-skillgen-run_pilot_experiment"
+}

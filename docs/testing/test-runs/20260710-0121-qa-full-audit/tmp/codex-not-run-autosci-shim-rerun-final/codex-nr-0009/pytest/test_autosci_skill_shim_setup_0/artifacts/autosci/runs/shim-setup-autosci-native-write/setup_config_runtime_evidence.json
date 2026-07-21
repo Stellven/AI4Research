@@ -1,0 +1,17 @@
+{
+  "after_artifact": "approved-setup.env",
+  "changed": true,
+  "dotenv_path": "runtime/.env",
+  "evidence_ids": [
+    "setup-config:autosci-review-llm-model",
+    "setup-config:openai-api-key"
+  ],
+  "exit_code": 0,
+  "keys_written": [
+    "AUTOSCI_REVIEW_LLM_MODEL",
+    "OPENAI_API_KEY"
+  ],
+  "schema": "autosci_setup_config_runtime.v1",
+  "secret_values_recorded": false,
+  "status": "completed"
+}

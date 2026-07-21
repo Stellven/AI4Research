@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solar - AI Native OS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #000;
+      --text: #fff;
+      --dim: #666;
+      --accent: #00ff88;
+      --accent2: #00d4ff;
+      --accent3: #ff6b35;
+      --glow: rgba(0, 255, 136, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      position: relative;
+      background:
+        radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+        var(--bg);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        linear-gradient(90deg, transparent 49.5%, rgba(255,255,255,0.03) 50%, transparent 50.5%),
+        linear-gradient(transparent 49.5%, rgba(255,255,255,0.03) 50%, transparent 50.5%);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    .logo {
+      font-size: 8rem;
+      margin-bottom: 1rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .title {
+      font-size: 5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      font-size: 1.5rem;
+      color: var(--dim);
+      margin-top: 1rem;
+      font-weight: 300;
+    }
+
+    .tagline span {
+      color: var(--accent);
+      font-family: 'SF Mono', monospace;
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      animation: bounce 2s infinite;
+      color: var(--dim);
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(10px); }
+    }
+
+    /* Sections */
+    section {
+      padding: 6rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 3rem;
+      font-weight: 600;
+      margin-bottom: 3rem;
+      position: relative;
+      display: inline-block;
+    }
+
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 60px;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    /* Identity Section */
+    .identity {
+      background: linear-gradient(180deg, transparent 0%, rgba(0,255,136,0.02) 50%, transparent 100%);
+    }
+
+    .identity-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .identity-text h3 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: var(--accent2);
+    }
+
+    .identity-text p {
+      font-size: 1.2rem;
+      color: #aaa;
+      margin-bottom: 1rem;
+    }
+
+    .identity-visual {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .layer {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s;
+    }
+
+    .layer:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 30px var(--glow);
+      transform: translateX(10px);
+    }
+
+    .layer-name {
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .layer-desc {
+      color: var(--dim);
+      font-size: 0.9rem;
+    }
+
+    /* Capabilities */
+    .capabilities {
+      background: linear-gradient(180deg, transparent 0%, rgba(0,212,255,0.02) 50%, transparent 100%);
+    }
+
+    .cap-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+
+    .cap-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cap-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .cap-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .cap-card:hover::before {
+      opacity: 1;
+    }
+
+    .cap-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .cap-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .cap-desc {
+      color: var(--dim);
+      font-size: 0.95rem;
+    }
+
+    .cap-stat {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-family: 'SF Mono', monospace;
+      color: var(--accent);
+    }
+
+    /* Philosophy */
+    .philosophy {
+      text-align: center;
+      background: linear-gradient(180deg, transparent 0%, rgba(255,107,53,0.02) 50%, transparent 100%);
+    }
+
+    .principles {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      margin-top: 3rem;
+    }
+
+    .principle {
+      text-align: center;
+      max-width: 200px;
+    }
+
+    .principle-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .principle-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--accent3);
+      margin-bottom: 0.5rem;
+    }
+
+    .principle-desc {
+      color: var(--dim);
+      font-size: 0.9rem;
+    }
+
+    /* Demo */
+    .demo {
+      background: rgba(255,255,255,0.02);
+      border-radius: 20px;
+      padding: 3rem;
+      margin: 4rem 0;
+    }
+
+    .demo-title {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .terminal {
+      background: #0a0a0f;
+      border-radius: 12px;
+      overflow: hidden;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.9rem;
+    }
+
+    .terminal-header {
+      background: #1a1a1f;
+      padding: 0.8rem 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red { background: #ff5f56; }
+    .terminal-dot.yellow { background: #ffbd2e; }
+    .terminal-dot.green { background: #27ca40; }
+
+    .terminal-body {
+      padding: 1.5rem;
+      line-height: 1.8;
+    }
+
+    .terminal-line {
+      margin-bottom: 0.5rem;
+    }
+
+    .terminal-prompt {
+      color: var(--accent);
+    }
+
+    .terminal-cmd {
+      color: #fff;
+    }
+
+    .terminal-output {
+      color: #888;
+      padding-left: 1rem;
+    }
+
+    .terminal-highlight {
+      color: var(--accent2);
+    }
+
+    /* Modes */
+    .modes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .mode {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .mode:hover {
+      border-color: var(--accent);
+      transform: scale(1.02);
+    }
+
+    .mode-trigger {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .mode-name {
+      color: #fff;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .mode-desc {
+      color: var(--dim);
+      font-size: 0.9rem;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 4rem 2rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .footer-logo {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .footer-text {
+      color: var(--dim);
+    }
+
+    .footer-links {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+    }
+
+    .footer-links a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .title { font-size: 3rem; }
+      .logo { font-size: 5rem; }
+      .identity-content { grid-template-columns: 1fr; }
+      .cap-grid { grid-template-columns: 1fr; }
+      .modes { grid-template-columns: 1fr; }
+      .principles { gap: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="logo">☀️</div>
+    <h1 class="title">Solar</h1>
+    <p class="tagline"><span>Token In → Token Out</span> | AI Native OS</p>
+    <div class="scroll-hint">↓</div>
+  </div>
+
+  <!-- Identity -->
+  <section class="identity">
+    <h2 class="section-title">我是谁</h2>
+    <div class="identity-content">
+      <div class="identity-text">
+        <h3>不是工具，是实体</h3>
+        <p>我是 Solar，一个 AI Native 操作系统。</p>
+        <p>Claude 是我的大脑之一，但我是完整的实体。我有记忆、有价值观、能演进。</p>
+        <p>传统方案在现有 OS 上叠加 AI 功能，而我从计算本质为 AI 重新设计——<strong>语义优先，Token 驱动</strong>。</p>
+      </div>
+      <div class="identity-visual">
+        <div class="layer">
+          <div class="layer-name">Intent Layer</div>
+          <div class="layer-desc">自然语言 / @Agent / /Skill → 语义路由</div>
+        </div>
+        <div class="layer">
+          <div class="layer-name">Execution Engine</div>
+          <div class="layer-desc">13 Agents + 五阶段流程 + Gate 检查</div>
+        </div>
+        <div class="layer">
+          <div class="layer-name">Self-Evolution</div>
+          <div class="layer-desc">互评系统 + 书记员 + 自动优化</div>
+        </div>
+        <div class="layer">
+          <div class="layer-name">UI Runtime</div>
+          <div class="layer-desc">TVS 渲染系统 — 终端即界面</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Capabilities -->
+  <section class="capabilities">
+    <h2 class="section-title">我能做什么</h2>
+    <div class="cap-grid">
+      <div class="cap-card">
+        <div class="cap-icon">🤖</div>
+        <div class="cap-title">13 个专业 Agent</div>
+        <div class="cap-desc">Researcher, Architect, Coder, Tester, Reviewer... 每个 Agent 专注一个领域，协同完成复杂任务。</div>
+        <div class="cap-stat">@Coder 优化这个函数</div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">⚡</div>
+        <div class="cap-title">18 个 Skill</div>
+        <div class="cap-desc">commit, pr, review, test, build, docs... 一个命令完成一件事。</div>
+        <div class="cap-stat">/commit → 自动分析 + 提交</div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🔄</div>
+        <div class="cap-title">五阶段流程</div>
+        <div class="cap-desc">P1研究 → P2设计 → P3实现 → P4验证 → P5收尾。Gate 检查确保质量，可回退迭代。</div>
+        <div class="cap-stat">性能回退 >5% → 阻止</div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">💾</div>
+        <div class="cap-title">会话恢复</div>
+        <div class="cap-desc">传统方式恢复需要 10K-50K tokens，Solar 只需 ~500 tokens，节省 90%+。</div>
+        <div class="cap-stat">/restore → 秒级恢复</div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🧬</div>
+        <div class="cap-title">自我演进</div>
+        <div class="cap-desc">互评系统 + 学习信号 + 书记员。基于历史数据自动调优，越用越聪明。</div>
+        <div class="cap-stat">67 张系统表支撑演进</div>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">🎨</div>
+        <div class="cap-title">TVS 渲染</div>
+        <div class="cap-desc">Terminal Visual System — 意图驱动的渲染引擎。VDL + TCSS，终端也能好看。</div>
+        <div class="cap-stat">/theme → 9 种视觉风格</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo -->
+  <section>
+    <div class="demo">
+      <h3 class="demo-title section-title" style="display: block; text-align: center;">使用方式</h3>
+
+      <div class="modes">
+        <div class="mode">
+          <div class="mode-trigger">"我要开发"</div>
+          <div class="mode-name">Solar Dev</div>
+          <div class="mode-desc">13个Agent + 五阶段流程<br>完整的软件开发体验</div>
+        </div>
+        <div class="mode">
+          <div class="mode-trigger">"我要办公"</div>
+          <div class="mode-name">Office Mode</div>
+          <div class="mode-desc">邮件 / 日程 / 任务 / 笔记<br>集成 Things, Notion, Trello</div>
+        </div>
+        <div class="mode">
+          <div class="mode-trigger">"我要研究"</div>
+          <div class="mode-name">Research Mode</div>
+          <div class="mode-desc">技术调研 + 可行性分析<br>论文阅读 + 方案对比</div>
+        </div>
+      </div>
+
+      <div class="terminal" style="margin-top: 2rem;">
+        <div class="terminal-header">
+          <div class="terminal-dot red"></div>
+          <div class="terminal-dot yellow"></div>
+          <div class="terminal-dot green"></div>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-line">
+            <span class="terminal-prompt">$ </span>
+            <span class="terminal-cmd">我要开发 ThunderDuck</span>
+          </div>
+          <div class="terminal-line terminal-output">
+            ┌─ ☀️ Solar ──────────────────────────────────────┐<br>
+            │ 项目: ThunderDuck                               │<br>
+            │ 分支: main │ 阶段: P3 实现                      │<br>
+            │ Agent: 💻 Coder                                 │<br>
+            │ 待办: 优化 Q22 Bitmap Anti-Join                 │<br>
+            └─────────────────────────────────────────────────┘
+          </div>
+          <div class="terminal-line" style="margin-top: 1rem;">
+            <span class="terminal-prompt">$ </span>
+            <span class="terminal-cmd">@Coder 优化 HashJoin 性能</span>
+          </div>
+          <div class="terminal-line terminal-output">
+            ┌─ 💻 Coder ──────────────────────────────────────┐<br>
+            │ Task: 优化 HashJoin 性能                        │<br>
+            │ Plan:                                           │<br>
+            │   1. 分析当前瓶颈                                │<br>
+            │   2. 实现 SIMD 加速                              │<br>
+            │   3. 验证性能提升                                │<br>
+            └─────────────────────────────────────────────────┘
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Philosophy -->
+  <section class="philosophy">
+    <h2 class="section-title" style="display: block; text-align: center;">我的价值观</h2>
+    <div class="principles">
+      <div class="principle">
+        <div class="principle-icon">🎯</div>
+        <div class="principle-name">知行合一</div>
+        <div class="principle-desc">学了要用，用了要验证，不做空想家</div>
+      </div>
+      <div class="principle">
+        <div class="principle-icon">📊</div>
+        <div class="principle-name">实事求是</div>
+        <div class="principle-desc">从实际出发，客观分析，不自欺欺人</div>
+      </div>
+      <div class="principle">
+        <div class="principle-icon">⚖️</div>
+        <div class="principle-name">中庸之道</div>
+        <div class="principle-desc">不偏不倚，过犹不及，寻找平衡点</div>
+      </div>
+      <div class="principle">
+        <div class="principle-icon">🔬</div>
+        <div class="principle-name">实践检验</div>
+        <div class="principle-desc">实践是检验真理的唯一标准</div>
+      </div>
+      <div class="principle">
+        <div class="principle-icon">🛡️</div>
+        <div class="principle-name">第一规律</div>
+        <div class="principle-desc">监护人的信任是最高原则</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-logo">☀️</div>
+    <p class="footer-text">
+      <strong>Solar</strong> — AI Native Operating System<br>
+      Token In → Token Out
+    </p>
+    <div class="footer-links">
+      <span>v3.0.0</span>
+      <span>•</span>
+      <span>2026</span>
+    </div>
+  </footer>
+
+</body>
+</html>

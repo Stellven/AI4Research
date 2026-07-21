@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-07-10T18:47:37Z",
+  "proofs": [
+    {
+      "categories": [
+        "semantic_equivalence_evidence"
+      ],
+      "collection_mode": "semantic_audit",
+      "description": "Completed semantic parity audit for AutoSci route equivalence.",
+      "evidence_refs": [
+        "semantic-audits/novelty-audit.json",
+        "AutoSci/i18n/en/skills/novelty/SKILL.md",
+        "external-evidence-root/harness/artifacts/runtime/semantic/solar-novelty.json"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:worktree-portability-audit:20260710T184737Z",
+      "provenance": {
+        "artifact_kind": "autosci_semantic_parity_audit.v1",
+        "captured_at": "2026-07-10T18:47:37Z",
+        "command": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/semantic_parity_runtime_proof.py from-audit /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0022/pytest/test_semantic_audit_resolves_c0/semantic-audits/novelty-audit.json --native-skill novelty --runtime-proof-out /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0022/pytest/test_semantic_audit_resolves_c0/semantic-audits/novelty.proof.json",
+        "source": "worktree-portability-audit"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

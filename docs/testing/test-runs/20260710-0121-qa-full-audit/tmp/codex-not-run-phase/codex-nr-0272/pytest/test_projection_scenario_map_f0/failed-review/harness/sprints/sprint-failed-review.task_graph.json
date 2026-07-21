@@ -1,0 +1,11 @@
+{
+  "sprint_id": "sprint-failed-review",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "fix",
+      "depends_on": [],
+      "status": "failed"
+    }
+  ]
+}

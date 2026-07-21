@@ -1,0 +1,42 @@
+{
+  "schema_version": "solar.compiled_sprint.traceability.v1",
+  "sprint_id": "sprint-20260527-understand-anything-operator-productization",
+  "generated_at": "2026-07-10T18:52:49Z",
+  "requirements": [
+    {
+      "requirement_id": "REQ-001",
+      "mapped_nodes": [
+        "S1",
+        "S2"
+      ],
+      "acceptance_ids": [
+        "ACC-S1-1",
+        "ACC-S2-1"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "S1",
+      "logical_operator": "DeepArchitect",
+      "dispatch_task_type": "planning",
+      "capability_capsule_id": "cap.requirement-compiler-planner",
+      "depends_on": [],
+      "acceptance_ids": [
+        "ACC-S1-1"
+      ]
+    },
+    {
+      "id": "S2",
+      "logical_operator": "ImplementationWorker",
+      "dispatch_task_type": "implementation",
+      "capability_capsule_id": "cap.requirement-compiler-implementation",
+      "depends_on": [
+        "S1"
+      ],
+      "acceptance_ids": [
+        "ACC-S2-1"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "node_id": "N1",
+  "resource": "resource.repo-workspace",
+  "workspace_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0035/pytest/test_node_verdict_delegates_to0",
+  "write_scope": [
+    "/tmp/test"
+  ],
+  "scanned_paths": [],
+  "in_scope": true,
+  "bound": true,
+  "checked_at": "2026-07-10T14:14:18Z"
+}

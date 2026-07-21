@@ -1,0 +1,5 @@
+检查 ssh localhost...
+
+SKIP: ssh localhost 不可用
+  配置方法: ssh-copy-id localhost
+

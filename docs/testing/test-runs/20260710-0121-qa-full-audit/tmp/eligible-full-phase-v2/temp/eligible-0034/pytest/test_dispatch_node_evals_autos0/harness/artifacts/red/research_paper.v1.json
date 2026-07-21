@@ -1,0 +1,43 @@
+{
+  "schema": "research_paper.v1",
+  "task_id": "task.phase1.sample.paper",
+  "sprint_id": "sprint.autosci.phase1",
+  "node_id": "node.paper_ingest",
+  "status": "completed",
+  "inputs": {
+    "source_ref": "fixtures/sample_paper.md"
+  },
+  "outputs": {
+    "paper": {
+      "paper_id": "paper.sample.transformer",
+      "title": "Sample Transformer Study",
+      "source_type": "markdown",
+      "source_ref": "fixtures/sample_paper.md",
+      "identifiers": {
+        "arxiv": "2501.00001"
+      },
+      "abstract": "A fixture paper used to validate Solar research paper evidence.",
+      "parse_status": "failed",
+      "sections": [
+        {
+          "section_id": "sec.abstract",
+          "title": "Abstract",
+          "text": "A compact abstract.",
+          "source_anchor": "fixtures/sample_paper.md#abstract"
+        }
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "type": "normalized_paper",
+      "path": "artifacts/autosci/fixtures/research_paper.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificPaperIngestor",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": []
+}

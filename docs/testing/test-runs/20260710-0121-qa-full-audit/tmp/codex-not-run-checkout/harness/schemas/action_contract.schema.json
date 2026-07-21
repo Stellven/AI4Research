@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "solar.action_contract.v1",
+  "title": "Action Contract",
+  "description": "Execution contract for broker-managed actions. Frozen by S02 architecture, enforced by S03 broker. No contract = no execution.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "action_id",
+    "node_id",
+    "kind",
+    "intent",
+    "read_set",
+    "write_set",
+    "required_capabilities",
+    "preconditions",
+    "success_predicates",
+    "verification",
+    "risk_class"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "solar.action_contract.v1"
+    },
+    "action_id": {
+      "type": "string",
+      "pattern": "^[A-Z]\\d+$"
+    },
+    "node_id": {
+      "type": "string",
+      "pattern": "^[A-Z]\\d+$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["shell", "python", "file_write", "tool_call", "research_extract", "human_approval"]
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 500
+    },
+    "read_set": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "write_set": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "required_capabilities": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "preconditions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "success_predicates": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "verification": {
+      "type": "object",
+      "required": ["static", "runtime", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "static": {"type": "boolean"},
+        "runtime": {"type": "array", "items": {"type": "string"}},
+        "evidence": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "risk_class": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "approval_required": {
+      "type": "boolean"
+    },
+    "rollback": {
+      "type": "object",
+      "required": ["kind", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"type": "string", "enum": ["git_restore", "file_delete", "none"]},
+        "target": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "timeout_sec": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600
+    },
+    "legacy": {
+      "type": "boolean"
+    }
+  }
+}

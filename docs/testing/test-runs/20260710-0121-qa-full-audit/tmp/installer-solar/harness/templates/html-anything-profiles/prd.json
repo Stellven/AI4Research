@@ -1,0 +1,35 @@
+{
+  "id": "prd",
+  "surface_label": "PM / PRD",
+  "kicker": "HTML Anything · PRD",
+  "title": "Solar PRD",
+  "default_lede": "面向人读的 PRD 默认走 html-anything 渲染链，而不是旧的手写 HTML shell。",
+  "footer_left": "Solar Harness",
+  "footer_right": "PM readable artifact",
+  "upstream": {
+    "skill": "doc-kami-parchment",
+    "path": "next/src/lib/templates/skills/doc-kami-parchment/example.html"
+  },
+  "theme": {
+    "colors": {
+      "background": "#f5f4ed",
+      "surface": "#faf9f5",
+      "ink": "#1f1d18",
+      "muted": "#6b665b",
+      "accent": "#1B365D",
+      "rule": "#d4d1c5",
+      "badge_bg": "#efeee5"
+    },
+    "typography": {
+      "hero_size": "clamp(46px, 6vw, 88px)",
+      "serif": "'Source Serif 4', 'Noto Serif SC', Georgia, serif",
+      "sans": "'Inter Tight', system-ui, sans-serif",
+      "mono": "'JetBrains Mono', ui-monospace, monospace"
+    },
+    "layout": {
+      "max_width": "1080px",
+      "toc_width": "250px",
+      "card_min_height": "170px"
+    }
+  }
+}

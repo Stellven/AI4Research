@@ -1,0 +1,14 @@
+{
+  "node_id": "N1",
+  "resource": "resource.repo-workspace",
+  "workspace_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness",
+  "write_scope": [
+    "test_output.txt"
+  ],
+  "scanned_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0046/pytest/test_verdict_pass_with_handoff0/sprints/sprint-ac3-full.N1-handoff.md"
+  ],
+  "in_scope": true,
+  "bound": true,
+  "checked_at": "2026-07-10T14:06:35Z"
+}

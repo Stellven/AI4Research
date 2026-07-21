@@ -1,0 +1,58 @@
+{
+  "claim_evidence_ids": [
+    "claim-001",
+    "paper-job-scientific-lifecycle-resume-test",
+    "sample_paper.md#results"
+  ],
+  "claim_evidence_linked": true,
+  "claim_id": "claim-001",
+  "code_evidence_ids": [
+    "task-job-scientific-lifecycle-resume-test-code_evidence_map",
+    "map-001",
+    "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+    "claim-001"
+  ],
+  "code_evidence_linked": true,
+  "evidence_ids": [
+    "claim-001",
+    "paper-job-scientific-lifecycle-resume-test",
+    "sample_paper.md#results",
+    "task-job-scientific-lifecycle-resume-test-experiment_run",
+    "exp-001",
+    "evidence:autosci-fixture-result",
+    "evidence:autosci-fixture-ledger",
+    "task-job-scientific-lifecycle-resume-test-code_evidence_map",
+    "map-001",
+    "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py"
+  ],
+  "experiment_evidence_ids": [
+    "task-job-scientific-lifecycle-resume-test-experiment_run",
+    "exp-001",
+    "evidence:autosci-fixture-result",
+    "evidence:autosci-fixture-ledger"
+  ],
+  "experiment_result_ready": true,
+  "experiment_schema": "experiment_result.v1",
+  "experiment_status": "completed",
+  "final_verdict_ready": false,
+  "limitations": [
+    "Final experiment evaluation requires completed Review LLM proof.",
+    "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+  ],
+  "review_llm_completed": false,
+  "review_llm_status": "unavailable",
+  "schema": "autosci_experiment_evaluation_final_verdict_boundary.v1",
+  "status": "final_verdict_incomplete",
+  "verdict": "supported",
+  "writeback_completed": false,
+  "writeback_status": {
+    "applied": false,
+    "approval_ref": "N/A",
+    "limitations": [
+      "Claim verdict writeback was not requested."
+    ],
+    "path": "",
+    "requested": false,
+    "status": "not_requested"
+  }
+}

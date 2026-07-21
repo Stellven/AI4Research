@@ -1,0 +1,18 @@
+{
+  "sprint_id": "test_complete_professor_gate_r0",
+  "generated_at": "2026-07-10T18:50:39Z",
+  "document_word_count": 287,
+  "document_char_count": 830,
+  "total_token_consumption": 5312,
+  "total_tokens": 5312,
+  "input_tokens": 5104,
+  "output_tokens": 208,
+  "token_usage_source": "estimated_from_report_artifacts",
+  "token_usage_is_estimated": true,
+  "usage_source": "estimated_from_report_artifacts",
+  "estimated": true,
+  "fallback_reason": "no_provider_usage",
+  "token_usage_files": [],
+  "ledger_path": "",
+  "ledger_lines": 0
+}

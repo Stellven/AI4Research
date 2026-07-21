@@ -47,7 +47,7 @@ from ledger_writer import LedgerWriter
 from pane_hygiene_registry import PaneHygieneRegistry, PaneState
 
 TEST_SESSION = "solar-harness-test"
-REPORT_DIR = "/Users/lisihao/.solar/harness/reports/tui-pane/s05-acceptance"
+REPORT_DIR = "~/.solar/harness/reports/tui-pane/s05-acceptance"
 TS = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 SPRINT_ID = "sprint-20260527-p0-solar-harness-tui-pane-recover-s05-v2"
 
@@ -212,7 +212,7 @@ def capture_protected_panes_state() -> dict[str, dict]:
     # Check pane-hygiene.json md5
     try:
         result = subprocess.run(
-            ["md5", "-q", "/Users/lisihao/.solar/harness/run/pane-hygiene.json"],
+            ["md5", "-q", "~/.solar/harness/run/pane-hygiene.json"],
             capture_output=True, text=True
         )
         state["_hygiene_md5"] = result.stdout.strip()

@@ -1,0 +1,29 @@
+{
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/lint.py",
+    "--wiki-root",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki"
+  ],
+  "edge_count": 1,
+  "issue_counts": {
+    "error": 0,
+    "info": 1,
+    "warn": 0
+  },
+  "issues": [
+    {
+      "category": "orphan",
+      "file": "papers/skillgen.md",
+      "level": "\ud83d\udd35",
+      "message": "No incoming links",
+      "severity": "info"
+    }
+  ],
+  "ok": true,
+  "page_count": 1,
+  "returncode": 0,
+  "schema": "autosci_wiki_lint_cli.v1",
+  "status": "completed",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_ask_an0/artifacts/autosci/workspace/wiki"
+}

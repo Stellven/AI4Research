@@ -1,0 +1,18 @@
+{
+  "sprint_id": "test_strict_eval_fails_when_cl0",
+  "generated_at": "2026-07-10T14:06:53Z",
+  "document_word_count": 10542,
+  "document_char_count": 34679,
+  "total_token_consumption": 28621,
+  "total_tokens": 28621,
+  "input_tokens": 19951,
+  "output_tokens": 8670,
+  "token_usage_source": "estimated_from_report_artifacts",
+  "token_usage_is_estimated": true,
+  "usage_source": "estimated_from_report_artifacts",
+  "estimated": true,
+  "fallback_reason": "no_provider_usage",
+  "token_usage_files": [],
+  "ledger_path": "",
+  "ledger_lines": 0
+}

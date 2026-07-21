@@ -1,0 +1,18 @@
+{
+  "sprint_id": "out",
+  "generated_at": "2026-07-10T18:50:40Z",
+  "document_word_count": 2153,
+  "document_char_count": 18365,
+  "total_token_consumption": 4686,
+  "total_tokens": 4686,
+  "input_tokens": 94,
+  "output_tokens": 4592,
+  "token_usage_source": "estimated_from_report_artifacts",
+  "token_usage_is_estimated": true,
+  "usage_source": "estimated_from_report_artifacts",
+  "estimated": true,
+  "fallback_reason": "no_provider_usage",
+  "token_usage_files": [],
+  "ledger_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0130/pytest/test_run_web_query_end_to_end_0/out/model_usage.jsonl",
+  "ledger_lines": 1
+}

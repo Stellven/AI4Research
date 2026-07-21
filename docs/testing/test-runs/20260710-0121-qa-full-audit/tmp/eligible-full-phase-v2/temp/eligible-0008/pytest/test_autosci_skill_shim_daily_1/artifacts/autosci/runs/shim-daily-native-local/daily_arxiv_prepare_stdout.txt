@@ -1,0 +1,1 @@
+daily-arxiv prepare: 1 new / 1 scanned -> /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_daily_1/artifacts/autosci/runs/shim-daily-native-local/daily_arxiv_recommendation_context.json

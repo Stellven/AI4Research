@@ -1,0 +1,2181 @@
+{
+  "schema_version": "solar.capsule_plan_ir.v1",
+  "sprint_id": "sprint-20260710-185257-intent-intent-consumer-rawintent-pm-0e593383",
+  "request_type": "implementation",
+  "lane_hint": "delivery",
+  "dag_variant": "short",
+  "artifact_types": {
+    "required_inputs": [
+      "json",
+      "markdown",
+      "artifact.guard_decision",
+      "artifact.request_context",
+      "artifact.requirement_ir",
+      "artifact.resource_binding",
+      "artifact.task_graph_node"
+    ],
+    "required_outputs": [
+      "json",
+      "diff",
+      "markdown"
+    ],
+    "consumes": [
+      "artifact.request_context",
+      "artifact.requirement_ir",
+      "artifact.task_graph_node",
+      "artifact.handoff_md",
+      "artifact.guard_decision",
+      "artifact.resource_binding",
+      "json"
+    ],
+    "produces": [
+      "artifact.guard_decision",
+      "artifact.resource_binding",
+      "artifact.patch_diff",
+      "artifact.handoff_md",
+      "artifact.eval_md",
+      "artifact.eval_json",
+      "markdown"
+    ]
+  },
+  "effect_union": {
+    "read": [
+      "request.metadata",
+      "repo.read",
+      "requirement.artifacts",
+      "artifacts.handoff",
+      "artifacts.patch",
+      "github.readonly",
+      "artifacts.bridge_input"
+    ],
+    "write": [
+      "artifacts.guard_decision",
+      "repo.worktree",
+      "artifacts.handoff",
+      "artifacts.eval",
+      "artifacts.bridge_output"
+    ],
+    "execute": [
+      "shell.pytest"
+    ],
+    "network": [],
+    "cost": [
+      "medium_model_quota",
+      "premium_model_quota"
+    ],
+    "risk": [
+      "patch_scope_drift",
+      "false_pass",
+      "artifact_translation_loss"
+    ]
+  },
+  "proof_obligations": [
+    {
+      "kind": "self_check",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "check.guard_decision_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "guard_decision exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "guard_decision"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "resource.repo-workspace",
+      "requirement": "check.resource_binding_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "resource.repo-workspace",
+      "requirement": "resource_binding exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "resource.repo-workspace",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "resource_binding"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "cap.requirement-compiler-implementation",
+      "requirement": "check.patch_within_scope"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "cap.requirement-compiler-implementation",
+      "requirement": "check.handoff_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "cap.requirement-compiler-implementation",
+      "requirement": "patch_diff exists"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "cap.requirement-compiler-implementation",
+      "requirement": "handoff_md exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "cap.requirement-compiler-implementation",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "patch_diff"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "cap.requirement-compiler-implementation",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "handoff_md"
+    },
+    {
+      "kind": "external_verifier",
+      "source_capsule_id": "cap.requirement-compiler-implementation",
+      "requirement": "external_verifier.required",
+      "preferred_capsules": [
+        "cap.requirement-compiler-verification"
+      ]
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "check.eval_written"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "check.coverage_reviewed"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "eval_md exists"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "eval_json exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "eval_md"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "eval_json"
+    },
+    {
+      "kind": "external_verifier",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "external_verifier.required",
+      "preferred_capsules": [
+        "guard.secret-leak-guard"
+      ]
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "check.guard_decision_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "guard_decision exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "guard_decision"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "resource.github-readonly",
+      "requirement": "check.resource_binding_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "resource.github-readonly",
+      "requirement": "resource_binding exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "resource.github-readonly",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "resource_binding"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "adapter.artifact-type-bridge",
+      "requirement": "check.adapter_output_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "adapter.artifact-type-bridge",
+      "requirement": "adapter output exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "adapter.artifact-type-bridge",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "bridged_artifact"
+    },
+    {
+      "kind": "adapter_contract",
+      "source_capsule_id": "adapter.artifact-type-bridge",
+      "requirement": "type_mismatch_bridge",
+      "target_stage_id": "S2:capability",
+      "missing_required_inputs": [
+        "markdown"
+      ],
+      "source_artifacts": [
+        "artifact.guard_decision",
+        "artifact.request_context",
+        "artifact.requirement_ir",
+        "artifact.resource_binding",
+        "artifact.task_graph_node",
+        "json"
+      ]
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "check.eval_written"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "check.coverage_reviewed"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "eval_md exists"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "eval_json exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "eval_md"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "eval_json"
+    },
+    {
+      "kind": "external_verifier",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "external_verifier.required",
+      "preferred_capsules": [
+        "guard.secret-leak-guard"
+      ]
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "check.guard_decision_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "guard_decision exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "guard_decision"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "check.guard_decision_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "guard_decision exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "guard_decision"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "resource.github-readonly",
+      "requirement": "check.resource_binding_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "resource.github-readonly",
+      "requirement": "resource_binding exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "resource.github-readonly",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "resource_binding"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "adapter.artifact-type-bridge",
+      "requirement": "check.adapter_output_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "adapter.artifact-type-bridge",
+      "requirement": "adapter output exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "adapter.artifact-type-bridge",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "bridged_artifact"
+    },
+    {
+      "kind": "adapter_contract",
+      "source_capsule_id": "adapter.artifact-type-bridge",
+      "requirement": "type_mismatch_bridge",
+      "target_stage_id": "S3:capability",
+      "missing_required_inputs": [
+        "markdown"
+      ],
+      "source_artifacts": [
+        "artifact.guard_decision",
+        "artifact.request_context",
+        "artifact.requirement_ir",
+        "artifact.resource_binding",
+        "artifact.task_graph_node",
+        "json"
+      ]
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "check.eval_written"
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "check.coverage_reviewed"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "eval_md exists"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "eval_json exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "eval_md"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "eval_json"
+    },
+    {
+      "kind": "external_verifier",
+      "source_capsule_id": "cap.requirement-compiler-verification",
+      "requirement": "external_verifier.required",
+      "preferred_capsules": [
+        "guard.secret-leak-guard"
+      ]
+    },
+    {
+      "kind": "self_check",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "check.guard_decision_written"
+    },
+    {
+      "kind": "pass_condition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "guard_decision exists"
+    },
+    {
+      "kind": "postcondition",
+      "source_capsule_id": "guard.secret-leak-guard",
+      "requirement": "output_present",
+      "check": "output_present",
+      "field": "guard_decision"
+    }
+  ],
+  "nodes": [
+    {
+      "schema_version": "solar.capsule_plan_node.v1",
+      "node_id": "S1",
+      "logical_operator": "ImplementationWorker",
+      "request_type": "implementation",
+      "lane_hint": "delivery",
+      "goal": "Implement the requested targeted change.",
+      "selected": true,
+      "capability_capsule_id": "cap.requirement-compiler-implementation",
+      "dispatch_task_type": "implementation",
+      "role": "builder",
+      "required_guard_capsules": [
+        "guard.secret-leak-guard"
+      ],
+      "required_resource_capsules": [
+        "resource.repo-workspace"
+      ],
+      "selected_skills": [
+        "skill.implementation"
+      ],
+      "artifact_types": {
+        "required_inputs": [
+          "json",
+          "markdown"
+        ],
+        "optional_inputs": [
+          "markdown",
+          "diff",
+          "text"
+        ],
+        "required_outputs": [
+          "json",
+          "diff",
+          "markdown"
+        ],
+        "optional_outputs": [
+          "text"
+        ],
+        "consumes": [
+          "artifact.request_context",
+          "artifact.requirement_ir",
+          "artifact.task_graph_node",
+          "artifact.handoff_md"
+        ],
+        "produces": [
+          "artifact.guard_decision",
+          "artifact.resource_binding",
+          "artifact.patch_diff",
+          "artifact.handoff_md",
+          "artifact.eval_md",
+          "artifact.eval_json"
+        ]
+      },
+      "effect_union": {
+        "read": [
+          "request.metadata",
+          "repo.read",
+          "requirement.artifacts",
+          "artifacts.handoff",
+          "artifacts.patch"
+        ],
+        "write": [
+          "artifacts.guard_decision",
+          "repo.worktree",
+          "artifacts.handoff",
+          "artifacts.eval"
+        ],
+        "execute": [
+          "shell.pytest"
+        ],
+        "network": [],
+        "cost": [
+          "medium_model_quota",
+          "premium_model_quota"
+        ],
+        "risk": [
+          "patch_scope_drift",
+          "false_pass"
+        ]
+      },
+      "proof_obligations": [
+        {
+          "kind": "self_check",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "check.guard_decision_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "guard_decision exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "guard_decision"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "resource.repo-workspace",
+          "requirement": "check.resource_binding_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "resource.repo-workspace",
+          "requirement": "resource_binding exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "resource.repo-workspace",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "resource_binding"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "cap.requirement-compiler-implementation",
+          "requirement": "check.patch_within_scope"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "cap.requirement-compiler-implementation",
+          "requirement": "check.handoff_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "cap.requirement-compiler-implementation",
+          "requirement": "patch_diff exists"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "cap.requirement-compiler-implementation",
+          "requirement": "handoff_md exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "cap.requirement-compiler-implementation",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "patch_diff"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "cap.requirement-compiler-implementation",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "handoff_md"
+        },
+        {
+          "kind": "external_verifier",
+          "source_capsule_id": "cap.requirement-compiler-implementation",
+          "requirement": "external_verifier.required",
+          "preferred_capsules": [
+            "cap.requirement-compiler-verification"
+          ]
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "check.eval_written"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "check.coverage_reviewed"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "eval_md exists"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "eval_json exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "eval_md"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "eval_json"
+        },
+        {
+          "kind": "external_verifier",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "external_verifier.required",
+          "preferred_capsules": [
+            "guard.secret-leak-guard"
+          ]
+        }
+      ],
+      "stages": [
+        {
+          "stage_id": "S1:guard:1",
+          "stage_kind": "guard",
+          "capability_capsule_id": "guard.secret-leak-guard",
+          "dispatch_mode": "attached",
+          "role": "builder",
+          "task_type": "implementation",
+          "reason": "required_guard_capsules",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": []
+          },
+          "artifact_types": {
+            "required_inputs": [],
+            "optional_inputs": [],
+            "required_outputs": [
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.request_context"
+            ],
+            "produces": [
+              "artifact.guard_decision"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "request.metadata"
+            ],
+            "write": [
+              "artifacts.guard_decision"
+            ],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": []
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "check.guard_decision_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "guard_decision exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "guard_decision"
+            }
+          ]
+        },
+        {
+          "stage_id": "S1:resource:1",
+          "stage_kind": "resource",
+          "capability_capsule_id": "resource.repo-workspace",
+          "dispatch_mode": "attached",
+          "role": "builder",
+          "task_type": "implementation",
+          "reason": "required_resource_capsules",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder",
+              "mini-claude-opus-evaluator"
+            ],
+            "forbidden": []
+          },
+          "artifact_types": {
+            "required_inputs": [],
+            "optional_inputs": [],
+            "required_outputs": [
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [],
+            "produces": [
+              "artifact.resource_binding"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "repo.read"
+            ],
+            "write": [
+              "repo.worktree"
+            ],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": []
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "resource.repo-workspace",
+              "requirement": "check.resource_binding_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "resource.repo-workspace",
+              "requirement": "resource_binding exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "resource.repo-workspace",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "resource_binding"
+            }
+          ]
+        },
+        {
+          "stage_id": "S1:capability",
+          "stage_kind": "capability",
+          "capability_capsule_id": "cap.requirement-compiler-implementation",
+          "dispatch_mode": "execute",
+          "role": "builder",
+          "task_type": "implementation",
+          "reason": "static_default_fallback",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": [
+              "mini-antigravity-gemini35-flash-high"
+            ],
+            "default_operator_profile": "mini-claude-sonnet-builder"
+          },
+          "artifact_types": {
+            "required_inputs": [
+              "json"
+            ],
+            "optional_inputs": [
+              "markdown"
+            ],
+            "required_outputs": [
+              "diff",
+              "markdown"
+            ],
+            "optional_outputs": [
+              "text"
+            ],
+            "consumes": [
+              "artifact.requirement_ir",
+              "artifact.task_graph_node"
+            ],
+            "produces": [
+              "artifact.patch_diff",
+              "artifact.handoff_md"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "repo.read",
+              "requirement.artifacts"
+            ],
+            "write": [
+              "repo.worktree",
+              "artifacts.handoff"
+            ],
+            "execute": [
+              "shell.pytest"
+            ],
+            "network": [],
+            "cost": [
+              "medium_model_quota"
+            ],
+            "risk": [
+              "patch_scope_drift"
+            ]
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "cap.requirement-compiler-implementation",
+              "requirement": "check.patch_within_scope"
+            },
+            {
+              "kind": "self_check",
+              "source_capsule_id": "cap.requirement-compiler-implementation",
+              "requirement": "check.handoff_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "cap.requirement-compiler-implementation",
+              "requirement": "patch_diff exists"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "cap.requirement-compiler-implementation",
+              "requirement": "handoff_md exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "cap.requirement-compiler-implementation",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "patch_diff"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "cap.requirement-compiler-implementation",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "handoff_md"
+            },
+            {
+              "kind": "external_verifier",
+              "source_capsule_id": "cap.requirement-compiler-implementation",
+              "requirement": "external_verifier.required",
+              "preferred_capsules": [
+                "cap.requirement-compiler-verification"
+              ]
+            }
+          ]
+        },
+        {
+          "stage_id": "S1:verifier:1",
+          "stage_kind": "verifier",
+          "capability_capsule_id": "cap.requirement-compiler-verification",
+          "dispatch_mode": "execute",
+          "role": "evaluator",
+          "task_type": "verification",
+          "reason": "external_verifier.required",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-opus-evaluator"
+            ],
+            "forbidden": [
+              "mini-antigravity-gemini35-flash-high"
+            ]
+          },
+          "artifact_types": {
+            "required_inputs": [
+              "json",
+              "markdown"
+            ],
+            "optional_inputs": [
+              "diff",
+              "text"
+            ],
+            "required_outputs": [
+              "markdown",
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.handoff_md",
+              "artifact.requirement_ir"
+            ],
+            "produces": [
+              "artifact.eval_md",
+              "artifact.eval_json"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "repo.read",
+              "artifacts.handoff",
+              "artifacts.patch"
+            ],
+            "write": [
+              "artifacts.eval"
+            ],
+            "execute": [
+              "shell.pytest"
+            ],
+            "network": [],
+            "cost": [
+              "premium_model_quota"
+            ],
+            "risk": [
+              "false_pass"
+            ]
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "check.eval_written"
+            },
+            {
+              "kind": "self_check",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "check.coverage_reviewed"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "eval_md exists"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "eval_json exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "eval_md"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "eval_json"
+            },
+            {
+              "kind": "external_verifier",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "external_verifier.required",
+              "preferred_capsules": [
+                "guard.secret-leak-guard"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": "solar.capsule_plan_node.v1",
+      "node_id": "S2",
+      "logical_operator": "TestRunner",
+      "request_type": "implementation",
+      "lane_hint": "delivery",
+      "goal": "Run tests or collect execution evidence for the change.",
+      "selected": true,
+      "capability_capsule_id": "cap.requirement-compiler-verification",
+      "dispatch_task_type": "tests",
+      "role": "evaluator",
+      "required_guard_capsules": [
+        "guard.secret-leak-guard"
+      ],
+      "required_resource_capsules": [
+        "resource.github-readonly"
+      ],
+      "selected_skills": [
+        "skill.patch-review-hardcore"
+      ],
+      "artifact_types": {
+        "required_inputs": [
+          "artifact.guard_decision",
+          "artifact.request_context",
+          "artifact.requirement_ir",
+          "artifact.resource_binding",
+          "artifact.task_graph_node",
+          "json",
+          "markdown"
+        ],
+        "optional_inputs": [
+          "diff",
+          "text"
+        ],
+        "required_outputs": [
+          "json",
+          "markdown"
+        ],
+        "optional_outputs": [],
+        "consumes": [
+          "artifact.request_context",
+          "artifact.guard_decision",
+          "artifact.requirement_ir",
+          "artifact.resource_binding",
+          "artifact.task_graph_node",
+          "json",
+          "artifact.handoff_md"
+        ],
+        "produces": [
+          "artifact.guard_decision",
+          "artifact.resource_binding",
+          "markdown",
+          "artifact.eval_md",
+          "artifact.eval_json"
+        ]
+      },
+      "effect_union": {
+        "read": [
+          "request.metadata",
+          "github.readonly",
+          "artifacts.bridge_input",
+          "repo.read",
+          "artifacts.handoff",
+          "artifacts.patch"
+        ],
+        "write": [
+          "artifacts.guard_decision",
+          "artifacts.bridge_output",
+          "artifacts.eval"
+        ],
+        "execute": [
+          "shell.pytest"
+        ],
+        "network": [],
+        "cost": [
+          "premium_model_quota"
+        ],
+        "risk": [
+          "artifact_translation_loss",
+          "false_pass"
+        ]
+      },
+      "proof_obligations": [
+        {
+          "kind": "self_check",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "check.guard_decision_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "guard_decision exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "guard_decision"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "resource.github-readonly",
+          "requirement": "check.resource_binding_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "resource.github-readonly",
+          "requirement": "resource_binding exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "resource.github-readonly",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "resource_binding"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "adapter.artifact-type-bridge",
+          "requirement": "check.adapter_output_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "adapter.artifact-type-bridge",
+          "requirement": "adapter output exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "adapter.artifact-type-bridge",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "bridged_artifact"
+        },
+        {
+          "kind": "adapter_contract",
+          "source_capsule_id": "adapter.artifact-type-bridge",
+          "requirement": "type_mismatch_bridge",
+          "target_stage_id": "S2:capability",
+          "missing_required_inputs": [
+            "markdown"
+          ],
+          "source_artifacts": [
+            "artifact.guard_decision",
+            "artifact.request_context",
+            "artifact.requirement_ir",
+            "artifact.resource_binding",
+            "artifact.task_graph_node",
+            "json"
+          ]
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "check.eval_written"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "check.coverage_reviewed"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "eval_md exists"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "eval_json exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "eval_md"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "eval_json"
+        },
+        {
+          "kind": "external_verifier",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "external_verifier.required",
+          "preferred_capsules": [
+            "guard.secret-leak-guard"
+          ]
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "check.guard_decision_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "guard_decision exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "guard_decision"
+        }
+      ],
+      "stages": [
+        {
+          "stage_id": "S2:guard:1",
+          "stage_kind": "guard",
+          "capability_capsule_id": "guard.secret-leak-guard",
+          "dispatch_mode": "attached",
+          "role": "evaluator",
+          "task_type": "tests",
+          "reason": "required_guard_capsules",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": []
+          },
+          "artifact_types": {
+            "required_inputs": [],
+            "optional_inputs": [],
+            "required_outputs": [
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.request_context"
+            ],
+            "produces": [
+              "artifact.guard_decision"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "request.metadata"
+            ],
+            "write": [
+              "artifacts.guard_decision"
+            ],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": []
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "check.guard_decision_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "guard_decision exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "guard_decision"
+            }
+          ]
+        },
+        {
+          "stage_id": "S2:resource:1",
+          "stage_kind": "resource",
+          "capability_capsule_id": "resource.github-readonly",
+          "dispatch_mode": "attached",
+          "role": "evaluator",
+          "task_type": "tests",
+          "reason": "required_resource_capsules",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": []
+          },
+          "artifact_types": {
+            "required_inputs": [],
+            "optional_inputs": [],
+            "required_outputs": [
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [],
+            "produces": [
+              "artifact.resource_binding"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "github.readonly"
+            ],
+            "write": [],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": []
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "resource.github-readonly",
+              "requirement": "check.resource_binding_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "resource.github-readonly",
+              "requirement": "resource_binding exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "resource.github-readonly",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "resource_binding"
+            }
+          ]
+        },
+        {
+          "stage_id": "S2:adapter:1",
+          "stage_kind": "adapter",
+          "capability_capsule_id": "adapter.artifact-type-bridge",
+          "dispatch_mode": "attached",
+          "role": "evaluator",
+          "task_type": "tests",
+          "reason": "generic_artifact_bridge",
+          "operator_constraints": {},
+          "artifact_types": {
+            "required_inputs": [
+              "artifact.guard_decision",
+              "artifact.request_context",
+              "artifact.requirement_ir",
+              "artifact.resource_binding",
+              "artifact.task_graph_node",
+              "json"
+            ],
+            "optional_inputs": [],
+            "required_outputs": [
+              "markdown"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.guard_decision",
+              "artifact.request_context",
+              "artifact.requirement_ir",
+              "artifact.resource_binding",
+              "artifact.task_graph_node",
+              "json"
+            ],
+            "produces": [
+              "markdown"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "artifacts.bridge_input"
+            ],
+            "write": [
+              "artifacts.bridge_output"
+            ],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": [
+              "artifact_translation_loss"
+            ]
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "adapter.artifact-type-bridge",
+              "requirement": "check.adapter_output_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "adapter.artifact-type-bridge",
+              "requirement": "adapter output exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "adapter.artifact-type-bridge",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "bridged_artifact"
+            },
+            {
+              "kind": "adapter_contract",
+              "source_capsule_id": "adapter.artifact-type-bridge",
+              "requirement": "type_mismatch_bridge",
+              "target_stage_id": "S2:capability",
+              "missing_required_inputs": [
+                "markdown"
+              ],
+              "source_artifacts": [
+                "artifact.guard_decision",
+                "artifact.request_context",
+                "artifact.requirement_ir",
+                "artifact.resource_binding",
+                "artifact.task_graph_node",
+                "json"
+              ]
+            }
+          ],
+          "adapter_rule": {
+            "rule": "type_mismatch_to_adapter_capsule",
+            "adapter_capsule_id": "adapter.artifact-type-bridge",
+            "target_stage_id": "S2:capability",
+            "missing_required_inputs": [
+              "markdown"
+            ],
+            "available_before": [
+              "artifact.guard_decision",
+              "artifact.request_context",
+              "artifact.requirement_ir",
+              "artifact.resource_binding",
+              "artifact.task_graph_node",
+              "json"
+            ],
+            "registry_match": {
+              "source_artifacts": [],
+              "target_artifacts": []
+            }
+          }
+        },
+        {
+          "stage_id": "S2:capability",
+          "stage_kind": "capability",
+          "capability_capsule_id": "cap.requirement-compiler-verification",
+          "dispatch_mode": "execute",
+          "role": "evaluator",
+          "task_type": "tests",
+          "reason": "static_default_fallback",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-opus-evaluator"
+            ],
+            "forbidden": [
+              "mini-antigravity-gemini35-flash-high"
+            ],
+            "default_operator_profile": "mini-claude-opus-evaluator"
+          },
+          "artifact_types": {
+            "required_inputs": [
+              "json",
+              "markdown"
+            ],
+            "optional_inputs": [
+              "diff",
+              "text"
+            ],
+            "required_outputs": [
+              "markdown",
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.handoff_md",
+              "artifact.requirement_ir"
+            ],
+            "produces": [
+              "artifact.eval_md",
+              "artifact.eval_json"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "repo.read",
+              "artifacts.handoff",
+              "artifacts.patch"
+            ],
+            "write": [
+              "artifacts.eval"
+            ],
+            "execute": [
+              "shell.pytest"
+            ],
+            "network": [],
+            "cost": [
+              "premium_model_quota"
+            ],
+            "risk": [
+              "false_pass"
+            ]
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "check.eval_written"
+            },
+            {
+              "kind": "self_check",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "check.coverage_reviewed"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "eval_md exists"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "eval_json exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "eval_md"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "eval_json"
+            },
+            {
+              "kind": "external_verifier",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "external_verifier.required",
+              "preferred_capsules": [
+                "guard.secret-leak-guard"
+              ]
+            }
+          ]
+        },
+        {
+          "stage_id": "S2:verifier:1",
+          "stage_kind": "verifier",
+          "capability_capsule_id": "guard.secret-leak-guard",
+          "dispatch_mode": "attached",
+          "role": "evaluator",
+          "task_type": "tests",
+          "reason": "external_verifier.required",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": []
+          },
+          "artifact_types": {
+            "required_inputs": [],
+            "optional_inputs": [],
+            "required_outputs": [
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.request_context"
+            ],
+            "produces": [
+              "artifact.guard_decision"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "request.metadata"
+            ],
+            "write": [
+              "artifacts.guard_decision"
+            ],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": []
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "check.guard_decision_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "guard_decision exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "guard_decision"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": "solar.capsule_plan_node.v1",
+      "node_id": "S3",
+      "logical_operator": "Verifier",
+      "request_type": "implementation",
+      "lane_hint": "delivery",
+      "goal": "Review implementation and evidence before closeout.",
+      "selected": true,
+      "capability_capsule_id": "cap.requirement-compiler-verification",
+      "dispatch_task_type": "verification",
+      "role": "evaluator",
+      "required_guard_capsules": [
+        "guard.secret-leak-guard"
+      ],
+      "required_resource_capsules": [
+        "resource.github-readonly"
+      ],
+      "selected_skills": [
+        "skill.patch-review-hardcore"
+      ],
+      "artifact_types": {
+        "required_inputs": [
+          "artifact.guard_decision",
+          "artifact.request_context",
+          "artifact.requirement_ir",
+          "artifact.resource_binding",
+          "artifact.task_graph_node",
+          "json",
+          "markdown"
+        ],
+        "optional_inputs": [
+          "diff",
+          "text"
+        ],
+        "required_outputs": [
+          "json",
+          "markdown"
+        ],
+        "optional_outputs": [],
+        "consumes": [
+          "artifact.request_context",
+          "artifact.guard_decision",
+          "artifact.requirement_ir",
+          "artifact.resource_binding",
+          "artifact.task_graph_node",
+          "json",
+          "artifact.handoff_md"
+        ],
+        "produces": [
+          "artifact.guard_decision",
+          "artifact.resource_binding",
+          "markdown",
+          "artifact.eval_md",
+          "artifact.eval_json"
+        ]
+      },
+      "effect_union": {
+        "read": [
+          "request.metadata",
+          "github.readonly",
+          "artifacts.bridge_input",
+          "repo.read",
+          "artifacts.handoff",
+          "artifacts.patch"
+        ],
+        "write": [
+          "artifacts.guard_decision",
+          "artifacts.bridge_output",
+          "artifacts.eval"
+        ],
+        "execute": [
+          "shell.pytest"
+        ],
+        "network": [],
+        "cost": [
+          "premium_model_quota"
+        ],
+        "risk": [
+          "artifact_translation_loss",
+          "false_pass"
+        ]
+      },
+      "proof_obligations": [
+        {
+          "kind": "self_check",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "check.guard_decision_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "guard_decision exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "guard_decision"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "resource.github-readonly",
+          "requirement": "check.resource_binding_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "resource.github-readonly",
+          "requirement": "resource_binding exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "resource.github-readonly",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "resource_binding"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "adapter.artifact-type-bridge",
+          "requirement": "check.adapter_output_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "adapter.artifact-type-bridge",
+          "requirement": "adapter output exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "adapter.artifact-type-bridge",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "bridged_artifact"
+        },
+        {
+          "kind": "adapter_contract",
+          "source_capsule_id": "adapter.artifact-type-bridge",
+          "requirement": "type_mismatch_bridge",
+          "target_stage_id": "S3:capability",
+          "missing_required_inputs": [
+            "markdown"
+          ],
+          "source_artifacts": [
+            "artifact.guard_decision",
+            "artifact.request_context",
+            "artifact.requirement_ir",
+            "artifact.resource_binding",
+            "artifact.task_graph_node",
+            "json"
+          ]
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "check.eval_written"
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "check.coverage_reviewed"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "eval_md exists"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "eval_json exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "eval_md"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "eval_json"
+        },
+        {
+          "kind": "external_verifier",
+          "source_capsule_id": "cap.requirement-compiler-verification",
+          "requirement": "external_verifier.required",
+          "preferred_capsules": [
+            "guard.secret-leak-guard"
+          ]
+        },
+        {
+          "kind": "self_check",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "check.guard_decision_written"
+        },
+        {
+          "kind": "pass_condition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "guard_decision exists"
+        },
+        {
+          "kind": "postcondition",
+          "source_capsule_id": "guard.secret-leak-guard",
+          "requirement": "output_present",
+          "check": "output_present",
+          "field": "guard_decision"
+        }
+      ],
+      "stages": [
+        {
+          "stage_id": "S3:guard:1",
+          "stage_kind": "guard",
+          "capability_capsule_id": "guard.secret-leak-guard",
+          "dispatch_mode": "attached",
+          "role": "evaluator",
+          "task_type": "verification",
+          "reason": "required_guard_capsules",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": []
+          },
+          "artifact_types": {
+            "required_inputs": [],
+            "optional_inputs": [],
+            "required_outputs": [
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.request_context"
+            ],
+            "produces": [
+              "artifact.guard_decision"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "request.metadata"
+            ],
+            "write": [
+              "artifacts.guard_decision"
+            ],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": []
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "check.guard_decision_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "guard_decision exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "guard_decision"
+            }
+          ]
+        },
+        {
+          "stage_id": "S3:resource:1",
+          "stage_kind": "resource",
+          "capability_capsule_id": "resource.github-readonly",
+          "dispatch_mode": "attached",
+          "role": "evaluator",
+          "task_type": "verification",
+          "reason": "required_resource_capsules",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": []
+          },
+          "artifact_types": {
+            "required_inputs": [],
+            "optional_inputs": [],
+            "required_outputs": [
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [],
+            "produces": [
+              "artifact.resource_binding"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "github.readonly"
+            ],
+            "write": [],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": []
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "resource.github-readonly",
+              "requirement": "check.resource_binding_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "resource.github-readonly",
+              "requirement": "resource_binding exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "resource.github-readonly",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "resource_binding"
+            }
+          ]
+        },
+        {
+          "stage_id": "S3:adapter:1",
+          "stage_kind": "adapter",
+          "capability_capsule_id": "adapter.artifact-type-bridge",
+          "dispatch_mode": "attached",
+          "role": "evaluator",
+          "task_type": "verification",
+          "reason": "generic_artifact_bridge",
+          "operator_constraints": {},
+          "artifact_types": {
+            "required_inputs": [
+              "artifact.guard_decision",
+              "artifact.request_context",
+              "artifact.requirement_ir",
+              "artifact.resource_binding",
+              "artifact.task_graph_node",
+              "json"
+            ],
+            "optional_inputs": [],
+            "required_outputs": [
+              "markdown"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.guard_decision",
+              "artifact.request_context",
+              "artifact.requirement_ir",
+              "artifact.resource_binding",
+              "artifact.task_graph_node",
+              "json"
+            ],
+            "produces": [
+              "markdown"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "artifacts.bridge_input"
+            ],
+            "write": [
+              "artifacts.bridge_output"
+            ],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": [
+              "artifact_translation_loss"
+            ]
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "adapter.artifact-type-bridge",
+              "requirement": "check.adapter_output_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "adapter.artifact-type-bridge",
+              "requirement": "adapter output exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "adapter.artifact-type-bridge",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "bridged_artifact"
+            },
+            {
+              "kind": "adapter_contract",
+              "source_capsule_id": "adapter.artifact-type-bridge",
+              "requirement": "type_mismatch_bridge",
+              "target_stage_id": "S3:capability",
+              "missing_required_inputs": [
+                "markdown"
+              ],
+              "source_artifacts": [
+                "artifact.guard_decision",
+                "artifact.request_context",
+                "artifact.requirement_ir",
+                "artifact.resource_binding",
+                "artifact.task_graph_node",
+                "json"
+              ]
+            }
+          ],
+          "adapter_rule": {
+            "rule": "type_mismatch_to_adapter_capsule",
+            "adapter_capsule_id": "adapter.artifact-type-bridge",
+            "target_stage_id": "S3:capability",
+            "missing_required_inputs": [
+              "markdown"
+            ],
+            "available_before": [
+              "artifact.guard_decision",
+              "artifact.request_context",
+              "artifact.requirement_ir",
+              "artifact.resource_binding",
+              "artifact.task_graph_node",
+              "json"
+            ],
+            "registry_match": {
+              "source_artifacts": [],
+              "target_artifacts": []
+            }
+          }
+        },
+        {
+          "stage_id": "S3:capability",
+          "stage_kind": "capability",
+          "capability_capsule_id": "cap.requirement-compiler-verification",
+          "dispatch_mode": "execute",
+          "role": "evaluator",
+          "task_type": "verification",
+          "reason": "static_default_fallback",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-opus-evaluator"
+            ],
+            "forbidden": [
+              "mini-antigravity-gemini35-flash-high"
+            ],
+            "default_operator_profile": "mini-claude-opus-evaluator"
+          },
+          "artifact_types": {
+            "required_inputs": [
+              "json",
+              "markdown"
+            ],
+            "optional_inputs": [
+              "diff",
+              "text"
+            ],
+            "required_outputs": [
+              "markdown",
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.handoff_md",
+              "artifact.requirement_ir"
+            ],
+            "produces": [
+              "artifact.eval_md",
+              "artifact.eval_json"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "repo.read",
+              "artifacts.handoff",
+              "artifacts.patch"
+            ],
+            "write": [
+              "artifacts.eval"
+            ],
+            "execute": [
+              "shell.pytest"
+            ],
+            "network": [],
+            "cost": [
+              "premium_model_quota"
+            ],
+            "risk": [
+              "false_pass"
+            ]
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "check.eval_written"
+            },
+            {
+              "kind": "self_check",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "check.coverage_reviewed"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "eval_md exists"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "eval_json exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "eval_md"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "eval_json"
+            },
+            {
+              "kind": "external_verifier",
+              "source_capsule_id": "cap.requirement-compiler-verification",
+              "requirement": "external_verifier.required",
+              "preferred_capsules": [
+                "guard.secret-leak-guard"
+              ]
+            }
+          ]
+        },
+        {
+          "stage_id": "S3:verifier:1",
+          "stage_kind": "verifier",
+          "capability_capsule_id": "guard.secret-leak-guard",
+          "dispatch_mode": "attached",
+          "role": "evaluator",
+          "task_type": "verification",
+          "reason": "external_verifier.required",
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": []
+          },
+          "artifact_types": {
+            "required_inputs": [],
+            "optional_inputs": [],
+            "required_outputs": [
+              "json"
+            ],
+            "optional_outputs": [],
+            "consumes": [
+              "artifact.request_context"
+            ],
+            "produces": [
+              "artifact.guard_decision"
+            ]
+          },
+          "effect_profile": {
+            "read": [
+              "request.metadata"
+            ],
+            "write": [
+              "artifacts.guard_decision"
+            ],
+            "execute": [],
+            "network": [],
+            "cost": [],
+            "risk": []
+          },
+          "proof_obligations": [
+            {
+              "kind": "self_check",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "check.guard_decision_written"
+            },
+            {
+              "kind": "pass_condition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "guard_decision exists"
+            },
+            {
+              "kind": "postcondition",
+              "source_capsule_id": "guard.secret-leak-guard",
+              "requirement": "output_present",
+              "check": "output_present",
+              "field": "guard_decision"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "records_parsed": 2,
+  "imported_sources": 2,
+  "imported_evidence": 4,
+  "imported_claims": 4,
+  "imported_links": 4,
+  "research_angle_counts": {
+    "literature_lineage": 1,
+    "method_taxonomy": 1,
+    "evaluation_protocol": 0,
+    "controversy": 0,
+    "engineering": 1
+  },
+  "missing_research_angles": [
+    "evaluation_protocol",
+    "controversy"
+  ],
+  "sources_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu1/sources.jsonl",
+  "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu1/evidence.jsonl",
+  "claims_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu1/claims.jsonl",
+  "claim_evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu1/claim_evidence.jsonl",
+  "run_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu1/survey_import_search_results.json"
+}

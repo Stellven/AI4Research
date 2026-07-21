@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_416_934db3eba4_harness_tests_test_projections.py",
+  "source": "harness/tests/test_projections.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_projections.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.251,
+  "timeout": false
+}

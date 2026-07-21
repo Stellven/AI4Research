@@ -1,0 +1,1670 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-02T01:59:19Z",
+  "logical_operators": {
+    "DeepArchitect": {
+      "operator_type": "DeepArchitect",
+      "description": "System architecture design, schema design, high-level technical planning. Requires strong architecture_reasoning and long_context.",
+      "primary_role": "planner",
+      "required_capabilities": {
+        "architecture_reasoning": 4,
+        "long_context": 3,
+        "multi_agent_coordination": 3
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 6,
+        "singleton": false
+      }
+    },
+    "RootCauseDebugger": {
+      "operator_type": "RootCauseDebugger",
+      "description": "Deep root cause analysis of failures, crashes, and regressions. Requires strong root_cause_debug and code_impl.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "root_cause_debug": 4,
+        "code_impl": 3,
+        "long_context": 2
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "ImplementationWorker": {
+      "operator_type": "ImplementationWorker",
+      "description": "General-purpose code implementation: new features, modules, integrations. Requires strong code_impl.",
+      "primary_role": "builder",
+      "required_capabilities": {
+        "code_impl": 4,
+        "test_generation": 2
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 5,
+        "singleton": false
+      }
+    },
+    "PatchWorker": {
+      "operator_type": "PatchWorker",
+      "description": "Targeted surgical patches: one-line fixes, config corrections, minor refactors. Optimized for speed and low cost.",
+      "primary_role": "builder",
+      "required_capabilities": {
+        "code_impl": 3,
+        "root_cause_debug": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 8,
+        "singleton": false
+      }
+    },
+    "TestDesigner": {
+      "operator_type": "TestDesigner",
+      "description": "Designs test suites, edge-case matrices, property-based tests, and test plans. Requires strong test_generation.",
+      "primary_role": "builder",
+      "required_capabilities": {
+        "test_generation": 4,
+        "architecture_reasoning": 2
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "TestRunner": {
+      "operator_type": "TestRunner",
+      "description": "Executes test suites, interprets results, reports failures. Requires test_execution capability.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "test_execution": 4,
+        "root_cause_debug": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 6,
+        "singleton": false
+      }
+    },
+    "BenchmarkRunner": {
+      "operator_type": "BenchmarkRunner",
+      "description": "Runs performance benchmarks, collects latency/throughput metrics, compares before/after. Shell access required.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "test_execution": 3,
+        "code_impl": 2
+      },
+      "risk_constraints": {
+        "allowed_shell_scope": "allowed"
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "ParallelExplorer": {
+      "operator_type": "ParallelExplorer",
+      "description": "Spawns parallel research or exploration threads, aggregates results. Requires multi_agent_coordination.",
+      "primary_role": "planner",
+      "required_capabilities": {
+        "multi_agent_coordination": 4,
+        "research_synthesis": 3
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 5,
+        "singleton": false
+      }
+    },
+    "ResearchScout": {
+      "operator_type": "ResearchScout",
+      "description": "Rapid information gathering: web search, documentation triage, codebase exploration. Optimized for speed.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 3,
+        "speed": 4
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 6,
+        "singleton": false
+      }
+    },
+    "ResearchSynthesizer": {
+      "operator_type": "ResearchSynthesizer",
+      "description": "Deep research synthesis: cross-source analysis, literature review, technical comparisons. Requires strong research_synthesis and long_context.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 4,
+        "long_context": 4,
+        "academic_critique": 3
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "Critic": {
+      "operator_type": "Critic",
+      "description": "Critical review of designs, proposals, and plans. Applies academic_critique and adversarial questioning.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "academic_critique": 4,
+        "architecture_reasoning": 3
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "Verifier": {
+      "operator_type": "Verifier",
+      "description": "End-to-end verification: confirms implementations match specs, evidence collection, acceptance sign-off.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "test_execution": 3,
+        "root_cause_debug": 3
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "VerifierLite": {
+      "operator_type": "VerifierLite",
+      "description": "Constrained structural verification: validates tests, artifact layout, metadata, and machine-readable sidecars without issuing final acceptance sign-off.",
+      "primary_role": "evaluator",
+      "required_capabilities": {
+        "test_execution": 3,
+        "code_impl": 2
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "harness_readonly",
+        "destructive_actions": "denied",
+        "final_signoff": "denied",
+        "machine_structural_verification_only": true
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "SecurityGate": {
+      "operator_type": "SecurityGate",
+      "description": "Security review gate: checks for vulnerabilities, validates risk profiles, enforces security policies before promotion.",
+      "primary_role": "auditor",
+      "required_capabilities": {
+        "root_cause_debug": 3,
+        "academic_critique": 3
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "harness_readonly",
+        "destructive_actions": "denied"
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 2,
+        "singleton": false
+      }
+    },
+    "QuotaBroker": {
+      "operator_type": "QuotaBroker",
+      "description": "Manages token/cost quotas across actors, enforces budget limits, routes overflow to fallbacks.",
+      "primary_role": "router",
+      "required_capabilities": {
+        "multi_agent_coordination": 3,
+        "speed": 4
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": true
+      }
+    },
+    "ContextCompressor": {
+      "operator_type": "ContextCompressor",
+      "description": "Compresses long context windows into context packets, generates memory summaries, trims stale state.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "long_context": 4,
+        "research_synthesis": 3
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "ArtifactCurator": {
+      "operator_type": "ArtifactCurator",
+      "description": "Manages build artifacts, evidence ledgers, handoff documents, and sprint closeout artifacts.",
+      "primary_role": "auditor",
+      "required_capabilities": {
+        "code_impl": 2,
+        "research_synthesis": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 4,
+        "singleton": false
+      }
+    },
+    "DeepResearchBrowser": {
+      "operator_type": "DeepResearchBrowser",
+      "description": "Runs long-horizon browser-mediated research tasks that require persistent webapp sessions and async artifact collection.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 5,
+        "browser_use": 5,
+        "gui_use": 4,
+        "long_context": 4
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 2,
+        "singleton": false
+      }
+    },
+    "DeepResearchGemini": {
+      "operator_type": "DeepResearchGemini",
+      "description": "Routes deep research tasks to Gemini-oriented long-context synthesis workers when browser-first execution is unavailable.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 5,
+        "long_context": 5,
+        "browser_use": 2
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "DeepResearchChatGPT": {
+      "operator_type": "DeepResearchChatGPT",
+      "description": "Routes deep research tasks to ChatGPT-oriented synthesis workers as a premium fallback path.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "research_synthesis": 5,
+        "academic_critique": 4,
+        "long_context": 5
+      },
+      "cost_hint": "high",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "WebwrightPlaywright": {
+      "operator_type": "WebwrightPlaywright",
+      "description": "Runs deterministic Playwright/Webwright browser automation for browser research, UI inspection, and web artifact collection.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "browser_use": 5,
+        "gui_use": 4,
+        "data_extraction": 4
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "artifact_dir_only",
+        "payment_or_external_action": "denied"
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 2,
+        "singleton": false
+      }
+    },
+    "BrowserUseMcp": {
+      "operator_type": "BrowserUseMcp",
+      "description": "Runs quick browser-use MCP automation for lightweight snapshots, extraction, and browser-mediated checks.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "browser_use": 4,
+        "gui_use": 3,
+        "data_extraction": 4,
+        "speed": 4
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "artifact_dir_only",
+        "payment_or_external_action": "denied"
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 3,
+        "singleton": false
+      }
+    },
+    "YoutubeTranscriptExtractor": {
+      "operator_type": "YoutubeTranscriptExtractor",
+      "description": "Extracts YouTube transcripts and related metadata through browser/webapp automation into auditable artifacts.",
+      "primary_role": "knowledge-extractor",
+      "required_capabilities": {
+        "browser_use": 4,
+        "data_extraction": 5,
+        "speed": 3
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "artifact_dir_only",
+        "payment_or_external_action": "denied"
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 2,
+        "singleton": false
+      }
+    },
+    "TechnologyDiagramPainter": {
+      "operator_type": "TechnologyDiagramPainter",
+      "description": "Generates polished technology architecture diagrams and report figures through the browser-agent technology diagram painter.",
+      "primary_role": "builder",
+      "required_capabilities": {
+        "browser_use": 5,
+        "gui_use": 4,
+        "data_extraction": 2
+      },
+      "risk_constraints": {
+        "allowed_write_scope": "artifact_dir_only",
+        "payment_or_external_action": "denied"
+      },
+      "cost_hint": "medium",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificLiteratureDiscoverer": {
+      "operator_type": "ScientificLiteratureDiscoverer",
+      "description": "AutoSci literature discovery and source shortlist preparation through bounded Solar-native bridge evidence.",
+      "primary_role": "scientific-literature-discoverer",
+      "required_capabilities": {
+        "research_synthesis": 3,
+        "scientific_evidence": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificPaperIngestor": {
+      "operator_type": "ScientificPaperIngestor",
+      "description": "AutoSci source preparation, paper parsing, and ingest evidence generation.",
+      "primary_role": "scientific-paper-ingestor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "data_extraction": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificPaperAnalyzer": {
+      "operator_type": "ScientificPaperAnalyzer",
+      "description": "AutoSci paper analysis evidence generation from parsed source evidence.",
+      "primary_role": "scientific-paper-ingestor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "research_synthesis": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificMemoryUpdater": {
+      "operator_type": "ScientificMemoryUpdater",
+      "description": "AutoSci research memory sidecar generation and final memory update projection.",
+      "primary_role": "scientific-memory-updater",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "artifact_curation": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificGraphUpdater": {
+      "operator_type": "ScientificGraphUpdater",
+      "description": "AutoSci research graph sidecar generation and graph evidence projection.",
+      "primary_role": "scientific-memory-updater",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "artifact_curation": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificClaimExtractor": {
+      "operator_type": "ScientificClaimExtractor",
+      "description": "AutoSci paper claim extraction into schema-gated claim evidence.",
+      "primary_role": "scientific-claim-extractor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "data_extraction": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificMethodExtractor": {
+      "operator_type": "ScientificMethodExtractor",
+      "description": "AutoSci method extraction into schema-gated method evidence.",
+      "primary_role": "scientific-claim-extractor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "data_extraction": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificCodeEvidenceMapper": {
+      "operator_type": "ScientificCodeEvidenceMapper",
+      "description": "AutoSci code and artifact evidence mapping for source-backed claims.",
+      "primary_role": "scientific-code-evidence-mapper",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "code_impl": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificIdeaGenerator": {
+      "operator_type": "ScientificIdeaGenerator",
+      "description": "AutoSci source-grounded idea generation with explicit promotion boundary evidence.",
+      "primary_role": "lab-builder",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "research_synthesis": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificIdeaEvaluator": {
+      "operator_type": "ScientificIdeaEvaluator",
+      "description": "AutoSci novelty and review gate evaluation evidence for candidate ideas.",
+      "primary_role": "lab-evaluator",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "academic_critique": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificExperimentDesigner": {
+      "operator_type": "ScientificExperimentDesigner",
+      "description": "AutoSci experiment design evidence and execution-readiness boundary generation.",
+      "primary_role": "scientific-experiment-designer",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "test_generation": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificExperimentRunner": {
+      "operator_type": "ScientificExperimentRunner",
+      "description": "AutoSci approved experiment runtime and result evidence generation.",
+      "primary_role": "scientific-experiment-runner",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "test_execution": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificExperimentMonitor": {
+      "operator_type": "ScientificExperimentMonitor",
+      "description": "AutoSci experiment status monitoring and approved collection evidence generation.",
+      "primary_role": "scientific-experiment-runner",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "test_execution": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificClaimVerifier": {
+      "operator_type": "ScientificClaimVerifier",
+      "description": "AutoSci claim verification using experiment, code, and Review LLM evidence.",
+      "primary_role": "scientific-claim-verifier",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "academic_critique": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificReportPlanner": {
+      "operator_type": "ScientificReportPlanner",
+      "description": "AutoSci paper/report plan evidence with citation and Review LLM readiness boundaries.",
+      "primary_role": "scientific-report-writer",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "research_synthesis": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificReportDrafter": {
+      "operator_type": "ScientificReportDrafter",
+      "description": "AutoSci source-backed scientific report or manuscript draft evidence generation.",
+      "primary_role": "scientific-report-writer",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "research_synthesis": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificArtifactReviewer": {
+      "operator_type": "ScientificArtifactReviewer",
+      "description": "AutoSci artifact review and Review LLM final acceptance boundary generation.",
+      "primary_role": "lab-evaluator",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "academic_critique": 3
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificPublicationProducer": {
+      "operator_type": "ScientificPublicationProducer",
+      "description": "AutoSci publication compile bundle and submission-readiness evidence generation.",
+      "primary_role": "lab-builder",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "test_execution": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
+    "ScientificWorkflowEvolver": {
+      "operator_type": "ScientificWorkflowEvolver",
+      "description": "AutoSci lifecycle closeout, memory-finalization, and workflow evolution evidence generation.",
+      "primary_role": "planner",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "artifact_curation": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    }
+  },
+  "workflow_vocabulary": {
+    "_comment": "Workflow stage names used by APO logical workflow expander. Each stage maps to one or more existing logical_operators. Multiple operators may be selected per stage based on capsule and signal context.",
+    "ScanContext": {
+      "description": "Gather all relevant context: repository state, benchmark history, existing tickets, related code. Read-only phase.",
+      "maps_to_operators": [
+        "ResearchScout",
+        "ResearchSynthesizer"
+      ],
+      "stage_type": "read_only",
+      "position": 1
+    },
+    "DebugRCA": {
+      "description": "Root cause analysis: identify what changed, why performance degraded, or where the bug originates.",
+      "maps_to_operators": [
+        "RootCauseDebugger"
+      ],
+      "stage_type": "analysis",
+      "position": 2
+    },
+    "DesignSolution": {
+      "description": "Architect the fix, optimization, or feature. May produce a design doc, interface sketch, or algorithm outline.",
+      "maps_to_operators": [
+        "DeepArchitect"
+      ],
+      "stage_type": "design",
+      "position": 3
+    },
+    "ImplementPatch": {
+      "description": "Write the actual code change, patch, or module. Uses ImplementationWorker for features or PatchWorker for surgical fixes.",
+      "maps_to_operators": [
+        "ImplementationWorker",
+        "PatchWorker"
+      ],
+      "stage_type": "implementation",
+      "position": 4
+    },
+    "RunBenchmark": {
+      "description": "Execute the benchmark suite to measure before/after impact. Requires shell access.",
+      "maps_to_operators": [
+        "BenchmarkRunner"
+      ],
+      "stage_type": "evaluation",
+      "position": 5
+    },
+    "ReviewPatch": {
+      "description": "Critical review of the patch/implementation: correctness, security, style, invariant preservation.",
+      "maps_to_operators": [
+        "Critic",
+        "SecurityGate"
+      ],
+      "stage_type": "review",
+      "position": 6
+    },
+    "VerifyEvidence": {
+      "description": "Final acceptance: confirm outputs exist, evidence matches pass_conditions, sign off for promotion.",
+      "maps_to_operators": [
+        "Verifier",
+        "ArtifactCurator"
+      ],
+      "stage_type": "verification",
+      "position": 7
+    }
+  },
+  "workflow_templates": {
+    "performance_debug_workflow": {
+      "description": "7-stage workflow for performance regression and kernel debug task classes.",
+      "stages": [
+        "ScanContext",
+        "DebugRCA",
+        "DesignSolution",
+        "ImplementPatch",
+        "RunBenchmark",
+        "ReviewPatch",
+        "VerifyEvidence"
+      ],
+      "applicable_task_classes": [
+        "PERFORMANCE_REGRESSION",
+        "PERFORMANCE_KERNEL_DEBUG"
+      ]
+    },
+    "design_and_optimize_workflow": {
+      "description": "Workflow for software-hardware co-optimization tasks: design first, then implement and benchmark.",
+      "stages": [
+        "ScanContext",
+        "DesignSolution",
+        "ImplementPatch",
+        "RunBenchmark",
+        "VerifyEvidence"
+      ],
+      "applicable_task_classes": [
+        "SOFT_HW_OPT"
+      ]
+    },
+    "implementation_workflow": {
+      "description": "Standard feature implementation workflow.",
+      "stages": [
+        "ScanContext",
+        "DesignSolution",
+        "ImplementPatch",
+        "ReviewPatch",
+        "VerifyEvidence"
+      ],
+      "applicable_task_classes": [
+        "CODE_IMPL_REQUIRED"
+      ]
+    },
+    "prototype_workflow": {
+      "description": "Fast prototype: skip design formalism and review gates.",
+      "stages": [
+        "ScanContext",
+        "ImplementPatch",
+        "VerifyEvidence"
+      ],
+      "applicable_task_classes": [
+        "FAST_PROTOTYPE"
+      ]
+    }
+  },
+  "bindings": {
+    "DeepArchitect": {
+      "operator_type": "DeepArchitect",
+      "candidates": [
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner-2",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner-3",
+          "priority": 3,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt55-medium-planner-1",
+          "priority": 4,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-codex-gpt55-medium-planner-2",
+          "priority": 5,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner-print",
+          "priority": 6,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "priority": 99,
+          "condition": "emergency_only"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "RootCauseDebugger": {
+      "operator_type": "RootCauseDebugger",
+      "candidates": [
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-reasonix-deepseek-v4-builder",
+          "priority": 2,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "priority": 3,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator-print",
+          "priority": 4,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "ImplementationWorker": {
+      "operator_type": "ImplementationWorker",
+      "candidates": [
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-1",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-2",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-3",
+          "priority": 3,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-4",
+          "priority": 4,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-5",
+          "priority": 5,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-6",
+          "priority": 6,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "priority": 7,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "priority": 8,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "priority": 9,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "PatchWorker": {
+      "operator_type": "PatchWorker",
+      "candidates": [
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-1",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-2",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-3",
+          "priority": 3,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-4",
+          "priority": 4,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-5",
+          "priority": 5,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-6",
+          "priority": 6,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "priority": 7,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini35-flash-high",
+          "priority": 8,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder-print",
+          "priority": 9,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "cost_optimal",
+      "fallback_policy": "queue"
+    },
+    "TestDesigner": {
+      "operator_type": "TestDesigner",
+      "candidates": [
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-1",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-2",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-3",
+          "priority": 3,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-4",
+          "priority": 4,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-5",
+          "priority": 5,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-6",
+          "priority": 6,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "priority": 7,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "priority": 8,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "TestRunner": {
+      "operator_type": "TestRunner",
+      "candidates": [
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator-print",
+          "priority": 2,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "priority": 3,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "BenchmarkRunner": {
+      "operator_type": "BenchmarkRunner",
+      "candidates": [
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-1",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-2",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-3",
+          "priority": 3,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-4",
+          "priority": 4,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-5",
+          "priority": 5,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-6",
+          "priority": 6,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "priority": 7,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "priority": 8,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "ParallelExplorer": {
+      "operator_type": "ParallelExplorer",
+      "candidates": [
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner-2",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner-3",
+          "priority": 3,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt55-medium-planner-1",
+          "priority": 4,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-codex-gpt55-medium-planner-2",
+          "priority": 5,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "priority": 99,
+          "condition": "emergency_only"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "ResearchScout": {
+      "operator_type": "ResearchScout",
+      "candidates": [
+        {
+          "actor_id": "mini-antigravity-gemini35-flash-high",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini35-flash-image",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-local-scan",
+          "priority": 3,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "cost_optimal",
+      "fallback_policy": "queue"
+    },
+    "ResearchSynthesizer": {
+      "operator_type": "ResearchSynthesizer",
+      "candidates": [
+        {
+          "actor_id": "mini-thunderomlx-qwen36-knowledge",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-glm51-knowledge",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "priority": 3,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "Critic": {
+      "operator_type": "Critic",
+      "candidates": [
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "priority": 2,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-codex-gpt55-medium-planner-1",
+          "priority": 3,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "priority": 99,
+          "condition": "emergency_only"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "Verifier": {
+      "operator_type": "Verifier",
+      "candidates": [
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator-print",
+          "priority": 2,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "VerifierLite": {
+      "operator_type": "VerifierLite",
+      "candidates": [
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-1",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-2",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-3",
+          "priority": 3,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-4",
+          "priority": 4,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-5",
+          "priority": 5,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-6",
+          "priority": 6,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "priority": 7,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "priority": 8,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "SecurityGate": {
+      "operator_type": "SecurityGate",
+      "candidates": [
+        {
+          "actor_id": "mini-audit",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-opus-evaluator",
+          "priority": 2,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "QuotaBroker": {
+      "operator_type": "QuotaBroker",
+      "candidates": [
+        {
+          "actor_id": "mini-router",
+          "priority": 1,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ContextCompressor": {
+      "operator_type": "ContextCompressor",
+      "candidates": [
+        {
+          "actor_id": "mini-thunderomlx-qwen36-knowledge",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-glm51-knowledge",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini31-pro",
+          "priority": 3,
+          "condition": "quota_ok"
+        }
+      ],
+      "selection_policy": "cost_optimal",
+      "fallback_policy": "queue"
+    },
+    "ArtifactCurator": {
+      "operator_type": "ArtifactCurator",
+      "candidates": [
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-1",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-2",
+          "priority": 2,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-3",
+          "priority": 3,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-4",
+          "priority": 4,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-5",
+          "priority": 5,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-codex-gpt53-spark-builder-6",
+          "priority": 6,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-claude-sonnet-builder",
+          "priority": 7,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-antigravity-gemini35-flash-high",
+          "priority": 8,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "cost_optimal",
+      "fallback_policy": "queue"
+    },
+    "DeepResearchBrowser": {
+      "operator_type": "DeepResearchBrowser",
+      "candidates": [
+        {
+          "actor_id": "browser_agent_session",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "mini-gemini-deep-research",
+          "priority": 2,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-chatgpt-deep-research",
+          "priority": 3,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "DeepResearchGemini": {
+      "operator_type": "DeepResearchGemini",
+      "candidates": [
+        {
+          "actor_id": "mini-gemini-deep-research",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "browser_agent_session",
+          "priority": 2,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "priority": 3,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "DeepResearchChatGPT": {
+      "operator_type": "DeepResearchChatGPT",
+      "candidates": [
+        {
+          "actor_id": "mini-chatgpt-deep-research",
+          "priority": 1,
+          "condition": "always"
+        },
+        {
+          "actor_id": "browser_agent_session",
+          "priority": 2,
+          "condition": "quota_ok"
+        },
+        {
+          "actor_id": "mini-claude-opus-planner",
+          "priority": 3,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "WebwrightPlaywright": {
+      "operator_type": "WebwrightPlaywright",
+      "candidates": [
+        {
+          "actor_id": "op.browser.webwright.playwright.01",
+          "priority": 1,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "BrowserUseMcp": {
+      "operator_type": "BrowserUseMcp",
+      "candidates": [
+        {
+          "actor_id": "op.browser.browser_use_mcp.quick.01",
+          "priority": 1,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "YoutubeTranscriptExtractor": {
+      "operator_type": "YoutubeTranscriptExtractor",
+      "candidates": [
+        {
+          "actor_id": "mini-youtube-transcript-extractor",
+          "priority": 1,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "TechnologyDiagramPainter": {
+      "operator_type": "TechnologyDiagramPainter",
+      "candidates": [
+        {
+          "actor_id": "technology-diagram-painter",
+          "priority": 1,
+          "condition": "always"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "queue"
+    },
+    "ScientificLiteratureDiscoverer": {
+      "operator_type": "ScientificLiteratureDiscoverer",
+      "candidates": [
+        {
+          "actor_id": "autosci-literature-discover-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificPaperIngestor": {
+      "operator_type": "ScientificPaperIngestor",
+      "candidates": [
+        {
+          "actor_id": "autosci-paper-ingest-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificPaperAnalyzer": {
+      "operator_type": "ScientificPaperAnalyzer",
+      "candidates": [
+        {
+          "actor_id": "autosci-paper-analyze-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificMemoryUpdater": {
+      "operator_type": "ScientificMemoryUpdater",
+      "candidates": [
+        {
+          "actor_id": "autosci-memory-update-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificGraphUpdater": {
+      "operator_type": "ScientificGraphUpdater",
+      "candidates": [
+        {
+          "actor_id": "autosci-graph-update-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificClaimExtractor": {
+      "operator_type": "ScientificClaimExtractor",
+      "candidates": [
+        {
+          "actor_id": "autosci-claim-extract-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificMethodExtractor": {
+      "operator_type": "ScientificMethodExtractor",
+      "candidates": [
+        {
+          "actor_id": "autosci-method-extract-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificCodeEvidenceMapper": {
+      "operator_type": "ScientificCodeEvidenceMapper",
+      "candidates": [
+        {
+          "actor_id": "autosci-code-evidence-map-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificIdeaGenerator": {
+      "operator_type": "ScientificIdeaGenerator",
+      "candidates": [
+        {
+          "actor_id": "autosci-idea-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificIdeaEvaluator": {
+      "operator_type": "ScientificIdeaEvaluator",
+      "candidates": [
+        {
+          "actor_id": "autosci-idea-evaluate-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificExperimentDesigner": {
+      "operator_type": "ScientificExperimentDesigner",
+      "candidates": [
+        {
+          "actor_id": "autosci-experiment-design-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificExperimentRunner": {
+      "operator_type": "ScientificExperimentRunner",
+      "candidates": [
+        {
+          "actor_id": "autosci-experiment-run-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificExperimentMonitor": {
+      "operator_type": "ScientificExperimentMonitor",
+      "candidates": [
+        {
+          "actor_id": "autosci-experiment-monitor-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificClaimVerifier": {
+      "operator_type": "ScientificClaimVerifier",
+      "candidates": [
+        {
+          "actor_id": "autosci-claim-verify-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificReportPlanner": {
+      "operator_type": "ScientificReportPlanner",
+      "candidates": [
+        {
+          "actor_id": "autosci-report-plan-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificReportDrafter": {
+      "operator_type": "ScientificReportDrafter",
+      "candidates": [
+        {
+          "actor_id": "autosci-report-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificArtifactReviewer": {
+      "operator_type": "ScientificArtifactReviewer",
+      "candidates": [
+        {
+          "actor_id": "autosci-artifact-review-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificPublicationProducer": {
+      "operator_type": "ScientificPublicationProducer",
+      "candidates": [
+        {
+          "actor_id": "autosci-publication-compile-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificWorkflowEvolver": {
+      "operator_type": "ScientificWorkflowEvolver",
+      "candidates": [
+        {
+          "actor_id": "autosci-workflow-evolve-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    }
+  }
+}

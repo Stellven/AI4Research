@@ -1,0 +1,11 @@
+{
+  "sprint_id": "sprint-running",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "running node",
+      "depends_on": [],
+      "status": "dispatched"
+    }
+  ]
+}

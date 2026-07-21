@@ -2,17 +2,15 @@
 
 S03 N9: sprint-20260519-solar-harness-vnext-code-as-harness-runtime-s03-core-runtime
 
-Replays the EventLedger for a sprint and emits a broker_coverage report
-conforming to harness/schemas/broker_coverage.schema.json (8 required
-fields) plus an event_ledger_lag_seconds observability metric.
+Replays the EventLedger for a sprint and emits the product's canonical
+broker_coverage report plus an event_ledger_lag_seconds observability metric.
 
 Usage:
     python3 -m harness.tests.integration.activation_proof_runner \\
         --sid sprint-foo \\
         [--base-dir /path/to/run] [--out report.json]
 
-Exits 0 when broker_coverage.health == "PASS" (uncontracted=0,
-unscoped=0, coverage_ratio=1.0). Exits 1 otherwise.
+Exits 0 when broker_coverage.health == "PASS". Exits 1 otherwise.
 
 The computation is event-driven and purely additive — it never mutates
 the ledger. It can be invoked against any sprint whose events have been
@@ -31,20 +29,25 @@ from typing import Any, Dict, Iterable, List, Optional
 
 # Dual import path: package style (production) + legacy sys.path (tests).
 try:
+    from harness.lib.activation_proof import (
+        BROKER_COVERAGE_FIELDS,
+        compute_broker_coverage_from_events,
+    )
     from harness.lib.event_ledger import EventLedger
 except ModuleNotFoundError:  # pragma: no cover - legacy direct import path
     _HARNESS_LIB = str(Path(__file__).resolve().parents[2] / "lib")
     if _HARNESS_LIB not in sys.path:
         sys.path.insert(0, _HARNESS_LIB)
+    from activation_proof import (  # type: ignore[no-redef]
+        BROKER_COVERAGE_FIELDS,
+        compute_broker_coverage_from_events,
+    )
     from event_ledger import EventLedger  # type: ignore[no-redef]
 
 
 SCHEMA_FIELDS = (
+    *BROKER_COVERAGE_FIELDS,
     "uncontracted_action_count",
-    "unscoped_write_count",
-    "total_actions",
-    "contracted_actions",
-    "coverage_ratio",
     "legacy_path_actions",
     "by_kind",
     "health",
@@ -52,75 +55,8 @@ SCHEMA_FIELDS = (
 
 
 def compute_broker_coverage(events: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
-    """Compute the 8-field broker_coverage payload from a replayed event list.
-
-    See harness/schemas/broker_coverage.schema.json for the contract.
-    health == "PASS" iff uncontracted == 0 AND unscoped == 0 AND
-    coverage_ratio == 1.0.
-    """
-    proposed_ids: set[str] = set()
-    contracted_ids: set[str] = set()
-    executed_ids: set[str] = set()
-    legacy_ids: set[str] = set()
-    unscoped_write_count = 0
-    by_kind: Dict[str, int] = {}
-
-    for ev in events:
-        event_type = ev.get("event_type") or ev.get("type") or ""
-        payload = ev.get("payload") or {}
-        if isinstance(payload, str):
-            try:
-                payload = json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                payload = {}
-        action_id = payload.get("action_id")
-
-        if event_type == "action.proposed" and action_id:
-            proposed_ids.add(action_id)
-            kind = str(payload.get("kind") or "unknown")
-            by_kind[kind] = by_kind.get(kind, 0) + 1
-            if payload.get("legacy") is True:
-                legacy_ids.add(action_id)
-        elif event_type == "policy.verdict" and action_id:
-            verdict = str(payload.get("verdict") or "").upper()
-            reason = str(payload.get("reason") or "")
-            detail = str(payload.get("detail") or "")
-            if verdict == "PASS":
-                contracted_ids.add(action_id)
-            elif reason == "policy_denied" and detail.startswith("write_scope"):
-                unscoped_write_count += 1
-        elif event_type in {"action.executed", "action.failed"} and action_id:
-            executed_ids.add(action_id)
-
-    total_actions = len(proposed_ids)
-    contracted_actions = len(contracted_ids)
-    uncontracted_action_count = len(executed_ids - contracted_ids)
-    coverage_ratio = (
-        float(contracted_actions) / float(total_actions) if total_actions else 1.0
-    )
-    if coverage_ratio > 1.0:
-        coverage_ratio = 1.0
-
-    health = (
-        "PASS"
-        if (
-            uncontracted_action_count == 0
-            and unscoped_write_count == 0
-            and coverage_ratio >= 1.0
-        )
-        else "FAIL"
-    )
-
-    return {
-        "uncontracted_action_count": uncontracted_action_count,
-        "unscoped_write_count": unscoped_write_count,
-        "total_actions": total_actions,
-        "contracted_actions": contracted_actions,
-        "coverage_ratio": coverage_ratio,
-        "legacy_path_actions": len(legacy_ids),
-        "by_kind": by_kind,
-        "health": health,
-    }
+    """Compute broker coverage through the product's single authority."""
+    return compute_broker_coverage_from_events(events)
 
 
 def compute_ledger_lag_seconds(

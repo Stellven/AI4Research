@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="6" time="0.371" timestamp="2026-07-10T14:50:06.063695-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.graph.test_graph_dispatch_hygiene" name="test_dirty_pane_is_unavailable_before_dispatch" time="0.045"><failure message="AssertionError: assert '' == 'pane_hygiene_dirty'&#10;  &#10;  - pane_hygiene_dirty">harness/tests/graph/test_graph_dispatch_hygiene.py:29: in test_dirty_pane_is_unavailable_before_dispatch
+    assert gnd._pane_hygiene_unavailable_reason("solar-harness-lab:0.2") == "pane_hygiene_dirty"
+E   AssertionError: assert '' == 'pane_hygiene_dirty'
+E     
+E     - pane_hygiene_dirty</failure></testcase><testcase classname="harness.tests.graph.test_graph_dispatch_hygiene" name="test_needs_respawn_pane_is_not_auto_recovered" time="0.004" /><testcase classname="harness.tests.graph.test_graph_dispatch_hygiene" name="test_assigned_pane_guard_checks_hygiene_before_tui_busy" time="0.001"><failure message="AssertionError: hygiene should short-circuit before TUI busy probe">harness/tests/graph/test_graph_dispatch_hygiene.py:55: in test_assigned_pane_guard_checks_hygiene_before_tui_busy
+    assert gnd._assigned_pane_unavailable_reason(pane) == "pane_hygiene_dirty"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/lib/graph_node_dispatcher.py:4828: in _assigned_pane_unavailable_reason
+    _pane_hygiene_unavailable_reason(pane)
+harness/lib/graph_node_dispatcher.py:4786: in _pane_hygiene_unavailable_reason
+    if _recover_pane_hygiene_if_idle(pane, state):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/lib/graph_node_dispatcher.py:4636: in _recover_pane_hygiene_if_idle
+    if _pane_tui_busy(pane):
+       ^^^^^^^^^^^^^^^^^^^^
+harness/tests/graph/test_graph_dispatch_hygiene.py:53: in &lt;lambda&gt;
+    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda _pane: (_ for _ in ()).throw(AssertionError("hygiene should short-circuit before TUI busy probe")))
+                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/graph/test_graph_dispatch_hygiene.py:53: in &lt;genexpr&gt;
+    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda _pane: (_ for _ in ()).throw(AssertionError("hygiene should short-circuit before TUI busy probe")))
+E   AssertionError: hygiene should short-circuit before TUI busy probe</failure></testcase><testcase classname="harness.tests.graph.test_graph_dispatch_hygiene" name="test_feedback_survey_prompt_is_recoverable_dispatch_prompt" time="0.000"><failure message="AssertionError: assert '' == 'feedback_survey_prompt'&#10;  &#10;  - feedback_survey_prompt">harness/tests/graph/test_graph_dispatch_hygiene.py:65: in test_feedback_survey_prompt_is_recoverable_dispatch_prompt
+    assert gnd._pane_dispatch_prompt_reason(tail) == "feedback_survey_prompt"
+E   AssertionError: assert '' == 'feedback_survey_prompt'
+E     
+E     - feedback_survey_prompt</failure></testcase><testcase classname="harness.tests.graph.test_graph_dispatch_hygiene" name="test_rewind_prompt_is_recoverable_dispatch_prompt" time="0.000"><failure message="AssertionError: assert '' == 'rewind_prompt_blocked'&#10;  &#10;  - rewind_prompt_blocked">harness/tests/graph/test_graph_dispatch_hygiene.py:76: in test_rewind_prompt_is_recoverable_dispatch_prompt
+    assert gnd._pane_dispatch_prompt_reason(tail) == "rewind_prompt_blocked"
+E   AssertionError: assert '' == 'rewind_prompt_blocked'
+E     
+E     - rewind_prompt_blocked</failure></testcase><testcase classname="harness.tests.graph.test_graph_dispatch_hygiene" name="test_dispatch_ready_marks_graph_active_panes_busy" time="0.015"><failure message="assert False is True">harness/tests/graph/test_graph_dispatch_hygiene.py:113: in test_dispatch_ready_marks_graph_active_panes_busy
+    assert workers_by_pane["pane-a"]["busy"] is True
+E   assert False is True</failure></testcase></testsuite></testsuites>

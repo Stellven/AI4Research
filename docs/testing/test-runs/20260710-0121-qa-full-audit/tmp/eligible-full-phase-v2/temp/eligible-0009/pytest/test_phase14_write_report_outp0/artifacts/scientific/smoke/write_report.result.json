@@ -1,0 +1,304 @@
+{
+  "action": "write_report",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/scientific/smoke/report_plan.json",
+        "type": "report_plan_json"
+      },
+      {
+        "path": "artifacts/scientific/smoke/report.md",
+        "type": "markdown_report"
+      },
+      {
+        "path": "artifacts/scientific/smoke/report_evidence_index.json",
+        "type": "report_evidence_index_json"
+      },
+      {
+        "path": "artifacts/scientific/smoke/optional_poster.html",
+        "type": "optional_poster_html"
+      },
+      {
+        "path": "artifacts/scientific/smoke/optional_rebuttal.md",
+        "type": "optional_rebuttal_markdown"
+      },
+      {
+        "path": "artifacts/scientific/smoke/scientific_report.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "claim_id": "claim-001",
+      "claim_verdict_evidence": "artifacts/scientific/smoke/claim_verdict.json",
+      "claims_evidence": "artifacts/scientific/smoke/research_claims.json",
+      "code_evidence": "artifacts/scientific/smoke/code_evidence_map.json",
+      "experiment_id": "exp-supported-001",
+      "experiment_result": "artifacts/scientific/smoke/experiment_result.json",
+      "report_id": "report-autosci-phase14",
+      "report_title": "AutoSci Evidence-Linked Fixture Report"
+    },
+    "limitations": [
+      "Fixture report is assembled from supplied local Solar evidence only.",
+      "Publication files are local artifacts and require human approval before external handoff."
+    ],
+    "node_id": "node-write-report",
+    "outputs": {
+      "report": {
+        "compile_handoff": {
+          "status": "not_requested"
+        },
+        "evidence_ids": [
+          "task-autosci-verdict-supported-fixture",
+          "claim-001",
+          "paper-sample-paper",
+          "sample_paper.md#results",
+          "exp-supported-001",
+          "experiment.supported.001",
+          "metric.fixture_passed",
+          "task-autosci-code-evidence-fixture",
+          "map-001",
+          "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+          "task-autosci-claims-fixture",
+          "claim-002",
+          "sample_paper.md#abstract",
+          "task-autosci-experiment-run-fixture",
+          "exp-001",
+          "evidence:autosci-fixture-result",
+          "evidence:autosci-fixture-ledger"
+        ],
+        "figures": [
+          {
+            "artifact_path": "artifacts/scientific/smoke/optional_poster.html",
+            "evidence_ids": [
+              "task-autosci-verdict-supported-fixture",
+              "claim-001",
+              "paper-sample-paper",
+              "sample_paper.md#results",
+              "exp-supported-001",
+              "experiment.supported.001",
+              "metric.fixture_passed",
+              "task-autosci-code-evidence-fixture",
+              "map-001",
+              "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+              "task-autosci-claims-fixture",
+              "claim-002",
+              "sample_paper.md#abstract",
+              "task-autosci-experiment-run-fixture",
+              "exp-001",
+              "evidence:autosci-fixture-result",
+              "evidence:autosci-fixture-ledger"
+            ],
+            "figure_id": "fig.optional-poster",
+            "title": "Optional poster artifact"
+          }
+        ],
+        "publication_bundle_path": "artifacts/scientific/smoke/publication_bundle.json",
+        "report_id": "report-autosci-phase14",
+        "sections": [
+          {
+            "body": "Claim `claim-001` has fixture verdict `supported`.",
+            "evidence_ids": [
+              "task-autosci-verdict-supported-fixture",
+              "claim-001",
+              "paper-sample-paper",
+              "sample_paper.md#results",
+              "exp-supported-001",
+              "experiment.supported.001",
+              "metric.fixture_passed",
+              "task-autosci-code-evidence-fixture",
+              "map-001",
+              "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+              "task-autosci-claims-fixture",
+              "claim-002",
+              "sample_paper.md#abstract",
+              "task-autosci-experiment-run-fixture",
+              "exp-001",
+              "evidence:autosci-fixture-result",
+              "evidence:autosci-fixture-ledger"
+            ],
+            "section_id": "summary",
+            "title": "Summary"
+          },
+          {
+            "body": "Findings are limited to the linked claim, experiment, and code evidence artifacts.",
+            "evidence_ids": [
+              "task-autosci-verdict-supported-fixture",
+              "claim-001",
+              "paper-sample-paper",
+              "sample_paper.md#results",
+              "exp-supported-001",
+              "experiment.supported.001",
+              "metric.fixture_passed",
+              "task-autosci-code-evidence-fixture",
+              "map-001",
+              "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+              "task-autosci-claims-fixture",
+              "claim-002",
+              "sample_paper.md#abstract",
+              "task-autosci-experiment-run-fixture",
+              "exp-001",
+              "evidence:autosci-fixture-result",
+              "evidence:autosci-fixture-ledger"
+            ],
+            "figures": [
+              {
+                "artifact_path": "artifacts/scientific/smoke/optional_poster.html",
+                "evidence_ids": [
+                  "task-autosci-verdict-supported-fixture",
+                  "claim-001",
+                  "paper-sample-paper",
+                  "sample_paper.md#results",
+                  "exp-supported-001",
+                  "experiment.supported.001",
+                  "metric.fixture_passed",
+                  "task-autosci-code-evidence-fixture",
+                  "map-001",
+                  "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+                  "task-autosci-claims-fixture",
+                  "claim-002",
+                  "sample_paper.md#abstract",
+                  "task-autosci-experiment-run-fixture",
+                  "exp-001",
+                  "evidence:autosci-fixture-result",
+                  "evidence:autosci-fixture-ledger"
+                ],
+                "figure_id": "fig.optional-poster",
+                "title": "Optional poster artifact"
+              }
+            ],
+            "section_id": "findings",
+            "title": "Findings"
+          },
+          {
+            "body": "The evidence map lists the concrete ids used to support the report sections.",
+            "evidence_ids": [
+              "task-autosci-verdict-supported-fixture",
+              "claim-001",
+              "paper-sample-paper",
+              "sample_paper.md#results",
+              "exp-supported-001",
+              "experiment.supported.001",
+              "metric.fixture_passed",
+              "task-autosci-code-evidence-fixture",
+              "map-001",
+              "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+              "task-autosci-claims-fixture",
+              "claim-002",
+              "sample_paper.md#abstract",
+              "task-autosci-experiment-run-fixture",
+              "exp-001",
+              "evidence:autosci-fixture-result",
+              "evidence:autosci-fixture-ledger"
+            ],
+            "section_id": "evidence-map",
+            "tables": [
+              {
+                "artifact_path": "artifacts/scientific/smoke/report_evidence_index.json",
+                "evidence_ids": [
+                  "task-autosci-verdict-supported-fixture",
+                  "claim-001",
+                  "paper-sample-paper",
+                  "sample_paper.md#results",
+                  "exp-supported-001",
+                  "experiment.supported.001",
+                  "metric.fixture_passed",
+                  "task-autosci-code-evidence-fixture",
+                  "map-001",
+                  "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+                  "task-autosci-claims-fixture",
+                  "claim-002",
+                  "sample_paper.md#abstract",
+                  "task-autosci-experiment-run-fixture",
+                  "exp-001",
+                  "evidence:autosci-fixture-result",
+                  "evidence:autosci-fixture-ledger"
+                ],
+                "table_id": "table.evidence-map",
+                "title": "Evidence ids"
+              }
+            ],
+            "title": "Evidence Map"
+          },
+          {
+            "body": "The report is not a substitute for external peer review or real benchmark validation.",
+            "evidence_ids": [
+              "task-autosci-verdict-supported-fixture",
+              "claim-001",
+              "paper-sample-paper",
+              "sample_paper.md#results",
+              "exp-supported-001",
+              "experiment.supported.001",
+              "metric.fixture_passed",
+              "task-autosci-code-evidence-fixture",
+              "map-001",
+              "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+              "task-autosci-claims-fixture",
+              "claim-002",
+              "sample_paper.md#abstract",
+              "task-autosci-experiment-run-fixture",
+              "exp-001",
+              "evidence:autosci-fixture-result",
+              "evidence:autosci-fixture-ledger"
+            ],
+            "section_id": "limitations",
+            "title": "Limitations"
+          }
+        ],
+        "tables": [
+          {
+            "artifact_path": "artifacts/scientific/smoke/report_evidence_index.json",
+            "evidence_ids": [
+              "task-autosci-verdict-supported-fixture",
+              "claim-001",
+              "paper-sample-paper",
+              "sample_paper.md#results",
+              "exp-supported-001",
+              "experiment.supported.001",
+              "metric.fixture_passed",
+              "task-autosci-code-evidence-fixture",
+              "map-001",
+              "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+              "task-autosci-claims-fixture",
+              "claim-002",
+              "sample_paper.md#abstract",
+              "task-autosci-experiment-run-fixture",
+              "exp-001",
+              "evidence:autosci-fixture-result",
+              "evidence:autosci-fixture-ledger"
+            ],
+            "table_id": "table.evidence-map",
+            "title": "Evidence ids"
+          }
+        ],
+        "title": "AutoSci Evidence-Linked Fixture Report",
+        "unsupported_claims": []
+      }
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T14:05:04Z"
+    },
+    "schema": "scientific_report.v1",
+    "sprint_id": "sprint-autosci-phase14",
+    "status": "completed",
+    "task_id": "task-autosci-report-fixture"
+  },
+  "evidence_jsonl": "artifacts/scientific/smoke/evidence.jsonl",
+  "evidence_path": "artifacts/scientific/smoke/scientific_report.json",
+  "ok": true,
+  "publication_bundle_path": "artifacts/scientific/smoke/publication_bundle.json",
+  "publication_files": [
+    "artifacts/scientific/smoke/report_plan.json",
+    "artifacts/scientific/smoke/report.md",
+    "artifacts/scientific/smoke/report_evidence_index.json",
+    "artifacts/scientific/smoke/optional_poster.html",
+    "artifacts/scientific/smoke/optional_rebuttal.md"
+  ],
+  "result_path": "artifacts/scientific/smoke/write_report.result.json",
+  "schema": "scientific_report.v1",
+  "sidecar_evidence_paths": [
+    "artifacts/scientific/smoke/publication_bundle.json"
+  ],
+  "status": "completed"
+}

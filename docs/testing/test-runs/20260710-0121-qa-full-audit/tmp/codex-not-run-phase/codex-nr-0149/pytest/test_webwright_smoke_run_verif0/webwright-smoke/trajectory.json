@@ -1,0 +1,14 @@
+{
+  "steps": [
+    {
+      "action": "generate_script",
+      "status": "success",
+      "script_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0149/pytest/test_webwright_smoke_run_verif0/webwright-smoke/final_script.py"
+    },
+    {
+      "action": "execute_script",
+      "status": "failed",
+      "return_code": 1
+    }
+  ]
+}

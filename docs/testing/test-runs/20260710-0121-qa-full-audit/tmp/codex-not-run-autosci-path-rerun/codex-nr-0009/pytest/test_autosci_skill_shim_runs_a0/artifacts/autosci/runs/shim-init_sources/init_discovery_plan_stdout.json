@@ -1,0 +1,60 @@
+{
+  "schema": "autosci_init_discovery_cli.v1",
+  "command": "plan",
+  "status": "completed",
+  "ok": true,
+  "topic": "agent skill learning",
+  "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_a0/artifacts/autosci/workspace/raw",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_a0/artifacts/autosci/workspace/wiki",
+  "network_fetch": "disabled",
+  "requires_network": false,
+  "steps": [
+    "prepare local source manifest",
+    "scan local raw papers and notes",
+    "rank local candidates without provider fetch",
+    "write discovery plan for human review"
+  ],
+  "plan": {
+    "topic": "agent skill learning",
+    "mode": "bootstrap",
+    "allow_introduction": false,
+    "target_final_range": [
+      8,
+      10
+    ],
+    "shortlist_target": 0,
+    "local_papers": [],
+    "notes_web": {
+      "files": [],
+      "keywords": [],
+      "exclusions": [],
+      "assertions": [],
+      "ideas": []
+    },
+    "query_terms": {
+      "topic_terms": [
+        "agent",
+        "skill",
+        "learning"
+      ],
+      "note_terms": [],
+      "local_terms": [],
+      "exclusion_terms": []
+    },
+    "shortlist": [],
+    "candidates": [],
+    "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_a0/artifacts/autosci/workspace/wiki",
+    "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_a0/artifacts/autosci/workspace/raw",
+    "prepared_manifest": "raw/tmp",
+    "warnings": [],
+    "errors": [
+      {
+        "source": "planner",
+        "message": "shortlist is empty"
+      }
+    ]
+  },
+  "limitations": [
+    "Network discovery disabled; Semantic Scholar, DeepXiv, and arXiv source requests were not made."
+  ]
+}

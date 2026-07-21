@@ -1,0 +1,12 @@
+{
+  "schema": "qa.codex_not_run_execution_plan.v1",
+  "candidate_target_count": 298,
+  "category_counts": {
+    "aggregator_not_atomic": 2,
+    "excluded_scope_test": 4,
+    "manual_gui_pending_ack": 2,
+    "safe_deterministic": 277,
+    "shell_safety_review": 13
+  },
+  "safe_linked_feature_count": 785
+}

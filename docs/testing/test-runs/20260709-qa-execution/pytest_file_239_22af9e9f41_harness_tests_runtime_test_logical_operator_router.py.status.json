@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_239_22af9e9f41_harness_tests_runtime_test_logical_operator_router.py",
+  "source": "harness/tests/runtime/test_logical_operator_router.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/runtime/test_logical_operator_router.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.203,
+  "timeout": false
+}

@@ -16,7 +16,7 @@ from hf_s03_core_runtime_closeout import NODE_IDS, auto_closeout_hf_s03_nodes
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runtime-root", default="/Users/lisihao/.solar/harness")
+    parser.add_argument("--runtime-root", default="~/.solar/harness")
     parser.add_argument("--node", action="append", default=[])
     args = parser.parse_args()
 

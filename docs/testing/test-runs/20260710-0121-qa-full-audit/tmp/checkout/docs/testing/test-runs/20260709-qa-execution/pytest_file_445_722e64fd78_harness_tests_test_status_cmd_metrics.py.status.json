@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_445_722e64fd78_harness_tests_test_status_cmd_metrics.py",
+  "source": "harness/tests/test_status_cmd_metrics.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_status_cmd_metrics.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.199,
+  "timeout": false
+}

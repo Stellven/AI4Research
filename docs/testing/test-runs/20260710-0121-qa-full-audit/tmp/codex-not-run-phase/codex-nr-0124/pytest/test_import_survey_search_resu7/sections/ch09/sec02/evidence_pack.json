@@ -1,0 +1,36 @@
+{
+  "pack_id": "pack_ch09_sec02",
+  "section_id": "ch09/sec02",
+  "evidence_ids": [
+    "ev_17eb9bf9c1f4",
+    "ev_a4831dec67e5",
+    "ev_95cf77e1386c",
+    "ev_c756b6aeb307",
+    "ev_ae1ef7ac27d0",
+    "ev_d7e1ced8f26f"
+  ],
+  "claim_ids": [
+    "cl_17eb9bf9c1f4",
+    "cl_a4831dec67e5",
+    "cl_95cf77e1386c",
+    "cl_c756b6aeb307",
+    "cl_ae1ef7ac27d0",
+    "cl_d7e1ced8f26f"
+  ],
+  "source_ids": [
+    "src_27a750b4c63e",
+    "src_4335ac6f8e8c",
+    "src_1c707361a977"
+  ],
+  "source_types": [
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "contradiction_slots": [
+    "contradiction:ch09/sec02:required"
+  ],
+  "status": "ready",
+  "blockers": [],
+  "schema_version": "solar.research.survey.v1"
+}

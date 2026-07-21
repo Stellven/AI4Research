@@ -1,0 +1,74 @@
+schema_version: solar.contract_bundle.v1
+request_type: implementation
+source_of_truth: requirement_ir.json
+contracts:
+  product:
+    enabled: true
+    goal: 修复一个按钮文案 typo。
+    success_metrics: &id001
+    - 目标变更在声明范围内完成。
+    - 至少一条测试/执行证据被记录。
+    - 存在独立 verifier 决策。
+    non_goals:
+    - 不做无关架构重写。
+    - 不默认引入新的生产依赖。
+    acceptance: *id001
+    stop_rules: &id002
+    - 缺少可验证 acceptance 不得标记为完成。
+    - 缺少 verifier 决策不得进入 DONE。
+  interface:
+    enabled: true
+    name: RequirementCompilerAdapters
+    version: '1.0'
+    inputs:
+    - RequirementIR
+    outputs:
+    - ProductBrief
+    - ContractsBundle
+    - TaskDAG
+    - HandoffPackage
+    invariants:
+    - Requirement IR is the only source of truth.
+    - DAG nodes[*].id must be unique.
+    - Every acceptance criterion maps to at least one validation step.
+    errors:
+    - code: CYCLE_DETECTED
+      action: split dependencies or ask for clarification
+    - code: ACCEPTANCE_COVERAGE_MISSING
+      action: add validation before dispatch
+  agent_execution:
+    enabled: true
+    task_scope: implementation
+    allowed_paths:
+    - apps/pm-pane/**
+    - packages/requirement-ir/**
+    - harness/**
+    forbidden_paths:
+    - infra/prod/**
+    - .env*
+    - secrets/**
+    commands:
+      test:
+      - pnpm test
+      - pnpm lint
+      inspect:
+      - rg
+      - python3
+      - pytest
+    approval_required_when:
+    - new production dependency
+    - database migration
+    - network access
+    - touching auth or billing
+    stop_conditions: *id002
+  research:
+    enabled: false
+    hypothesis: 修复一个按钮文案 typo。
+    source_papers: []
+    experiments: []
+    adoption_threshold: {}
+    rejection_criteria: []
+request_excerpt: "# RawIntent Consumer Request - 修复一个按钮文案 typo。\n\n## Source\n\n-\
+  \ intent_id: intent-20260710-062937-a0370f3215\n- channel: cli_intake\n- actor:\
+  \ user\n- device: \n- thread_ref: \n\n## Rewritten Objective\n\n修复一个按钮文案 typo。\n\
+  \n## Problem\n\n修复一个按钮文案 typo。\n\n## C"

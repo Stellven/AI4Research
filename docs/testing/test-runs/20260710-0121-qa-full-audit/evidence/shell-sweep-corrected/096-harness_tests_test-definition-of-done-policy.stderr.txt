@@ -1,0 +1,2 @@
+FAIL: Solar CLAUDE.md has system DoD
+FAIL: Solar CLAUDE.md forbids success without evidence

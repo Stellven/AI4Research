@@ -1,0 +1,15 @@
+T1: runtime context projection is injected and recorded
+  PASS: context block injected
+  PASS: context event recorded
+T2: Claude hook tool events enter session log
+  PASS: process audit exists
+  PASS: tool requested counted
+  PASS: tool terminal counted
+  PASS: tool observable true
+  PASS: hook payload redacted
+T3: pane launcher sanitized settings include harness hook bridge
+  PASS: pre hook bridge configured
+  PASS: post hook bridge configured
+  PASS: settings env stripped
+
+=== Long-running Observability: PASS=10 FAIL=0 ===

@@ -1,0 +1,74 @@
+{
+  "artifacts": [
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0020/pytest/test_reset_wiki_tool_executes_0/reset-runtime.json.plan.json",
+      "type": "reset_plan_json"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "approval-reset-wiki",
+    "project_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0020/pytest/test_reset_wiki_tool_executes_0/project",
+    "scopes": [
+      "wiki",
+      "raw",
+      "log",
+      "checkpoints"
+    ],
+    "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0020/pytest/test_reset_wiki_tool_executes_0/project/wiki"
+  },
+  "limitations": [
+    "Destructive reset ran only because explicit approval and execution flags were supplied."
+  ],
+  "node_id": "node-reset-wiki",
+  "outputs": {
+    "runtime": {
+      "action": "reset_plan",
+      "approval_ref": "approval-reset-wiki",
+      "checks": [
+        {
+          "check": "approval_ref",
+          "detail": "approval-reset-wiki",
+          "status": "ok"
+        },
+        {
+          "check": "execute_approved",
+          "detail": "true",
+          "status": "ok"
+        },
+        {
+          "check": "reset_scope",
+          "detail": "wiki,raw,log,checkpoints",
+          "status": "ok"
+        }
+      ],
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/reset_wiki.py --scope all --project-root /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0020/pytest/test_reset_wiki_tool_executes_0/project --approval-ref approval-reset-wiki --runtime-evidence-out /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0020/pytest/test_reset_wiki_tool_executes_0/reset-runtime.json --execute-approved --yes",
+      "deleted_files": 6,
+      "evidence_ids": [
+        "reset:approval-reset-wiki",
+        "wiki:wiki"
+      ],
+      "exit_code": 0,
+      "planned_delete_count": 6,
+      "planned_reset_count": 0,
+      "project_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0020/pytest/test_reset_wiki_tool_executes_0/project",
+      "reset_files": 0,
+      "scopes": [
+        "wiki",
+        "raw",
+        "log",
+        "checkpoints"
+      ],
+      "status": "completed",
+      "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0020/pytest/test_reset_wiki_tool_executes_0/project/wiki"
+    }
+  },
+  "provenance": {
+    "implementation_package": "tools.reset_wiki",
+    "operator_id": "autosci-reset-wiki-cli",
+    "timestamp": "2026-07-10T18:47:37Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "reset-wiki",
+  "status": "completed",
+  "task_id": "reset-wiki-runtime"
+}

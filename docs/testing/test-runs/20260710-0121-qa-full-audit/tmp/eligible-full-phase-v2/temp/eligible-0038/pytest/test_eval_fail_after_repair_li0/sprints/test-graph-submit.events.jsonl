@@ -1,0 +1,1 @@
+{"event": "graph_node_dependency_blocked_terminalized", "by": "graph-dispatch", "severity": "warn", "data": {"node": "N2", "status": "skipped", "reason": "blocked_by_failed_dependency", "blocked_by": ["N1"]}, "ts": "2026-07-10T14:06:32Z", "sid": "test-graph-submit"}

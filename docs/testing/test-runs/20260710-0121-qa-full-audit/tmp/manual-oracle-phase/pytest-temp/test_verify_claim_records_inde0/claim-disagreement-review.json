@@ -1,0 +1,1 @@
+{"schema": "artifact_review.v1", "task_id": "review-claim-disagreement", "status": "completed", "outputs": {"review": {"review_mode": "review_llm", "review_available": true, "recommendation": "revise_required", "evidence_ids": ["review:claim-disagreement"], "review_llm": {"status": "completed"}}}}

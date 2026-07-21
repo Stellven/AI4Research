@@ -1,0 +1,27 @@
+{
+  "edges": [
+    {
+      "evidence_ids": [],
+      "operation": "confirm",
+      "relation": "inspires",
+      "source": "papers/source.md",
+      "target": "ideas/skillgen.md"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "ideas",
+      "id": "ideas/skillgen.md",
+      "label": "SkillGen Idea",
+      "path": "ideas/skillgen.md"
+    },
+    {
+      "group": "papers",
+      "id": "papers/source.md",
+      "label": "Source Paper",
+      "path": "papers/source.md"
+    }
+  ],
+  "schema": "autosci_web_graph.v1",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_visual0/artifacts/autosci/workspace/wiki"
+}

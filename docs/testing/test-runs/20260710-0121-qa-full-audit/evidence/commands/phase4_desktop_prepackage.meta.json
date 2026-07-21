@@ -1,0 +1,13 @@
+{
+  "command_id": "phase4_desktop_prepackage",
+  "phase": "deterministic",
+  "linked_feature_ids": "DESKTOP_PACKAGE_SET",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/desktop",
+  "command": "/Users/jamesyuan/.local/share/mise/installs/node/26.1.0/bin/node prepackage-check.js",
+  "start_time": "2026-07-10T02:12:51-04:00",
+  "end_time": "2026-07-10T02:12:51-04:00",
+  "duration_seconds": "0.089",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase4_desktop_prepackage.stdout.txt",
+  "stderr_path": "evidence/commands/phase4_desktop_prepackage.stderr.txt"
+}

@@ -1,0 +1,14 @@
+{
+  "sprint_id": "sprint-20260710-140622-intent-official-full-runtime-autosc-602601d3",
+  "node_id": "paper_ingest",
+  "updated_at": "2026-07-10T14:06:25Z",
+  "eval_state": {
+    "eval_dispatch_failures": 0,
+    "max_eval_dispatch_failures": 8,
+    "last_eval_result": "DISPATCHED",
+    "last_eval_reason": "autosci_evaluator_dispatched",
+    "next_action": "await_autosci_eval_verdict",
+    "status": "reviewing",
+    "updated_at": "2026-07-10T14:06:25Z"
+  }
+}

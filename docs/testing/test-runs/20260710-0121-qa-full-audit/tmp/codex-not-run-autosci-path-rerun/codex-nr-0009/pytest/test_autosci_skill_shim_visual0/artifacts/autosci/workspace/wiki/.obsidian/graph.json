@@ -1,0 +1,74 @@
+{
+  "collapse-filter": false,
+  "colorGroups": [
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3381759
+      },
+      "query": "path:papers"
+    },
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3382759
+      },
+      "query": "path:concepts"
+    },
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3383759
+      },
+      "query": "path:topics"
+    },
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3384759
+      },
+      "query": "path:people"
+    },
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3385759
+      },
+      "query": "path:ideas"
+    },
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3386759
+      },
+      "query": "path:methods"
+    },
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3387759
+      },
+      "query": "path:experiments"
+    },
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3388759
+      },
+      "query": "path:Summary"
+    },
+    {
+      "color": {
+        "a": 1,
+        "rgb": 3389759
+      },
+      "query": "path:foundations"
+    }
+  ],
+  "hideUnresolved": false,
+  "schema": "autosci_obsidian_graph_config.v1",
+  "search": "",
+  "showAttachments": true,
+  "showOrphans": true,
+  "showTags": true
+}

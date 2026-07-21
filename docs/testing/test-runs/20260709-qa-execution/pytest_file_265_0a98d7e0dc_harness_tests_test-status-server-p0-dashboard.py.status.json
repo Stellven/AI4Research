@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_265_0a98d7e0dc_harness_tests_test-status-server-p0-dashboard.py",
+  "source": "harness/tests/test-status-server-p0-dashboard.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-status-server-p0-dashboard.py"
+  ],
+  "exit_code": 5,
+  "runtime_seconds": 0.198,
+  "timeout": false
+}

@@ -1,0 +1,145 @@
+{
+  "schema_version": "chapter_evidence_pack.v1",
+  "chapter": {
+    "chapter_id": "ch_01",
+    "title": "Runtime Shift",
+    "material_video_refs": [
+      "V001",
+      "V002",
+      "V003",
+      "V004"
+    ],
+    "chapter_type": "core_trend",
+    "priority": "P1",
+    "deep_writer_required": false,
+    "expected_words": 900,
+    "selected_video_refs": [
+      "V001",
+      "V002",
+      "V003",
+      "V004"
+    ],
+    "legacy_imported": true
+  },
+  "chapter_id": "ch_01",
+  "selected_videos": [
+    {
+      "video_ref": "V001",
+      "quality_tier": "T1",
+      "transcript_segments": [
+        {
+          "text": "a"
+        },
+        {
+          "text": "b"
+        }
+      ]
+    },
+    {
+      "video_ref": "V002",
+      "quality_tier": "T0",
+      "transcript_segments": [
+        {
+          "text": "c"
+        },
+        {
+          "text": "d"
+        }
+      ]
+    },
+    {
+      "video_ref": "V003",
+      "quality_tier": "T2",
+      "transcript_segments": [
+        {
+          "text": "e"
+        }
+      ],
+      "support_only": true
+    }
+  ],
+  "core_evidence": [
+    {
+      "video_ref": "V001",
+      "quality_tier": "T1",
+      "transcript_segments": [
+        {
+          "text": "a"
+        },
+        {
+          "text": "b"
+        }
+      ]
+    },
+    {
+      "video_ref": "V002",
+      "quality_tier": "T0",
+      "transcript_segments": [
+        {
+          "text": "c"
+        },
+        {
+          "text": "d"
+        }
+      ]
+    }
+  ],
+  "support_evidence": [
+    {
+      "video_ref": "V003",
+      "quality_tier": "T2",
+      "transcript_segments": [
+        {
+          "text": "e"
+        }
+      ],
+      "support_only": true
+    }
+  ],
+  "excluded_evidence": [
+    {
+      "video_ref": "V004",
+      "quality_tier": "T3",
+      "status": "failed",
+      "reason": "excluded:failed",
+      "metadata_only": true
+    }
+  ],
+  "video_count": 3,
+  "transcript_segments": [
+    {
+      "text": "a",
+      "video_ref": "V001"
+    },
+    {
+      "text": "b",
+      "video_ref": "V001"
+    },
+    {
+      "text": "c",
+      "video_ref": "V002"
+    },
+    {
+      "text": "d",
+      "video_ref": "V002"
+    },
+    {
+      "text": "e",
+      "video_ref": "V003"
+    }
+  ],
+  "semantic_packets": [],
+  "cross_source_links": [],
+  "counter_evidence": [],
+  "must_use_evidence_ids": [
+    "V001",
+    "V002",
+    "V003"
+  ],
+  "optional_evidence_ids": [],
+  "transcript_segment_count": 5,
+  "weak": false,
+  "weak_reasons": [],
+  "allowed_use": "current_chapter_only",
+  "transcript_policy": "T0/T1 core; T2 support_only; T3/failed metadata_only"
+}

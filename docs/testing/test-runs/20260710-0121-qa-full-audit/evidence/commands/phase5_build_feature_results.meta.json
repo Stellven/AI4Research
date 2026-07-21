@@ -1,0 +1,13 @@
+{
+  "command_id": "phase5_build_feature_results",
+  "phase": "reporting",
+  "linked_feature_ids": "ALL_ATOMIC_FEATURES",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit",
+  "command": "\"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/build_feature_results.py\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit\"",
+  "start_time": "2026-07-10T02:33:01-04:00",
+  "end_time": "2026-07-10T02:33:01-04:00",
+  "duration_seconds": "0.483",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase5_build_feature_results.stdout.txt",
+  "stderr_path": "evidence/commands/phase5_build_feature_results.stderr.txt"
+}

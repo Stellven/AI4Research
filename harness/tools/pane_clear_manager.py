@@ -5,6 +5,7 @@ Retry: 3 attempts with 5s/10s/15s backoff per OQ-02; 4th failure → needs_respa
 """
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import time
@@ -23,7 +24,59 @@ from recover_detector import (
     RecoverDetector,
 )
 
-PATTERN_EMPTY_PROMPT = re.compile(r"^\s*[\$>]\s*$")
+PATTERN_EMPTY_PROMPT = re.compile(
+    r'^\s*(?:[\$>]|❯(?:\s*$|\s+Try\s+")|›(?:\s*$|\s+(?!/).+))'
+)
+PASSIVE_PERMISSIONS_FOOTER_RE = re.compile(r"bypass permissions on", re.I)
+PASSIVE_CODEX_PERMISSIONS_RE = re.compile(r"^\s*[│|]?\s*permissions:\s+YOLO mode\b", re.I)
+
+
+def _pane_runtime() -> str:
+    runtime = os.environ.get("SOLAR_PANE_RUNTIME", "claude").strip().lower()
+    return runtime if runtime in {"claude", "codex"} else "claude"
+
+
+def _clear_command() -> str:
+    return "/new" if _pane_runtime() == "codex" else "/clear"
+
+
+def _clear_wait_s(default: float) -> float:
+    if _pane_runtime() != "codex":
+        return default
+    raw = os.environ.get("SOLAR_CODEX_CLEAR_WAIT_SEC", "5.0")
+    try:
+        return max(default, float(raw))
+    except ValueError:
+        return max(default, 5.0)
+
+
+def _codex_composer_has_slash_residue(pane_id: str, tmux_binary: str = "tmux") -> bool:
+    """Return true when Codex's live composer contains a slash command residue.
+
+    `C-c` is useful for clearing Codex slash-completion/input residue, but on a
+    clean idle Codex composer it can exit the TUI back to the shell. Inspect the
+    visible composer and only cancel when there is residue to cancel.
+    """
+    try:
+        result = subprocess.run(
+            [tmux_binary, "capture-pane", "-pt", pane_id, "-S", "-30"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except Exception:
+        return False
+    if result.returncode != 0:
+        return False
+    for line in reversed(result.stdout.splitlines()[-20:]):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith(("│", "╭", "╰")):
+            continue
+        if stripped.startswith("›"):
+            return stripped[1:].lstrip().startswith("/")
+    return False
 
 
 class ClearLedger(Protocol):
@@ -57,11 +110,44 @@ def _utc_now() -> str:
 
 
 def _tmux_send_keys(pane_id: str, keys: str, tmux_binary: str = "tmux") -> None:
+    if _pane_runtime() == "codex" and _codex_composer_has_slash_residue(pane_id, tmux_binary):
+        subprocess.run(
+            [tmux_binary, "send-keys", "-t", pane_id, "C-c"],
+            capture_output=True,
+            timeout=5,
+        )
+        time.sleep(0.2)
     subprocess.run(
-        [tmux_binary, "send-keys", "-t", pane_id, keys, "Enter"],
+        [tmux_binary, "send-keys", "-t", pane_id, "C-u"],
         capture_output=True,
         timeout=5,
     )
+    subprocess.run(
+        [tmux_binary, "send-keys", "-t", pane_id, "-l", keys],
+        capture_output=True,
+        timeout=5,
+    )
+    subprocess.run(
+        [tmux_binary, "send-keys", "-t", pane_id, "Enter"],
+        capture_output=True,
+        timeout=5,
+    )
+    if _pane_runtime() == "codex":
+        time.sleep(0.8)
+        subprocess.run(
+            [tmux_binary, "send-keys", "-t", pane_id, "Enter"],
+            capture_output=True,
+            timeout=5,
+        )
+        for _ in range(2):
+            time.sleep(0.8)
+            if not _codex_composer_has_slash_residue(pane_id, tmux_binary):
+                break
+            subprocess.run(
+                [tmux_binary, "send-keys", "-t", pane_id, "Enter"],
+                capture_output=True,
+                timeout=5,
+            )
 
 
 class PaneClearManager:
@@ -97,8 +183,8 @@ class PaneClearManager:
                 f"clear_pane requires dirty state, got {entry.state.value}"
             )
 
-        self._send(pane_id, "/clear")
-        self._sleep(self.WAIT_S)
+        self._send(pane_id, _clear_command())
+        self._sleep(_clear_wait_s(self.WAIT_S))
 
         s_empty, s_no_queued, s_no_confirm = self.verify_clear_success(pane_id)
         success = s_empty and s_no_queued and s_no_confirm
@@ -145,7 +231,12 @@ class PaneClearManager:
         )
 
         signal_no_confirm = not any(
-            DET_PROCEED.search(line) or DET_PERMISSION.search(line)
+            DET_PROCEED.search(line)
+            or (
+                DET_PERMISSION.search(line)
+                and not PASSIVE_PERMISSIONS_FOOTER_RE.search(line)
+                and not PASSIVE_CODEX_PERMISSIONS_RE.search(line)
+            )
             for line in live_window
         )
 
@@ -169,8 +260,8 @@ class PaneClearManager:
         s_empty = s_no_queued = s_no_confirm = False
 
         for attempt in range(1, total_attempts + 1):
-            self._send(pane_id, "/clear")
-            self._sleep(self.WAIT_S)
+            self._send(pane_id, _clear_command())
+            self._sleep(_clear_wait_s(self.WAIT_S))
 
             s_empty, s_no_queued, s_no_confirm = self.verify_clear_success(pane_id)
             success = s_empty and s_no_queued and s_no_confirm

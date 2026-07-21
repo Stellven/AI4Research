@@ -1,0 +1,211 @@
+# OpenJiuwen Solar
+
+OpenJiuwen Solar is a Python/bash harness for running a Claude Code based
+multi-agent software cockpit. It opens real `claude` processes in tmux panes,
+accepts natural-language work, records the work as file-backed sprint/runtime
+artifacts, dispatches to live agents, and keeps human approval gates in the
+loop.
+
+Solar is not a finished autonomous cloud service and not a TypeScript
+orchestrator product. The working product today is the local harness plus the
+installer/lifecycle tooling around it.
+
+## Quick Start
+
+Shell installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.8/get-solar.sh | bash -s -- --yes --components kernel,harness
+~/.solar/bin/solar doctor
+```
+
+Python wrapper from the current release branch:
+
+```bash
+pipx install "git+https://github.com/suraj-subrahmanyan/OpenSolar.git@v1.0.0-rc.8#subdirectory=distribution/pipx"
+openjiuwen-solar install --yes --components kernel,harness
+openjiuwen-solar doctor
+```
+
+After the owner publishes the prepared PyPI package, the wrapper install command
+becomes:
+
+```bash
+pipx install openjiuwen-solar
+openjiuwen-solar install --yes --components kernel,harness
+```
+
+Interactive install is also supported:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/suraj-subrahmanyan/OpenSolar/v1.0.0-rc.8/get-solar.sh | bash
+```
+
+The installer writes only under `~/.solar` and `~/.claude/solar`, records an
+install receipt, and gives you `solar doctor`, `solar update`, `solar repair`,
+`solar backup`, and `solar uninstall`.
+
+## What You Get
+
+The real, working Solar surface is:
+
+- a four-pane tmux cockpit through `solar harness start`;
+- natural-language intake through `solar harness intake "..."`;
+- live dispatch to Claude Code panes when Claude auth, trust, and quota are
+  available on the machine;
+- human gates such as `solar harness plan-verdict` and
+  `solar harness eval-verdict`;
+- per-role model selection through `solar harness models show` and related
+  `models` verbs;
+- background tasks through `solar harness bg`;
+- program analytics through `solar harness stats`;
+- cross-machine migration/deploy helpers through `solar harness migrate` and
+  `solar harness deploy`;
+- deterministic local status views through `solar status`, `solar doctor`, and
+  `solar ui`;
+- optional knowledge integrations such as the Obsidian wiki and RAGFlow
+  adapters.
+
+Some code in `core/` is roadmap scaffolding or compatibility glue. It is kept in
+the repository, but the README and CLI surfaces should not treat it as a fully
+working autonomous orchestrator.
+
+## Language Policy
+
+Solar v1.0 ships with a Chinese-first persona and English lifecycle commands.
+Commands, docs, installer output, and public-facing help are being made English
+first. The operative kernel/persona content still contains Chinese by design;
+full bilingual kernel translation is post-v1.0 work.
+
+## Platform Support
+
+| Platform | v1.0 status | Notes |
+|---|---|---|
+| macOS | Primary | Main target for the tmux/Claude cockpit. Bash 4+, tmux, jq, Python 3, git, and Claude Code are needed for live harness work. |
+| Linux | Supported | Installer/lifecycle and deterministic smoke are covered in CI. Live Claude behavior still depends on local Claude Code auth/trust/quota. |
+| Windows / WSL2 | Experimental (WSL2) | The desktop app and `install.ps1` auto-provision WSL2 and install the runtime inside it (pinned release channel, prerequisite bootstrap, reboot-resume, logon autostart); the host reaches it over localhost. Covered by deterministic gates + code review; full real-hardware confirmation is owner-manual — see [docs/WINDOWS.md](docs/WINDOWS.md). |
+
+## Basic Workflow
+
+Verify the install:
+
+```bash
+solar status
+solar doctor
+```
+
+Check the harness launch requirements:
+
+```bash
+solar harness preflight
+```
+
+Start the Product Delivery cockpit:
+
+```bash
+solar harness start /path/to/project
+```
+
+Inside the cockpit, trust/login prompts and Claude quota limits are real
+operator boundaries. Solar can show deterministic plumbing status, but it cannot
+prove live Claude work until the panes actually produce a real response/result
+on your machine.
+
+Submit a task:
+
+```bash
+solar harness intake "Add a failing test for the parser bug, fix it, and show the evidence."
+```
+
+Approve or reject gates:
+
+```bash
+solar harness plan-verdict <sprint-id> approve "scope looks right"
+solar harness eval-verdict <sprint-id> pass "tests and evidence accepted"
+```
+
+Choose or inspect models:
+
+```bash
+solar harness models show
+solar harness models set-main opus --apply
+```
+
+## Install Details
+
+See:
+
+- [INSTALL.md](INSTALL.md) for components, flags, install layout, and lifecycle
+  commands.
+- [docs/FIRST-SESSION.md](docs/FIRST-SESSION.md) for the first install,
+  cockpit, intake, and model-selection walkthrough.
+- [docs/COMPONENTS.md](docs/COMPONENTS.md) for the generated component list.
+- [docs/UNINSTALL.md](docs/UNINSTALL.md) for residue-free uninstall behavior.
+- [docs/WINDOWS.md](docs/WINDOWS.md) for the WSL2 bootstrap path (experimental).
+
+Default install:
+
+```bash
+./install.sh --yes
+```
+
+The default install includes `kernel`, `harness`, and `autosci`; it also adds
+`core-runtime` when `bun` is available. Optional components include
+`skills-md`, `skills-office`, `skills-obsidian`, `skills-calendar`,
+`skills-browser`, `codex-bridge`, `mempalace`, `daemons`, and `solar-max`. Use:
+
+```bash
+./install.sh --list-components
+```
+
+## Development And Release
+
+This repository is still being prepared for public v1.0 packaging. Do not treat
+local branches, release candidates, or the moving `stable` branch as registry
+publication. The owner performs irreversible release actions: PyPI upload,
+GitHub Release creation, release asset upload, tags, and public ref updates.
+
+Contributors should read [AGENTS.md](AGENTS.md) before editing. Release
+preparation remains owner-gated and uses the maintainer checklist in this repo.
+
+## Appendix: AutoSci Commands
+
+The commands below are implemented in the BetterSolar harness AutoSci
+compatibility layer. Commands marked by their runtime as approval-gated still
+require explicit approval evidence before they perform side effects such as
+remote execution, wiki mutation, serving, reset, compile, or send operations.
+
+| AutoSci command | Function |
+|---|---|
+| `/ask` | Query the projected AutoSci research wiki and return source-linked answers from local workspace evidence. |
+| `/check` | Inspect wiki/workspace health, structure, graph evidence, and optional model-backed quality review signals. |
+| `/daily-arxiv` | Prepare a gated daily arXiv discovery/update workflow with recommendation and optional delivery boundaries. |
+| `/discover` | Discover or shortlist related literature from anchors, topics, venues, live providers, or the local wiki graph. |
+| `/edit` | Plan approval-gated edits to AutoSci wiki/source artifacts, including delete/remove flows. |
+| `/exp-design` | Generate an evidence-linked experiment plan, assumptions, metrics, success criteria, and execution readiness boundary. |
+| `/exp-eval` | Verify claims against experiment results, code evidence, and Review LLM evidence when supplied. |
+| `/exp-pilot-eval` | Evaluate pilot experiment evidence through the pilot claim-verification route. |
+| `/exp-pilot-run` | Prepare an approval-gated pilot experiment run contract and result evidence boundary. |
+| `/exp-run` | Run or collect experiment evidence only when approval/runtime allowlist evidence is present; otherwise emits gated result evidence. |
+| `/exp-status` | Monitor local or approved remote experiment status and produce typed experiment status evidence. |
+| `/ideate` | Extract paper-grounded claims/methods and generate deterministic idea candidates with promotion boundaries. |
+| `/ingest` | Ingest paper/source material, extract text/metadata, project it into the AutoSci workspace, and register graph/memory evidence. |
+| `/init` | Initialize source discovery/setup state and optional introduction/source preparation under approval gates. |
+| `/novelty` | Evaluate idea novelty using local evidence and supplied novelty/review evidence. |
+| `/paper-compile` | Compile or audit paper artifacts through approval-gated publication/LaTeX/PDF evidence paths. |
+| `/paper-draft` | Draft a scientific report or paper from claims, methods, experiment results, and workspace evidence. |
+| `/paper-plan` | Plan a paper/report structure and publication handoff from validated idea, experiment, and review evidence. |
+| `/poster` | Build poster content and render/export artifacts from paper sources through approval-gated poster tooling. |
+| `/prefill` | Approval-gated foundation/concept prefill into the AutoSci wiki/workspace. |
+| `/rebuttal` | Draft rebuttal material from paper context and reviewer-thread evidence, with optional stress-test boundaries. |
+| `/refine` | Plan or execute approval-gated refinement of an artifact with review and iteration controls. |
+| `/research` | Dispatch the Solar scientific research lifecycle scheduler and record typed lifecycle/gate evidence. |
+| `/reset` | Plan or execute approval-gated cleanup/reset of wiki, raw, log, checkpoint, or all AutoSci scopes. |
+| `/review` | Review artifacts with deterministic checks and optional Review LLM evidence. |
+| `/setup` | Report setup/readiness status and gated setup actions for AutoSci runtime surfaces. |
+| `/survey` | Generate a survey-style writeup from discovered/cited paper evidence. |
+| `/visualize` | Generate AutoSci graph visualization artifacts, including Obsidian graph config, canvas, and web graph JSON; serving remains approval-gated. |
+
+## License
+
+MIT. See [LICENSE](LICENSE).

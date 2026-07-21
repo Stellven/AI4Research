@@ -1,0 +1,11 @@
+{
+  "remaining_inconclusive": 0,
+  "blocker_counts": {},
+  "excluded_feature_count": 576,
+  "excluded_scope_counts": {
+    "EXCLUDED_CLAUDE": 125,
+    "EXCLUDED_SCIDAG": 429,
+    "EXCLUDED_SCIDAG+SCIMEM": 10,
+    "EXCLUDED_SCIMEM": 12
+  }
+}

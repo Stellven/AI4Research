@@ -1,0 +1,24 @@
+{
+  "audit_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0017/pytest/test_default_generation_writes0/semantic-audits/ask.semantic-audit.json"
+  ],
+  "generated_at": "2026-07-10T14:05:13Z",
+  "items": [
+    {
+      "acceptance_check_statuses": {
+        "full_semantic_assessment_supplied": "pending",
+        "native_skill_doc_exists": "ok",
+        "solar_route_binding_declared": "ok",
+        "solar_wrapper_doc_exists": "ok"
+      },
+      "audit_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0017/pytest/test_default_generation_writes0/semantic-audits/ask.semantic-audit.json",
+      "native_skill": "ask",
+      "semantic_parity": "partial"
+    }
+  ],
+  "route_count": 1,
+  "schema": "autosci_semantic_parity_audit_matrix.v1",
+  "semantic_full_count": 0,
+  "semantic_partial_count": 1,
+  "status": "completed"
+}

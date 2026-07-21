@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="18" time="2.099" timestamp="2026-07-14T10:00:02.270576-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_browser_job_capture_unifies_source_timestamp_and_artifacts" time="0.010" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_browser_job_terminal_failure_is_checkpointed_and_idempotent" time="0.002" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_social_cli_reports_unavailable_browser_deterministically" time="0.003" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_social_capture_output_contains_source_timestamp_and_artifacts" time="0.013"><failure message="KeyError: 'source_url'">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-330/test_social_capture_output_con0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x10af3fd10&gt;
+
+    def test_social_capture_output_contains_source_timestamp_and_artifacts(tmp_path, monkeypatch):
+        sys.path.insert(0, str(HARNESS / "lib"))
+        from social_browser_backend_x.hard_blocker_guard import CallableResolver, HardBlockerGuard
+        from social_browser_backend_x.pipeline import AccountConfig, Pipeline
+    
+        monkeypatch.setenv("BROWSER_AGENT_MOCK_MODE", "1")
+        socket_path = tmp_path / "thunderomlx.socket"
+        socket_path.write_text("fixture", encoding="utf-8")
+        pipeline = Pipeline(
+            _social_conn(),
+            guard=HardBlockerGuard(resolver=CallableResolver(lambda: False), mock_mode_probe=lambda: True),
+            thunderomlx_socket=socket_path,
+            artifact_root=tmp_path / "artifacts",
+        )
+        result = pipeline.run(
+            accounts=[AccountConfig(handle="karpathy", profile_url="https://x.com/karpathy")],
+            requested_backend="auto",
+        )
+        assert result.posts_stored == 1
+        scan = result.scans[0]
+        assert scan.post_record is not None
+        raw_path = Path(scan.knowledge_raw_path or "")
+        queue_path = Path(scan.extract_queue_path or "")
+        assert raw_path.is_file() and queue_path.is_file()
+        raw = json.loads(raw_path.read_text(encoding="utf-8"))
+        queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    
+        # The atomic contract requires one captured output to bind provenance,
+        # timestamp, and concrete capture artifacts. These assertions expose the
+        # current split/omission if the sidecars do not carry them.
+&gt;       assert raw["source_url"] == scan.post_record.post_url
+               ^^^^^^^^^^^^^^^^^
+E       KeyError: 'source_url'
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:193: KeyError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_office_supported_and_unsupported_requests_have_executable_contract" time="0.000"><failure message="AssertionError: office ships only prose; no executable accepts/rejects requests&#10;assert []">def test_office_supported_and_unsupported_requests_have_executable_contract():
+        skill_dir = LOCKED_ROOT / "skills" / "office"
+        implementations = [
+            path
+            for path in skill_dir.rglob("*")
+            if path.is_file() and path.name != "SKILL.md" and path.suffix in {".py", ".sh", ".js", ".ts"}
+        ]
+&gt;       assert implementations, "office ships only prose; no executable accepts/rejects requests"
+E       AssertionError: office ships only prose; no executable accepts/rejects requests
+E       assert []
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:205: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_office_missing_provider_emits_structured_failure_contract" time="0.000"><failure message="AssertionError: office has no executable provider boundary to emit failed/inconclusive state&#10;assert []">def test_office_missing_provider_emits_structured_failure_contract():
+        skill_dir = LOCKED_ROOT / "skills" / "office"
+        implementations = [
+            path
+            for path in skill_dir.rglob("*")
+            if path.is_file() and path.suffix in {".py", ".sh", ".js", ".ts"}
+        ]
+&gt;       assert implementations, "office has no executable provider boundary to emit failed/inconclusive state"
+E       AssertionError: office has no executable provider boundary to emit failed/inconclusive state
+E       assert []
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:215: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_obsidian_cli_accepts_supported_input_and_rejects_unsupported" time="0.088" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_obsidian_cli_missing_vault_is_explicit_and_nonfabricating" time="0.038" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_calendar_accepts_supported_request_and_rejects_bad_request" time="0.501" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_calendar_missing_or_unknown_provider_is_typed_failure" time="0.056" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_browser_skill_records_explicit_unavailable_setup_state" time="0.003" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_obsidian_wiki_unconfigured_state_is_explicit_and_nonfabricating" time="0.062" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_ragflow_supported_and_unsupported_inputs_are_distinguished" time="0.107" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_ragflow_unavailable_provider_is_typed_and_never_fakes_hits" time="0.052" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_codex_operator_accepts_supported_dispatch_and_rejects_empty" time="1.064" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_codex_operator_missing_cli_emits_structured_failure" time="0.044"><failure message="assert 'Traceback' not in &quot;codex_opera...y: 'codex'\n&quot;&#10;  &#10;  'Traceback' is contained here:&#10;    dispatch&gt;&#10;    Traceback (most recent call last):&#10;  ? +++++++++&#10;      File &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tools/codex_operator.py&quot;, line 237, in &lt;module&gt;&#10;        raise SystemExit(main())...&#10;  &#10;  ...Full output truncated (20 lines hidden), use '-vv' to show">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-330/test_codex_operator_missing_cl0')
+
+    def test_codex_operator_missing_cli_emits_structured_failure(tmp_path):
+        operator = HARNESS / "tools" / "codex_operator.py"
+        env = {
+            "HOME": str(tmp_path / "home"),
+            "HARNESS_DIR": str(tmp_path / "harness"),
+            "TASK_DIR": str(tmp_path / "task"),
+            "CODEX_WORKDIR": str(tmp_path),
+            "PATH": str(tmp_path / "empty-bin"),
+            "CODEX_OPERATOR_TIMEOUT_SECONDS": "5",
+        }
+        result = _run([sys.executable, str(operator)], env=env, input_text="Perform fixture audit")
+        combined = result.stdout + result.stderr
+    
+        assert result.returncode != 0
+&gt;       assert "Traceback" not in combined
+E       assert 'Traceback' not in "codex_opera...y: 'codex'\n"
+E         
+E         'Traceback' is contained here:
+E           dispatch&gt;
+E           Traceback (most recent call last):
+E         ? +++++++++
+E             File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tools/codex_operator.py", line 237, in &lt;module&gt;
+E               raise SystemExit(main())...
+E         
+E         ...Full output truncated (20 lines hidden), use '-vv' to show
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:427: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_browser_automation_unavailable_is_structured_and_nonfabricating" time="0.000"><failure message="AssertionError: setup reports unavailable, but the mapped skill ships no executable that can emit runtime failure evidence&#10;assert []">def test_browser_automation_unavailable_is_structured_and_nonfabricating():
+        setup_path = LOCKED_ROOT / "skills" / "browser-automation" / "setup.json"
+        setup = json.loads(setup_path.read_text(encoding="utf-8"))
+        skill_dir = setup_path.parent
+        runtime_files = [
+            path
+            for path in skill_dir.rglob("*")
+            if path.is_file() and path.suffix in {".py", ".sh", ".js", ".ts", ".mjs", ".cjs"}
+        ]
+    
+        assert setup["setupComplete"] is False
+        assert all(not details.get("installed", details.get("configured", False)) for details in setup["prerequisites"].values())
+&gt;       assert runtime_files, "setup reports unavailable, but the mapped skill ships no executable that can emit runtime failure evidence"
+E       AssertionError: setup reports unavailable, but the mapped skill ships no executable that can emit runtime failure evidence
+E       assert []
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:447: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_app_browser_provider_contracts" name="test_gemini_deep_research_accepts_supported_request_and_rejects_invalid" time="0.004" /></testsuite></testsuites>

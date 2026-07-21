@@ -1,0 +1,1 @@
+PASS: coordinator dispatch heredoc escapes DoD backticks

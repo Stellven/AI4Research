@@ -1,0 +1,22 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "test-graph-submit",
+  "graph_ref": "test-graph-submit.task_graph.json",
+  "node_results": {
+    "N1": {
+      "status": "failed",
+      "updated_at": "2026-07-10T18:50:08Z",
+      "note": "eval_json=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0079/pytest/test_direct_node_verdict_fail_1/sprints/test-graph-submit.N1-eval.json",
+      "artifacts": {
+        "handoff_md": "test-graph-submit.N1-handoff.md",
+        "eval_json": "test-graph-submit.N1-eval.json"
+      },
+      "eval_json": "test-graph-submit.N1-eval.json"
+    }
+  },
+  "gate_results": {},
+  "leases": {},
+  "dispatch_ids": {},
+  "updated_at": "2026-07-10T18:50:08Z",
+  "events": []
+}

@@ -1,0 +1,54 @@
+{
+  "artifacts": [],
+  "inputs": {
+    "approval_ref": "approval-compile-fix"
+  },
+  "limitations": [
+    "Paper compile executor did not run because no available TeX executor was allowlisted."
+  ],
+  "node_id": "node-compile-paper",
+  "outputs": {
+    "runtime": {
+      "action": "compile_paper",
+      "approval_ref": "approval-compile-fix",
+      "available_tex_executors": [
+        "pdflatex",
+        "xelatex",
+        "lualatex"
+      ],
+      "checks": [
+        {
+          "check": "tex_executor_available",
+          "detail": "pdflatex, xelatex, lualatex",
+          "status": "ok"
+        },
+        {
+          "check": "command_allowlisted",
+          "detail": "No available TeX executor was allowlisted: pdflatex: command is not allowlisted: /Library/TeX/texbin/pdflatex -interaction=nonstopmode -halt-on-error main.tex; xelatex: command is not allowlisted: /Library/TeX/texbin/xelatex -interaction=nonstopmode -halt-on-error main.tex; lualatex: command is not allowlisted: /Library/TeX/texbin/lualatex -interaction=nonstopmode -halt-on-error main.tex",
+          "status": "error"
+        }
+      ],
+      "command_run": "blocked:tex-executor-unavailable-or-not-allowlisted",
+      "evidence_ids": [
+        "paper-compile-runtime:blocked"
+      ],
+      "exit_code": 1,
+      "pdf_generated": false,
+      "rejected_tex_executors": [
+        "pdflatex: command is not allowlisted: /Library/TeX/texbin/pdflatex -interaction=nonstopmode -halt-on-error main.tex",
+        "xelatex: command is not allowlisted: /Library/TeX/texbin/xelatex -interaction=nonstopmode -halt-on-error main.tex",
+        "lualatex: command is not allowlisted: /Library/TeX/texbin/lualatex -interaction=nonstopmode -halt-on-error main.tex"
+      ],
+      "status": "inconclusive"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-approved-side-effect-executor",
+    "timestamp": "2026-07-10T19:26:04Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "inconclusive",
+  "task_id": "task-autosci-skillgen-compile_paper"
+}

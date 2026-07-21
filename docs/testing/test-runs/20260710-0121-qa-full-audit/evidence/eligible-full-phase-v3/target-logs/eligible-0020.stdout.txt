@@ -1,0 +1,18 @@
+.FF                                                                      [100%]
+=================================== FAILURES ===================================
+________ TestWorkerIdleBackground.test_queue_papers_is_background_only _________
+harness/tests/data_plane/test_mineru_canonical_sources.py:134: in test_queue_papers_is_background_only
+    self.assertTrue(result.get("ok"), f"queue failed: {result}")
+E   AssertionError: False is not true : queue failed: {'ok': False, 'error': 'manifest not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge/_meta/source-manifest.jsonl', 'papers': [], 'total': 0, 'resolvable': 0, 'unresolved': 0}
+----------------------------- Captured stdout call -----------------------------
+ERROR: manifest not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge/_meta/source-manifest.jsonl
+___ TestNoForegroundBlocking.test_extract_single_pdf_without_background_flag ___
+harness/tests/data_plane/test_mineru_canonical_sources.py:194: in test_extract_single_pdf_without_background_flag
+    self.assertEqual(result.get("mode"), "idle_background")
+E   AssertionError: None != 'idle_background'
+----------------------------- Captured stdout call -----------------------------
+ERROR: manifest not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge/_meta/source-manifest.jsonl
+=========================== short test summary info ============================
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestWorkerIdleBackground::test_queue_papers_is_background_only
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestNoForegroundBlocking::test_extract_single_pdf_without_background_flag
+2 failed, 1 passed, 14 deselected in 0.08s

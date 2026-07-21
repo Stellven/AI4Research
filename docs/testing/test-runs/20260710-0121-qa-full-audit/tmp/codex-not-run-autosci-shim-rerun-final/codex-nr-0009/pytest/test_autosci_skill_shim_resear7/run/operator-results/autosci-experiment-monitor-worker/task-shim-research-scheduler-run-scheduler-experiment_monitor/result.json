@@ -1,0 +1,21 @@
+{
+  "task_id": "task-shim-research-scheduler-run-scheduler-experiment_monitor",
+  "operator_id": "autosci-experiment-monitor-worker",
+  "sprint_id": "shim-research-scheduler-run-scheduler",
+  "node_id": "experiment_monitor",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T19:24:09Z",
+  "finished_at": "2026-07-10T19:24:09Z",
+  "log_tail": "{\n  \"action\": \"monitor_experiment\",",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

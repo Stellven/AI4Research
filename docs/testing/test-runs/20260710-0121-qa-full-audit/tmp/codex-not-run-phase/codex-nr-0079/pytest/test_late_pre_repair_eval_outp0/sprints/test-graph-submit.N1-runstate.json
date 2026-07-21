@@ -1,0 +1,12 @@
+{
+  "sprint_id": "test-graph-submit",
+  "node_id": "N1",
+  "updated_at": "2026-07-10T18:50:08Z",
+  "eval_state": {
+    "last_eval_result": "STALE_ARCHIVED",
+    "last_eval_reason": "late_pre_repair_eval_output",
+    "next_action": "dispatch_fresh_eval",
+    "status": "reviewing",
+    "updated_at": "2026-07-10T18:50:08Z"
+  }
+}

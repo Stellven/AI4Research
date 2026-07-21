@@ -1,0 +1,19 @@
+OpenSolar installer
+
+Usage: ./install.sh [options]
+
+Options:
+  --yes, --non-interactive    Accept resolved defaults
+  --components LIST           Comma-separated component list
+  --set KEY=VALUE             Set a config var (repeatable; highest precedence)
+  --no-hooks                  Skip settings.json hook registration
+  --no-mcp                    Skip MCP server registration
+  --list-components           Show component manifests
+  --solar-home PATH           Runtime root (default: ~/.solar)
+  --claude-dir PATH           Claude user dir (default: ~/.claude)
+  --dry-run                   Print actions without writing
+  --bootstrap-system-deps     Prompt/attempt OS package install for Python, tmux, jq, bash>=4
+  --fake-keys                 Write test-only placeholder env files
+  --skip-llm-cli              Skip LLM CLI checks for CI
+  --skip-py-deps              Validate Python requirements only (deps-light CI)
+  --help                      Show this help

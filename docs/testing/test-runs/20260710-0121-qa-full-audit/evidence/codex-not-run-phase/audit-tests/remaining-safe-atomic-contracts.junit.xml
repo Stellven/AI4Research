@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="8" skipped="0" tests="15" time="3.385" timestamp="2026-07-13T12:56:16.469137-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0024_stats_empty_corpus_returns_explicit_zero_state_without_mutation" time="0.561"><failure message="AssertionError: /private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0024_stats_empty_corpu0/harness/solar-harness.sh: line 77: /private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0024_stats_empty_corpu0/harness/lib/run-state.sh: No such file or directory&#10;  &#10;assert 1 == 0&#10; +  where 1 = CompletedProcess(args=['/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_w.../pytest-of-jamesyuan/pytest-324/test_wf_0024_stats_empty_corpu0/harness/lib/run-state.sh: No such file or directory\n').returncode">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0024_stats_empty_corpu0')
+
+    def test_wf_0024_stats_empty_corpus_returns_explicit_zero_state_without_mutation(tmp_path: Path) -&gt; None:
+        harness_copy = tmp_path / "harness"
+        harness_copy.mkdir()
+        shutil.copy2(SOLAR_HARNESS, harness_copy / "solar-harness.sh")
+        before = tree_digest(harness_copy)
+        proc = run(
+            [str(harness_copy / "solar-harness.sh"), "stats"],
+            tmp_path,
+            cwd=harness_copy,
+            harness_dir=harness_copy,
+        )
+&gt;       assert proc.returncode == 0, proc.stdout + proc.stderr
+E       AssertionError: /private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0024_stats_empty_corpu0/harness/solar-harness.sh: line 77: /private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0024_stats_empty_corpu0/harness/lib/run-state.sh: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_w.../pytest-of-jamesyuan/pytest-324/test_wf_0024_stats_empty_corpu0/harness/lib/run-state.sh: No such file or directory\n').returncode
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:115: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0152_markdown_sections_have_stable_source_anchors" time="0.001"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0152_markdown_sections0/first/ingest_paper.envelope.json'">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0152_markdown_sections0')
+
+    def test_wf_0152_markdown_sections_have_stable_source_anchors(tmp_path: Path) -&gt; None:
+        paper = tmp_path / "paper.md"
+        paper.write_text(
+            "# QA Paper\n\n## Introduction\nGrounded introduction.\n\n## Results\nMeasured result.\n",
+            encoding="utf-8",
+        )
+        inputs = {"paper_path": str(paper), "raw_root": str(tmp_path / "raw")}
+&gt;       first = bridge_run("ingest_paper", tmp_path / "first", inputs)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:127: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:77: in bridge_run
+    envelope_path.write_text(json.dumps(envelope, indent=2) + "\n", encoding="utf-8")
+../../../.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:809: in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0152_markdown_sections0/first/ingest_paper.envelope.json')
+mode = 'w', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+&gt;       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0152_markdown_sections0/first/ingest_paper.envelope.json'
+
+../../../.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0217_init_sources_scans_raw_channels_into_checkpoint_manifest" time="0.627" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0233_pilot_run_requires_a_bounded_spec_and_required_inputs" time="0.236"><failure message="assert False&#10; +  where False = any(&lt;generator object test_wf_0233_pilot_run_requires_a_bounded_spec_and_required_inputs.&lt;locals&gt;.&lt;genexpr&gt; at 0x109043bc0&gt;)">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0233_pilot_run_require0')
+
+    def test_wf_0233_pilot_run_requires_a_bounded_spec_and_required_inputs(tmp_path: Path) -&gt; None:
+        result = bridge_run("run_pilot_experiment", tmp_path, {"target": "missing-pilot-spec"})
+        evidence = result["evidence"]
+        text = json.dumps(evidence).lower()
+        assert evidence["status"] in {"failed", "inconclusive"}
+        assert "spec" in text
+&gt;       assert any(marker in text for marker in ("missing dataset", "dataset is missing", "missing config", "config is missing"))
+E       assert False
+E        +  where False = any(&lt;generator object test_wf_0233_pilot_run_requires_a_bounded_spec_and_required_inputs.&lt;locals&gt;.&lt;genexpr&gt; at 0x109043bc0&gt;)
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:168: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0234_pilot_run_emits_generated_code_artifact_before_execution" time="0.237"><failure message="AssertionError: assert 'pilot_spec_snapshot' in {'approval_contract_json', 'pilot_run_final_acceptance_boundary_json', 'solar_evidence_json'}">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0234_pilot_run_emits_g0')
+
+    def test_wf_0234_pilot_run_emits_generated_code_artifact_before_execution(tmp_path: Path) -&gt; None:
+        spec = tmp_path / "experiments/pilot/qa-pilot.yaml"
+        spec.parent.mkdir(parents=True)
+        spec.write_text(
+            "id: qa-pilot\ndataset: fixtures/data.json\ncommand: python run.py\nlimits:\n  max_minutes: 1\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "fixtures").mkdir()
+        (tmp_path / "fixtures/data.json").write_text("[]\n", encoding="utf-8")
+        result = bridge_run(
+            "run_pilot_experiment",
+            tmp_path,
+            {"target": "qa-pilot", "pilot_spec": str(spec), "execute_approved_side_effect": False},
+        )
+        artifact_types = {item.get("type") for item in result["evidence"]["artifacts"]}
+&gt;       assert "pilot_spec_snapshot" in artifact_types
+E       AssertionError: assert 'pilot_spec_snapshot' in {'approval_contract_json', 'pilot_run_final_acceptance_boundary_json', 'solar_evidence_json'}
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:187: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0236_pilot_run_result_is_evidence_only_not_a_final_verdict" time="0.233" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0237_pilot_eval_missing_result_is_typed_inconclusive" time="0.221" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0240_paper_plan_blocks_without_validated_idea_and_successful_experiment" time="0.222" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0105_and_wf_0242_unconfirmed_citations_are_explicit_plan_blockers" time="0.225"><failure message="assert 0 == 1">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0105_and_wf_0242_uncon0')
+
+    def test_wf_0105_and_wf_0242_unconfirmed_citations_are_explicit_plan_blockers(tmp_path: Path) -&gt; None:
+        source = tmp_path / "citation-source.json"
+        source.write_text(
+            json.dumps(
+                {
+                    "schema": "literature_discovery.v1",
+                    "task_id": "qa-citation",
+                    "outputs": {
+                        "candidates": [
+                            {
+                                "paper_id": "paper-qa",
+                                "title": "Unconfirmed QA Citation",
+                                "source_ref": "https://example.invalid/unconfirmed",
+                                "source_channels": ["fixture"],
+                            }
+                        ]
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = bridge_run("plan_report", tmp_path, {"target": "qa-paper", "source_evidence": [str(source)]})
+        boundary = artifact_payload(result, "paper_plan_final_acceptance_boundary_json")
+        citation_map = artifact_payload(result, "citation_map_json")
+&gt;       assert citation_map["citation_count"] == 1
+E       assert 0 == 1
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:247: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0253_poster_html_contains_source_sections_and_no_raw_latex_or_todo" time="0.442" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0110_and_wf_0255_unresolved_overflow_cannot_pass" time="0.221" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_fd_0594_capability_inference_reports_missing_rule_configuration" time="0.047"><failure message="assert 0 != 0&#10; +  where 0 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...es in UTC: datetime.datetime.now(datetime.UTC).\n  return datetime.datetime.utcnow().strftime(&quot;%Y-%m-%dT%H:%M:%SZ&quot;)\n').returncode">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_fd_0594_capability_infere0')
+
+    def test_fd_0594_capability_inference_reports_missing_rule_configuration(tmp_path: Path) -&gt; None:
+        graph = tmp_path / "graph.json"
+        graph.write_text(json.dumps({"nodes": [{"id": "n1", "goal": "use browser automation"}]}), encoding="utf-8")
+        empty_pythonpath = tmp_path / "empty-pythonpath"
+        empty_pythonpath.mkdir()
+        proc = run(
+            [str(PYTHON), str(HARNESS / "tools/capability_inference.py"), "enrich-graph", "--graph", str(graph)],
+            tmp_path,
+            extra_env={"PYTHONPATH": str(empty_pythonpath)},
+        )
+        combined = proc.stdout + proc.stderr
+&gt;       assert proc.returncode != 0
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...es in UTC: datetime.datetime.now(datetime.UTC).\n  return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")\n').returncode
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:303: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_misc_0224_status_server_exhausted_port_range_is_explicit_and_clean" time="0.001"><failure message="PermissionError: [Errno 1] Operation not permitted">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_misc_0224_status_server_e0')
+
+    def test_misc_0224_status_server_exhausted_port_range_is_explicit_and_clean(tmp_path: Path) -&gt; None:
+        sockets: list[socket.socket] = []
+        try:
+            for port in range(8765, 8776):
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+&gt;               sock.bind(("127.0.0.1", port))
+E               PermissionError: [Errno 1] Operation not permitted
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:315: PermissionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_misc_0283_release_build_missing_version_fails_without_partial_artifacts" time="0.008" /><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0027_malformed_migration_preserves_source_and_reports_failure" time="0.019"><failure message="AssertionError: assert 'bundle-meta.json' in '\x1b[0;36m[migrate-import]\x1b[0m 日志: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/logs/migrate-import-20260713-165619.log\n'&#10; +  where '\x1b[0;36m[migrate-import]\x1b[0m 日志: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/logs/migrate-import-20260713-165619.log\n' = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...21-qa-full-audit/tmp/codex-not-run-checkout/harness/migrate/import.sh: line 32: /dev/fd/63: Operation not permitted\n').stdout">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-324/test_wf_0027_malformed_migrati0')
+
+    def test_wf_0027_malformed_migration_preserves_source_and_reports_failure(tmp_path: Path) -&gt; None:
+        bundle_dir = tmp_path / "bundle/solar-bundle-qa"
+        bundle_dir.mkdir(parents=True)
+        source = bundle_dir / "source-owned.txt"
+        source.write_text("source remains intact\n", encoding="utf-8")
+        bundle = tmp_path / "malformed.tar"
+        with tarfile.open(bundle, "w") as archive:
+            archive.add(bundle_dir, arcname=bundle_dir.name)
+        before = hashlib.sha256(bundle.read_bytes()).hexdigest()
+        proc = run(
+            ["bash", str(HARNESS / "migrate/import.sh"), str(bundle), "--dry-run"],
+            tmp_path,
+            cwd=HARNESS,
+            timeout=40,
+        )
+        assert proc.returncode != 0
+&gt;       assert "bundle-meta.json" in proc.stdout
+E       AssertionError: assert 'bundle-meta.json' in '\x1b[0;36m[migrate-import]\x1b[0m 日志: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/logs/migrate-import-20260713-165619.log\n'
+E        +  where '\x1b[0;36m[migrate-import]\x1b[0m 日志: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/logs/migrate-import-20260713-165619.log\n' = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...21-qa-full-audit/tmp/codex-not-run-checkout/harness/migrate/import.sh: line 32: /dev/fd/63: Operation not permitted\n').stdout
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:363: AssertionError</failure></testcase></testsuite></testsuites>

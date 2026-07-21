@@ -1,0 +1,13 @@
+{
+  "command_id": "phase3_test_surface_discovery",
+  "phase": "test-selection",
+  "linked_feature_ids": "",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "bash -lc \"printf \\\"TOP PACKAGE\\n\\\"; sed -n \\\"1,240p\\\" package.json; printf \\\"\\nDESKTOP PACKAGE\\n\\\"; sed -n \\\"1,240p\\\" desktop/package.json; printf \\\"\\nPIPX PYPROJECT\\n\\\"; sed -n \\\"1,260p\\\" distribution/pipx/pyproject.toml; printf \\\"\\nTEST DIR COUNTS\\n\\\"; find harness -type f \\( -name \\\"test_*.py\\\" -o -name \\\"test-*.sh\\\" -o -name \\\"*.test.ts\\\" -o -name \\\"*.test.js\\\" \\) | sed \\\"s#/[^/]*$##\\\" | sort | uniq -c | sort -nr | sed -n \\\"1,120p\\\"; printf \\\"\\nTOP TEST DOC HITS\\n\\\"; rg -n \\\"pytest|npm test|bun test|premerge|doctor --json|test:\\\" README.md INSTALL.md docs harness/README.md 2>/dev/null | sed -n \\\"1,320p\\\"\"",
+  "start_time": "2026-07-10T01:40:12-04:00",
+  "end_time": "2026-07-10T01:40:13-04:00",
+  "duration_seconds": "0.666",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase3_test_surface_discovery.stdout.txt",
+  "stderr_path": "evidence/commands/phase3_test_surface_discovery.stderr.txt"
+}

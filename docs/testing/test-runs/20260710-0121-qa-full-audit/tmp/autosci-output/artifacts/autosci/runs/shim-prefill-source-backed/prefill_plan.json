@@ -1,0 +1,39 @@
+{
+  "catalog": {
+    "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.agents/skills/prefill/foundations-catalog.yaml",
+    "status": "completed"
+  },
+  "catalog_domain_count": 5,
+  "dedup": [
+    {
+      "domain": "NLP",
+      "exists": true,
+      "foundation_id": "foundation-lora",
+      "path": "artifacts/autosci/workspace/wiki/foundations/foundation-lora.md",
+      "seed_slug": "lora",
+      "source_evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil3/lora-source.json",
+      "source_status": "completed",
+      "source_url": "https://en.wikipedia.org/wiki/Low-rank_adaptation",
+      "title": "LoRA"
+    }
+  ],
+  "domain": "NLP",
+  "domain_resolution": {
+    "domain": "NLP",
+    "source": "input.domain",
+    "status": "explicit"
+  },
+  "fetch_attempts": [],
+  "limitations": [],
+  "mode": "add",
+  "schema": "autosci_prefill_plan.v1",
+  "seed_count": 1,
+  "selected_count": 0,
+  "selected_seeds": [],
+  "skipped_existing_count": 1,
+  "source_evidence_count": 1,
+  "source_evidence_refs": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil3/lora-source.json"
+  ],
+  "status": "completed"
+}

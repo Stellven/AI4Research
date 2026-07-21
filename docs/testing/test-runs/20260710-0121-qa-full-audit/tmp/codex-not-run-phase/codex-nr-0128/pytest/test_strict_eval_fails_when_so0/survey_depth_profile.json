@@ -1,0 +1,52 @@
+{
+  "ok": true,
+  "complete_context": false,
+  "finalized_sections": 0,
+  "total_sections": 32,
+  "claim_tag_density_per_1k_chars": 0.0,
+  "evidence_tag_density_per_1k_chars": 0.0,
+  "chapter_structure_coverage": 0.0,
+  "academic_marker_counts": {
+    "taxonomy": 10,
+    "mechanism": 8,
+    "evaluation_protocol": 12,
+    "baseline_or_ablation": 0,
+    "reproducibility": 0,
+    "deployment": 28,
+    "failure_mode": 10,
+    "controversy": 18,
+    "auditability": 0,
+    "evolution": 21
+  },
+  "academic_marker_variants": [
+    "controversy",
+    "deployment",
+    "evaluation_protocol",
+    "evolution",
+    "failure_mode",
+    "mechanism",
+    "taxonomy"
+  ],
+  "section_marker_coverage": 0.0,
+  "section_marker_rows": [],
+  "terminology_profile": "agentic_runtime",
+  "terminology_counts": {
+    "runtime_orchestration": 0,
+    "tool_execution": 0,
+    "memory_state": 0,
+    "multi_agent_handoff": 0,
+    "evaluation_benchmark": 32,
+    "safety_governance": 10,
+    "observability_trace": 0
+  },
+  "terminology_variants": [
+    "evaluation_benchmark",
+    "safety_governance"
+  ],
+  "terminology_evolution_edges": [
+    "evaluation_benchmark->safety_governance"
+  ],
+  "literature_map_ok": false,
+  "controversy_matrix_ok": false,
+  "issues": []
+}

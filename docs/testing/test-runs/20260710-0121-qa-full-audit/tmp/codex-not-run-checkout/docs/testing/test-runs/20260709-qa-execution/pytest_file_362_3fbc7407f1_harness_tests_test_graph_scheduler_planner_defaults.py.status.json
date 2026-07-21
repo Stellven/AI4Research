@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_362_3fbc7407f1_harness_tests_test_graph_scheduler_planner_defaults.py",
+  "source": "harness/tests/test_graph_scheduler_planner_defaults.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_graph_scheduler_planner_defaults.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.19,
+  "timeout": false
+}

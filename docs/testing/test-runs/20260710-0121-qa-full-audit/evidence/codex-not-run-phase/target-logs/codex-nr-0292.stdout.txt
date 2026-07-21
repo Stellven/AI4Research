@@ -1,0 +1,198 @@
+=== detect_context_overflow() Tests ===
+
+--- Context overflow signals (should detect) ---
+  PASS: context length exceeded
+  PASS: context_length_exceeded (underscore)
+  PASS: maximum context length
+  PASS: token limit exceeded
+  PASS: token_limit_reached
+  PASS: too many tokens
+  PASS: exceeds the maximum
+  PASS: exceeded the maximum number of tokens
+  PASS: input is too long
+  PASS: context window exceeded
+  PASS: maximum context window
+  PASS: case insensitive
+  PASS: mixed case
+  PASS: in multiline output
+--- Normal output (should NOT detect) ---
+  PASS: normal implementation output
+  PASS: empty file
+  PASS: nonexistent file
+  PASS: context discussion
+  PASS: token discussion
+  PASS: limit discussion
+  PASS: maximum discussion
+
+=== handle_context_overflow() Tests ===
+
+--- Overflow detected and handled ---
+  PASS: handle returns 0 for overflow
+  PASS: CONTEXT_RETRIES incremented (expected=1, actual=1)
+  PASS: CONTEXT_OVERFLOW set to 1 (expected=1, actual=1)
+  PASS: PROMPT_TRIMMED set to 1 (expected=1, actual=1)
+  PASS: CONSECUTIVE_FAILURES reset to 0 (expected=0, actual=0)
+  PASS: PREVIOUS_FEEDBACK mentions overflow
+  PASS: progress.md has overflow entry
+  PASS: log.md has overflow note
+--- Non-overflow not handled ---
+  PASS: handle returns 1 for normal output
+  PASS: CONTEXT_RETRIES stays 0 for normal (expected=0, actual=0)
+--- Max retries reached ---
+  PASS: handle returns 1 when max retries reached
+  PASS: CONTEXT_RETRIES at max+1 (expected=4, actual=4)
+--- Multiple retries increment counter ---
+  PASS: first retry: counter=1 (expected=1, actual=1)
+  PASS: second retry: counter=2 (expected=2, actual=2)
+  PASS: third retry: counter=3 (expected=3, actual=3)
+  PASS: fourth retry exceeds max
+
+=== estimate_prompt_tokens() Tests ===
+
+--- Token estimation for various text types ---
+  PASS: English text token estimate (expected=34, actual=34)
+  PASS: Chinese text token estimate (expected=9, actual=9)
+  PASS: Empty text returns 0 tokens (expected=0, actual=0)
+  PASS: Mixed text token estimate (expected=30, actual=30)
+  PASS: 450000 chars → 150000 tokens (expected=150000, actual=150000)
+
+=== compress_context() Tests ===
+
+--- Basic compression behavior ---
+  PASS: Summary for iteration-1 exists
+  PASS: Summary for iteration-2 exists
+  PASS: Original iteration-1 log removed
+  PASS: Original iteration-2 log removed
+  PASS: Iteration-3 log kept
+  PASS: Iteration-4 log kept
+  PASS: Iteration-5 log kept
+  PASS: Summary has key content
+  PASS: Summary has '完成的工作' section
+  PASS: Summary has '修改的文件' section
+  PASS: Summary has '关键决策' section
+  PASS: Summary has '失败的尝试' section
+  PASS: Summary has 'Learnings' section
+--- Compression when logs <= keep_recent ---
+  PASS: Iteration-1 log still exists
+  PASS: Iteration-2 log still exists
+  PASS: No summary files created
+--- Compression with non-existent directory ---
+  PASS: Non-existent dir returns 1 (expected=1, actual=1)
+--- Re-compression skips already summarized logs ---
+  PASS: Iteration-1 log removed (already summarized)
+  PASS: Iteration-2 log removed (newly compressed)
+  PASS: Iteration-3 log kept
+  PASS: Iteration-4 log kept
+
+=== check_and_compress_prompt() Tests ===
+
+--- Below threshold: no compression ---
+  PASS: No compression for small prompt (expected=0, actual=0)
+  PASS: No summaries dir for small prompt
+--- Above threshold: triggers compression ---
+  PASS: Summaries dir created after threshold breach
+  PASS: Summary created for iteration-1
+  PASS: Summary created for iteration-2
+--- Custom threshold via environment variable ---
+  PASS: No compression with high threshold
+  PASS: Compression triggered with low threshold
+
+=== generate_iteration_summary() Tests ===
+
+--- Structured extraction from log ---
+  PASS: Summary has completed work
+  PASS: Summary has modified files
+  PASS: Summary has key decisions
+  PASS: Summary has failed attempts
+  PASS: Summary has learnings
+  PASS: Summary has code diff
+--- Empty log handling ---
+  PASS: Non-existent log returns 1 (expected=1, actual=1)
+
+=== Progressive compression Tests ===
+
+--- Multiple compression rounds ---
+  PASS: Iteration-1 log removed after first compression
+  PASS: Iteration-5 log removed after first compression
+  PASS: Iteration-6 log kept
+  PASS: Iteration-8 log kept
+  PASS: Iteration-6 log removed after second compression
+  PASS: Iteration-7 summary exists
+  PASS: Iteration-11 log kept
+
+=== Prompt assembly uses summaries ===
+
+--- get_progress_content replaces log references ---
+  PASS: Progress content replaces log with summary
+  PASS: Progress content no longer has raw log reference
+
+=== handle_context_overflow() with compress_context() ===
+
+--- Overflow triggers compression ---
+  PASS: handle returns 0 for overflow with compression
+  PASS: CONTEXT_RETRIES incremented (expected=1, actual=1)
+  PASS: CONTEXT_OVERFLOW set to 1 (expected=1, actual=1)
+  PASS: CONSECUTIVE_FAILURES reset to 0 (expected=0, actual=0)
+  PASS: Summaries dir created by overflow handler
+  PASS: Log notes compression
+
+=== Large file performance Tests ===
+
+--- generate_iteration_summary handles large log ---
+  PASS: Summary generated for large file
+  PASS: Large file summary has key sections
+  PASS: Large file summary under 5 seconds
+
+=== Summary quality validation Tests ===
+
+--- Summary contains key information ---
+  PASS: Quality summary has completed work
+  PASS: Quality summary has modified files
+  PASS: Quality summary has key decisions
+  PASS: Quality summary has failed attempts
+  PASS: Quality summary has learnings
+  PASS: Quality summary has code diff
+  PASS: Summary is not empty
+  PASS: Summary has multiple sections
+
+=== Progressive compression token reduction Tests ===
+
+--- Token count decreases after compression ---
+  PASS: Token count reduced after compression
+
+=== trim_prompt_for_overflow() Tests ===
+
+--- Basic trimming behavior ---
+  PASS: Empty prompt returns empty (expected=, actual=)
+  PASS: Program section removed
+  PASS: Program instructions removed
+  PASS: Short content preserved
+  PASS: Continue text preserved
+  PASS: Current task preserved
+  PASS: Failed subtask kept
+  PASS: Review feedback preserved
+--- Function exists and is callable ---
+  PASS: trim_prompt_for_overflow function exists
+
+=== Complete overflow recovery flow Tests ===
+
+--- Full flow: detect -> compress -> trim -> continue ---
+  PASS: handle returns 0 for overflow
+  PASS: CONTEXT_RETRIES incremented (expected=1, actual=1)
+  PASS: CONTEXT_OVERFLOW set to 1 (expected=1, actual=1)
+  PASS: PROMPT_TRIMMED set to 1 (first overflow) (expected=1, actual=1)
+  PASS: CONSECUTIVE_FAILURES reset to 0 (expected=0, actual=0)
+  PASS: Summaries dir created
+  PASS: trim_prompt_for_overflow works after overflow
+--- Progressive overflow increases trim level ---
+  PASS: First overflow sets PROMPT_TRIMMED=1 (expected=1, actual=1)
+  PASS: Second overflow sets PROMPT_TRIMMED=2 (expected=2, actual=2)
+  PASS: Third overflow sets PROMPT_TRIMMED=3 (expected=3, actual=3)
+--- apply_prompt_trimming respects trim levels ---
+  PASS: Level 1 trimming removes program
+  PASS: Level 2 trimming removes history
+  PASS: Level 3 trimming removes persona
+
+==========================================
+Total: 126  Passed: 126  Failed: 0
+==========================================

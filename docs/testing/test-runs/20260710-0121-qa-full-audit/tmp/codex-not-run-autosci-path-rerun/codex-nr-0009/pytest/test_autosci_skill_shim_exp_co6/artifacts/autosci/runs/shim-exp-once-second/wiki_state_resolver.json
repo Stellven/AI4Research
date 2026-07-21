@@ -1,0 +1,112 @@
+{
+  "action": "monitor_experiment",
+  "existing_wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ],
+  "experiments": [
+    {
+      "aliases": [],
+      "evidence_ids": [
+        "exp-once",
+        "remote-collect:exp-once",
+        "remote-once-results/results.json",
+        "result:exp-once",
+        "task-autosci-skillgen-monitor_experiment",
+        "node-monitor-experiment",
+        "artifacts/autosci/runs/shim-exp-once-first/monitor_experiment_runtime_evidence.json"
+      ],
+      "experiment_id": "exp-once",
+      "frontmatter_keys": [
+        "evidence_ids",
+        "experiment_id",
+        "outcome",
+        "status",
+        "updated_at"
+      ],
+      "graph_edge_count": 1,
+      "id": "exp-once",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "supports",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-once.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-once",
+      "status": "completed",
+      "title": "exp-once"
+    }
+  ],
+  "graph_edges": [
+    {
+      "evidence_ids": [
+        "exp-once",
+        "remote-collect:exp-once",
+        "remote-once-results/results.json",
+        "result:exp-once",
+        "task-autosci-skillgen-monitor_experiment",
+        "node-monitor-experiment",
+        "artifacts/autosci/runs/shim-exp-once-first/monitor_experiment_runtime_evidence.json"
+      ],
+      "line": 1,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "produced_result",
+      "source": "exp-once",
+      "status": "",
+      "target": "exp-once"
+    }
+  ],
+  "graph_errors": [],
+  "ideas": [],
+  "indexes": {
+    "experiments_by_slug": {
+      "exp-once": "exp-once"
+    },
+    "ideas_by_slug": {},
+    "outputs_by_slug": {
+      "experiment": "experiment"
+    }
+  },
+  "limitations": [
+    "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+    "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+  ],
+  "outputs": [
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "experiment",
+      "idea_id": "",
+      "output_id": "experiment",
+      "path": "artifacts/autosci/workspace/wiki/outputs/experiment.md",
+      "slug": "experiment",
+      "status": "unknown",
+      "title": "Experiment summary for shim-exp-once-first"
+    }
+  ],
+  "resolution": {
+    "fallback_used": false,
+    "target": "exp-once",
+    "target_id": "exp-once",
+    "target_path": "artifacts/autosci/workspace/wiki/experiments/exp-once.md",
+    "target_type": "experiment",
+    "warnings": []
+  },
+  "schema": "autosci_wiki_state_resolver.v1",
+  "selected_root": "artifacts/autosci/workspace/wiki",
+  "status": "completed",
+  "wiki_roots": [
+    "artifacts/autosci/workspace/wiki",
+    "wiki",
+    "harness/artifacts/autosci/workspace/wiki"
+  ]
+}

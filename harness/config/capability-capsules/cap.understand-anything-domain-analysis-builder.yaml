@@ -104,6 +104,6 @@ operator_compatibility:
   - mini-understand-anything-pane-bridge
   forbidden: []
 provenance:
-  owner: lisihao
+  owner: opensolar
   created_at: '2026-05-29T02:28:08Z'
   compiler: skill_to_capsule_compiler

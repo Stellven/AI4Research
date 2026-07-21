@@ -1,0 +1,36 @@
+{
+  "schema": "publication_bundle.v1",
+  "task_id": "task.phase1.sample.publication",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.publication_produce",
+  "status": "completed",
+  "inputs": {
+    "report_id": "report.sample.001"
+  },
+  "outputs": {
+    "bundle": {
+      "bundle_id": "bundle.sample.001",
+      "publication_type": "paper",
+      "files": [
+        {
+          "type": "paper_pdf",
+          "path": "artifacts/scientific/fixtures/sample_paper.pdf"
+        }
+      ],
+      "source_report_id": "report.sample.001",
+      "evidence_ids": ["report.sample.001"]
+    }
+  },
+  "artifacts": [
+    {
+      "type": "publication_manifest",
+      "path": "artifacts/scientific/fixtures/publication_bundle.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificPublicationProducer",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": ["Fixture file paths are illustrative."]
+}

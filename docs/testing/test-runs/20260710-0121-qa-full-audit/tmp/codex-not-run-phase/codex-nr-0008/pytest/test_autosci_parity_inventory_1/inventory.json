@@ -1,0 +1,666 @@
+{
+  "full_count": 0,
+  "gated_count": 11,
+  "generated_at": "2026-07-10T18:45:32.749981Z",
+  "inputs": {
+    "capability_registry": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/config/capability-capsules.registry.yaml",
+    "logical_operators": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/config/logical-operators.json",
+    "native_repo": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0008/pytest/test_autosci_parity_inventory_1/AutoSci",
+    "operator_bindings": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/config/feature_operator_bindings.v1.json",
+    "physical_operators": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/config/physical-operators.json",
+    "plugin_manifest": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/manifest.yaml",
+    "route_config": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json"
+  },
+  "manifest_registry_drift": {
+    "manifest_capabilities_missing_from_registry": [],
+    "route_capabilities_missing_from_manifest": [],
+    "route_capabilities_missing_from_registry": []
+  },
+  "missing_native_skills": [
+    "native-only"
+  ],
+  "missing_route_count": 1,
+  "native_command_parity_by_command": {
+    "/ask": {
+      "backend_action": "ask_wiki",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "research_memory_update.v1",
+      "evidence_schema_registered": true,
+      "gate": "memory_update_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Retrieval-backed ask answers now record context_brief/open_questions/index/edge context evidence, gap annotations, explicit model evidence or model-command synthesis with persisted request/response provenance, and an evidence-bound crystallize recommendation. --format table/timeline/bullets changes only the evidence-backed answer presentation. ask_final_answer_boundary requires retrieved source evidence plus completed model-backed synthesis with evidence ids before an answer is final, and missing retrieval/model evidence remains visible as incomplete rather than inferred. Optional crystallize write-back is approval-gated and can target outputs, concepts, ideas, methods, topics, or explicit wiki markdown paths while recording wiki output/log/edge/rebuild mutation evidence."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "ask",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/check": {
+      "backend_action": "check_wiki_health",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "workflow_evolution.v1",
+      "evidence_schema_registered": true,
+      "gate": "workflow_evolution_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "LLM-assisted content quality checks can be backed by explicit model evidence or a model command with persisted request/response provenance; check_final_quality_boundary requires passing local wiki checks plus completed model-backed recommendation evidence, and absent model evidence is not treated as deterministic pass/fail."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "check",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/daily-arxiv": {
+      "backend_action": "daily_arxiv_prepare_finalize",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "literature_discovery.v1",
+      "evidence_schema_registered": true,
+      "gate": "literature_discovery_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Native daily arXiv recommendation semantics are complete behind explicit approval/provider boundaries: one-off inform runs can use provider/runtime evidence plus Review LLM ranking, while SMTP delivery, GitHub Actions scheduling, and auto-ingest fan-in remain approval/provider-gated side effects. daily_arxiv_final_provider_delivery_boundary must verify provider candidates, ranking evidence, and either explicit delivery or approved wiki ingest/fan-in before a digest is final; semantic full parity is attached only through route-level audit evidence."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "daily-arxiv",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/discover": {
+      "backend_action": "discover_literature",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "literature_discovery.v1",
+      "evidence_schema_registered": true,
+      "gate": "literature_discovery_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Live API failures must be represented as incomplete source evidence rather than synthetic recommendations.",
+        "Root discover CLI now covers topic, anchor, wiki, and venue modes; source runtime completion requires a non-placeholder source channel boundary, and discover_final_shortlist_boundary requires non-empty candidates backed by provider or local wiki source channels. Live provider proof remains optional/provider-mode; local wiki source proof must not be labeled as live_provider."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "discover",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/edit": {
+      "backend_action": "edit_wiki_plan",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "research_memory_update.v1",
+      "evidence_schema_registered": true,
+      "gate": "memory_update_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Actual raw or wiki mutations require explicit user approval and must produce before/after evidence. Raw source add/delete is implemented only for explicit `raw/...` targets; existing raw files remain read-only unless an explicit approved delete path is used."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "edit",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/exp-design": {
+      "backend_action": "design_experiment",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "experiment_plan.v1",
+      "evidence_schema_registered": true,
+      "gate": "experiment_plan_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Current experiment design path emits evidence-linked local plans, can attach Review LLM design validation, and records experiment_design_final_execution_boundary requiring resolved target evidence, completed Review LLM validation, approval preflight, command handoff, and expected artifact handoff before a plan is execution-ready. Local design-readiness proof is wired, but native experiment wiki page writes, master design document creation, graph edge projection, context/open-question rebuilds, and end-to-end approved execution audit remain partial."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "exp-design",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/exp-eval": {
+      "backend_action": "verify_claim",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "claim_verdict.v1",
+      "evidence_schema_registered": true,
+      "gate": "claim_verdict_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Experiment result, claim, code, and Review LLM evidence can be supplied explicitly for review-backed verdicts; approved --write can update linked wiki idea/experiment status, while unapproved mutation remains blocked; experiment_evaluation_final_verdict_boundary requires completed experiment_result.v1 evidence, linked claim/code evidence, completed Review LLM proof, and completed approved wiki writeback before a verdict is treated as final."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "exp-eval",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/exp-pilot-eval": {
+      "backend_action": "evaluate_pilot_result",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "claim_verdict.v1",
+      "evidence_schema_registered": true,
+      "gate": "claim_verdict_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Pilot result/runtime evidence can produce completed lenient verdicts; approved --write can update linked wiki idea/experiment status, while unapproved mutation remains blocked; pilot_eval_final_acceptance_boundary requires linked pilot runtime/result evidence, a non-inconclusive pilot verdict, and completed approved wiki writeback before pilot evaluation is treated as final."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "exp-pilot-eval",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/exp-pilot-run": {
+      "backend_action": "run_pilot_experiment",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "experiment_result.v1",
+      "evidence_schema_registered": true,
+      "gate": "experiment_result_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Code execution and remote execution require approval; approved runtime evidence can be supplied or produced by an allowlisted local/remote command before marking pilot runtime complete. $exp-pilot-run writes pilot runtime/result evidence only, does not judge pass/fail, and does not mutate wiki pages; $exp-pilot-eval owns verdict assessment and approved wiki updates."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "exp-pilot-run",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/exp-run": {
+      "backend_action": "run_experiment",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "experiment_result.v1",
+      "evidence_schema_registered": true,
+      "gate": "experiment_result_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Local default mode is approval-gated and can be proven without remote/provider configuration when approval_ref, allowlist evidence, before-state evidence, runtime evidence, deploy/run reports, collection ledger where applicable, and wiki mutation evidence are present. SSH, rsync, screen sessions, remote launch/pull-results, distributed session exactly-once collection, and live provider/remote connectivity remain optional remote-mode follow-up proof and must not block local default parity; local result-dir reads remain local collection only and must not be counted as live SSH/provider collection."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "exp-run",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/exp-status": {
+      "backend_action": "monitor_experiment",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "experiment_status.v1",
+      "evidence_schema_registered": true,
+      "gate": "experiment_status_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Local status parity covers wiki/run-state lookup, local session registry status, supplied approved runtime evidence, collect-ready detection, and local collection identity evidence without requiring remote/provider configuration. `$exp-status` emits an explicit remote poll boundary so local run-dir status-file checks are not counted as live SSH/provider polling; live SSH/provider polling, approved provider status commands, and distributed exactly-once remote collection remain optional remote-mode follow-up proof."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "exp-status",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/ideate": {
+      "backend_action": "generate_ideas",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "idea_candidate.v1",
+      "evidence_schema_registered": true,
+      "gate": "idea_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Explicit model-command/model-evidence brainstorming is wired for source-grounded candidates with persisted request/response provenance, ideate_final_promotion_boundary records wiki maturity scan, failed-idea banlist, source evidence, model provenance, and novelty/review gate requirements before ideas are promotable, and completed pilot handoff/runtime evidence can close phase 5. Approved durable idea-page projection now requires the full ideate pipeline to be ready, projects generated_from/has_pilot_handoff graph edges, and records those graph edges in wiki mutation proof; side-effect execution is approval-gated and strict/safe modes emit side_effect_access_request evidence instead of silently passing as dry-run. Full native ideation still requires audited provider-backed dual-model brainstorming, external discovery evidence, novelty/review gates, pilot handoff evidence or explicit --skip-pilot, and explicit bounded-test mode for sample-content runs."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "ideate",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/ingest": {
+      "backend_action": "ingest_paper",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "research_paper.v1",
+      "evidence_schema_registered": true,
+      "gate": "paper_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "PDF and arXiv source preparation writes explicit raw/tmp artifacts; set allow_network_fetch=false for offline synthetic-TeX fallback.",
+        "Source-grounded PDF extraction, sample-content leakage guards, and phase9 memory/graph sidecars are covered; ingest_final_source_registration_boundary requires verified source preparation, parse quality, raw provenance, memory/graph handoff, and wiki paper/log/graph/index/context registration before a source is treated as fully registered."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "ingest",
+      "native_skill_present": true,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/init": {
+      "backend_action": "init_sources",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "literature_discovery.v1",
+      "evidence_schema_registered": true,
+      "gate": "literature_discovery_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Approved runtime source manifests can complete init evidence only with production-shaped provider or local source-channel boundary proof, and --write can fan candidates into wiki papers/log/graph; init_sources_final_fan_in_boundary requires provider/local source candidates, approved wiki fan-in, graph/log/index rebuild evidence, and verified approval/runtime evidence before initialization is final; native network fetch and bulk ingest execution remain approval/provider-gated."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "init",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/native-only": {
+      "backend_action": "N/A",
+      "backend_action_registered": false,
+      "capability_registered": false,
+      "coverage_status": "missing",
+      "evidence_schema": "N/A",
+      "evidence_schema_registered": false,
+      "gate": "N/A",
+      "gate_registered": false,
+      "limitations": [],
+      "logical_operator_registered": false,
+      "native_skill": "native-only",
+      "native_skill_present": true,
+      "physical_operator_binding_registered": false,
+      "route_present": false,
+      "semantic_parity": "missing"
+    },
+    "/novelty": {
+      "backend_action": "evaluate_ideas",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "idea_evaluation.v1",
+      "evidence_schema_registered": true,
+      "gate": "idea_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "S2 and DeepXiv source CLIs now emit explicit provider evidence; unavailable sources and Review LLM remain warnings/inconclusive evidence, not deterministic substitutes; novelty_final_acceptance_boundary requires completed external novelty evidence, passed provider provenance, and completed Review LLM proof before promotion/writeback is treated as final."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "novelty",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/paper-compile": {
+      "backend_action": "compile_paper",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "publication_bundle.v1",
+      "evidence_schema_registered": true,
+      "gate": "publication_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Native paper compile semantics are complete behind the explicit approval boundary: TeX execution requires allowlist, approval, before/after artifacts, and runtime evidence; compile readiness requires structurally valid PDF output; venue submission readiness requires source-backed --submission-profile plus --pdf-inspection; submission audit readiness requires explicit --submission-audit evidence and does not imply portal upload unless that evidence says portal_submission_completed=true. The route remains coverage_status=gated because compilation and source auto-fix are side effects, while semantic full parity is attached through route-level audit evidence."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "paper-compile",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/paper-draft": {
+      "backend_action": "write_report",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "scientific_report.v1",
+      "evidence_schema_registered": true,
+      "gate": "report_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Paper draft final manuscript readiness is gated by source-backed citation evidence, completed Review LLM proof, verified compile/PDF handoff, paper directory artifacts, and workspace wiki projection proof; semantic full parity still requires an explicit completed route audit."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "paper-draft",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/paper-plan": {
+      "backend_action": "plan_report",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "scientific_report.v1",
+      "evidence_schema_registered": true,
+      "gate": "report_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Paper plan final acceptance is gated by source-backed citation planning, explicit Review LLM proof, and verified downstream compile/PDF handoff; semantic full parity still requires an explicit completed route audit."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "paper-plan",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/poster": {
+      "backend_action": "build_poster",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "publication_bundle.v1",
+      "evidence_schema_registered": true,
+      "gate": "publication_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Browser rendering and image conversion run only through explicit approved renderer configuration; root and bridge render paths emit runtime evidence and keep unavailable renderers inconclusive."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "poster",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/prefill": {
+      "backend_action": "prefill_foundations",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "research_memory_update.v1",
+      "evidence_schema_registered": true,
+      "gate": "memory_update_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Foundation creation mutates local wiki state only with explicit approval; no-approval runs remain proposal evidence. Prefill now records add/catalog mode, domain resolution, selected seeds, existing-foundation dedup state, supplied source/Wikipedia evidence status, Wikipedia fetch attempts, and terminal foundation page metadata before any approved writeback. Failed or disabled live fetches remain visible in prefill_plan.json and are not promoted to source-backed rendering."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "prefill",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/rebuttal": {
+      "backend_action": "draft_rebuttal",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "publication_bundle.v1",
+      "evidence_schema_registered": true,
+      "gate": "publication_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Reviewer-thread evidence is atomized into RvX-CY concerns, mapped to wiki/source evidence, rendered as rich/formal rebuttal artifacts, and gated by Review LLM stress-test plus supplied submission audit evidence; portal submission itself is not claimed unless external audit evidence records it."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "rebuttal",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/refine": {
+      "backend_action": "refine_artifact",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "workflow_evolution.v1",
+      "evidence_schema_registered": true,
+      "gate": "workflow_evolution_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Applying edits requires explicit approval; verified --execute-approved runs can replace a target artifact from after_artifact evidence, while refine_loop_report records supplied or command/provider Review LLM evidence, post-apply quality-gate score trajectory, actionable items, fixed/unresolved issue buckets, and termination reason. Additional autonomous fix-generation cycles remain approval-gated."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "refine",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/research": {
+      "backend_action": "run_research_lifecycle",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "workflow_evolution.v1",
+      "evidence_schema_registered": true,
+      "gate": "workflow_evolution_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Evidence-aware lifecycle completion is supported when wiki/source, Review LLM, experiment runtime, collection, and compile/PDF evidence are supplied.",
+        "`$research --scheduler-run` now defaults to `run_scientific_workflow.py`, a config-driven generic workflow runner that dispatches selected workflow nodes through operator_runtime and records `runner_contract=generic_workflow_runner`; the old bounded lifecycle smoke runner remains available only through `--scheduler-legacy-smoke-runner`.",
+        "Scheduler resume runs on the legacy smoke path still emit `autosci_scheduler_resume_boundary.v1` with reused-node fingerprints and no-rerun checks; generic workflow lifecycle summaries emit `scientific_workflow_runtime_manifest.v1`, but production scheduler parity still requires complete non-fixture node selection plus distributed lease/quota/runtime audit.",
+        "`--scheduler-require-workflow-config-alignment` passes only for the full supplied-evidence tail; partial/default runs surface workflow_config_alignment drift or inconclusive status rather than full parity.",
+        "`--scheduler-require-production-dispatch` now fails when the selected scheduler runner reports fixture/smoke input markers or blocked provider/runtime evidence.",
+        "`--scheduler-include-human-gates` records idea/results approval pauses as scheduler-visible blocked nodes, `--online` can carry supplied approval/runtime source evidence into strict scheduler source mode with non-fixture provider channel boundary checks, scheduler experiment stages can carry explicit `--experiment-*` approval/runtime evidence without reusing source evidence paths, `--experiment-execute-approved` can run an allowlisted approved local experiment command, and scheduler publication compile can use compile-specific approved runtime evidence or `--compile-execute-approved`.",
+        "Full parity still requires real provider evidence, audited remote/session stage runners, production scheduler dispatch, and submission/anonymity checks."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "research",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/reset": {
+      "backend_action": "reset_plan",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "workflow_evolution.v1",
+      "evidence_schema_registered": true,
+      "gate": "workflow_evolution_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Destructive reset execution is never automatic; Solar route emits a dry-run plan until explicit approval."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "reset",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/review": {
+      "backend_action": "review_artifact",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "artifact_review.v1",
+      "evidence_schema_registered": true,
+      "gate": "artifact_review_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Read-only diagnostic review output is available for every resolved artifact, but final_acceptance_ready requires configured OpenAI-compatible Review LLM provider, command bridge, or supplied Review LLM evidence; --require-review-llm records non-Review-LLM diagnostics as insufficient for final acceptance."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "review",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/setup": {
+      "backend_action": "setup_status",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "workflow_evolution.v1",
+      "evidence_schema_registered": true,
+      "gate": "workflow_evolution_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Solar must not write secrets or credentials without explicit user-provided values and approval."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "setup",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/survey": {
+      "backend_action": "write_survey",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "partial",
+      "evidence_schema": "scientific_report.v1",
+      "evidence_schema_registered": true,
+      "gate": "report_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Survey synthesis is bounded to supplied wiki/discovery citation evidence and records exhaustive_coverage_verified=false; external exhaustive literature search is not claimed without provider evidence."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "survey",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    },
+    "/visualize": {
+      "backend_action": "visualize_graph",
+      "backend_action_registered": true,
+      "capability_registered": true,
+      "coverage_status": "gated",
+      "evidence_schema": "research_graph_update.v1",
+      "evidence_schema_registered": true,
+      "gate": "graph_update_gate.py",
+      "gate_registered": true,
+      "limitations": [
+        "Serving a local web UI or opening a browser is an external side effect; generated local artifacts must remain explicit."
+      ],
+      "logical_operator_registered": true,
+      "native_skill": "visualize",
+      "native_skill_present": false,
+      "physical_operator_binding_registered": true,
+      "route_present": true,
+      "semantic_parity": "partial"
+    }
+  },
+  "native_skill_count": 2,
+  "paper_compile_proof_status": {
+    "name": "paper_compile_proof_status",
+    "reason": "Paper compile parity requires approved TeX runtime evidence and submission checks.",
+    "route_statuses": [
+      "gated"
+    ],
+    "routes": [
+      "paper-compile"
+    ],
+    "status": "pending"
+  },
+  "partial_count": 17,
+  "provider_live_proof_status": {
+    "name": "provider_live_proof_status",
+    "reason": "Provider/live routes require env-gated runtime proof manifests; route config alone is not live proof.",
+    "route_statuses": [
+      "gated",
+      "partial"
+    ],
+    "routes": [
+      "ask",
+      "check",
+      "daily-arxiv",
+      "discover",
+      "exp-design",
+      "exp-eval",
+      "exp-run",
+      "exp-status",
+      "ideate",
+      "ingest",
+      "init",
+      "novelty",
+      "paper-draft",
+      "paper-plan",
+      "poster",
+      "prefill",
+      "rebuttal",
+      "refine",
+      "research",
+      "review",
+      "survey"
+    ],
+    "status": "pending"
+  },
+  "remote_experiment_proof_status": {
+    "name": "remote_experiment_proof_status",
+    "reason": "Remote experiment parity requires remote config, approval, execution, and collection evidence.",
+    "route_statuses": [
+      "gated",
+      "partial"
+    ],
+    "routes": [
+      "exp-run",
+      "exp-status"
+    ],
+    "status": "pending"
+  },
+  "review_llm_proof_status": {
+    "name": "review_llm_proof_status",
+    "reason": "Review LLM parity requires persisted model/review evidence; local surrogate output is not final acceptance.",
+    "route_statuses": [
+      "partial"
+    ],
+    "routes": [
+      "review",
+      "ideate",
+      "novelty",
+      "paper-draft",
+      "rebuttal"
+    ],
+    "status": "pending"
+  },
+  "route_backend_actions_missing": [],
+  "route_capabilities_missing_from_registry": [],
+  "route_count": 28,
+  "route_evidence_schemas_missing": [],
+  "route_gate_missing": [],
+  "route_logical_operators_missing": [],
+  "route_physical_operator_binding_missing": [],
+  "schema": "autosci_parity_inventory.v1",
+  "warnings": [
+    "native skills root missing: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0008/pytest/test_autosci_parity_inventory_1/AutoSci/.claude/skills"
+  ]
+}

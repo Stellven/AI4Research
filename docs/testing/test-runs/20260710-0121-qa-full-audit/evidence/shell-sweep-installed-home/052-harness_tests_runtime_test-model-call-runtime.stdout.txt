@@ -1,0 +1,14 @@
+T1: record request/succeeded events
+  PASS: request event
+  PASS: succeeded event
+  PASS: private reasoning false
+  PASS: model flag captured
+  PASS: instruction digest captured
+T2: doctor sees no pending model call
+  PASS: doctor model runtime ok
+  PASS: doctor pending zero
+T3: failed call is terminal
+  PASS: doctor failed count
+  PASS: doctor still no pending
+
+=== Model Call Runtime: PASS=9 FAIL=0 ===

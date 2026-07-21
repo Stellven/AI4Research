@@ -1,0 +1,2 @@
+{"ts": "2026-07-10T06:27:55Z", "kind": "eval_state", "sprint_id": "test-graph-submit", "node_id": "N1", "repair_attempt": 1, "max_repair_attempts": 1, "last_eval_result": "FAIL", "last_eval_reason": "repair_budget_exhausted", "next_action": "terminal_failed", "status": "reviewing"}
+{"ts": "2026-07-10T06:27:55Z", "kind": "eval_state", "sprint_id": "test-graph-submit", "node_id": "N2", "last_eval_result": "BLOCKED", "last_eval_reason": "blocked_by_failed_dependency", "next_action": "upstream_failure_or_human_review", "status": "skipped"}

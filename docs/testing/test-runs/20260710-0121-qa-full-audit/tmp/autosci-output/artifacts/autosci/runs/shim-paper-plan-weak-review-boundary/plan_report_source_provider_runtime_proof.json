@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-07-10T05:54:47Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed citation/source evidence for AutoSci `paper-plan` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-paper-plan-weak-review-boundary/scientific_report.plan.json",
+        "artifacts/autosci/runs/shim-paper-plan-weak-review-boundary/paper_plan.json",
+        "artifacts/autosci/runs/shim-paper-plan-weak-review-boundary/paper_plan.md",
+        "artifacts/autosci/runs/shim-paper-plan-weak-review-boundary/plan_report_citation_map.json",
+        "artifacts/autosci/runs/shim-paper-plan-weak-review-boundary/paper_plan_idea_graph_map.json",
+        "artifacts/autosci/runs/shim-paper-plan-weak-review-boundary/paper_plan_final_acceptance_boundary.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_1/discovery.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_1/weak-review-llm.json",
+        "https://arxiv.org/abs/2601.00002",
+        "artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+        "artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+        "artifacts/autosci/workspace/wiki/papers/paper-skillgen.md",
+        "https://arxiv.org/abs/2601.00001"
+      ],
+      "native_skill": "paper-plan",
+      "production_ready": true,
+      "proof_id": "runtime:paper-plan:wiki:20260710T055447Z",
+      "provenance": {
+        "artifact_kind": "publication_citation_map",
+        "captured_at": "2026-07-10T05:54:47Z",
+        "citation_count": 5,
+        "command": "plan_report:citation_source_map",
+        "source": "wiki"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

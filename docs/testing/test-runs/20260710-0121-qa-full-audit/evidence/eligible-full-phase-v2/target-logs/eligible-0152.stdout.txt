@@ -1,0 +1,11 @@
+F.                                                                       [100%]
+=================================== FAILURES ===================================
+________ TestDaemonOnce.test_recovers_expired_lease_and_processes_task _________
+harness/tests/test_operatord_daemon.py:525: in test_recovers_expired_lease_and_processes_task
+    assert result_json.exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...e-0152/pytest/test_recovers_expired_lease_an0/run/operator-results/test-local-builder/T-expired-lease-001/result.json').exists
+=========================== short test summary info ============================
+FAILED harness/tests/test_operatord_daemon.py::TestDaemonOnce::test_recovers_expired_lease_and_processes_task
+1 failed, 1 passed, 22 deselected in 0.34s

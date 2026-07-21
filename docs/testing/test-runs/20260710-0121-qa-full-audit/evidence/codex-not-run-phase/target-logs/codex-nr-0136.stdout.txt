@@ -1,0 +1,13 @@
+PASS: session_log.py compiles
+PASS: append 3 events, replay returns correct seq
+PASS: duplicate idempotency_key raises DuplicateEventError
+PASS: cross-process at-least-once: second instance rejects duplicate
+PASS: lock-time idempotency rejects stale sibling duplicate
+PASS: replay filters: sprint_id / event_type / activity_id
+PASS: invalid event type raises ValueError
+PASS: monotonic seq preserved across log re-open
+PASS: SessionLog.for_sprint classmethod works
+
+========================
+PASS=9 FAIL=0
+PASS

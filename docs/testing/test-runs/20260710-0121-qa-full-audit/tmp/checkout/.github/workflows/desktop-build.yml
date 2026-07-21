@@ -1,0 +1,134 @@
+name: Desktop Build
+
+# Builds the Solar desktop shell (Electron) into per-OS installers and runs the visual gate.
+# The renderer is built from harness/status-server/react-app by build-renderer.sh, so a change
+# to either the shell or the dashboard triggers a build.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "desktop/**"
+      - "harness/status-server/react-app/**"
+      - ".github/workflows/desktop-build.yml"
+  push:
+    branches:
+      - main
+      - pkg/migration
+    paths:
+      - "desktop/**"
+      - "harness/status-server/react-app/**"
+      - ".github/workflows/desktop-build.yml"
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS (dmg)
+            script: build:mac
+            artifact: solar-macos-dmg
+            glob: desktop/dist/*.dmg
+          - os: windows-latest
+            label: Windows (portable exe)
+            script: build:win
+            artifact: solar-windows-portable
+            glob: desktop/dist/*.exe
+          - os: ubuntu-latest
+            label: Linux (AppImage)
+            script: build:linux
+            artifact: solar-linux-appimage
+            glob: desktop/dist/*.AppImage
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm ci
+
+      # Unsigned builds: macOS identity is null and CSC discovery is disabled in package.json /
+      # the build:mac script, so this never attempts to sign or notarize.
+      - name: Build installer
+        working-directory: desktop
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run ${{ matrix.script }}
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.glob }}
+          if-no-files-found: error
+
+  gate:
+    name: Visual gate (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build renderer (from in-repo react-app)
+        working-directory: desktop
+        run: npm run build:renderer
+
+      - name: Install Playwright chromium
+        working-directory: desktop
+        run: npx playwright install --with-deps chromium
+
+      # autotest.sh runs all deterministic desktop gates: WSL/runtime-detection logic
+      # (runtime-detect.test.js), the backend HTTP contract (contract.js — CORS/OPTIONS/HEAD/auth,
+      # no token leak), the dashboard render (verify.js — spawns the real status-server, renders in
+      # headless chromium, asserts the UI), and the first-run/recovery screens (screens.test.js).
+      # autotest.sh self-manages xvfb for the Electron screen gate, so we don't wrap it here (no
+      # nested xvfb). Deterministic, no live runtime. (The real Windows .exe / WSL2 provisioning +
+      # packaged-artifact launch remain owner-Phase-F — see docs/WINDOWS.md.)
+      - name: Run desktop autotest (bootstrap + contract + render + screens)
+        working-directory: desktop
+        run: bash autotest.sh
+
+      - name: Upload gate screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-screenshot
+          path: desktop/gate-dashboard.png
+          if-no-files-found: ignore

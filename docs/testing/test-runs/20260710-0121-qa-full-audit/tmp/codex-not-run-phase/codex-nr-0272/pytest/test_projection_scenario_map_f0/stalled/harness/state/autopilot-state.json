@@ -1,0 +1,11 @@
+{
+  "routing_decisions": [
+    {
+      "node_id": "N1",
+      "decision": "no_matching_worker",
+      "blocked_reason": "no_matching_worker",
+      "provided_capabilities": [],
+      "sprint_id": "sprint-stalled"
+    }
+  ]
+}

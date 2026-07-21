@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-07-10T14:02:58Z",
+  "proofs": [
+    {
+      "categories": [
+        "external_runtime_evidence",
+        "approval_boundary_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Verified approval/runtime evidence for AutoSci `research` lifecycle parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-research-verified-lifecycle/workflow_evolution.research.json",
+        "artifacts/autosci/runs/shim-research-verified-lifecycle/research_lifecycle_recommended_changes.md",
+        "artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md",
+        "artifacts/autosci/workspace/wiki/outputs/PIPELINE_REPORT.md",
+        "artifacts/autosci/workspace/wiki/outputs/pipeline-state.json",
+        "artifacts/autosci/runs/shim-research-verified-lifecycle/run_research_lifecycle_approval_contract.json",
+        "exp-runtime.json",
+        "compile-runtime.json",
+        "research-allowlist.json",
+        "research-before.json",
+        "research-after.json",
+        "paper-main.pdf"
+      ],
+      "generated_at": "2026-07-10T14:02:58Z",
+      "native_skill": "research",
+      "production_ready": true,
+      "proof_id": "runtime:research:approved-runtime:20260710T140258Z",
+      "provenance": {
+        "artifact_kind": "research_lifecycle_approved_runtime",
+        "captured_at": "2026-07-10T14:02:58Z",
+        "command": "run_research_lifecycle:approval_runtime_evidence_report",
+        "source": "approval_contract"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

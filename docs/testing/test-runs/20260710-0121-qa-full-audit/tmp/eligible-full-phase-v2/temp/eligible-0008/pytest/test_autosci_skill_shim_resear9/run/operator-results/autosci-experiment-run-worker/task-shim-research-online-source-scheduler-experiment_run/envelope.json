@@ -1,0 +1,33 @@
+{
+  "task_id": "task-shim-research-online-source-scheduler-experiment_run",
+  "sprint_id": "shim-research-online-source-scheduler",
+  "node_id": "experiment_run",
+  "operator_id": "autosci-experiment-run-worker",
+  "task_type": "scientific-experiment-run",
+  "objective": "Scheduler-dispatched bounded smoke for ScientificExperimentRunner.",
+  "mode": "bounded_runtime_smoke",
+  "runner_contract": "bounded_node_smoke",
+  "output_dir": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-online-source-scheduler/experiment_run/task-shim-research-online-source-scheduler-experiment_run",
+  "inputs": {
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "paper_id": "paper-shim-research-online-source-scheduler",
+    "allow_network_fetch": false,
+    "smoke_mode": true,
+    "execution_mode": "fixture",
+    "experiment_plan_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-online-source-scheduler/experiment_design/task-shim-research-online-source-scheduler-experiment_design/experiment_plan.json",
+    "experiment_result": "plugins/autosci/tests/fixtures/sample_autosci_raw_experiment_result.json"
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-online-source-scheduler/experiment_run/task-shim-research-online-source-scheduler-experiment_run/run_experiment.result.json",
+    "evidence_payload_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-online-source-scheduler/experiment_run/task-shim-research-online-source-scheduler-experiment_run/experiment_result.json",
+    "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-online-source-scheduler/experiment_run/task-shim-research-online-source-scheduler-experiment_run/evidence.jsonl",
+    "memory_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-online-source-scheduler/experiment_run/task-shim-research-online-source-scheduler-experiment_run/research_memory_update.json",
+    "graph_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-online-source-scheduler/experiment_run/task-shim-research-online-source-scheduler-experiment_run/research_graph_update.json"
+  },
+  "expected_schema": "experiment_result.v1",
+  "expected_action": "run_experiment",
+  "logical_operator": "ScientificExperimentRunner",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T14:03:35Z",
+  "lease_expires_at": "2026-07-10T14:05:35Z"
+}

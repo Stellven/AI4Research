@@ -1,0 +1,47 @@
+---
+# Eval Pack: plugin-health
+# Tests that plugin manifests are valid and capabilities are registered
+id: plugin-health
+name: "Plugin Health Eval"
+version: "1.0.0"
+target: "extension-framework"
+min_score: 0.80
+description: "Validates plugin manifests, capability registry, and scope enforcement are functioning correctly."
+
+cases:
+  - id: ph-1
+    name: "all manifests valid"
+    cmd: "python3 lib/plugin_loader.py validate --json"
+    expect_field: "ok"
+    expect_value: true
+    weight: 2.0
+
+  - id: ph-2
+    name: "capability sync succeeds"
+    cmd: "python3 lib/capability_registry.py sync --json"
+    expect_field: "ok"
+    expect_value: true
+    weight: 2.0
+
+  - id: ph-3
+    name: "scope violation rejected"
+    cmd: "python3 lib/plugin_loader.py check-scope --plugin mermaid --path /etc/passwd --json"
+    expect_field: "allowed"
+    expect_value: false
+    weight: 2.0
+
+  - id: ph-4
+    name: "at least 5 plugins loaded"
+    cmd: "python3 lib/plugin_loader.py list --json"
+    expect_field: "total"
+    expect_min: 5
+    weight: 1.5
+
+  - id: ph-5
+    name: "capability scorecard has entries"
+    cmd: "python3 lib/capability_registry.py scorecard --json"
+    expect_field: "total_capabilities"
+    expect_min: 5
+    weight: 1.5
+
+regression_suite: "tests/plugins/test-s4-plugins.sh"

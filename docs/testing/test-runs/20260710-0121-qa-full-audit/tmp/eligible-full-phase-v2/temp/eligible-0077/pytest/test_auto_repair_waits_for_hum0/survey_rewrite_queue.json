@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "queue_count": 1,
+  "max_severity": "P1",
+  "min_risk_score": 25,
+  "items": [
+    {
+      "queue_id": "rewrite_ch01_sec01",
+      "section_id": "ch01/sec01",
+      "priority": "P0",
+      "risk_score": 225,
+      "issues": [
+        {
+          "severity": "P0",
+          "code": "missing_claim_tags",
+          "detail": true
+        },
+        {
+          "severity": "P0",
+          "code": "missing_evidence_tags",
+          "detail": true
+        },
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "0<6"
+        }
+      ],
+      "section_spec": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/sections/ch01/sec01/section.spec.json",
+      "evidence_pack": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/sections/ch01/sec01/evidence_pack.json",
+      "current_final": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/sections/ch01/sec01/final.md",
+      "target_response": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/sections/ch01/sec01/human_responses/round_01.md",
+      "writer_backend": "human-packet",
+      "action": "rewrite_section_from_scorecard"
+    }
+  ],
+  "scorecard_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/survey_section_scorecard.json",
+  "queue_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/survey_rewrite_queue.json"
+}

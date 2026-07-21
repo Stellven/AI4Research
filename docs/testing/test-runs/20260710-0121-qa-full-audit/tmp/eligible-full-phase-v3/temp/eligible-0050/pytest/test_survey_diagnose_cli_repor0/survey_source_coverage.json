@@ -1,0 +1,75 @@
+{
+  "ok": false,
+  "source_count": 0,
+  "min_sources": 8,
+  "source_type_counts": {},
+  "required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "missing_required_source_types": [
+    "benchmark",
+    "code",
+    "official_doc",
+    "paper"
+  ],
+  "paper_like_source_count": 0,
+  "min_paper_like_sources": 4,
+  "high_authority_source_count": 0,
+  "min_high_authority_sources": 4,
+  "source_authority_average": 0.0,
+  "low_value_source_count": 0,
+  "low_value_source_ratio": 0.0,
+  "cited_source_ratio": 0.0,
+  "source_audit": {
+    "ok": false,
+    "output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0050/pytest/test_survey_diagnose_cli_repor0",
+    "research_profile": "technical_architecture",
+    "strict_profile": true,
+    "policy_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/research/policies/source_authority.json",
+    "source_count": 0,
+    "source_type_counts": {},
+    "source_type_count": 0,
+    "missing_required_source_types": [
+      "paper"
+    ],
+    "missing_recommended_source_types": [
+      "benchmark",
+      "code",
+      "official_doc"
+    ],
+    "source_authority_average": 0.0,
+    "source_high_authority_count": 0,
+    "source_high_authority_threshold": 0.75,
+    "invalid_source_type_count": 0,
+    "low_authority_source_count": 0,
+    "sources": [],
+    "replacement_suggestions": [
+      "Add paper source for profile technical_architecture",
+      "Add benchmark source for profile technical_architecture",
+      "Add code source for profile technical_architecture",
+      "Add official_doc source for profile technical_architecture"
+    ],
+    "errors": [
+      "source_type_count_too_low:0<2",
+      "missing_required_source_types:paper",
+      "high_authority_sources_too_low:0<2"
+    ],
+    "warnings": [
+      "missing_recommended_source_types:benchmark,code,official_doc"
+    ]
+  },
+  "issues": [
+    "survey_source_count_low:0<8",
+    "survey_missing_required_source_types:benchmark,code,official_doc,paper",
+    "paper_like_source_count_low:0<4",
+    "high_authority_source_count_low:0<4",
+    "source_authority_average_low:0.0000<0.5500",
+    "cited_source_ratio_low:0.0000<0.5000",
+    "source_type_count_too_low:0<2",
+    "missing_required_source_types:paper",
+    "high_authority_sources_too_low:0<2"
+  ]
+}

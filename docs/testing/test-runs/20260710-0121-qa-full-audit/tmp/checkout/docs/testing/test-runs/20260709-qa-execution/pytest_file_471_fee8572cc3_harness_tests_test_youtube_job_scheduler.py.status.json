@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_471_fee8572cc3_harness_tests_test_youtube_job_scheduler.py",
+  "source": "harness/tests/test_youtube_job_scheduler.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_youtube_job_scheduler.py"
+  ],
+  "exit_code": 2,
+  "runtime_seconds": 0.196,
+  "timeout": false
+}

@@ -1,0 +1,16 @@
+Solar Multi-Task    2026-05-20 21:45   health:warn   intent:screen
+================================================================================
+PANE MAP                                  HEALTH
+  main:0  PM     ready    Opus              coordinator ok   pid 2391
+  main:1  PLAN   ready    Opus              tmux        ok   session ready
+> main:2  BUILD  working  Opus              models      warn 1 quota low
+  main:3  EVAL   ready    Opus              profile     ok   default
+  lab:0   LAB    ready    GLM
+  lab:1   LAB    ready    GLM             DEGRADED
+  lab:2   LAB    ready    GLM               lab : lab_session_missing
+  lab:3   LAB    ready    Sonnet
+WORKERS  active=0  tracked=8  | dry_run=8  idle=0  blocked=0  active=0
+LAST     20:01  evaluator  main:3  ->  S04/N8-eval
+DAG      S04  pass=7  pending=1  reviewing=1  ready=[]
+--------------------------------------------------------------------------------
+fallback render  80x20  ascii-only  no-emoji

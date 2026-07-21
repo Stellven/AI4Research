@@ -1,0 +1,1131 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solar Orchestrator Dashboard</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --card: #ffffff;
+        --ink: #102a43;
+        --muted: #627d98;
+        --line: #d9e2ec;
+        --accent: #0b6e4f;
+        --warn: #b44d12;
+        --danger: #b42318;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Source Sans 3", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 0 0, #ebf5ff, var(--bg) 35%);
+      }
+      .wrap {
+        max-width: 1160px;
+        margin: 24px auto;
+        padding: 0 16px 24px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.35rem;
+      }
+      .muted { color: var(--muted); }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
+      }
+      input, select, button {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-size: 0.92rem;
+      }
+      button {
+        cursor: pointer;
+        background: #eef4ff;
+      }
+      .btn-primary {
+        background: #d7ebff;
+        border-color: #a7d2ff;
+      }
+      .btn-warn {
+        background: #fff1e6;
+        border-color: #ffd8b5;
+      }
+      .btn-danger {
+        background: #ffe3e3;
+        border-color: #ffa8a8;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+      th, td {
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        padding: 8px 6px;
+        vertical-align: top;
+        font-size: 0.86rem;
+        word-break: break-word;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .tag {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 0.75rem;
+        border: 1px solid #b8c7db;
+        background: #f2f6fc;
+      }
+      .ok { color: var(--accent); }
+      .warn { color: var(--warn); }
+      .err { color: var(--danger); }
+      .small { font-size: 0.8rem; }
+      .graph-wrap {
+        border: 1px dashed var(--line);
+        border-radius: 10px;
+        padding: 8px;
+        min-height: 180px;
+        overflow: auto;
+        background: #fbfdff;
+      }
+      .kpi {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .kpi .box {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px;
+        background: #fcfdff;
+      }
+      .kpi .val {
+        font-weight: 700;
+        font-size: 1rem;
+      }
+      .kpi .val-good { color: var(--accent); }
+      .kpi .val-warn { color: var(--warn); }
+      .kpi .val-bad { color: var(--danger); }
+      .trend-up { color: var(--danger); font-size: 0.78rem; margin-left: 4px; }
+      .trend-down { color: var(--accent); font-size: 0.78rem; margin-left: 4px; }
+      .trend-flat { color: var(--muted); font-size: 0.78rem; margin-left: 4px; }
+      .status-pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 9px;
+        font-size: 0.76rem;
+        font-weight: 600;
+      }
+      .status-good { background: #e8f7ef; color: #0b6e4f; border: 1px solid #bde5cb; }
+      .status-warn { background: #fff5e8; color: #b44d12; border: 1px solid #ffd8b5; }
+      .status-bad { background: #ffeaea; color: #b42318; border: 1px solid #fecaca; }
+      .mini-chart-wrap {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 6px;
+        background: #fcfdff;
+        margin-top: 8px;
+      }
+      .failure-card {
+        border: 1px solid #fecaca;
+        background: #fff5f5;
+        border-radius: 10px;
+        padding: 8px;
+        margin-bottom: 8px;
+      }
+      .legend {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 6px 0 8px;
+      }
+      .dot { width: 10px; height: 10px; border-radius: 99px; display: inline-block; margin-right: 4px; }
+      @media (max-width: 980px) {
+        .controls { grid-template-columns: repeat(2, 1fr); }
+        .kpi { grid-template-columns: repeat(2, 1fr); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <h1>Solar Orchestrator Dashboard</h1>
+        <div class="small muted" id="clock">--</div>
+      </div>
+
+      <div class="grid">
+        <section class="card">
+          <div class="controls">
+            <input id="taskId" placeholder="taskId (可选)" />
+            <input id="eventType" placeholder="event type (可选)" />
+            <input id="sinceMinutes" placeholder="since minutes (默认 30)" />
+            <input id="limit" placeholder="limit (默认 100)" />
+            <button class="btn-primary" onclick="refresh()">刷新</button>
+            <button onclick="toggleAuto()" id="autoBtn">自动刷新: 开</button>
+          </div>
+          <div class="controls" style="margin-top:8px;">
+            <input id="ctrlTaskId" placeholder="control: taskId" />
+            <input id="ctrlNodeId" placeholder="control: nodeId (可选)" />
+            <input id="ctrlTarget" placeholder="target/intetnt，例如 /review" />
+            <input id="ctrlRounds" placeholder="rounds，例如 2" />
+            <button class="btn-warn" onclick="control('pause')">暂停</button>
+            <button class="btn-primary" onclick="control('resume')">恢复</button>
+          </div>
+          <div class="controls" style="margin-top:8px;">
+            <button class="btn-primary" onclick="control('debate')">设置辩论轮次</button>
+            <button class="btn-primary" onclick="control('reroute')">重路由节点</button>
+            <select id="policyVote">
+              <option value="">vote mode (可选)</option>
+              <option value="majority">majority</option>
+              <option value="weighted">weighted</option>
+            </select>
+            <input id="policyRisk" placeholder="risk threshold 0..1" />
+            <input id="policyRounds" placeholder="default rounds" />
+            <button class="btn-primary" onclick="updatePolicy()">更新策略</button>
+          </div>
+          <div class="controls" style="margin-top:8px;">
+            <input id="retryBaseDelay" placeholder="retry baseDelayMs" />
+            <input id="retryMaxDelay" placeholder="retry maxDelayMs" />
+            <input id="retryMaxAttempts" placeholder="retry maxAttempts" />
+            <input id="retryJitter" placeholder="retry jitterRatio 0..1" />
+            <button class="btn-primary" onclick="loadRetryPolicy()">读取重试策略</button>
+            <button class="btn-primary" onclick="updateRetryPolicy()">更新重试策略</button>
+          </div>
+          <div class="controls" style="margin-top:8px;">
+            <input id="graphTaskId" placeholder="graph taskId" />
+            <button class="btn-primary" onclick="loadTasks()">加载 task 列表</button>
+            <button class="btn-primary" onclick="renderGraph()">渲染任务图</button>
+            <select id="taskListSelect" onchange="pickTaskFromList()">
+              <option value="">从已知 task 选择...</option>
+            </select>
+            <button class="btn-warn" onclick="retryFromControl()">重试节点</button>
+            <div class="small muted" style="align-self:center;">使用 taskId + nodeId</div>
+          </div>
+          <div id="ctrlMsg" class="small muted" style="margin-top:8px;"></div>
+        </section>
+
+        <section class="card">
+          <div class="small muted" id="stateLine">状态加载中...</div>
+        </section>
+
+        <section class="card">
+          <h3 style="margin:0 0 8px;">健康总览（24h）</h3>
+          <div class="small muted" style="display:flex;justify-content:space-between;align-items:center;">
+            <span id="healthStatusLine">系统状态: <span class="status-pill status-good">GOOD</span></span>
+            <button onclick="exportHealth()">导出健康 JSON</button>
+          </div>
+          <div class="controls" style="margin-top:8px; grid-template-columns: repeat(6, 1fr);">
+            <button onclick="showDrilldown('failures')">失败节点下钻</button>
+            <button onclick="showDrilldown('repairs')">修复任务下钻</button>
+            <button onclick="loadHealthConfig()">读取配置</button>
+            <button class="btn-primary" onclick="saveHealthConfig()">保存阈值</button>
+            <button onclick="refreshHealthAlerts()">刷新告警</button>
+            <label class="small muted" style="display:flex;align-items:center;gap:6px;">
+              <input id="includeResolvedAlerts" type="checkbox" style="width:auto;" />
+              包含已恢复
+            </label>
+          </div>
+          <textarea
+            id="cfgJson"
+            style="width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:8px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace;font-size:12px;"
+            rows="9"
+            placeholder='完整配置 JSON，示例: {"thresholds":{...},"monitor":{...}}'
+          ></textarea>
+          <div class="kpi">
+            <div class="box">
+              <div class="small muted">队列量</div>
+              <div class="val" id="healthQueue">0</div>
+            </div>
+            <div class="box">
+              <div class="small muted">失败率</div>
+              <div class="val" id="healthFailureRate">0%</div>
+            </div>
+            <div class="box">
+              <div class="small muted">重试中节点数</div>
+              <div class="val" id="healthRetrying">0</div>
+            </div>
+            <div class="box">
+              <div class="small muted">修复分支任务数</div>
+              <div class="val" id="healthRepairTasks">0</div>
+            </div>
+          </div>
+          <div class="kpi" style="margin-top:8px;">
+            <div class="box">
+              <div class="small muted">失败率（1h）</div>
+              <div class="val" id="healthFailureRate1h">0%</div>
+            </div>
+            <div class="box">
+              <div class="small muted">队列最老等待</div>
+              <div class="val" id="healthQueueOldest">0m</div>
+            </div>
+            <div class="box">
+              <div class="small muted">修复分支任务（24h）</div>
+              <div class="val" id="healthRepairTasks24h">0</div>
+            </div>
+            <div class="box">
+              <div class="small muted">采样时间</div>
+              <div class="val" id="healthGeneratedAt">-</div>
+            </div>
+          </div>
+          <div class="mini-chart-wrap">
+            <div class="small muted">24h 失败/完成趋势（小时）</div>
+            <canvas id="healthHistoryChart" width="1060" height="120" style="width:100%;height:120px;"></canvas>
+          </div>
+          <div class="mini-chart-wrap">
+            <div class="small muted">告警列表（最新）</div>
+            <div id="healthAlertsBox" class="small muted">(no alerts)</div>
+          </div>
+          <div id="healthDrilldownBox" class="small muted" style="margin-top:8px;">(点击上方按钮查看下钻明细)</div>
+          <div id="healthError" class="small muted" style="margin-top:6px;"></div>
+        </section>
+
+        <section class="card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:170px;">时间</th>
+                <th style="width:140px;">类型</th>
+                <th style="width:150px;">taskId</th>
+                <th style="width:150px;">nodeId</th>
+                <th>payload</th>
+              </tr>
+            </thead>
+            <tbody id="eventsBody"></tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <div class="legend small muted">
+            <span><i class="dot" style="background:#c6f6d5;"></i>completed</span>
+            <span><i class="dot" style="background:#fde68a;"></i>running</span>
+            <span><i class="dot" style="background:#e2e8f0;"></i>pending</span>
+            <span><i class="dot" style="background:#fecaca;"></i>failed</span>
+            <span><i class="dot" style="background:#bfdbfe;"></i>paused</span>
+          </div>
+          <div id="graphMeta" class="small muted">(no graph)</div>
+          <div class="graph-wrap">
+            <svg id="graphSvg" width="100%" height="260"></svg>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="kpi">
+            <div class="box">
+              <div class="small muted">Total Tokens</div>
+              <div class="val" id="kpiTokens">0</div>
+            </div>
+            <div class="box">
+              <div class="small muted">Completed Nodes</div>
+              <div class="val" id="kpiCompleted">0</div>
+            </div>
+            <div class="box">
+              <div class="small muted">Failed Nodes</div>
+              <div class="val" id="kpiFailed">0</div>
+            </div>
+            <div class="box">
+              <div class="small muted">Avg Duration (ms)</div>
+              <div class="val" id="kpiDuration">0</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 style="margin:0 0 8px;">Node Timeline</h3>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:180px;">nodeId</th>
+                <th style="width:100px;">status</th>
+                <th style="width:120px;">duration</th>
+                <th style="width:120px;">tokens</th>
+                <th style="width:140px;">risk</th>
+                <th style="width:90px;">attempt</th>
+                <th style="width:140px;">retryStatus</th>
+                <th style="width:170px;">nextRetryAt</th>
+                <th style="width:160px;">intent</th>
+                <th>preview</th>
+              </tr>
+            </thead>
+            <tbody id="timelineBody"></tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <h3 style="margin:0 0 8px;">Failure Root Cause Cards</h3>
+          <div id="failuresBox" class="small muted">(no failures)</div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      let auto = true;
+      let timer = null;
+      let lastHealth = null;
+      let latestHealthSummary = null;
+      let latestHealthHistory = [];
+      let healthConfig = null;
+
+      function nowClock() {
+        const d = new Date();
+        document.getElementById("clock").textContent = d.toLocaleString("zh-CN");
+      }
+
+      function getFilter() {
+        const taskId = document.getElementById("taskId").value.trim();
+        const eventType = document.getElementById("eventType").value.trim();
+        const sinceMinutesRaw = document.getElementById("sinceMinutes").value.trim();
+        const limitRaw = document.getElementById("limit").value.trim();
+        const limit = Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : 100;
+        const sinceMinutes = Number.isFinite(Number(sinceMinutesRaw)) && Number(sinceMinutesRaw) > 0 ? Number(sinceMinutesRaw) : 30;
+        return { taskId, eventType, sinceMinutes, limit };
+      }
+
+      function buildSinceIso(minutes) {
+        const d = new Date(Date.now() - minutes * 60 * 1000);
+        return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+      }
+
+      function esc(v) {
+        return String(v ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function pct(v) {
+        const n = Number(v || 0);
+        if (!Number.isFinite(n)) return "0%";
+        return `${(n * 100).toFixed(1)}%`;
+      }
+
+      function trend(current, previous) {
+        if (previous === null || previous === undefined) {
+          return { cls: "trend-flat", text: "→ 首次" };
+        }
+        const c = Number(current || 0);
+        const p = Number(previous || 0);
+        if (!Number.isFinite(c) || !Number.isFinite(p)) return { cls: "trend-flat", text: "" };
+        const d = c - p;
+        if (Math.abs(d) < 1e-9) return { cls: "trend-flat", text: "→ 0" };
+        if (d > 0) return { cls: "trend-up", text: `↑ +${d.toFixed(1)}` };
+        return { cls: "trend-down", text: `↓ ${d.toFixed(1)}` };
+      }
+
+      function setValStyle(el, cls) {
+        el.classList.remove("val-good", "val-warn", "val-bad");
+        el.classList.add(cls);
+      }
+
+      function healthStatus(summary) {
+        const thresholds = healthConfig?.thresholds || {};
+        const queueBand = thresholds.queueSize || { warn: 50, bad: 200 };
+        const failBand = thresholds.failureRate24h || { warn: 0.05, bad: 0.15 };
+        const retryBand = thresholds.retryingNodes || { warn: 2, bad: 10 };
+        const repairBand = thresholds.repairTasksActive || { warn: 1, bad: 5 };
+        const queue = Number(summary?.queueSize || 0);
+        const failure = Number(summary?.failureRate?.ratio || 0);
+        const retrying = Number(summary?.retryingNodes || 0);
+        const repair = Number(summary?.repairBranchTasks || 0);
+        const score = (queue >= queueBand.bad ? 2 : queue >= queueBand.warn ? 1 : 0)
+          + (failure >= failBand.bad ? 2 : failure >= failBand.warn ? 1 : 0)
+          + (retrying >= retryBand.bad ? 2 : retrying >= retryBand.warn ? 1 : 0)
+          + (repair >= repairBand.bad ? 2 : repair >= repairBand.warn ? 1 : 0);
+        if (score >= 4) return { cls: "status-bad", text: "BAD" };
+        if (score >= 2) return { cls: "status-warn", text: "WARN" };
+        return { cls: "status-good", text: "GOOD" };
+      }
+
+      function getBand(name, fallbackWarn, fallbackBad) {
+        const band = healthConfig?.thresholds?.[name];
+        if (band && Number.isFinite(Number(band.warn)) && Number.isFinite(Number(band.bad))) {
+          return { warn: Number(band.warn), bad: Number(band.bad) };
+        }
+        return { warn: fallbackWarn, bad: fallbackBad };
+      }
+
+      function drawHealthHistory(history) {
+        const canvas = document.getElementById("healthHistoryChart");
+        if (!canvas || !canvas.getContext) return;
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        if (!Array.isArray(history) || history.length === 0) {
+          ctx.fillStyle = "#627d98";
+          ctx.font = "12px sans-serif";
+          ctx.fillText("no history", 8, 18);
+          return;
+        }
+
+        const maxV = Math.max(
+          1,
+          ...history.map((x) => Math.max(Number(x.failed || 0), Number(x.completed || 0)))
+        );
+        const pad = 8;
+        const chartW = w - pad * 2;
+        const chartH = h - pad * 2;
+        const step = chartW / Math.max(1, history.length - 1);
+
+        const toY = (v) => pad + chartH - (v / maxV) * chartH;
+
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad, pad + chartH);
+        ctx.lineTo(w - pad, pad + chartH);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#b42318";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        history.forEach((p, i) => {
+          const x = pad + i * step;
+          const y = toY(Number(p.failed || 0));
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        ctx.strokeStyle = "#0b6e4f";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        history.forEach((p, i) => {
+          const x = pad + i * step;
+          const y = toY(Number(p.completed || 0));
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      function exportHealth() {
+        const payload = {
+          exportedAt: new Date().toISOString(),
+          summary: latestHealthSummary,
+          history: latestHealthHistory,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `orchestrator-health-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function loadHealthConfig() {
+        const res = await getJson("/api/orchestrator/health-config");
+        if (!res.ok || !res.data) return;
+        healthConfig = res.data;
+        document.getElementById("cfgJson").value = JSON.stringify(res.data, null, 2);
+      }
+
+      async function saveHealthConfig() {
+        const msg = document.getElementById("healthError");
+        let payload = {};
+        try {
+          const raw = document.getElementById("cfgJson").value.trim();
+          payload = raw ? JSON.parse(raw) : {};
+        } catch (e) {
+          msg.innerHTML = `<span class="err">配置 JSON 解析失败: ${esc(String(e))}</span>`;
+          return;
+        }
+        const r = await fetch("/api/orchestrator/health-config", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const res = await r.json();
+        if (!res.ok) {
+          msg.innerHTML = `<span class="err">阈值保存失败</span>`;
+          return;
+        }
+        healthConfig = res.data;
+        msg.innerHTML = `<span class="ok">阈值已保存</span>`;
+        await refresh();
+      }
+
+      async function refreshHealthAlerts() {
+        const includeResolved = document.getElementById("includeResolvedAlerts").checked ? 1 : 0;
+        const box = document.getElementById("healthAlertsBox");
+        const res = await getJson(`/api/orchestrator/health-alerts?limit=30&includeResolved=${includeResolved}`);
+        if (!res.ok || !Array.isArray(res.data) || res.data.length === 0) {
+          box.innerHTML = `<span class="muted">(no alerts)</span>`;
+          return;
+        }
+        box.innerHTML = res.data.map((a) => {
+          const p = a.payload || {};
+          const metric = esc(p.metric || a.ruleKey || "");
+          const value = esc(p.value ?? "");
+          const at = esc((a.createdAt || "").replace("T", " ").slice(0, 19));
+          const lv = String(a.level || "").toLowerCase() === "bad" ? "err" : "warn";
+          return `<div style="margin:4px 0;">
+            <span class="${lv}">[${esc(String(a.level || "").toUpperCase())}]</span>
+            <code>${metric}</code>=<code>${value}</code>
+            <span class="muted">${at}</span>
+            <div class="small">${esc(a.message || "")}</div>
+          </div>`;
+        }).join("");
+      }
+
+      async function showDrilldown(type) {
+        const box = document.getElementById("healthDrilldownBox");
+        const res = await getJson(`/api/orchestrator/health-drilldown?type=${encodeURIComponent(type)}&limit=20`);
+        if (!res.ok || !Array.isArray(res.data) || res.data.length === 0) {
+          box.innerHTML = `<span class="muted">(no ${esc(type)} data)</span>`;
+          return;
+        }
+        if (type === "failures") {
+          box.innerHTML = res.data.map((r) => {
+            const tid = esc(r.taskId || "");
+            const nid = esc(r.nodeId || "");
+            const err = esc(r.error || "");
+            const branchSuggestion = esc(r.branchSuggestion || "");
+            return `<div style="margin:4px 0;">
+              <button onclick="focusFailure('${encodeURIComponent(tid)}','${encodeURIComponent(nid)}')">定位</button>
+              <button class="btn-warn" onclick="healthActionRetry('${encodeURIComponent(tid)}','${encodeURIComponent(nid)}')">一键重试</button>
+              <button onclick="healthActionRepair('${encodeURIComponent(tid)}','${encodeURIComponent(nid)}','${encodeURIComponent(err)}','${encodeURIComponent(branchSuggestion)}')">一键创建修复任务</button>
+              <code>${tid}</code> / <code>${nid}</code> <span class="err">${err}</span>
+            </div>`;
+          }).join("");
+          return;
+        }
+        box.innerHTML = res.data.map((r) => {
+          const taskId = esc(r.ofTaskId || "");
+          const nodeId = esc(r.ofNodeId || "");
+          return `<div style="margin:4px 0;">
+            <button onclick="focusFailure('${encodeURIComponent(taskId)}','${encodeURIComponent(nodeId)}')">定位</button>
+            <button class="btn-warn" onclick="healthActionRetry('${encodeURIComponent(taskId)}','${encodeURIComponent(nodeId)}')">一键重试</button>
+            <button onclick="healthActionRepair('${encodeURIComponent(taskId)}','${encodeURIComponent(nodeId)}','','')">一键创建修复任务</button>
+            repair=<code>${esc(r.repairTaskId || "")}</code> of <code>${taskId}</code>/<code>${nodeId}</code> status=${esc(r.status || "")}
+          </div>`;
+        }).join("");
+      }
+
+      async function healthActionRetry(taskIdEnc, nodeIdEnc) {
+        const taskId = decodeURIComponent(taskIdEnc || "");
+        const nodeId = decodeURIComponent(nodeIdEnc || "");
+        if (!taskId || !nodeId) return;
+        const r = await fetch("/api/orchestrator/health-actions/retry", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ taskId, nodeId }),
+        });
+        const res = await r.json();
+        const msg = document.getElementById("healthError");
+        msg.innerHTML = res.ok ? `<span class="ok">已触发重试 ${esc(taskId)}/${esc(nodeId)}</span>` : `<span class="err">重试失败: ${esc(res.error || "unknown")}</span>`;
+        await refresh();
+      }
+
+      async function healthActionRepair(taskIdEnc, nodeIdEnc, errEnc, branchEnc) {
+        const taskId = decodeURIComponent(taskIdEnc || "");
+        const nodeId = decodeURIComponent(nodeIdEnc || "");
+        const error = decodeURIComponent(errEnc || "");
+        const branchSuggestion = decodeURIComponent(branchEnc || "");
+        if (!taskId || !nodeId) return;
+        const r = await fetch("/api/orchestrator/health-actions/repair", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ taskId, nodeId, error, branchSuggestion }),
+        });
+        const res = await r.json();
+        const msg = document.getElementById("healthError");
+        msg.innerHTML = res.ok ? `<span class="ok">已创建修复任务 ${esc(taskId)}/${esc(nodeId)}</span>` : `<span class="err">创建修复任务失败: ${esc(res.error || "unknown")}</span>`;
+        await refresh();
+      }
+
+      async function focusFailure(taskIdEnc, nodeIdEnc) {
+        const taskId = decodeURIComponent(taskIdEnc || "");
+        const nodeId = decodeURIComponent(nodeIdEnc || "");
+        document.getElementById("graphTaskId").value = taskId;
+        document.getElementById("ctrlTaskId").value = taskId;
+        document.getElementById("ctrlNodeId").value = nodeId;
+        document.getElementById("taskId").value = taskId;
+        document.getElementById("eventType").value = "node_failed";
+        await refresh();
+        await renderGraph();
+      }
+
+      async function getJson(url) {
+        const r = await fetch(url);
+        return r.json();
+      }
+
+      async function refresh() {
+        nowClock();
+        const f = getFilter();
+        const q = new URLSearchParams();
+        q.set("limit", String(f.limit));
+        q.set("since", buildSinceIso(f.sinceMinutes));
+        if (f.taskId) q.set("taskId", f.taskId);
+        if (f.eventType) q.set("type", f.eventType);
+
+        const [eventsRes, stateRes, healthRes, healthHistoryRes] = await Promise.all([
+          getJson(`/api/orchestrator/events?${q.toString()}`),
+          getJson(`/api/orchestrator/state`),
+          getJson(`/api/orchestrator/health-summary`),
+          getJson(`/api/orchestrator/health-history?hours=24`),
+        ]);
+
+        const body = document.getElementById("eventsBody");
+        body.innerHTML = "";
+        if (!eventsRes.ok) {
+          body.innerHTML = `<tr><td colspan="5" class="err">events error: ${eventsRes.error}</td></tr>`;
+        } else if (!eventsRes.data || eventsRes.data.length === 0) {
+          body.innerHTML = `<tr><td colspan="5" class="muted">(no events)</td></tr>`;
+        } else {
+          for (const e of eventsRes.data) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${e.at || ""}</td>
+              <td><span class="tag">${e.type || ""}</span></td>
+              <td>${e.taskId || ""}</td>
+              <td>${e.nodeId || "-"}</td>
+              <td><code>${JSON.stringify(e.payload || {})}</code></td>
+            `;
+            body.appendChild(tr);
+          }
+        }
+
+        const line = document.getElementById("stateLine");
+        if (!stateRes.ok) {
+          line.innerHTML = `<span class="err">state error: ${stateRes.error}</span>`;
+        } else {
+          const active = (stateRes.data.activeTaskIds || []).join(", ") || "(none)";
+          line.innerHTML = `activeTaskIds: <span class="ok">${active}</span>`;
+          if (!document.getElementById("graphTaskId").value && stateRes.data.activeTaskIds?.length) {
+            document.getElementById("graphTaskId").value = stateRes.data.activeTaskIds[0];
+          }
+        }
+
+        if (healthRes.ok && healthRes.data) {
+          const queue = Number(healthRes.data.queueSize ?? 0);
+          const failureRatio = Number(healthRes.data.failureRate?.ratio ?? 0);
+          const failureRatio1h = Number(healthRes.data.failureRate1h?.ratio ?? 0);
+          const retrying = Number(healthRes.data.retryingNodes ?? 0);
+          const repair = Number(healthRes.data.repairBranchTasks ?? 0);
+          const queueOldestAgeMinutes = Number(healthRes.data.queueOldestAgeMinutes ?? 0);
+          const repair24h = Number(healthRes.data.repairBranchTasks24h ?? 0);
+
+          const tq = trend(queue, lastHealth?.queue);
+          const tf = trend(failureRatio * 100, lastHealth?.failureRatioPct);
+          const tr = trend(retrying, lastHealth?.retrying);
+          const tp = trend(repair, lastHealth?.repair);
+          const tf1 = trend(failureRatio1h * 100, lastHealth?.failureRatio1hPct);
+          const to = trend(queueOldestAgeMinutes, lastHealth?.queueOldestAgeMinutes);
+          const tp24 = trend(repair24h, lastHealth?.repair24h);
+
+          const queueEl = document.getElementById("healthQueue");
+          const failEl = document.getElementById("healthFailureRate");
+          const retryEl = document.getElementById("healthRetrying");
+          const repairEl = document.getElementById("healthRepairTasks");
+          const fail1hEl = document.getElementById("healthFailureRate1h");
+          const oldestEl = document.getElementById("healthQueueOldest");
+          const repair24El = document.getElementById("healthRepairTasks24h");
+          const generatedAtEl = document.getElementById("healthGeneratedAt");
+
+          queueEl.innerHTML = `${queue}<span class="${tq.cls}">${tq.text}</span>`;
+          failEl.innerHTML = `${pct(failureRatio)}<span class="${tf.cls}">${tf.text}</span>`;
+          retryEl.innerHTML = `${retrying}<span class="${tr.cls}">${tr.text}</span>`;
+          repairEl.innerHTML = `${repair}<span class="${tp.cls}">${tp.text}</span>`;
+          fail1hEl.innerHTML = `${pct(failureRatio1h)}<span class="${tf1.cls}">${tf1.text}</span>`;
+          oldestEl.innerHTML = `${queueOldestAgeMinutes}m<span class="${to.cls}">${to.text}</span>`;
+          repair24El.innerHTML = `${repair24h}<span class="${tp24.cls}">${tp24.text}</span>`;
+          generatedAtEl.textContent = String(healthRes.data.generatedAt || "-").replace("T", " ").slice(0, 19);
+
+          const qBand = getBand("queueSize", 50, 200);
+          const f24Band = getBand("failureRate24h", 0.05, 0.15);
+          const f1Band = getBand("failureRate1h", 0.05, 0.15);
+          const rBand = getBand("retryingNodes", 2, 10);
+          const rpBand = getBand("repairTasksActive", 1, 5);
+          const oBand = getBand("queueOldestAgeMinutes", 10, 60);
+          const rp24Band = getBand("repairTasks24h", 2, 8);
+
+          setValStyle(queueEl, queue >= qBand.bad ? "val-bad" : queue >= qBand.warn ? "val-warn" : "val-good");
+          setValStyle(failEl, failureRatio >= f24Band.bad ? "val-bad" : failureRatio >= f24Band.warn ? "val-warn" : "val-good");
+          setValStyle(retryEl, retrying >= rBand.bad ? "val-bad" : retrying >= rBand.warn ? "val-warn" : "val-good");
+          setValStyle(repairEl, repair >= rpBand.bad ? "val-bad" : repair >= rpBand.warn ? "val-warn" : "val-good");
+          setValStyle(fail1hEl, failureRatio1h >= f1Band.bad ? "val-bad" : failureRatio1h >= f1Band.warn ? "val-warn" : "val-good");
+          setValStyle(oldestEl, queueOldestAgeMinutes >= oBand.bad ? "val-bad" : queueOldestAgeMinutes >= oBand.warn ? "val-warn" : "val-good");
+          setValStyle(repair24El, repair24h >= rp24Band.bad ? "val-bad" : repair24h >= rp24Band.warn ? "val-warn" : "val-good");
+
+          const status = healthStatus(healthRes.data);
+          document.getElementById("healthStatusLine").innerHTML = `系统状态: <span class="status-pill ${status.cls}">${status.text}</span>`;
+          document.getElementById("healthError").textContent = "";
+
+          lastHealth = {
+            queue,
+            failureRatioPct: failureRatio * 100,
+            failureRatio1hPct: failureRatio1h * 100,
+            retrying,
+            repair,
+            queueOldestAgeMinutes,
+            repair24h,
+          };
+          latestHealthSummary = healthRes.data;
+        } else {
+          document.getElementById("healthQueue").textContent = "-";
+          document.getElementById("healthFailureRate").textContent = "-";
+          document.getElementById("healthRetrying").textContent = "-";
+          document.getElementById("healthRepairTasks").textContent = "-";
+          document.getElementById("healthFailureRate1h").textContent = "-";
+          document.getElementById("healthQueueOldest").textContent = "-";
+          document.getElementById("healthRepairTasks24h").textContent = "-";
+          document.getElementById("healthGeneratedAt").textContent = "-";
+          document.getElementById("healthStatusLine").innerHTML = `系统状态: <span class="status-pill status-bad">N/A</span>`;
+          document.getElementById("healthError").innerHTML = `<span class="err">health-summary 拉取失败</span>`;
+        }
+
+        if (healthHistoryRes.ok && Array.isArray(healthHistoryRes.data)) {
+          latestHealthHistory = healthHistoryRes.data;
+          drawHealthHistory(healthHistoryRes.data);
+        } else {
+          latestHealthHistory = [];
+          drawHealthHistory([]);
+          if (!document.getElementById("healthError").textContent) {
+            document.getElementById("healthError").innerHTML = `<span class="warn">health-history 拉取失败</span>`;
+          }
+        }
+
+        await refreshHealthAlerts();
+      }
+
+      async function loadTasks() {
+        const select = document.getElementById("taskListSelect");
+        const res = await getJson("/api/orchestrator/tasks?limit=100");
+        select.innerHTML = `<option value="">从已知 task 选择...</option>`;
+        if (!res.ok || !Array.isArray(res.data)) return;
+        for (const id of res.data) {
+          const opt = document.createElement("option");
+          opt.value = id;
+          opt.textContent = id;
+          select.appendChild(opt);
+        }
+      }
+
+      function pickTaskFromList() {
+        const v = document.getElementById("taskListSelect").value;
+        if (v) document.getElementById("graphTaskId").value = v;
+      }
+
+      function statusColor(s) {
+        switch ((s || "").toLowerCase()) {
+          case "completed": return "#c6f6d5";
+          case "running": return "#fde68a";
+          case "failed": return "#fecaca";
+          case "paused": return "#bfdbfe";
+          default: return "#e2e8f0";
+        }
+      }
+
+      async function renderGraph() {
+        const taskId = document.getElementById("graphTaskId").value.trim();
+        const meta = document.getElementById("graphMeta");
+        const svg = document.getElementById("graphSvg");
+        svg.innerHTML = "";
+        if (!taskId) {
+          meta.textContent = "请先输入 taskId";
+          return;
+        }
+
+        const res = await getJson(`/api/orchestrator/graph?taskId=${encodeURIComponent(taskId)}`);
+        if (!res.ok || !res.data?.ok || !res.data?.graph) {
+          meta.innerHTML = `<span class="warn">该 task 暂无可用 graph（可能尚未执行或已不在 active 内存）</span>`;
+          return;
+        }
+
+        const graph = res.data.graph;
+        const nodes = graph.nodes || [];
+        meta.textContent = `graph=${graph.id} nodes=${nodes.length} createdAt=${graph.createdAt}`;
+
+        const rowH = 72;
+        const w = 1040;
+        const h = Math.max(240, nodes.length * rowH + 20);
+        svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+        svg.setAttribute("height", String(h));
+
+        const pos = new Map();
+        nodes.forEach((n, i) => {
+          pos.set(n.id, { x: 160 + i * 220, y: 40 + i * 12 });
+        });
+
+        for (const n of nodes) {
+          const p = pos.get(n.id);
+          for (const d of (n.dependsOn || [])) {
+            const dp = pos.get(d);
+            if (!dp) continue;
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", String(dp.x + 180));
+            line.setAttribute("y1", String(dp.y + 24));
+            line.setAttribute("x2", String(p.x));
+            line.setAttribute("y2", String(p.y + 24));
+            line.setAttribute("stroke", "#94a3b8");
+            line.setAttribute("stroke-width", "2");
+            svg.appendChild(line);
+          }
+        }
+
+        for (const n of nodes) {
+          const p = pos.get(n.id);
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+          const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          r.setAttribute("x", String(p.x));
+          r.setAttribute("y", String(p.y));
+          r.setAttribute("width", "180");
+          r.setAttribute("height", "50");
+          r.setAttribute("rx", "8");
+          r.setAttribute("fill", statusColor(n.status));
+          r.setAttribute("stroke", "#334e68");
+          r.setAttribute("stroke-width", "1");
+          g.appendChild(r);
+
+          const t1 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          t1.setAttribute("x", String(p.x + 8));
+          t1.setAttribute("y", String(p.y + 18));
+          t1.setAttribute("font-size", "11");
+          t1.setAttribute("font-weight", "600");
+          t1.textContent = n.id;
+          g.appendChild(t1);
+
+          const t2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          t2.setAttribute("x", String(p.x + 8));
+          t2.setAttribute("y", String(p.y + 34));
+          t2.setAttribute("font-size", "10");
+          t2.textContent = `${(n.intent || "").slice(0, 22)} | risk=${Number(n.riskScore || 0).toFixed(2)}`;
+          g.appendChild(t2);
+
+          svg.appendChild(g);
+        }
+
+        await renderDiagnostics(taskId);
+      }
+
+      async function renderDiagnostics(taskId) {
+        const res = await getJson(`/api/orchestrator/diagnostics?taskId=${encodeURIComponent(taskId)}`);
+        const timelineBody = document.getElementById("timelineBody");
+        const failuresBox = document.getElementById("failuresBox");
+
+        document.getElementById("kpiTokens").textContent = "0";
+        document.getElementById("kpiCompleted").textContent = "0";
+        document.getElementById("kpiFailed").textContent = "0";
+        document.getElementById("kpiDuration").textContent = "0";
+        timelineBody.innerHTML = "";
+        failuresBox.innerHTML = `<span class="muted">(no failures)</span>`;
+
+        if (!res.ok || !res.data?.ok || !res.data?.diagnostics) return;
+        const d = res.data.diagnostics;
+        const a = d.aggregate || {};
+        document.getElementById("kpiTokens").textContent = String(a.totalTokens || 0);
+        document.getElementById("kpiCompleted").textContent = String(a.completedNodes || 0);
+        document.getElementById("kpiFailed").textContent = String(a.failedNodes || 0);
+        document.getElementById("kpiDuration").textContent = String(a.avgDurationMs || 0);
+
+        const timeline = Array.isArray(d.timeline) ? d.timeline : [];
+        if (timeline.length === 0) {
+          timelineBody.innerHTML = `<tr><td colspan="7" class="muted">(no node timeline)</td></tr>`;
+        } else {
+          for (const n of timeline) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${n.nodeId || ""}</td>
+              <td><span class="tag">${n.status || ""}</span></td>
+              <td>${n.durationMs ?? "-"}</td>
+              <td>${n.tokensUsed ?? "-"}</td>
+              <td>${typeof n.riskScore === "number" ? Number(n.riskScore).toFixed(2) : "-"}</td>
+              <td>${n.attemptCount ?? "-"}</td>
+              <td>${n.retryStatus ?? "-"}</td>
+              <td>${n.nextRetryAt ?? "-"}</td>
+              <td>${n.intent || "-"}</td>
+              <td><code>${(n.outputPreview || "").replace(/</g, "&lt;")}</code></td>
+            `;
+            timelineBody.appendChild(tr);
+          }
+        }
+
+        const failures = Array.isArray(d.failures) ? d.failures : [];
+        if (failures.length === 0) {
+          failuresBox.innerHTML = `<span class="ok">(no failures)</span>`;
+        } else {
+          failuresBox.innerHTML = "";
+          for (const f of failures) {
+            const div = document.createElement("div");
+            div.className = "failure-card";
+            div.innerHTML = `
+              <div><strong>${esc(f.nodeId)}</strong> <span class="small muted">at ${esc(f.at)}</span></div>
+              <div class="err"><strong>Error:</strong> ${esc(f.error)}</div>
+              <div><strong>Likely Cause:</strong> ${esc(f.likelyCause)}</div>
+              <div><strong>Suggestion:</strong> ${esc(f.suggestion)}</div>
+              <div><strong>Fix Branch:</strong> <code>${esc(f.branchSuggestion || "")}</code></div>
+              <div style="margin-top:6px;">
+                <button class="btn-warn" onclick="retryNode('${encodeURIComponent(taskId)}','${encodeURIComponent(f.nodeId || "")}')">重试此节点</button>
+              </div>
+            `;
+            failuresBox.appendChild(div);
+          }
+        }
+      }
+
+      async function postControl(payload) {
+        const r = await fetch("/api/orchestrator/control", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        return r.json();
+      }
+
+      async function control(action) {
+        const msg = document.getElementById("ctrlMsg");
+        const taskId = document.getElementById("ctrlTaskId").value.trim();
+        const nodeId = document.getElementById("ctrlNodeId").value.trim();
+        const target = document.getElementById("ctrlTarget").value.trim();
+        const rounds = document.getElementById("ctrlRounds").value.trim();
+        if (!taskId) {
+          msg.innerHTML = `<span class="err">control 需要 taskId</span>`;
+          return;
+        }
+        const payload = { action, taskId };
+        if (nodeId) payload.nodeId = nodeId;
+        if (target) payload.target = target;
+        if (rounds) payload.rounds = Number(rounds);
+        const res = await postControl(payload);
+        msg.innerHTML = res.ok
+          ? `<span class="ok">控制命令已发送: ${action}</span>`
+          : `<span class="err">失败: ${res.error || "unknown"}</span>`;
+        await refresh();
+      }
+
+      async function retryNode(taskIdEnc, nodeIdEnc) {
+        const msg = document.getElementById("ctrlMsg");
+        const taskId = decodeURIComponent(taskIdEnc || "");
+        const nodeId = decodeURIComponent(nodeIdEnc || "");
+        if (!taskId || !nodeId) {
+          msg.innerHTML = `<span class="err">retry 需要 taskId 和 nodeId</span>`;
+          return;
+        }
+        const res = await postControl({ action: "retry", taskId, nodeId });
+        msg.innerHTML = res.ok && res.queued
+          ? `<span class="ok">已排队重试: ${esc(nodeId)} (newTaskId=${esc(res.newTaskId || "-")})</span>`
+          : `<span class="err">重试失败: ${esc(res.reason || res.error || "unknown")}</span>`;
+        await refresh();
+        await renderGraph();
+        await renderDiagnostics(taskId);
+      }
+
+      async function retryFromControl() {
+        const taskId = document.getElementById("ctrlTaskId").value.trim();
+        const nodeId = document.getElementById("ctrlNodeId").value.trim();
+        await retryNode(encodeURIComponent(taskId), encodeURIComponent(nodeId));
+      }
+
+      async function updatePolicy() {
+        const msg = document.getElementById("ctrlMsg");
+        const voteMode = document.getElementById("policyVote").value;
+        const highRiskThreshold = document.getElementById("policyRisk").value.trim();
+        const defaultDebateRounds = document.getElementById("policyRounds").value.trim();
+
+        const payload = { action: "policy" };
+        if (voteMode) payload.voteMode = voteMode;
+        if (highRiskThreshold) payload.highRiskThreshold = Number(highRiskThreshold);
+        if (defaultDebateRounds) payload.defaultDebateRounds = Number(defaultDebateRounds);
+
+        const res = await postControl(payload);
+        msg.innerHTML = res.ok
+          ? `<span class="ok">策略已更新</span>`
+          : `<span class="err">策略更新失败: ${res.error || "unknown"}</span>`;
+      }
+
+      async function loadRetryPolicy() {
+        const msg = document.getElementById("ctrlMsg");
+        const r = await getJson("/api/orchestrator/retry-policy");
+        if (!r.ok || !r.data?.ok || !r.data?.policy) {
+          msg.innerHTML = `<span class="err">读取重试策略失败</span>`;
+          return;
+        }
+        const p = r.data.policy;
+        document.getElementById("retryBaseDelay").value = String(p.baseDelayMs ?? "");
+        document.getElementById("retryMaxDelay").value = String(p.maxDelayMs ?? "");
+        document.getElementById("retryMaxAttempts").value = String(p.maxAttempts ?? "");
+        document.getElementById("retryJitter").value = String(p.jitterRatio ?? "");
+        msg.innerHTML = `<span class="ok">重试策略已加载</span>`;
+      }
+
+      async function updateRetryPolicy() {
+        const msg = document.getElementById("ctrlMsg");
+        const payload = {};
+        const baseDelayMs = document.getElementById("retryBaseDelay").value.trim();
+        const maxDelayMs = document.getElementById("retryMaxDelay").value.trim();
+        const maxAttempts = document.getElementById("retryMaxAttempts").value.trim();
+        const jitterRatio = document.getElementById("retryJitter").value.trim();
+        if (baseDelayMs) payload.baseDelayMs = Number(baseDelayMs);
+        if (maxDelayMs) payload.maxDelayMs = Number(maxDelayMs);
+        if (maxAttempts) payload.maxAttempts = Number(maxAttempts);
+        if (jitterRatio) payload.jitterRatio = Number(jitterRatio);
+        const r = await fetch("/api/orchestrator/retry-policy", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const res = await r.json();
+        msg.innerHTML = res.ok && res.data?.ok
+          ? `<span class="ok">重试策略已更新</span>`
+          : `<span class="err">重试策略更新失败: ${res.error || "unknown"}</span>`;
+      }
+
+      function toggleAuto() {
+        auto = !auto;
+        document.getElementById("autoBtn").textContent = `自动刷新: ${auto ? "开" : "关"}`;
+        if (auto) {
+          loop();
+        } else if (timer) {
+          clearTimeout(timer);
+        }
+      }
+
+      async function loop() {
+        if (!auto) return;
+        await refresh();
+        await renderGraph();
+        timer = setTimeout(loop, 2000);
+      }
+
+      loadTasks();
+      loadHealthConfig();
+      loadRetryPolicy();
+      loop();
+      nowClock();
+      setInterval(nowClock, 1000);
+    </script>
+  </body>
+</html>

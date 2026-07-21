@@ -1,0 +1,21 @@
+{
+  "task_id": "task-shim-research-online-source-scheduler-literature_discover",
+  "operator_id": "autosci-literature-discover-worker",
+  "sprint_id": "shim-research-online-source-scheduler",
+  "node_id": "literature_discover",
+  "status": "failed",
+  "exit_code": 1,
+  "started_at": "2026-07-10T18:45:56Z",
+  "finished_at": "2026-07-10T18:45:56Z",
+  "log_tail": "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0009/pytest/test_autosci_skill_shim_resear11/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

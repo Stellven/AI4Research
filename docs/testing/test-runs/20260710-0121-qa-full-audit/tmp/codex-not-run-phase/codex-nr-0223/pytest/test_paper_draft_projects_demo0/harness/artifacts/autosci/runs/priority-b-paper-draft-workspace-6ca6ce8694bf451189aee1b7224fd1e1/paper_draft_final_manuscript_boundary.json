@@ -1,0 +1,25 @@
+{
+  "blocking_reasons": [
+    "source evidence was not supplied",
+    "source-backed citation map is missing",
+    "completed Review LLM boundary evidence is missing",
+    "verified compile/PDF handoff is missing"
+  ],
+  "citation_count": 0,
+  "citation_ids": [],
+  "compile_handoff_status": "inconclusive",
+  "compile_handoff_verified": false,
+  "compiled_pdf_paths": [],
+  "final_manuscript_ready": false,
+  "limitations": [
+    "Final manuscript readiness requires source evidence, a source-backed citation map, completed Review LLM proof, and verified compile/PDF handoff."
+  ],
+  "manuscript_scope": "draft_scaffold",
+  "publication_ready_claim_allowed": false,
+  "review_boundary_status": "inconclusive",
+  "review_evidence_ids": [],
+  "review_llm_completed": false,
+  "schema": "autosci_paper_draft_final_manuscript_boundary.v1",
+  "source_evidence_supplied": false,
+  "status": "paper_draft_final_manuscript_incomplete"
+}

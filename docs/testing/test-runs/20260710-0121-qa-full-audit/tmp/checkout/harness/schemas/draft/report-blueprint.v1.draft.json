@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/report-blueprint.v1.draft.json",
+  "title": "Report Blueprint v1",
+  "description": "Draft schema for ReportBlueprint — the structured plan for deep research report compilation.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": ["blueprint_id", "run_id", "title", "chapters"],
+  "additionalProperties": false,
+  "properties": {
+    "blueprint_id": {"type": "string"},
+    "run_id": {"type": "string"},
+    "title": {"type": "string"},
+    "target_chars": {"type": "integer"},
+    "chapters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["chapter_id", "title", "order", "sections"],
+        "properties": {
+          "chapter_id": {"type": "string"},
+          "title": {"type": "string"},
+          "order": {"type": "integer"},
+          "objective": {"type": "string"},
+          "sections": {
+            "type": "array",
+            "items": {"type": "string", "description": "Section IDs mapping to section contracts"}
+          }
+        }
+      }
+    },
+    "metadata": {"type": "object", "additionalProperties": true}
+  }
+}

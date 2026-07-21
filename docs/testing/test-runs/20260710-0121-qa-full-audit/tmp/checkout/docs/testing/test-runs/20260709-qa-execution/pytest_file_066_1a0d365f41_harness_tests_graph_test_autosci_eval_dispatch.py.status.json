@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_066_1a0d365f41_harness_tests_graph_test_autosci_eval_dispatch.py",
+  "source": "harness/tests/graph/test_autosci_eval_dispatch.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph/test_autosci_eval_dispatch.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 8.973,
+  "timeout": false
+}

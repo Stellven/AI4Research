@@ -1,0 +1,36 @@
+....................................................................F... [ 70%]
+.......................F..F...                                           [100%]
+=================================== FAILURES ===================================
+________ TestLogicalOperatorFixture.test_each_operator_has_primary_role ________
+harness/tests/test_logical_operator_schema.py:245: in test_each_operator_has_primary_role
+    assert op_def["primary_role"] in valid_roles, (
+E   AssertionError: ScientificLiteratureDiscoverer: primary_role='scientific-literature-discoverer' not in {'auditor', 'router', 'builder', 'knowledge-extractor', 'evaluator', 'planner'}
+E   assert 'scientific-literature-discoverer' in {'auditor', 'builder', 'evaluator', 'knowledge-extractor', 'planner', 'router'}
+____ TestBindingFixture.test_all_binding_candidates_exist_in_actor_registry ____
+harness/tests/test_logical_operator_schema.py:283: in test_all_binding_candidates_exist_in_actor_registry
+    assert actor_id in known_actor_ids, (
+E   AssertionError: ScientificLiteratureDiscoverer.candidates[0]: actor_id='autosci-literature-discover-worker' not found in agent-actors.json
+E   assert 'autosci-literature-discover-worker' in {'browser_agent_session', 'mini-antigravity-gemini31-pro', 'mini-antigravity-gemini31-pro-image', 'mini-antigravity-gemini35-flash-builder-1', 'mini-antigravity-gemini35-flash-builder-2', 'mini-antigravity-gemini35-flash-high', ...}
+_ TestLogicalOperatorFixtureSchemaValidation.test_fixture_validates_against_schema _
+harness/tests/test_logical_operator_schema.py:313: in test_fixture_validates_against_schema
+    jsonschema.validate(instance=lo, schema=schema)
+.venv/lib/python3.14/site-packages/jsonschema/validators.py:1332: in validate
+    raise error
+E   jsonschema.exceptions.ValidationError: 'artifact_curation', 'scientific_evidence' do not match any of the regexes: '^(architecture_reasoning|code_impl|root_cause_debug|test_generation|test_execution|research_synthesis|academic_critique|browser_use|gui_use|long_context|multi_agent_coordination|speed|data_extraction)$'
+E   
+E   Failed validating 'additionalProperties' in schema['properties']['logical_operators']['additionalProperties']['properties']['required_capabilities']:
+E       {'type': 'object',
+E        'description': 'Minimum capability_profile scores required for actor '
+E                       'assignment.',
+E        'additionalProperties': False,
+E        'patternProperties': {'^(architecture_reasoning|code_impl|root_cause_debug|test_generation|test_execution|research_synthesis|academic_critique|browser_use|gui_use|long_context|multi_agent_coordination|speed|data_extraction)$': {'type': 'integer',
+E                                                                                                                                                                                                                                            'minimum': 0,
+E                                                                                                                                                                                                                                            'maximum': 5}}}
+E   
+E   On instance['logical_operators']['ScientificWorkflowEvolver']['required_capabilities']:
+E       {'scientific_evidence': 3, 'artifact_curation': 2}
+=========================== short test summary info ============================
+FAILED harness/tests/test_logical_operator_schema.py::TestLogicalOperatorFixture::test_each_operator_has_primary_role
+FAILED harness/tests/test_logical_operator_schema.py::TestBindingFixture::test_all_binding_candidates_exist_in_actor_registry
+FAILED harness/tests/test_logical_operator_schema.py::TestLogicalOperatorFixtureSchemaValidation::test_fixture_validates_against_schema
+3 failed, 99 passed in 0.17s

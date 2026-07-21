@@ -1,0 +1,1 @@
+{"schema": "autosci_submission_profile.v1", "venue": "ICLR", "evidence_ids": ["venue-profile:iclr"], "requirements": {"submission_mode": "double_blind", "anonymous": true, "page_limit": 8, "min_font_size": 10}}

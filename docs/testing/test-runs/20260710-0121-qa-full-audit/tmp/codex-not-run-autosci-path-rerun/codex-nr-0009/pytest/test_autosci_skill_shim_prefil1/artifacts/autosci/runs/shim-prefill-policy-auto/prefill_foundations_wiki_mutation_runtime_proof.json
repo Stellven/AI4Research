@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-07-10T19:22:07Z",
+  "proofs": [
+    {
+      "categories": [
+        "wiki_mutation_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed approved wiki mutation evidence for AutoSci `prefill` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-prefill-policy-auto/research_memory_update.prefill.json",
+        "artifacts/autosci/workspace/wiki/foundations/foundation-lora.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "prefill",
+      "production_ready": true,
+      "proof_id": "runtime:prefill:wiki-writeback:20260710T192207Z",
+      "provenance": {
+        "artifact_kind": "wiki_foundation_prefill",
+        "captured_at": "2026-07-10T19:22:07Z",
+        "command": "prefill_foundations:approved_mutation",
+        "source": "wiki_writeback"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

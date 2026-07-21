@@ -1,0 +1,11 @@
+{
+  "schema_version": "solar.operator_registry.v1",
+  "lines": {
+    "test_line": {
+      "primary": "scripts/test_op.py",
+      "fallback": [],
+      "schedule": "daily",
+      "output_dir": "reports/test/"
+    }
+  }
+}

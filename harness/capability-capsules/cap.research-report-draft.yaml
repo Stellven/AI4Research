@@ -1,0 +1,94 @@
+capability_capsule_id: cap.research-report-draft
+capsule_kind: capability
+metadata:
+  name: Scientific Report Draft
+  description: Draft scientific reports or paper sections from typed evidence while keeping unsupported claims explicit.
+applicability:
+  task_types:
+    - scientific-research
+    - report-drafting
+  positive_signals:
+    - draft report
+    - write paper section
+    - compile evidence narrative
+  negative_signals:
+    - run experiment
+    - generate idea
+contract:
+  inputs:
+    required:
+      - name: report_plan_or_evidence_refs
+        description: Report plan or typed evidence artifacts used for drafting.
+    optional:
+      - name: style_constraints
+        description: Audience, venue, or formatting guidance.
+  outputs:
+    required:
+      - name: scientific_report
+        schema_ref: schemas/evidence/scientific_report.v1.schema.json
+    optional:
+      - name: draft_files
+        description: Markdown, LaTeX, or section files emitted as artifacts.
+  preconditions:
+    - check: evidence_available
+      description: Drafting has typed evidence or report plan input.
+  postconditions:
+    - check: draft_evidence_linked
+      description: Report sections and findings cite evidence ids.
+  invariants:
+    - Unsupported claims remain explicit and are not presented as successful findings.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      purpose: Planned report evidence.
+    - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      purpose: Verdict-backed claims.
+  produces:
+    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      purpose: Draft report evidence.
+  compatible_with:
+    - cap.research-publication-produce
+    - cap.research-memory-update
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+    - typed scientific evidence and report plans
+    - schemas/evidence/scientific_report.v1.schema.json
+  write:
+    - artifacts/scientific/scientific_report/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - none by default
+  cost:
+    - bounded drafting cost
+  risk:
+    - narrative generation can overstate evidence without verifier checks
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.report_draft
+      - autosci.paper_draft
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/scientific_report.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against scientific_report.v1.schema.json.
+    - Confirm sections cite evidence ids and unsupported_claims is explicit.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - Fixture draft emits valid scientific_report.v1 evidence.
+    - Claims without evidence appear in unsupported_claims or limitations.
+operator_compatibility:
+  preferred:
+    - autosci-report-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

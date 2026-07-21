@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-07-10T19:22:38Z",
+  "proofs": [
+    {
+      "categories": [
+        "external_runtime_evidence",
+        "approval_boundary_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Verified approval/runtime evidence for AutoSci `exp-eval` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-exp-eval-writeback/claim_verdict_writeback.json",
+        "artifacts/autosci/runs/shim-exp-eval-writeback/verify_claim_approval_contract.json",
+        "allowlist-claim-writeback.json",
+        "runtime-claim-writeback.json",
+        "artifacts/autosci/runs/shim-exp-eval-writeback/verify_claim_local_mutation_runtime_evidence.json",
+        "before-claim-writeback.md",
+        "artifacts/autosci/workspace/wiki/ideas/claim-skillgen-write.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+        "artifacts/autosci/workspace/wiki/graph/open_questions.md"
+      ],
+      "native_skill": "exp-eval",
+      "production_ready": true,
+      "proof_id": "runtime:exp-eval:approval-contract:20260710T192238Z",
+      "provenance": {
+        "artifact_kind": "claim_verdict_writeback",
+        "captured_at": "2026-07-10T19:22:38Z",
+        "command": "verify_claim:approved_mutation",
+        "source": "approval_contract"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

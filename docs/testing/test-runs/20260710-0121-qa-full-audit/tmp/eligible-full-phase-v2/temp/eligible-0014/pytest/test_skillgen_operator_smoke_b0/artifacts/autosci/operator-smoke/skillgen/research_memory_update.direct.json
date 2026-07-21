@@ -1,0 +1,39 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/operator-smoke/skillgen/research_memory_update.direct.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+  },
+  "limitations": [
+    "Fixture proposes a memory update; it does not mutate wiki state."
+  ],
+  "node_id": "node-update-memory",
+  "outputs": {
+    "changes": [
+      {
+        "confidence": 0.9,
+        "entity_id": "paper-skillgen-operator-smoke-paper",
+        "entity_type": "paper",
+        "evidence_ids": [
+          "paper-skillgen-operator-smoke-paper"
+        ],
+        "operation": "propose",
+        "path": "knowledge/research/papers/paper-skillgen-operator-smoke-paper.md",
+        "summary": "Propose recording normalized metadata for SKILLGEN: Verified Inference-Time Agent Skill Synthesis."
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T14:05:06Z"
+  },
+  "schema": "research_memory_update.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-update_memory"
+}

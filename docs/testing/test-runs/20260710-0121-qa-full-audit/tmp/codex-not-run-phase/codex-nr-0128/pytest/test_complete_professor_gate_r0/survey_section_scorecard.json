@@ -1,0 +1,327 @@
+{
+  "ok": true,
+  "section_count": 32,
+  "needs_rewrite_count": 32,
+  "top_issues": [
+    {
+      "section_id": "ch01/sec01",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch01/sec02",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch01/sec03",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch01/sec04",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch02/sec01",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch02/sec02",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch02/sec03",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch02/sec04",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch03/sec01",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch03/sec02",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch03/sec03",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch03/sec04",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch04/sec01",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch04/sec02",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch04/sec03",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch04/sec04",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch05/sec01",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch05/sec02",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch05/sec03",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    },
+    {
+      "section_id": "ch05/sec04",
+      "status": "needs_rewrite",
+      "risk_score": 25,
+      "p0_count": 0,
+      "p1_count": 1,
+      "p2_count": 0,
+      "issues": [
+        {
+          "severity": "P1",
+          "code": "section_structure_shallow",
+          "detail": "1<6"
+        }
+      ],
+      "rewrite_recommended": true
+    }
+  ]
+}

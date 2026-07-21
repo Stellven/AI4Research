@@ -40,7 +40,7 @@ def _render_html(runtime_root: Path, kind: str) -> dict[str, object]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runtime-root", default="/Users/lisihao/.solar/harness")
+    parser.add_argument("--runtime-root", default="~/.solar/harness")
     args = parser.parse_args()
 
     runtime_root = Path(args.runtime_root)

@@ -1,0 +1,127 @@
+...FFF.........FF.                                                       [100%]
+=================================== FAILURES ===================================
+______ test_social_capture_output_contains_source_timestamp_and_artifacts ______
+
+tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-330/test_social_capture_output_con0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10af3fd10>
+
+    def test_social_capture_output_contains_source_timestamp_and_artifacts(tmp_path, monkeypatch):
+        sys.path.insert(0, str(HARNESS / "lib"))
+        from social_browser_backend_x.hard_blocker_guard import CallableResolver, HardBlockerGuard
+        from social_browser_backend_x.pipeline import AccountConfig, Pipeline
+    
+        monkeypatch.setenv("BROWSER_AGENT_MOCK_MODE", "1")
+        socket_path = tmp_path / "thunderomlx.socket"
+        socket_path.write_text("fixture", encoding="utf-8")
+        pipeline = Pipeline(
+            _social_conn(),
+            guard=HardBlockerGuard(resolver=CallableResolver(lambda: False), mock_mode_probe=lambda: True),
+            thunderomlx_socket=socket_path,
+            artifact_root=tmp_path / "artifacts",
+        )
+        result = pipeline.run(
+            accounts=[AccountConfig(handle="karpathy", profile_url="https://x.com/karpathy")],
+            requested_backend="auto",
+        )
+        assert result.posts_stored == 1
+        scan = result.scans[0]
+        assert scan.post_record is not None
+        raw_path = Path(scan.knowledge_raw_path or "")
+        queue_path = Path(scan.extract_queue_path or "")
+        assert raw_path.is_file() and queue_path.is_file()
+        raw = json.loads(raw_path.read_text(encoding="utf-8"))
+        queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    
+        # The atomic contract requires one captured output to bind provenance,
+        # timestamp, and concrete capture artifacts. These assertions expose the
+        # current split/omission if the sidecars do not carry them.
+>       assert raw["source_url"] == scan.post_record.post_url
+               ^^^^^^^^^^^^^^^^^
+E       KeyError: 'source_url'
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:193: KeyError
+___ test_office_supported_and_unsupported_requests_have_executable_contract ____
+
+    def test_office_supported_and_unsupported_requests_have_executable_contract():
+        skill_dir = LOCKED_ROOT / "skills" / "office"
+        implementations = [
+            path
+            for path in skill_dir.rglob("*")
+            if path.is_file() and path.name != "SKILL.md" and path.suffix in {".py", ".sh", ".js", ".ts"}
+        ]
+>       assert implementations, "office ships only prose; no executable accepts/rejects requests"
+E       AssertionError: office ships only prose; no executable accepts/rejects requests
+E       assert []
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:205: AssertionError
+________ test_office_missing_provider_emits_structured_failure_contract ________
+
+    def test_office_missing_provider_emits_structured_failure_contract():
+        skill_dir = LOCKED_ROOT / "skills" / "office"
+        implementations = [
+            path
+            for path in skill_dir.rglob("*")
+            if path.is_file() and path.suffix in {".py", ".sh", ".js", ".ts"}
+        ]
+>       assert implementations, "office has no executable provider boundary to emit failed/inconclusive state"
+E       AssertionError: office has no executable provider boundary to emit failed/inconclusive state
+E       assert []
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:215: AssertionError
+___________ test_codex_operator_missing_cli_emits_structured_failure ___________
+
+tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-330/test_codex_operator_missing_cl0')
+
+    def test_codex_operator_missing_cli_emits_structured_failure(tmp_path):
+        operator = HARNESS / "tools" / "codex_operator.py"
+        env = {
+            "HOME": str(tmp_path / "home"),
+            "HARNESS_DIR": str(tmp_path / "harness"),
+            "TASK_DIR": str(tmp_path / "task"),
+            "CODEX_WORKDIR": str(tmp_path),
+            "PATH": str(tmp_path / "empty-bin"),
+            "CODEX_OPERATOR_TIMEOUT_SECONDS": "5",
+        }
+        result = _run([sys.executable, str(operator)], env=env, input_text="Perform fixture audit")
+        combined = result.stdout + result.stderr
+    
+        assert result.returncode != 0
+>       assert "Traceback" not in combined
+E       assert 'Traceback' not in "codex_opera...y: 'codex'\n"
+E         
+E         'Traceback' is contained here:
+E           dispatch>
+E           Traceback (most recent call last):
+E         ? +++++++++
+E             File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tools/codex_operator.py", line 237, in <module>
+E               raise SystemExit(main())...
+E         
+E         ...Full output truncated (20 lines hidden), use '-vv' to show
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:427: AssertionError
+_____ test_browser_automation_unavailable_is_structured_and_nonfabricating _____
+
+    def test_browser_automation_unavailable_is_structured_and_nonfabricating():
+        setup_path = LOCKED_ROOT / "skills" / "browser-automation" / "setup.json"
+        setup = json.loads(setup_path.read_text(encoding="utf-8"))
+        skill_dir = setup_path.parent
+        runtime_files = [
+            path
+            for path in skill_dir.rglob("*")
+            if path.is_file() and path.suffix in {".py", ".sh", ".js", ".ts", ".mjs", ".cjs"}
+        ]
+    
+        assert setup["setupComplete"] is False
+        assert all(not details.get("installed", details.get("configured", False)) for details in setup["prerequisites"].values())
+>       assert runtime_files, "setup reports unavailable, but the mapped skill ships no executable that can emit runtime failure evidence"
+E       AssertionError: setup reports unavailable, but the mapped skill ships no executable that can emit runtime failure evidence
+E       assert []
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py:447: AssertionError
+=========================== short test summary info ============================
+FAILED docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py::test_social_capture_output_contains_source_timestamp_and_artifacts
+FAILED docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py::test_office_supported_and_unsupported_requests_have_executable_contract
+FAILED docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py::test_office_missing_provider_emits_structured_failure_contract
+FAILED docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py::test_codex_operator_missing_cli_emits_structured_failure
+FAILED docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_app_browser_provider_contracts.py::test_browser_automation_unavailable_is_structured_and_nonfabricating
+5 failed, 13 passed in 2.11s

@@ -1,0 +1,1 @@
+{"sprint_id": "sid", "nodes": [{"id": "R8", "goal": "DeepResearch citation check", "status": "reviewing", "required_capabilities": ["research.citation_verify"]}]}

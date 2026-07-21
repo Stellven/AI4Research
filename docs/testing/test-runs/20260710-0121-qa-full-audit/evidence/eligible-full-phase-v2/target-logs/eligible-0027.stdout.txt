@@ -1,0 +1,19 @@
+F...                                                                     [100%]
+=================================== FAILURES ===================================
+____________________ TestScaffoldDirs.test_meta_dir_exists _____________________
+harness/tests/data_plane/test_source_manifest.py:47: in test_meta_dir_exists
+    assert (Path.home() / "Knowledge" / "_meta").exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = ((PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home') / 'Knowledge') / '_meta').exists
+E    +      where PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home') = home()
+E    +        where home = Path.home
+=============================== warnings summary ===============================
+harness/tests/data_plane/test_source_manifest.py: 12 warnings
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/source_manifest.py:62: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED harness/tests/data_plane/test_source_manifest.py::TestScaffoldDirs::test_meta_dir_exists
+1 failed, 3 passed, 11 deselected, 12 warnings in 0.04s

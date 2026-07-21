@@ -1,0 +1,6 @@
+SKILLGEN: Verified Inference-Time Agent Skill Synthesis
+arXiv: 2601.00001
+Abstract
+This PDF describes inference-time skill synthesis with verifier gates and measurable gains.
+1. Introduction
+The pipeline trains reusable agent skills and evaluates repairs, regressions, and net gain.

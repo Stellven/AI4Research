@@ -1,0 +1,54 @@
+{
+  "artifacts": [],
+  "inputs": {
+    "approval_ref": "approval-shim-idea-gate",
+    "gate": "G_HUMAN_IDEA_ACCEPTANCE"
+  },
+  "limitations": [
+    "Approval ref was supplied explicitly; no external side effect was executed by this gate."
+  ],
+  "node_id": "idea_acceptance_gate",
+  "outputs": {
+    "evolution": {
+      "approval_state": "approved",
+      "change_type": "gate",
+      "collected": {
+        "ambiguous_manuals_or_prompts": [],
+        "failed_nodes": [],
+        "gate_rejection_reasons": [],
+        "human_intervention_points": [
+          {
+            "description": "Approval ref `approval-shim-idea-gate` recorded for idea_acceptance_gate.",
+            "id": "idea_acceptance_gate"
+          }
+        ],
+        "insufficient_schemas": [],
+        "poor_operator_bindings": [],
+        "runtime_errors": []
+      },
+      "evidence_ids": [
+        "human-approval:approval-shim-idea-gate",
+        "idea_acceptance_gate"
+      ],
+      "expected_effect": "Allow the scientific lifecycle to advance past a human approval pause without losing auditability.",
+      "proposal_id": "idea_acceptance_gate-approval-shim-idea-gate",
+      "rationale": "Human approval `approval-shim-idea-gate` was recorded as scheduler-visible lifecycle state.",
+      "review": {
+        "application_state": "not_applied",
+        "approval_ref": "approval-shim-idea-gate",
+        "human_accept_reject_required": true,
+        "protected_core_edits_applied": false
+      },
+      "scope": "scientific research lifecycle human gate"
+    }
+  },
+  "provenance": {
+    "implementation_package": "harness.tools.run_scientific_lifecycle_smoke",
+    "operator_id": "human-approval-gate",
+    "timestamp": "2026-07-10T19:24:37Z"
+  },
+  "schema": "workflow_evolution.v1",
+  "sprint_id": "shim-research-human-gate-scheduler",
+  "status": "completed",
+  "task_id": "task-shim-research-human-gate-scheduler-idea_acceptance_gate"
+}

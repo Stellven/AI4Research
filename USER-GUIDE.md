@@ -2,170 +2,99 @@
 
 > Solar 是一个 AI-native execution fabric：让用户当老板，让 AI 组织自己完成软件工程。
 
-本指南面向公开仓库用户，和 README / install.sh / INSTALL-AGENT.md 保持一致。
+本指南是面向公开仓库用户的中文快速上手。完整、权威的安装文档是
+[`INSTALL.md`](INSTALL.md)；架构与设计见 [`README.md`](README.md)。
 
 ---
 
-## 1. Solar 是什么
+## 1. 安装位置
 
-Solar 当前由三层组成：
+Solar 安装为一个 Claude Code 内核覆盖层 + 一个运行时：
 
-| 层级 | 范围 | 安装位置 | 说明 |
-|---|---|---|---|
-| L1 Solar Core | `CLAUDE.md`, `rules/`, `skills/`, `agents/`, `hooks/`, `core/` | `~/.claude/` + `~/.solar/` | Claude/Codex-native 工作流内核。 |
-| L2 Solar Harness | `harness/` | `~/.solar/harness` + `~/.solar/bin/solar-harness` | 需求编译、Sprint 控制面、TaskGraph DAG、队列、租约、派发、评审。 |
-| L2 optional components | `mempalace/`, `codex-bridge/` when present | `~/.solar/mempalace`, `~/.solar/codex-bridge` | 语义记忆与 Codex 协同协议，按仓库内容复制。 |
-| Optional third-party skills | external repos | `~/.claude/skills/` | 可选增强。通过 `SKILLS-INSTALL.md` 安装，默认不自动装。 |
+- `~/.claude/solar/` — 内核资产（生成的 `SOLAR.md`、rules/hooks/agents），命名空间隔离、可干净卸载。安装器**不会整体覆盖**你的 `~/.claude/CLAUDE.md`：它只在一个 sentinel 标记块内编辑，卸载时干净移除。
+- `~/.solar/` — 运行时根目录（`install-receipt.json`、`config.env`、`.env`、`db/`、`bin/`，以及按所选组件的 `harness/`、`venv/`、`mempalace/` 等）。
 
 ---
 
 ## 2. 快速安装
 
 ```bash
-git clone https://github.com/lisihao/Solar.git ~/Solar
-cd ~/Solar
+git clone https://github.com/suraj-subrahmanyan/OpenSolar.git
+cd OpenSolar
 ./install.sh
 ```
 
-`install.sh` 会执行：
-
-1. 备份已有 `~/.claude/` 配置；
-2. 复制 Solar Core 到 `~/.claude/`；
-3. 创建 `~/.solar/`；
-4. 同步仓库 `harness/` 到 `~/.solar/harness/`；
-5. 创建 `~/.solar/bin/solar-harness`；
-6. 如果仓库存在 `mempalace/`、`codex-bridge/`，则复制到 `~/.solar/`；
-7. 运行 L1 + L2 自检。
-
-安装成功的典型结尾：
-
-```text
-Solar L1 + L2 安装完成
-```
-
----
-
-## 3. 给 AI Agent 的安装方式
-
-如果你希望 Claude、Codex、Cursor、Copilot 等 Agent 帮你安装，直接把下面的话交给它：
-
-```text
-Install Solar from https://github.com/lisihao/Solar using INSTALL-AGENT.md.
-Before each command, report purpose, command, and expected output.
-Do not use sudo/root. Stop on the first failure and show the exact output.
-After install, verify L1 + L2 and run ~/.solar/bin/solar-harness help.
-Do not install optional third-party skills unless I approve.
-```
-
-详细协议见：[`INSTALL-AGENT.md`](INSTALL-AGENT.md)。
-
----
-
-## 4. 安装后自检
+在终端里这是交互式安装（检测系统、解析组件选择、展示将要执行的操作并请你确认）。无人值守安装：
 
 ```bash
-test -f ~/.claude/CLAUDE.md && \
-test -d ~/.claude/rules && \
-test -d ~/.claude/skills && \
-test -d ~/.claude/agents && \
-test -d ~/.solar/harness && \
-test -x ~/.solar/harness/solar-harness.sh && \
-test -L ~/.solar/bin/solar-harness && \
-echo "Solar L1+L2 filesystem check PASS"
+./install.sh --yes --components kernel,harness
 ```
 
-Harness CLI 自检：
-
-```bash
-~/.solar/bin/solar-harness help
-```
-
-重新同步 Harness runtime：
-
-```bash
-cd ~/Solar
-./scripts/sync-harness-runtime.sh
-~/.solar/bin/solar-harness help
-```
+默认选择 `kernel` + `harness`，在有 `bun` 时附带 `core-runtime`；其余组件默认关闭、按需选择。组件、参数、安装布局、按 Agent 安装等完整内容见 [`INSTALL.md`](INSTALL.md)；组件清单见 [`docs/COMPONENTS.md`](docs/COMPONENTS.md)。
 
 ---
 
-## 5. 常用入口
+## 3. 验证安装
 
-| 入口 | 命令 / 文件 | 用途 |
-|---|---|---|
-| Solar Core | Claude Code 中输入 `solar` | 加载 Solar 工作流内核。 |
-| Harness CLI | `~/.solar/bin/solar-harness help` | 查看 Harness 命令。 |
-| Harness runtime | `~/.solar/harness/` | 本机运行目录。 |
-| Harness source | `~/Solar/harness/` | 仓库发布源。 |
-| Runtime sync | `~/Solar/scripts/sync-harness-runtime.sh` | 将仓库 Harness 同步到运行目录。 |
-| Agent install | `INSTALL-AGENT.md` | 给 AI Agent 的安装/部署/自检协议。 |
-| Optional skills | `SKILLS-INSTALL.md` | 可选第三方 skill packs 安装协议。 |
+```bash
+~/.solar/bin/solar doctor --json     # 期望 "verdict": "ok"
+claude                               # 首次打开时，批准一次性的 @~/.claude/solar/SOLAR.md 导入
+```
+
+Product Delivery harness 启动前先做确定性预检：
+
+```bash
+~/.solar/bin/solar-harness preflight
+~/.solar/bin/solar-harness start "$(pwd)"
+~/.solar/bin/solar-harness status
+```
+
+`solar-harness start` 需要 Bash 4+、`python3`、`tmux`、`jq` 和 `claude`
+CLI 在 `PATH` 上。`preflight` 和 `status` 只能证明安装、依赖、tmux 布局、
+coordinator/dispatch plumbing 等外围运行层；它们不会假装验证 live Claude。
+Claude pane 是否真的启动、是否通过 quota/auth、以及真实 delegation 结果，
+必须由 owner 在 Claude 可用后手动确认。
 
 ---
 
-## 6. Skills 与插件
+## 4. 生命周期
 
-### Solar-bundled skills
+所有生命周期操作通过 `~/.solar/bin/solar`：
 
-仓库中的 `skills/` 会在安装时复制到：
-
-```text
-~/.claude/skills/
+```bash
+solar doctor [--json]               # 健康 / 漂移检查
+solar update [安装参数]             # 按 receipt 记录的组件重新运行安装
+solar backup [--out FILE]           # 备份 config + secrets + receipt + db
+solar restore <archive>             # 从备份恢复
+solar components list               # 列出已安装组件
+solar uninstall [--yes] [--keep-data] [--dry-run]
 ```
 
-具体数量会随仓库变化，不要依赖固定数字。
+卸载详情见 [`docs/UNINSTALL.md`](docs/UNINSTALL.md)：receipt 驱动、无残留，`--keep-data` 保留数据库/配置/密钥。
 
-### Optional third-party skills
+---
 
-第三方 skills 是增强，不是基础安装必需项。
+## 5. 给 AI Agent 安装
 
-规则：
+如果你让 Claude、Codex、Cursor、Copilot 等 Agent 代为安装，要求它遵守协议：每条命令前报告 **目的 + 命令 + 预期输出**；不使用 `sudo`/root；首个失败即停止并展示原文；未经同意不安装第三方 skills；最后用 `~/.solar/bin/solar doctor --json` 验证。完整协议见 [`INSTALL.md`](INSTALL.md) 的 *Installing via an AI coding agent* 一节。
 
-- 不默认安装第三方仓库；
-- 安装前必须问用户；
-- 只在 `~/.claude/skills/` 下操作；
-- 不删除用户已有 skills；
-- 失败要报告，不假装成功。
+---
 
-见：[`SKILLS-INSTALL.md`](SKILLS-INSTALL.md)。
+## 6. Skills
 
-### Harness plugins
-
-Harness 包含插件框架。插件必须位于：
-
-```text
-harness/plugins/<id>/manifest.yaml
-```
-
-并通过插件校验后，才应视为可用。公开仓库不默认承诺启用第三方插件。
+仓库自带 skills 由 `skills-*` 组件安装到 `~/.claude/skills/`。第三方 skill packs 是可选增强：单独安装、需先征得同意、只在 `~/.claude/skills/` 下操作、不覆盖你已有的 skills。
 
 ---
 
 ## 7. 可选 API keys
 
-安装不需要 API key。需要 API-backed 功能时：
-
-```bash
-cd ~/Solar
-cp .env.template .env
-# 编辑 .env，填入本机需要的 key
-```
-
-不要提交 `.env`。
+安装不需要 API key。需要 API-backed 功能时，把 `.env.template` 复制为本机 `.env` 并填入 key（不要提交 `.env`）。
 
 ---
 
-## 8. Runtime 边界
+## 8. Windows
 
-| 类型 | 路径 | 是否应提交 |
-|---|---|---|
-| 仓库发布源 | `~/Solar/` | 是 |
-| Harness 发布源 | `~/Solar/harness/` | 是 |
-| 本机 runtime | `~/.solar/harness/` | 否 |
-| runtime state | `run/`, `state/`, `logs/`, `cache/`, `vendor/`, `venvs/` | 否 |
-| local env | `.env` | 否 |
-| env template | `.env.template` | 是 |
+原生（非 WSL）Windows 不在支持范围内；WSL2 是 Windows 的运行路径。从 PowerShell 运行 `install.ps1`，它会按需安装 WSL2（一次管理员批准 + 一次重启），再在 WSL 内运行 Linux 安装器并透传参数。详见 [`docs/WINDOWS.md`](docs/WINDOWS.md)。
 
 ---
 
@@ -198,11 +127,11 @@ Solar 逐步优化自己
 
 | 问题 | 检查 | 处理 |
 |---|---|---|
-| `solar` 在 Claude Code 中没反应 | `test -f ~/.claude/CLAUDE.md` | 重新运行 `cd ~/Solar && ./install.sh`，然后重启 Claude Code。 |
-| `solar-harness` 不存在 | `ls -la ~/.solar/bin/solar-harness` | 运行 `cd ~/Solar && ./scripts/sync-harness-runtime.sh`。 |
-| Harness CLI 报错 | `bash -n ~/.solar/harness/solar-harness.sh` | 把完整输出提交 issue。 |
-| 缺少第三方 skill | `ls ~/.claude/skills` | 这是可选增强；按 `SKILLS-INSTALL.md` 安装。 |
-| API 功能不可用 | `test -f ~/Solar/.env` | 从 `.env.template` 复制并在本机填写 key。 |
+| `solar` 在 Claude Code 中没反应 | 打开 `claude` | 批准一次性的 `@~/.claude/solar/SOLAR.md` 导入提示 |
+| 组件被跳过（`core-runtime` / `skills-browser`） | `command -v bun` / `command -v cargo` | 安装对应依赖后用 `--components` 重新选择 |
+| 组件提示需要某个配置值 | — | 用 `--set KEY=VALUE`（见该组件的 required vars） |
+| 想先看将执行的操作 | — | `./install.sh --dry-run --components ...`（不写任何文件） |
+| 全面健康检查 | — | `~/.solar/bin/solar doctor --json` |
 
 ---
 
@@ -215,6 +144,5 @@ Solar commit:
 Command:
 Expected:
 Actual output:
-Did INSTALL-AGENT.md pass? yes/no
-Did ~/.solar/bin/solar-harness help pass? yes/no
+solar doctor --json verdict:
 ```

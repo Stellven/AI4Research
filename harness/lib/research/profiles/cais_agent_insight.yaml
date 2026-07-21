@@ -1,0 +1,54 @@
+# cais-agent-insight profile
+# Declares must-answer questions, required signal clusters, required outputs,
+# forbidden outputs, and strict defaults for the DeepDive Insight Runtime v2.
+
+profile_id: cais-agent-insight
+mode: insight
+version: "1.0.0"
+
+strict_defaults:
+  strict: true
+  run_chief_editor: true
+  run_chief_insight_editor: true
+  require_figures: true
+  forbid_generic_survey_toc: true
+
+must_answer_questions:
+  - "What is the central thesis of this DeepDive?"
+  - "Which concrete signals and evidence support, weaken, or complicate the thesis?"
+  - "What are the key technical, product, strategic, or ecosystem implications?"
+  - "What actions, designs, experiments, roadmap items, schemas, operators, or quality gates should follow when applicable?"
+  - "What should be watched next, with drivers, leading indicators, risks, and falsification conditions?"
+
+required_signal_clusters:
+  - conference_signals
+  - paper_evidence_patterns
+  - challenge_extraction
+  - solar_absorption_mapping
+
+required_outputs:
+  - signal_map.json
+  - action_mapping.json
+  - challenge_or_implication_matrix.json
+  - prediction_packets.jsonl
+  - section_render_cards/*.json
+  - figures/*.svg
+  - survey_insight_quality.json
+  - chief_insight_review.json
+
+forbidden_outputs:
+  - generic survey taxonomy as final report structure
+  - machine labels in human-facing report body
+  - unsupported claims in final conclusions
+  - free Markdown wrapper without SectionRenderCard and FigureSpec source
+
+required_gates:
+  - GenericSurveyTOCGate
+  - TemplateRepetitionGate
+  - MachineLabelLeakGate
+  - SolarActionabilityGate
+  - CAISCoverageGate
+  - FigureRequiredGate
+  - CitationVisibilityGate
+  - PredictionPacketGate
+  - UserQuestionFitnessGate

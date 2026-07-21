@@ -1,0 +1,181 @@
+{
+  "action": "evaluate_ideas",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/idea_evaluate/task-job-scientific-lifecycle-config-drift-test-idea_evaluate/novelty_final_acceptance_boundary.json",
+        "type": "novelty_final_acceptance_boundary_json"
+      },
+      {
+        "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/idea_evaluate/task-job-scientific-lifecycle-config-drift-test-idea_evaluate/idea_evaluation.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "allow_network_fetch": false,
+      "claims_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/claim_extract/task-job-scientific-lifecycle-config-drift-test-claim_extract/research_claims.json",
+      "ideas_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/idea_generate/task-job-scientific-lifecycle-config-drift-test-idea_generate/idea_candidate.json",
+      "method_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/method_extract/task-job-scientific-lifecycle-config-drift-test-method_extract/research_method.json",
+      "paper_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/paper_ingest/task-job-scientific-lifecycle-config-drift-test-paper_ingest/research_paper.json",
+      "paper_id": "paper-job-scientific-lifecycle-config-drift-test",
+      "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+      "smoke_mode": true
+    },
+    "limitations": [
+      "Fixture evaluation uses local evidence and does not update idea status directly.",
+      "Novelty final acceptance boundary is incomplete for at least one evaluated idea."
+    ],
+    "node_id": "idea_evaluate",
+    "outputs": {
+      "evaluations": [
+        {
+          "closest_prior_work": [],
+          "duplicate_status": "new",
+          "evidence_ids": [
+            "idea-001",
+            "claim-001",
+            "method-001",
+            "task-job-scientific-lifecycle-config-drift-test-paper_ingest",
+            "task-job-scientific-lifecycle-config-drift-test-claim_extract",
+            "claim-002",
+            "task-job-scientific-lifecycle-config-drift-test-method_extract"
+          ],
+          "external_novelty": {
+            "status": "N/A"
+          },
+          "external_source_count": "N/A",
+          "failed_overlap": "",
+          "feasibility": 0.76,
+          "feasibility_rationale": "The required inputs already exist as Solar Evidence ABI artifacts.",
+          "final_acceptance_boundary": {
+            "blocking_reasons": [
+              "external_novelty status is `N/A`, not `completed`",
+              "external_novelty provenance status is `missing`, not `passed`",
+              "review_llm status is `N/A`, not `completed`"
+            ],
+            "evidence_ids": [
+              "idea-001",
+              "claim-001",
+              "method-001",
+              "task-job-scientific-lifecycle-config-drift-test-paper_ingest",
+              "task-job-scientific-lifecycle-config-drift-test-claim_extract",
+              "claim-002",
+              "task-job-scientific-lifecycle-config-drift-test-method_extract"
+            ],
+            "external_novelty_provenance_status": "missing",
+            "external_novelty_status": "N/A",
+            "external_source_count": "N/A",
+            "final_acceptance_ready": false,
+            "idea_id": "idea-001",
+            "limitations": [
+              "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+            ],
+            "novelty": 0.68,
+            "novelty_score": 4,
+            "provider_statuses": [],
+            "recommendation": "advance",
+            "review_available": false,
+            "review_invocation_mode": "N/A",
+            "review_llm_status": "N/A",
+            "review_mode": "N/A",
+            "schema": "autosci_novelty_final_acceptance_boundary.v1",
+            "status": "novelty_acceptance_incomplete"
+          },
+          "idea_id": "idea-001",
+          "local_source_count": "N/A",
+          "novelty": 0.68,
+          "novelty_label": "fixture",
+          "novelty_rationale": "The idea combines claim, method, and code evidence at a shared artifact grain.",
+          "recommendation": "advance",
+          "review_available": false,
+          "review_llm": {
+            "status": "N/A"
+          },
+          "review_mode": "N/A",
+          "review_score": "N/A",
+          "risks": [
+            "External novelty is unverified because fixture mode does not search live literature."
+          ],
+          "source_count": "N/A",
+          "source_mode": "fixture"
+        },
+        {
+          "duplicate_status": "duplicate",
+          "evidence_ids": [
+            "idea-duplicate-001",
+            "claim-001",
+            "method-001",
+            "task-job-scientific-lifecycle-config-drift-test-paper_ingest",
+            "task-job-scientific-lifecycle-config-drift-test-claim_extract",
+            "claim-001",
+            "claim-002",
+            "task-job-scientific-lifecycle-config-drift-test-method_extract",
+            "method-001"
+          ],
+          "feasibility": 0.8,
+          "feasibility_rationale": "It is easy to run but does not add meaningful evidence.",
+          "final_acceptance_boundary": {
+            "blocking_reasons": [
+              "external_novelty status is `missing`, not `completed`",
+              "external_novelty provenance status is `missing`, not `passed`",
+              "review_llm status is `missing`, not `completed`"
+            ],
+            "evidence_ids": [
+              "idea-duplicate-001",
+              "claim-001",
+              "method-001",
+              "task-job-scientific-lifecycle-config-drift-test-paper_ingest",
+              "task-job-scientific-lifecycle-config-drift-test-claim_extract",
+              "claim-002",
+              "task-job-scientific-lifecycle-config-drift-test-method_extract"
+            ],
+            "external_novelty_provenance_status": "missing",
+            "external_novelty_status": "missing",
+            "external_source_count": "N/A",
+            "final_acceptance_ready": false,
+            "idea_id": "idea-duplicate-001",
+            "limitations": [
+              "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+            ],
+            "novelty": 0.15,
+            "novelty_score": 2,
+            "provider_statuses": [],
+            "recommendation": "reject",
+            "review_available": false,
+            "review_invocation_mode": "N/A",
+            "review_llm_status": "missing",
+            "review_mode": "N/A",
+            "schema": "autosci_novelty_final_acceptance_boundary.v1",
+            "status": "novelty_acceptance_incomplete"
+          },
+          "idea_id": "idea-duplicate-001",
+          "novelty": 0.15,
+          "novelty_rationale": "The idea duplicates known fixture validation rather than adding a new research question.",
+          "recommendation": "reject",
+          "risks": [
+            "Marked duplicate of an existing fixture smoke path."
+          ],
+          "source_mode": "fixture"
+        }
+      ]
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T14:05:46Z"
+    },
+    "schema": "idea_evaluation.v1",
+    "sprint_id": "job-scientific-lifecycle-config-drift-test",
+    "status": "completed",
+    "task_id": "task-job-scientific-lifecycle-config-drift-test-idea_evaluate"
+  },
+  "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/idea_evaluate/task-job-scientific-lifecycle-config-drift-test-idea_evaluate/evidence.jsonl",
+  "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/idea_evaluate/task-job-scientific-lifecycle-config-drift-test-idea_evaluate/idea_evaluation.json",
+  "ok": true,
+  "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/idea_evaluate/task-job-scientific-lifecycle-config-drift-test-idea_evaluate/evaluate_ideas.result.json",
+  "schema": "idea_evaluation.v1",
+  "sidecar_evidence_paths": [
+    "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-config-drift-test/idea_evaluate/task-job-scientific-lifecycle-config-drift-test-idea_evaluate/research_memory_update.json"
+  ],
+  "status": "completed"
+}

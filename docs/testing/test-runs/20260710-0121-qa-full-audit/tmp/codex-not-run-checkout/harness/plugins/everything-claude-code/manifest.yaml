@@ -1,0 +1,56 @@
+---
+id: everything-claude-code
+name: "Everything Claude Code"
+version: "1.0.0"
+description: "Vendored Everything Claude Code repository registered as a safe read-only Solar capability provider. Hooks/commands are not blindly installed; Solar consumes audited contexts, agents, commands, rules and MCP metadata through allowlisted reads."
+status: enabled
+
+write_scope:
+  - "state/everything-claude-code"
+  - "reports/everything-claude-code"
+
+read_scope:
+  - "vendor/everything-claude-code"
+  - "reports/everything-claude-code-audit-20260508.md"
+
+capabilities:
+  - "agent.inventory"
+  - "command.catalog"
+  - "rules.catalog"
+  - "mcp.catalog"
+  - "context.templates"
+
+commands:
+  - "python3 lib/everything_claude_code_adapter.py"
+  - "solar-harness integrations status"
+
+background_safety:
+  mode: bounded
+  idle_only: false
+  rate_limit: "read-only"
+  max_runtime_s: 120
+  max_memory_mb: 512
+
+eval_packs:
+  - "tests/plugins/test-s4-extension-framework.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable everything-claude-code"
+
+integration_level: basic_usable
+
+entry: "vendor/everything-claude-code/agent.yaml"
+
+events:
+  - "ecc.inventory_synced"
+  - "ecc.catalog_queried"
+
+depends_on: []
+
+tags:
+  - "agents"
+  - "commands"
+  - "mcp"
+  - "vendor"

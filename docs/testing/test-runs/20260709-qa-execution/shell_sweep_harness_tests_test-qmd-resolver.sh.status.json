@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-qmd-resolver.sh",
+  "source": "harness/tests/test-qmd-resolver.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-qmd-resolver.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.012,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-e5_419f3"
+}

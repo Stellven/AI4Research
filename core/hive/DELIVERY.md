@@ -7,7 +7,7 @@
 | **项目名称** | HIVE Phase 2: 节点发现与通信 |
 | **交付日期** | 2026-02-04 |
 | **实现者** | Claude Sonnet 4.5 (1M context) |
-| **监护人** | sihaoli |
+| **监护人** | owner |
 | **代码库** | ~/Solar/core/hive |
 
 ## 交付清单

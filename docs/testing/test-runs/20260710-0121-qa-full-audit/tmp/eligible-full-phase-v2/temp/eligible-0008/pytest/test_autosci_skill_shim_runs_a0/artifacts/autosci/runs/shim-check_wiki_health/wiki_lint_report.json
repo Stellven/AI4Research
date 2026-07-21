@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/lint.py",
+    "--wiki-root",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_runs_a0/artifacts/autosci/workspace/wiki"
+  ],
+  "edge_count": 0,
+  "issue_counts": {
+    "error": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "issues": [],
+  "ok": true,
+  "page_count": 0,
+  "returncode": 0,
+  "schema": "autosci_wiki_lint_cli.v1",
+  "status": "completed",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_runs_a0/artifacts/autosci/workspace/wiki"
+}

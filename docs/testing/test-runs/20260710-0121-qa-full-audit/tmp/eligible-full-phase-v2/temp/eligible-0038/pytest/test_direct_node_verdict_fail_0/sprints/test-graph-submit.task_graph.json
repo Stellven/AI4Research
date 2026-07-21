@@ -1,0 +1,88 @@
+{
+  "sprint_id": "test-graph-submit",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "Test goal",
+      "depends_on": [],
+      "write_scope": [
+        "/tmp/test"
+      ],
+      "required_skills": [
+        "bash"
+      ],
+      "acceptance": [
+        "test acceptance"
+      ],
+      "status": "failed_review",
+      "max_repair_attempts": 1,
+      "repair_attempts": 1,
+      "repair_context": {
+        "attempt": 1,
+        "max_attempts": 1,
+        "verdict": "FAIL",
+        "summary": "Artifact omitted package manifests.",
+        "failed_conditions": [
+          "ACC-003"
+        ],
+        "errors": [
+          {
+            "cond": "ACC-003",
+            "severity": "high",
+            "evidence": "package.json exists but was reported absent",
+            "fix_hint": "Correct the manifest inventory."
+          }
+        ],
+        "archived_sidecars": {
+          "handoff_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0038/pytest/test_direct_node_verdict_fail_0/sprints/test-graph-submit.N1-handoff.repair1.20260710T140632Z.md",
+          "eval_json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0038/pytest/test_direct_node_verdict_fail_0/sprints/test-graph-submit.N1-eval.repair1.20260710T140632Z.json",
+          "eval_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0038/pytest/test_direct_node_verdict_fail_0/sprints/test-graph-submit.N1-eval.repair1.20260710T140632Z.md"
+        },
+        "created_at": "2026-07-10T14:06:32Z"
+      },
+      "repair_history": [
+        {
+          "attempt": 1,
+          "max_attempts": 1,
+          "verdict": "FAIL",
+          "summary": "Artifact omitted package manifests.",
+          "failed_conditions": [
+            "ACC-003"
+          ],
+          "errors": [
+            {
+              "cond": "ACC-003",
+              "severity": "high",
+              "evidence": "package.json exists but was reported absent",
+              "fix_hint": "Correct the manifest inventory."
+            }
+          ],
+          "archived_sidecars": {
+            "handoff_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0038/pytest/test_direct_node_verdict_fail_0/sprints/test-graph-submit.N1-handoff.repair1.20260710T140632Z.md",
+            "eval_json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0038/pytest/test_direct_node_verdict_fail_0/sprints/test-graph-submit.N1-eval.repair1.20260710T140632Z.json",
+            "eval_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0038/pytest/test_direct_node_verdict_fail_0/sprints/test-graph-submit.N1-eval.repair1.20260710T140632Z.md"
+          },
+          "created_at": "2026-07-10T14:06:32Z"
+        }
+      ],
+      "updated_at": "2026-07-10T14:06:32Z"
+    },
+    {
+      "id": "N2",
+      "goal": "Test goal 2",
+      "depends_on": [
+        "N1"
+      ],
+      "write_scope": [
+        "/tmp/test2"
+      ],
+      "required_skills": [
+        "bash"
+      ],
+      "acceptance": [
+        "test acceptance 2"
+      ],
+      "status": "pending"
+    }
+  ]
+}

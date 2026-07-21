@@ -19,7 +19,7 @@
 #
 # Thread safety: mkdir-based lock prevents torn writes.
 
-HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 _EVENTS_DIR="${_EVENTS_DIR:-${HARNESS_DIR}/events}"
 _SPRINTS_DIR="${_SPRINTS_DIR:-${HARNESS_DIR}/sprints}"
 
@@ -95,6 +95,8 @@ _events_emit_impl() {
   fi
 }
 
+emit_event() { _events_emit_impl "$@"; }
+
 # query_events [sprint_id] [limit] [event_type] — filter events
 query_events() {
   local sprint_id="${1:-}"
@@ -134,9 +136,8 @@ for e in sorted(seen):
 " 2>/dev/null
 }
 
-emit_event() { _events_emit_impl "$@"; }
-
 # Also export as events_emit for callers that need to avoid name collision.
-# Keep this bound to the implementation, not to emit_event, because some
-# legacy callers source this library and then define their own emit_event shim.
+# Keep this bound to the private implementation: coordinator.sh defines its own
+# legacy emit_event shim after sourcing this file, and events_emit must not
+# resolve back to that shim recursively.
 events_emit() { _events_emit_impl "$@"; }

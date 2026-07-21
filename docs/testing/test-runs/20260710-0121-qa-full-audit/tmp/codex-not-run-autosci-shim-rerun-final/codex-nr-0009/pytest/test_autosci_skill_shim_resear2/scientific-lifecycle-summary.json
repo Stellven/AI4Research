@@ -1,0 +1,218 @@
+{
+  "blocked_nodes": {},
+  "gate_results": {
+    "artifact_review": {
+      "node_id": "artifact_review",
+      "ok": true,
+      "status": "passed"
+    },
+    "claim_extract": {
+      "node_id": "claim_extract",
+      "ok": true,
+      "status": "passed"
+    },
+    "claim_verify": {
+      "node_id": "claim_verify",
+      "ok": true,
+      "status": "passed"
+    },
+    "code_evidence_map": {
+      "node_id": "code_evidence_map",
+      "ok": true,
+      "status": "passed"
+    },
+    "experiment_design": {
+      "node_id": "experiment_design",
+      "ok": true,
+      "status": "passed"
+    },
+    "experiment_monitor": {
+      "node_id": "experiment_monitor",
+      "ok": true,
+      "status": "passed"
+    },
+    "experiment_run": {
+      "node_id": "experiment_run",
+      "ok": true,
+      "status": "passed"
+    },
+    "graph_update": {
+      "node_id": "graph_update",
+      "ok": true,
+      "status": "passed"
+    },
+    "idea_evaluate": {
+      "node_id": "idea_evaluate",
+      "ok": true,
+      "status": "passed"
+    },
+    "idea_generate": {
+      "node_id": "idea_generate",
+      "ok": true,
+      "status": "passed"
+    },
+    "literature_discover": {
+      "node_id": "literature_discover",
+      "ok": true,
+      "status": "passed"
+    },
+    "memory_update_final": {
+      "node_id": "memory_update_final",
+      "ok": true,
+      "status": "passed"
+    },
+    "memory_update_initial": {
+      "node_id": "memory_update_initial",
+      "ok": true,
+      "status": "passed"
+    },
+    "method_extract": {
+      "node_id": "method_extract",
+      "ok": true,
+      "status": "passed"
+    },
+    "paper_analyze": {
+      "node_id": "paper_analyze",
+      "ok": true,
+      "status": "passed"
+    },
+    "paper_ingest": {
+      "node_id": "paper_ingest",
+      "ok": true,
+      "status": "passed"
+    },
+    "publication_produce": {
+      "node_id": "publication_produce",
+      "ok": true,
+      "status": "passed"
+    },
+    "report_draft": {
+      "node_id": "report_draft",
+      "ok": true,
+      "status": "passed"
+    },
+    "report_plan": {
+      "node_id": "report_plan",
+      "ok": true,
+      "status": "passed"
+    },
+    "workflow_evolve": {
+      "node_id": "workflow_evolve",
+      "ok": true,
+      "status": "passed"
+    }
+  },
+  "job_id": "job-scheduler-lifecycle-weak",
+  "lifecycle_gate_result": {
+    "ok": true,
+    "status": "passed"
+  },
+  "lifecycle_status": "passed",
+  "node_results": {
+    "artifact_review": {
+      "node_id": "artifact_review",
+      "status": "passed"
+    },
+    "claim_extract": {
+      "node_id": "claim_extract",
+      "status": "passed"
+    },
+    "claim_verify": {
+      "node_id": "claim_verify",
+      "status": "passed"
+    },
+    "code_evidence_map": {
+      "node_id": "code_evidence_map",
+      "status": "passed"
+    },
+    "experiment_design": {
+      "node_id": "experiment_design",
+      "status": "passed"
+    },
+    "experiment_monitor": {
+      "node_id": "experiment_monitor",
+      "status": "passed"
+    },
+    "experiment_run": {
+      "node_id": "experiment_run",
+      "status": "passed"
+    },
+    "graph_update": {
+      "node_id": "graph_update",
+      "status": "passed"
+    },
+    "idea_evaluate": {
+      "node_id": "idea_evaluate",
+      "status": "passed"
+    },
+    "idea_generate": {
+      "node_id": "idea_generate",
+      "status": "passed"
+    },
+    "literature_discover": {
+      "node_id": "literature_discover",
+      "status": "passed"
+    },
+    "memory_update_final": {
+      "node_id": "memory_update_final",
+      "status": "passed"
+    },
+    "memory_update_initial": {
+      "node_id": "memory_update_initial",
+      "status": "passed"
+    },
+    "method_extract": {
+      "node_id": "method_extract",
+      "status": "passed"
+    },
+    "paper_analyze": {
+      "node_id": "paper_analyze",
+      "status": "passed"
+    },
+    "paper_ingest": {
+      "node_id": "paper_ingest",
+      "status": "passed"
+    },
+    "publication_produce": {
+      "node_id": "publication_produce",
+      "status": "passed"
+    },
+    "report_draft": {
+      "node_id": "report_draft",
+      "status": "passed"
+    },
+    "report_plan": {
+      "node_id": "report_plan",
+      "status": "passed"
+    },
+    "workflow_evolve": {
+      "node_id": "workflow_evolve",
+      "status": "passed"
+    }
+  },
+  "required_nodes": [
+    "literature_discover",
+    "paper_ingest",
+    "paper_analyze",
+    "memory_update_initial",
+    "graph_update",
+    "claim_extract",
+    "method_extract",
+    "code_evidence_map",
+    "idea_generate",
+    "idea_evaluate",
+    "experiment_design",
+    "experiment_run",
+    "experiment_monitor",
+    "claim_verify",
+    "report_draft",
+    "artifact_review",
+    "memory_update_final",
+    "workflow_evolve",
+    "report_plan",
+    "publication_produce"
+  ],
+  "schema": "scientific_lifecycle.v1",
+  "sprint_id": "job-scheduler-lifecycle-weak",
+  "workflow_id": "scientific_research_lifecycle_full_v1"
+}

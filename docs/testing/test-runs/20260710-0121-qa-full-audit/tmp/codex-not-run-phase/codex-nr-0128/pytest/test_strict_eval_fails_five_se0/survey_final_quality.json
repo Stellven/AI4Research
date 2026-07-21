@@ -1,0 +1,35 @@
+{
+  "ok": false,
+  "final_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0128/pytest/test_strict_eval_fails_five_se0/final.md",
+  "target_chars": 0,
+  "final_char_count": 0,
+  "min_final_chars": 0,
+  "finalized_sections": 0,
+  "total_sections": 5,
+  "missing_sections": [
+    "ch1/sec0",
+    "ch1/sec1",
+    "ch1/sec2",
+    "ch1/sec3",
+    "ch1/sec4"
+  ],
+  "avg_section_chars": 0.0,
+  "min_avg_section_chars": 500,
+  "pending_placeholder_count": 0,
+  "heading_count": 0,
+  "min_heading_count": 0,
+  "claim_tag_count": 0,
+  "evidence_tag_count": 0,
+  "claim_tag_density_per_1k_chars": 0.0,
+  "evidence_tag_density_per_1k_chars": 0.0,
+  "repetition_rate": 1.0,
+  "long_sentence_count": 0,
+  "unique_long_sentence_count": 0,
+  "duplicate_long_sentence_occurrences": 0,
+  "duplicate_long_sentence_ratio": 0.0,
+  "max_duplicate_long_sentence_count": 0,
+  "top_duplicate_long_sentences": [],
+  "issues": [
+    "final_repetition_rate_high:1.0000>0.9900"
+  ]
+}

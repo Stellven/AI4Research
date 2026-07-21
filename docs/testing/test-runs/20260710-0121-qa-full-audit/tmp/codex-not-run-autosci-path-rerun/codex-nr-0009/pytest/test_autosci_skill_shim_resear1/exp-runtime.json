@@ -1,0 +1,1 @@
+{"schema": "autosci_runtime_evidence.v1", "status": "completed", "outputs": {"runtime": {"action": "run_experiment", "status": "completed", "exit_code": 0, "result_collected": true, "outcome": "supports", "metrics": [{"name": "accuracy", "value": 0.91}], "evidence_ids": ["runtime:research-exp"]}}}

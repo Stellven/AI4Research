@@ -1,0 +1,46 @@
+{
+  "section_id": "s1",
+  "dimension_coverages": {
+    "mechanism_comparison": "present",
+    "method_taxonomy": "present",
+    "evaluation_protocol": "present",
+    "failure_negative_evidence": "present",
+    "engineering_implication": "present"
+  },
+  "density_score": 1.0,
+  "detected_indicators": [
+    {
+      "dimension": "mechanism_comparison",
+      "span_text": "Transformer versus RNN architectures",
+      "confidence": "high",
+      "schema_version": "solar.research.survey.v1"
+    },
+    {
+      "dimension": "method_taxonomy",
+      "span_text": "Methods fall into three category types",
+      "confidence": "high",
+      "schema_version": "solar.research.survey.v1"
+    },
+    {
+      "dimension": "evaluation_protocol",
+      "span_text": "We use benchmark evaluation with standard metrics",
+      "confidence": "high",
+      "schema_version": "solar.research.survey.v1"
+    },
+    {
+      "dimension": "failure_negative_evidence",
+      "span_text": "A key limitation is the failure to handle edge cases",
+      "confidence": "high",
+      "schema_version": "solar.research.survey.v1"
+    },
+    {
+      "dimension": "engineering_implication",
+      "span_text": "The engineering implication for production deployment",
+      "confidence": "high",
+      "schema_version": "solar.research.survey.v1"
+    }
+  ],
+  "not_applicable_entries": [],
+  "issues": [],
+  "schema_version": "solar.research.survey.v1"
+}

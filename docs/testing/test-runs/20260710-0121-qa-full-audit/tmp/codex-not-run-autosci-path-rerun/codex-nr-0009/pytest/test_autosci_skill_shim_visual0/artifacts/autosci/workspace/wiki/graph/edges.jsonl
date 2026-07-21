@@ -1,0 +1,2 @@
+{"relation": "inspires", "source": "papers/source.md", "target": "ideas/skillgen.md"}
+{"evidence_ids": ["visualize:autosci-graph", "visualize-autosci-graph", "autosci graph"], "operation": "confirm", "relation": "inspires", "rendered": false, "run_id": "shim-visualize-projects-action-graph", "source": "papers/source.md", "source_evidence": "artifacts/autosci/runs/shim-visualize-projects-action-graph/research_graph_update.visualize.json", "target": "ideas/skillgen.md"}

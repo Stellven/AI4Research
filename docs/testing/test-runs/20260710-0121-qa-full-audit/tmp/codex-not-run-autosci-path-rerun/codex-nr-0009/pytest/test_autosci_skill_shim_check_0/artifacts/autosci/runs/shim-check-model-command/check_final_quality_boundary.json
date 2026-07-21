@@ -1,0 +1,19 @@
+{
+  "blocking_reasons": [],
+  "final_quality_ready": true,
+  "limitations": [],
+  "local_blocking_reasons": [],
+  "local_structure_ready": true,
+  "model_confidence": 0.91,
+  "model_evidence_ids": [
+    "model:wiki-health-review"
+  ],
+  "model_name": "test-model",
+  "model_provider": "command",
+  "model_source": "model-command",
+  "model_status": "completed",
+  "request_sha256": "745ca68d5f062e042c66168431c6fe2ab3a1942005d2ae0d05310d558936841d",
+  "response_sha256": "2ca581f76a9f8cdfd378dc896e62bfe2e1f53b5816068de5892ba919df95a2eb",
+  "schema": "autosci_check_final_quality_boundary.v1",
+  "status": "final_quality_ready"
+}

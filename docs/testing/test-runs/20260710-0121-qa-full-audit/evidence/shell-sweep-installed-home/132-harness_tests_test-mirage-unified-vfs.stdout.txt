@@ -1,0 +1,64 @@
+
+A1 — doctor --json
+  ✅ A1.1 doctor exits 0
+  ✅ A1.2 enabled=True
+  ✅ A1.3 config path present
+  ✅ A1.4 drive status is valid enum
+  ✅ A1.5 last-probe.json written
+
+A2 — workspace create + mounts ⊇ required set
+  ✅ A2.1 mounts --json exits 0
+  ✅ A2.2 mount /knowledge present
+  ✅ A2.2 mount /raw present
+  ✅ A2.2 mount /sources present
+  ✅ A2.2 mount /papers present
+  ✅ A2.2 mount /qmd present
+  ✅ A2.2 mount /solar-db present
+  ✅ A2.2 mount /cortex present
+  ✅ A2.2 mount /sprints present
+  ✅ A2.3 workspace state file written
+
+A3 — exec read paths
+  ✅ A3.1 exec find /sprints
+  ❌ A3.2 exec ls /solar-db
+  ✅ A3.3 exec find /knowledge
+  ✅ A3.4 exec --json has stdout+exit_code
+
+A4 — unified search (mirage_search.py)
+  ❌ A4.1 search returns hits array
+  ❌ A4.2 search has elapsed_ms + query
+  ❌ A4.3 search has degraded_sources
+
+A5 — write boundary: drive
+  ❌ A5.1 read /knowledge allowed
+  ✅ A5.2 write /drive correctly denied
+
+A6 — write boundary enforcement
+  ❌ A6.1 write /raw allowed
+  ✅ A6.2 write /solar-db correctly denied
+  ✅ A6.3 write /cortex correctly denied
+  ✅ A6.4 mirage_write_denied event in warn.events.jsonl
+
+A7 — /status endpoint mirage section
+  ✅ A7.1 _mirage_status defined in status-server.py
+  ✅ A7.2 mirage key in _status_payload
+  ✅ A7.3 status-server.py syntax valid
+  ✅ A7.4 /status mirage section wired in code (server offline — verified via A7.1-A7.3)
+
+A8 — mirage_events.py
+  ✅ A8.1 mirage_events.py exists
+  ✅ A8.2 mirage_events.py syntax valid
+  ✅ A8.3 emit mirage_installed returns correct event
+  ✅ A8.4 mirage_write_denied has severity=warn
+
+════════════════════════════════════════
+Results: 30 passed, 6 failed
+
+Failed checks:
+  ❌ A3.2 exec ls /solar-db
+  ❌ A4.1 search returns hits array
+  ❌ A4.2 search has elapsed_ms + query
+  ❌ A4.3 search has degraded_sources
+  ❌ A5.1 read /knowledge allowed
+  ❌ A6.1 write /raw allowed
+

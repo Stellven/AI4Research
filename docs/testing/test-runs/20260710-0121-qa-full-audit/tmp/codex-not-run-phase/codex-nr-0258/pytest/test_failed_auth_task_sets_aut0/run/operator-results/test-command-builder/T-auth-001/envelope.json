@@ -1,0 +1,11 @@
+{
+  "task_id": "T-auth-001",
+  "sprint_id": "sprint-command",
+  "node_id": "N1",
+  "operator_id": "test-command-builder",
+  "task_type": "dummy",
+  "objective": "exercise failure flow control",
+  "command": "python3 -c \"print(\\\"You are not logged in\\\", flush=True); raise SystemExit(1)\"",
+  "submitted_at": "2026-07-10T18:53:03Z",
+  "lease_expires_at": "2026-07-10T19:53:03Z"
+}

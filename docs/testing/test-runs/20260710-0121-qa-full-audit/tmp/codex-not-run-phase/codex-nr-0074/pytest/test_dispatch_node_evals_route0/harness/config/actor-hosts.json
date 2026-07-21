@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-02T03:56:00Z",
+  "hosts": {
+    "mini": {
+      "host_id": "mini",
+      "host_type": "claude_code_session",
+      "display_name": "Example remote host (documentation IP)",
+      "display_meta": {
+        "label": "mini"
+      },
+      "lifecycle": {
+        "state": "online",
+        "started_at": "2026-05-22T00:00:00Z",
+        "last_seen_at": "2026-05-23T01:06:55Z",
+        "shutdown_policy": "never"
+      },
+      "address": {
+        "ssh": "solar@example-host",
+        "tailscale_ip": "203.0.113.10",
+        "hostname": "example-host.local",
+        "harness_dir": "~/.solar/harness"
+      },
+      "heartbeat": {
+        "interval_sec": 30,
+        "timeout_sec": 90,
+        "path": "actors/_host/mini/heartbeat.json"
+      },
+      "probe": {
+        "last_probe_at": "2026-05-23T00:53:00Z",
+        "last_probe_result": "ok",
+        "probe_cmd": "ssh solar@example-host echo SOLAR_HOST_OK",
+        "probe_expected": "SOLAR_HOST_OK"
+      }
+    },
+    "browser_profile_host": {
+      "host_id": "browser_profile_host",
+      "host_type": "antigravity_managed_env",
+      "display_name": "Browser Profile Host (Deep Research Session Cache)",
+      "lifecycle": {
+        "state": "online",
+        "started_at": "2026-05-25T16:30:00Z",
+        "last_seen_at": "2026-05-25T16:30:00Z",
+        "shutdown_policy": "manual"
+      },
+      "address": {
+        "ssh": null,
+        "tailscale_ip": null,
+        "hostname": "localhost",
+        "harness_dir": "~/.solar/harness"
+      },
+      "heartbeat": {
+        "interval_sec": 15,
+        "timeout_sec": 45,
+        "path": "actors/_host/browser_profile_host/heartbeat.json"
+      },
+      "probe": {
+        "last_probe_at": "2026-05-25T16:30:00Z",
+        "last_probe_result": "ok",
+        "probe_cmd": "test -d ~/.solar/harness/run/browser-profiles && echo BROWSER_HOST_OK",
+        "probe_expected": "BROWSER_HOST_OK"
+      },
+      "carrier": {
+        "antigravity_meta": {
+          "environment_id": "browser_profile_env",
+          "browser_profile": "deepresearch",
+          "endpoint_url": "http://localhost:9222"
+        }
+      }
+    },
+    "stub_tmux_pane": {
+      "host_id": "stub_tmux_pane",
+      "host_type": "tmux_pane",
+      "display_name": "Stub tmux pane",
+      "lifecycle": {
+        "state": "offline",
+        "shutdown_policy": "manual"
+      },
+      "address": {
+        "hostname": "stub-tmux",
+        "harness_dir": null
+      },
+      "carrier": {
+        "tmux_pane_meta": {
+          "session": "solar-stub",
+          "window": "stub-window",
+          "pane": "0",
+          "role": "builder"
+        }
+      }
+    },
+    "stub_codex_worktree": {
+      "host_id": "stub_codex_worktree",
+      "host_type": "codex_worktree",
+      "display_name": "Stub codex worktree",
+      "lifecycle": {
+        "state": "offline",
+        "shutdown_policy": "manual"
+      },
+      "address": {
+        "hostname": "stub-codex-worktree",
+        "harness_dir": null
+      },
+      "carrier": {
+        "codex_meta": {
+          "worktree_path": "/tmp/stub-codex-worktree"
+        }
+      }
+    },
+    "stub_codex_cloud": {
+      "host_id": "stub_codex_cloud",
+      "host_type": "codex_cloud",
+      "display_name": "Stub codex cloud",
+      "lifecycle": {
+        "state": "offline",
+        "shutdown_policy": "manual"
+      },
+      "address": {
+        "hostname": "stub-codex-cloud",
+        "harness_dir": null
+      }
+    },
+    "stub_local_mlx": {
+      "host_id": "stub_local_mlx",
+      "host_type": "local_mlx_process",
+      "display_name": "Stub local mlx process",
+      "lifecycle": {
+        "state": "offline",
+        "shutdown_policy": "manual"
+      },
+      "address": {
+        "hostname": "stub-local-mlx",
+        "harness_dir": null
+      },
+      "carrier": {
+        "mlx_meta": {
+          "model_path": "/tmp/stub-mlx-model",
+          "port": 7000
+        }
+      }
+    },
+    "stub_ssh_devbox": {
+      "host_id": "stub_ssh_devbox",
+      "host_type": "ssh_devbox",
+      "display_name": "Stub ssh devbox",
+      "lifecycle": {
+        "state": "offline",
+        "shutdown_policy": "manual"
+      },
+      "address": {
+        "hostname": "stub-ssh",
+        "harness_dir": null
+      },
+      "carrier": {
+        "ssh_meta": {
+          "hostname": "stub-ssh.example",
+          "user": "stub",
+          "port": 22
+        }
+      }
+    },
+    "stub_docker_sandbox": {
+      "host_id": "stub_docker_sandbox",
+      "host_type": "docker_sandbox",
+      "display_name": "Stub docker sandbox",
+      "lifecycle": {
+        "state": "offline",
+        "shutdown_policy": "manual"
+      },
+      "address": {
+        "hostname": "stub-docker",
+        "harness_dir": null
+      }
+    }
+  }
+}

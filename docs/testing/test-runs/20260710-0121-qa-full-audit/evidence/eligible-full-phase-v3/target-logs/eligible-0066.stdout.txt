@@ -1,0 +1,13 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________ test_ideate_projects_human_candidate_and_evaluation_summary __________
+harness/tests/test_autosci_priority_b_demo_contracts.py:310: in test_ideate_projects_human_candidate_and_evaluation_summary
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: usage: autosci_skill_shim.py [-h] {skills,skill} ...
+E     autosci_skill_shim.py: error: unrecognized arguments: Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0066/pytest/test_ideate_projects_human_can0/harness/artifacts/autosci/workspace/wiki Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0066/pytest/test_ideate_projects_human_can0/harness/artifacts/autosci/runs/priority-b-discover-seed/literature_discovery.json
+E     
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...t/test_ideate_projects_human_can0/harness/artifacts/autosci/runs/priority-b-discover-seed/literature_discovery.json\n').returncode
+=========================== short test summary info ============================
+FAILED harness/tests/test_autosci_priority_b_demo_contracts.py::test_ideate_projects_human_candidate_and_evaluation_summary
+1 failed, 8 deselected in 0.40s

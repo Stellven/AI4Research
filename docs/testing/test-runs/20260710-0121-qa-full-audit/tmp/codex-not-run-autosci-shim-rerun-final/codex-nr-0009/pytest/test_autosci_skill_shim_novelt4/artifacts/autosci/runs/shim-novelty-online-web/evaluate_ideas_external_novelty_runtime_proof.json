@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-07-10T19:27:08Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed external novelty provider/source evidence for AutoSci parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-novelty-online-web/idea_evaluation.json",
+        "artifacts/autosci/runs/shim-novelty-online-web/external_novelty_payloads/web-400af197d1d81e32.json"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:web:20260710T192708Z",
+      "provenance": {
+        "artifact_kind": "external_novelty",
+        "captured_at": "2026-07-10T19:27:08Z",
+        "command": "external_novelty_evidence:web",
+        "source": "web"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

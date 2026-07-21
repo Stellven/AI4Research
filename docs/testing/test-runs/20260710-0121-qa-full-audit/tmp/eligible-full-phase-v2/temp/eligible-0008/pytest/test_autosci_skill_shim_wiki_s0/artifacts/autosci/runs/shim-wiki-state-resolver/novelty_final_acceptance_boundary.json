@@ -1,0 +1,58 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "external_novelty status is `unavailable`, not `completed`",
+        "external_novelty provenance status is `unavailable`, not `passed`",
+        "review_llm status is `unavailable`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-wiki-discovery-001",
+        "wiki:papers/skillgen",
+        "wiki:ideas/skillgen"
+      ],
+      "external_novelty_provenance_status": "unavailable",
+      "external_novelty_status": "unavailable",
+      "external_source_count": 0,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-wiki-discovery-001",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.51,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "fetched_at": "2026-07-10T14:04:46Z",
+          "provider": "semantic_scholar",
+          "query": "skillgen",
+          "reason": "<urlopen error [Errno 1] Operation not permitted>",
+          "status": "failed"
+        },
+        {
+          "fetched_at": "2026-07-10T14:04:46Z",
+          "provider": "web",
+          "query": "skillgen",
+          "reason": "missing AUTOSCI_WEB_SEARCH_EVIDENCE_URL or SERPER_API_KEY",
+          "status": "unavailable"
+        },
+        {
+          "fetched_at": "2026-07-10T14:04:46Z",
+          "provider": "deepxiv",
+          "query": "skillgen",
+          "reason": "missing AUTOSCI_DEEPXIV_SEARCH_URL",
+          "status": "unavailable"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": false,
+      "review_invocation_mode": "unavailable",
+      "review_llm_status": "unavailable",
+      "review_mode": "local_surrogate",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

@@ -1,0 +1,1 @@
+import sys; print("fallback ok"); sys.exit(0)

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_104_5c20f812b1_harness_tests_influence_test_pipeline.py",
+  "source": "harness/tests/influence/test_pipeline.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/influence/test_pipeline.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.193,
+  "timeout": false
+}

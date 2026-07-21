@@ -1,0 +1,12 @@
+{
+  "section_id": "ch01/sec01",
+  "verdict": "WAITING_FOR_HUMAN",
+  "unsupported_claim_rate": 1.0,
+  "citation_span_accuracy": 0.0,
+  "source_diversity_score": 0.0,
+  "repetition_score": 0.0,
+  "issues": [
+    "human_response_missing:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0122/pytest/test_survey_write_human_packet0/sections/ch01/sec01/human_responses/round_00.md"
+  ],
+  "schema_version": "solar.research.survey.v1"
+}

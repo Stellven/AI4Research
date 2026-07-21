@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-23T01:30:00Z",
+  "packets": {
+    "pkt-lease-fleet-project": {
+      "packet_id": "pkt-lease-fleet-project",
+      "packet_type": "project",
+      "created_at": "2026-05-23T00:00:00Z",
+      "expires_at": null,
+      "project_id": "lease-based-model-fleet-runtime",
+      "sprint_id": null,
+      "node_id": null,
+      "actor_id": null,
+      "summary": "Project context for the lease-based model fleet runtime sprint. Covers actor registry schema, logical operator routing, context store, and DAG dispatch infrastructure.",
+      "content": {
+        "goals": [
+          "Add actor and host registry schema/config fixtures with compatibility aliases",
+          "Define 16 P0 logical operator types with binding table",
+          "Context store schema for project/task/memory packets",
+          "DAG node schema that rejects direct physical ids without compatibility=true"
+        ],
+        "constraints": [
+          "All new schemas must pass jsonschema validation",
+          "All 15 physical operators must have actor entries with operator_alias",
+          "tmux_pane_index must only appear in display_meta",
+          "Critical task envelopes must have context_packet_ref or embedded context_packet"
+        ],
+        "sprint": "sprint-20260523-lease-based-model-fleet-runtime",
+        "harness_dir": "~/.solar/harness"
+      },
+      "token_estimate": 512,
+      "compression_level": "none",
+      "parent_packet_id": null
+    },
+    "pkt-n2-builder-task": {
+      "packet_id": "pkt-n2-builder-task",
+      "packet_type": "task",
+      "created_at": "2026-05-23T01:00:00Z",
+      "expires_at": "2026-05-24T01:00:00Z",
+      "project_id": "lease-based-model-fleet-runtime",
+      "sprint_id": "sprint-20260523-lease-based-model-fleet-runtime",
+      "node_id": "N2",
+      "actor_id": "mini-claude-sonnet-builder",
+      "summary": "Task context for N2 Builder node: schema fixtures for actor registry, host registry, logical operators, and context store.",
+      "content": {
+        "node_id": "N2",
+        "persona": "builder",
+        "model": "claude-sonnet-4-6",
+        "goal": "Add actor and host registry schema/config fixtures with compatibility aliases from existing physical operators.",
+        "files_to_write": [
+          "config/agent-actors.schema.json",
+          "config/agent-actors.json",
+          "config/actor-hosts.schema.json",
+          "config/actor-hosts.json",
+          "config/logical-operators.schema.json",
+          "config/logical-operators.json",
+          "config/context-store.schema.json",
+          "config/context-store.json",
+          "tests/test_agent_actor_schema.py",
+          "tests/test_logical_operator_schema.py",
+          "tests/test_context_store_schema.py"
+        ],
+        "read_scope": [
+          "config/physical-operators.json",
+          "config/agent-actors.schema.json",
+          "config/agent-actors.json",
+          "config/actor-hosts.schema.json",
+          "config/actor-hosts.json",
+          "tests/test_agent_actor_schema.py"
+        ],
+        "write_scope": [
+          "config/",
+          "tests/",
+          "sprints/"
+        ]
+      },
+      "token_estimate": 768,
+      "compression_level": "none",
+      "parent_packet_id": "pkt-lease-fleet-project"
+    },
+    "pkt-memory-actor-schema-lessons": {
+      "packet_id": "pkt-memory-actor-schema-lessons",
+      "packet_type": "memory",
+      "created_at": "2026-05-23T01:30:00Z",
+      "expires_at": null,
+      "project_id": "lease-based-model-fleet-runtime",
+      "sprint_id": null,
+      "node_id": null,
+      "actor_id": null,
+      "summary": "Compressed lessons from N2 schema design: capability_profile/risk_profile/cost_profile separation, why tmux_pane_index belongs only in display_meta, and how compatibility aliases bridge physical-operators.json to logical routing.",
+      "content": {
+        "key_decisions": [
+          "Legacy 'capability' field retained in schema for backward compat; new capability_profile/risk_profile/cost_profile added as parallel optional fields",
+          "tmux_pane_index is display metadata only — actor_id is the durable key; confirmed by schema additionalProperties:false on display_meta",
+          "All 15 physical operators map 1:1 to actor entries via operator_alias field",
+          "context_packet_ref and evidence_ledger_ref are null when actor is idle, populated at dispatch time",
+          "DAG node physical id rejection uses JSON Schema if/then: if compatibility != true, then disallow physical_actor_id/physical_operator_id/physical_model_id"
+        ],
+        "schema_patterns": [
+          "Use $defs + $ref for all reused sub-schemas",
+          "additionalProperties: false on leaf objects to catch typos",
+          "patternProperties for open-ended capability score maps",
+          "if/then for conditional required fields (critical task envelope, task packet)"
+        ]
+      },
+      "token_estimate": 384,
+      "compression_level": "light",
+      "parent_packet_id": "pkt-n2-builder-task"
+    }
+  },
+  "task_envelopes": {
+    "env-n2-builder-dispatch": {
+      "envelope_id": "env-n2-builder-dispatch",
+      "task_id": "N2",
+      "sprint_id": "sprint-20260523-lease-based-model-fleet-runtime",
+      "assigned_actor_id": "mini-claude-sonnet-builder",
+      "logical_operator": "ImplementationWorker",
+      "criticality": "critical",
+      "dispatched_at": "2026-05-23T01:00:00Z",
+      "context_packet_ref": {
+        "packet_id": "pkt-n2-builder-task",
+        "path": "context-store/pkt-n2-builder-task.json"
+      },
+      "evidence_ledger_ref": {
+        "path": "actors/mini-claude-sonnet-builder/evidence"
+      },
+      "timeout_sec": 7200,
+      "retry_policy": {
+        "max_retries": 2,
+        "backoff_sec": 60
+      }
+    },
+    "env-n2-low-priority-scan": {
+      "envelope_id": "env-n2-low-priority-scan",
+      "task_id": "N2-scan",
+      "sprint_id": "sprint-20260523-lease-based-model-fleet-runtime",
+      "assigned_actor_id": "mini-local-scan",
+      "logical_operator": "ResearchScout",
+      "criticality": "low",
+      "dispatched_at": "2026-05-23T01:05:00Z",
+      "context_packet_ref": null,
+      "evidence_ledger_ref": null,
+      "timeout_sec": 300,
+      "retry_policy": {
+        "max_retries": 1,
+        "backoff_sec": 30
+      }
+    }
+  }
+}

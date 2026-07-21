@@ -1,0 +1,13 @@
+............................                                             [100%]
+=============================== warnings summary ===============================
+harness/tests/graph/test_graph_dispatch_submit.py::TestQueueStateSemantics::test_enqueue_ready_marks_assigned_not_dispatched
+harness/tests/graph/test_graph_dispatch_submit.py::TestQueueStateSemantics::test_enqueue_ready_marks_assigned_not_dispatched
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/capability_inference.py:21: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+harness/tests/graph/test_graph_dispatch_submit.py::TestQueueStateSemantics::test_enqueue_ready_marks_assigned_not_dispatched
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/graph_scheduler.py:2376: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    dispatch_id = f"graph-{sid}-{node_id}-{datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+28 passed, 3 warnings in 1.17s

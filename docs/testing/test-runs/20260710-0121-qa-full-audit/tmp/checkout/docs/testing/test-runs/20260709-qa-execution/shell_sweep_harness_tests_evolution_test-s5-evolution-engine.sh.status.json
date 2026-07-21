@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_evolution_test-s5-evolution-engine.sh",
+  "source": "harness/tests/evolution/test-s5-evolution-engine.sh",
+  "command": [
+    "bash",
+    "harness/tests/evolution/test-s5-evolution-engine.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.006,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-7mdfru2c"
+}

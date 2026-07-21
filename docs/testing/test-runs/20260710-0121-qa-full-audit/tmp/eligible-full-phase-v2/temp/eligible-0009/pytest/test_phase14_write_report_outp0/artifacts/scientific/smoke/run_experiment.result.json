@@ -1,0 +1,68 @@
+{
+  "action": "run_experiment",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/scientific/smoke/exp-001.log",
+        "type": "experiment_run_log"
+      },
+      {
+        "path": "artifacts/scientific/smoke/experiment_result.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "execution_mode": "fixture",
+      "experiment_plan_evidence": "artifacts/scientific/smoke/experiment_plan.json",
+      "experiment_result": "plugins/autosci/tests/fixtures/sample_autosci_raw_experiment_result.json"
+    },
+    "limitations": [
+      "Fixture result is deterministic and not a real benchmark run."
+    ],
+    "node_id": "node-run-experiment",
+    "outputs": {
+      "result": {
+        "command_run": "fixture-mode:no-external-command",
+        "evidence_ids": [
+          "evidence:autosci-fixture-result",
+          "evidence:autosci-fixture-ledger"
+        ],
+        "execution_mode": "fixture",
+        "exit_code": 0,
+        "experiment_id": "exp-001",
+        "logs": [
+          "execution_mode=fixture",
+          "experiment_id=exp-001",
+          "command_run=fixture-mode:no-external-command",
+          "fixture result collected"
+        ],
+        "metrics": [
+          {
+            "name": "result_json_written",
+            "value": true
+          },
+          {
+            "name": "evidence_jsonl_written",
+            "value": true
+          }
+        ],
+        "outcome": "supports"
+      }
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T14:05:03Z"
+    },
+    "schema": "experiment_result.v1",
+    "sprint_id": "sprint-autosci-phase12",
+    "status": "completed",
+    "task_id": "task-autosci-experiment-run-fixture"
+  },
+  "evidence_jsonl": "artifacts/scientific/smoke/evidence.jsonl",
+  "evidence_path": "artifacts/scientific/smoke/experiment_result.json",
+  "ok": true,
+  "result_path": "artifacts/scientific/smoke/run_experiment.result.json",
+  "schema": "experiment_result.v1",
+  "status": "completed"
+}

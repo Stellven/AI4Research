@@ -1,0 +1,21 @@
+{
+  "task_id": "task-shim-research-publication-compile-scheduler-report_plan",
+  "operator_id": "autosci-report-plan-worker",
+  "sprint_id": "shim-research-publication-compile-scheduler",
+  "node_id": "report_plan",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T19:25:18Z",
+  "finished_at": "2026-07-10T19:25:19Z",
+  "log_tail": "              \"candidate-autosci-fixture-paper\",\n              \"review-llm:publication-compile-shim\",\n              \"paper-draft-compile-handoff\",\n              \"paper-compile-runtime:latexmk\",\n              \"external-publication-compile/compile_target/main.tex\",\n              \"task-shim-research-publication-compile-scheduler-report_plan\",\n              \"report_plan\",\n              \"artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json\",\n              \"external-publication-compile/compile_target/main.pdf\"\n            ],\n            \"section_id\": \"figure-citation-plan\",\n            \"title\": \"Figure And Citation Plan\"\n          },\n          {\n            \"body\": \"Review LLM boundary status: `completed`. Invocation mode: `evidence`. Source: `task-review-llm-publication-compile-shim`. Novelty/relevance checks remain required before promotion beyond plan status.\",\n            \"evidence_ids\": [\n              \"task-shim-research-publication-compile-scheduler-literature_discover\",\n              \"task-review-llm-publication-compile-shim\",\n              \"task-shim-research-publication-compile-scheduler-claim_verify\",\n              \"claim-001\",\n              \"paper-shim-research-publication-compile-scheduler\",\n              \"sample_paper.md#results\",\n              \"task-shim-research-publication-compile-scheduler-experiment_run\",\n              \"exp-001\",\n              \"evidence:autosci-fixture-result\",\n              \"evidence:autosci-fixture-ledger\",\n              \"task-shim-research-publication-compile-scheduler-code_evidence_map\",\n              \"map-001\",\n              \"plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py\",\n              \"task-shim-research-publication-compile-scheduler-claim_extract\",\n              \"claim-002\",\n              \"sample_paper.md#abstract\",\n              \"task-shim-research-publication-compile-scheduler-idea_evaluate\",\n              \"idea-001\",\n              \"method-001\",\n              \"task-shim-research-publication-compile-scheduler-paper_ingest\",\n              \"task-shim-research-publication-compile-scheduler-method_extract\",\n              \"idea-duplicate-001\",\n              \"exp-supported-001\",\n              \"scheduler-lifecycle-resume\",\n              \"candidate-autosci-fixture-paper\",\n              \"review-llm:publication-compile-shim\",\n              \"paper-draft-compile-handoff\",\n              \"paper-compile-runtime:latexmk\",\n              \"external-publication-compile/compile_target/main.tex\",\n              \"task-shim-research-publication-compile-scheduler-report_plan\",\n              \"report_plan\",\n              \"artifacts/scientific/scheduler-lifecycle-smoke/shim-research-publication-compile-scheduler/report_plan/task-shim-research-publication-compile-scheduler-report_plan/compile_paper_runtime_evidence.json\",\n              \"external-publication-compile/compile_target/main.pdf\"\n            ],",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

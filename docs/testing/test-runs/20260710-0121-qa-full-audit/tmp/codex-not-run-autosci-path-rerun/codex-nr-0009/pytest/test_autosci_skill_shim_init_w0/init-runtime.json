@@ -1,0 +1,1 @@
+{"schema": "autosci_runtime_evidence.v1", "task_id": "init-runtime-skillgen", "status": "completed", "exit_code": 0, "candidates": [{"candidate_id": "skillgen-source", "title": "SkillGen Source Candidate", "url": "https://arxiv.org/abs/2601.00003", "abstract": "Runtime-discovered source candidate."}], "evidence_ids": ["runtime:init-skillgen"]}

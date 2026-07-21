@@ -76,14 +76,14 @@ skills:
 
   - name: brainstorm
     namespace: user
-    status: stable
+    status: draft
     description: "Structured brainstorming — diverge then converge with multi-expert perspective"
     tags: [creativity, diverge, converge]
     min_score: 0.75
     eval_pack: evals/skills/brainstorm.eval.yaml
     entry: skills/user/brainstorm/SKILL.md
-    promoted_at: "2026-05-09T00:00:00Z"
-    promoted_by: s2-builder
+    promoted_at: null
+    promoted_by: null
     # APO capability metadata (v2 extension fields)
     apo_skill_id: skill.architecture-design
     required_capabilities: [architecture_reasoning, long_context]
@@ -93,25 +93,25 @@ skills:
 
   - name: tdd
     namespace: user
-    status: stable
+    status: draft
     description: "Test-driven development — write failing test first, then implement to pass"
     tags: [testing, tdd, quality]
     min_score: 0.8
     eval_pack: evals/skills/tdd.eval.yaml
     entry: skills/user/tdd/SKILL.md
-    promoted_at: "2026-05-09T00:00:00Z"
-    promoted_by: s2-builder
+    promoted_at: null
+    promoted_by: null
 
   - name: debug
     namespace: user
-    status: stable
+    status: draft
     description: "Systematic debugging — root-cause analysis via bisect + evidence chain"
     tags: [debug, root-cause, diagnosis]
     min_score: 0.8
     eval_pack: evals/skills/debug.eval.yaml
     entry: skills/user/debug/SKILL.md
-    promoted_at: "2026-05-09T00:00:00Z"
-    promoted_by: s2-builder
+    promoted_at: null
+    promoted_by: null
     # APO capability metadata (v2 extension fields)
     apo_skill_id: skill.root-cause-debug
     required_capabilities: [root_cause_debug, long_context]

@@ -1,0 +1,24 @@
+domains:
+  general:
+    - slug: gradient-descent
+      title: Gradient Descent
+      summary: "Iterative first-order optimization method used as background across ML papers."
+    - slug: transformer-architecture
+      title: Transformer Architecture
+      summary: "Attention-based neural architecture family commonly referenced by modern ML/NLP papers."
+  NLP:
+    - slug: tokenization
+      title: Tokenization
+      summary: "Text segmentation and vocabulary construction foundation for NLP systems."
+  CV:
+    - slug: convolutional-neural-network
+      title: Convolutional Neural Network
+      summary: "Vision model family based on learned convolutional filters."
+  ML Systems:
+    - slug: distributed-training
+      title: Distributed Training
+      summary: "Systems foundation for training models across multiple devices or machines."
+  Robotics:
+    - slug: motion-planning
+      title: Motion Planning
+      summary: "Planning foundation for feasible robot trajectories under constraints."

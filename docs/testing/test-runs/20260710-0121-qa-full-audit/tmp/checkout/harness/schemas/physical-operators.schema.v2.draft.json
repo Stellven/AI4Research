@@ -1,0 +1,463 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/physical-operators.schema.v2.draft.json",
+  "title": "Solar Model Fleet Physical Operator Registry (v2 draft)",
+  "description": "Draft v2 registry schema for sprint-20260523-pane-as-physical-operator-architecture (N1 Workstream A Registry Lock). DESIGN-ONLY DRAFT — placed under schemas/ alongside v1 production schema, never replaces config/physical-operators.schema.json in this sprint. Loader compatibility: missing v2 fields warn (do not reject) for at least 1 sprint per R1 mitigation.",
+  "schema_status": "draft",
+  "schema_version": "v2.0.0-draft",
+  "supersedes": "https://solar.local/schemas/physical-operators.schema.json",
+  "compat_mode": {
+    "accepts_v1_input": true,
+    "missing_field_policy": "warn",
+    "missing_field_policy_min_window_sprints": 1,
+    "legacy_field_preservation": [
+      "billing_surface",
+      "billing_pool",
+      "launch_cmd_kind",
+      "aliases",
+      "compat_alias_for",
+      "model_binding",
+      "enabled",
+      "available",
+      "profile",
+      "role",
+      "provider",
+      "vendor",
+      "model",
+      "preferred_for",
+      "avoid_for",
+      "preferred_operator"
+    ]
+  },
+  "type": "object",
+  "required": ["version", "operators"],
+  "additionalProperties": true,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Registry version. v1 input remains valid; v2 sets this to >= 2."
+    },
+    "schema_version_ref": {
+      "type": "string",
+      "description": "Optional pin to a specific schema draft id (e.g. 'v2.0.0-draft')."
+    },
+    "updated_at": {"type": "string"},
+    "operators": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/operator"}
+    }
+  },
+  "$defs": {
+    "operator": {
+      "type": "object",
+      "required": ["display_name"],
+      "additionalProperties": true,
+      "description": "PhysicalOperator entry. The 11 v2 top-level fields (physical / surface / model / endpoint / auth / quota / capability / policy / state / metrics / routing) are listed below. Any v1 legacy fields not in the 11-field set are preserved through additionalProperties=true.",
+      "properties": {
+        "operator_id_format": {
+          "type": "string",
+          "description": "Documentation-only field stating Q1 naming convention: 'pane-<host>-<index>-<role>-<model_slug>' (e.g. pane-aiops-0-planner-opus47). Operators MAY also declare 'aliases' for display.",
+          "default": "pane-<host>-<index>-<role>-<model_slug>"
+        },
+        "display_name": {"type": "string", "minLength": 1},
+        "operator_class": {
+          "type": "string",
+          "description": "Logical class used by scheduler (PRD US1/US4 + Mandatory Design Decision #3). Subset of 16 P0 logical operator classes; legacy v1 enum values remain valid.",
+          "enum": [
+            "DeepArchitect",
+            "RootCauseDebug",
+            "RootCauseDebugger",
+            "Implementation",
+            "ImplementationWorker",
+            "FastSubagent",
+            "ParallelExploration",
+            "Verifier",
+            "Critic",
+            "SecurityGate",
+            "ResearchSynthesis",
+            "BrowserComputerUse",
+            "GoogleStack",
+            "LocalPrivacy",
+            "RouterMeta",
+            "AuditLedger",
+            "DataEngineer",
+            "ContextCompressor",
+            "ArtifactCurator",
+            "planner",
+            "builder",
+            "evaluator",
+            "architect",
+            "pm",
+            "external"
+          ]
+        },
+        "physical": {
+          "type": "object",
+          "description": "Physical host metadata (PRD D2). pane_id is for display only — durable lease key is operator_id.",
+          "additionalProperties": true,
+          "properties": {
+            "host_type": {
+              "type": "string",
+              "enum": [
+                "tmux_pane",
+                "codex_cli",
+                "antigravity",
+                "thunderomlx_local",
+                "flashmlx_local",
+                "managed_agent",
+                "desktop_bridge",
+                "local",
+                "external_http"
+              ]
+            },
+            "backend": {
+              "type": "string",
+              "enum": ["tmux", "managed_agent", "local", "desktop_bridge", "claude-cli"]
+            },
+            "pane_id": {"type": "string"},
+            "pane_ref": {"type": "string"},
+            "pane_title": {"type": "string"},
+            "session": {"type": "string"},
+            "window": {"type": "string"},
+            "cwd": {"type": "string"}
+          }
+        },
+        "surface": {
+          "type": "object",
+          "description": "User-visible invocation surface. invoke_cmd is bootstrap-only; never used to inject task payloads at runtime (Lease-fleet-runtime constraint).",
+          "additionalProperties": true,
+          "properties": {
+            "surface_type": {
+              "type": "string",
+              "enum": [
+                "claude_code_pane",
+                "claude_code_interactive",
+                "claude_print",
+                "claude_sdk",
+                "claude_github_action",
+                "codex_bridge",
+                "http_endpoint",
+                "cli",
+                "api",
+                "managed_agent",
+                "desktop_bridge",
+                "local"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "description": "v1 legacy field alias for surface_type — accepted for compatibility."
+            },
+            "tool": {"type": "string"},
+            "invoke_cmd": {"type": "string"},
+            "launch_cmd": {"type": "string"}
+          }
+        },
+        "model": {
+          "type": "object",
+          "description": "Stable model binding (PRD D3). Once locked, the operator does not 'switch model' at runtime — that is a contract violation (FR4).",
+          "additionalProperties": true,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": ["anthropic", "google", "openai", "zhipu", "local", "external", "thunderomlx", "flashmlx"]
+            },
+            "model_id": {"type": "string"},
+            "model_alias": {"type": "string"},
+            "binding_locked_at": {"type": "string"},
+            "model_config": {"type": "object", "additionalProperties": true}
+          }
+        },
+        "endpoint": {
+          "type": "object",
+          "description": "Transport endpoint metadata.",
+          "additionalProperties": true,
+          "properties": {
+            "endpoint_type": {"type": "string", "enum": ["cli", "http", "sdk", "local"]},
+            "base_url": {"type": ["string", "null"]},
+            "region": {"type": ["string", "null"]},
+            "api_version": {"type": ["string", "null"]}
+          }
+        },
+        "auth": {
+          "type": "object",
+          "description": "Authentication reference only. RAW SECRET STRINGS ARE FORBIDDEN ANYWHERE IN REGISTRY (PRD C2 / R9 / Hard Rule). Allowed shape: secret_ref / key_env / account_label / last_verified_at.",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["subscription_cli", "api_key", "oauth", "local", "none", "keychain"]
+            },
+            "account_label": {"type": "string"},
+            "secret_ref": {
+              "type": "string",
+              "description": "Reference URI: 'keychain:<service-name>', 'env:<VAR_NAME>', '1password:<item-id>' (future), 'local://...' (no remote auth), or 'none'.",
+              "pattern": "^(secret://|keychain:|env:|1password:|local://|none)$|^(secret://|keychain:|env:|1password:|local://).+"
+            },
+            "key_env": {"type": ["string", "null"]},
+            "last_verified_at": {"type": ["string", "null"]},
+            "expose_raw_key_to_pane": {
+              "type": "boolean",
+              "default": false,
+              "description": "Must remain false for managed panes; ATLAS evidence collection MUST mask any env matched by policy.redact_envs."
+            }
+          },
+          "not": {
+            "anyOf": [
+              {"required": ["api_key"]},
+              {"required": ["token"]},
+              {"required": ["password"]},
+              {"required": ["client_secret"]},
+              {"required": ["bearer"]},
+              {"required": ["cookie"]},
+              {"required": ["raw_key"]},
+              {"required": ["credential"]}
+            ]
+          }
+        },
+        "quota": {
+          "type": "object",
+          "description": "Local soft-limit + remote 429 truth model (R3). reserve_for protects high-value tasks; avoid_for blocks bulk/cheap tasks from premium operators.",
+          "additionalProperties": true,
+          "properties": {
+            "pool": {
+              "type": "string",
+              "description": "Shared budget pool id (Q4 answer). Two operators with the same pool share quota; sqlite CAS lease_token enforces no double-lease (R5)."
+            },
+            "quota_type": {"type": "string"},
+            "period": {
+              "type": "string",
+              "enum": ["rolling_5h", "daily", "weekly", "monthly", "api_balance", "none", "unknown"]
+            },
+            "enabled_at": {"type": "string"},
+            "refresh_at": {"type": "string"},
+            "monthly_budget_units": {"type": ["number", "null"]},
+            "hard_limit_units": {"type": ["number", "null"]},
+            "remaining_estimate": {"type": ["number", "string", "null"]},
+            "soft_stop_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+            "hard_stop_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+            "reserve_for": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ARCH_DESIGN",
+                  "ROOT_CAUSE_DEBUG",
+                  "FINAL_REVIEW",
+                  "DEEP_REVIEW",
+                  "INCIDENT_RESPONSE"
+                ]
+              }
+            },
+            "avoid_for": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "BULK_DOC_EDIT",
+                  "TRIVIAL_RENAME",
+                  "GREP_SCAN",
+                  "FAST_PROTOTYPE",
+                  "LINT_FIX"
+                ]
+              }
+            },
+            "on_exhausted": {
+              "type": "string",
+              "enum": ["disable_and_fallback", "cooldown", "manual_review", "ignore"]
+            }
+          }
+        },
+        "capability": {
+          "type": "object",
+          "description": "CapabilityProfile (Q2 answer): structured capability_tags as integer 0..5 values; capability_schema_version pins the tag vocabulary so future bumps remain compatible.",
+          "additionalProperties": true,
+          "properties": {
+            "capability_schema_version": {
+              "type": "string",
+              "default": "v1",
+              "description": "Bump when capability_tags vocabulary changes."
+            },
+            "task_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "examples": [
+                  "ARCH_DESIGN",
+                  "IMPL",
+                  "REVIEW",
+                  "DEBUG",
+                  "RESEARCH",
+                  "DOC",
+                  "TEST",
+                  "MIGRATION"
+                ]
+              }
+            },
+            "capability_tags": {
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "^(planning|architecture_reasoning|coding|code_impl|debugging|testing|research|browser|shell|long_context|speed|cost_efficiency|reliability|multimodal|local_privacy|review|verification|migration|security|data_engineering|context_compression)$": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                }
+              }
+            }
+          }
+        },
+        "policy": {
+          "type": "object",
+          "description": "PermissionPolicy. Defaults are conservative (write/network/secrets denied; git_push denied). redact_envs is mandatory for any operator with a non-null auth.secret_ref.",
+          "additionalProperties": true,
+          "properties": {
+            "allowed_write_scope": {
+              "type": "string",
+              "enum": ["patch_only", "repo_local", "sprint_artifacts", "none"],
+              "default": "sprint_artifacts"
+            },
+            "allowed_shell_scope": {
+              "type": "string",
+              "enum": ["denied", "repo_local", "sandboxed", "full"],
+              "default": "repo_local"
+            },
+            "allowed_network": {
+              "type": "string",
+              "enum": ["denied", "docs_only", "approved_hosts", "full"],
+              "default": "denied"
+            },
+            "allowed_secrets": {
+              "type": "string",
+              "enum": ["denied", "secret_ref_only", "allowed"],
+              "default": "denied"
+            },
+            "destructive_actions": {
+              "type": "string",
+              "enum": ["denied", "requires_human", "allowed"],
+              "default": "denied"
+            },
+            "git_push": {
+              "type": "string",
+              "enum": ["denied", "requires_human", "allowed"],
+              "default": "denied"
+            },
+            "payment_or_external_action": {
+              "type": "string",
+              "enum": ["denied", "requires_human", "allowed"],
+              "default": "denied"
+            },
+            "requires_human_for": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "delete_files",
+                  "modify_ci",
+                  "touch_secrets",
+                  "force_push",
+                  "drop_table",
+                  "schema_change",
+                  "production_config_write"
+                ]
+              },
+              "default": ["delete_files", "modify_ci", "touch_secrets"]
+            },
+            "redact_envs": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Env-name globs to mask from logs/evidence/handoff. MUST include any pattern that could leak a secret.",
+              "default": ["ANTHROPIC_*", "OPENAI_*", "GOOGLE_*", "ZHIPU_*", "*_API_KEY", "*_TOKEN"]
+            },
+            "allowed_repos": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "state": {
+          "type": "object",
+          "description": "RuntimeState. canonical lifecycle + exception states unified in this enum (FR2). last_lease_id is the sqlite CAS owner.",
+          "additionalProperties": true,
+          "properties": {
+            "availability": {
+              "type": "string",
+              "enum": ["enabled", "disabled", "degraded"]
+            },
+            "runtime_state": {
+              "type": "string",
+              "enum": [
+                "unregistered",
+                "booting",
+                "created",
+                "warming",
+                "available",
+                "idle",
+                "leased",
+                "running",
+                "busy",
+                "finalizing",
+                "draining",
+                "cooldown",
+                "error",
+                "quota_exhausted",
+                "auth_expired",
+                "disabled",
+                "unavailable",
+                "human_required",
+                "stale_context",
+                "needs_human_review"
+              ]
+            },
+            "last_state_change_at": {"type": ["string", "null"]},
+            "last_lease_id": {"type": ["string", "null"]},
+            "last_heartbeat_at": {"type": ["string", "null"]},
+            "last_success_at": {"type": ["string", "null"]},
+            "last_error": {"type": ["string", "null"]}
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Observability counters. Populated by Operator Runtime, never authored by registry editor.",
+          "additionalProperties": true,
+          "properties": {
+            "recent_success_rate": {"type": ["number", "null"]},
+            "last_result_at": {"type": ["string", "null"]},
+            "recent_failure_kinds": {"type": "array", "items": {"type": "string"}},
+            "avg_latency_sec": {"type": ["number", "null"]},
+            "task_success_rate_7d": {"type": ["number", "null"]},
+            "avg_cost_per_success": {"type": ["number", "null"]},
+            "tool_error_rate": {"type": ["number", "null"]},
+            "hallucination_incidents": {"type": "integer", "minimum": 0}
+          }
+        },
+        "routing": {
+          "type": "object",
+          "description": "Scheduler hints. fallback_ladder is the ordered list of operator_ids tried after this one (R8 + Q5).",
+          "additionalProperties": true,
+          "properties": {
+            "preferred_for_classes": {"type": "array", "items": {"type": "string"}},
+            "primary_task_types": {"type": "array", "items": {"type": "string"}},
+            "avoid_task_types": {"type": "array", "items": {"type": "string"}},
+            "fallback_operator_classes": {"type": "array", "items": {"type": "string"}},
+            "fallback_ladder": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "operator_id": {"type": "string"},
+                  "reason": {"type": "string"}
+                },
+                "required": ["operator_id"]
+              }
+            },
+            "verifier_class_blocklist": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Classes that this operator MUST NOT be paired with as verifier (writer reuse guard, Q6 baseline rule)."
+            }
+          }
+        }
+      }
+    }
+  }
+}

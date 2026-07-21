@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "solar.broker_event.v1",
+  "title": "Broker Event",
+  "description": "Append-only event ledger entry for Code-as-Harness Runtime. Every broker action, policy check, and verification writes one of these. Frozen by S02 architecture.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "ts",
+    "sprint_id",
+    "node_id",
+    "type",
+    "actor"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "solar.broker_event.v1"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_[0-9a-f]{8,32}$"
+    },
+    "ts": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "sprint_id": {
+      "type": "string",
+      "pattern": "^sprint-"
+    },
+    "node_id": {
+      "type": "string",
+      "pattern": "^[A-Z]\\d+$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "action.proposed",
+        "policy.verdict",
+        "action.executed",
+        "action.failed",
+        "artifact.registered",
+        "verifier.verdict",
+        "projection.updated"
+      ]
+    },
+    "actor": {
+      "type": "string",
+      "pattern": "^(pm|planner|builder|evaluator|broker|system)(:\\S+)?$"
+    },
+    "action_id": {
+      "type": "string",
+      "pattern": "^[A-Z]\\d+$"
+    },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "output_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policy_verdict": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "WARN"]
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "parent_event_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^evt_[0-9a-f]{8,32}$"}
+    }
+  }
+}

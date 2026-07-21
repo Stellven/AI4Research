@@ -1,0 +1,1 @@
+PASS: model doctor failure recorded without pane dispatch

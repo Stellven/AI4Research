@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_325_956b20b1c4_harness_tests_test_chatgpt_browser_agent_task_operator.py",
+  "source": "harness/tests/test_chatgpt_browser_agent_task_operator.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_chatgpt_browser_agent_task_operator.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.209,
+  "timeout": false
+}

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solar 技术演进报告</title>
+  <style>
+    /* 华为风格 - 简洁大气 */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #1a1a1a;
+      color: #333;
+    }
+
+    .slide {
+      width: 100vw;
+      height: 100vh;
+      padding: 60px 80px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      page-break-after: always;
+    }
+
+    /* 标题页 */
+    .slide-title {
+      background: linear-gradient(135deg, #C7000B 0%, #E31937 100%);
+      color: white;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .slide-title h1 {
+      font-size: 3.5rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin-bottom: 40px;
+    }
+
+    .slide-title .author,
+    .slide-title .date {
+      font-size: 1.4rem;
+      opacity: 0.9;
+      margin: 10px 0;
+    }
+
+    /* 章节页 */
+    .slide-section {
+      background: linear-gradient(135deg, #0052D9 0%, #0066FF 100%);
+      color: white;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .slide-section h2 {
+      font-size: 3rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+    }
+
+    /* 内容页 */
+    .slide-header {
+      margin-bottom: 40px;
+      border-left: 5px solid #C7000B;
+      padding-left: 20px;
+    }
+
+    .slide-header h2 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      color: #333333;
+    }
+
+    .slide-header h3 {
+      font-size: 1.3rem;
+      color: #666;
+      margin-top: 8px;
+      font-weight: 400;
+    }
+
+    .slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .slide-content ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .slide-content li {
+      font-size: 1.6rem;
+      line-height: 1.8;
+      margin: 20px 0;
+      padding-left: 40px;
+      position: relative;
+      color: #444;
+    }
+
+    .slide-content li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 12px;
+      width: 12px;
+      height: 12px;
+      background: #C7000B;
+      border-radius: 2px;
+    }
+
+    /* 页脚 */
+    .slide-footer {
+      position: absolute;
+      bottom: 30px;
+      right: 60px;
+      font-size: 1rem;
+      color: #999;
+    }
+
+    .slide-title .slide-footer,
+    .slide-section .slide-footer {
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* 键盘导航 */
+    .slide { display: none; }
+    .slide.active { display: flex; }
+
+    /* 打印样式 */
+    @media print {
+      .slide {
+        display: flex !important;
+        page-break-after: always;
+        height: 100vh;
+      }
+      body { background: white; }
+    }
+
+    /* 进度条 */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 4px;
+      background: #C7000B;
+      transition: width 0.3s ease;
+      z-index: 1000;
+    }
+
+    /* 帮助提示 */
+    .help-tip {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .help-tip.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="progress-bar" id="progress"></div>
+  <div class="help-tip" id="help">← → 翻页 | F 全屏 | P 打印</div>
+
+  
+    <div class="slide slide-title" id="slide-1">
+      <div class="slide-content">
+        <h1>Solar 技术演进报告</h1>
+        <p class="author">Solar Team</p>
+        <p class="date">2026-02-03</p>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">1 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-2">
+      <div class="slide-content">
+        <h2>一、核心架构</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">2 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide" id="slide-3">
+      <div class="slide-header">
+        <h2>一、核心架构</h2>
+        
+      </div>
+      <div class="slide-content">
+        <ul>
+          <li>支持 8+ 大模型动态切换</li>
+          <li>成本优化：按任务复杂度选择</li>
+          <li>智能路由：根据任务类型自动匹配</li>
+          <li>性能追踪：实时监控各模型表现</li>
+          <li>故障转移：自动降级机制</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">3 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-4">
+      <div class="slide-content">
+        <h2>二、五阶段开发流程</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">4 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide" id="slide-5">
+      <div class="slide-header">
+        <h2>二、五阶段开发流程</h2>
+        
+      </div>
+      <div class="slide-content">
+        <ul>
+          <li>P1 研究：技术调研与可行性分析</li>
+          <li>P2 设计：架构设计与方案评审</li>
+          <li>P3 实现：代码开发与单元测试</li>
+          <li>P4 验证：集成测试与性能验证</li>
+          <li>P5 收尾：文档与上线</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">5 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-6">
+      <div class="slide-content">
+        <h2>三、Agent 体系</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">6 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide" id="slide-7">
+      <div class="slide-header">
+        <h2>三、Agent 体系 (1/2)</h2>
+        
+      </div>
+      <div class="slide-content">
+        <ul>
+          <li>@Researcher - 技术调研</li>
+          <li>@Architect - 架构设计</li>
+          <li>@Coder - 代码实现</li>
+          <li>@Tester - 测试验证</li>
+          <li>@Reviewer - 代码审查</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">7 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide" id="slide-8">
+      <div class="slide-header">
+        <h2>三、Agent 体系 (2/2)</h2>
+        
+      </div>
+      <div class="slide-content">
+        <ul>
+          <li>@Docs - 文档生成</li>
+          <li>@Ops - 构建部署</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">8 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-9">
+      <div class="slide-content">
+        <h2>四、关键成果</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">9 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide" id="slide-10">
+      <div class="slide-header">
+        <h2>四、关键成果</h2>
+        
+      </div>
+      <div class="slide-content">
+        <ul>
+          <li>Token 成本降低 40%</li>
+          <li>开发效率提升 60%</li>
+          <li>代码质量提升 35%</li>
+          <li>文档覆盖率 95%</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">10 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide slide-section" id="slide-11">
+      <div class="slide-content">
+        <h2>五、下一步计划</h2>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">11 / 12</span>
+      </div>
+    </div>
+
+    <div class="slide" id="slide-12">
+      <div class="slide-header">
+        <h2>五、下一步计划</h2>
+        
+      </div>
+      <div class="slide-content">
+        <ul>
+          <li>增强记忆系统</li>
+          <li>优化 TVS 渲染引擎</li>
+          <li>扩展 MCP 生态</li>
+          <li>完善自动化测试</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span class="page-num">12 / 12</span>
+      </div>
+    </div>
+
+  <script>
+    (function() {
+      const slides = document.querySelectorAll('.slide');
+      const progress = document.getElementById('progress');
+      const help = document.getElementById('help');
+      let current = 0;
+
+      function showSlide(n) {
+        if (n < 0) n = 0;
+        if (n >= slides.length) n = slides.length - 1;
+        current = n;
+
+        slides.forEach((s, i) => {
+          s.classList.toggle('active', i === current);
+        });
+
+        progress.style.width = ((current + 1) / slides.length * 100) + '%';
+        location.hash = 'slide-' + (current + 1);
+      }
+
+      // 键盘导航
+      document.addEventListener('keydown', (e) => {
+        switch(e.key) {
+          case 'ArrowRight':
+          case 'ArrowDown':
+          case ' ':
+          case 'PageDown':
+            showSlide(current + 1);
+            e.preventDefault();
+            break;
+          case 'ArrowLeft':
+          case 'ArrowUp':
+          case 'PageUp':
+            showSlide(current - 1);
+            e.preventDefault();
+            break;
+          case 'Home':
+            showSlide(0);
+            break;
+          case 'End':
+            showSlide(slides.length - 1);
+            break;
+          case 'f':
+          case 'F':
+            document.documentElement.requestFullscreen?.();
+            break;
+          case 'p':
+          case 'P':
+            window.print();
+            break;
+          case 'h':
+          case 'H':
+          case '?':
+            help.classList.toggle('show');
+            break;
+        }
+      });
+
+      // 点击导航
+      document.addEventListener('click', (e) => {
+        const x = e.clientX / window.innerWidth;
+        if (x > 0.5) showSlide(current + 1);
+        else showSlide(current - 1);
+      });
+
+      // 触摸导航
+      let touchStartX = 0;
+      document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+      });
+      document.addEventListener('touchend', (e) => {
+        const diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) {
+          if (diff > 0) showSlide(current + 1);
+          else showSlide(current - 1);
+        }
+      });
+
+      // 初始化
+      const hash = location.hash.match(/slide-(\d+)/);
+      showSlide(hash ? parseInt(hash[1]) - 1 : 0);
+
+      // 显示帮助提示
+      setTimeout(() => {
+        help.classList.add('show');
+        setTimeout(() => help.classList.remove('show'), 3000);
+      }, 500);
+    })();
+  </script>
+</body>
+</html>

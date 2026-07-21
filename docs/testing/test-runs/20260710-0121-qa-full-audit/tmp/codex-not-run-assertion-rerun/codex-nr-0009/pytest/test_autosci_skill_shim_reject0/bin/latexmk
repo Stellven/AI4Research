@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+from pathlib import Path
+Path('main.pdf').write_text('%PDF-1.4\n', encoding='utf-8')
+print('fake latexmk emitted invalid pdf')

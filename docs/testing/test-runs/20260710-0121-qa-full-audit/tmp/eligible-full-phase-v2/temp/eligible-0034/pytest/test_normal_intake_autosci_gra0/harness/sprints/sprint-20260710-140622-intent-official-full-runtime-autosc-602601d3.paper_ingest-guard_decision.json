@@ -1,0 +1,11 @@
+{
+  "node_id": "paper_ingest",
+  "decision": "allow",
+  "detector": "builtin_secret_patterns",
+  "matches": [],
+  "scanned_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0034/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-140622-intent-official-full-runtime-autosc-602601d3.paper_ingest-handoff.md",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0034/pytest/test_normal_intake_autosci_gra0/harness/artifacts/intake-green/research_paper.v1.json"
+  ],
+  "checked_at": "2026-07-10T14:06:25Z"
+}

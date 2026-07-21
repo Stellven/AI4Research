@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_321_c487fc3bc6_harness_tests_test_capability_token_runtime.py",
+  "source": "harness/tests/test_capability_token_runtime.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_capability_token_runtime.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.193,
+  "timeout": false
+}

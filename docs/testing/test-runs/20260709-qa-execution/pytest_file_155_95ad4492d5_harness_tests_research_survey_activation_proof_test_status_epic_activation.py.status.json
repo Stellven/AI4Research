@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_155_95ad4492d5_harness_tests_research_survey_activation_proof_test_status_epic_activation.py",
+  "source": "harness/tests/research/survey/activation_proof/test_status_epic_activation.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research/survey/activation_proof/test_status_epic_activation.py"
+  ],
+  "exit_code": 2,
+  "runtime_seconds": 0.199,
+  "timeout": false
+}

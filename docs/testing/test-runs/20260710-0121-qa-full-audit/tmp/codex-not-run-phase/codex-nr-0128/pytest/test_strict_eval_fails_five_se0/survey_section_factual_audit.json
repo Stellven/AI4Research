@@ -1,0 +1,16 @@
+{
+  "ok": false,
+  "section_factual_accuracy": 0.0,
+  "section_grounding_accuracy": 0.0,
+  "audited_sections": 0,
+  "passed_sections": 0,
+  "grounded_sections": 0,
+  "missing_final_sections": [
+    "ch1/sec0",
+    "ch1/sec1",
+    "ch1/sec2",
+    "ch1/sec3",
+    "ch1/sec4"
+  ],
+  "failed_sections": []
+}

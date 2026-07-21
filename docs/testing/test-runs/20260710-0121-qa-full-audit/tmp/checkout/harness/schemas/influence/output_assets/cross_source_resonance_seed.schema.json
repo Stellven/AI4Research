@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "influence.output.cross_source_resonance_seed.v1",
+  "title": "CrossSourceResonanceSeed",
+  "type": "object",
+  "required": ["schema_version", "asset_type", "packet_id", "thesis_id"],
+  "properties": {
+    "schema_version": {"const": "influence.output.cross_source_resonance_seed.v1"},
+    "asset_type": {"const": "cross_source_resonance_seed"},
+    "packet_id": {"type": "string"},
+    "thesis_id": {"type": "string"},
+    "resonance_score": {"type": "number"},
+    "source_statements": {"type": "array", "items": {"type": "string"}}
+  }
+}

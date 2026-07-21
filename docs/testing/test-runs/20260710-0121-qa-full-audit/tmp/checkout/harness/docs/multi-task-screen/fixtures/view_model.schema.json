@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/multi_task_screen/view_model.v1.json",
+  "title": "Multi-Task Screen View Model v1",
+  "description": "Normalized view model emitted by harness/lib/multi_task_runner.screen_view_model. Single source of truth for TVS render path and fallback render path. Field renames or removals MUST be reflected in S02 architecture doc §4 and §9.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "health",
+    "panes",
+    "workers",
+    "last_dispatch",
+    "dag",
+    "meta"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "multi_task_screen.view_model.v1",
+      "description": "Pins this contract. Bumping the value implies a breaking change to any consumer."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC instant the view model snapshot was computed. Optional but recommended."
+    },
+    "width_hint": {
+      "type": "integer",
+      "minimum": 40,
+      "maximum": 240,
+      "description": "Renderer hint for terminal columns (typical 80 or 120). Optional."
+    },
+    "height_hint": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 100,
+      "description": "Renderer hint for terminal rows (typical 20 or 24). Optional."
+    },
+    "health": {
+      "type": "object",
+      "required": ["overall", "capsules"],
+      "additionalProperties": false,
+      "properties": {
+        "overall": {
+          "type": "string",
+          "enum": ["ok", "warn", "error"],
+          "description": "Roll-up across capsules. error > warn > ok."
+        },
+        "capsules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "state", "detail"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Capsule identifier: coordinator|tmux|models|profile (free-form, lowercase)."
+              },
+              "state": {
+                "type": "string",
+                "enum": ["ok", "warn", "error"],
+                "description": "Capsule state, contributes to overall."
+              },
+              "detail": {
+                "type": "string",
+                "description": "Short human-readable explanation rendered next to the capsule."
+              }
+            }
+          }
+        }
+      }
+    },
+    "panes": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "description": "Always exactly 8 entries (main:0..3 then lab:0..3). Missing panes use state=missing as placeholder; the array is never shrunk.",
+      "items": {
+        "type": "object",
+        "required": ["plane", "slot", "role", "state", "model", "marker"],
+        "additionalProperties": false,
+        "properties": {
+          "plane": {
+            "type": "string",
+            "enum": ["main", "lab"],
+            "description": "Which tmux session the pane belongs to."
+          },
+          "slot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Pane index inside the plane (0..3)."
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PM|PLAN|BUILD|EVAL|LAB. Free-form short label, single token."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "warn",
+              "error",
+              "idle",
+              "active",
+              "blocked",
+              "dry_run",
+              "ready",
+              "working",
+              "missing"
+            ],
+            "description": "Fixed 10-word enum. Renames forbidden without S02 doc update."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Model label rendered in the pane row (e.g. Opus, Sonnet, GLM)."
+          },
+          "marker": {
+            "type": "string",
+            "maxLength": 1,
+            "pattern": "^[\\x20-\\x7E]$",
+            "description": "Single printable ASCII character. Pattern restricts to U+0020..U+007E; emoji and non-ASCII glyphs are rejected. Common values: space (idle), '>' (working), '*' (attention)."
+          }
+        }
+      }
+    },
+    "workers": {
+      "type": "object",
+      "required": ["active", "tracked", "counts"],
+      "additionalProperties": false,
+      "properties": {
+        "active": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Worker count currently in state=active. MUST be ≤ tracked."
+        },
+        "tracked": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total workers known to the multi-task runner snapshot."
+        },
+        "counts": {
+          "type": "object",
+          "required": ["dry_run", "idle", "blocked", "active"],
+          "additionalProperties": false,
+          "properties": {
+            "dry_run": {"type": "integer", "minimum": 0},
+            "idle": {"type": "integer", "minimum": 0},
+            "blocked": {"type": "integer", "minimum": 0},
+            "active": {"type": "integer", "minimum": 0}
+          },
+          "description": "Partition of tracked workers by sub-state. Sum SHOULD equal tracked; renderer is tolerant if sum < tracked (drift gets surfaced via meta.degraded)."
+        }
+      }
+    },
+    "last_dispatch": {
+      "type": "object",
+      "required": ["time", "role", "pane", "target_sprint_short", "target_node"],
+      "additionalProperties": false,
+      "properties": {
+        "time": {
+          "type": "string",
+          "pattern": "^[0-9]{2}:[0-9]{2}$",
+          "description": "HH:MM, 5 chars exactly. Date is intentionally omitted to keep the line short; absolute timestamps live in events.jsonl."
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dispatcher persona: planner|builder|evaluator|coordinator (free-form, lowercase)."
+        },
+        "pane": {
+          "type": "string",
+          "pattern": "^(main|lab):[0-3]$",
+          "description": "Target pane in 'plane:slot' form, e.g. main:3, lab:0."
+        },
+        "target_sprint_short": {
+          "type": "string",
+          "pattern": "^S[0-9]+$",
+          "description": "Slice short id, e.g. S04. Full sprint id is forbidden in this field; surfacing the full id would break 80x20 layout."
+        },
+        "target_node": {
+          "type": "string",
+          "minLength": 1,
+          "description": "DAG node label, e.g. N8-eval, D3, N1. Free-form short token."
+        }
+      }
+    },
+    "dag": {
+      "type": "object",
+      "required": ["sprint_short", "counts", "ready"],
+      "additionalProperties": false,
+      "properties": {
+        "sprint_short": {
+          "type": "string",
+          "pattern": "^S[0-9]+$",
+          "description": "Currently focused slice. Full sprint id forbidden (see last_dispatch.target_sprint_short)."
+        },
+        "counts": {
+          "type": "object",
+          "required": ["pass", "pending", "reviewing"],
+          "additionalProperties": false,
+          "properties": {
+            "pass": {"type": "integer", "minimum": 0},
+            "pending": {"type": "integer", "minimum": 0},
+            "reviewing": {"type": "integer", "minimum": 0}
+          }
+        },
+        "ready": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Ready node short labels. Empty array means 'no ready node' and renders as 'ready=N/A' in fallback path."
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["source_intent", "degraded"],
+      "additionalProperties": false,
+      "properties": {
+        "source_intent": {
+          "type": "string",
+          "enum": ["screen", "status"],
+          "description": "Which Control-Plane intent produced this view model. 'status' implies the verbose debug command was the entry point."
+        },
+        "degraded": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Data source identifier (e.g. lab, autopilot, tvs_render)."
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Short code-like reason: lab_session_missing | capture_timeout:<pane> | tvs_render_error | ..."
+              }
+            }
+          },
+          "description": "Empty array means all data sources are healthy."
+        }
+      }
+    }
+  }
+}

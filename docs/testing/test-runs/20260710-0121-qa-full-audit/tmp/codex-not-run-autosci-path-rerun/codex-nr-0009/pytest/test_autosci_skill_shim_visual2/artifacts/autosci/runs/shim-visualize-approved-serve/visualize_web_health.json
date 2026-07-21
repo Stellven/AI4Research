@@ -1,0 +1,28 @@
+{
+  "api_endpoints": [
+    "/api/health",
+    "/api/stats",
+    "/api/maturity",
+    "/api/entities/{type}",
+    "/api/entities/{type}/{slug}",
+    "/api/graph",
+    "/api/open-questions",
+    "/api/log",
+    "/api/events"
+  ],
+  "app_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/app",
+  "edge_count": 0,
+  "node_count": 0,
+  "ok": true,
+  "schema": "autosci_serve_cli.v1",
+  "status": "completed",
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_visual2/artifacts/autosci/workspace/wiki",
+  "write_endpoints": [
+    "PATCH /api/entities/{type}/{slug}",
+    "POST /api/edges",
+    "POST /api/citations",
+    "POST /api/log",
+    "POST /api/regenerate/{kind}",
+    "POST /api/lint/fix"
+  ]
+}

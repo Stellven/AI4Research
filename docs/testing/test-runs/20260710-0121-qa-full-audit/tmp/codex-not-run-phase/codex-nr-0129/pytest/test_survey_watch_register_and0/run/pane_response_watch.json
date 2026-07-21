@@ -1,0 +1,12 @@
+{
+  "ok": false,
+  "processed": 0,
+  "passed": 0,
+  "failed": 0,
+  "pending_responses": 1,
+  "skipped_final": 0,
+  "results": [],
+  "pending_section_ids": [
+    "ch01/sec01"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-07-10T05:54:33Z",
+  "proofs": [
+    {
+      "categories": [
+        "wiki_mutation_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed wiki registration evidence for AutoSci `ingest` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/research_paper.json",
+        "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/ingest_final_source_registration_boundary.json",
+        "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/research_memory_update.json",
+        "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/research_graph_update.json",
+        "artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "ingest",
+      "production_ready": true,
+      "proof_id": "runtime:ingest:wiki-registration:20260710T055433Z",
+      "provenance": {
+        "artifact_kind": "ingest_wiki_registration_boundary",
+        "captured_at": "2026-07-10T05:54:33Z",
+        "command": "ingest_paper:wiki_registration_boundary",
+        "paper_id": "paper-sample-paper",
+        "source": "ingest_wiki_registration"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

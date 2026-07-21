@@ -1,0 +1,10 @@
+[D3] Builder worktree 一致性测试
+  [0;32m✓[0m pane-launcher 引用 worktree.sh
+  [0;32m✓[0m start-incarnation 引用 worktree.sh
+  [0;32m✓[0m lib/worktree.sh 存在
+  [0;32m✓[0m worktree.sh 有复用逻辑
+  [0;32m✓[0m watchdog respawn 传 work_dir 参数
+  [0;32m✓[0m worktree.sh 语法正确
+
+  [0;32mPASS: 6[0m  [0;31mFAIL: 0[0m
+PASS

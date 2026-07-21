@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/skill.v2.draft.json",
+  "title": "Solar Skill Registry Entry v2",
+  "description": "Draft v2 schema for Skill entries in solar_skills.py registry.yaml. Adds role, skill_version, mcp_tools, policy_refs, verification_contract. Backward compatible: v1 fields preserved.",
+  "schema_status": "draft",
+  "schema_version": "v2.0.0-draft",
+  "type": "object",
+  "required": ["name", "role", "skill_version"],
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Skill name slug. Must be unique within registry."
+    },
+    "role": {
+      "type": "string",
+      "enum": ["macro", "implementation", "enforcer"],
+      "description": "Skill role. macro=decomposition hint (advisory). implementation=executable recipe. enforcer=mandatory gate (hard stop). Default for migrated v1 entries: 'implementation'."
+    },
+    "skill_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-z0-9.]+)?$",
+      "description": "Semver string (e.g. '1.0.0', '2.1.0-draft')."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what this skill does."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "stable", "deprecated", "broken"],
+      "default": "draft",
+      "description": "Lifecycle status. Matches solar_skills.py lifecycle states."
+    },
+    "injectable": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this skill can be injected into dispatch context."
+    },
+    "executable": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this skill has an executable implementation (not just advisory)."
+    },
+    "mcp_tools": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]*$",
+        "description": "MCP capability token. Must match capability.schema.json pattern."
+      },
+      "default": [],
+      "description": "List of MCP capability tokens required for execution. APO resolves each via capability_registry.py:186 cmd_query."
+    },
+    "policy_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": [],
+      "description": "List of policy IDs that govern execution of this skill. APO enforces all listed policies before dispatch."
+    },
+    "verification_contract": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Inline verification contract.",
+          "properties": {
+            "must_pass": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "List of check names that must pass for skill to be considered complete."
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Verification timeout."
+            }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "string",
+          "description": "$ref to external contract schema path."
+        },
+        {
+          "type": "null",
+          "description": "No verification contract (advisory skills)."
+        }
+      ],
+      "default": null,
+      "description": "Post-execution verification rules. Required for role=implementation and role=enforcer."
+    },
+    "macro_override": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, APO may ignore this skill's macro decomposition in favor of direct implementation. Only meaningful for role=macro."
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": [],
+      "description": "Classification tags for APO task-type matching."
+    },
+    "promoted_at": {
+      "type": ["string", "null"],
+      "description": "ISO 8601 timestamp when skill was promoted to stable."
+    },
+    "promoted_by": {
+      "type": ["string", "null"],
+      "description": "Actor that performed the promotion."
+    }
+  },
+  "$defs": {}
+}

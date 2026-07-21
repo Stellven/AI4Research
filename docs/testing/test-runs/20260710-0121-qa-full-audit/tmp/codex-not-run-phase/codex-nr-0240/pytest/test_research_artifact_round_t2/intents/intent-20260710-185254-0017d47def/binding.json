@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "intent_id": "intent-20260710-185254-0017d47def",
+  "sprint_id": "sprint-20260710-185254-intent-antigravity-artifact-compile-0017d47d",
+  "artifacts": {
+    "raw_intent.json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0240/pytest/test_research_artifact_round_t2/sprints/sprint-20260710-185254-intent-antigravity-artifact-compile-0017d47d.raw_intent.json",
+    "rewritten_intent.json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0240/pytest/test_research_artifact_round_t2/sprints/sprint-20260710-185254-intent-antigravity-artifact-compile-0017d47d.rewritten_intent.json",
+    "requirement_ir.json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0240/pytest/test_research_artifact_round_t2/sprints/sprint-20260710-185254-intent-antigravity-artifact-compile-0017d47d.requirement_ir.json",
+    "requirement_trace.json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0240/pytest/test_research_artifact_round_t2/sprints/sprint-20260710-185254-intent-antigravity-artifact-compile-0017d47d.requirement_trace.json"
+  }
+}

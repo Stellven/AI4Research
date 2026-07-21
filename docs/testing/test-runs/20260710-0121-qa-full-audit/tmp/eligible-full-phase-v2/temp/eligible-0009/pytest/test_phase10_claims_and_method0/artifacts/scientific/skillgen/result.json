@@ -1,0 +1,56 @@
+{
+  "action": "extract_methods",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/scientific/skillgen/research_method.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "paper_path": "plugins/autosci/tests/fixtures/skillgen_sample_paper.md"
+    },
+    "limitations": [
+      "Method extraction is deterministic and section-based; it does not infer hidden procedure steps."
+    ],
+    "node_id": "node-extract_methods",
+    "outputs": {
+      "methods": [
+        {
+          "evidence_ids": [
+            "paper-skillgen-sample-paper",
+            "skillgen_sample_paper.md#method"
+          ],
+          "method_id": "method-001",
+          "name": "Method protocol",
+          "procedure": [
+            "The workflow derives candidate skill procedures from trajectory data",
+            "Compares success patterns",
+            "Failure modes",
+            "Verifies whether the generated skill improves the base agent without introducing unacceptable regressions"
+          ],
+          "source_anchor": "skillgen_sample_paper.md#method",
+          "source_papers": [
+            "paper-skillgen-sample-paper"
+          ],
+          "summary": "The workflow derives candidate skill procedures from trajectory data, compares success patterns and failure modes, and verifies whether the generated skill improves the base agent without introducing unacceptable regressions."
+        }
+      ]
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T14:04:57Z"
+    },
+    "schema": "research_method.v1",
+    "sprint_id": "phase10-test",
+    "status": "completed",
+    "task_id": "skillgen-extract_methods"
+  },
+  "evidence_jsonl": "artifacts/scientific/skillgen/evidence.jsonl",
+  "evidence_path": "artifacts/scientific/skillgen/research_method.json",
+  "ok": true,
+  "result_path": "artifacts/scientific/skillgen/result.json",
+  "schema": "research_method.v1",
+  "status": "completed"
+}

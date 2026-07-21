@@ -1,0 +1,25 @@
+{
+  "id": "dQw4w9WgXcQ",
+  "subtitles": {
+    "en": [
+      {"ext": "srv1", "url": "https://www.youtube.com/api/timedtext?lang=en&fmt=srv1", "name": "English"},
+      {"ext": "vtt", "url": "https://www.youtube.com/api/timedtext?lang=en&fmt=vtt", "name": "English"},
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?lang=en&fmt=json3", "name": "English"}
+    ],
+    "zh-Hans": [
+      {"ext": "srv1", "url": "https://www.youtube.com/api/timedtext?lang=zh-Hans&fmt=srv1", "name": "Chinese (Simplified)"},
+      {"ext": "vtt", "url": "https://www.youtube.com/api/timedtext?lang=zh-Hans&fmt=vtt", "name": "Chinese (Simplified)"}
+    ]
+  },
+  "automatic_captions": {
+    "en": [
+      {"ext": "srv1", "url": "https://www.youtube.com/api/timedtext?lang=en&kind=asr&fmt=srv1", "name": "English (auto-generated)"},
+      {"ext": "vtt", "url": "https://www.youtube.com/api/timedtext?lang=en&kind=asr&fmt=vtt", "name": "English (auto-generated)"},
+      {"ext": "json3", "url": "https://www.youtube.com/api/timedtext?lang=en&kind=asr&fmt=json3", "name": "English (auto-generated)"}
+    ],
+    "ja": [
+      {"ext": "srv1", "url": "https://www.youtube.com/api/timedtext?lang=ja&kind=asr&fmt=srv1", "name": "Japanese (auto-generated)"},
+      {"ext": "vtt", "url": "https://www.youtube.com/api/timedtext?lang=ja&kind=asr&fmt=vtt", "name": "Japanese (auto-generated)"}
+    ]
+  }
+}

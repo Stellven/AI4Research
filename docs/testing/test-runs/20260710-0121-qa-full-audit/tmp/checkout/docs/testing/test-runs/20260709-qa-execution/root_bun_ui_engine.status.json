@@ -1,0 +1,10 @@
+{
+  "name": "root_bun_ui_engine",
+  "command": [
+    "bun",
+    "run",
+    "tests/ui-engine.test.ts"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0
+}

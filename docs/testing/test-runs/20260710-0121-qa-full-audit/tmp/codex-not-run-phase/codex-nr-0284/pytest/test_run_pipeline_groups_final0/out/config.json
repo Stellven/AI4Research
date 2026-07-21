@@ -1,0 +1,9 @@
+{
+  "schema_version": "solar.understand_anything.config.v1",
+  "generated_at": "2026-07-10T18:54:04Z",
+  "repo_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0284/pytest/test_run_pipeline_groups_final0/repo",
+  "language": "zh",
+  "execution_surface": "deterministic_scan_and_thunderomlx_semantic",
+  "semantic_backend": "ThunderOMLX",
+  "semantic_model": "Qwen3.6-35b-a3b"
+}

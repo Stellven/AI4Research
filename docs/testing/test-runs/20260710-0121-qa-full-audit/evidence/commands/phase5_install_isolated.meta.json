@@ -1,0 +1,13 @@
+{
+  "command_id": "phase5_install_isolated",
+  "phase": "installer",
+  "linked_feature_ids": "INSTALL_CORE_SET",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "/opt/homebrew/bin/bash ./install.sh --yes --components kernel,harness,autosci --skip-py-deps --solar-home \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar\" --claude-dir \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude\"",
+  "start_time": "2026-07-10T02:16:09-04:00",
+  "end_time": "2026-07-10T02:16:11-04:00",
+  "duration_seconds": "2.363",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase5_install_isolated.stdout.txt",
+  "stderr_path": "evidence/commands/phase5_install_isolated.stderr.txt"
+}

@@ -1,0 +1,20 @@
+{
+  "job_id": "job-a1853048-05ef-4afa-b3c5-4b63a2ce51b1",
+  "actor_id": "mini-browser-deepresearch",
+  "state": "reauth_required",
+  "envelope": {
+    "task_id": "T-reauth",
+    "objective": "Do standard research"
+  },
+  "execution_mode": "mock",
+  "logs": "Job job-a1853048-05ef-4afa-b3c5-4b63a2ce51b1 submitted for actor mini-browser-deepresearch at 2026-07-10T06:23:49Z.\n[2026-07-10T06:23:49Z] Transitioned to state: running\n[2026-07-10T06:23:49Z] Transitioned to state: reauth_required\n",
+  "artifacts": [],
+  "mock_sequence": [
+    "running",
+    "reauth_required"
+  ],
+  "mock_index": 1,
+  "created_at": "2026-07-10T06:23:49Z",
+  "updated_at": "2026-07-10T06:23:49Z",
+  "projected_state": "WAITING_HUMAN"
+}

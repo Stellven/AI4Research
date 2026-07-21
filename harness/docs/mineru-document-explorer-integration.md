@@ -2,24 +2,24 @@
 
 Status: installed
 Installed at: 2026-05-08
-Vault: `/Users/sihaoli/Knowledge`
+Vault: `~/Knowledge`
 Collection: `solar-wiki`
 
 ## What Was Installed
 
 - `mineru-document-explorer@1.0.9` via npm.
-- CLI binary: `/Users/sihaoli/.npm-global/bin/qmd`.
-- Source vendor copy: `/Users/sihaoli/.solar/harness/vendor/MinerU-Document-Explorer`.
+- CLI binary: `~/.npm-global/bin/qmd`.
+- Source vendor copy: `~/.solar/harness/vendor/MinerU-Document-Explorer`.
 - Skill symlinks:
-  - `/Users/sihaoli/.agents/skills/mineru-document-explorer`
-  - `/Users/sihaoli/.claude/skills/mineru-document-explorer`
-  - `/Users/sihaoli/.codex/skills/mineru-document-explorer`
+  - `~/.agents/skills/mineru-document-explorer`
+  - `~/.claude/skills/mineru-document-explorer`
+  - `~/.codex/skills/mineru-document-explorer`
 
 ## Python Document Readers
 
 Python document dependencies are installed in an isolated venv:
 
-`/Users/sihaoli/.solar/harness/venvs/mineru-doc-explorer`
+`~/.solar/harness/venvs/mineru-doc-explorer`
 
 Installed packages:
 
@@ -32,7 +32,7 @@ Installed packages:
 The Obsidian vault is indexed as:
 
 ```bash
-qmd collection add /Users/sihaoli/Knowledge --name solar-wiki --mask '**/*.{md,pdf,docx,pptx}'
+qmd collection add ~/Knowledge --name solar-wiki --mask '**/*.{md,pdf,docx,pptx}'
 qmd wiki init solar-wiki
 qmd context add qmd://solar-wiki "Solar Obsidian knowledge vault..."
 ```
@@ -56,8 +56,8 @@ solar-harness wiki qmd-mcp status
 
 Both config files point wiki skills to QMD:
 
-- `/Users/sihaoli/.obsidian-wiki/config`
-- `/Users/sihaoli/Knowledge/.env`
+- `~/.obsidian-wiki/config`
+- `~/Knowledge/.env`
 
 Required values:
 
@@ -70,13 +70,13 @@ QMD_PAPERS_COLLECTION=solar-wiki
 
 MCP HTTP server:
 
-- LaunchAgent: `/Users/sihaoli/Library/LaunchAgents/com.solar.qmd-mineru-document-explorer.plist`
+- LaunchAgent: `~/Library/LaunchAgents/com.solar.qmd-mineru-document-explorer.plist`
 - Endpoint: `http://localhost:8181/mcp`
 - Health: `solar-harness wiki qmd-mcp status`
 
 Index updater:
 
-- LaunchAgent: `/Users/sihaoli/Library/LaunchAgents/com.solar.qmd-mineru-update.plist`
+- LaunchAgent: `~/Library/LaunchAgents/com.solar.qmd-mineru-update.plist`
 - Interval: 300 seconds
 - Action: `qmd update`
 

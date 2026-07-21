@@ -1,0 +1,7 @@
+bash: release/build.sh: No such file or directory
+bash: release/publish.sh: No such file or directory
+grep: release/CHANGELOG.md: No such file or directory
+grep: release/CHANGELOG.md: No such file or directory
+grep: release/CHANGELOG.md: No such file or directory
+grep: docs/upgrade-guide.md: No such file or directory
+grep: docs/rollback-guide.md: No such file or directory

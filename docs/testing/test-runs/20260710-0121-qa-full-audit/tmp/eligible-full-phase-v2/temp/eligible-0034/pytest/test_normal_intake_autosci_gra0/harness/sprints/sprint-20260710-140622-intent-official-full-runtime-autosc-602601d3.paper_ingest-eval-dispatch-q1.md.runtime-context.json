@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "sidecar_version": 2,
+  "dispatch_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0034/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-140622-intent-official-full-runtime-autosc-602601d3.paper_ingest-eval-dispatch-q1.md",
+  "session_id": "sprint-20260710-140622-intent-official-full-runtime-autosc-602601d3",
+  "pane": "operator:autosci-evaluator-worker",
+  "dispatch_id": "graph-eval-sprint-20260710-140622-intent-official-full-runtime-autosc-602601d3-paper_ingest-20260710T140623Z-q1",
+  "query": "Ingest supplied paper sources into Solar research paper evidence. cap.research paper ingest research_synthesis data_extraction [ ] Emits or validates research_paper.v1 evidence for ScientificPaperIngestor. [ ] Records failed or inconclusive status instead of inventing missing evidence. [ ] Does not ",
+  "changed": true,
+  "context_event_id": "b0c9d866-98c3-4789-9fd6-290c6a01a3e5",
+  "duplicate": false,
+  "kb_hit_count": 4,
+  "included_event_count": 0,
+  "context_sources": {
+    "default": 3
+  },
+  "source_counts": {
+    "default": 3
+  },
+  "degraded_sources": [
+    "mirage:nonzero"
+  ],
+  "lineage_refs": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge",
+    "qmd://solar-wiki"
+  ],
+  "source_hash_refs": [],
+  "task_kind": "paper",
+  "required_sources": [
+    "understanding"
+  ],
+  "used_sources": [
+    "default"
+  ],
+  "required_source_policy_ok": false
+}

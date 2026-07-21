@@ -1,0 +1,14 @@
+{
+  "registered_gate_names": [
+    "argument_density",
+    "controversy",
+    "source_quality"
+  ],
+  "gate_report_slots": [
+    "source_quality",
+    "argument_density",
+    "controversy_matrix",
+    "exploration_log"
+  ],
+  "note": "exploration_log is intentionally a visible GateReport slot with partial_verdicts degradation, not a registered gate plugin in S03."
+}

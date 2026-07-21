@@ -1,0 +1,1 @@
+{"task_id": "T-n3-test-002", "sprint_id": "sprint-test-n3", "node_id": "N3", "operator_id": "test-local-builder", "task_type": "dummy", "objective": "Verify operatord daemon end-to-end lifecycle."}

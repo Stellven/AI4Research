@@ -297,53 +297,8 @@ def test_import_survey_search_results_cli(tmp_path, capsys):
     assert payload["imported_sources"] == 2
 
 
-def test_import_survey_search_results_cli_continue_finalize_preserves_target_chars(tmp_path, capsys):
-    md = tmp_path / "results.md"
-    source_types = ["paper", "repo", "official_doc", "benchmark"]
-    blocks = ["# External Search Results: latent reasoning"]
-    for idx in range(1, 33):
-        source_type = source_types[(idx - 1) % len(source_types)]
-        blocks.append(f"""
-## Source {idx}: Latent Reasoning Source {idx}
-URL: {_source_url(source_type, idx)}
-Publisher: Example
-Published: 2025-01-{idx:02d}
-Source Type: {source_type}
-Research Angles: {["literature_lineage", "method_taxonomy", "evaluation_protocol", "controversy", "engineering"][(idx - 1) % 5]}
-
-Summary:
-- Latent reasoning source {idx} covers architecture evaluation deployment.
-
-Key Claims:
-- Latent reasoning claim {idx}A requires evidence for architecture evaluation.
-- Latent reasoning claim {idx}B requires evidence for deployment constraints.
-
-Relevant Quotes:
-> Latent reasoning source {idx} preserves evidence boundaries.
-""")
-    md.write_text("\n".join(blocks), encoding="utf-8")
-    rc = main([
-        "survey-import-search-results",
-        "--output-dir", str(tmp_path),
-        "--input-md", str(md),
-        "--continue-finalize",
-        "--brief", "latent reasoning",
-        "--target-chars", "100000",
-        "--section-limit", "1",
-        "--min-finalized", "1",
-        "--min-chars", "100",
-        "--json",
-    ])
-    assert rc == 0
-    payload = json.loads(capsys.readouterr().out)
-    ast = json.loads((tmp_path / "survey_report_ast.json").read_text(encoding="utf-8"))
-    assert payload["ok"] is True
-    assert ast["target_chars"] == 100000
-    assert len(ast["chapters"]) == 12
-    assert len(ast["sections"]) == 60
-
-
-def test_import_survey_search_results_cli_continue_finalize_accepts_narrative_args(tmp_path, capsys):
+def test_import_survey_search_results_cli_continue_finalize_preserves_target_chars(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("HARNESS_DIR", str(tmp_path / "installed-harness"))
     md = tmp_path / "results.md"
     source_types = ["paper", "repo", "official_doc", "benchmark"]
     blocks = ["# External Search Results: latent reasoning"]
@@ -379,12 +334,65 @@ Relevant Quotes:
         "--min-finalized", "1",
         "--min-chars", "100",
         "--narrative-backend", "deterministic",
+        "--narrative-min-chars", "100",
+        "--json",
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    ast = json.loads((tmp_path / "survey_report_ast.json").read_text(encoding="utf-8"))
+    assert payload["ok"] is True
+    assert ast["target_chars"] == 100000
+    assert len(ast["chapters"]) == 12
+    assert len(ast["sections"]) == 60
+
+
+def test_import_survey_search_results_cli_continue_finalize_accepts_narrative_args(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("HARNESS_DIR", str(tmp_path / "installed-harness"))
+    md = tmp_path / "results.md"
+    source_types = ["paper", "repo", "official_doc", "benchmark"]
+    blocks = ["# External Search Results: latent reasoning"]
+    for idx in range(1, 33):
+        source_type = source_types[(idx - 1) % len(source_types)]
+        blocks.append(f"""
+## Source {idx}: Latent Reasoning Source {idx}
+URL: {_source_url(source_type, idx)}
+Publisher: Example
+Published: 2025-01-{idx:02d}
+Source Type: {source_type}
+Research Angles: {["literature_lineage", "method_taxonomy", "evaluation_protocol", "controversy", "engineering"][(idx - 1) % 5]}
+
+Summary:
+- Latent reasoning source {idx} covers architecture evaluation deployment.
+
+Key Claims:
+- Latent reasoning claim {idx}A requires evidence for architecture evaluation.
+- Latent reasoning claim {idx}B requires evidence for deployment constraints.
+
+Relevant Quotes:
+> Latent reasoning source {idx} preserves evidence boundaries.
+""")
+    md.write_text("\n".join(blocks), encoding="utf-8")
+    rc = main([
+        "survey-import-search-results",
+        "--output-dir", str(tmp_path),
+        "--input-md", str(md),
+        "--continue-finalize",
+        "--brief", "latent reasoning",
+        "--target-chars", "100000",
+        "--section-limit", "1",
+        "--min-finalized", "1",
+        "--min-chars", "100",
+        "--narrative-backend", "deterministic",
+        "--narrative-min-chars", "100",
         "--json",
     ])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["ok"] is True
     assert payload["finalize"]["ok"] is True
+    assert payload["finalize"]["narrative"]["ok"] is True
+    assert payload["finalize"]["final_md"].endswith("chief_editor_final.md")
+    assert (tmp_path / "chief_editor_final.md").exists()
 
 
 def test_parse_survey_search_markdown_accepts_gemini_deep_search_report_format():

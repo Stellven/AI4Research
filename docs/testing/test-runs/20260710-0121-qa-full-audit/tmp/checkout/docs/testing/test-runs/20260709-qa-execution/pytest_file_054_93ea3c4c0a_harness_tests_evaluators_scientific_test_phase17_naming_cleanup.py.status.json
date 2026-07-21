@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_054_93ea3c4c0a_harness_tests_evaluators_scientific_test_phase17_naming_cleanup.py",
+  "source": "harness/tests/evaluators/scientific/test_phase17_naming_cleanup.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/evaluators/scientific/test_phase17_naming_cleanup.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.2,
+  "timeout": false
+}

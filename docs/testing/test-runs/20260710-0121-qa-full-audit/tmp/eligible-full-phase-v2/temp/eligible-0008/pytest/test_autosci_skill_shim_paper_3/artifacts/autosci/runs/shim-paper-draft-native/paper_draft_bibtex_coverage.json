@@ -1,0 +1,12 @@
+{
+  "entries": [],
+  "entry_count": 0,
+  "limitations": [
+    "No citation entries were available for references.bib generation."
+  ],
+  "references_bib_path": "artifacts/autosci/runs/shim-paper-draft-native/paper/references.bib",
+  "schema": "autosci_paper_draft_bibtex_coverage.v1",
+  "status": "inconclusive",
+  "unconfirmed_count": 0,
+  "verified_count": 0
+}

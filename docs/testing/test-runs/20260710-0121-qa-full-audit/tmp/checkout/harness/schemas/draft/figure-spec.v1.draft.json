@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/figure-spec.v1.draft.json",
+  "title": "Figure Spec v1",
+  "description": "Draft schema for FigureSpec — S04 figure/diagram-level contract.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": ["figure_id", "title", "figure_type", "grounding_ids", "spec_data"],
+  "additionalProperties": false,
+  "properties": {
+    "figure_id": {"type": "string"},
+    "title": {"type": "string"},
+    "figure_type": {
+      "type": "string",
+      "enum": ["architecture_diagram", "timeline"]
+    },
+    "grounding_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "spec_data": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "renderer": {
+      "type": "string",
+      "default": "mermaid"
+    },
+    "caption": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string",
+      "default": "v1"
+    }
+  }
+}

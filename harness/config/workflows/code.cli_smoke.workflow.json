@@ -1,0 +1,201 @@
+{
+  "schema_version": "solar.workflow_contract.v1",
+  "workflow_id": "code.cli_smoke",
+  "version": "1.0",
+  "title": "Code smoke / CLI artifact",
+  "dag_variant": "short",
+  "trigger": {
+    "explicit_markers": [],
+    "selection": "explicit workflow_id only (used by isolated live E2E harness and prompt-matrix validation, not by free intake)",
+    "on_match": "instantiate this contract"
+  },
+  "provider_policy": {
+    "runtime": "codex",
+    "allowed_providers": ["openai"],
+    "route_proof_required": true,
+    "route_records": "per_stage_execution_append_only"
+  },
+  "artifact_roots": {
+    "canonical": "sprints/<sid>/workdir/",
+    "aliases": [],
+    "publish_rule": "none (workdir is canonical for code tasks)"
+  },
+  "validator_command": "python3 -m pytest sprints/<sid>/workdir/tests -q",
+  "release_proof_level": "P2",
+  "stages": [
+    {
+      "id": "S1",
+      "gate_family": "G_BUILD",
+      "node_kind": "code",
+      "logical_operator": "ImplementationWorker",
+      "depends_on": [],
+      "task_type": "implementation",
+      "allowed_capsules": ["cap.requirement-compiler-implementation"],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": ["openai"]
+      },
+      "outputs": [
+        {
+          "path": "<tool>.py",
+          "type": "python"
+        },
+        {
+          "path": "README.md",
+          "type": "markdown"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "postcondition",
+          "requirement": "output_present",
+          "field": "<tool>.py",
+          "proof_kind": "artifact_presence"
+        },
+        {
+          "kind": "postcondition",
+          "requirement": "output_present",
+          "field": "patch_diff",
+          "proof_kind": "patch_proof"
+        },
+        {
+          "kind": "self_check",
+          "requirement": "check.patch_within_scope",
+          "proof_kind": "patch_proof"
+        },
+        {
+          "kind": "postcondition",
+          "requirement": "output_present",
+          "field": "handoff_md",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "llm_eval",
+        "role": "evaluator",
+        "on_capacity_unavailable": "wait",
+        "on_human_review": "block_dependents",
+        "verdict_kinds": ["content", "mechanical", "infrastructure"],
+        "repair": {
+          "max_attempts": 1,
+          "generation_fenced": true,
+          "single_flight": true
+        }
+      },
+      "dashboard_label": "S1 · Implement",
+      "timeouts": {
+        "result_timeout_sec": 1200
+      }
+    },
+    {
+      "id": "S2",
+      "gate_family": "G_SMOKE",
+      "node_kind": "code",
+      "logical_operator": "TestRunner",
+      "depends_on": ["S1"],
+      "task_type": "implementation",
+      "task_type_note": "test-authoring canonicalizes to implementation per 713201b0; the contract writes the canonical type directly",
+      "allowed_capsules": ["cap.requirement-compiler-implementation"],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": ["openai"]
+      },
+      "outputs": [
+        {
+          "path": "tests/test_<tool>.py",
+          "type": "python"
+        },
+        {
+          "path": "test-report.md",
+          "type": "markdown"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "postcondition",
+          "requirement": "output_present",
+          "field": "tests/test_<tool>.py",
+          "proof_kind": "artifact_presence"
+        },
+        {
+          "kind": "postcondition",
+          "requirement": "output_present",
+          "field": "patch_diff",
+          "proof_kind": "patch_proof"
+        },
+        {
+          "kind": "acceptance",
+          "requirement": "tests_executed_exit_0",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "llm_eval",
+        "role": "evaluator",
+        "on_capacity_unavailable": "wait",
+        "on_human_review": "block_dependents",
+        "verdict_kinds": ["content", "mechanical", "infrastructure"],
+        "repair": {
+          "max_attempts": 1,
+          "generation_fenced": true,
+          "single_flight": true
+        }
+      },
+      "dashboard_label": "S2 · Smoke",
+      "timeouts": {
+        "result_timeout_sec": 1200
+      }
+    },
+    {
+      "id": "S3",
+      "gate_family": "G_REVIEW",
+      "node_kind": "verify",
+      "logical_operator": "Verifier",
+      "depends_on": ["S2"],
+      "task_type": "evidence",
+      "allowed_capsules": ["cap.requirement-compiler-audit"],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": ["openai"]
+      },
+      "outputs": [
+        {
+          "path": "<sid>.review_decision.yaml",
+          "type": "yaml"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "postcondition",
+          "requirement": "output_present",
+          "field": "<sid>.review_decision.yaml",
+          "proof_kind": "artifact_presence"
+        },
+        {
+          "kind": "acceptance",
+          "requirement": "structured_output_parses",
+          "parser": "yaml.safe_load",
+          "note": "the Run-G/Run-H class: closeout YAML must parse (9f2d7f35)",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "llm_eval",
+        "role": "evaluator",
+        "on_capacity_unavailable": "wait",
+        "on_human_review": "block_dependents",
+        "verdict_kinds": ["content", "mechanical", "infrastructure"]
+      },
+      "dashboard_label": "S3 · Review",
+      "timeouts": {
+        "result_timeout_sec": 1200
+      }
+    }
+  ],
+  "required_artifacts": [
+    "<tool>.py",
+    "tests/test_<tool>.py",
+    "<sid>.review_decision.yaml"
+  ],
+  "note": "This contract encodes the shape that actually went green (a8203924 run ab795810, cd528d0a smoke c42d1e2f): S1 implement -> S2 smoke -> S3 review. The verify stage is node_kind=verify with an audit capsule and NO patch_diff obligation — unlike S1/S2 — which is exactly the distinction the runtime kept getting wrong. Delta from workflow-contract-schema.example.json: validator_command spells the workdir path (sprints/<sid>/workdir/tests) instead of the informal <sid-workdir> token so placeholder substitution stays uniform."
+}

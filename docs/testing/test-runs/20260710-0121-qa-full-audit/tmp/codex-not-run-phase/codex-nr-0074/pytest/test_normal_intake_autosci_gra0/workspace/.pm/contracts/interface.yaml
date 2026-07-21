@@ -1,0 +1,19 @@
+enabled: true
+name: RequirementCompilerAdapters
+version: '1.0'
+inputs:
+- RequirementIR
+outputs:
+- ProductBrief
+- ContractsBundle
+- TaskDAG
+- HandoffPackage
+invariants:
+- Requirement IR is the only source of truth.
+- DAG nodes[*].id must be unique.
+- Every acceptance criterion maps to at least one validation step.
+errors:
+- code: CYCLE_DETECTED
+  action: split dependencies or ask for clarification
+- code: ACCEPTANCE_COVERAGE_MISSING
+  action: add validation before dispatch

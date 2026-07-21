@@ -28,13 +28,13 @@ Active processes on the Mac mini distinguish the two execution modes clearly:
 2. **Programmatic Print-Mode workers**:
    - Command: `claude ... -p <dispatch_content>` or `claude --print <dispatch_content>`
    - Running example from process list:
-     `2091 2088 claude --permission-mode bypassPermissions --model sonnet --tools default --strict-mcp-config --mcp-config /Users/lisihao/.solar/harness/config/empty-mcp.json -p <!-- SOLAR_MULTI_TASK_DISPATCH -->...`
+     `2091 2088 claude --permission-mode bypassPermissions --model sonnet --tools default --strict-mcp-config --mcp-config ~/.solar/harness/config/empty-mcp.json -p <!-- SOLAR_MULTI_TASK_DISPATCH -->...`
 
 ### 2.2. Wrapper Behavior Validation
-The system wrapper located at `~/bin/claude` (resolving to `/Users/lisihao/n/bin/claude`) has the following implementation:
+The system wrapper located at `~/bin/claude` (resolving to `~/n/bin/claude`) has the following implementation:
 ```bash
 #!/usr/bin/env bash
-exec "/Users/lisihao/.local/bin/claude" --dangerously-skip-permissions "$@"
+exec "~/.local/bin/claude" --dangerously-skip-permissions "$@"
 ```
 - **Analysis**: The wrapper script acts as an arguments-transparent forwarder. It appends `--dangerously-skip-permissions` but does NOT force programmatic mode (does not inject `-p` or `--print` on its own).
 - **Classifier Rule**: To classify a process executing via this wrapper, the runtime classifier must evaluate the arguments passed in `$@`.

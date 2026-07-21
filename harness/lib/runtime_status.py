@@ -7,12 +7,14 @@ also emits a v2 session-log state transition through ActivityRuntime.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import json
 import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Iterator, Tuple
 
 import sys
 
@@ -100,7 +102,66 @@ def _harness_dir_from_status_path(path: Path) -> str:
     try:
         return str(path.parent.parent)
     except Exception:
-        return os.path.expanduser("~/.solar/harness")
+        return os.path.expanduser(
+            os.environ.get("HARNESS_DIR")
+            or os.environ.get("SOLAR_HARNESS_DIR")
+            or "~/.solar/harness"
+        )
+
+
+@contextlib.contextmanager
+def status_write_lock(status_path: Path) -> Iterator[None]:
+    """Serialize read-modify-write cycles on <sid>.status.json.
+
+    Both status writers take this lock (transition_status here, the
+    plan-compile bounce mirror in plan_validator — G2b review finding 4:
+    the bounce mirror's full-object write could revert a transition that
+    landed between its read and its write). The sidecar lock file survives
+    os.replace of the status file itself, which the file's own inode would
+    not. Degrades to unlocked (legacy behavior) if the lock file cannot be
+    created or flocked, so a read-only or exotic filesystem never blocks a
+    status write.
+    """
+    lock_path = Path(status_path).expanduser()
+    lock_path = lock_path.with_name(lock_path.name + ".lock")
+    handle = None
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        handle = open(lock_path, "w", encoding="utf-8")
+        fcntl.flock(handle, fcntl.LOCK_EX)
+    except Exception:
+        if handle is not None:
+            with contextlib.suppress(Exception):
+                handle.close()
+        handle = None
+    try:
+        yield
+    finally:
+        if handle is not None:
+            with contextlib.suppress(Exception):
+                fcntl.flock(handle, fcntl.LOCK_UN)
+            with contextlib.suppress(Exception):
+                handle.close()
+
+
+def merge_status_fields(status_path: Path, fields: Dict[str, Any]) -> Dict[str, Any]:
+    """Locked metadata merge: set the given top-level keys on the FRESHEST
+    status object without touching status/phase/routing. This is the write
+    path for bookkeeping mirrors (e.g. plan_compile_bounces) that must never
+    clobber a concurrent transition with a stale full-object write."""
+    status_path = Path(status_path).expanduser()
+    with status_write_lock(status_path):
+        with status_path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+        if not isinstance(data, dict):
+            raise ValueError(f"sprint status is not an object: {status_path}")
+        data.update(fields)
+        fd, tmp = tempfile.mkstemp(dir=str(status_path.parent), suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2, ensure_ascii=False)
+            fh.write("\n")
+        os.replace(tmp, status_path)
+        return data
 
 
 def transition_status(
@@ -118,6 +179,21 @@ def transition_status(
     if not status_path.exists():
         raise FileNotFoundError(f"sprint status not found: {status_path}")
 
+    with status_write_lock(status_path):
+        return _transition_status_locked(
+            status_path, new_status, event, actor, extra=extra, bump_round=bump_round
+        )
+
+
+def _transition_status_locked(
+    status_path: Path,
+    new_status: str,
+    event: str,
+    actor: str,
+    *,
+    extra: Dict[str, Any],
+    bump_round: bool,
+) -> Tuple[Dict[str, Any], str]:
     with status_path.open(encoding="utf-8") as fh:
         data = json.load(fh)
 

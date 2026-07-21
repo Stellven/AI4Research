@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_474_f07533bed5_harness_tests_test_youtube_premium_escape.py",
+  "source": "harness/tests/test_youtube_premium_escape.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_youtube_premium_escape.py"
+  ],
+  "exit_code": 2,
+  "runtime_seconds": 0.207,
+  "timeout": false
+}

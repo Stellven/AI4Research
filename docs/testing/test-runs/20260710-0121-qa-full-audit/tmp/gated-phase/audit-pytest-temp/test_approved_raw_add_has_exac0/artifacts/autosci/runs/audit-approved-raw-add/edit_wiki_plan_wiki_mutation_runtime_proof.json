@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-07-14T13:40:42Z",
+  "proofs": [
+    {
+      "categories": [
+        "wiki_mutation_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed approved wiki mutation evidence for AutoSci `edit` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/audit-approved-raw-add/research_memory_update.edit_plan.json",
+        "artifacts/autosci/workspace/raw/papers/approved-source.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "edit",
+      "production_ready": true,
+      "proof_id": "runtime:edit:wiki-writeback:20260714T134042Z",
+      "provenance": {
+        "artifact_kind": "raw_source_add",
+        "captured_at": "2026-07-14T13:40:42Z",
+        "command": "edit_wiki_plan:approved_mutation",
+        "source": "wiki_writeback"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

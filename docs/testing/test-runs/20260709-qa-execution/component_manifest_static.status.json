@@ -1,0 +1,10 @@
+{
+  "name": "component_manifest_static",
+  "command": [
+    "bash",
+    "-lc",
+    "set -o pipefail; for f in components.d/*/component.sh; do [ -e \"$f\" ] || continue; bash -n \"$f\" || exit 1; done; echo component manifests ok"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 1
+}

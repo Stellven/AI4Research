@@ -1,0 +1,1 @@
+[{"figure_id": "fig_1", "title": "Architecture", "figure_type": "architecture_diagram", "grounding_ids": ["cl_1", "ev_missing"], "spec_data": {"nodes": [{"id": "n1", "grounding_id": "cl_1"}], "edges": [{"source": "n1", "target": "n2"}]}}]

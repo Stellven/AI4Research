@@ -1,0 +1,32 @@
+{
+  "schema": "qa.eligible_full_phase_progress.v1",
+  "updated_at": "2026-07-10T10:14:46-04:00",
+  "completed_targets": 107,
+  "total_targets": 107,
+  "remaining_targets": 0,
+  "status_counts": {
+    "FAIL": 15,
+    "PASS": 92
+  },
+  "last_target": {
+    "target_id": "eligible-0107",
+    "runner_kind": "pytest",
+    "test_target": "skills/email-to-calendar/scripts/tests/test_activity_ops.py",
+    "linked_feature_count": "3",
+    "linked_feature_ids": "MISC-0131-BUILD-START-SCRIPT-SUCCEEDS-5A9428;MISC-0136-BUILD-START-SCRIPT-SUCCEEDS-387550;MISC-0141-BUILD-START-SCRIPT-SUCCEEDS-4591CE",
+    "command": "'/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python' -m pytest skills/email-to-calendar/scripts/tests/test_activity_ops.py -q --tb=short -o 'cache_dir=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/cache/eligible-0107/pytest' '--basetemp=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0107/pytest' '--junitxml=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/eligible-full-phase-v3/junit/eligible-0107.xml' -k 'test_log_event_without_session_raises_error or test_log_skip_without_session_raises_error or test_start_session_output'",
+    "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+    "start_time": "2026-07-10T10:14:45-04:00",
+    "end_time": "2026-07-10T10:14:46-04:00",
+    "duration_seconds": "0.181",
+    "exit_code": "0",
+    "execution_status": "PASS",
+    "testcase_pass": "3",
+    "testcase_fail": "0",
+    "testcase_error": "0",
+    "testcase_skip": "0",
+    "stdout_path": "evidence/eligible-full-phase-v3/target-logs/eligible-0107.stdout.txt",
+    "stderr_path": "evidence/eligible-full-phase-v3/target-logs/eligible-0107.stderr.txt",
+    "junit_path": "evidence/eligible-full-phase-v3/junit/eligible-0107.xml"
+  }
+}

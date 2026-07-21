@@ -1,0 +1,299 @@
+{
+  "_comment": "Lane 2 fault-catalog ledger — every taxonomy class vs its verification status. Refreshed for the INTEGRATED tree (contract/lane0-spine + contract/lane05-supervision + contract/lane1-compiler + contract/lane2-harness) per spec-review round 2 F5. See docs/product/lane2-spec-mismatches.md for why the plan's '30 always-green JSON files' is replaced by 'runnable scenario for classes whose retiring mechanism exists here + honest pending/cross-lane rows for the rest'. status: verified_here (red-green proven by a scenario in THIS branch's engine) | partial (a scenario proves one half; the rest is pending — see pending_remainder) | verified_lane_1 / verified_lane_0_5 (proven by another lane's committed suite — see verified_by for cited test paths; runnable on the integrated tree — cites updated to the integration merge) | pending_lane_N (retiring seam unbuilt on any branch; a scenario would be red-only) | delegated_lane_6. The verified_by citations name real committed tests on the cited lane branch@commit; run them there to reproduce. Integration flip 2026-07-07: cross-lane cites re-pointed at the integration merge where the cited suites were re-executed green (evidence: ~/opensolar-state/run-archive/lane3-integration/). Lane 3 flip 2026-07-07: classes 6/9/10/13/16/18/21/23/29/30 verified_here via the new gate_replay scenario mode (driver scripts under scenarios/drivers/, fault = SOLAR_GATE_LEDGER=0).",
+  "generated_for_branch": "contract/integration",
+  "integrated_tree": [
+    "contract/lane0-spine",
+    "contract/lane05-supervision",
+    "contract/lane1-compiler",
+    "contract/lane2-harness"
+  ],
+  "engine": "harness/tests/run_scenario.py",
+  "operator_seam": "operator-pool command backend (operator_runtime.submit -> operatord daemon --once -> result.json)",
+  "classes": [
+    {
+      "class": 1,
+      "name": "Planner DAG nondeterminism",
+      "status": "verified_lane_1",
+      "scenario": null,
+      "required_seam": "harness/lib/workflow_contract.py byte-identical instantiation + golden diff",
+      "verified_by": [
+        "contract/integration@d3ea9a68 harness/tests/workflow_contract/test_instantiate.py::test_instantiation_byte_identical_twice",
+        "contract/integration@d3ea9a68 harness/tests/workflow_contract/test_instantiate.py::test_instantiation_matches_committed_golden (goldens: harness/tests/workflow_contract/goldens/code.cli_smoke.instantiated.golden.json, harness/tests/workflow_contract/goldens/research.deepdive.rsi_demo.instantiated.golden.json)"
+      ],
+      "note": "R3/AC-R3.1 golden-file determinism. Proven by Lane 1's suite; re-executed green on the integrated tree contract/integration@d3ea9a68."
+    },
+    {
+      "class": 2,
+      "name": "Generic PM for research",
+      "status": "pending_lane_1",
+      "scenario": null,
+      "required_seam": "harness/lib/workflow_router.py trigger match",
+      "note": "R1/AC-R1.1 routing; router absent."
+    },
+    {
+      "class": 3,
+      "name": "Epic over-decomposition",
+      "status": "pending_lane_1",
+      "scenario": null,
+      "required_seam": "workflow_router epic admission rule",
+      "note": "R1/AC-R1.4."
+    },
+    {
+      "class": 4,
+      "name": "task_type admission (fixed 4x)",
+      "status": "verified_lane_1",
+      "scenario": null,
+      "required_seam": "harness/lib/plan_validator.py task_type_in check",
+      "verified_by": [
+        "contract/integration@d3ea9a68 harness/tests/workflow_contract/test_plan_validator.py::test_four_historical_admission_shapes_all_rejected"
+      ],
+      "note": "R2/AC-R2.3; the four historical admission shapes (F-019/F-030/...) all reject. Proven by Lane 1's suite; re-executed green on the integrated tree contract/integration@d3ea9a68."
+    },
+    {
+      "class": 5,
+      "name": "Artifact node x patch-diff proof",
+      "status": "verified_lane_1",
+      "scenario": null,
+      "required_seam": "plan_validator obligation-satisfiability (patch_diff => code only)",
+      "verified_by": [
+        "contract/integration@d3ea9a68 harness/tests/workflow_contract/test_plan_validator.py::test_v7_graph_rejected_with_obligation_unsatisfiable",
+        "contract/integration@d3ea9a68 harness/tests/workflow_contract/test_plan_validator.py::test_v7_s1_derives_artifact_node_kind",
+        "contract/integration@d3ea9a68 harness/tests/workflow_contract/test_plan_validator.py::test_cli_rejects_v7_fixture_exit_3 (fixture: harness/tests/workflow_contract/fixtures/v7-rsi-demo-bf66d46b.task_graph.json)"
+      ],
+      "note": "R2/AC-R2.1 v7 replay rejection (OBLIGATION_UNSATISFIABLE_FOR_NODE_KIND). Proven by Lane 1's suite; re-executed green on the integrated tree contract/integration@d3ea9a68."
+    },
+    {
+      "class": 6,
+      "name": "Missing/undiscoverable patch proof",
+      "status": "verified_here",
+      "scenario": "F-CLASS-06-patch-proof-via-manifest.scenario.json",
+      "required_seam": "harness/lib/artifact_manifest.py per-node manifest",
+      "note": "R6/AC-R6.2. Retired by Lane 3's artifact manifest (kind-keyed sidecar map replaces filename-shape scans). Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    },
+    {
+      "class": 7,
+      "name": "Obligation mismatch by artifact type",
+      "status": "verified_lane_1",
+      "scenario": null,
+      "required_seam": "plan_validator obligation<->declared-output check",
+      "verified_by": [
+        "contract/integration@d3ea9a68 harness/tests/workflow_contract/test_plan_validator.py::test_real_code_node_keeps_patch_obligations",
+        "contract/integration@d3ea9a68 harness/tests/workflow_contract/test_plan_validator.py::test_v8_shaped_artifact_plan_compiles"
+      ],
+      "note": "R2 obligation<->declared-output (code node keeps patch obligations; artifact plan compiles with presence obligations). Proven by Lane 1's suite; re-executed green on the integrated tree contract/integration@d3ea9a68."
+    },
+    {
+      "class": 8,
+      "name": "Evaluator capacity / human-review cascade",
+      "status": "partial",
+      "scenario": "F-CLASS-08-busy-singleton-classified-busy-not-absent.scenario.json",
+      "required_seam": "harness/lib/plan_validator.py evaluator_gate.on_capacity_unavailable=wait bounded-wait policy (Lane 1)",
+      "pending_remainder": "The human-review cascade / bounded-wait half is not exercisable here: only the classification half (busy!=absent) is red-green proven by the scenario via lease state. The evaluator_gate.on_capacity_unavailable=wait policy that drives the cascade is pending_lane_1, and bounded-wait timing is separately covered by F-CLASS-28.",
+      "note": "Classification half (busy!=absent) verified_here via lease state; recatalogued partial per spec-review round 2 F5 because the human-review cascade is not exercisable until Lane 1's evaluator_gate lands."
+    },
+    {
+      "class": 9,
+      "name": "Sticky auto-resolution clobbered",
+      "status": "verified_here",
+      "scenario": "F-CLASS-09-auto-resolution-sticky.scenario.json",
+      "required_seam": "harness/lib/gate_ledger.py append-only decisions / projection",
+      "note": "R4. Retired by Lane 3's append-only decision records + doctor neutralization on the contracted path. Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    },
+    {
+      "class": 10,
+      "name": "Mechanical vs content eval FAIL",
+      "status": "verified_here",
+      "scenario": "F-CLASS-10-mechanical-fail-held.scenario.json",
+      "required_seam": "gate_ledger verdict_kind set by gate runner",
+      "note": "R4/AC-R4.1 v5 replay. Retired by node_verdict's runner-owned verdict_kind + the mechanical-FAIL hold. Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    },
+    {
+      "class": 11,
+      "name": "Closeout builder quality (true-positive FAILs)",
+      "status": "pending_lane_1",
+      "scenario": null,
+      "required_seam": "plan_validator deterministic validator commands per stage",
+      "note": "R2 content gate; PARTIAL-BY-DESIGN (quality track). Scenario 11 would assert the content gate FAILs a parseable-but-stale closeout."
+    },
+    {
+      "class": 12,
+      "name": "Repair lifecycle races",
+      "status": "verified_here",
+      "scenario": "F-CLASS-12-duplicate-lease-single-flight.scenario.json",
+      "required_seam": null,
+      "note": "Single-flight via lease duplicate rejection (operator_runtime.py:215,474). Generation/repair-window property suite is Lane 3."
+    },
+    {
+      "class": 13,
+      "name": "Stale eval generation / doctor backfill",
+      "status": "verified_here",
+      "scenario": "F-CLASS-13-stale-generation-recorded.scenario.json",
+      "required_seam": "gate_ledger eval_generation required field + stale-archive",
+      "note": "R4/AC-R4.4. The archive machinery predates Lane 3 (714eb781); Lane 3 adds the durable non-consumable evidence record the class lacked. Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    },
+    {
+      "class": 14,
+      "name": "Wrapper epic observation",
+      "status": "verified_lane_5",
+      "scenario": null,
+      "required_seam": "scripts/live_codex_epic_status.py --contract (reads contract terminal states)",
+      "note": "artifact-check --contract validates a finished contracted sprint end-to-end (contract terminal states + canonical-layout copy validation + route-proof gates); also proven against the real P3 run-5 PASS bundle (run-archive/p3-sprint-20260708-161906-...-passed-20260708T164000Z): ok:true state:passed. LIVE-PROVEN P4 2026-07-08: dashboard-initiated contracted run (webapp composer /workflow directive, sprint-20260708-185911) — displayed stage states reconciled against the gate ledger, 0 violations over 49 UI snapshots (run-archive/p4-sprint-20260708-185911-...-passed-20260708T191732Z, truthful-states-verdict.json). Same run exposed a residual heuristic surface: human_action_required advertised plan_review for the whole contracted run (39 sightings, zero plan verdicts in the ledger) — retired by contracted/build_started guards in _human_action_required.",
+      "verified_by": [
+        "contract/p2-staging@25110e20 harness/tests/scenarios/test_p4_class14_artifact_check.py::test_contract_artifact_check_validates_a_finished_contracted_sprint",
+        "contract/p2-staging@25110e20 harness/tests/scenarios/test_p4_class14_artifact_check.py::test_contract_artifact_check_still_fails_on_missing_artifacts",
+        "harness/tests/scenarios/test_p4_false_plan_review_card.py::test_contracted_inflight_run_never_advertises_plan_review",
+        "harness/tests/scenarios/test_p4_false_plan_review_card.py::test_generic_unstarted_plan_still_asks_for_review"
+      ]
+    },
+    {
+      "class": 15,
+      "name": "Wrapper timing race",
+      "status": "verified_lane_5",
+      "scenario": null,
+      "required_seam": "wrapper contract terminal-state signal",
+      "note": "wrapper terminal-state signal is now LEVEL-triggered (parent projection converges on every dispatch tick, not on a single completion edge) — structurally retires the v8 18ms edge race; live-proven P3 run 5: wrapper printed PASS, projection flipped 15s after the final node (previous run: frozen forever). LIVE-PROVEN P4 2026-07-08 on the dashboard path: run submitted through the webapp UI, parent status.json flipped passed within seconds of S3 terminal, dashboard displayed terminal truthfully (run-archive/p4-sprint-20260708-185911-...-passed-20260708T191732Z).",
+      "verified_by": [
+        "contract/p2-staging@25110e20 harness/tests/scenarios/test_p3_run4_projection_convergence.py::test_dispatch_tick_converges_the_parent_projection",
+        "contract/p2-staging@25110e20 harness/tests/scenarios/test_p3_run4_projection_convergence.py::test_inflight_graph_projection_stays_active"
+      ]
+    },
+    {
+      "class": 16,
+      "name": "Artifact-root divergence",
+      "status": "verified_here",
+      "scenario": "F-CLASS-16-workdir-root-resolution.scenario.json",
+      "required_seam": "artifact_manifest root resolution/normalization",
+      "note": "R6/AC-R6.1 v9 shape. Retired by manifest alias-root resolution + presence consult + publish_canonical. Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    },
+    {
+      "class": 17,
+      "name": "Route proof missing on dead runs",
+      "status": "verified_here",
+      "scenario": "F-CLASS-17-kill-mid-run-truthful-terminal.scenario.json",
+      "required_seam": null,
+      "note": "Terminal-truth + durable stage evidence on a killed run verified. The append-only kind:route_record ledger (AC-R5.1) is pending_lane_3."
+    },
+    {
+      "class": 18,
+      "name": "Route violations / route-truth lies",
+      "status": "verified_here",
+      "scenario": "F-CLASS-18-route-record-truth.scenario.json",
+      "required_seam": "gate_ledger kind:route_record; Lane 5 host_type relabel",
+      "note": "R5/AC-R5.1. Retired by route records at the operatord seam (submit + write_result). The Lane 5 host_type relabel remains a Lane 5 item; AC-R5.2 zero-cross-provider is a P2 assertion. Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    },
+    {
+      "class": 19,
+      "name": "Alias/registry data quality",
+      "status": "verified_here",
+      "scenario": "F-CLASS-19-disabled-operator-unselectable.scenario.json",
+      "required_seam": null,
+      "note": "Hazard half (disabled-op unselectable) verified. The sonnet->GLM allowlist + registry hygiene half is pending_lane_0 (spine allowlist)."
+    },
+    {
+      "class": 20,
+      "name": "Auth preservation/validity",
+      "status": "verified_here",
+      "scenario": "F-CLASS-20-auth-absent-flow-control.scenario.json",
+      "required_seam": null,
+      "note": "auth_expired flow-control verified. Per-provider preflight auth check is Lane 0.5."
+    },
+    {
+      "class": 21,
+      "name": "Installed-harness contamination",
+      "status": "partial",
+      "scenario": "F-CLASS-21-root-violation-blocks.scenario.json",
+      "required_seam": "artifact_manifest root containment (ARTIFACT_ROOT_VIOLATION) + Lane 0.5 preflight path self-consistency",
+      "note": "R6/AC-R6.3 artifact half — CONSULT ONLY (round-4 G5 downgrade from verified_here; the round-3 verified_here claim was a tautology: the driver hand-built the violation the dispatcher can never produce). Verified: manifest ARTIFACT_ROOT_VIOLATION entries block the proof gate (gate_replay red-green, fault = SOLAR_GATE_LEDGER=0). NOT verified: any live producer of observed writes. The path-selection half is Lane 0.5's preflight (verified).",
+      "pending_remainder": "AC-R6.3 live-path enforcement: the dispatcher's write_manifest call passes no observed= (node_verdict has no source of the paths the node actually wrote — operator result.json carries no artifact list, and no workspace write-scan exists), so violations is always [] in production. The scenario proves the CONSULT half only: a manifest carrying an ARTIFACT_ROOT_VIOLATION blocks the proof gate. Remainder owner: the lane that adds an observed-writes producer (operator result artifact lists or a post-dispatch workspace scan) must wire observed= through node_verdict and prove AC-R6.3 end-to-end."
+    },
+    {
+      "class": 22,
+      "name": "Orphan coordinator/watchdog/process residue",
+      "status": "verified_lane_0_5",
+      "scenario": null,
+      "required_seam": "harness/lib/run_process_registry.py + real-daemon teardown (Lane 0.5)",
+      "tier": "non_hermetic_p1_6",
+      "verified_by": [
+        "contract/integration@d3ea9a68 harness/tests/supervision/test_run_teardown_real_processes.py::test_real_teardown_kills_all_and_suppresses_respawn (opt-in: SOLAR_P16_REAL_PROCESS=1)",
+        "contract/integration@d3ea9a68 harness/tests/supervision/test_run_teardown_real_processes.py::test_real_teardown_idempotent",
+        "contract/integration@d3ea9a68 harness/tests/supervision/test_run_teardown_real_processes.py::test_real_registry_status_reports_live_then_dead"
+      ],
+      "note": "R7/AC-R7.4. Runs at the non-hermetic real-process (P1.6) tier — real sleep/watchdog processes, still no models/network — so it is opt-in (SOLAR_P16_REAL_PROCESS=1), not default-CI. Proven by Lane 0.5's committed suite (contract/lane05-supervision); flips from non_hermetic_p1_6 pending on the integrated tree."
+    },
+    {
+      "class": 23,
+      "name": "Dashboard/projection untruth",
+      "status": "verified_here",
+      "scenario": "F-CLASS-23-projection-truth.scenario.json",
+      "required_seam": "gate_ledger projection + Lane 5 contract endpoint (parent-status truth)",
+      "note": "R4 projection truth. Retired for the contracted path's truth source; the dashboard endpoint that consumes it is Lane 5. Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    },
+    {
+      "class": 24,
+      "name": "Installer/wizard gaps",
+      "status": "delegated_lane_6",
+      "scenario": null,
+      "required_seam": "per-OS clean-machine artifact acid tests (Lane 6)",
+      "note": "R10; owned by the installability track, not the hermetic harness."
+    },
+    {
+      "class": 25,
+      "name": "Report quality / synthesizer boilerplate",
+      "status": "pending_lane_1",
+      "scenario": null,
+      "required_seam": "plan_validator research quality gates / builder-authored synthesizer path",
+      "note": "R- content; PARTIAL-BY-DESIGN demo blocker."
+    },
+    {
+      "class": 26,
+      "name": "Self-incriminating wording",
+      "status": "pending_lane_1",
+      "scenario": null,
+      "required_seam": "contract validator token list + wording lint",
+      "note": "R- SOLVED-LITE; validator token list is a contract field (Lane 1)."
+    },
+    {
+      "class": 27,
+      "name": "No live workers",
+      "status": "verified_here",
+      "scenario": "F-CLASS-27-no-capacity-quota-cooldown.scenario.json",
+      "required_seam": null,
+      "note": "Quota/rate-limit -> cooldown flow-control verified. Preflight live-capacity per role + auto-start is Lane 0.5."
+    },
+    {
+      "class": 28,
+      "name": "Supervision faults (wedge/timeout)",
+      "status": "verified_here",
+      "scenario": "F-CLASS-28-wedge-timeout-classification.scenario.json",
+      "required_seam": null,
+      "note": "Bounded operator task timeout -> failed_timeout/exit124 verified via SOLAR_OPERATORD_TASK_TIMEOUT_SECONDS. Role-pool inflight-suppression timeout (AC-R7.1 S01 wedge) is a scheduler concern pending_lane_1/3."
+    },
+    {
+      "class": 29,
+      "name": "Gates consume status, not verdict content",
+      "status": "verified_here",
+      "scenario": "F-CLASS-29-gate-consumes-verdict-content.scenario.json",
+      "required_seam": "gate_ledger verdict-content consult, fail-closed on missing verdict",
+      "note": "R4/AC-R4.2 LDES shape. Retired by the ledger verdict-content consult in _gate_verdicts_ok. Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    },
+    {
+      "class": 30,
+      "name": "Verdict provenance (self-graded/backfilled)",
+      "status": "verified_here",
+      "scenario": "F-CLASS-30-verdict-provenance.scenario.json",
+      "required_seam": "gate_ledger author+generation, backfill non-consumable",
+      "note": "R4/AC-R4.3 provenance. Retired by author/generation/self-graded provenance records + fail-closed consumability. Red-green proven by the gate_replay engine mode: fault = SOLAR_GATE_LEDGER=0 (the pre-contract world)."
+    }
+  ],
+  "summary": {
+    "verified_here": [6, 9, 10, 12, 13, 16, 17, 18, 19, 20, 23, 27, 28, 29, 30],
+    "partial": [8, 21],
+    "verified_lane_1": [1, 4, 5, 7],
+    "verified_lane_0_5": [22],
+    "pending_lane_0": ["19-allowlist-half"],
+    "pending_lane_1": [2, 3, 11, 25, 26],
+    "delegated_lane_6": [24],
+    "verified_lane_5": [14, 15]
+  },
+  "integration_merge": "contract/integration@d3ea9a68"
+}

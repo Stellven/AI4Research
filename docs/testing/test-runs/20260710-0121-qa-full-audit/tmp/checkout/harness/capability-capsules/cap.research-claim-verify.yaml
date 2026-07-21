@@ -1,0 +1,99 @@
+capability_capsule_id: cap.research-claim-verify
+capsule_kind: capability
+metadata:
+  name: Scientific Claim Verify
+  description: Compare claims against experiment, code, paper, and report evidence to emit explicit claim verdicts.
+applicability:
+  task_types:
+    - scientific-research
+    - claim-verification
+  positive_signals:
+    - verify claim
+    - produce verdict
+    - compare result to claim
+  negative_signals:
+    - extract claim only
+    - generate idea
+contract:
+  inputs:
+    required:
+      - name: research_claims
+        schema_ref: schemas/evidence/research_claims.v1.schema.json
+    optional:
+      - name: experiment_result
+        schema_ref: schemas/evidence/experiment_result.v1.schema.json
+      - name: code_evidence_map
+        schema_ref: schemas/evidence/code_evidence_map.v1.schema.json
+  outputs:
+    required:
+      - name: claim_verdict
+        schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+    optional:
+      - name: unresolved_claims
+        description: Claims lacking enough evidence for a verdict.
+  preconditions:
+    - check: claims_present
+      description: Claim evidence exists and is source anchored.
+  postconditions:
+    - check: verdicts_evidenced
+      description: Every verdict has confidence, basis, evidence ids, and limitations.
+  invariants:
+    - Does not convert inconclusive evidence into supported claims.
+    - Verdicts remain separate from experiment results.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_claims.v1.schema.json
+      purpose: Claims under verification.
+    - schema_ref: schemas/evidence/experiment_result.v1.schema.json
+      purpose: Experimental support or refutation evidence.
+  produces:
+    - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      purpose: Claim verdict evidence.
+  compatible_with:
+    - cap.research-report-plan
+    - cap.research-report-draft
+    - cap.research-memory-update
+  incompatible_with: []
+  requires_after:
+    - cap.research-claim-extract
+effects:
+  read:
+    - claim, experiment, code, and paper evidence
+    - schemas/evidence/claim_verdict.v1.schema.json
+  write:
+    - artifacts/scientific/claim_verdict/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - none by default
+  cost:
+    - bounded verification cost
+  risk:
+    - weak evidence can produce overconfident verdicts if not checked
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.claim_verify
+      - autosci.experiment_evaluate
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/claim_verdict.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against claim_verdict.v1.schema.json.
+    - Confirm verdict basis cites evidence ids and preserves limitations.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - Passing fixture emits supported or partially_supported verdict with evidence ids.
+    - Failing fixture emits refuted, blocked, not_testable, or inconclusive verdict.
+operator_compatibility:
+  preferred:
+    - ScientificClaimVerifier
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

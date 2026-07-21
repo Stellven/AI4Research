@@ -1,0 +1,8 @@
+{
+  "stage": "evaluator",
+  "verdict": "fail",
+  "workspace_changed": false,
+  "file_count_before": 0,
+  "file_count_after": 0,
+  "builder_return_code": 2
+}

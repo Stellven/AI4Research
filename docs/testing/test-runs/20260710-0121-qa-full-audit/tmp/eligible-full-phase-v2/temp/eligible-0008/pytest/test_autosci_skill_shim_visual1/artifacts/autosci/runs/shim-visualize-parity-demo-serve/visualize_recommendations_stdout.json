@@ -1,0 +1,40 @@
+=== OmegaWiki Visualization Recommendations ===
+
+Obsidian Plugins (install via Settings > Community Plugins):
+
+1. Graph Analysis (HIGHLY RECOMMENDED)
+   - Adds pathfinding, isolated cluster detection, and centrality metrics
+   - Directly useful for identifying key nodes in the knowledge graph
+   - Install: Settings > Community Plugins > Browse > "Graph Analysis"
+
+2. Dataview (RECOMMENDED)
+   - SQL-like queries over YAML frontmatter
+   - Create dynamic views like "all training methods" or "ideas with novelty_score >= 4"
+   - Example query: TABLE type, source_papers FROM "methods" WHERE type = "training"
+   - Install: Settings > Community Plugins > Browse > "Dataview"
+
+3. Excalidraw (OPTIONAL)
+   - Annotate Canvas views with freehand diagrams and visual notes
+   - Useful for brainstorming and presenting research ideas
+
+Setup Instructions:
+
+1. Open Obsidian
+2. Click "Open another vault" > "Open folder as vault"
+3. Select the wiki/ directory in your OmegaWiki repo
+4. The .obsidian/graph.json config will be applied automatically
+5. Open Graph View (Ctrl+G / Cmd+G) to see color-coded entity types
+
+Canvas Usage:
+
+1. Navigate to canvases/ in the file explorer
+2. Open knowledge-map.canvas for the full graph overview
+3. Open idea-evidence.canvas for the idea-centric research view
+4. Generate focused canvases: python3 tools/visualize.py generate-canvas wiki/ --focus <node_id>
+
+Standalone web Graph view:
+
+1. python3 tools/serve.py            (starts the SPA on http://127.0.0.1:8765)
+2. Open http://127.0.0.1:8765/#/graph
+3. Click nodes for BFS highlight; double-click to open in the SPA Reader.
+

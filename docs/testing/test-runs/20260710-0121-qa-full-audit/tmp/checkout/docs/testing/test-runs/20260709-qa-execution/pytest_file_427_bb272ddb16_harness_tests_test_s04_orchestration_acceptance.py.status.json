@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_427_bb272ddb16_harness_tests_test_s04_orchestration_acceptance.py",
+  "source": "harness/tests/test_s04_orchestration_acceptance.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_s04_orchestration_acceptance.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.249,
+  "timeout": false
+}

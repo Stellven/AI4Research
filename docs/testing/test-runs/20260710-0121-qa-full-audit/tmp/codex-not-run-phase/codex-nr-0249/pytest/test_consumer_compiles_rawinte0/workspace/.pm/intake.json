@@ -1,0 +1,14 @@
+{
+  "request_type": "short_impl",
+  "intent_summary": "新增 intent consumer，把 RawIntent 自动编译成 PM/Planner sprint package。",
+  "source_inputs": {
+    "papers": [],
+    "logs": [],
+    "repo_context": []
+  },
+  "output_mode": {
+    "prd": "short",
+    "contract": "short",
+    "dag": "short"
+  }
+}

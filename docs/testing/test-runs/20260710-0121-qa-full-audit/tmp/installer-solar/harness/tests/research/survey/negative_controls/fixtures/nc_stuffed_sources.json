@@ -1,0 +1,17 @@
+{
+  "section_id": "sec-stuffed",
+  "source_ids": ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "blog1"],
+  "source_types": ["blog", "blog", "blog", "blog", "blog", "blog", "blog", "blog", "blog", "web"],
+  "source_urls": [
+    "https://medium.com/a",
+    "https://medium.com/b",
+    "https://medium.com/c",
+    "https://medium.com/d",
+    "https://medium.com/e",
+    "https://medium.com/f",
+    "https://medium.com/g",
+    "https://medium.com/h",
+    "https://medium.com/i",
+    "https://example.com/j"
+  ]
+}

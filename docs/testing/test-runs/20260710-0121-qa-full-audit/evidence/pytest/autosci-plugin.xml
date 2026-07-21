@@ -1,0 +1,920 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="95" skipped="6" tests="130" time="108.181" timestamp="2026-07-10T01:53:35.253805-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.plugins.autosci.tests.test_approval_runtime_proof" name="test_verified_approval_contract_writes_runtime_proof_manifest" time="0.035" /><testcase classname="harness.plugins.autosci.tests.test_approval_runtime_proof" name="test_unverified_approval_contract_does_not_write_runtime_proof" time="0.033" /><testcase classname="harness.plugins.autosci.tests.test_approval_runtime_proof" name="test_approval_runtime_proof_tool_is_exposed_for_approval_routes" time="0.001" /><testcase classname="harness.plugins.autosci.tests.test_autosci_live_provider_env_gated" name="test_autosci_live_review_llm_provider_produces_runtime_proof" time="0.000"><skipped type="pytest.skip" message="Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_REVIEW_LLM_TEST=1 to run this live provider test.">/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py:37: Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_REVIEW_LLM_TEST=1 to run this live provider test.</skipped></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_live_provider_env_gated" name="test_autosci_live_semantic_scholar_novelty_provider_produces_runtime_proof" time="0.000"><skipped type="pytest.skip" message="Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_NOVELTY_PROVIDER_TEST=1 to run this live provider test.">/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py:37: Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_NOVELTY_PROVIDER_TEST=1 to run this live provider test.</skipped></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_live_provider_env_gated" name="test_autosci_live_remote_status_provider_produces_runtime_proof" time="0.000"><skipped type="pytest.skip" message="Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_REMOTE_STATUS_TEST=1 to run this live provider test.">/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py:37: Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_REMOTE_STATUS_TEST=1 to run this live provider test.</skipped></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_live_provider_env_gated" name="test_autosci_live_remote_launch_provider_produces_runtime_evidence" time="0.000"><skipped type="pytest.skip" message="Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_REMOTE_LAUNCH_TEST=1 to run this live provider test.">/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py:37: Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_REMOTE_LAUNCH_TEST=1 to run this live provider test.</skipped></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_live_provider_env_gated" name="test_autosci_live_remote_pull_results_provider_produces_final_runtime_proof" time="0.000"><skipped type="pytest.skip" message="Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_REMOTE_COLLECT_TEST=1 to run this live provider test.">/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py:37: Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_REMOTE_COLLECT_TEST=1 to run this live provider test.</skipped></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_live_provider_env_gated" name="test_autosci_live_tex_compile_executor_produces_runtime_proof" time="0.000"><skipped type="pytest.skip" message="Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_TEX_COMPILE_TEST=1 to run this live provider test.">/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py:37: Set AUTOSCI_LIVE_PROVIDER_TESTS=1 and AUTOSCI_LIVE_TEX_COMPILE_TEST=1 to run this live provider test.</skipped></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_parity_inventory_tool" name="test_autosci_parity_inventory_reports_prompt_b_fields" time="0.148" /><testcase classname="harness.plugins.autosci.tests.test_autosci_parity_inventory_tool" name="test_autosci_parity_inventory_cli_writes_json" time="0.154" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_projection" name="test_autosci_codex_skill_projection_generates_solar_wrappers" time="0.040" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_lists_configured_skills" time="0.059" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_lists_skills_with_dollar_alias" time="0.057" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_ingest_and_gate" time="0.985"><failure message="AssertionError: assert False&#10; +  where False = exists()&#10; +    where exists = (PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_runs_i0') / 'artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md').exists">harness/plugins/autosci/tests/test_autosci_skill_shim.py:290: in test_autosci_skill_shim_runs_ingest_and_gate
+    assert (
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = (PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_runs_i0') / 'artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md').exists</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_ingest_with_dollar_skill_alias" time="1.036" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_direct_dollar_skill" time="1.172" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_single_token_dollar_command_with_flags" time="4.224" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_text_dollar_command" time="1.011" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_maps_positional_ingest_source" time="0.994" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leakage" time="1.034"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ingest0/artifacts/autosci/runs/shim-pdf-ingest-source-grounded/ingest_paper_source_provider_runtime_proof.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:448: in test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leakage
+    source_proof = json.loads((tmp_path / artifacts["provider_source_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ingest0/artifacts/autosci/runs/shim-pdf-ingest-source-grounded/ingest_paper_source_provider_runtime_proof.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_ingest_final_source_registration_boundary_ready_with_wiki_state" time="1.014"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ingest1/artifacts/autosci/runs/shim-ingest-final-source-registration/ingest_paper_source_provider_runtime_proof.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:549: in test_autosci_skill_shim_ingest_final_source_registration_boundary_ready_with_wiki_state
+    source_proof = json.loads((tmp_path / artifacts["provider_source_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ingest1/artifacts/autosci/runs/shim-ingest-final-source-registration/ingest_paper_source_provider_runtime_proof.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_accepts_original_ingest_followup_flags" time="1.072" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_accepts_discover_from_wiki_limit" time="0.473" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_discover_runtime_requires_provider_boundary" time="0.378" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_discover_runtime_attaches_provider_runtime_proof" time="0.405"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/artifacts/autosci/runs/shim-discover-provider-runtime-proof/discover_literature_source_provider_runtime_proof.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:784: in test_autosci_skill_shim_discover_runtime_attaches_provider_runtime_proof
+    proof = json.loads((tmp_path / proof_artifact["path"]).read_text(encoding="utf-8"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov1/artifacts/autosci/runs/shim-discover-provider-runtime-proof/discover_literature_source_provider_runtime_proof.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_discover_wiki_runtime_proof_is_not_live_provider" time="0.378"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov2/artifacts/autosci/runs/shim-discover-wiki-runtime-proof/discover_literature_source_provider_runtime_proof.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:877: in test_autosci_skill_shim_discover_wiki_runtime_proof_is_not_live_provider
+    proof = json.loads((tmp_path / proof_artifact["path"]).read_text(encoding="utf-8"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_discov2/artifacts/autosci/runs/shim-discover-wiki-runtime-proof/discover_literature_source_provider_runtime_proof.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_research_pipeline" time="6.194"><failure message="AssertionError: assert False&#10; +  where False = exists()&#10; +    where exists = (PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_runs_r0') / 'artifacts/autosci/runs/shim-research/report.md').exists">harness/plugins/autosci/tests/test_autosci_skill_shim.py:929: in test_autosci_skill_shim_runs_research_pipeline
+    assert (tmp_path / "artifacts/autosci/runs/shim-research/report.md").exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = (PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_runs_r0') / 'artifacts/autosci/runs/shim-research/report.md').exists</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts" time="0.374"><failure message="AssertionError: assert False&#10; +  where False = exists()&#10; +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...t-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear0/artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md').exists">harness/plugins/autosci/tests/test_autosci_skill_shim.py:969: in test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts
+    assert progress.exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...t-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear0/artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md').exists</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_lifecycle_completes_from_verified_stage_evidence" time="0.385"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear1/artifacts/autosci/workspace/wiki/outputs/pipeline-state.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1138: in test_autosci_skill_shim_research_lifecycle_completes_from_verified_stage_evidence
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear1/artifacts/autosci/workspace/wiki/outputs/pipeline-state.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_lifecycle_ignores_weak_scheduler_summary" time="0.386"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear2/artifacts/autosci/workspace/wiki/outputs/pipeline-state.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1188: in test_autosci_skill_shim_research_lifecycle_ignores_weak_scheduler_summary
+    state = json.loads((tmp_path / state_artifact["path"]).read_text(encoding="utf-8"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear2/artifacts/autosci/workspace/wiki/outputs/pipeline-state.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_lifecycle_completes_from_strict_scheduler_summary" time="0.454"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear3/artifacts/autosci/workspace/wiki/outputs/pipeline-state.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1221: in test_autosci_skill_shim_research_lifecycle_completes_from_strict_scheduler_summary
+    state = json.loads((tmp_path / state_artifact["path"]).read_text(encoding="utf-8"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear3/artifacts/autosci/workspace/wiki/outputs/pipeline-state.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_run_attaches_blocked_summary" time="0.902"><failure message="AssertionError: {&#10;    &quot;action_count&quot;: 1,&#10;    &quot;authorization_request_count&quot;: 1,&#10;    &quot;authorization_required&quot;: true,&#10;    &quot;autosci_command&quot;: &quot;/research&quot;,&#10;    &quot;evidence_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-generic-scheduler-run/autosci_skill_run.json&quot;,&#10;    &quot;execution_status&quot;: &quot;failed&quot;,&#10;    &quot;failed_count&quot;: 0,&#10;    &quot;ok&quot;: false,&#10;    &quot;passed_count&quot;: 0,&#10;    &quot;scheduler_authorization_request_count&quot;: 0,&#10;    &quot;scheduler_authorization_required&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_blocking_reasons&quot;: [],&#10;    &quot;scheduler_dispatch_boundary_production_ready&quot;: true,&#10;    &quot;scheduler_dispatch_boundary_status&quot;: &quot;generic_workflow_runner&quot;,&#10;    &quot;scheduler_lifecycle_blocked_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_status&quot;: &quot;failed&quot;,&#10;    &quot;scheduler_lifecycle_summary_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/scientific/workflow-runs/shim-research-generic-scheduler-run-scheduler/scientific_lifecycle_runtime.json&quot;,&#10;    &quot;scheduler_workflow_config_alignment_issues&quot;: [],&#10;    &quot;scheduler_workflow_config_alignment_ok&quot;: null,&#10;    &quot;scheduler_workflow_config_alignment_status&quot;: &quot;N/A&quot;,&#10;    &quot;schema&quot;: &quot;autosci_skill_run.v1&quot;,&#10;    &quot;schema_only_count&quot;: 1,&#10;    &quot;side_effect_policy&quot;: &quot;approval_required&quot;,&#10;    &quot;skill&quot;: &quot;research&quot;,&#10;    &quot;status&quot;: &quot;failed&quot;,&#10;    &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-generic-scheduler-run&quot;&#10;  }&#10;  &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-generic-scheduler-run&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1254: in test_autosci_skill_shim_research_scheduler_run_attaches_blocked_summary
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: {
+E       "action_count": 1,
+E       "authorization_request_count": 1,
+E       "authorization_required": true,
+E       "autosci_command": "/research",
+E       "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-generic-scheduler-run/autosci_skill_run.json",
+E       "execution_status": "failed",
+E       "failed_count": 0,
+E       "ok": false,
+E       "passed_count": 0,
+E       "scheduler_authorization_request_count": 0,
+E       "scheduler_authorization_required": false,
+E       "scheduler_dispatch_boundary_blocking_reasons": [],
+E       "scheduler_dispatch_boundary_production_ready": true,
+E       "scheduler_dispatch_boundary_status": "generic_workflow_runner",
+E       "scheduler_lifecycle_blocked_node_count": 0,
+E       "scheduler_lifecycle_node_count": 0,
+E       "scheduler_lifecycle_status": "failed",
+E       "scheduler_lifecycle_summary_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/scientific/workflow-runs/shim-research-generic-scheduler-run-scheduler/scientific_lifecycle_runtime.json",
+E       "scheduler_workflow_config_alignment_issues": [],
+E       "scheduler_workflow_config_alignment_ok": null,
+E       "scheduler_workflow_config_alignment_status": "N/A",
+E       "schema": "autosci_skill_run.v1",
+E       "schema_only_count": 1,
+E       "side_effect_policy": "approval_required",
+E       "skill": "research",
+E       "status": "failed",
+E       "work_dir": "artifacts/autosci/runs/shim-research-generic-scheduler-run"
+E     }
+E     
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-research-generic-scheduler-run"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_blocked_gate_surfaces_authorization" time="0.504" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_demo_uses_multi_node_preset" time="0.931"><failure message="AssertionError: &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...esearch&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-demo-scheduler&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1341: in test_autosci_skill_shim_research_scheduler_demo_uses_multi_node_preset
+    assert proc.returncode == 0, proc.stderr
+E   AssertionError: 
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...esearch",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-research-demo-scheduler"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_legacy_scheduler_run_attaches_blocked_summary" time="0.902"><failure message="AssertionError: {&#10;    &quot;action_count&quot;: 1,&#10;    &quot;authorization_request_count&quot;: 1,&#10;    &quot;authorization_required&quot;: true,&#10;    &quot;autosci_command&quot;: &quot;/research&quot;,&#10;    &quot;evidence_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-scheduler-run/autosci_skill_run.json&quot;,&#10;    &quot;execution_status&quot;: &quot;failed&quot;,&#10;    &quot;failed_count&quot;: 0,&#10;    &quot;ok&quot;: false,&#10;    &quot;passed_count&quot;: 0,&#10;    &quot;scheduler_authorization_request_count&quot;: 0,&#10;    &quot;scheduler_authorization_required&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_blocking_reasons&quot;: [&#10;      &quot;runner_contract=bounded_smoke_runner&quot;,&#10;      &quot;node_inputs_include_smoke_mode&quot;,&#10;      &quot;node_inputs_include_fixture_or_fixture_fallback&quot;&#10;    ],&#10;    &quot;scheduler_dispatch_boundary_production_ready&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_status&quot;: &quot;bounded_smoke&quot;,&#10;    &quot;scheduler_lifecycle_blocked_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_status&quot;: &quot;failed&quot;,&#10;    &quot;scheduler_lifecycle_summary_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json&quot;,&#10;    &quot;scheduler_workflow_config_alignment_issues&quot;: [&#10;      &quot;configured_nodes_not_required_by_run&quot;&#10;    ],&#10;    &quot;scheduler_workflow_config_alignment_ok&quot;: false,&#10;    &quot;scheduler_workflow_config_alignment_status&quot;: &quot;drift&quot;,&#10;    &quot;schema&quot;: &quot;autosci_skill_run.v1&quot;,&#10;    &quot;schema_only_count&quot;: 1,&#10;    &quot;side_effect_policy&quot;: &quot;approval_required&quot;,&#10;    &quot;skill&quot;: &quot;research&quot;,&#10;    &quot;status&quot;: &quot;failed&quot;,&#10;    &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-scheduler-run&quot;&#10;  }&#10;  &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...research&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-scheduler-run&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1368: in test_autosci_skill_shim_research_legacy_scheduler_run_attaches_blocked_summary
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: {
+E       "action_count": 1,
+E       "authorization_request_count": 1,
+E       "authorization_required": true,
+E       "autosci_command": "/research",
+E       "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-scheduler-run/autosci_skill_run.json",
+E       "execution_status": "failed",
+E       "failed_count": 0,
+E       "ok": false,
+E       "passed_count": 0,
+E       "scheduler_authorization_request_count": 0,
+E       "scheduler_authorization_required": false,
+E       "scheduler_dispatch_boundary_blocking_reasons": [
+E         "runner_contract=bounded_smoke_runner",
+E         "node_inputs_include_smoke_mode",
+E         "node_inputs_include_fixture_or_fixture_fallback"
+E       ],
+E       "scheduler_dispatch_boundary_production_ready": false,
+E       "scheduler_dispatch_boundary_status": "bounded_smoke",
+E       "scheduler_lifecycle_blocked_node_count": 0,
+E       "scheduler_lifecycle_node_count": 0,
+E       "scheduler_lifecycle_status": "failed",
+E       "scheduler_lifecycle_summary_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-scheduler-run/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+E       "scheduler_workflow_config_alignment_issues": [
+E         "configured_nodes_not_required_by_run"
+E       ],
+E       "scheduler_workflow_config_alignment_ok": false,
+E       "scheduler_workflow_config_alignment_status": "drift",
+E       "schema": "autosci_skill_run.v1",
+E       "schema_only_count": 1,
+E       "side_effect_policy": "approval_required",
+E       "skill": "research",
+E       "status": "failed",
+E       "work_dir": "artifacts/autosci/runs/shim-research-scheduler-run"
+E     }
+E     
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...research",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-research-scheduler-run"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_strict_workflow_config_alignment_fails" time="0.920" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_strict_production_dispatch_fails" time="0.906" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_run_records_human_gate" time="0.869"><failure message="AssertionError: {&#10;    &quot;action_count&quot;: 1,&#10;    &quot;authorization_request_count&quot;: 1,&#10;    &quot;authorization_required&quot;: true,&#10;    &quot;autosci_command&quot;: &quot;/research&quot;,&#10;    &quot;evidence_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-human-gate/autosci_skill_run.json&quot;,&#10;    &quot;execution_status&quot;: &quot;failed&quot;,&#10;    &quot;failed_count&quot;: 0,&#10;    &quot;ok&quot;: false,&#10;    &quot;passed_count&quot;: 0,&#10;    &quot;scheduler_authorization_request_count&quot;: 0,&#10;    &quot;scheduler_authorization_required&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_blocking_reasons&quot;: [&#10;      &quot;runner_contract=bounded_smoke_runner&quot;,&#10;      &quot;node_inputs_include_smoke_mode&quot;,&#10;      &quot;node_inputs_include_fixture_or_fixture_fallback&quot;&#10;    ],&#10;    &quot;scheduler_dispatch_boundary_production_ready&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_status&quot;: &quot;bounded_smoke&quot;,&#10;    &quot;scheduler_lifecycle_blocked_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_status&quot;: &quot;failed&quot;,&#10;    &quot;scheduler_lifecycle_summary_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-human-gate/scheduler_lifecycle/scientific_lifecycle_runtime.json&quot;,&#10;    &quot;scheduler_workflow_config_alignment_issues&quot;: [&#10;      &quot;configured_nodes_not_required_by_run&quot;&#10;    ],&#10;    &quot;scheduler_workflow_config_alignment_ok&quot;: false,&#10;    &quot;scheduler_workflow_config_alignment_status&quot;: &quot;drift&quot;,&#10;    &quot;schema&quot;: &quot;autosci_skill_run.v1&quot;,&#10;    &quot;schema_only_count&quot;: 1,&#10;    &quot;side_effect_policy&quot;: &quot;approval_required&quot;,&#10;    &quot;skill&quot;: &quot;research&quot;,&#10;    &quot;status&quot;: &quot;failed&quot;,&#10;    &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-human-gate&quot;&#10;  }&#10;  &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...: &quot;research&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-human-gate&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1503: in test_autosci_skill_shim_research_scheduler_run_records_human_gate
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: {
+E       "action_count": 1,
+E       "authorization_request_count": 1,
+E       "authorization_required": true,
+E       "autosci_command": "/research",
+E       "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-human-gate/autosci_skill_run.json",
+E       "execution_status": "failed",
+E       "failed_count": 0,
+E       "ok": false,
+E       "passed_count": 0,
+E       "scheduler_authorization_request_count": 0,
+E       "scheduler_authorization_required": false,
+E       "scheduler_dispatch_boundary_blocking_reasons": [
+E         "runner_contract=bounded_smoke_runner",
+E         "node_inputs_include_smoke_mode",
+E         "node_inputs_include_fixture_or_fixture_fallback"
+E       ],
+E       "scheduler_dispatch_boundary_production_ready": false,
+E       "scheduler_dispatch_boundary_status": "bounded_smoke",
+E       "scheduler_lifecycle_blocked_node_count": 0,
+E       "scheduler_lifecycle_node_count": 0,
+E       "scheduler_lifecycle_status": "failed",
+E       "scheduler_lifecycle_summary_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-human-gate/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+E       "scheduler_workflow_config_alignment_issues": [
+E         "configured_nodes_not_required_by_run"
+E       ],
+E       "scheduler_workflow_config_alignment_ok": false,
+E       "scheduler_workflow_config_alignment_status": "drift",
+E       "schema": "autosci_skill_run.v1",
+E       "schema_only_count": 1,
+E       "side_effect_policy": "approval_required",
+E       "skill": "research",
+E       "status": "failed",
+E       "work_dir": "artifacts/autosci/runs/shim-research-human-gate"
+E     }
+E     
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...: "research",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-research-human-gate"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_online_uses_source_runtime_evidence" time="0.872"><failure message="AssertionError: {&#10;    &quot;action_count&quot;: 1,&#10;    &quot;authorization_request_count&quot;: 1,&#10;    &quot;authorization_required&quot;: true,&#10;    &quot;autosci_command&quot;: &quot;/research&quot;,&#10;    &quot;evidence_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-online-source/autosci_skill_run.json&quot;,&#10;    &quot;execution_status&quot;: &quot;failed&quot;,&#10;    &quot;failed_count&quot;: 0,&#10;    &quot;ok&quot;: false,&#10;    &quot;passed_count&quot;: 0,&#10;    &quot;scheduler_authorization_request_count&quot;: 0,&#10;    &quot;scheduler_authorization_required&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_blocking_reasons&quot;: [&#10;      &quot;runner_contract=bounded_smoke_runner&quot;,&#10;      &quot;node_inputs_include_smoke_mode&quot;,&#10;      &quot;node_inputs_include_fixture_or_fixture_fallback&quot;&#10;    ],&#10;    &quot;scheduler_dispatch_boundary_production_ready&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_status&quot;: &quot;bounded_smoke&quot;,&#10;    &quot;scheduler_lifecycle_blocked_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_status&quot;: &quot;failed&quot;,&#10;    &quot;scheduler_lifecycle_summary_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-online-source/scheduler_lifecycle/scientific_lifecycle_runtime.json&quot;,&#10;    &quot;scheduler_workflow_config_alignment_issues&quot;: [&#10;      &quot;configured_nodes_not_required_by_run&quot;&#10;    ],&#10;    &quot;scheduler_workflow_config_alignment_ok&quot;: false,&#10;    &quot;scheduler_workflow_config_alignment_status&quot;: &quot;drift&quot;,&#10;    &quot;schema&quot;: &quot;autosci_skill_run.v1&quot;,&#10;    &quot;schema_only_count&quot;: 1,&#10;    &quot;side_effect_policy&quot;: &quot;approval_required&quot;,&#10;    &quot;skill&quot;: &quot;research&quot;,&#10;    &quot;status&quot;: &quot;failed&quot;,&#10;    &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-online-source&quot;&#10;  }&#10;  &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...research&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-online-source&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1611: in test_autosci_skill_shim_research_scheduler_online_uses_source_runtime_evidence
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: {
+E       "action_count": 1,
+E       "authorization_request_count": 1,
+E       "authorization_required": true,
+E       "autosci_command": "/research",
+E       "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-online-source/autosci_skill_run.json",
+E       "execution_status": "failed",
+E       "failed_count": 0,
+E       "ok": false,
+E       "passed_count": 0,
+E       "scheduler_authorization_request_count": 0,
+E       "scheduler_authorization_required": false,
+E       "scheduler_dispatch_boundary_blocking_reasons": [
+E         "runner_contract=bounded_smoke_runner",
+E         "node_inputs_include_smoke_mode",
+E         "node_inputs_include_fixture_or_fixture_fallback"
+E       ],
+E       "scheduler_dispatch_boundary_production_ready": false,
+E       "scheduler_dispatch_boundary_status": "bounded_smoke",
+E       "scheduler_lifecycle_blocked_node_count": 0,
+E       "scheduler_lifecycle_node_count": 0,
+E       "scheduler_lifecycle_status": "failed",
+E       "scheduler_lifecycle_summary_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-online-source/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+E       "scheduler_workflow_config_alignment_issues": [
+E         "configured_nodes_not_required_by_run"
+E       ],
+E       "scheduler_workflow_config_alignment_ok": false,
+E       "scheduler_workflow_config_alignment_status": "drift",
+E       "schema": "autosci_skill_run.v1",
+E       "schema_only_count": 1,
+E       "side_effect_policy": "approval_required",
+E       "skill": "research",
+E       "status": "failed",
+E       "work_dir": "artifacts/autosci/runs/shim-research-online-source"
+E     }
+E     
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...research",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-research-online-source"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_uses_experiment_runtime_evidence" time="0.885"><failure message="AssertionError: {&#10;    &quot;action_count&quot;: 1,&#10;    &quot;authorization_request_count&quot;: 1,&#10;    &quot;authorization_required&quot;: true,&#10;    &quot;autosci_command&quot;: &quot;/research&quot;,&#10;    &quot;evidence_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-experiment-runtime/autosci_skill_run.json&quot;,&#10;    &quot;execution_status&quot;: &quot;failed&quot;,&#10;    &quot;failed_count&quot;: 0,&#10;    &quot;ok&quot;: false,&#10;    &quot;passed_count&quot;: 0,&#10;    &quot;scheduler_authorization_request_count&quot;: 0,&#10;    &quot;scheduler_authorization_required&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_blocking_reasons&quot;: [&#10;      &quot;runner_contract=bounded_smoke_runner&quot;,&#10;      &quot;node_inputs_include_smoke_mode&quot;,&#10;      &quot;node_inputs_include_fixture_or_fixture_fallback&quot;&#10;    ],&#10;    &quot;scheduler_dispatch_boundary_production_ready&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_status&quot;: &quot;bounded_smoke&quot;,&#10;    &quot;scheduler_lifecycle_blocked_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_status&quot;: &quot;failed&quot;,&#10;    &quot;scheduler_lifecycle_summary_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-experiment-runtime/scheduler_lifecycle/scientific_lifecycle_runtime.json&quot;,&#10;    &quot;scheduler_workflow_config_alignment_issues&quot;: [&#10;      &quot;configured_nodes_not_required_by_run&quot;&#10;    ],&#10;    &quot;scheduler_workflow_config_alignment_ok&quot;: false,&#10;    &quot;scheduler_workflow_config_alignment_status&quot;: &quot;drift&quot;,&#10;    &quot;schema&quot;: &quot;autosci_skill_run.v1&quot;,&#10;    &quot;schema_only_count&quot;: 1,&#10;    &quot;side_effect_policy&quot;: &quot;approval_required&quot;,&#10;    &quot;skill&quot;: &quot;research&quot;,&#10;    &quot;status&quot;: &quot;failed&quot;,&#10;    &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-experiment-runtime&quot;&#10;  }&#10;  &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...rch&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-experiment-runtime&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1698: in test_autosci_skill_shim_research_scheduler_uses_experiment_runtime_evidence
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: {
+E       "action_count": 1,
+E       "authorization_request_count": 1,
+E       "authorization_required": true,
+E       "autosci_command": "/research",
+E       "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-experiment-runtime/autosci_skill_run.json",
+E       "execution_status": "failed",
+E       "failed_count": 0,
+E       "ok": false,
+E       "passed_count": 0,
+E       "scheduler_authorization_request_count": 0,
+E       "scheduler_authorization_required": false,
+E       "scheduler_dispatch_boundary_blocking_reasons": [
+E         "runner_contract=bounded_smoke_runner",
+E         "node_inputs_include_smoke_mode",
+E         "node_inputs_include_fixture_or_fixture_fallback"
+E       ],
+E       "scheduler_dispatch_boundary_production_ready": false,
+E       "scheduler_dispatch_boundary_status": "bounded_smoke",
+E       "scheduler_lifecycle_blocked_node_count": 0,
+E       "scheduler_lifecycle_node_count": 0,
+E       "scheduler_lifecycle_status": "failed",
+E       "scheduler_lifecycle_summary_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-experiment-runtime/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+E       "scheduler_workflow_config_alignment_issues": [
+E         "configured_nodes_not_required_by_run"
+E       ],
+E       "scheduler_workflow_config_alignment_ok": false,
+E       "scheduler_workflow_config_alignment_status": "drift",
+E       "schema": "autosci_skill_run.v1",
+E       "schema_only_count": 1,
+E       "side_effect_policy": "approval_required",
+E       "skill": "research",
+E       "status": "failed",
+E       "work_dir": "artifacts/autosci/runs/shim-research-experiment-runtime"
+E     }
+E     
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...rch",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-research-experiment-runtime"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_executes_approved_experiment_command" time="0.847"><failure message="AssertionError: {&#10;    &quot;action_count&quot;: 1,&#10;    &quot;authorization_request_count&quot;: 1,&#10;    &quot;authorization_required&quot;: true,&#10;    &quot;autosci_command&quot;: &quot;/research&quot;,&#10;    &quot;evidence_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-experiment-executor/autosci_skill_run.json&quot;,&#10;    &quot;execution_status&quot;: &quot;failed&quot;,&#10;    &quot;failed_count&quot;: 0,&#10;    &quot;ok&quot;: false,&#10;    &quot;passed_count&quot;: 0,&#10;    &quot;scheduler_authorization_request_count&quot;: 0,&#10;    &quot;scheduler_authorization_required&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_blocking_reasons&quot;: [&#10;      &quot;runner_contract=bounded_smoke_runner&quot;,&#10;      &quot;node_inputs_include_smoke_mode&quot;,&#10;      &quot;node_inputs_include_fixture_or_fixture_fallback&quot;&#10;    ],&#10;    &quot;scheduler_dispatch_boundary_production_ready&quot;: false,&#10;    &quot;scheduler_dispatch_boundary_status&quot;: &quot;bounded_smoke&quot;,&#10;    &quot;scheduler_lifecycle_blocked_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_node_count&quot;: 0,&#10;    &quot;scheduler_lifecycle_status&quot;: &quot;failed&quot;,&#10;    &quot;scheduler_lifecycle_summary_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-experiment-executor/scheduler_lifecycle/scientific_lifecycle_runtime.json&quot;,&#10;    &quot;scheduler_workflow_config_alignment_issues&quot;: [&#10;      &quot;configured_nodes_not_required_by_run&quot;&#10;    ],&#10;    &quot;scheduler_workflow_config_alignment_ok&quot;: false,&#10;    &quot;scheduler_workflow_config_alignment_status&quot;: &quot;drift&quot;,&#10;    &quot;schema&quot;: &quot;autosci_skill_run.v1&quot;,&#10;    &quot;schema_only_count&quot;: 1,&#10;    &quot;side_effect_policy&quot;: &quot;approval_required&quot;,&#10;    &quot;skill&quot;: &quot;research&quot;,&#10;    &quot;status&quot;: &quot;failed&quot;,&#10;    &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-experiment-executor&quot;&#10;  }&#10;  &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...ch&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-research-experiment-executor&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1776: in test_autosci_skill_shim_research_scheduler_executes_approved_experiment_command
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: {
+E       "action_count": 1,
+E       "authorization_request_count": 1,
+E       "authorization_required": true,
+E       "autosci_command": "/research",
+E       "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-experiment-executor/autosci_skill_run.json",
+E       "execution_status": "failed",
+E       "failed_count": 0,
+E       "ok": false,
+E       "passed_count": 0,
+E       "scheduler_authorization_request_count": 0,
+E       "scheduler_authorization_required": false,
+E       "scheduler_dispatch_boundary_blocking_reasons": [
+E         "runner_contract=bounded_smoke_runner",
+E         "node_inputs_include_smoke_mode",
+E         "node_inputs_include_fixture_or_fixture_fallback"
+E       ],
+E       "scheduler_dispatch_boundary_production_ready": false,
+E       "scheduler_dispatch_boundary_status": "bounded_smoke",
+E       "scheduler_lifecycle_blocked_node_count": 0,
+E       "scheduler_lifecycle_node_count": 0,
+E       "scheduler_lifecycle_status": "failed",
+E       "scheduler_lifecycle_summary_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-experiment-executor/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+E       "scheduler_workflow_config_alignment_issues": [
+E         "configured_nodes_not_required_by_run"
+E       ],
+E       "scheduler_workflow_config_alignment_ok": false,
+E       "scheduler_workflow_config_alignment_status": "drift",
+E       "schema": "autosci_skill_run.v1",
+E       "schema_only_count": 1,
+E       "side_effect_policy": "approval_required",
+E       "skill": "research",
+E       "status": "failed",
+E       "work_dir": "artifacts/autosci/runs/shim-research-experiment-executor"
+E     }
+E     
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...ch",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-research-experiment-executor"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_research_scheduler_records_truthful_legacy_publication_compile_boundary" time="0.881"><failure message="assert 0 == 14">harness/plugins/autosci/tests/test_autosci_skill_shim.py:1885: in test_autosci_skill_shim_research_scheduler_records_truthful_legacy_publication_compile_boundary
+    assert summary["scheduler_lifecycle_node_count"] == 14
+E   assert 0 == 14</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_accepts_exp_run_native_options_without_fixture_fallback" time="0.362" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_run_full_routes_deploy_and_collect_actions" time="0.971" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_pipeline_runs_monitor_action" time="0.385" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_pipeline_reads_wiki_experiment_state" time="0.362"><failure message="assert 0 == 1">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2044: in test_autosci_skill_shim_exp_status_pipeline_reads_wiki_experiment_state
+    assert summary["passed_count"] == 1
+E   assert 0 == 1</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_normalizes_native_wiki_states[collected-completed]" time="0.391"><failure message="AssertionError: assert 'schema_only' == 'passed'&#10;  &#10;  - passed&#10;  + schema_only">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2107: in test_autosci_skill_shim_exp_status_normalizes_native_wiki_states
+    assert action["gate_status"] == "passed"
+E   AssertionError: assert 'schema_only' == 'passed'
+E     
+E     - passed
+E     + schema_only</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_normalizes_native_wiki_states[collect-ready-running]" time="0.416"><failure message="AssertionError: assert 'schema_only' == 'passed'&#10;  &#10;  - passed&#10;  + schema_only">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2107: in test_autosci_skill_shim_exp_status_normalizes_native_wiki_states
+    assert action["gate_status"] == "passed"
+E   AssertionError: assert 'schema_only' == 'passed'
+E     
+E     - passed
+E     + schema_only</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_normalizes_native_wiki_states[ready-running]" time="0.406"><failure message="AssertionError: assert 'schema_only' == 'passed'&#10;  &#10;  - passed&#10;  + schema_only">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2107: in test_autosci_skill_shim_exp_status_normalizes_native_wiki_states
+    assert action["gate_status"] == "passed"
+E   AssertionError: assert 'schema_only' == 'passed'
+E     
+E     - passed
+E     + schema_only</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support" time="3.413" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_design_attaches_review_llm_validation" time="0.384"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_de0/artifacts/autosci/runs/shim-exp-design-review-llm/design_experiment_review_llm_runtime_proof.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2219: in test_autosci_skill_shim_exp_design_attaches_review_llm_validation
+    proof = json.loads((tmp_path / proof_artifact["path"]).read_text(encoding="utf-8"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_de0/artifacts/autosci/runs/shim-exp-design-review-llm/design_experiment_review_llm_runtime_proof.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_preflight" time="0.386"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_de1/artifacts/autosci/runs/shim-exp-design-execution-ready/experiment_design_final_execution_boundary.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2287: in test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_preflight
+    sidecar = json.loads((tmp_path / artifacts["experiment_design_final_execution_boundary_json"]).read_text(encoding="utf-8"))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_de1/artifacts/autosci/runs/shim-exp-design-execution-ready/experiment_design_final_execution_boundary.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki" time="3.464"><failure message="AssertionError: assert False&#10; +  where False = exists()&#10; +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...st-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru1/artifacts/autosci/workspace/wiki/experiments/exp-approved.md').exists">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2399: in test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki
+    assert state_path.exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...st-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru1/artifacts/autosci/workspace/wiki/experiments/exp-approved.md').exists</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_run_executes_approved_native_command" time="3.476"><failure message="AssertionError: assert 'schema_only' == 'passed'&#10;  &#10;  - passed&#10;  + schema_only">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2509: in test_autosci_skill_shim_exp_run_executes_approved_native_command
+    assert action["status"] == "passed"
+E   AssertionError: assert 'schema_only' == 'passed'
+E     
+E     - passed
+E     + schema_only</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_run_parity_demo_auto_executes_local_command" time="3.377"><failure message="AssertionError: assert 'schema_only' == 'passed'&#10;  &#10;  - passed&#10;  + schema_only">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2631: in test_autosci_skill_shim_exp_run_parity_demo_auto_executes_local_command
+    assert action["status"] == "passed"
+E   AssertionError: assert 'schema_only' == 'passed'
+E     
+E     - passed
+E     + schema_only</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_pilot_run_executes_approved_native_command_without_wiki_writeback" time="0.419"><failure message="AssertionError: assert 'schema_only' == 'passed'&#10;  &#10;  - passed&#10;  + schema_only">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2744: in test_autosci_skill_shim_exp_pilot_run_executes_approved_native_command_without_wiki_writeback
+    assert action["status"] == "passed"
+E   AssertionError: assert 'schema_only' == 'passed'
+E     
+E     - passed
+E     + schema_only</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command" time="0.417"><failure message="AssertionError: assert 'inconclusive' == 'completed'&#10;  &#10;  - completed&#10;  + inconclusive">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2866: in test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command
+    assert result["status"] == "completed"
+E   AssertionError: assert 'inconclusive' == 'completed'
+E     
+E     - completed
+E     + inconclusive</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_run_assimilates_remote_helper_runtime_evidence" time="3.482"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru4/artifacts/autosci/workspace/wiki/experiments/exp-remote.md'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:2987: in test_autosci_skill_shim_exp_run_assimilates_remote_helper_runtime_evidence
+    state_text = state_path.read_text(encoding="utf-8")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru4/artifacts/autosci/workspace/wiki/experiments/exp-remote.md'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_run_rejects_remote_helper_stdout_without_runtime_evidence" time="3.522"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru5/artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/run_experiment_runtime_evidence.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3048: in test_autosci_skill_shim_exp_run_rejects_remote_helper_stdout_without_runtime_evidence
+    local_runtime = json.loads((tmp_path / local_runtime_path).read_text(encoding="utf-8"))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru5/artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/run_experiment_runtime_evidence.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_reads_persistent_session_registry" time="3.442"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st5/artifacts/autosci/workspace/wiki/experiments/session-registry.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3093: in test_autosci_skill_shim_exp_status_reads_persistent_session_registry
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st5/artifacts/autosci/workspace/wiki/experiments/session-registry.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_executes_approved_remote_check" time="0.465"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st6/artifacts/autosci/runs/shim-exp-status-remote-check/remote_status_runtime_evidence.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3187: in test_autosci_skill_shim_exp_status_executes_approved_remote_check
+    runtime = json.loads((tmp_path / runtime_path).read_text(encoding="utf-8"))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st6/artifacts/autosci/runs/shim-exp-status-remote-check/remote_status_runtime_evidence.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_parity_demo_remote_opt_in_executes_check" time="0.459"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st7/artifacts/autosci/runs/shim-exp-status-parity-remote-check/monitor_experiment_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3259: in test_autosci_skill_shim_exp_status_parity_demo_remote_opt_in_executes_check
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st7/artifacts/autosci/runs/shim-exp-status-parity-remote-check/monitor_experiment_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_status_executes_approved_live_remote_check" time="0.479"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st8/artifacts/autosci/runs/shim-exp-status-live-remote-check/remote_status_runtime_evidence.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3344: in test_autosci_skill_shim_exp_status_executes_approved_live_remote_check
+    runtime = json.loads((tmp_path / runtime_path).read_text(encoding="utf-8"))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_st8/artifacts/autosci/runs/shim-exp-status-live-remote-check/remote_status_runtime_evidence.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_collect_uses_verified_runtime_evidence" time="0.401"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co0/artifacts/autosci/workspace/wiki/experiments/exp-collect.md'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3441: in test_autosci_skill_shim_exp_collect_uses_verified_runtime_evidence
+    state_text = (tmp_path / "artifacts/autosci/workspace/wiki/experiments/exp-collect.md").read_text(encoding="utf-8")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co0/artifacts/autosci/workspace/wiki/experiments/exp-collect.md'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_collect_executes_approved_remote_pull_results" time="0.454"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/artifacts/autosci/runs/shim-exp-remote-collect/monitor_experiment_runtime_evidence.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3510: in test_autosci_skill_shim_exp_collect_executes_approved_remote_pull_results
+    runtime = json.loads((tmp_path / runtime_path).read_text(encoding="utf-8"))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/artifacts/autosci/runs/shim-exp-remote-collect/monitor_experiment_runtime_evidence.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_collect_parity_demo_remote_opt_in_executes_pull_results" time="0.457"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co2/artifacts/autosci/runs/shim-exp-remote-parity-collect/monitor_experiment_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3597: in test_autosci_skill_shim_exp_collect_parity_demo_remote_opt_in_executes_pull_results
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co2/artifacts/autosci/runs/shim-exp-remote-parity-collect/monitor_experiment_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_collect_executes_approved_live_remote_pull_results" time="0.506"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co3/artifacts/autosci/runs/shim-exp-live-remote-collect/monitor_experiment_runtime_evidence.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3679: in test_autosci_skill_shim_exp_collect_executes_approved_live_remote_pull_results
+    runtime = json.loads((tmp_path / runtime_path).read_text(encoding="utf-8"))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co3/artifacts/autosci/runs/shim-exp-live-remote-collect/monitor_experiment_runtime_evidence.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_collect_rejects_empty_remote_pull_results" time="0.459"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co4/artifacts/autosci/runs/shim-exp-remote-empty/monitor_experiment_runtime_evidence.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3756: in test_autosci_skill_shim_exp_collect_rejects_empty_remote_pull_results
+    runtime = json.loads((tmp_path / runtime_path).read_text(encoding="utf-8"))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co4/artifacts/autosci/runs/shim-exp-remote-empty/monitor_experiment_runtime_evidence.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_collect_writes_multiseed_metric_aggregate_report" time="0.476"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co5/artifacts/autosci/runs/shim-exp-multiseed-collect/experiment_metric_aggregate_report.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3830: in test_autosci_skill_shim_exp_collect_writes_multiseed_metric_aggregate_report
+    aggregate_report = json.loads((tmp_path / aggregate_path).read_text(encoding="utf-8"))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co5/artifacts/autosci/runs/shim-exp-multiseed-collect/experiment_metric_aggregate_report.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_exp_collect_reuses_exactly_once_collection_ledger" time="0.931"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/artifacts/autosci/workspace/wiki/collections/collection-ledger.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3906: in test_autosci_skill_shim_exp_collect_reuses_exactly_once_collection_ledger
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co6/artifacts/autosci/workspace/wiki/collections/collection-ledger.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback" time="0.410"><failure message="AssertionError: assert False&#10; +  where False = exists()&#10; +    where exists = (PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_accept3') / 'artifacts/autosci/runs/shim-paper-plan-native/paper_plan.md').exists">harness/plugins/autosci/tests/test_autosci_skill_shim.py:3957: in test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback
+    assert (tmp_path / "artifacts/autosci/runs/shim-paper-plan-native/paper_plan.md").exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = (PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_accept3') / 'artifacts/autosci/runs/shim-paper-plan-native/paper_plan.md').exists</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_paper_plan_blocks_final_acceptance_without_compile" time="0.391"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_0/artifacts/autosci/runs/shim-paper-plan-citation-review/plan_report_citation_map.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4034: in test_autosci_skill_shim_paper_plan_blocks_final_acceptance_without_compile
+    citation_map = json.loads((tmp_path / artifacts["citation_map_json"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_0/artifacts/autosci/runs/shim-paper-plan-citation-review/plan_report_citation_map.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_paper_plan_rejects_weak_review_llm_boundary" time="0.394"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_1/artifacts/autosci/runs/shim-paper-plan-weak-review-boundary/paper_plan.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4123: in test_autosci_skill_shim_paper_plan_rejects_weak_review_llm_boundary
+    plan_json = json.loads((tmp_path / artifacts["paper_plan_json"]).read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_1/artifacts/autosci/runs/shim-paper-plan-weak-review-boundary/paper_plan.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_paper_plan_attaches_verified_compile_handoff" time="0.395"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_2/artifacts/autosci/runs/shim-paper-plan-compile-handoff/paper_plan.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4266: in test_autosci_skill_shim_paper_plan_attaches_verified_compile_handoff
+    plan_json = json.loads((tmp_path / artifacts["paper_plan_json"]).read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_2/artifacts/autosci/runs/shim-paper-plan-compile-handoff/paper_plan.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_paper_draft_writes_latex_source" time="0.391"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_3/artifacts/autosci/runs/shim-paper-draft-native/paper_draft_final_manuscript_boundary.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4319: in test_autosci_skill_shim_paper_draft_writes_latex_source
+    boundary = json.loads((tmp_path / artifacts["paper_draft_final_manuscript_boundary_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_3/artifacts/autosci/runs/shim-paper-draft-native/paper_draft_final_manuscript_boundary.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff" time="0.401"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/artifacts/autosci/runs/shim-paper-draft-compile-handoff/paper_draft_workspace_wiki_mutation_runtime_proof.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4469: in test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff
+    projection_proof = json.loads((tmp_path / projection_proof_artifact["path"]).read_text(encoding="utf-8"))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/artifacts/autosci/runs/shim-paper-draft-compile-handoff/paper_draft_workspace_wiki_mutation_runtime_proof.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_paper_compile_fix_diagnostics" time="0.413" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_paper_compile_fix_applies_approved_after_artifact" time="0.433"><failure message="AssertionError: assert '\\documentcl...d{document}\n' == '\\documentcl...d{document}\n'&#10;  &#10;    \documentclass{article}&#10;    \begin{document}&#10;  - Approved fixed draft.&#10;  + Broken draft&#10;    \end{document}">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4617: in test_autosci_skill_shim_paper_compile_fix_applies_approved_after_artifact
+    assert tex.read_text(encoding="utf-8") == fixed.read_text(encoding="utf-8")
+E   AssertionError: assert '\\documentcl...d{document}\n' == '\\documentcl...d{document}\n'
+E     
+E       \documentclass{article}
+E       \begin{document}
+E     - Approved fixed draft.
+E     + Broken draft
+E       \end{document}</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars" time="0.384"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_runs_s1/artifacts/autosci/runs/shim-write_survey/survey_final_coverage_boundary.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4659: in test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars
+    boundary = json.loads((tmp_path / artifacts["survey_final_coverage_boundary_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_runs_s1/artifacts/autosci/runs/shim-write_survey/survey_final_coverage_boundary.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_survey_completes_with_citation_evidence" time="0.410"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_survey0/artifacts/autosci/runs/shim-survey-citation-map/write_survey_citation_map.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4737: in test_autosci_skill_shim_survey_completes_with_citation_evidence
+    citation_map = json.loads((tmp_path / artifacts["citation_map_json"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_survey0/artifacts/autosci/runs/shim-survey-citation-map/write_survey_citation_map.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_rebuttal_maps_review_llm_findings" time="0.395"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt0/artifacts/autosci/runs/shim-rebuttal-review-map/rebuttal_response_map.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4819: in test_autosci_skill_shim_rebuttal_maps_review_llm_findings
+    response_map = json.loads((tmp_path / map_file["path"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt0/artifacts/autosci/runs/shim-rebuttal-review-map/rebuttal_response_map.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_rebuttal_ingests_reviewer_thread_and_submission_audit" time="0.404"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt1/artifacts/autosci/runs/shim-rebuttal-thread-audit/rebuttal_response_map.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:4982: in test_autosci_skill_shim_rebuttal_ingests_reviewer_thread_and_submission_audit
+    response_map = json.loads((tmp_path / map_file["path"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt1/artifacts/autosci/runs/shim-rebuttal-thread-audit/rebuttal_response_map.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_rebuttal_atomizes_comma_separated_review_files" time="0.388"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/runs/shim-rebuttal-comma-review-files/rebuttal_response_map.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5052: in test_autosci_skill_shim_rebuttal_atomizes_comma_separated_review_files
+    response_map = json.loads((tmp_path / file_map["rebuttal_response_map_json"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_rebutt2/artifacts/autosci/runs/shim-rebuttal-comma-review-files/rebuttal_response_map.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_accepts_survey_format_latex" time="0.419"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_accept4/artifacts/autosci/runs/shim-survey-format-latex/survey.tex'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5093: in test_autosci_skill_shim_accepts_survey_format_latex
+    latex_source = (tmp_path / latex_artifact["path"]).read_text(encoding="utf-8")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_accept4/artifacts/autosci/runs/shim-survey-format-latex/survey.tex'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_wiki_and_control_proposal_actions" time="1.215"><failure message="AssertionError: &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...n  &quot;skill&quot;: &quot;setup&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-setup_status&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5114: in test_autosci_skill_shim_runs_wiki_and_control_proposal_actions
+    assert proc.returncode == 0, proc.stderr
+E   AssertionError: 
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...n  "skill": "setup",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-setup_status"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_prefill_applies_approved_wiki_mutation" time="0.386"><failure message="AssertionError: assert False&#10; +  where False = exists()&#10; +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...amesyuan/pytest-1/test_autosci_skill_shim_prefil0/artifacts/autosci/workspace/wiki/foundations/foundation-skillgen.md').exists">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5178: in test_autosci_skill_shim_prefill_applies_approved_wiki_mutation
+    assert page.exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...amesyuan/pytest-1/test_autosci_skill_shim_prefil0/artifacts/autosci/workspace/wiki/foundations/foundation-skillgen.md').exists</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_prefill_parity_demo_auto_applies_local_writeback" time="0.422"><failure message="AssertionError: assert False&#10; +  where False = exists()&#10; +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil1/artifacts/autosci/workspace/wiki/foundations/foundation-lora.md').exists">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5234: in test_autosci_skill_shim_prefill_parity_demo_auto_applies_local_writeback
+    assert page.exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil1/artifacts/autosci/workspace/wiki/foundations/foundation-lora.md').exists</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_prefill_add_mode_records_catalog_plan_without_mutation" time="0.399"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil2/artifacts/autosci/runs/shim-prefill-add-plan/envelopes/prefill_foundations.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5272: in test_autosci_skill_shim_prefill_add_mode_records_catalog_plan_without_mutation
+    envelope = json.loads((tmp_path / "artifacts/autosci/runs/shim-prefill-add-plan/envelopes/prefill_foundations.json").read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil2/artifacts/autosci/runs/shim-prefill-add-plan/envelopes/prefill_foundations.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_prefill_renders_supplied_source_evidence" time="0.389"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil3/artifacts/autosci/runs/shim-prefill-source-backed/prefill_plan.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5353: in test_autosci_skill_shim_prefill_renders_supplied_source_evidence
+    plan = json.loads((tmp_path / artifacts["prefill_plan_json"]).read_text(encoding="utf-8"))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil3/artifacts/autosci/runs/shim-prefill-source-backed/prefill_plan.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_prefill_online_fetch_disabled_records_fallback_boundary" time="0.353"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil4/artifacts/autosci/runs/shim-prefill-online-disabled/envelopes/prefill_foundations.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5386: in test_autosci_skill_shim_prefill_online_fetch_disabled_records_fallback_boundary
+    envelope = json.loads((tmp_path / "artifacts/autosci/runs/shim-prefill-online-disabled/envelopes/prefill_foundations.json").read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_prefil4/artifacts/autosci/runs/shim-prefill-online-disabled/envelopes/prefill_foundations.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_control_routes_emit_approved_external_runtime_proofs[$setup-setup_status-setup]" time="0.374"><failure message="AssertionError: &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...: &quot;setup&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-setup-external-runtime&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5452: in test_autosci_skill_shim_control_routes_emit_approved_external_runtime_proofs
+    assert proc.returncode == 0, proc.stderr
+E   AssertionError: 
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...: "setup",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-setup-external-runtime"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_control_routes_emit_approved_external_runtime_proofs[$reset-reset_plan-reset]" time="0.424"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_contro1/artifacts/autosci/runs/shim-reset-external-runtime/reset_plan_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5471: in test_autosci_skill_shim_control_routes_emit_approved_external_runtime_proofs
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_contro1/artifacts/autosci/runs/shim-reset-external-runtime/reset_plan_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_reset_accepts_native_scope_and_keeps_dry_run_non_destructive" time="0.461"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_0/artifacts/autosci/runs/shim-reset-scope-dry-run/reset_wiki_dry_run_plan.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5512: in test_autosci_skill_shim_reset_accepts_native_scope_and_keeps_dry_run_non_destructive
+    plan = json.loads((tmp_path / artifacts["reset_plan_json"]).read_text(encoding="utf-8"))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_0/artifacts/autosci/runs/shim-reset-scope-dry-run/reset_wiki_dry_run_plan.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_reset_executes_approved_local_scope_with_runtime_proofs" time="0.528"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_1/artifacts/autosci/runs/shim-reset-approved-local/reset_plan_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5577: in test_autosci_skill_shim_reset_executes_approved_local_scope_with_runtime_proofs
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_1/artifacts/autosci/runs/shim-reset-approved-local/reset_plan_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_reset_autosci_native_auto_executes_scoped_reset" time="0.567"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_2/artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_plan_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5642: in test_autosci_skill_shim_reset_autosci_native_auto_executes_scoped_reset
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_reset_2/artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_plan_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_edit_applies_approved_after_artifact" time="0.396"><failure message="AssertionError: assert 'create' == 'update'&#10;  &#10;  - update&#10;  + create">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5700: in test_autosci_skill_shim_edit_applies_approved_after_artifact
+    assert change["operation"] == "update"
+E   AssertionError: assert 'create' == 'update'
+E     
+E     - update
+E     + create</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_edit_parity_demo_auto_applies_after_artifact" time="0.358"><failure message="AssertionError: assert '# SkillGen\n\nOld content.\n' == '# SkillGen\n...ed content.\n'&#10;  &#10;    # SkillGen&#10;    &#10;  - Policy-approved edited content.&#10;  + Old content.">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5749: in test_autosci_skill_shim_edit_parity_demo_auto_applies_after_artifact
+    assert target.read_text(encoding="utf-8") == after.read_text(encoding="utf-8")
+E   AssertionError: assert '# SkillGen\n\nOld content.\n' == '# SkillGen\n...ed content.\n'
+E     
+E       # SkillGen
+E       
+E     - Policy-approved edited content.
+E     + Old content.</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_edit_applies_approved_raw_add" time="0.407"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_edit_a1/artifacts/autosci/workspace/raw/papers/new-source.md'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5806: in test_autosci_skill_shim_edit_applies_approved_raw_add
+    assert raw_target.read_text(encoding="utf-8") == after.read_text(encoding="utf-8")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_edit_a1/artifacts/autosci/workspace/raw/papers/new-source.md'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_edit_blocks_existing_raw_add" time="0.407"><failure message="AssertionError: {&#10;    &quot;action_count&quot;: 1,&#10;    &quot;autosci_command&quot;: &quot;/edit&quot;,&#10;    &quot;evidence_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-edit-raw-block/autosci_skill_run.json&quot;,&#10;    &quot;execution_status&quot;: &quot;gated&quot;,&#10;    &quot;failed_count&quot;: 0,&#10;    &quot;ok&quot;: true,&#10;    &quot;passed_count&quot;: 1,&#10;    &quot;schema&quot;: &quot;autosci_skill_run.v1&quot;,&#10;    &quot;schema_only_count&quot;: 0,&#10;    &quot;side_effect_policy&quot;: &quot;approval_required&quot;,&#10;    &quot;skill&quot;: &quot;edit&quot;,&#10;    &quot;status&quot;: &quot;inconclusive&quot;,&#10;    &quot;wiki_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace/wiki&quot;,&#10;    &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-edit-raw-block&quot;,&#10;    &quot;workspace_path&quot;: &quot;/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace&quot;,&#10;    &quot;workspace_updated_count&quot;: 2&#10;  }&#10;  &#10;assert 0 == 2&#10; +  where 0 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...0-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace&quot;,\n  &quot;workspace_updated_count&quot;: 2\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5851: in test_autosci_skill_shim_edit_blocks_existing_raw_add
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+E   AssertionError: {
+E       "action_count": 1,
+E       "autosci_command": "/edit",
+E       "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-edit-raw-block/autosci_skill_run.json",
+E       "execution_status": "gated",
+E       "failed_count": 0,
+E       "ok": true,
+E       "passed_count": 1,
+E       "schema": "autosci_skill_run.v1",
+E       "schema_only_count": 0,
+E       "side_effect_policy": "approval_required",
+E       "skill": "edit",
+E       "status": "inconclusive",
+E       "wiki_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace/wiki",
+E       "work_dir": "artifacts/autosci/runs/shim-edit-raw-block",
+E       "workspace_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace",
+E       "workspace_updated_count": 2
+E     }
+E     
+E   assert 0 == 2
+E    +  where 0 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0...0-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace",\n  "workspace_updated_count": 2\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_edit_applies_approved_raw_delete" time="0.366"><failure message="AssertionError: &#10;assert 2 == 0&#10; +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0... &quot;skill&quot;: &quot;edit&quot;,\n  &quot;status&quot;: &quot;failed&quot;,\n  &quot;work_dir&quot;: &quot;artifacts/autosci/runs/shim-edit-raw-delete&quot;\n}\n', stderr='').returncode">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5898: in test_autosci_skill_shim_edit_applies_approved_raw_delete
+    assert proc.returncode == 0, proc.stderr
+E   AssertionError: 
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0... "skill": "edit",\n  "status": "failed",\n  "work_dir": "artifacts/autosci/runs/shim-edit-raw-delete"\n}\n', stderr='').returncode</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_ask_check_and_init_diagnostics" time="0.362"><failure message="AssertionError: assert 'passed' == 'schema_only'&#10;  &#10;  - schema_only&#10;  + passed">harness/plugins/autosci/tests/test_autosci_skill_shim.py:5940: in test_autosci_skill_shim_runs_ask_check_and_init_diagnostics
+    assert action["status"] == expected_action_status
+E   AssertionError: assert 'passed' == 'schema_only'
+E     
+E     - schema_only
+E     + passed</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_init_uses_verified_runtime_source_manifest" time="0.377"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_u0/artifacts/autosci/runs/shim-init-runtime-manifest/init_sources_source_provider_runtime_proof.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6026: in test_autosci_skill_shim_init_uses_verified_runtime_source_manifest
+    proof = json.loads((tmp_path / proof_artifact["path"]).read_text(encoding="utf-8"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_u0/artifacts/autosci/runs/shim-init-runtime-manifest/init_sources_source_provider_runtime_proof.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki" time="0.374"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_w0/artifacts/autosci/runs/shim-init-runtime-fan-in/source_fan_in_writeback.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6110: in test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki
+    fan_in_evidence = json.loads((tmp_path / fan_in_artifact["path"]).read_text(encoding="utf-8"))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_w0/artifacts/autosci/runs/shim-init-runtime-fan-in/source_fan_in_writeback.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_init_parity_demo_auto_fans_runtime_sources_into_wiki" time="0.413"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_p0/artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6211: in test_autosci_skill_shim_init_parity_demo_auto_fans_runtime_sources_into_wiki
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_p0/artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest" time="0.355"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_daily_0/artifacts/autosci/runs/shim-daily-runtime-digest/envelopes/daily_arxiv_prepare_finalize.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6299: in test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest
+    (tmp_path / "artifacts/autosci/runs/shim-daily-runtime-digest/envelopes/daily_arxiv_prepare_finalize.json").read_text(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_daily_0/artifacts/autosci/runs/shim-daily-runtime-digest/envelopes/daily_arxiv_prepare_finalize.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_daily_arxiv_runs_native_local_feed_pipeline" time="0.596"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_daily_1/artifacts/autosci/runs/shim-daily-native-local/daily_arxiv_recommendation_context.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6438: in test_autosci_skill_shim_daily_arxiv_runs_native_local_feed_pipeline
+    context = json.loads((tmp_path / artifacts["daily_arxiv_recommendation_context_json"]).read_text(encoding="utf-8"))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_daily_1/artifacts/autosci/runs/shim-daily-native-local/daily_arxiv_recommendation_context.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_daily_arxiv_write_creates_ingest_handoff" time="0.401"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_daily_2/artifacts/autosci/runs/shim-daily-runtime-auto-ingest/daily_arxiv_prepare_finalize_review_llm_runtime_proof.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6558: in test_autosci_skill_shim_daily_arxiv_write_creates_ingest_handoff
+    review_proof = json.loads((tmp_path / review_proof_artifact["path"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_daily_2/artifacts/autosci/runs/shim-daily-runtime-auto-ingest/daily_arxiv_prepare_finalize_review_llm_runtime_proof.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_daily_arxiv_routes_management_subcommands[setup-inconclusive-True]" time="0.417" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_daily_arxiv_routes_management_subcommands[status-completed-False]" time="0.403" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_daily_arxiv_routes_management_subcommands[disable-inconclusive-True]" time="0.400" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_ask_and_check_read_workspace_wiki" time="0.416"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/runs/shim-ask-wiki-retrieval/ask_wiki_retrieval.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6654: in test_autosci_skill_shim_ask_and_check_read_workspace_wiki
+    retrieval = json.loads((tmp_path / retrieval_artifact["path"]).read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_an0/artifacts/autosci/runs/shim-ask-wiki-retrieval/ask_wiki_retrieval.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_ask_respects_native_format_modes" time="0.390"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_re0/artifacts/autosci/runs/shim-ask-format-table/envelopes/ask_wiki.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6732: in test_autosci_skill_shim_ask_respects_native_format_modes
+    table_envelope = json.loads((tmp_path / "artifacts/autosci/runs/shim-ask-format-table/envelopes/ask_wiki.json").read_text(encoding="utf-8"))
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_re0/artifacts/autosci/runs/shim-ask-format-table/envelopes/ask_wiki.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources" time="0.437"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_us0/artifacts/autosci/runs/shim-ask-model-command/ask_wiki_model_request.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6847: in test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources
+    request_payload = json.loads((tmp_path / request_artifact["path"]).read_text(encoding="utf-8"))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_us0/artifacts/autosci/runs/shim-ask-model-command/ask_wiki_model_request.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_ask_crystallize_writes_approved_output" time="0.437"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr0/artifacts/autosci/runs/shim-ask-crystallize/envelopes/ask_wiki.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:6957: in test_autosci_skill_shim_ask_crystallize_writes_approved_output
+    envelope = json.loads((tmp_path / "artifacts/autosci/runs/shim-ask-crystallize/envelopes/ask_wiki.json").read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr0/artifacts/autosci/runs/shim-ask-crystallize/envelopes/ask_wiki.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_ask_crystallize_parity_demo_auto_writes_output" time="0.486"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/runs/shim-ask-crystallize-policy-auto/ask_wiki_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7073: in test_autosci_skill_shim_ask_crystallize_parity_demo_auto_writes_output
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/artifacts/autosci/runs/shim-ask-crystallize-policy-auto/ask_wiki_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_ask_crystallize_writes_typed_target" time="0.442"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr2/artifacts/autosci/runs/shim-ask-crystallize-concept/envelopes/ask_wiki.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7169: in test_autosci_skill_shim_ask_crystallize_writes_typed_target
+    envelope = json.loads((tmp_path / "artifacts/autosci/runs/shim-ask-crystallize-concept/envelopes/ask_wiki.json").read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr2/artifacts/autosci/runs/shim-ask-crystallize-concept/envelopes/ask_wiki.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_check_uses_model_command_for_quality_review" time="0.491"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_check_0/artifacts/autosci/runs/shim-check-model-command/check_wiki_health_model_request.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7310: in test_autosci_skill_shim_check_uses_model_command_for_quality_review
+    request_payload = json.loads((tmp_path / request_artifact["path"]).read_text(encoding="utf-8"))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_check_0/artifacts/autosci/runs/shim-check-model-command/check_wiki_health_model_request.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_runs_remaining_gated_backend_actions" time="0.374"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_runs_r1/artifacts/autosci/runs/shim-daily_arxiv_prepare_finalize/daily_arxiv_prepare_finalize_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7364: in test_autosci_skill_shim_runs_remaining_gated_backend_actions
+    contract = json.loads((tmp_path / contract_artifact["path"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_runs_r1/artifacts/autosci/runs/shim-daily_arxiv_prepare_finalize/daily_arxiv_prepare_finalize_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_strict_gate_emits_side_effect_access_requests_for_native_parity_commands" time="4.582" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_visualize_projects_action_graph_update_into_workspace_graph" time="0.611"><failure message="assert False&#10; +  where False = any(&lt;generator object test_autosci_skill_shim_visualize_projects_action_graph_update_into_workspace_graph.&lt;locals&gt;.&lt;genexpr&gt; at 0x10cf39210&gt;)">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7496: in test_autosci_skill_shim_visualize_projects_action_graph_update_into_workspace_graph
+    assert any(
+E   assert False
+E    +  where False = any(&lt;generator object test_autosci_skill_shim_visualize_projects_action_graph_update_into_workspace_graph.&lt;locals&gt;.&lt;genexpr&gt; at 0x10cf39210&gt;)</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_accepts_visualize_serve_flag_without_server_execution" time="0.631"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_accept5/artifacts/autosci/runs/shim-visualize-serve-flag/visualize_graph_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7537: in test_autosci_skill_shim_accepts_visualize_serve_flag_without_server_execution
+    contract = json.loads((tmp_path / contract_artifact["path"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_accept5/artifacts/autosci/runs/shim-visualize-serve-flag/visualize_graph_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_visualize_parity_demo_auto_runs_server_probe" time="1.223"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_visual1/artifacts/autosci/runs/shim-visualize-parity-demo-serve/visualize_web_health.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7596: in test_autosci_skill_shim_visualize_parity_demo_auto_runs_server_probe
+    serve_probe = json.loads((tmp_path / artifacts["visualize_web_health_json"]).read_text(encoding="utf-8"))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_visual1/artifacts/autosci/runs/shim-visualize-parity-demo-serve/visualize_web_health.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_visualize_serve_emits_approved_runtime_proofs" time="0.697"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_visual2/artifacts/autosci/runs/shim-visualize-approved-serve/visualize_graph_approval_contract.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7652: in test_autosci_skill_shim_visualize_serve_emits_approved_runtime_proofs
+    contract = json.loads((tmp_path / artifacts["approval_contract_json"]).read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_visual2/artifacts/autosci/runs/shim-visualize-approved-serve/visualize_graph_approval_contract.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_visualize_accepts_native_focus_and_filters" time="0.601"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_visual3/artifacts/autosci/runs/shim-visualize-focus-filter/visualize_canvas_stdout.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7716: in test_autosci_skill_shim_visualize_accepts_native_focus_and_filters
+    canvas_payload = json.loads((tmp_path / artifacts["visualize_canvas_stdout_json"]).read_text(encoding="utf-8"))
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_visual3/artifacts/autosci/runs/shim-visualize-focus-filter/visualize_canvas_stdout.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_refine_applies_approved_after_artifact" time="0.399"><failure message="AssertionError: assert 'proposed' == 'applied'&#10;  &#10;  - applied&#10;  + proposed">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7799: in test_autosci_skill_shim_refine_applies_approved_after_artifact
+    assert evolution["approval_state"] == "applied"
+E   AssertionError: assert 'proposed' == 'applied'
+E     
+E     - applied
+E     + proposed</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_refine_parity_demo_auto_applies_after_artifact" time="0.390"><failure message="AssertionError: assert 'proposed' == 'applied'&#10;  &#10;  - applied&#10;  + proposed">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7885: in test_autosci_skill_shim_refine_parity_demo_auto_applies_after_artifact
+    assert evolution["approval_state"] == "applied"
+E   AssertionError: assert 'proposed' == 'applied'
+E     
+E     - applied
+E     + proposed</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_refine_runs_review_command_quality_gate" time="0.407"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_refine2/artifacts/autosci/runs/shim-refine-review-command/refine_review_round_01.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:7990: in test_autosci_skill_shim_refine_runs_review_command_quality_gate
+    review_round = json.loads((tmp_path / artifacts["refine_review_round_json"]).read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_refine2/artifacts/autosci/runs/shim-refine-review-command/refine_review_round_01.json'</failure></testcase><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_pilot_eval_uses_runtime_evidence" time="0.382" /><testcase classname="harness.plugins.autosci.tests.test_autosci_skill_shim" name="test_autosci_skill_shim_pilot_eval_write_updates_wiki_with_approval" time="0.388"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_pilot_1/artifacts/autosci/runs/shim-pilot-eval-writeback/claim_verdict_writeback.json'">harness/plugins/autosci/tests/test_autosci_skill_shim.py:8102: in test_autosci_skill_shim_pilot_eval_write_updates_wiki_with_approval
+    writeback = json.loads((tmp_path / writeback_artifact["path"]).read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_pilot_1/artifacts/autosci/runs/shim-pilot-eval-writeback/claim_verdict_writeback.json'</failure></testcase><testcase time="0.001" /></testsuite></testsuites>

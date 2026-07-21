@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="6" failures="0" skipped="0" tests="6" time="0.339" timestamp="2026-07-10T02:22:40.739584-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="" name="harness.tests.research.survey.activation_proof.test_status_epic_activation" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/research/survey/activation_proof/test_status_epic_activation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/research/survey/activation_proof/test_status_epic_activation.py:9: in &lt;module&gt;
+    from cli.cmd_status_epic import run_status_epic
+E   ModuleNotFoundError: No module named 'cli.cmd_status_epic'</error></testcase><testcase classname="" name="harness.tests.research.survey.cli.test_argument_density_view" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/research/survey/cli/test_argument_density_view.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ModuleNotFoundError: No module named 'cli.test_argument_density_view'</error></testcase><testcase classname="" name="harness.tests.research.survey.cli.test_contradiction_matrix_view" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/research/survey/cli/test_contradiction_matrix_view.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ModuleNotFoundError: No module named 'cli.test_contradiction_matrix_view'</error></testcase><testcase classname="" name="harness.tests.research.survey.cli.test_exploration_view" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/research/survey/cli/test_exploration_view.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ModuleNotFoundError: No module named 'cli.test_exploration_view'</error></testcase><testcase classname="" name="harness.tests.research.survey.cli.test_gate_report_view" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/research/survey/cli/test_gate_report_view.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ModuleNotFoundError: No module named 'cli.test_gate_report_view'</error></testcase><testcase classname="" name="harness.tests.research.survey.cli.test_source_quality_view" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/research/survey/cli/test_source_quality_view.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ModuleNotFoundError: No module named 'cli.test_source_quality_view'</error></testcase></testsuite></testsuites>

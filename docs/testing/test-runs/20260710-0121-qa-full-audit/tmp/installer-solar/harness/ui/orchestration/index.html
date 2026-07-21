@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Orchestration Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="shell">
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Solar Orchestration</span>
+      <h1>Epic Runtime Dashboard</h1>
+      <p id="hero-subtitle">Loading sprint runtime state...</p>
+    </div>
+    <div class="hero-metrics" aria-label="runtime summary">
+      <div class="metric"><span class="metric-label">Nodes</span><strong id="metric-nodes">N/A</strong></div>
+      <div class="metric"><span class="metric-label">Passed</span><strong id="metric-passed">N/A</strong></div>
+      <div class="metric"><span class="metric-label">Blocked</span><strong id="metric-blocked">N/A</strong></div>
+      <div class="metric"><span class="metric-label">Cost</span><strong id="metric-cost">N/A</strong></div>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <label for="sprint-select">Sprint</label>
+    <select id="sprint-select"></select>
+    <span id="refresh-state">pending</span>
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="panel panel-wide">
+      <header><h2>DAG Progress Flow</h2><span id="gate-summary">N/A</span></header>
+      <div id="dag-flow" class="dag-flow" aria-live="polite"></div>
+    </article>
+    <article class="panel">
+      <header><h2>Capability Demand</h2><span id="capability-total">N/A</span></header>
+      <div id="capability-list" class="stack-list"></div>
+    </article>
+    <article class="panel">
+      <header><h2>Resource Cost</h2><span id="routing-count">N/A</span></header>
+      <div id="resource-list" class="stack-list"></div>
+    </article>
+    <article class="panel panel-wide">
+      <header><h2>Route Decisions</h2><span id="route-count">N/A</span></header>
+      <div id="route-list" class="evidence-grid" aria-live="polite"></div>
+    </article>
+    <article class="panel panel-wide">
+      <header><h2>ActorHost Taxonomy</h2><span id="actorhost-count">N/A</span></header>
+      <div id="actorhost-list" class="evidence-grid" aria-live="polite"></div>
+    </article>
+    <article class="panel panel-wide">
+      <header><h2>Blocker Diagnostics</h2><span id="blocker-count">N/A</span></header>
+      <div id="blocker-list" class="diagnostics"></div>
+    </article>
+    <article class="panel panel-wide">
+      <header><h2>Degraded Sources</h2><span id="degraded-count">N/A</span></header>
+      <div id="degraded-list" class="diagnostics" aria-live="polite"></div>
+    </article>
+    <article class="panel panel-wide">
+      <header><h2>Pane Supply</h2><span id="pane-count">N/A</span></header>
+      <div id="pane-supply" class="pane-grid" aria-live="polite"></div>
+    </article>
+  </section>
+</main>
+<script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/physical-operators.schema.json",
+  "title": "Solar Model Fleet Physical Operator Registry",
+  "type": "object",
+  "required": ["version", "operators"],
+  "additionalProperties": true,
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string"},
+    "deprecated": {"type": "boolean", "const": true},
+    "deprecation_note": {"type": "string", "minLength": 1},
+    "transition_status": {
+      "type": "string",
+      "enum": ["read_only", "deprecated", "sunset"],
+      "const": "read_only"
+    },
+    "sunset_after_slice": {"type": "string", "const": "S05"},
+    "operators": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/operator"}
+    }
+  },
+  "$defs": {
+    "operator": {
+      "type": "object",
+      "required": ["display_name"],
+      "additionalProperties": true,
+      "properties": {
+        "display_name": {"type": "string", "minLength": 1},
+        "operator_class": {
+          "type": "string",
+          "enum": [
+            "DeepArchitect",
+            "RootCauseDebug",
+            "Implementation",
+            "FastSubagent",
+            "ParallelExploration",
+            "Verifier",
+            "ResearchSynthesis",
+            "BrowserComputerUse",
+            "GoogleStack",
+            "LocalPrivacy",
+            "RouterMeta",
+            "AuditLedger"
+          ]
+        },
+        "physical": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "backend": {"type": "string", "enum": ["tmux", "managed_agent", "local", "desktop_bridge"]},
+            "session": {"type": "string"},
+            "window": {"type": "string"},
+            "pane_ref": {"type": "string"},
+            "pane_title": {"type": "string"},
+            "cwd": {"type": "string"}
+          }
+        },
+        "surface": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {"type": "string", "enum": [
+              "cli", "api", "managed_agent", "desktop_bridge", "local",
+              "claude_code_interactive", "claude_print", "claude_sdk", "claude_github_action"
+            ]},
+            "tool": {"type": "string"},
+            "launch_cmd": {"type": "string"}
+          }
+        },
+        "billing_surface": {
+          "type": "string",
+          "enum": [
+            "subscription_interactive",
+            "anthropic_agent_sdk_credit",
+            "usage_credit",
+            "local_compute",
+            "unknown"
+          ]
+        },
+        "billing_pool": {
+          "type": "string"
+        },
+        "launch_cmd_kind": {
+          "type": "string",
+          "enum": ["interactive_repl", "print_once", "sdk_call", "local"]
+        },
+        "aliases": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "compat_alias_for": {
+          "type": "string"
+        },
+        "model_binding": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "provider": {"type": "string"},
+            "model_id": {"type": "string"},
+            "alias": {"type": "string"},
+            "config": {"type": "object"}
+          }
+        },
+        "endpoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "base_url": {"type": ["string", "null"]},
+            "region": {"type": ["string", "null"]},
+            "api_version": {"type": ["string", "null"]}
+          }
+        },
+        "auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["subscription_cli", "api_key", "oauth", "local", "none"]
+            },
+            "account_label": {"type": "string"},
+            "secret_ref": {
+              "type": "string",
+              "pattern": "^(secret://|local://|none$)"
+            },
+            "key_env": {"type": ["string", "null"]},
+            "expose_raw_key_to_pane": {"type": "boolean", "default": false}
+          },
+          "not": {
+            "anyOf": [
+              {"required": ["api_key"]},
+              {"required": ["token"]},
+              {"required": ["password"]},
+              {"required": ["client_secret"]}
+            ]
+          }
+        },
+        "quota": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "quota_type": {"type": "string"},
+            "period": {"type": "string", "enum": ["rolling_5h", "daily", "weekly", "monthly", "api_balance", "none", "unknown"]},
+            "enabled_at": {"type": "string"},
+            "refresh_at": {"type": "string"},
+            "hard_limit_units": {"type": ["number", "null"]},
+            "remaining_estimate": {"type": ["number", "string", "null"]},
+            "soft_stop_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+            "hard_stop_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+            "reserve_for": {"type": "array", "items": {"type": "string"}},
+            "on_exhausted": {"type": "string", "enum": ["disable_and_fallback", "cooldown", "manual_review", "ignore"]}
+          }
+        },
+        "capability": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^(planning|coding|debugging|testing|research|browser|shell|long_context|speed|cost_efficiency|reliability|multimodal|local_privacy)$": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            }
+          }
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "write_files": {"type": "string"},
+            "run_shell": {"type": "string"},
+            "network": {"type": "string"},
+            "secrets_access": {"type": "string", "enum": ["denied", "secret_ref_only", "allowed"]},
+            "git_commit": {"type": "string"},
+            "allowed_repos": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "state": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "availability": {"type": "string", "enum": ["enabled", "disabled", "degraded"]},
+            "runtime_state": {
+              "type": "string",
+              "enum": ["created", "warming", "idle", "leased", "running", "draining", "cooldown", "error", "quota_exhausted", "auth_expired", "disabled", "stale_context", "needs_human_review"]
+            },
+            "last_heartbeat_at": {"type": ["string", "null"]},
+            "last_success_at": {"type": ["string", "null"]},
+            "last_error": {"type": ["string", "null"]}
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "avg_latency_sec": {"type": ["number", "null"]},
+            "task_success_rate_7d": {"type": ["number", "null"]},
+            "avg_cost_per_success": {"type": ["number", "null"]},
+            "tool_error_rate": {"type": ["number", "null"]},
+            "hallucination_incidents": {"type": "integer", "minimum": 0}
+          }
+        },
+        "routing": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "operator_class": {"type": "string"},
+            "primary_task_types": {"type": "array", "items": {"type": "string"}},
+            "avoid_task_types": {"type": "array", "items": {"type": "string"}},
+            "fallback_operator_classes": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "enabled": {"type": "boolean"},
+        "available": {"type": "boolean"},
+        "profile": {"type": "string"},
+        "role": {"type": "string"},
+        "provider": {"type": "string"},
+        "vendor": {"type": "string"},
+        "model": {"type": "string"},
+        "preferred_for": {"type": "array", "items": {"type": "string"}},
+        "avoid_for": {"type": "array", "items": {"type": "string"}}
+      },
+      "if": {
+        "properties": {
+          "backend": {"const": "claude-cli"}
+        },
+        "required": ["backend"]
+      },
+      "then": {
+        "required": ["surface", "billing_surface"],
+        "properties": {
+          "surface": {
+            "properties": {
+              "type": {"enum": ["claude_code_interactive", "claude_print", "claude_sdk", "claude_github_action"]}
+            }
+          }
+        }
+      }
+    }
+  }
+}

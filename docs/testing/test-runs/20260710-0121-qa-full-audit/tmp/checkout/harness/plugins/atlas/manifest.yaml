@@ -1,0 +1,53 @@
+---
+id: atlas
+name: "ATLAS Repair Protocol"
+version: "1.0.0"
+description: "ATLAS-derived complexity budgeting and PR-CoT repair protocol absorbed into Solar rules. Used to make hook/tool failures actionable instead of silently stopping."
+status: enabled
+
+write_scope:
+  - "state/atlas"
+
+read_scope:
+  - "~/Solar/rules/atlas-repair-protocol.md"
+  - "~/.claude/rules/atlas-repair-protocol.md"
+  - "~/.solar/plans/atlas-solar-integration.md"
+
+capabilities:
+  - "repair.pr-cot"
+  - "routing.complexity_budget"
+  - "failure.structured_repair"
+
+commands:
+  - "solar-harness integrations status"
+  - "solar-harness context inject"
+
+background_safety:
+  mode: none
+  idle_only: false
+  rate_limit: "none"
+  max_runtime_s: 30
+  max_memory_mb: 128
+
+eval_packs:
+  - "tests/plugins/test-s4-extension-framework.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable atlas"
+
+integration_level: default_usable
+
+entry: "~/Solar/rules/atlas-repair-protocol.md"
+
+events:
+  - "atlas.repair_strategy_seen"
+  - "atlas.repair_applied"
+
+depends_on: []
+
+tags:
+  - "repair"
+  - "routing"
+  - "hooks"

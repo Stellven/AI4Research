@@ -1,0 +1,50 @@
+{
+  "evidence_ids": [
+    "paper-draft-compile-handoff",
+    "claim-001",
+    "exp-supported-001"
+  ],
+  "report_id": "report-skillgen-operator-smoke",
+  "sections": [
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "summary"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "findings"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "evidence-map"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "final-manuscript-boundary"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "limitations"
+    }
+  ]
+}

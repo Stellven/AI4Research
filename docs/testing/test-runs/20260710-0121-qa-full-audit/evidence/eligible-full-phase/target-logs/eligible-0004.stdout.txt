@@ -1,0 +1,25 @@
+....FF.FF                                                                [100%]
+=================================== FAILURES ===================================
+_________________ TestEpicTreeReal.test_capabilities_surfaced __________________
+harness/integrations/gemini_deep_research/ui/test_status_view.py:51: in test_capabilities_surfaced
+    self.assertTrue(any(sp.capabilities for sp in self.tree.sprints))
+E   AssertionError: False is not true
+___________________ TestEpicTreeReal.test_five_child_sprints ___________________
+harness/integrations/gemini_deep_research/ui/test_status_view.py:48: in test_five_child_sprints
+    self.assertGreaterEqual(len(self.tree.sprints), 5)
+E   AssertionError: 0 not greater than or equal to 5
+___________ TestEpicTreeReal.test_render_text_contains_epic_and_tree ___________
+harness/integrations/gemini_deep_research/ui/test_status_view.py:60: in test_render_text_contains_epic_and_tree
+    self.assertIn("s03-core-runtime", txt)
+E   AssertionError: 's03-core-runtime' not found in 'EPIC epic-20260529-跑通-gemini-deep-research-我的具体要求是-1-从用户那里或者上游调用-上游算子那里获取问题输入-2'
+_____________________ TestEpicTreeReal.test_to_dict_shape ______________________
+harness/integrations/gemini_deep_research/ui/test_status_view.py:72: in test_to_dict_shape
+    self.assertIn("nodes", d["sprints"][0])
+                           ^^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+=========================== short test summary info ============================
+FAILED harness/integrations/gemini_deep_research/ui/test_status_view.py::TestEpicTreeReal::test_capabilities_surfaced
+FAILED harness/integrations/gemini_deep_research/ui/test_status_view.py::TestEpicTreeReal::test_five_child_sprints
+FAILED harness/integrations/gemini_deep_research/ui/test_status_view.py::TestEpicTreeReal::test_render_text_contains_epic_and_tree
+FAILED harness/integrations/gemini_deep_research/ui/test_status_view.py::TestEpicTreeReal::test_to_dict_shape
+4 failed, 5 passed in 0.03s

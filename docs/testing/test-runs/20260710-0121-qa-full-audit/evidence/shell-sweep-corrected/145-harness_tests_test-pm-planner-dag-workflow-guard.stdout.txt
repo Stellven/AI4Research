@@ -1,0 +1,18 @@
+PASS: queued contract_ready + bypass_pm still routes PM
+PASS: legacy builder shortcut is reported as violation
+PASS: PRD only routes planner
+PASS: design+plan without task_graph stays planner
+PASS: PRD+design+plan+task_graph routes builder_main
+PASS: unmet external prerequisite blocks builder route
+PASS: external prerequisite block reason reported
+PASS: passed external prerequisite releases builder route
+PASS: invalid task_graph blocks builder
+PASS: invalid task_graph violation reported
+PASS: node-level planner artifacts count as planner-ready
+PASS: solar-harness.sh syntax ok
+PASS: coordinator.sh syntax ok
+PASS: workflow_guard.py compiles
+
+========================
+PASS=14 FAIL=0
+PASS

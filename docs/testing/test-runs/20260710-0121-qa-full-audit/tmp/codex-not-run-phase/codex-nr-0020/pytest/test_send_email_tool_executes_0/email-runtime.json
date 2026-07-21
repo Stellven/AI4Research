@@ -1,0 +1,58 @@
+{
+  "artifacts": [
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0020/pytest/test_send_email_tool_executes_0/email-runtime.json.receipt.json",
+      "type": "email_delivery_receipt_json"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "approval-email-smtp",
+    "subject": "AutoSci SMTP",
+    "to": "user@example.com"
+  },
+  "limitations": [
+    "Email was sent only because explicit approval and SMTP execution flags were supplied."
+  ],
+  "node_id": "node-send-email",
+  "outputs": {
+    "runtime": {
+      "action": "send_email",
+      "approval_ref": "approval-email-smtp",
+      "checks": [
+        {
+          "check": "smtp_configured",
+          "detail": "127.0.0.1:62768",
+          "status": "ok"
+        },
+        {
+          "check": "smtp_send",
+          "detail": "accepted",
+          "status": "ok"
+        }
+      ],
+      "command_run": "smtp://127.0.0.1:62768 send autosci@example.com -> user@example.com",
+      "delivered": true,
+      "evidence_ids": [
+        "email:approval-email-smtp",
+        "recipient:user@example.com"
+      ],
+      "exit_code": 0,
+      "from": "autosci@example.com",
+      "provider": "smtp",
+      "smtp_host": "127.0.0.1",
+      "smtp_port": 62768,
+      "status": "completed",
+      "subject": "AutoSci SMTP",
+      "to": "user@example.com"
+    }
+  },
+  "provenance": {
+    "implementation_package": "tools.send_email",
+    "operator_id": "autosci-send-email-cli",
+    "timestamp": "2026-07-10T18:47:36Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "send-email",
+  "status": "completed",
+  "task_id": "send-email-runtime"
+}

@@ -1,0 +1,19 @@
+{
+  "section_id": "ch01/sec01",
+  "rounds": [
+    {
+      "section_id": "ch01/sec01",
+      "round_index": 0,
+      "verdict": "WAITING_FOR_PANE",
+      "changed": false,
+      "issues_before": [
+        "pane_response_missing:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0079/pytest/test_survey_write_pane_packet_0/sections/ch01/sec01/human_responses/round_00.md"
+      ],
+      "actions": [
+        "let_pane_write_response_markdown",
+        "rerun_survey_write_section"
+      ],
+      "schema_version": "solar.research.survey.v1"
+    }
+  ]
+}

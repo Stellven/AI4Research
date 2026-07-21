@@ -1,0 +1,21 @@
+{
+  "task_id": "task-job-scientific-lifecycle-source-runtime-test-report_plan",
+  "operator_id": "autosci-report-plan-worker",
+  "sprint_id": "job-scientific-lifecycle-source-runtime-test",
+  "node_id": "report_plan",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T14:05:56Z",
+  "finished_at": "2026-07-10T14:05:57Z",
+  "log_tail": "              \"task-review-llm-full-external-test\",\n              \"task-job-scientific-lifecycle-source-runtime-test-claim_verify\",\n              \"claim-001\",\n              \"paper-job-scientific-lifecycle-source-runtime-test\",\n              \"sample_paper.md#results\",\n              \"task-job-scientific-lifecycle-source-runtime-test-experiment_run\",\n              \"exp-001\",\n              \"evidence:autosci-fixture-result\",\n              \"evidence:autosci-fixture-ledger\",\n              \"task-job-scientific-lifecycle-source-runtime-test-code_evidence_map\",\n              \"map-001\",\n              \"plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py\",\n              \"task-job-scientific-lifecycle-source-runtime-test-claim_extract\",\n              \"claim-002\",\n              \"sample_paper.md#abstract\",\n              \"task-job-scientific-lifecycle-source-runtime-test-idea_evaluate\",\n              \"idea-001\",\n              \"method-001\",\n              \"task-job-scientific-lifecycle-source-runtime-test-paper_ingest\",\n              \"task-job-scientific-lifecycle-source-runtime-test-method_extract\",\n              \"idea-duplicate-001\",\n              \"exp-supported-001\",\n              \"scheduler-lifecycle-resume\",\n              \"runtime-source-001\",\n              \"review-llm:full-external-test\",\n              \"paper-draft-compile-handoff\",\n              \"supplied-compile-target-handoff\",\n              \"artifacts/scientific/external/source-runtime-test/compile_target/main.pdf\"\n            ],\n            \"section_id\": \"limitations\",\n            \"title\": \"Limitations\"\n          }\n        ],\n        \"title\": \"Scheduler Lifecycle Resumed Paper Plan\",\n        \"unsupported_claims\": []\n      }\n    },\n    \"provenance\": {\n      \"implementation_package\": \"plugins/autosci\",\n      \"operator_id\": \"autosci-bridge\",\n      \"timestamp\": \"2026-07-10T14:05:57Z\"\n    },\n    \"schema\": \"scientific_report.v1\",\n    \"sprint_id\": \"job-scientific-lifecycle-source-runtime-test\",\n    \"status\": \"completed\",\n    \"task_id\": \"task-job-scientific-lifecycle-source-runtime-test-report_plan\"\n  },\n  \"evidence_jsonl\": \"artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_plan/task-job-scientific-lifecycle-source-runtime-test-report_plan/evidence.jsonl\",\n  \"evidence_path\": \"artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_plan/task-job-scientific-lifecycle-source-runtime-test-report_plan/scientific_report_plan.json\",\n  \"ok\": true,",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

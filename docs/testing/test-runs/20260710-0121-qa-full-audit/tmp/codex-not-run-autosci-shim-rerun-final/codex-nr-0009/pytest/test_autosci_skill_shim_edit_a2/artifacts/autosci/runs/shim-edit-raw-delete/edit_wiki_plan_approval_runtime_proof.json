@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-07-10T19:26:17Z",
+  "proofs": [
+    {
+      "categories": [
+        "external_runtime_evidence",
+        "approval_boundary_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Verified approval/runtime evidence for AutoSci `edit` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-edit-raw-delete/research_memory_update.edit_plan.json",
+        "artifacts/autosci/runs/shim-edit-raw-delete/edit_wiki_plan_approval_contract.json",
+        "edit-allowlist.json",
+        "edit-runtime.json",
+        "artifacts/autosci/runs/shim-edit-raw-delete/edit_wiki_plan_local_mutation_runtime_evidence.json",
+        "raw-before.md",
+        "raw-after.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "edit",
+      "production_ready": true,
+      "proof_id": "runtime:edit:approval-contract:20260710T192617Z",
+      "provenance": {
+        "artifact_kind": "raw_source_delete",
+        "captured_at": "2026-07-10T19:26:17Z",
+        "command": "edit_wiki_plan:approved_mutation",
+        "source": "approval_contract"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

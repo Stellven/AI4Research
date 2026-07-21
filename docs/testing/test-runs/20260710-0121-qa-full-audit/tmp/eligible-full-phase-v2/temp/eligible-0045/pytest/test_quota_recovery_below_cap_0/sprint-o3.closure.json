@@ -1,0 +1,16 @@
+{
+  "schema_version": "solar.closure_record.v1",
+  "sprint_id": "sprint-o3",
+  "graph_ref": "sprint-o3.task_graph.json",
+  "graph_state_ref": "sprint-o3.task_graph.json",
+  "status": "pending",
+  "all_nodes_passed": false,
+  "all_required_gates_passed": true,
+  "acceptance_traceability_coverage": 0,
+  "open_nodes": [
+    "N1"
+  ],
+  "failed_nodes": [],
+  "missing_gates": [],
+  "updated_at": "2026-07-10T14:06:35Z"
+}

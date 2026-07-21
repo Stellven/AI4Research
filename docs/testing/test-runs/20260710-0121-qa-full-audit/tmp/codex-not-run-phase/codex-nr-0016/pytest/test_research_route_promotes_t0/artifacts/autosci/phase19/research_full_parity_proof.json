@@ -1,0 +1,361 @@
+{
+  "artifacts": [
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json",
+      "type": "route_config"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/research-full-parity-proof.json",
+      "type": "runtime_proof_manifest"
+    }
+  ],
+  "inputs": {
+    "autosci_repo": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/AutoSci",
+    "requested_skill": "research",
+    "route_config": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/config/feature_parity_routes.v1.json",
+    "runtime_proof_dirs": [],
+    "runtime_proof_manifest_paths": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/research-full-parity-proof.json"
+    ],
+    "runtime_proof_manifests": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/research-full-parity-proof.json"
+    ],
+    "semantic_audit_dirs": [],
+    "semantic_audit_paths": [],
+    "semantic_audits": []
+  },
+  "limitations": [
+    "Phase 19 parity evidence verifies Solar-native route coverage, not live execution of external services.",
+    "Side effects such as secrets, remote execution, SMTP, browser rendering, GitHub Actions, and destructive reset remain approval-gated.",
+    "Local primary tool/config references are checked for ABI existence; external executables/providers are represented as external requirements."
+  ],
+  "node_id": "autosci-feature-parity-research",
+  "outputs": {
+    "parity": {
+      "autosci_repo": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/AutoSci",
+      "blocked_count": 0,
+      "config_version": "phase19.v1",
+      "configured_route_count": 1,
+      "execution_policy_counts": {
+        "approval_required": 1,
+        "bounded_local": 0,
+        "provider_required": 0,
+        "pure": 0
+      },
+      "full_count": 0,
+      "gated_count": 1,
+      "items": [
+        {
+          "autosci_command": "/research",
+          "autosci_feature": "/research",
+          "backend_mode": "route_plan",
+          "coverage_status": "gated",
+          "evidence_ids": [
+            "route:research",
+            "native:research"
+          ],
+          "evidence_schema": "workflow_evolution.v1",
+          "execution_policy": "approval_required",
+          "feature_kind": "skill",
+          "limitations": [
+            "Evidence-aware lifecycle completion is supported when wiki/source, Review LLM, experiment runtime, collection, and compile/PDF evidence are supplied.",
+            "`$research --scheduler-run` now defaults to `run_scientific_workflow.py`, a config-driven generic workflow runner that dispatches selected workflow nodes through operator_runtime and records `runner_contract=generic_workflow_runner`; the old bounded lifecycle smoke runner remains available only through `--scheduler-legacy-smoke-runner`.",
+            "Scheduler resume runs on the legacy smoke path still emit `autosci_scheduler_resume_boundary.v1` with reused-node fingerprints and no-rerun checks; generic workflow lifecycle summaries emit `scientific_workflow_runtime_manifest.v1`, but production scheduler parity still requires complete non-fixture node selection plus distributed lease/quota/runtime audit.",
+            "`--scheduler-require-workflow-config-alignment` passes only for the full supplied-evidence tail; partial/default runs surface workflow_config_alignment drift or inconclusive status rather than full parity.",
+            "`--scheduler-require-production-dispatch` now fails when the selected scheduler runner reports fixture/smoke input markers or blocked provider/runtime evidence.",
+            "`--scheduler-include-human-gates` records idea/results approval pauses as scheduler-visible blocked nodes, `--online` can carry supplied approval/runtime source evidence into strict scheduler source mode with non-fixture provider channel boundary checks, scheduler experiment stages can carry explicit `--experiment-*` approval/runtime evidence without reusing source evidence paths, `--experiment-execute-approved` can run an allowlisted approved local experiment command, and scheduler publication compile can use compile-specific approved runtime evidence or `--compile-execute-approved`.",
+            "Full parity still requires real provider evidence, audited remote/session stage runners, production scheduler dispatch, and submission/anonymity checks."
+          ],
+          "missing_primary_tools": [],
+          "native_paths": [
+            "i18n/en/skills/research/SKILL.md"
+          ],
+          "native_skill": "research",
+          "primary_tool_statuses": [
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/workflows/scientific_research_lifecycle_full_v1.json",
+              "ref": "harness/workflows/scientific_research_lifecycle_full_v1.json",
+              "status": "ok",
+              "token": "harness/workflows/scientific_research_lifecycle_full_v1.json"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tools/run_scientific_workflow.py",
+              "ref": "harness/tools/run_scientific_workflow.py",
+              "status": "ok",
+              "token": "harness/tools/run_scientific_workflow.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tools/run_scientific_lifecycle_smoke.py",
+              "ref": "harness/tools/run_scientific_lifecycle_smoke.py",
+              "status": "ok",
+              "token": "harness/tools/run_scientific_lifecycle_smoke.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/review_model_runtime_proof.py",
+              "ref": "tools/review_model_runtime_proof.py from-evidence",
+              "status": "ok",
+              "token": "tools/review_model_runtime_proof.py"
+            },
+            {
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/approval_runtime_proof.py",
+              "ref": "tools/approval_runtime_proof.py from-contract",
+              "status": "ok",
+              "token": "tools/approval_runtime_proof.py"
+            }
+          ],
+          "primary_tools": [
+            "harness/workflows/scientific_research_lifecycle_full_v1.json",
+            "harness/tools/run_scientific_workflow.py",
+            "harness/tools/run_scientific_lifecycle_smoke.py",
+            "tools/review_model_runtime_proof.py from-evidence",
+            "tools/approval_runtime_proof.py from-contract"
+          ],
+          "proof_level": "E4",
+          "proof_refs": [
+            "route:research",
+            "native:research"
+          ],
+          "proof_requirements": [
+            {
+              "category": "route_definition",
+              "description": "Solar route declaration exists in feature_parity_routes.v1.json.",
+              "evidence_refs": [
+                "route:research"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "native_skill_presence",
+              "description": "Discovered AutoSci native skill file exists under i18n/en/skills.",
+              "evidence_refs": [
+                "native:research"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "primary_tool_abi",
+              "description": "Primary Solar tool/config references resolve locally or are declared external.",
+              "evidence_refs": [
+                "harness/workflows/scientific_research_lifecycle_full_v1.json",
+                "harness/tools/run_scientific_workflow.py",
+                "harness/tools/run_scientific_lifecycle_smoke.py",
+                "tools/review_model_runtime_proof.py from-evidence",
+                "tools/approval_runtime_proof.py from-contract"
+              ],
+              "status": "ok"
+            },
+            {
+              "category": "semantic_equivalence_evidence",
+              "description": "Route still needs audited native AutoSci semantic equivalence proof before semantic full parity.",
+              "evidence_refs": [
+                "runtime:research:semantic-audit-full",
+                "artifacts/runtime/research-full/semantic-audit-full.json",
+                "artifacts/runtime/research-full/native-research.md",
+                "artifacts/runtime/research-full/solar-research.json",
+                "runtime:research:lifecycle-approved-runtime",
+                "artifacts/runtime/research-full/research-lifecycle-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "external_runtime_evidence",
+              "description": "Route needs approved provider/runtime execution evidence before external behavior can be considered complete.",
+              "evidence_refs": [
+                "runtime:research:semantic-audit-full",
+                "artifacts/runtime/research-full/semantic-audit-full.json",
+                "artifacts/runtime/research-full/native-research.md",
+                "artifacts/runtime/research-full/solar-research.json",
+                "runtime:research:lifecycle-approved-runtime",
+                "artifacts/runtime/research-full/research-lifecycle-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "approval_boundary_evidence",
+              "description": "Side-effecting route requires durable approval, allowlist, before/after, and result evidence.",
+              "evidence_refs": [
+                "runtime:research:semantic-audit-full",
+                "artifacts/runtime/research-full/semantic-audit-full.json",
+                "artifacts/runtime/research-full/native-research.md",
+                "artifacts/runtime/research-full/solar-research.json",
+                "runtime:research:lifecycle-approved-runtime",
+                "artifacts/runtime/research-full/research-lifecycle-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "review_llm_or_model_evidence",
+              "description": "Model/Review LLM-dependent route needs persisted request/response or supplied review evidence.",
+              "evidence_refs": [
+                "runtime:research:semantic-audit-full",
+                "artifacts/runtime/research-full/semantic-audit-full.json",
+                "artifacts/runtime/research-full/native-research.md",
+                "artifacts/runtime/research-full/solar-research.json",
+                "runtime:research:lifecycle-approved-runtime",
+                "artifacts/runtime/research-full/research-lifecycle-runtime.json"
+              ],
+              "status": "supplied"
+            },
+            {
+              "category": "provider_source_evidence",
+              "description": "Source-dependent route needs non-fixture provider/source-channel evidence.",
+              "evidence_refs": [
+                "runtime:research:semantic-audit-full",
+                "artifacts/runtime/research-full/semantic-audit-full.json",
+                "artifacts/runtime/research-full/native-research.md",
+                "artifacts/runtime/research-full/solar-research.json",
+                "runtime:research:lifecycle-approved-runtime",
+                "artifacts/runtime/research-full/research-lifecycle-runtime.json"
+              ],
+              "status": "supplied"
+            }
+          ],
+          "remaining_requirements": [],
+          "required_capabilities": [
+            "idea discovery",
+            "human gates",
+            "experiment lifecycle",
+            "paper lifecycle",
+            "resume state"
+          ],
+          "runtime_proof_refs": [
+            "runtime:research:semantic-audit-full",
+            "artifacts/runtime/research-full/semantic-audit-full.json",
+            "artifacts/runtime/research-full/native-research.md",
+            "artifacts/runtime/research-full/solar-research.json",
+            "runtime:research:lifecycle-approved-runtime",
+            "artifacts/runtime/research-full/research-lifecycle-runtime.json"
+          ],
+          "runtime_proof_sources": [
+            {
+              "block_reasons": [],
+              "categories": [
+                "semantic_equivalence_evidence"
+              ],
+              "collection_mode": "semantic_audit",
+              "description": "Research lifecycle semantic parity audit proof.",
+              "evidence_ref_statuses": [
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/artifacts/runtime/research-full/semantic-audit-full.json",
+                  "ref": "artifacts/runtime/research-full/semantic-audit-full.json",
+                  "status": "ok"
+                },
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/artifacts/runtime/research-full/native-research.md",
+                  "ref": "artifacts/runtime/research-full/native-research.md",
+                  "status": "ok"
+                },
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/artifacts/runtime/research-full/solar-research.json",
+                  "ref": "artifacts/runtime/research-full/solar-research.json",
+                  "status": "ok"
+                }
+              ],
+              "evidence_refs": [
+                "artifacts/runtime/research-full/semantic-audit-full.json",
+                "artifacts/runtime/research-full/native-research.md",
+                "artifacts/runtime/research-full/solar-research.json"
+              ],
+              "manifest_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/research-full-parity-proof.json",
+              "native_skill": "research",
+              "production_ready": true,
+              "proof_id": "runtime:research:semantic-audit-full",
+              "provenance": {
+                "artifact_kind": "autosci_semantic_parity_audit.v1",
+                "captured_at": "2026-06-30T00:00:00Z",
+                "source": "phase19 research semantic audit"
+              },
+              "status": "supplied"
+            },
+            {
+              "block_reasons": [],
+              "categories": [
+                "external_runtime_evidence",
+                "approval_boundary_evidence",
+                "review_llm_or_model_evidence",
+                "provider_source_evidence"
+              ],
+              "collection_mode": "approved_side_effect",
+              "description": "Research lifecycle provider, approval, review, and runtime proof.",
+              "evidence_ref_statuses": [
+                {
+                  "kind": "local_path",
+                  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/artifacts/runtime/research-full/research-lifecycle-runtime.json",
+                  "ref": "artifacts/runtime/research-full/research-lifecycle-runtime.json",
+                  "status": "ok"
+                }
+              ],
+              "evidence_refs": [
+                "artifacts/runtime/research-full/research-lifecycle-runtime.json"
+              ],
+              "manifest_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0016/pytest/test_research_route_promotes_t0/research-full-parity-proof.json",
+              "native_skill": "research",
+              "production_ready": true,
+              "proof_id": "runtime:research:lifecycle-approved-runtime",
+              "provenance": {
+                "artifact_kind": "scientific_workflow_runtime_manifest.v1",
+                "captured_at": "2026-06-30T00:00:00Z",
+                "source": "phase19 research lifecycle runtime audit"
+              },
+              "status": "supplied"
+            }
+          ],
+          "runtime_proof_status": "verified",
+          "semantic_audit_refs": [
+            "artifacts/runtime/research-full/semantic-audit-full.json"
+          ],
+          "semantic_audit_status": "verified",
+          "semantic_parity": "full",
+          "side_effect_policy": "approval_required",
+          "solar_backend_action": "run_research_lifecycle",
+          "solar_capability": "cap.research-workflow-evolve",
+          "solar_logical_operator": "ScientificWorkflowEvolver",
+          "tool_abi_status": "ok"
+        }
+      ],
+      "missing_route_count": 0,
+      "native_skill_count": 1,
+      "native_skills": [
+        "research"
+      ],
+      "partial_count": 0,
+      "proof_level_counts": {
+        "E0": 0,
+        "E1": 0,
+        "E2": 0,
+        "E3": 0,
+        "E4": 1,
+        "E5": 0
+      },
+      "proof_requirement_status_counts": {
+        "blocked": 0,
+        "missing": 0,
+        "ok": 3,
+        "pending": 0,
+        "supplied": 5
+      },
+      "routed_count": 1,
+      "runtime_proof_status_counts": {
+        "not_required": 0,
+        "pending": 0,
+        "supplied": 0,
+        "verified": 1
+      },
+      "semantic_full_count": 1,
+      "semantic_missing_count": 0,
+      "semantic_partial_count": 0
+    }
+  },
+  "provenance": {
+    "implementation_package": "harness.plugins.autosci",
+    "operator_id": "AutoSciFeatureParityBridge",
+    "timestamp": "2026-07-10T18:47:30.924504Z"
+  },
+  "schema": "autosci_feature_parity.v1",
+  "sprint_id": "phase19",
+  "status": "completed",
+  "task_id": "phase19-autosci-feature-parity"
+}

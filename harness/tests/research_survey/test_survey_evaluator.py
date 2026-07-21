@@ -45,6 +45,31 @@ def test_strict_eval_fails_five_section_brief(tmp_path):
     assert "section_count_low:5<30" in result["scorecard"]["issues"]
 
 
+def test_survey_evaluation_is_pure_by_default(tmp_path):
+    ast = {
+        "title": "brief",
+        "chapters": [{"chapter_id": "ch1", "title": "Brief"}],
+        "sections": [{"section_id": "ch1/sec1", "chapter_id": "ch1", "title": "S1"}],
+    }
+    (tmp_path / "survey_report_ast.json").write_text(json.dumps(ast), encoding="utf-8")
+    (tmp_path / "survey_evidence_packs.json").write_text(json.dumps({"blocked": 0}), encoding="utf-8")
+    before = {
+        path.relative_to(tmp_path): path.read_bytes()
+        for path in sorted(tmp_path.rglob("*"))
+        if path.is_file()
+    }
+
+    result = evaluate_survey(tmp_path, strict=True)
+
+    after = {
+        path.relative_to(tmp_path): path.read_bytes()
+        for path in sorted(tmp_path.rglob("*"))
+        if path.is_file()
+    }
+    assert result["ok"] is False
+    assert after == before
+
+
 def test_strict_eval_passes_controlled_strong_fixture(tmp_path):
     plan = create_survey_plan("latent reasoning", target_chars=50000)
     write_survey_plan(plan, tmp_path)
@@ -60,7 +85,7 @@ def test_strict_eval_passes_controlled_strong_fixture(tmp_path):
     for section in plan["report_ast"]["sections"][:3]:
         compile_section(tmp_path, section["section_id"])
     compile_survey(tmp_path)
-    result = evaluate_survey(tmp_path, strict=True)
+    result = evaluate_survey(tmp_path, strict=True, persist=True)
     assert result["ok"] is True
     assert result["scorecard"]["chapter_count"] >= 8
     assert result["scorecard"]["section_count"] >= 30

@@ -1,0 +1,21 @@
+{
+  "task_id": "task-job-scientific-lifecycle-experiment-runtime-test-claim_verify",
+  "operator_id": "autosci-claim-verify-worker",
+  "sprint_id": "job-scientific-lifecycle-experiment-runtime-test",
+  "node_id": "claim_verify",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T14:06:07Z",
+  "finished_at": "2026-07-10T14:06:07Z",
+  "log_tail": "            \"task-job-scientific-lifecycle-experiment-runtime-test-experiment_run\",\n            \"exp-001\",\n            \"Validate evidence coverage for `claim-001` using a bounded fixture experiment.\",\n            \"runtime:experiment:scheduler\",\n            \"task-experiment-runtime-test\",\n            \"experiment_runtime\",\n            \"artifacts/scientific/external/experiment-runtime-test/experiment-runtime.json\",\n            \"task-job-scientific-lifecycle-experiment-runtime-test-code_evidence_map\",\n            \"map-001\",\n            \"plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py\"\n          ],\n          \"evidence_outcome\": \"supports\",\n          \"experiment_evidence_ids\": [\n            \"task-job-scientific-lifecycle-experiment-runtime-test-experiment_run\",\n            \"exp-001\",\n            \"exp-001\",\n            \"Validate evidence coverage for `claim-001` using a bounded fixture experiment.\",\n            \"runtime:experiment:scheduler\",\n            \"task-experiment-runtime-test\",\n            \"experiment_runtime\",\n            \"artifacts/scientific/external/experiment-runtime-test/experiment-runtime.json\"\n          ],\n          \"experiment_id\": \"exp-001\",\n          \"final_verdict_boundary\": {\n            \"claim_evidence_ids\": [\n              \"claim-001\",\n              \"paper-job-scientific-lifecycle-experiment-runtime-test\",\n              \"sample_paper.md#results\"\n            ],\n            \"claim_evidence_linked\": true,\n            \"claim_id\": \"claim-001\",\n            \"code_evidence_ids\": [\n              \"task-job-scientific-lifecycle-experiment-runtime-test-code_evidence_map\",\n              \"map-001\",\n              \"plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py\",\n              \"claim-001\"\n            ],\n            \"code_evidence_linked\": true,\n            \"evidence_ids\": [\n              \"claim-001\",\n              \"paper-job-scientific-lifecycle-experiment-runtime-test\",\n              \"sample_paper.md#results\",\n              \"task-job-scientific-lifecycle-experiment-runtime-test-experiment_run\",\n              \"exp-001\",\n              \"Validate evidence coverage for `claim-001` using a bounded fixture experiment.\",\n              \"runtime:experiment:scheduler\",\n              \"task-experiment-runtime-test\",\n              \"experiment_runtime\",\n              \"artifacts/scientific/external/experiment-runtime-test/experiment-runtime.json\",\n              \"task-job-scientific-lifecycle-experiment-runtime-test-code_evidence_map\",",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

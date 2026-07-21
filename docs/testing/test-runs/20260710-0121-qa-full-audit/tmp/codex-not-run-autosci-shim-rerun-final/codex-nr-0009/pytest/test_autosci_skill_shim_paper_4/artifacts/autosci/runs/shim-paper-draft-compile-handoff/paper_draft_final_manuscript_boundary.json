@@ -1,0 +1,26 @@
+{
+  "blocking_reasons": [],
+  "citation_count": 1,
+  "citation_ids": [
+    "arxiv:2601.00003"
+  ],
+  "compile_handoff_status": "completed",
+  "compile_handoff_verified": true,
+  "compiled_pdf_paths": [
+    "compiled/main.pdf"
+  ],
+  "final_manuscript_ready": true,
+  "limitations": [
+    "Final manuscript readiness is bounded to supplied source evidence, Review LLM proof, and verified compile/PDF handoff."
+  ],
+  "manuscript_scope": "evidence_linked_local_final_candidate",
+  "publication_ready_claim_allowed": true,
+  "review_boundary_status": "completed",
+  "review_evidence_ids": [
+    "review:paper-draft"
+  ],
+  "review_llm_completed": true,
+  "schema": "autosci_paper_draft_final_manuscript_boundary.v1",
+  "source_evidence_supplied": true,
+  "status": "final_manuscript_ready"
+}

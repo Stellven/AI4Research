@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_311_008aed6280_harness_tests_test_autosci_priority_b_demo_contracts.py",
+  "source": "harness/tests/test_autosci_priority_b_demo_contracts.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_autosci_priority_b_demo_contracts.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 9.357,
+  "timeout": false
+}

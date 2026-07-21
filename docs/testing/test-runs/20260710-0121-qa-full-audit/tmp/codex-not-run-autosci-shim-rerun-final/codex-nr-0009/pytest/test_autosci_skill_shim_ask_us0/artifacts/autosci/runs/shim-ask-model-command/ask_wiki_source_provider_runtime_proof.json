@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-07-10T19:26:25Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed workspace wiki source retrieval evidence for AutoSci `ask` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ask-model-command/research_memory_update.ask.json",
+        "artifacts/autosci/runs/shim-ask-model-command/ask_wiki_retrieval.json",
+        "artifacts/autosci/workspace/wiki/papers/skillgen.md"
+      ],
+      "native_skill": "ask",
+      "production_ready": true,
+      "proof_id": "runtime:ask:workspace_wiki:20260710T192625Z",
+      "provenance": {
+        "artifact_kind": "workspace_wiki_retrieval",
+        "captured_at": "2026-07-10T19:26:25Z",
+        "command": "ask_wiki:wiki_retrieval",
+        "source": "workspace_wiki"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_354_bf98758dfe_harness_tests_test_frontdoor_ingress_parity.py",
+  "source": "harness/tests/test_frontdoor_ingress_parity.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_frontdoor_ingress_parity.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.306,
+  "timeout": false
+}

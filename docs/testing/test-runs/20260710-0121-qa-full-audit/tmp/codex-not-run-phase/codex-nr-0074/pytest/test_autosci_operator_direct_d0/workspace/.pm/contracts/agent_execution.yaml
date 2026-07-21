@@ -1,0 +1,27 @@
+enabled: true
+task_scope: research
+allowed_paths:
+- apps/pm-pane/**
+- packages/requirement-ir/**
+- harness/**
+forbidden_paths:
+- infra/prod/**
+- .env*
+- secrets/**
+commands:
+  test:
+  - pnpm test
+  - pnpm lint
+  inspect:
+  - rg
+  - python3
+  - pytest
+approval_required_when:
+- new production dependency
+- database migration
+- network access
+- touching auth or billing
+stop_conditions:
+- 缺少可验证 acceptance 不得标记为完成。
+- 缺少 verifier 决策不得进入 DONE。
+- 缺少 evidence ledger 或 critique gate 时不得推进到 adoption。

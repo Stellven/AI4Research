@@ -1,0 +1,21 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "projection-closeout",
+  "graph_ref": "projection-closeout.task_graph.json",
+  "node_results": {
+    "N1": {
+      "status": "passed",
+      "updated_at": "2026-05-22T00:00:00Z"
+    },
+    "N2": {
+      "status": "passed",
+      "updated_at": "2026-07-10T06:27:56Z",
+      "artifacts": {}
+    }
+  },
+  "gate_results": {},
+  "leases": {},
+  "dispatch_ids": {},
+  "updated_at": "2026-07-10T06:27:56Z",
+  "events": []
+}

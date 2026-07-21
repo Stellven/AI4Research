@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "influence.influencer_profile.v1",
+  "title": "InfluencerProfile",
+  "type": "object",
+  "required": ["schema_version", "influencer_id", "display_name", "tier"],
+  "properties": {
+    "schema_version": {"const": "influence.influencer_profile.v1"},
+    "influencer_id": {"type": "string", "minLength": 1},
+    "display_name": {"type": "string", "minLength": 1},
+    "tier": {"type": "string"},
+    "categories": {"type": "array", "items": {"type": "string"}},
+    "platform_accounts": {"type": "object"},
+    "expertise_tags": {"type": "array", "items": {"type": "string"}},
+    "bias_profile": {"type": "object"},
+    "influence_weight": {"type": "number", "minimum": 0, "maximum": 1},
+    "role_at_time": {"type": "array", "items": {"type": "object"}}
+  }
+}

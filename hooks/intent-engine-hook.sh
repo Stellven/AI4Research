@@ -1,14 +1,17 @@
 #!/bin/bash
 # Solar Unified Intent Engine v2.0
-# 统一意图路由: Solar 信号 > @Agent > Superpowers > gstack
+# 统一意图路由: Solar 信号 > @Agent
 # 触发: UserPromptSubmit
 # 性能目标: <10ms (纯 shell regex，无 bun/TypeScript 调用)
 
-source "$HOME/.claude/hooks/hook-logger.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/hook-logger.sh"
 _START_MS=$(hook_time_ms)
 
 INPUT=$(cat)
-USER_PROMPT=$(echo "$INPUT" | jq -r '.user_prompt // ""' 2>/dev/null)
+# Claude Code's UserPromptSubmit hook sends the prompt under `.prompt`. This
+# hook used to read `.user_prompt`, which never exists, so it silently no-op'd
+# on every prompt. Read `.prompt` (keep `.user_prompt` as a fallback).
+USER_PROMPT=$(echo "$INPUT" | jq -r '.prompt // .user_prompt // ""' 2>/dev/null)
 
 # 如果没有用户提示，直接退出
 [ -z "$USER_PROMPT" ] && exit 0
@@ -18,7 +21,7 @@ PROMPT_TRIMMED=$(echo "$USER_PROMPT" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 PROMPT_LOWER=$(echo "$PROMPT_TRIMMED" | tr '[:upper:]' '[:lower:]')
 
 # 数据库路径
-DB_PATH="$HOME/.solar/solar.db"
+DB_PATH="$HOME/.solar/db/solar.db"
 
 # ========================================
 # Phase 1: Solar 信号 (直接输出指令，无确认)
@@ -117,78 +120,6 @@ if echo "$PROMPT_TRIMMED" | grep -qiE '^(我要看|我想看|给我看|展示|�
     exit 0
 fi
 
-# 1j. 模式切换检测 (省钱的/经济的/用GLM/平衡/正常)
-if echo "$PROMPT_LOWER" | grep -qiE '^(省钱|经济|economy)'; then
-    echo '<intent-detected type="mode_switch" target="economy" confidence="0.95">'
-    echo '用户请求切换到经济模式。使用 mcp__brain-router__switch_mode 切换到 economy 模式。'
-    echo '</intent-detected>'
-    exit 0
-fi
-if echo "$PROMPT_LOWER" | grep -qiE '^(用glm|智谱|glm.only)$'; then
-    echo '<intent-detected type="mode_switch" target="glm_only" confidence="0.95">'
-    echo '用户请求切换到 GLM 全量模式。使用 mcp__brain-router__switch_mode 切换到 glm_only 模式。'
-    echo '</intent-detected>'
-    exit 0
-fi
-if echo "$PROMPT_LOWER" | grep -qiE '^(平衡|正常|balanced)'; then
-    echo '<intent-detected type="mode_switch" target="balanced" confidence="0.95">'
-    echo '用户请求切换到平衡模式。使用 mcp__brain-router__switch_mode 切换到 balanced 模式。'
-    echo '</intent-detected>'
-    exit 0
-fi
-
-# 1k. 洞察分析检测 (快速洞察)
-if echo "$PROMPT_TRIMMED" | grep -qiE '^洞察分析[：:]'; then
-    TOPIC=$(echo "$PROMPT_TRIMMED" | sed 's/^洞察分析[：:][[:space:]]*//')
-    echo "<intent-detected type=\"insight_quick\" topic=\"$TOPIC\" confidence=\"0.95\">"
-    echo "用户请求快速洞察分析: $TOPIC"
-    echo '调用 /insight 快速洞察 (对话内3专家)。'
-    echo '</intent-detected>'
-    exit 0
-fi
-
-# 1l. 深度洞察检测
-if echo "$PROMPT_TRIMMED" | grep -qiE '^(深入洞察|深度洞察)[[:space:]]'; then
-    TOPIC=$(echo "$PROMPT_TRIMMED" | sed -E 's/^(深入洞察|深度洞察)[[:space:]]+//')
-    echo "<intent-detected type=\"insight_deep\" topic=\"$TOPIC\" confidence=\"0.95\">"
-    echo "用户请求深度洞察: $TOPIC"
-    echo '执行: bun ~/.claude/core/solar-farm/insight-agent-v2.ts "<TOPIC>" 3 --force'
-    echo '</intent-detected>'
-    exit 0
-fi
-
-# 1m. 小爱远程调用检测
-if echo "$PROMPT_TRIMMED" | grep -qiE '^(小爱|呼叫小爱)[[:space:]]'; then
-    TASK=$(echo "$PROMPT_TRIMMED" | sed -E 's/^(小爱|呼叫小爱)[[:space:]]+//')
-    echo "<intent-detected type=\"xiaoai\" task=\"$TASK\" confidence=\"0.95\">"
-    echo "用户请求小爱执行任务: $TASK"
-    echo '执行: ~/.claude/scripts/xiaoai-remote.sh "<TASK>"'
-    echo '</intent-detected>'
-    exit 0
-fi
-
-# 1n. /plan 指令检测
-if echo "$PROMPT_TRIMMED" | grep -qiE '^/plan( +preview)? +'; then
-    SUB_CMD=$(echo "$PROMPT_TRIMMED" | awk '{print $2}')
-    PLAN_TASK=$(echo "$PROMPT_TRIMMED" | sed 's/^\/plan[[:space:]]*//; s/^preview[[:space:]]*//')
-    if [ "$SUB_CMD" = "metrics" ]; then
-        echo '<intent-detected type="plan_metrics" confidence="1.0">'
-        echo '用户请求 Plan metrics。执行: bun ~/.claude/core/plan-act/plan-act-adapter.ts metrics'
-        echo '</intent-detected>'
-    elif [ "$SUB_CMD" = "preview" ]; then
-        echo "<intent-detected type=\"plan_preview\" task=\"$PLAN_TASK\" confidence=\"0.95\">"
-        echo "用户预览计划: $PLAN_TASK"
-        echo '执行: bun ~/.claude/core/plan-act/plan-act-adapter.ts plan "<TASK>"'
-        echo '</intent-detected>'
-    else
-        echo "<intent-detected type=\"plan_execute\" task=\"$PLAN_TASK\" confidence=\"0.95\">"
-        echo "用户执行计划: $PLAN_TASK"
-        echo '执行: bun ~/.claude/core/plan-act/plan-act-adapter.ts execute "<TASK>"'
-        echo '</intent-detected>'
-    fi
-    exit 0
-fi
-
 # ========================================
 # Phase 2: @Agent 触发 (直接调用，无需确认)
 # ========================================
@@ -198,20 +129,16 @@ if echo "$PROMPT_TRIMMED" | grep -qiE '^@[A-Za-z]'; then
     AGENT_UPPER=$(echo "$AGENT_TAG" | tr '[:lower:]' '[:upper:]')
 
     # 映射 @Agent 到 subagent_type
+    # Base @Agent roster (the active agents the base kernel installs). The
+    # extended roster is dispatched only when the agents-extra component
+    # ships its own intents.conf entries.
     case "$AGENT_UPPER" in
-        @RESEARCHER)  SUBAGENT="researcher" ;;
-        @ARCHITECT)   SUBAGENT="architect" ;;
+        @DEV)         SUBAGENT="dev" ;;
+        @QA)          SUBAGENT="qa" ;;
+        @TEST)        SUBAGENT="test" ;;
+        @WRITE)       SUBAGENT="write" ;;
         @PM)          SUBAGENT="pm" ;;
-        @CODER)       SUBAGENT="coder" ;;
-        @TESTER)      SUBAGENT="tester" ;;
-        @REVIEWER)    SUBAGENT="reviewer" ;;
-        @DOCS)        SUBAGENT="docs" ;;
-        @OPS)         SUBAGENT="ops" ;;
-        @GUARD)       SUBAGENT="guard" ;;
-        @SECRETARY)   SUBAGENT="secretary" ;;
-        @BENCHMARKREPORTER) SUBAGENT="benchmark_reporter" ;;
-        @SM)          SUBAGENT="sm" ;;
-        @REPORTER)    SUBAGENT="reporter" ;;
+        @RESEARCHER)  SUBAGENT="researcher" ;;
         *)            SUBAGENT="" ;;
     esac
 
@@ -226,255 +153,6 @@ if echo "$PROMPT_TRIMMED" | grep -qiE '^@[A-Za-z]'; then
         echo '</intent-detected>'
         exit 0
     fi
-fi
-
-# ========================================
-# Phase 3: Superpowers 技能 (输出 <intent-hint>，需确认)
-# 注意: Superpowers 优先于 gstack，避免冲突
-# ========================================
-
-SUPERPOWERS_MATCH=""
-
-# 3a. brainstorming - 头脑风暴/创意探索
-if echo "$PROMPT_LOWER" | grep -qiE '头脑风暴|brainstorm|来个创意|构思一下'; then
-    SUPERPOWERS_MATCH="brainstorming"
-    SUPERPOWERS_DESC="创意探索/头脑风暴"
-fi
-
-# 3b. writing-plans - 编写计划
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '写计划|制定计划|roadmap'; then
-    SUPERPOWERS_MATCH="writing-plans"
-    SUPERPOWERS_DESC="编写计划"
-fi
-
-# 3c. executing-plans - 执行计划
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '执行计划|按计划执行|executing.plan'; then
-    SUPERPOWERS_MATCH="executing-plans"
-    SUPERPOWERS_DESC="执行计划"
-fi
-
-# 3d. test-driven-development - TDD/测试驱动
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE 'TDD|测试驱动|test.driven'; then
-    SUPERPOWERS_MATCH="test-driven-development"
-    SUPERPOWERS_DESC="测试驱动开发"
-fi
-
-# 3e. systematic-debugging - 系统化调试
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '系统化调试|逐步排查|systematic.debug'; then
-    SUPERPOWERS_MATCH="systematic-debugging"
-    SUPERPOWERS_DESC="系统化调试方法论"
-fi
-
-# 3f. verification-before-completion - 完成前验证
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '验证完成|完成前检查|verify.before'; then
-    SUPERPOWERS_MATCH="verification-before-completion"
-    SUPERPOWERS_DESC="完成前验证检查"
-fi
-
-# 3g. dispatching-parallel-agents - 并行代理调度
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '并行代理|parallel.agent|多代理并行'; then
-    SUPERPOWERS_MATCH="dispatching-parallel-agents"
-    SUPERPOWERS_DESC="并行代理调度"
-fi
-
-# 3h. subagent-driven-development - 子代理开发
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '子代理|subagent.dev|自动开发'; then
-    SUPERPOWERS_MATCH="subagent-driven-development"
-    SUPERPOWERS_DESC="子代理驱动开发"
-fi
-
-# 3i. using-git-worktrees - Git worktree 隔离
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE 'worktree|工作树|git.隔离'; then
-    SUPERPOWERS_MATCH="using-git-worktrees"
-    SUPERPOWERS_DESC="Git Worktree 隔离开发"
-fi
-
-# 3j. finishing-a-development-branch - 分支收尾
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '完成分支|结束开发|finish.branch'; then
-    SUPERPOWERS_MATCH="finishing-a-development-branch"
-    SUPERPOWERS_DESC="开发分支收尾流程"
-fi
-
-# 3k. receiving-code-review - 处理审查反馈
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '收到review|审查反馈|receiving.review'; then
-    SUPERPOWERS_MATCH="receiving-code-review"
-    SUPERPOWERS_DESC="处理代码审查反馈"
-fi
-
-# 3l. requesting-code-review - 请求审查
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '请求审查|要review|request.review'; then
-    SUPERPOWERS_MATCH="requesting-code-review"
-    SUPERPOWERS_DESC="请求代码审查"
-fi
-
-# 3m. writing-skills - 编写新技能 (允许 "创建/skill" 之间有修饰词)
-if [ -z "$SUPERPOWERS_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '编写技能|创建.*skill|写个skill|新建skill|write.skill|创建技能'; then
-    SUPERPOWERS_MATCH="writing-skills"
-    SUPERPOWERS_DESC="编写新 Skill"
-fi
-
-# 输出 Superpowers 匹配结果
-if [ -n "$SUPERPOWERS_MATCH" ]; then
-    printf '<intent-hint source="superpowers" skill="%s" confidence="0.85">\n' "$SUPERPOWERS_MATCH"
-    printf '检测到 %s 意图。建议使用 Superpowers "%s" 技能。\n' "$SUPERPOWERS_DESC" "$SUPERPOWERS_MATCH"
-    printf '确认后将通过 Skill tool 调用 superpowers:%s\n' "$SUPERPOWERS_MATCH"
-    echo '</intent-hint>'
-    exit 0
-fi
-
-# ========================================
-# Phase 4: gstack 技能 (输出 <intent-hint>，需确认)
-# 注意: 与 Phase 3 有重叠的关键词 (如调试) 在 Phase 3 已优先匹配
-# ========================================
-
-GSTACK_MATCH=""
-GSTACK_DESC=""
-
-# 4a. browse - 浏览网页
-if echo "$PROMPT_LOWER" | grep -qiE '浏览|打开网页|screenshot|访问网站|^browse '; then
-    GSTACK_MATCH="browse"
-    GSTACK_DESC="网页浏览"
-fi
-
-# 4b. review - 代码审查 (排除 plan-design-review 等更精确的匹配)
-if [ -z "$GSTACK_MATCH" ] && (echo "$PROMPT_LOWER" | grep -qiE '审查.*代码|code.review|review.*代码|review.*PR|做.*review' || echo "$PROMPT_TRIMMED" | grep -qxiE '^review$'); then
-    GSTACK_MATCH="review"
-    GSTACK_DESC="代码审查"
-fi
-
-# 4c. investigate - 排查/根因调查
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '排查|investigate|根因分析|排查bug'; then
-    GSTACK_MATCH="investigate"
-    GSTACK_DESC="根因排查"
-fi
-
-# 4d. qa - 质量保证
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '^qa$|QA|质量保证|全面测试|找bug'; then
-    GSTACK_MATCH="qa"
-    GSTACK_DESC="质量保证测试"
-fi
-
-# 4e. ship - 发布上线
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '发布|上线|^ship$|^deploy$'; then
-    GSTACK_MATCH="ship"
-    GSTACK_DESC="发布上线"
-fi
-
-# 4f. benchmark - 性能基准
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '性能基准|benchmark|跑分|性能回归'; then
-    GSTACK_MATCH="benchmark"
-    GSTACK_DESC="性能基准测试"
-fi
-
-# 4g. office-hours - 办公时间
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '办公时间|YC办公|office.hours'; then
-    GSTACK_MATCH="office-hours"
-    GSTACK_DESC="创业办公时间"
-fi
-
-# 4h. autoplan - 自动评审
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '自动评审|全审|^autoplan'; then
-    GSTACK_MATCH="autoplan"
-    GSTACK_DESC="自动计划评审"
-fi
-
-# 4i. careful - 谨慎模式
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '谨慎|小心|生产环境|^careful$'; then
-    GSTACK_MATCH="careful"
-    GSTACK_DESC="谨慎模式"
-fi
-
-# 4j. guard - 守护模式
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '守护|安全模式|^guard$'; then
-    GSTACK_MATCH="guard"
-    GSTACK_DESC="守护/安全模式"
-fi
-
-# 4k. freeze - 冻结
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '冻结|限制编辑|^freeze$'; then
-    GSTACK_MATCH="freeze"
-    GSTACK_DESC="冻结编辑"
-fi
-
-# 4l. unfreeze - 解冻
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '^unfreeze$|^解冻$'; then
-    GSTACK_MATCH="unfreeze"
-    GSTACK_DESC="解除冻结"
-fi
-
-# 4m. design-review - 设计审查
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '设计审查|视觉QA|design.review'; then
-    GSTACK_MATCH="design-review"
-    GSTACK_DESC="设计审查"
-fi
-
-# 4n. design-consultation - 设计咨询
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '设计咨询|设计系统|design.consult'; then
-    GSTACK_MATCH="design-consultation"
-    GSTACK_DESC="设计咨询"
-fi
-
-# 4o. plan-ceo-review - CEO 评审
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE 'CEO评审|战略评审|plan.ceo.review'; then
-    GSTACK_MATCH="plan-ceo-review"
-    GSTACK_DESC="CEO 计划评审"
-fi
-
-# 4p. plan-eng-review - 工程评审
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '工程评审|架构评审|plan.eng.review'; then
-    GSTACK_MATCH="plan-eng-review"
-    GSTACK_DESC="工程计划评审"
-fi
-
-# 4q. plan-design-review - 设计方案评审
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '设计方案评审|plan.design.review'; then
-    GSTACK_MATCH="plan-design-review"
-    GSTACK_DESC="设计方案评审"
-fi
-
-# 4r. retro - 回顾/复盘
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '回顾|复盘|^retro$'; then
-    GSTACK_MATCH="retro"
-    GSTACK_DESC="回顾/复盘"
-fi
-
-# 4s. document-release - 文档发布
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '文档更新|发布文档|document.release'; then
-    GSTACK_MATCH="document-release"
-    GSTACK_DESC="文档发布"
-fi
-
-# 4t. canary - 金丝雀发布
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '金丝雀|部署监控|^canary$'; then
-    GSTACK_MATCH="canary"
-    GSTACK_DESC="金丝雀发布"
-fi
-
-# 4u. cso - 安全审计
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '安全审计|OWASP|^CSO$|^cso$'; then
-    GSTACK_MATCH="cso"
-    GSTACK_DESC="CSO 安全审计"
-fi
-
-# 4v. codex - Codex 审查
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE 'codex审查|第二意见|codex.review'; then
-    GSTACK_MATCH="codex"
-    GSTACK_DESC="Codex 第二意见审查"
-fi
-
-# 4w. land-and-deploy - 合并部署
-if [ -z "$GSTACK_MATCH" ] && echo "$PROMPT_LOWER" | grep -qiE '合并部署|^land$|land.and.deploy'; then
-    GSTACK_MATCH="land-and-deploy"
-    GSTACK_DESC="合并部署上线"
-fi
-
-# 输出 gstack 匹配结果
-if [ -n "$GSTACK_MATCH" ]; then
-    printf '<intent-hint source="gstack" skill="%s" confidence="0.85">\n' "$GSTACK_MATCH"
-    printf '检测到 %s 意图。建议使用 gstack /%s 技能。\n' "$GSTACK_DESC" "$GSTACK_MATCH"
-    printf '确认后将通过 Skill tool 调用 gstack:%s\n' "$GSTACK_MATCH"
-    echo '</intent-hint>'
-    exit 0
 fi
 
 # ========================================

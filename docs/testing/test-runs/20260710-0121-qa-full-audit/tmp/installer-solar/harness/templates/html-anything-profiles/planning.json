@@ -1,0 +1,35 @@
+{
+  "id": "planning",
+  "surface_label": "Planner / Design Plan",
+  "kicker": "HTML Anything · Planning",
+  "title": "Solar Planning",
+  "default_lede": "设计、计划、DAG 与验证约束统一落在同一套 html-anything 渲染家族上。",
+  "footer_left": "Solar Harness",
+  "footer_right": "Planner readable artifact",
+  "upstream": {
+    "skill": "web-proto-editorial",
+    "path": "next/src/lib/templates/skills/web-proto-editorial/example.html"
+  },
+  "theme": {
+    "colors": {
+      "background": "#FBFBFA",
+      "surface": "#FFFFFF",
+      "ink": "#1A1A19",
+      "muted": "#787774",
+      "accent": "#1F6C9F",
+      "rule": "#EAEAEA",
+      "badge_bg": "#EDF3EC"
+    },
+    "typography": {
+      "hero_size": "clamp(44px, 6vw, 82px)",
+      "serif": "'Instrument Serif', Georgia, serif",
+      "sans": "'Inter Tight', system-ui, sans-serif",
+      "mono": "'JetBrains Mono', ui-monospace, monospace"
+    },
+    "layout": {
+      "max_width": "1120px",
+      "toc_width": "270px",
+      "card_min_height": "190px"
+    }
+  }
+}

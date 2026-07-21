@@ -1,0 +1,22 @@
+{
+  "schema_version": "solar.traceability.multitask-history-window-label.v1",
+  "sprint_id": "sprint-20260521-multitask-history-window-label",
+  "generated_at": "2026-07-10T18:52:59Z",
+  "nodes": {
+    "N1": {
+      "artifacts": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0252/pytest/test_auto_closeout_multitask_h0/sprints/sprint-20260521-multitask-history-window-label.N1-audit.md",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0252/pytest/test_auto_closeout_multitask_h0/sprints/sprint-20260521-multitask-history-window-label.N1-handoff.md"
+      ],
+      "gate": "audit identifies exact status fields to rename"
+    },
+    "N2": {
+      "artifacts": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0252/pytest/test_auto_closeout_multitask_h0/sprints/sprint-20260521-multitask-history-window-label.N2-handoff.md",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0252/pytest/test_auto_closeout_multitask_h0/lib/multi_task_runner.py",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0252/pytest/test_auto_closeout_multitask_h0/monitor-reports/safe-reap-guide.md"
+      ],
+      "gate": "status output separates active live work from historical open windows"
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"sprint_id": "sprint-A", "epic_id": "epic-test", "status": "active", "phase": "planning_complete", "handoff_to": "builder_main", "history": [{"ts": "2026-05-18T10:00:00Z", "blocked_by": ["sprint-B"]}]}

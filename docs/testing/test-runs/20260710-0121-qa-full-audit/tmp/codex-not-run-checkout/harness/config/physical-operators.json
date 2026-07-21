@@ -1,0 +1,4685 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-02T03:53:03Z",
+  "operators": {
+    "mini-claude-opus-planner": {
+      "display_name": "Mac mini Claude Opus planner",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "auto_edit",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model opus"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "architecture",
+        "requirements",
+        "schema-design"
+      ],
+      "strengths": [
+        "architecture",
+        "debugging",
+        "complex-reasoning"
+      ],
+      "preferred_for": [
+        "planner",
+        "architecture",
+        "schema-design"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "planner"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-opus-planner-2": {
+      "display_name": "Mac mini Claude Opus planner (instance 2)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "auto_edit",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model opus"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-01T23:58:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "architecture",
+        "requirements",
+        "schema-design"
+      ],
+      "strengths": [
+        "architecture",
+        "debugging",
+        "complex-reasoning"
+      ],
+      "preferred_for": [
+        "planner",
+        "architecture",
+        "schema-design"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "planner"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-opus-planner-3": {
+      "display_name": "Mac mini Claude Opus planner (instance 3)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "auto_edit",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model opus"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-01T23:58:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "architecture",
+        "requirements",
+        "schema-design"
+      ],
+      "strengths": [
+        "architecture",
+        "debugging",
+        "complex-reasoning"
+      ],
+      "preferred_for": [
+        "planner",
+        "architecture",
+        "schema-design"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "planner"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-sonnet-builder": {
+      "display_name": "Mac mini Claude Sonnet builder",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "model_config": "yolo",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model sonnet"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "implementation",
+        "debugging"
+      ],
+      "avoid_for": [
+        "bulk-extraction"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "builder_pool": {
+        "enabled": true,
+        "group": "sonnet",
+        "slot": 1,
+        "priority": 10
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-opus-evaluator": {
+      "display_name": "Mac mini Claude Opus evaluator",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "evaluator",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "auto_edit",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_code_interactive",
+        "tool": "claude",
+        "launch_cmd": "claude --dangerously-skip-permissions --model opus"
+      },
+      "billing_surface": "subscription_interactive",
+      "billing_pool": "anthropic_subscription_interactive",
+      "launch_cmd_kind": "interactive_repl",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "evaluator"
+      ],
+      "task_classes": [
+        "verification",
+        "review",
+        "evidence",
+        "regression"
+      ],
+      "strengths": [
+        "review",
+        "risk",
+        "quality-gate"
+      ],
+      "preferred_for": [
+        "evaluator",
+        "review",
+        "verification"
+      ],
+      "avoid_for": [
+        "bulk-extraction"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "evaluator"
+          }
+        }
+      },
+      "deprecated": true,
+      "disabled_reason": "retired_deprecated_opus_evaluator_in_favor_of_sonnet_2026-06-28"
+    },
+    "mini-thunderomlx-qwen36-knowledge": {
+      "display_name": "Mac mini ThunderOMLX Qwen3.6 knowledge",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "knowledge-extractor",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "local",
+      "vendor": "ThunderOMLX",
+      "backend": "command",
+      "command": "LOCAL_LLM_BACKEND=thunderomlx LOCAL_LLM_BASE_URL=http://127.0.0.1:8002 LOCAL_LLM_MODEL=Qwen3.6-35b-a3b LOCAL_LLM_API_KEY=${THUNDEROMLX_AUTH_TOKEN:-local-thunderomlx} PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/openai_compatible_pm_operator.py\"",
+      "model": "thunderomlx",
+      "model_config": "Qwen3.6-35b-a3b;hot-cache=8GB;thinking=disabled",
+      "base_url": "http://127.0.0.1:8002",
+      "auth_mode": "local",
+      "key_ref": "local-thunderomlx",
+      "quota_cycle": "none",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "knowledge-extraction",
+        "wiki-ingest",
+        "qmd-indexing",
+        "bulk-extraction"
+      ],
+      "strengths": [
+        "cheap-background",
+        "local",
+        "knowledge-extraction"
+      ],
+      "preferred_for": [
+        "knowledge",
+        "wiki",
+        "extraction",
+        "thunderomlx"
+      ],
+      "avoid_for": [
+        "critical-review",
+        "complex-refactor"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "medium",
+      "max_concurrency": 1,
+      "fallback_profile": "knowledge-extractor",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "local_mlx_process",
+      "compat_maps_to": {
+        "host_type": "local_mlx_process",
+        "carrier_hint": {
+          "mlx_meta": {
+            "model_path": "/tmp/models/local-mlx",
+            "port": 11434
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-antigravity-gemini35-flash-high": {
+      "display_name": "Mac mini Antigravity Gemini 3.5 Flash High",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "gemini-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "google",
+      "vendor": "Google",
+      "backend": "command",
+      "model": "gemini-3.5-flash-high",
+      "model_config": "Antigravity CLI agy",
+      "base_url": "agy-cli",
+      "auth_mode": "oauth",
+      "key_ref": "antigravity_oauth",
+      "quota_cycle": "google-account",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "disabled_reason": "needs dispatch adapter and ToS-safe smoke before scheduler use",
+      "enabled_at": "N/A",
+      "available": false,
+      "health_status": "smoke_pending",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "parallel-experiment",
+        "google-ecosystem",
+        "fast-prototype"
+      ],
+      "strengths": [
+        "speed",
+        "multi-agent",
+        "google-stack"
+      ],
+      "preferred_for": [
+        "parallel",
+        "prototype",
+        "google",
+        "android",
+        "firebase"
+      ],
+      "avoid_for": [
+        "root-debug",
+        "critical-code-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-antigravity-gemini35-flash-image": {
+      "display_name": "Mac mini Antigravity Gemini 3.5 Flash multimodal image",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "gemini-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "google",
+      "vendor": "Google",
+      "backend": "command",
+      "model": "gemini-3.5-flash-high",
+      "model_config": "Antigravity CLI agy;multimodal=blocked-until-media-adapter",
+      "base_url": "agy-cli",
+      "command_path": "~/.local/bin/agy",
+      "auth_mode": "oauth",
+      "key_ref": "antigravity_oauth",
+      "quota_cycle": "google-account",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "disabled_reason": "failed true-image smoke: agy --print path reports media=0/placeholder output; blocked until real media attachment adapter passes non-placeholder image test",
+      "enabled_at": "2026-05-22T00:34:00Z",
+      "available": false,
+      "health_status": "failed_smoke",
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text",
+        "structured-json"
+      ],
+      "artifact_types": [],
+      "roles": [
+        "builder",
+        "evaluator"
+      ],
+      "task_classes": [
+        "blocked-image-adapter"
+      ],
+      "strengths": [
+        "google-stack"
+      ],
+      "preferred_for": [],
+      "avoid_for": [
+        "bulk-text-extraction",
+        "critical-code-review",
+        "diagram-analysis",
+        "image",
+        "multimodal",
+        "ocr",
+        "screenshot",
+        "vision"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "state": {
+        "availability": "disabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-antigravity-gemini31-pro": {
+      "display_name": "Mac mini Antigravity Gemini 3.1 Pro",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "gemini-planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "google",
+      "vendor": "Google",
+      "backend": "command",
+      "model": "gemini-3.1-pro",
+      "model_config": "Antigravity CLI agy;reasoning=high",
+      "base_url": "agy-cli",
+      "auth_mode": "oauth",
+      "key_ref": "antigravity_oauth",
+      "quota_cycle": "google-account",
+      "quota_refresh_at": null,
+      "quota_guard_state": "conserve",
+      "enabled": true,
+      "disabled_reason": "",
+      "enabled_at": "2026-05-22T14:36:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner",
+        "evaluator"
+      ],
+      "task_classes": [
+        "planning",
+        "architecture",
+        "requirements",
+        "research"
+      ],
+      "strengths": [
+        "architecture",
+        "complex-reasoning",
+        "long-context"
+      ],
+      "preferred_for": [
+        "google-specific-planning",
+        "emergency-planner-fallback"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "planning-primary",
+        "prd-primary",
+        "quota-sensitive-planning"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "operator_class": "GoogleStack",
+      "auth": {
+        "mode": "oauth",
+        "account_label": "antigravity_gemini31_pro",
+        "secret_ref": "secret://antigravity_oauth"
+      },
+      "quota": {
+        "quota_type": "google-account",
+        "period": "daily",
+        "reserve_for": [
+          "emergency-planner-fallback",
+          "google-specific-planning"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "capability": {
+        "planning": 5,
+        "coding": 4,
+        "debugging": 4,
+        "testing": 4,
+        "research": 5,
+        "long_context": 5,
+        "reliability": 4
+      },
+      "routing": {
+        "operator_class": "GoogleStack",
+        "primary_task_types": [
+          "EMERGENCY_PLANNER_FALLBACK",
+          "GOOGLE_SPECIFIC_PLANNING"
+        ],
+        "avoid_task_types": [
+          "PLANNING_PRIMARY",
+          "PRD_PRIMARY",
+          "QUOTA_SENSITIVE_PLANNING",
+          "bulk-extraction"
+        ],
+        "fallback_operator_classes": [
+          "DeepArchitect",
+          "Verifier"
+        ]
+      },
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command_path": "~/.local/bin/agy",
+      "registry_fix_note": "2026-05-23T00:14Z: add command adapter so enabled Gemini 3.1 Pro command backend is actually dispatchable",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-antigravity-gemini31-pro-image": {
+      "display_name": "Mac mini Antigravity Gemini 3.1 Pro multimodal image",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "gemini-planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "google",
+      "vendor": "Google",
+      "backend": "command",
+      "model": "gemini-3.1-pro",
+      "model_config": "Antigravity CLI agy;multimodal=image-input;reasoning=high",
+      "base_url": "agy-cli",
+      "command_path": "~/.local/bin/agy",
+      "auth_mode": "oauth",
+      "key_ref": "antigravity_oauth",
+      "quota_cycle": "google-account",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "disabled_reason": "needs sandbox adapter activation and ToS-safe smoke before scheduler use",
+      "enabled_at": "N/A",
+      "available": false,
+      "health_status": "pending",
+      "input_modalities": [
+        "text",
+        "image",
+        "screenshot"
+      ],
+      "output_modalities": [
+        "text",
+        "structured-json"
+      ],
+      "artifact_types": [
+        "png",
+        "jpg",
+        "jpeg",
+        "webp",
+        "pdf-page-image",
+        "screenshot"
+      ],
+      "roles": [
+        "planner",
+        "evaluator"
+      ],
+      "task_classes": [
+        "multimodal",
+        "image-processing",
+        "vision",
+        "screenshot-analysis",
+        "ui-check",
+        "ocr",
+        "diagram-analysis"
+      ],
+      "strengths": [
+        "image-understanding",
+        "ui-check",
+        "screenshot-analysis",
+        "google-stack"
+      ],
+      "preferred_for": [
+        "image",
+        "vision",
+        "multimodal",
+        "screenshot",
+        "ui",
+        "mockup",
+        "diagram",
+        "ocr"
+      ],
+      "avoid_for": [
+        "bulk-text-extraction",
+        "critical-code-review"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "operator_class": "GoogleStack",
+      "auth": {
+        "mode": "oauth",
+        "account_label": "antigravity_gemini31_pro",
+        "secret_ref": "secret://antigravity_oauth"
+      },
+      "quota": {
+        "quota_type": "google-account",
+        "period": "daily",
+        "reserve_for": [
+          "ARCH_DESIGN",
+          "ROOT_CAUSE_DEBUG",
+          "RESEARCH_SYNTHESIS",
+          "FINAL_REVIEW"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "capability": {
+        "planning": 5,
+        "coding": 4,
+        "debugging": 4,
+        "testing": 4,
+        "research": 5,
+        "long_context": 5,
+        "reliability": 4
+      },
+      "routing": {
+        "operator_class": "GoogleStack",
+        "primary_task_types": [
+          "ARCH_DESIGN",
+          "ROOT_CAUSE_DEBUG",
+          "RESEARCH_SYNTHESIS",
+          "FINAL_REVIEW"
+        ],
+        "avoid_task_types": [
+          "bulk-extraction"
+        ],
+        "fallback_operator_classes": [
+          "DeepArchitect",
+          "Verifier"
+        ]
+      },
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-glm51-knowledge": {
+      "display_name": "Mac mini GLM-5.1 knowledge",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "glm-knowledge",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "glm",
+      "vendor": "ZhipuAI",
+      "backend": "command",
+      "model": "glm-5.1",
+      "model_config": "GLM local-cache=8GB;thinking=enabled",
+      "base_url": "http://127.0.0.1:8003",
+      "auth_mode": "local",
+      "key_ref": "local-glm",
+      "quota_cycle": "none",
+      "quota_refresh_at": "N/A",
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "disabled_reason": "model checkpoint download pending local hardware allocation",
+      "enabled_at": "N/A",
+      "available": false,
+      "health_status": "missing",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "knowledge-extraction",
+        "wiki-ingest",
+        "bulk-extraction"
+      ],
+      "strengths": [
+        "local",
+        "knowledge-extraction"
+      ],
+      "preferred_for": [
+        "knowledge",
+        "wiki",
+        "extraction"
+      ],
+      "avoid_for": [
+        "critical-review",
+        "complex-refactor"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "medium",
+      "max_concurrency": 1,
+      "fallback_profile": "knowledge-extractor",
+      "operator_class": "LocalPrivacy",
+      "auth": {
+        "mode": "local",
+        "account_label": "local_glm",
+        "secret_ref": "none"
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "capability": {
+        "coding": 3,
+        "research": 4,
+        "long_context": 4,
+        "local_privacy": 5
+      },
+      "routing": {
+        "operator_class": "LocalPrivacy",
+        "primary_task_types": [
+          "KNOWLEDGE_EXTRACTION",
+          "CODE_IMPL"
+        ],
+        "fallback_operator_classes": [
+          "LocalPrivacy"
+        ]
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-local-scan": {
+      "display_name": "Mac mini local scan",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "local-scanner",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "local",
+      "vendor": "Solar",
+      "backend": "local",
+      "model": "ripgrep",
+      "model_config": "ripgrep-v14.1.0",
+      "base_url": "local",
+      "auth_mode": "local",
+      "key_ref": "local-scan",
+      "quota_cycle": "none",
+      "quota_refresh_at": "N/A",
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "disabled_reason": "local system security policy authorization pending",
+      "enabled_at": "N/A",
+      "available": false,
+      "health_status": "missing",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "local-scan",
+        "regex-search",
+        "code-indexing"
+      ],
+      "strengths": [
+        "speed",
+        "local-privacy"
+      ],
+      "preferred_for": [
+        "local-scan",
+        "search"
+      ],
+      "avoid_for": [
+        "reasoning"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "low",
+      "max_concurrency": 4,
+      "fallback_profile": "builder",
+      "operator_class": "LocalPrivacy",
+      "auth": {
+        "mode": "local",
+        "account_label": "system_root",
+        "secret_ref": "none"
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "capability": {
+        "shell": 5,
+        "local_privacy": 5
+      },
+      "routing": {
+        "operator_class": "LocalPrivacy",
+        "primary_task_types": [
+          "CODE_IMPL",
+          "TEST_GEN/TEST_RUN"
+        ],
+        "fallback_operator_classes": [
+          "LocalPrivacy"
+        ]
+      },
+      "compat_alias_for": "local_mlx_process",
+      "compat_maps_to": {
+        "host_type": "local_mlx_process",
+        "carrier_hint": {
+          "mlx_meta": {
+            "model_path": "/tmp/models/local-mlx",
+            "port": 11434
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-router": {
+      "display_name": "Mac mini Router",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "meta-router",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "local",
+      "vendor": "Solar",
+      "backend": "local",
+      "model": "meta-router-v1",
+      "model_config": "SolarRouterV1",
+      "base_url": "local",
+      "auth_mode": "local",
+      "key_ref": "local-router",
+      "quota_cycle": "none",
+      "quota_refresh_at": "N/A",
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "disabled_reason": "meta-routing policy network initialization pending",
+      "enabled_at": "N/A",
+      "available": false,
+      "health_status": "missing",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "routing",
+        "dispatch"
+      ],
+      "strengths": [
+        "routing",
+        "resilience"
+      ],
+      "preferred_for": [
+        "routing",
+        "fallback"
+      ],
+      "avoid_for": [
+        "coding"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "low",
+      "max_concurrency": 2,
+      "fallback_profile": "planner",
+      "operator_class": "RouterMeta",
+      "auth": {
+        "mode": "local",
+        "account_label": "router_agent",
+        "secret_ref": "none"
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "capability": {
+        "planning": 5,
+        "reliability": 5
+      },
+      "routing": {
+        "operator_class": "RouterMeta",
+        "primary_task_types": [
+          "ARCH_DESIGN",
+          "ROOT_CAUSE_DEBUG"
+        ],
+        "fallback_operator_classes": [
+          "RouterMeta"
+        ]
+      },
+      "compat_alias_for": "local_mlx_process",
+      "compat_maps_to": {
+        "host_type": "local_mlx_process",
+        "carrier_hint": {
+          "mlx_meta": {
+            "model_path": "/tmp/models/local-mlx",
+            "port": 11434
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-audit": {
+      "display_name": "Mac mini Audit Ledger",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "audit-ledger",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "local",
+      "vendor": "Solar",
+      "backend": "local",
+      "model": "ledger-audit-v1",
+      "model_config": "SolarAuditLedgerV1",
+      "base_url": "local",
+      "auth_mode": "local",
+      "key_ref": "local-audit",
+      "quota_cycle": "none",
+      "quota_refresh_at": "N/A",
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "disabled_reason": "audit trail signature keys not provisioned",
+      "enabled_at": "N/A",
+      "available": false,
+      "health_status": "missing",
+      "roles": [
+        "evaluator"
+      ],
+      "task_classes": [
+        "auditing",
+        "ledger-log",
+        "compliance"
+      ],
+      "strengths": [
+        "verification",
+        "compliance"
+      ],
+      "preferred_for": [
+        "audit",
+        "review"
+      ],
+      "avoid_for": [
+        "planning"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "low",
+      "max_concurrency": 2,
+      "fallback_profile": "evaluator",
+      "operator_class": "AuditLedger",
+      "auth": {
+        "mode": "local",
+        "account_label": "audit_compliance",
+        "secret_ref": "none"
+      },
+      "quota": {
+        "quota_type": "none",
+        "period": "none",
+        "on_exhausted": "ignore"
+      },
+      "capability": {
+        "reliability": 5
+      },
+      "routing": {
+        "operator_class": "AuditLedger",
+        "primary_task_types": [
+          "FINAL_REVIEW"
+        ],
+        "fallback_operator_classes": [
+          "AuditLedger"
+        ]
+      },
+      "compat_alias_for": "local_mlx_process",
+      "compat_maps_to": {
+        "host_type": "local_mlx_process",
+        "carrier_hint": {
+          "mlx_meta": {
+            "model_path": "/tmp/models/local-mlx",
+            "port": 11434
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-opus-planner-print": {
+      "display_name": "Mac mini Claude Opus planner programmatic print (reserve)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "print_once",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "claude --print --model opus"
+      },
+      "billing_surface": "anthropic_agent_sdk_credit",
+      "billing_pool": "anthropic_agent_sdk_credit",
+      "launch_cmd_kind": "print_once",
+      "compat_alias_for": "tmux_pane",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": "2026-07-11T00:52:33Z",
+      "quota_guard_state": "auth_expired",
+      "enabled": true,
+      "enabled_at": "2026-05-23T00:53:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "architecture",
+        "schema-design"
+      ],
+      "strengths": [
+        "architecture",
+        "debugging",
+        "complex-reasoning"
+      ],
+      "preferred_for": [
+        "planner",
+        "architecture",
+        "schema-design"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "FANOUT",
+        "BULK_EDIT",
+        "TEST_RUN",
+        "LOW_VALUE_SCAN"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "quota": {
+        "quota_type": "monthly-agent-credit",
+        "period": "monthly",
+        "reserve_for": [
+          "ARCH_DECISION",
+          "ROOT_CAUSE_DEBUG",
+          "FINAL_REVIEW",
+          "SMALL_HIGH_VALUE_BATCH"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "auth_expired",
+        "cooldown_until": "2026-07-11T00:52:33Z",
+        "last_error": "auth_expired",
+        "last_error_at": "2026-07-10T18:52:33Z"
+      },
+      "flow_control": {
+        "last_block_state": "auth_expired",
+        "last_block_reason": "auth_expired",
+        "last_block_source": "failure_flow_control",
+        "last_block_detected_at": "2026-07-10T18:52:33Z",
+        "last_block_expires_at": "2026-07-11T00:52:33Z",
+        "last_block_excerpt": "Not logged in · Please run /login",
+        "last_prune_reason": null
+      },
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "planner"
+          }
+        }
+      },
+      "deprecated": false
+    },
+    "mini-claude-sonnet-builder-print": {
+      "display_name": "Mac mini Claude Sonnet builder programmatic print (reserve)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "model_config": "print_once",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "claude --print --model sonnet"
+      },
+      "billing_surface": "anthropic_agent_sdk_credit",
+      "billing_pool": "anthropic_agent_sdk_credit",
+      "launch_cmd_kind": "print_once",
+      "compat_alias_for": "tmux_pane",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-23T00:53:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "implementation",
+        "debugging"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "FANOUT",
+        "BULK_EDIT",
+        "TEST_RUN",
+        "LOW_VALUE_SCAN"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 2,
+      "fallback_profile": "builder",
+      "quota": {
+        "quota_type": "monthly-agent-credit",
+        "period": "monthly",
+        "reserve_for": [
+          "ROOT_CAUSE_DEBUG",
+          "FINAL_REVIEW",
+          "SMALL_HIGH_VALUE_BATCH"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "rejected_task_types": [
+        "runtime-hardening",
+        "implementation",
+        "refactor"
+      ],
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-opus-evaluator-print": {
+      "display_name": "Mac mini Claude Opus evaluator programmatic print (reserve)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "evaluator",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "opus",
+      "model_config": "print_once",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "claude --print --model opus"
+      },
+      "billing_surface": "anthropic_agent_sdk_credit",
+      "billing_pool": "anthropic_agent_sdk_credit",
+      "launch_cmd_kind": "print_once",
+      "compat_alias_for": "tmux_pane",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "enabled_at": "2026-05-23T00:53:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "evaluator"
+      ],
+      "task_classes": [
+        "verification",
+        "review",
+        "evidence"
+      ],
+      "strengths": [
+        "review",
+        "risk",
+        "quality-gate"
+      ],
+      "preferred_for": [
+        "evaluator",
+        "review",
+        "verification"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "FANOUT",
+        "BULK_EDIT",
+        "TEST_RUN",
+        "LOW_VALUE_SCAN"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "quota": {
+        "quota_type": "monthly-agent-credit",
+        "period": "monthly",
+        "reserve_for": [
+          "FINAL_REVIEW",
+          "ROOT_CAUSE_DEBUG",
+          "ARCH_DECISION"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "evaluator"
+          }
+        }
+      },
+      "deprecated": true,
+      "disabled_reason": "retired_deprecated_opus_evaluator_in_favor_of_sonnet_2026-06-28"
+    },
+    "webapp_research_operator": {
+      "display_name": "Browser Agent Webapp Research Operator",
+      "plane": "interactive_browser",
+      "owner_host": "localhost",
+      "pane": "N/A",
+      "profile": "browser-agent",
+      "role": "knowledge-extractor",
+      "persona": "builder",
+      "provider": "browser",
+      "vendor": "BrowserUse",
+      "backend": "desktop_bridge",
+      "model": "webapp-research",
+      "model_config": "persistent-profile",
+      "base_url": "native-browser",
+      "auth_mode": "oauth",
+      "key_ref": "none",
+      "surface": {
+        "type": "desktop_bridge",
+        "tool": "browser-use",
+        "launch_cmd": "browser-use deep-research"
+      },
+      "billing_surface": "unknown",
+      "billing_pool": "browser_webapp_research",
+      "launch_cmd_kind": "local",
+      "operator_class": "BrowserComputerUse",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "knowledge-extractor"
+      ],
+      "task_classes": [
+        "browser-research",
+        "deep-research",
+        "competitive-analysis"
+      ],
+      "strengths": [
+        "browser",
+        "multimodal",
+        "long-running-jobs"
+      ],
+      "preferred_for": [
+        "browser-research",
+        "deep-research"
+      ],
+      "avoid_for": [
+        "direct-code-edit"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "high",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "knowledge-extractor",
+      "routing": {
+        "operator_class": "BrowserComputerUse",
+        "primary_task_types": [
+          "browser_research",
+          "deep_research"
+        ],
+        "fallback_operator_classes": [
+          "ResearchSynthesis"
+        ]
+      },
+      "quota": {
+        "quota_type": "webapp_session",
+        "period": "unknown",
+        "on_exhausted": "manual_review"
+      },
+      "policy": {
+        "write_files": "restricted",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "denied",
+        "git_commit": "denied"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle"
+      },
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-gemini-deep-research": {
+      "display_name": "Gemini Deep Research Browser Agent",
+      "plane": "interactive_browser",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "browser-agent",
+      "role": "knowledge-extractor",
+      "persona": "builder",
+      "provider": "google",
+      "vendor": "Google",
+      "backend": "command",
+      "model": "gemini-deep-research",
+      "model_config": "Gemini Web UI deep research wrapper",
+      "base_url": "gemini.google.com",
+      "auth_mode": "oauth",
+      "key_ref": "google_account",
+      "quota_cycle": "google-account",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "disabled_reason": "",
+      "enabled_at": "2026-05-29T14:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "knowledge-extractor"
+      ],
+      "task_classes": [
+        "browser-research",
+        "deep-research",
+        "competitive-analysis"
+      ],
+      "strengths": [
+        "browser",
+        "multimodal",
+        "long-running-jobs"
+      ],
+      "preferred_for": [
+        "browser-research",
+        "deep-research"
+      ],
+      "avoid_for": [
+        "direct-code-edit"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "high",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "command": "python3 \"$HARNESS_DIR/tools/gemini_deep_research_operator.py\"",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle"
+      },
+      "compat_alias_for": "codex_cloud",
+      "compat_maps_to": {
+        "host_type": "codex_cloud",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-gemini-deep-research",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-chatgpt-deep-research": {
+      "display_name": "ChatGPT Thinking High Browser Agent",
+      "plane": "interactive_browser",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "browser-agent",
+      "role": "knowledge-extractor",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "chatgpt-5.5",
+      "model_config": "ChatGPT Web UI Thinking high wrapper; project=杂项; no local fallback",
+      "base_url": "https://chatgpt.com",
+      "auth_mode": "oauth",
+      "key_ref": "chatgpt_browser_profile",
+      "quota_cycle": "webapp-account",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "disabled_reason": "",
+      "enabled_at": "2026-06-01T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "knowledge-extractor"
+      ],
+      "task_classes": [
+        "browser-research",
+        "deep-research",
+        "research-synthesis",
+        "ai-influence-report",
+        "trend-judgment"
+      ],
+      "strengths": [
+        "chatgpt-thinking-high",
+        "longform-synthesis",
+        "high-judgment",
+        "browser-agent",
+        "report-planning"
+      ],
+      "preferred_for": [
+        "deep-research-chatgpt",
+        "ai-influence-report",
+        "trend-synthesis",
+        "longform-report",
+        "strategic-insight"
+      ],
+      "avoid_for": [
+        "direct-code-edit",
+        "bulk-extraction",
+        "cheap-background"
+      ],
+      "cost_tier": "high",
+      "latency_tier": "high",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "command": "PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" CHATGPT_MODEL=\"${CHATGPT_MODEL:-chatgpt-5.5}\" CHATGPT_REASONING_EFFORT=\"${CHATGPT_REASONING_EFFORT:-high}\" BROWSER_AGENT_CHATGPT_MODEL_MODE=\"${BROWSER_AGENT_CHATGPT_MODEL_MODE:-thinking}\" BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE=\"${BROWSER_AGENT_CHATGPT_REQUIRE_UI_MODE:-true}\" BROWSER_AGENT_CHATGPT_PROJECT_NAME=\"${BROWSER_AGENT_CHATGPT_PROJECT_NAME:-杂项}\" BROWSER_AGENT_PROFILE_DIRECTORY=\"${BROWSER_AGENT_PROFILE_DIRECTORY:-Profile 1}\" BROWSER_AGENT_PROFILE_STRATEGY=\"${BROWSER_AGENT_PROFILE_STRATEGY:-persistent}\" BROWSER_AGENT_CHATGPT_PROFILE_STRATEGY=\"${BROWSER_AGENT_CHATGPT_PROFILE_STRATEGY:-persistent}\" BROWSER_AGENT_TARGET_ACCOUNT_EMAIL=\"${BROWSER_AGENT_TARGET_ACCOUNT_EMAIL:-browser-agent@example.com}\" BROWSER_AGENT_CHATGPT_ACCOUNT_EMAIL=\"${BROWSER_AGENT_CHATGPT_ACCOUNT_EMAIL:-browser-agent@example.com}\" BROWSER_AGENT_USER_DATA_DIR=\"${BROWSER_AGENT_USER_DATA_DIR:-~/Library/Application Support/Google/Chrome}\" BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE=\"${BROWSER_AGENT_CHATGPT_PROFILE_POLICY_FILE:-~/.solar/harness/browser-agent-chatgpt-local.json}\" python3 \"$HARNESS_DIR/tools/chatgpt_browser_agent_task_operator.py\"",
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "restricted_operator_command",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "flow_control": {
+        "success_cooldown_seconds": 180,
+        "rate_limit_cooldown_seconds": 3600,
+        "auth_cooldown_seconds": 21600,
+        "defer_on_cooldown": true,
+        "defer_on_auth": true,
+        "last_block_state": "unknown"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "compat_alias_for": "ssh_devbox",
+      "compat_maps_to": {
+        "host_type": "ssh_devbox",
+        "carrier_hint": {
+          "ssh_meta": {
+            "hostname": "203.0.113.10",
+            "user": "solar",
+            "port": 22
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-youtube-transcript-extractor": {
+      "display_name": "YouTube Transcript Extractor Browser Agent",
+      "plane": "interactive_browser",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "browser-agent",
+      "role": "knowledge-extractor",
+      "persona": "builder",
+      "provider": "browser",
+      "vendor": "YouTube",
+      "backend": "command",
+      "model": "youtube-transcript-browser",
+      "model_config": "YouTube Web UI transcript extraction wrapper",
+      "base_url": "www.youtube.com",
+      "auth_mode": "oauth",
+      "key_ref": "google_account",
+      "quota_cycle": "google-account",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "disabled_reason": "",
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "pending",
+      "roles": [
+        "knowledge-extractor"
+      ],
+      "task_classes": [
+        "transcript-extraction",
+        "youtube-data",
+        "browser-research"
+      ],
+      "strengths": [
+        "browser",
+        "data-extraction",
+        "youtube"
+      ],
+      "preferred_for": [
+        "transcript-extraction",
+        "youtube-data"
+      ],
+      "avoid_for": [
+        "direct-code-edit",
+        "deep-research"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "low",
+      "max_concurrency": 2,
+      "fallback_profile": "builder",
+      "command": "python3 \"$HARNESS_DIR/tools/youtube_transcript_operator.py\"",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle"
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "knowledge-extractor"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-reasonix-deepseek-v4-builder": {
+      "display_name": "Mac mini Reasonix DeepSeek V4 advisory reviewer",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "deepseek-advisory",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "deepseek",
+      "vendor": "DeepSeek",
+      "backend": "command",
+      "model": "deepseek-v4-pro",
+      "model_config": "Reasonix DeepSeek V4 Pro;effort=high;wrapper=reasonix_operator.py",
+      "base_url": "reasonix-cli",
+      "command_path": "/opt/homebrew/bin/reasonix",
+      "auth_mode": "api_key",
+      "key_ref": "deepseek_api_key",
+      "billing_surface": "usage_credit",
+      "billing_pool": "deepseek_api_credit",
+      "launch_cmd_kind": "print_once",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T22:40:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner",
+        "evaluator"
+      ],
+      "task_classes": [
+        "analysis",
+        "review",
+        "advisory"
+      ],
+      "strengths": [
+        "reasoning",
+        "critique",
+        "analysis"
+      ],
+      "preferred_for": [
+        "root-cause",
+        "architecture-review",
+        "counterargument",
+        "decision-review",
+        "deepseek",
+        "reasonix"
+      ],
+      "avoid_for": [
+        "final-quality-gate",
+        "critical-security-review",
+        "browser-research",
+        "multimodal",
+        "bulk-extraction",
+        "code-edit",
+        "repo-modification",
+        "implementation"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 2,
+      "fallback_profile": "evaluator",
+      "operator_class": "AdvisoryReview",
+      "model_binding": {
+        "provider": "deepseek",
+        "model_id": "deepseek-v4-pro",
+        "alias": "deepseek",
+        "config": {
+          "reasonix_model": "deepseek-v4-pro",
+          "reasoning_effort": "high",
+          "cache_first": true
+        }
+      },
+      "auth": {
+        "mode": "api_key",
+        "account_label": "deepseek_reasonix",
+        "secret_ref": "secret://deepseek_api_key",
+        "key_env": "DEEPSEEK_API_KEY",
+        "expose_raw_key_to_pane": false
+      },
+      "quota": {
+        "quota_type": "api_balance",
+        "period": "api_balance",
+        "reserve_for": [
+          "ROOT_CAUSE_DEBUG",
+          "ARCHITECTURE_REVIEW",
+          "DECISION_REVIEW",
+          "ADVISORY"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "capability": {
+        "planning": 4,
+        "coding": 0,
+        "debugging": 2,
+        "testing": 1,
+        "research": 3,
+        "long_context": 4,
+        "speed": 4,
+        "cost_efficiency": 5,
+        "reliability": 4
+      },
+      "capability_profile": {
+        "architecture_reasoning": 4,
+        "code_impl": 0,
+        "root_cause_debug": 3,
+        "test_generation": 1,
+        "test_execution": 0,
+        "research_synthesis": 3,
+        "academic_critique": 3,
+        "browser_use": 0,
+        "gui_use": 0,
+        "long_context": 4,
+        "multi_agent_coordination": 2,
+        "speed": 4
+      },
+      "routing": {
+        "operator_class": "AdvisoryReview",
+        "primary_task_types": [
+          "ROOT_CAUSE_DEBUG",
+          "ARCHITECTURE_REVIEW",
+          "DECISION_REVIEW",
+          "ADVISORY"
+        ],
+        "avoid_task_types": [
+          "implementation",
+          "debugging",
+          "fast-patch",
+          "tests",
+          "refactor",
+          "final-quality-gate",
+          "critical-security-review",
+          "browser-research",
+          "bulk-extraction"
+        ],
+        "fallback_operator_classes": [
+          "Verifier",
+          "DeepArchitect"
+        ]
+      },
+      "policy": {
+        "write_files": "denied",
+        "run_shell": "denied",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "command": "set -a; source \"$HOME/.solar/brain-router/.env\" 2>/dev/null || true; source \"$HARNESS_DIR/model-config.sh\" 2>/dev/null || true; set +a; PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/reasonix_operator.py\"",
+      "launch_cmd": "REASONIX_MODEL=deepseek-v4-pro REASONIX_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/reasonix_operator.py\"",
+      "builder_pool": {
+        "enabled": false,
+        "disabled_reason": "reasonix_no_verified_file_execution_surface",
+        "disabled_at": "2026-05-31T01:10:53Z"
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "docker_sandbox",
+      "compat_maps_to": {
+        "host_type": "docker_sandbox",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "docker-fallback",
+            "region": "local"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "op.browser.webwright.playwright.01": {
+      "display_name": "Webwright Playwright Task Operator",
+      "plane": "interactive_browser",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "browser-agent",
+      "role": "browser_task_operator",
+      "persona": "builder",
+      "provider": "browser",
+      "vendor": "Webwright",
+      "backend": "command",
+      "model": "webwright-playwright",
+      "model_config": "Webwright Playwright code-as-action browser engine",
+      "base_url": "native-browser",
+      "auth_mode": "oauth",
+      "key_ref": "google_account",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "command": "python3 \"$HARNESS_DIR/tools/webwright_operator.py\"",
+      "use_for": [
+        "LONG_HORIZON_WEB_TASK",
+        "FORM_WORKFLOW",
+        "WEB_RESEARCH_INTERACTIVE",
+        "REUSABLE_WEB_TOOL"
+      ],
+      "output_artifacts": [
+        "final_script.py",
+        "trajectory.json",
+        "screenshots/",
+        "report.json"
+      ],
+      "cost_tier": "medium",
+      "max_concurrency": 2,
+      "fallback_profile": "builder",
+      "capabilities": [
+        "browser_long_horizon",
+        "browser_replayable_script",
+        "screenshot_evidence",
+        "task2ui_report",
+        "reusable_tool_craft"
+      ],
+      "policy": {
+        "allowlist_check": "enabled",
+        "payment_denied": "denied",
+        "credential_extraction_denied": "denied",
+        "cookie_extraction_denied": "denied"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle"
+      },
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "op.browser.browser_use_mcp.quick.01": {
+      "display_name": "Browser-use MCP Quick Tool Operator",
+      "plane": "interactive_browser",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "browser-agent",
+      "role": "browser_tool_operator",
+      "persona": "builder",
+      "provider": "browser",
+      "vendor": "BrowserUse",
+      "backend": "command",
+      "model": "browser-use-mcp",
+      "model_config": "Browser-use MCP fast browser tool engine",
+      "base_url": "native-browser",
+      "auth_mode": "oauth",
+      "key_ref": "google_account",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "command": "python3 \"$HARNESS_DIR/tools/browser_use_mcp_operator.py\"",
+      "use_for": [
+        "QUICK_SCREENSHOT",
+        "DOM_EXTRACT",
+        "LOCALHOST_UI_SMOKE",
+        "SIMPLE_CLICK_INPUT"
+      ],
+      "output_artifacts": [
+        "screenshot_or_dom_snapshot",
+        "tool_trace"
+      ],
+      "cost_tier": "low",
+      "max_concurrency": 4,
+      "fallback_profile": "builder",
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle"
+      },
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-antigravity-gemini35-flash-builder-1": {
+      "display_name": "Mac mini Antigravity Gemini 3.5 Flash builder pool slot 1",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "gemini-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "google",
+      "vendor": "Google",
+      "backend": "command",
+      "model": "gemini-3.5-flash-high",
+      "model_config": "Antigravity CLI agy;gemini-3.5-flash;builder-pool",
+      "base_url": "agy-cli",
+      "auth_mode": "oauth",
+      "key_ref": "antigravity_oauth",
+      "quota_cycle": "google-account",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "parallel",
+        "prototype",
+        "google",
+        "implementation",
+        "tests",
+        "ui",
+        "multimodal"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command_path": "~/.local/bin/agy",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "~/.local/bin/agy",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "antigravity-gemini-3.5-flash",
+        "slot": 1,
+        "priority": 3
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-antigravity-gemini35-flash-builder-2": {
+      "display_name": "Mac mini Antigravity Gemini 3.5 Flash builder pool slot 2",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "gemini-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "google",
+      "vendor": "Google",
+      "backend": "command",
+      "model": "gemini-3.5-flash-high",
+      "model_config": "Antigravity CLI agy;gemini-3.5-flash;builder-pool",
+      "base_url": "agy-cli",
+      "auth_mode": "oauth",
+      "key_ref": "antigravity_oauth",
+      "quota_cycle": "google-account",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "parallel",
+        "prototype",
+        "google",
+        "implementation",
+        "tests",
+        "ui",
+        "multimodal"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "AGY_BIN=~/.local/bin/agy PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/antigravity_multimodal_agent.py\"",
+      "command_path": "~/.local/bin/agy",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "~/.local/bin/agy",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "antigravity-gemini-3.5-flash",
+        "slot": 2,
+        "priority": 2
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "antigravity_managed_env",
+      "compat_maps_to": {
+        "host_type": "antigravity_managed_env",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "antigravity-managed",
+            "browser_profile": "default"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-claude-sonnet-builder-2": {
+      "display_name": "Mac mini Claude Sonnet builder pool slot 2",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "model_config": "print_once;builder-pool",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "claude --print --model sonnet"
+      },
+      "billing_surface": "anthropic_agent_sdk_credit",
+      "billing_pool": "anthropic_agent_sdk_credit",
+      "launch_cmd_kind": "print_once",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "implementation",
+        "debugging"
+      ],
+      "avoid_for": [
+        "bulk-extraction"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "builder_pool": {
+        "enabled": true,
+        "group": "sonnet",
+        "slot": 2,
+        "priority": 8
+      },
+      "health_check": {
+        "type": "command",
+        "command_path": "claude",
+        "cache_seconds": 300
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": false
+    },
+    "mini-claude-sonnet-builder-3": {
+      "display_name": "Mac mini Claude Sonnet builder pool slot 3",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "model_config": "print_once;builder-pool",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "claude --print --model sonnet"
+      },
+      "billing_surface": "anthropic_agent_sdk_credit",
+      "billing_pool": "anthropic_agent_sdk_credit",
+      "launch_cmd_kind": "print_once",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-22T00:12:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "implementation",
+        "debugging"
+      ],
+      "avoid_for": [
+        "bulk-extraction"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "builder_pool": {
+        "enabled": true,
+        "group": "sonnet",
+        "slot": 3,
+        "priority": 7
+      },
+      "health_check": {
+        "type": "command",
+        "command_path": "claude",
+        "cache_seconds": 300
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt55-medium-builder-1": {
+      "display_name": "Mac mini Codex GPT 5.5 medium builder pool slot 1",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "model_config": "Codex CLI;gpt-5.5;reasoning=medium;builder-pool",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "implementation",
+        "code-edit",
+        "tests",
+        "refactor",
+        "codex",
+        "gpt"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.5-medium",
+        "slot": 1,
+        "priority": 5
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt55-medium-builder-1",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": false
+    },
+    "mini-codex-gpt55-medium-builder-2": {
+      "display_name": "Mac mini Codex GPT 5.5 medium builder pool slot 2",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "model_config": "Codex CLI;gpt-5.5;reasoning=medium;builder-pool",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "implementation",
+        "code-edit",
+        "tests",
+        "refactor",
+        "codex",
+        "gpt"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.5-medium",
+        "slot": 2,
+        "priority": 4
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt55-medium-builder-2",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt53-spark-builder-1": {
+      "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 1",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.3-codex-spark",
+      "model_config": "Codex CLI;gpt-5.3-codex-spark;reasoning=medium;builder-pool;independent-budget",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-01T20:45:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification",
+        "independent-budget"
+      ],
+      "preferred_for": [
+        "implementation",
+        "code-edit",
+        "tests",
+        "refactor",
+        "codex",
+        "spark"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.3-spark",
+        "slot": 1,
+        "priority": 9
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt53-spark-builder-1",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": false
+    },
+    "mini-codex-gpt53-spark-builder-2": {
+      "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 2",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.3-codex-spark",
+      "model_config": "Codex CLI;gpt-5.3-codex-spark;reasoning=medium;builder-pool;independent-budget",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-02T00:35:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification",
+        "independent-budget"
+      ],
+      "preferred_for": [
+        "implementation",
+        "code-edit",
+        "tests",
+        "refactor",
+        "codex",
+        "spark"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.3-spark",
+        "slot": 2,
+        "priority": 9
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt53-spark-builder-2",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt53-spark-builder-3": {
+      "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 3",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.3-codex-spark",
+      "model_config": "Codex CLI;gpt-5.3-codex-spark;reasoning=medium;builder-pool;independent-budget",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-02T00:35:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification",
+        "independent-budget"
+      ],
+      "preferred_for": [
+        "implementation",
+        "code-edit",
+        "tests",
+        "refactor",
+        "codex",
+        "spark"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.3-spark",
+        "slot": 3,
+        "priority": 9
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt53-spark-builder-3",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt53-spark-builder-4": {
+      "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 4",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.3-codex-spark",
+      "model_config": "Codex CLI;gpt-5.3-codex-spark;reasoning=medium;builder-pool;independent-budget",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-02T00:35:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification",
+        "independent-budget"
+      ],
+      "preferred_for": [
+        "implementation",
+        "code-edit",
+        "tests",
+        "refactor",
+        "codex",
+        "spark"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.3-spark",
+        "slot": 4,
+        "priority": 9
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt53-spark-builder-4",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt53-spark-builder-5": {
+      "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 5",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.3-codex-spark",
+      "model_config": "Codex CLI;gpt-5.3-codex-spark;reasoning=medium;builder-pool;independent-budget",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-02T00:45:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification",
+        "independent-budget"
+      ],
+      "preferred_for": [
+        "implementation",
+        "code-edit",
+        "tests",
+        "refactor",
+        "codex",
+        "spark"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.3-spark",
+        "slot": 5,
+        "priority": 9
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt53-spark-builder-5",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt53-spark-builder-6": {
+      "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 6",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.3-codex-spark",
+      "model_config": "Codex CLI;gpt-5.3-codex-spark;reasoning=medium;builder-pool;independent-budget",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-02T00:45:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification",
+        "independent-budget"
+      ],
+      "preferred_for": [
+        "implementation",
+        "code-edit",
+        "tests",
+        "refactor",
+        "codex",
+        "spark"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.3-codex-spark CODEX_REASONING_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "codex-gpt-5.3-spark",
+        "slot": 6,
+        "priority": 9
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt53-spark-builder-6",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-glm51-builder-1": {
+      "display_name": "Mac mini GLM-5.1 builder pool slot 1",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "glm",
+      "vendor": "ZhipuAI",
+      "backend": "claude-cli",
+      "model": "glm-5.1",
+      "model_config": "glm-5.1;claude-compatible;print_once;builder-pool",
+      "base_url": "native",
+      "auth_mode": "api_key_or_gateway",
+      "key_ref": "zhipu_api_key",
+      "quota_cycle": "none",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "implementation",
+        "debugging",
+        "glm",
+        "local-gateway"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "launch_cmd_kind": "print_once",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "source \"$HARNESS_DIR/model-config.sh\" 2>/dev/null || true; ANTHROPIC_BASE_URL=\"${ZHIPU_BASE_URL:-https://api.z.ai/api/anthropic}\" ANTHROPIC_API_KEY=\"${ZHIPU_API_KEY:-${ZHIPU_AUTH_TOKEN:-}}\" ANTHROPIC_DEFAULT_OPUS_MODEL=\"${ZHIPU_MODEL:-GLM-5.1}\" claude --print --model opus"
+      },
+      "health_check": {
+        "type": "command",
+        "command_path": "claude",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "glm-5.1",
+        "slot": 1,
+        "priority": 7
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-glm51-builder-2": {
+      "display_name": "Mac mini GLM-5.1 builder pool slot 2",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "glm",
+      "vendor": "ZhipuAI",
+      "backend": "claude-cli",
+      "model": "glm-5.1",
+      "model_config": "glm-5.1;claude-compatible;print_once;builder-pool",
+      "base_url": "native",
+      "auth_mode": "api_key_or_gateway",
+      "key_ref": "zhipu_api_key",
+      "quota_cycle": "none",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "implementation",
+        "debugging",
+        "glm",
+        "local-gateway"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "launch_cmd_kind": "print_once",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "source \"$HARNESS_DIR/model-config.sh\" 2>/dev/null || true; ANTHROPIC_BASE_URL=\"${ZHIPU_BASE_URL:-https://api.z.ai/api/anthropic}\" ANTHROPIC_API_KEY=\"${ZHIPU_API_KEY:-${ZHIPU_AUTH_TOKEN:-}}\" ANTHROPIC_DEFAULT_OPUS_MODEL=\"${ZHIPU_MODEL:-GLM-5.1}\" claude --print --model opus"
+      },
+      "health_check": {
+        "type": "command",
+        "command_path": "claude",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "glm-5.1",
+        "slot": 2,
+        "priority": 6
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-glm51-builder-3": {
+      "display_name": "Mac mini GLM-5.1 builder pool slot 3",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "glm",
+      "vendor": "ZhipuAI",
+      "backend": "claude-cli",
+      "model": "glm-5.1",
+      "model_config": "glm-5.1;claude-compatible;print_once;builder-pool",
+      "base_url": "native",
+      "auth_mode": "api_key_or_gateway",
+      "key_ref": "zhipu_api_key",
+      "quota_cycle": "none",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "implementation",
+        "debugging",
+        "glm",
+        "local-gateway"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "launch_cmd_kind": "print_once",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "source \"$HARNESS_DIR/model-config.sh\" 2>/dev/null || true; ANTHROPIC_BASE_URL=\"${ZHIPU_BASE_URL:-https://api.z.ai/api/anthropic}\" ANTHROPIC_API_KEY=\"${ZHIPU_API_KEY:-${ZHIPU_AUTH_TOKEN:-}}\" ANTHROPIC_DEFAULT_OPUS_MODEL=\"${ZHIPU_MODEL:-GLM-5.1}\" claude --print --model opus"
+      },
+      "health_check": {
+        "type": "command",
+        "command_path": "claude",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "glm-5.1",
+        "slot": 3,
+        "priority": 5
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-reasonix-deepseek-v4-flash-builder-1": {
+      "display_name": "Mac mini Reasonix DeepSeek V4 Flash builder pool slot 1",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "deepseek-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "deepseek",
+      "vendor": "DeepSeek",
+      "backend": "command",
+      "model": "deepseek-v4-flash",
+      "model_config": "Reasonix CLI;model=deepseek-v4-flash;effort=medium;builder-pool",
+      "base_url": "reasonix-cli",
+      "auth_mode": "api_key",
+      "key_ref": "deepseek",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": false,
+      "health_status": "disabled",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "analysis",
+        "review",
+        "advisory",
+        "implementation",
+        "documentation",
+        "planning"
+      ],
+      "strengths": [
+        "reasoning",
+        "critique",
+        "analysis",
+        "implementation",
+        "fast-iteration"
+      ],
+      "preferred_for": [
+        "root-cause",
+        "architecture-review",
+        "counterargument",
+        "decision-review",
+        "deepseek",
+        "reasonix"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "denied"
+      },
+      "command": "REASONIX_MODEL=deepseek-v4-flash REASONIX_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/reasonix_operator.py\"",
+      "command_path": "/opt/homebrew/bin/reasonix",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/reasonix",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": false,
+        "group": "deepseek-v4-flash",
+        "slot": 1,
+        "priority": 6,
+        "disabled_reason": "disabled_by_policy_remove_deepseek_from_builder_future",
+        "disabled_at": "2026-06-01T20:50:00Z"
+      },
+      "state": {
+        "availability": "disabled",
+        "runtime_state": "idle"
+      },
+      "compat_alias_for": "docker_sandbox",
+      "compat_maps_to": {
+        "host_type": "docker_sandbox",
+        "carrier_hint": {
+          "antigravity_meta": {
+            "environment_id": "docker-fallback",
+            "region": "local"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-reasonix-deepseek-v4-flash-builder-2": {
+      "display_name": "Mac mini Reasonix DeepSeek V4 Flash builder pool slot 2",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "deepseek-builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "deepseek",
+      "vendor": "DeepSeek",
+      "backend": "command",
+      "model": "deepseek-v4-flash",
+      "model_config": "Reasonix CLI;model=deepseek-v4-flash;effort=medium;builder-pool",
+      "base_url": "reasonix-cli",
+      "auth_mode": "api_key",
+      "key_ref": "deepseek",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": false,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": false,
+      "health_status": "disabled",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "analysis",
+        "review",
+        "advisory",
+        "implementation",
+        "documentation",
+        "planning"
+      ],
+      "strengths": [
+        "reasoning",
+        "critique",
+        "analysis",
+        "implementation",
+        "fast-iteration"
+      ],
+      "preferred_for": [
+        "root-cause",
+        "architecture-review",
+        "counterargument",
+        "decision-review",
+        "deepseek",
+        "reasonix"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "critical-security-review"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "denied"
+      },
+      "command": "REASONIX_MODEL=deepseek-v4-flash REASONIX_EFFORT=medium PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/reasonix_operator.py\"",
+      "command_path": "/opt/homebrew/bin/reasonix",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/reasonix",
+        "cache_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": false,
+        "group": "deepseek-v4-flash",
+        "slot": 2,
+        "priority": 5,
+        "disabled_reason": "disabled_by_policy_remove_deepseek_from_builder_future",
+        "disabled_at": "2026-06-01T20:50:00Z"
+      },
+      "state": {
+        "availability": "disabled",
+        "runtime_state": "idle"
+      },
+      "compat_alias_for": "local_mlx_process",
+      "compat_maps_to": {
+        "host_type": "local_mlx_process",
+        "carrier_hint": {
+          "mlx_meta": {
+            "model_path": "/tmp/models/local-mlx",
+            "port": 11434
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-thunderomlx-qwen36-builder": {
+      "display_name": "Mac mini ThunderOMLX Qwen3.6 builder pool slot 1",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "builder",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "local",
+      "vendor": "ThunderOMLX",
+      "backend": "command",
+      "model": "thunderomlx",
+      "model_config": "Qwen3.6-35b-a3b;hot-cache=8GB;health-gated;builder-pool",
+      "base_url": "http://127.0.0.1:8002",
+      "auth_mode": "local",
+      "key_ref": "local-thunderomlx",
+      "quota_cycle": "none",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-30T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "task_classes": [
+        "implementation",
+        "debugging",
+        "tests",
+        "refactor",
+        "fast-patch",
+        "code-edit"
+      ],
+      "strengths": [
+        "code-edit",
+        "tests",
+        "repo-modification"
+      ],
+      "preferred_for": [
+        "builder",
+        "local",
+        "draft-implementation",
+        "knowledge-assisted-coding",
+        "thunderomlx"
+      ],
+      "avoid_for": [
+        "critical-refactor",
+        "security-sensitive-code",
+        "final-quality-gate"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "medium",
+      "context_tier": "medium",
+      "max_concurrency": 1,
+      "fallback_profile": "builder",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "LOCAL_LLM_BACKEND=thunderomlx LOCAL_LLM_BASE_URL=http://127.0.0.1:8002 LOCAL_LLM_MODEL=Qwen3.6-35b-a3b LOCAL_LLM_API_KEY=${THUNDEROMLX_AUTH_TOKEN:-local-thunderomlx} PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/openai_compatible_pm_operator.py\"",
+      "health_check": {
+        "type": "http",
+        "url": "http://127.0.0.1:8002/v1/models",
+        "timeout_seconds": 0.5,
+        "cache_seconds": 60
+      },
+      "auto_start": {
+        "enabled": true,
+        "command": "$HARNESS_DIR/scripts/thunderomlx_start_8002.sh",
+        "cooldown_seconds": 300
+      },
+      "builder_pool": {
+        "enabled": true,
+        "group": "thunderomlx",
+        "slot": 1,
+        "priority": 5
+      },
+      "compat_alias_for": "local_mlx_process",
+      "compat_maps_to": {
+        "host_type": "local_mlx_process",
+        "carrier_hint": {
+          "mlx_meta": {
+            "model_path": "/tmp/models/local-mlx",
+            "port": 11434
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "technology-diagram-painter": {
+      "display_name": "Technology Diagram Painter Browser Agent",
+      "plane": "interactive_browser",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "browser-agent",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "browser",
+      "vendor": "BrowserAgent",
+      "backend": "command",
+      "model": "chatgpt-image-browser-agent",
+      "model_config": "ChatGPT image generation via browser-use/Playwright technology diagram painter",
+      "base_url": "https://chatgpt.com",
+      "auth_mode": "oauth",
+      "key_ref": "chatgpt_browser_profile",
+      "quota_cycle": "webapp-account",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-31T04:15:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "builder"
+      ],
+      "input_modalities": [
+        "text",
+        "structured-json"
+      ],
+      "output_modalities": [
+        "image",
+        "png",
+        "artifact",
+        "structured-json"
+      ],
+      "artifact_types": [
+        "png",
+        "browser-trace",
+        "result-json"
+      ],
+      "task_classes": [
+        "technology-diagram",
+        "diagram-generation",
+        "browser-asset-generation",
+        "architecture-figure",
+        "visual-artifact"
+      ],
+      "strengths": [
+        "technology-diagram-generation",
+        "architecture-figure",
+        "browser-agent",
+        "chatgpt-image"
+      ],
+      "preferred_for": [
+        "technology-diagram",
+        "architecture-figure",
+        "report-figure",
+        "browser-asset-generation",
+        "diagram"
+      ],
+      "avoid_for": [
+        "vision-analysis",
+        "ocr",
+        "code-implementation",
+        "critical-security-review"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "high",
+      "context_tier": "medium",
+      "max_concurrency": 1,
+      "fallback_profile": "browser-agent",
+      "policy": {
+        "write_files": "artifact_dir_only",
+        "run_shell": "restricted_operator_command",
+        "network": "allowed",
+        "secrets_access": "secret_ref_only",
+        "git_commit": "denied"
+      },
+      "command": "PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/technology_diagram_painter_operator.py\"",
+      "flow_control": {
+        "success_cooldown_seconds": 30,
+        "rate_limit_cooldown_seconds": 600,
+        "auth_cooldown_seconds": 3600,
+        "defer_on_cooldown": true,
+        "defer_on_auth": true,
+        "last_block_state": "unknown"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "compat_alias_for": "tmux_pane",
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "builder"
+          }
+        }
+      },
+      "deprecated": true
+    },
+    "mini-codex-gpt55-medium-planner-1": {
+      "display_name": "Mac mini Codex GPT 5.5 medium planner support slot 1",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "model_config": "Codex CLI;gpt-5.5;reasoning=high;planner-support;prd",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-02T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "requirements",
+        "prd",
+        "schema-design",
+        "architecture-support"
+      ],
+      "strengths": [
+        "prd-compilation",
+        "code-aware-planning",
+        "schema-design",
+        "implementation-aware-architecture"
+      ],
+      "preferred_for": [
+        "planning",
+        "requirements",
+        "prd",
+        "schema-design",
+        "code-aware-architecture",
+        "codex",
+        "gpt"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background",
+        "critical-security-review",
+        "final-acceptance-signoff"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt55-medium-planner-1",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": false
+    },
+    "mini-codex-gpt55-medium-planner-2": {
+      "display_name": "Mac mini Codex GPT 5.5 medium planner support slot 2",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-planner",
+      "role": "planner",
+      "persona": "planner",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "model_config": "Codex CLI;gpt-5.5;reasoning=high;planner-support;prd",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-02T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "planner"
+      ],
+      "task_classes": [
+        "planning",
+        "requirements",
+        "prd",
+        "schema-design",
+        "architecture-support"
+      ],
+      "strengths": [
+        "prd-compilation",
+        "code-aware-planning",
+        "schema-design",
+        "implementation-aware-architecture"
+      ],
+      "preferred_for": [
+        "planning",
+        "requirements",
+        "prd",
+        "schema-design",
+        "code-aware-architecture",
+        "codex",
+        "gpt"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background",
+        "critical-security-review",
+        "final-acceptance-signoff"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "planner",
+      "policy": {
+        "write_files": "allowed",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "allowed"
+      },
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt55-medium-planner-2",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": false
+    },
+    "mini-codex-gpt55-medium-evaluator-1": {
+      "display_name": "Mac mini Codex GPT 5.5 medium evaluator slot 1",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "codex-evaluator",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "model": "gpt-5.5",
+      "model_config": "Codex CLI;gpt-5.5;reasoning=high;evaluator;quality-gate",
+      "base_url": "codex-cli",
+      "auth_mode": "subscription_or_api_key",
+      "key_ref": "codex_auth",
+      "quota_cycle": "api_balance",
+      "quota_refresh_at": "unknown",
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-06-29T00:00:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "evaluator"
+      ],
+      "task_classes": [
+        "graph_eval",
+        "verification",
+        "review",
+        "evidence",
+        "quality-gate",
+        "acceptance"
+      ],
+      "strengths": [
+        "repo-aware-review",
+        "test-analysis",
+        "acceptance-verification",
+        "evidence-quality"
+      ],
+      "preferred_for": [
+        "evaluator",
+        "review",
+        "verification",
+        "quality-gate",
+        "acceptance",
+        "codex",
+        "gpt"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "cheap-background"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "policy": {
+        "write_files": "review_only",
+        "run_shell": "allowed",
+        "network": "allowed",
+        "git_commit": "forbidden"
+      },
+      "command": "CODEX_MODEL=gpt-5.5 CODEX_REASONING_EFFORT=high PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/codex_operator.py\"",
+      "command_path": "/opt/homebrew/bin/codex",
+      "launch_cmd_kind": "print_once",
+      "health_check": {
+        "type": "command",
+        "command_path": "/opt/homebrew/bin/codex",
+        "cache_seconds": 300
+      },
+      "compat_alias_for": "codex_worktree",
+      "compat_maps_to": {
+        "host_type": "codex_worktree",
+        "carrier_hint": {
+          "codex_meta": {
+            "worktree_path": "/tmp/codex/mini-codex-gpt55-medium-evaluator-1",
+            "repo": "solar-operators",
+            "branch": "main"
+          }
+        }
+      },
+      "deprecated": false
+    },
+    "mini-claude-sonnet-evaluator-print": {
+      "display_name": "Claude Sonnet evaluator (print)",
+      "plane": "headless",
+      "owner_host": "solar@example-host",
+      "pane": "solar-harness-multi-task:*",
+      "profile": "evaluator",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "anthropic",
+      "vendor": "Anthropic",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "model_config": "print_once",
+      "base_url": "native",
+      "auth_mode": "subscription",
+      "key_ref": "claude_subscription",
+      "surface": {
+        "type": "claude_print",
+        "tool": "claude",
+        "launch_cmd": "claude --print --model sonnet"
+      },
+      "billing_surface": "anthropic_agent_sdk_credit",
+      "billing_pool": "anthropic_agent_sdk_credit",
+      "launch_cmd_kind": "print_once",
+      "compat_alias_for": "tmux_pane",
+      "quota_cycle": "monthly",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "enabled_at": "2026-05-23T00:53:00Z",
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "evaluator"
+      ],
+      "task_classes": [
+        "graph_eval",
+        "verification",
+        "review",
+        "evidence"
+      ],
+      "strengths": [
+        "review",
+        "risk",
+        "quality-gate"
+      ],
+      "preferred_for": [
+        "evaluator",
+        "review",
+        "verification"
+      ],
+      "avoid_for": [
+        "bulk-extraction",
+        "FANOUT",
+        "BULK_EDIT",
+        "TEST_RUN",
+        "LOW_VALUE_SCAN"
+      ],
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "fallback_profile": "evaluator",
+      "quota": {
+        "quota_type": "monthly-agent-credit",
+        "period": "monthly",
+        "reserve_for": [
+          "FINAL_REVIEW",
+          "ROOT_CAUSE_DEBUG",
+          "ARCH_DECISION"
+        ],
+        "on_exhausted": "disable_and_fallback"
+      },
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      },
+      "compat_maps_to": {
+        "host_type": "tmux_pane",
+        "carrier_hint": {
+          "tmux_pane_meta": {
+            "session": "solar-harness",
+            "window": "multi-task",
+            "pane": "0",
+            "role": "evaluator"
+          }
+        }
+      },
+      "deprecated": false
+    },
+    "autosci-literature-discover-worker": {
+      "display_name": "AutoSci literature discover worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-literature-discoverer",
+      "persona": "scientific-literature-discoverer",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action discover_literature --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-paper-ingest-worker": {
+      "display_name": "AutoSci paper ingest worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-paper-ingestor",
+      "persona": "scientific-paper-ingestor",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action ingest_paper --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-paper-analyze-worker": {
+      "display_name": "AutoSci paper analyze worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-paper-ingestor",
+      "persona": "scientific-paper-ingestor",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action analyze_paper --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-memory-update-worker": {
+      "display_name": "AutoSci memory update worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-memory-updater",
+      "persona": "scientific-memory-updater",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action update_memory --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-graph-update-worker": {
+      "display_name": "AutoSci graph update worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-memory-updater",
+      "persona": "scientific-memory-updater",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action update_graph --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-claim-extract-worker": {
+      "display_name": "AutoSci claim extract worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-claim-extractor",
+      "persona": "scientific-claim-extractor",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action extract_claims --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-method-extract-worker": {
+      "display_name": "AutoSci method extract worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-claim-extractor",
+      "persona": "scientific-claim-extractor",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action extract_methods --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-code-evidence-map-worker": {
+      "display_name": "AutoSci code evidence map worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-code-evidence-mapper",
+      "persona": "scientific-code-evidence-mapper",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action map_code_evidence --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-idea-worker": {
+      "display_name": "AutoSci idea generation worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-builder",
+      "persona": "lab-builder",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action generate_ideas --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-idea-evaluate-worker": {
+      "display_name": "AutoSci idea evaluation worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-evaluator",
+      "persona": "lab-evaluator",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action evaluate_ideas --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-experiment-design-worker": {
+      "display_name": "AutoSci experiment design worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-experiment-designer",
+      "persona": "scientific-experiment-designer",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action design_experiment --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-experiment-run-worker": {
+      "display_name": "AutoSci experiment run worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-experiment-runner",
+      "persona": "scientific-experiment-runner",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action run_experiment --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-experiment-monitor-worker": {
+      "display_name": "AutoSci experiment monitor worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-experiment-runner",
+      "persona": "scientific-experiment-runner",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action monitor_experiment --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-claim-verify-worker": {
+      "display_name": "AutoSci claim verify worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-claim-verifier",
+      "persona": "scientific-claim-verifier",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action verify_claim --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-artifact-review-worker": {
+      "display_name": "AutoSci artifact review worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-evaluator",
+      "persona": "lab-evaluator",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action review_artifact --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-evaluator-worker": {
+      "display_name": "AutoSci runtime evaluator worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_eval_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "task_classes": [
+        "graph_eval",
+        "scientific-evidence-gate",
+        "verification"
+      ],
+      "strengths": [
+        "autosci-evidence",
+        "schema-gated-verdict",
+        "runtime-evaluation"
+      ],
+      "preferred_for": [
+        "research.autosci.v1",
+        "scientific-evidence",
+        "evaluator"
+      ],
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-report-plan-worker": {
+      "display_name": "AutoSci report plan worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-report-writer",
+      "persona": "scientific-report-writer",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action plan_report --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-report-worker": {
+      "display_name": "AutoSci report draft worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "scientific-report-writer",
+      "persona": "scientific-report-writer",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action write_report --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-publication-compile-worker": {
+      "display_name": "AutoSci publication compile worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-builder",
+      "persona": "lab-builder",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action compile_paper --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
+    "autosci-workflow-evolve-worker": {
+      "display_name": "AutoSci workflow evolve worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "planner",
+      "persona": "planner",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action evolve_workflow --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    }
+  },
+  "_meta": {
+    "transition_status": "read_only",
+    "deprecated_at": "2026-06-02",
+    "sunset_target": "S05 acceptance complete"
+  }
+}

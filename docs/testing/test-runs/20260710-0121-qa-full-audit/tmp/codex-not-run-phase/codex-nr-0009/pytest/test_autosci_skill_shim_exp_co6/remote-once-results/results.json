@@ -1,0 +1,1 @@
+{"outcome": "supports", "metrics": [{"name": "accuracy", "value": 0.96}], "evidence_ids": ["result:exp-once"], "logs": ["first collection payload"]}

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Solar Harness — Instrument (design proposal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     SOLAR HARNESS — "INSTRUMENT", simplified
+     One accent (amber). Red only for the fault. Everything else
+     is ink on charcoal. Structure from space, not boxes.
+     ============================================================ */
+  :root {
+    --bg:     #0c0d10;
+    --panel:  #141519;
+    --raise:  #1c1e23;
+    --ink:    #e9e7e1;
+    --dim:    #9398a0;
+    --faint:  #5a5f68;
+    --hair:   rgba(233,231,225,0.09);
+    --amber:  #ffb443;
+    --amber-bg: rgba(255,180,67,0.09);
+    --red:    #ff6a5b;
+    --red-bg: rgba(255,106,91,0.09);
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --disp: "Space Grotesk", var(--mono);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--mono); font-size: 13px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 260px minmax(0,1fr);
+    grid-template-rows: 52px 1fr;
+    grid-template-areas: "bar bar" "rail main";
+    height: 100vh;
+  }
+
+  /* top bar */
+  .bar { grid-area: bar; display: flex; align-items: center; gap: 16px; padding: 0 22px; border-bottom: 1px solid var(--hair); }
+  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--disp); font-weight: 600; font-size: 14px; }
+  .brand .g { color: var(--amber); }
+  .bar .spacer { flex: 1; }
+  .daygauge { font-size: 11px; color: var(--faint); }
+  .daygauge b { color: var(--dim); font-weight: 500; }
+  .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 7px; overflow: hidden; }
+  .seg button { font-family: var(--mono); font-size: 11px; color: var(--dim); background: transparent; border: 0; padding: 6px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--raise); color: var(--ink); }
+
+  /* rail */
+  .rail { grid-area: rail; border-right: 1px solid var(--hair); display: flex; flex-direction: column; min-height: 0; }
+  .rail .h { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 10px; }
+  .rail .h h2 { margin: 0; font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+  .newbtn { font-family: var(--mono); font-size: 11px; color: var(--ink); background: transparent; border: 1px solid var(--hair); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+  .newbtn:hover { border-color: var(--faint); }
+  .sprints { overflow-y: auto; padding: 2px 10px 16px; }
+  .srow { position: relative; display: flex; align-items: baseline; gap: 9px; padding: 9px 10px; border-radius: 7px; cursor: pointer; }
+  .srow:hover { background: var(--panel); }
+  .srow.active { background: var(--panel); }
+  .srow.active::before { content: ""; position: absolute; left: -10px; top: 9px; bottom: 9px; width: 2px; background: var(--amber); border-radius: 2px; }
+  .srow .dot { font-size: 8px; line-height: 1.9; }
+  .d-stall { color: var(--amber); } .d-run { color: var(--amber); } .d-done { color: var(--faint); } .d-fail { color: var(--red); } .d-queue { color: var(--faint); }
+  .srow .b { min-width: 0; flex: 1; }
+  .srow .id { font-size: 10px; color: var(--faint); }
+  .srow.active .id { color: var(--amber); }
+  .srow .t { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .srow.active .t { color: var(--ink); }
+  .srow .st { font-size: 10px; color: var(--faint); white-space: nowrap; }
+  .rail .f { margin-top: auto; border-top: 1px solid var(--hair); padding: 13px 18px; font-size: 10px; color: var(--faint); }
+
+  /* main */
+  .main { grid-area: main; overflow-y: auto; }
+  .wrap { padding: 32px 40px 80px; max-width: 760px; }
+
+  .crumb { font-size: 11px; color: var(--faint); margin-bottom: 14px; }
+  .crumb b { color: var(--dim); font-weight: 500; }
+
+  h1 { font-family: var(--disp); font-weight: 600; font-size: 23px; line-height: 1.25; margin: 0; letter-spacing: -0.2px; }
+
+  .status { display: flex; align-items: center; gap: 12px; margin: 16px 0 34px; font-size: 12px; }
+  .status .lab { font-family: var(--disp); font-weight: 600; font-size: 12px; letter-spacing: 0.4px; }
+  .status .lab.stall { color: var(--amber); }
+  .status .lab.run { color: var(--amber); }
+  .status .why { color: var(--dim); }
+  .status .why code { color: var(--red); }
+  .status .why.ok code { color: var(--amber); }
+  .status .age { margin-left: auto; color: var(--faint); }
+
+  /* fault — still the hero, but quiet */
+  .fault { border: 1px solid var(--hair); border-left: 2px solid var(--amber); border-radius: 0 10px 10px 0; background: var(--panel); padding: 22px 24px; margin-bottom: 40px; }
+  .fault h3 { font-family: var(--disp); font-weight: 600; font-size: 15px; margin: 0 0 12px; }
+  .fault h3 .code { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-left: 8px; font-weight: 400; }
+  .fault p { color: var(--dim); font-size: 13px; line-height: 1.65; margin: 0 0 20px; }
+  .fault p b { color: var(--ink); font-weight: 500; } .fault p code { color: var(--amber); }
+
+  .gap { font-size: 12px; margin-bottom: 22px; }
+  .gap .req { color: var(--red); }
+  .gap .glist { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .gap .grow { display: flex; gap: 12px; color: var(--faint); }
+  .gap .grow .n { color: var(--dim); min-width: 100px; }
+  .gap .grow .x { color: var(--red); margin-left: auto; }
+
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .act { font-family: var(--mono); font-size: 12px; cursor: pointer; border: 1px solid var(--hair); background: transparent; color: var(--ink); border-radius: 7px; padding: 8px 13px; }
+  .act:hover { border-color: var(--faint); }
+  .act.primary { background: var(--amber); color: var(--bg); border-color: var(--amber); font-weight: 500; }
+
+  .sec { font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--faint); font-weight: 600; margin: 0 0 16px; }
+
+  /* dag — plain row */
+  .dag { display: flex; align-items: center; gap: 10px; margin-bottom: 44px; flex-wrap: wrap; }
+  .node { font-size: 12px; }
+  .node .nn { font-family: var(--disp); font-weight: 500; color: var(--dim); }
+  .node .ns { font-size: 10px; color: var(--faint); }
+  .node.done .nn { color: var(--ink); }
+  .node.run .nn { color: var(--amber); } .node.run .ns { color: var(--amber); }
+  .node.block .nn { color: var(--amber); } .node.block .ns { color: var(--red); }
+  .node.queue { opacity: 0.45; }
+  .arrow { color: var(--faint); }
+
+  /* timeline — minimal */
+  .tl { display: flex; flex-direction: column; gap: 22px; margin-bottom: 44px; }
+  .ev { display: grid; grid-template-columns: 64px 1fr; gap: 18px; }
+  .ev .ts { font-size: 11px; color: var(--faint); text-align: right; padding-top: 1px; }
+  .ev .ag { font-family: var(--disp); font-weight: 600; font-size: 12px; }
+  .ev .ag .role { font-family: var(--mono); font-weight: 400; font-size: 11px; color: var(--faint); margin-left: 7px; }
+  .ev .ag.idle { color: var(--faint); }
+  .ev .ag:not(.idle) { color: var(--ink); }
+  .ev .wh { color: var(--dim); font-size: 12.5px; margin: 5px 0 0; }
+  .ev .wh b { color: var(--ink); font-weight: 500; } .ev .wh code { color: var(--amber); }
+  .ev .wh.mut { color: var(--faint); }
+  .ev .halt { color: var(--amber); margin-top: 6px; font-size: 12px; }
+  .ev .art { display: inline-block; margin-top: 8px; font-size: 11px; color: var(--dim); border: 1px solid var(--hair); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+  .ev .art:hover { border-color: var(--faint); }
+
+  /* facts grid — agents / deliverables / usage / config as plain rows */
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 36px 48px; border-top: 1px solid var(--hair); padding-top: 28px; }
+  .facts h4 { font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--faint); font-weight: 600; margin: 0 0 14px; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 12px; border-bottom: 1px solid var(--hair); }
+  .kv:last-child { border-bottom: 0; }
+  .kv .k { color: var(--dim); } .kv .v { color: var(--ink); } .kv .v.amber { color: var(--amber); } .kv .v.faint { color: var(--faint); }
+  .usage .big { font-family: var(--disp); font-weight: 600; font-size: 26px; }
+  .usage .u { font-size: 11px; color: var(--faint); }
+  .usage .warn { margin-top: 12px; font-size: 11px; color: var(--amber); line-height: 1.55; }
+  .usage .warn b { color: var(--ink); }
+  .empty { font-size: 11px; color: var(--faint); margin-top: 10px; }
+
+  [data-view="stalled"] .v-run { display: none; }
+  [data-view="running"] .v-stall { display: none; }
+</style>
+</head>
+<body data-view="stalled">
+
+<div class="app">
+
+  <header class="bar">
+    <div class="brand"><span class="g">◐</span> Solar Harness</div>
+    <div class="spacer"></div>
+    <div class="daygauge">opus-4 · <b>51.9M</b> / 130M tok · model-day</div>
+    <div class="seg">
+      <button data-set="stalled" aria-pressed="true">Stalled</button>
+      <button data-set="running" aria-pressed="false">Running</button>
+    </div>
+  </header>
+
+  <nav class="rail">
+    <div class="h"><h2>Sprints</h2><button class="newbtn">+ New</button></div>
+    <div class="sprints">
+      <div class="srow active">
+        <span class="dot d-stall">●</span>
+        <div class="b"><div class="id">kllmk</div><div class="t">Competitive teardown · 3 CRMs</div></div>
+        <span class="st v-stall">stalled</span><span class="st v-run">running</span>
+      </div>
+      <div class="srow"><span class="dot d-run">●</span><div class="b"><div class="id">qz3p1</div><div class="t">Migrate billing webhooks</div></div><span class="st">running</span></div>
+      <div class="srow"><span class="dot d-done">●</span><div class="b"><div class="id">m8x0a</div><div class="t">Q2 churn cohort analysis</div></div><span class="st">done</span></div>
+      <div class="srow"><span class="dot d-stall">●</span><div class="b"><div class="id">b71v2</div><div class="t">PDF invoice OCR pipeline</div></div><span class="st">stalled</span></div>
+      <div class="srow"><span class="dot d-fail">●</span><div class="b"><div class="id">tt40c</div><div class="t">Refactor auth middleware</div></div><span class="st">aborted</span></div>
+      <div class="srow"><span class="dot d-done">●</span><div class="b"><div class="id">9wkpz</div><div class="t">Landing page copy variants</div></div><span class="st">done</span></div>
+      <div class="srow"><span class="dot d-queue">○</span><div class="b"><div class="id">draft</div><div class="t">Onboarding email sequence</div></div><span class="st">queued</span></div>
+    </div>
+    <div class="f">7 sprints · 2 stalled · file-backed state</div>
+  </nav>
+
+  <main class="main">
+    <div class="wrap">
+
+      <div class="crumb">sprints / <b>kllmk</b></div>
+      <h1>Competitive teardown report of three rival solar-CRM dashboards</h1>
+
+      <div class="status v-stall">
+        <span class="lab stall">Stalled</span>
+        <span class="why">routing halted — <code>no_matching_worker</code> at node <b style="color:var(--ink)">build</b></span>
+        <span class="age">idle 4m</span>
+      </div>
+      <div class="status v-run">
+        <span class="lab run">Running</span>
+        <span class="why ok">builder active on <b style="color:var(--ink)">build</b> — <code>html.report</code></span>
+        <span class="age">2 of 5 nodes</span>
+      </div>
+
+      <!-- FAULT (stall) -->
+      <section class="fault v-stall">
+        <h3>Sprint stalled — no worker for a planned capability <span class="code">no_matching_worker</span></h3>
+        <p>The planner built a valid graph, but the <b>build</b> node was labeled with the capability <code>nonexistent-skill</code>. No registered worker advertises it, so the router couldn't dispatch. The sprint stopped at <b>planned</b> — <b>nothing downstream ran and no result was produced.</b> A routing gap, not a failed task.</p>
+        <div class="gap">
+          <div>node requires &nbsp;<span class="req">nonexistent-skill</span></div>
+          <div class="glist">
+            <div class="grow"><span class="n">builder.web</span><span>html.report · css · data.viz</span><span class="x">no match</span></div>
+            <div class="grow"><span class="n">builder.code</span><span>code.py · code.ts · refactor</span><span class="x">no match</span></div>
+            <div class="grow"><span class="n">research</span><span>web.search · summarize</span><span class="x">no match</span></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="act primary">Re-route to builder.web</button>
+          <button class="act">Edit plan label</button>
+          <button class="act">Register worker</button>
+          <button class="act">Abort</button>
+        </div>
+      </section>
+
+      <!-- RUNNING banner -->
+      <section class="fault v-run">
+        <h3>Builder is implementing the report <span class="code">dispatched · html.report</span></h3>
+        <p>Same plan — the <b>build</b> node was labeled <code>html.report</code>, which <b>builder.web</b> provides, so it dispatched cleanly. The builder is writing the comparison sections now; the evaluator is queued to gate the output. <b>No result is claimed yet</b> — the run is genuinely in progress.</p>
+      </section>
+
+      <!-- DAG -->
+      <h4 class="sec">Plan · task graph</h4>
+      <div class="dag v-stall">
+        <div class="node done"><div class="nn">spec</div><div class="ns">done</div></div><span class="arrow">→</span>
+        <div class="node done"><div class="nn">prd</div><div class="ns">done</div></div><span class="arrow">→</span>
+        <div class="node done"><div class="nn">plan</div><div class="ns">done</div></div><span class="arrow">→</span>
+        <div class="node block"><div class="nn">build</div><div class="ns">blocked · needs nonexistent-skill</div></div><span class="arrow">→</span>
+        <div class="node queue"><div class="nn">review</div><div class="ns">queued</div></div>
+      </div>
+      <div class="dag v-run">
+        <div class="node done"><div class="nn">spec</div><div class="ns">done</div></div><span class="arrow">→</span>
+        <div class="node done"><div class="nn">prd</div><div class="ns">done</div></div><span class="arrow">→</span>
+        <div class="node done"><div class="nn">plan</div><div class="ns">done</div></div><span class="arrow">→</span>
+        <div class="node run"><div class="nn">build</div><div class="ns">running · 3 of 8 sections</div></div><span class="arrow">→</span>
+        <div class="node queue"><div class="nn">review</div><div class="ns">queued</div></div>
+      </div>
+
+      <!-- PROCESS -->
+      <h4 class="sec">Process</h4>
+      <div class="tl v-stall">
+        <div class="ev"><div class="ts">14:26</div><div>
+          <div class="ag">PM <span class="role">产品经理 · intake</span></div>
+          <p class="wh">Scoped the request and wrote a PRD — 3 competitors, 8 dimensions, output = one HTML report.</p>
+          <span class="art">▤ prd-kllmk.html · 14 KB</span>
+        </div></div>
+        <div class="ev"><div class="ts">14:27</div><div>
+          <div class="ag">Planner <span class="role">规划者 · plan</span></div>
+          <p class="wh">Built the task graph; spec → prd → plan routed cleanly.</p>
+        </div></div>
+        <div class="ev"><div class="ts">14:28</div><div>
+          <div class="ag">Planner <span class="role">规划者 · route</span></div>
+          <p class="wh">Labeled node <b>build</b> with <code>nonexistent-skill</code> → router found <b style="color:var(--red)">0 matching workers</b>.</p>
+          <div class="halt">⏸ Routing halted. Parked at planned — awaiting operator decision.</div>
+        </div></div>
+        <div class="ev"><div class="ts">—</div><div>
+          <div class="ag idle">Builder <span class="role">主建设者 · idle</span></div>
+          <p class="wh mut">Never dispatched. No build attempted, no output generated.</p>
+        </div></div>
+        <div class="ev"><div class="ts">—</div><div>
+          <div class="ag idle">Evaluator <span class="role">审判官 · idle</span></div>
+          <p class="wh mut">Nothing to review. Gate has not run.</p>
+        </div></div>
+      </div>
+      <div class="tl v-run">
+        <div class="ev"><div class="ts">14:26</div><div>
+          <div class="ag">PM <span class="role">产品经理 · intake</span></div>
+          <p class="wh">Scoped the request and wrote a PRD — 3 competitors, 8 dimensions, HTML report.</p>
+          <span class="art">▤ prd-kllmk.html · 14 KB</span>
+        </div></div>
+        <div class="ev"><div class="ts">14:27</div><div>
+          <div class="ag">Planner <span class="role">规划者 · plan</span></div>
+          <p class="wh">Labeled <b>build</b> with <code>html.report</code> → matched <b>builder.web</b>, dispatched.</p>
+        </div></div>
+        <div class="ev"><div class="ts">14:30</div><div>
+          <div class="ag">Builder <span class="role">主建设者 · build</span></div>
+          <p class="wh">Generating the report — writing section <b>3 of 8</b> (pricing model).</p>
+        </div></div>
+        <div class="ev"><div class="ts">—</div><div>
+          <div class="ag idle">Evaluator <span class="role">审判官 · queued</span></div>
+          <p class="wh mut">Will gate the report on completion (completeness + citations).</p>
+        </div></div>
+      </div>
+
+      <!-- FACTS -->
+      <div class="facts">
+        <div>
+          <h4>Deliverables</h4>
+          <div class="v-stall">
+            <div class="kv"><span class="k">prd-kllmk.html</span><span class="v">PRD draft</span></div>
+            <p class="empty">No report produced — build never dispatched.</p>
+          </div>
+          <div class="v-run">
+            <div class="kv"><span class="k">prd-kllmk.html</span><span class="v">PRD draft</span></div>
+            <div class="kv"><span class="k">teardown-kllmk.html</span><span class="v faint">in progress · 3/8</span></div>
+          </div>
+        </div>
+        <div class="usage">
+          <h4>Token usage</h4>
+          <div class="big">51.9M <span class="u">/ 130M tok</span></div>
+          <p class="warn"><b>Per model, per day</b> (opus-4, 2026-06-17). Not attributable to this sprint or agent — the engine can't split it that way.</p>
+        </div>
+        <div>
+          <h4>Agents</h4>
+          <div class="kv"><span class="k">PM</span><span class="v faint">done</span></div>
+          <div class="kv"><span class="k">Planner</span><span class="v amber v-stall">halted</span><span class="v faint v-run">done</span></div>
+          <div class="kv"><span class="k">Builder</span><span class="v faint v-stall">idle</span><span class="v amber v-run">live</span></div>
+          <div class="kv"><span class="k">Evaluator</span><span class="v faint">idle</span></div>
+        </div>
+        <div>
+          <h4>Configuration</h4>
+          <div class="kv"><span class="k">Lead model</span><span class="v amber">claude-opus-4</span></div>
+          <div class="kv"><span class="k">Worker model</span><span class="v">claude-haiku-4.5</span></div>
+          <div class="kv"><span class="k">Routing</span><span class="v">capability-match</span></div>
+          <div class="kv"><span class="k">State</span><span class="v">file · ~/.solar</span></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<script>
+  const b = document.querySelectorAll('.seg button');
+  b.forEach(x => x.addEventListener('click', () => {
+    document.body.setAttribute('data-view', x.dataset.set);
+    b.forEach(y => y.setAttribute('aria-pressed', String(y === x)));
+  }));
+</script>
+</body>
+</html>

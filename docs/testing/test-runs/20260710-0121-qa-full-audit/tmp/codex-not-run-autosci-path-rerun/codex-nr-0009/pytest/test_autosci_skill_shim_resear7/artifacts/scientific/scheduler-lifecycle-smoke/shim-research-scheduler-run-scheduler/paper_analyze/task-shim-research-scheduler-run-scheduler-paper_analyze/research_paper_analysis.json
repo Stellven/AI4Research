@@ -1,0 +1,111 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/prepare_paper_source_native_stdout.json",
+      "type": "prepare_paper_source_native_stdout_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/prepare_paper_source_native_stderr.txt",
+      "type": "prepare_paper_source_native_stderr"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/prepare_paper_source_native_payload.json",
+      "type": "prepare_paper_source_native_payload_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/paper_analyze/task-shim-research-scheduler-run-scheduler-paper_analyze/research_paper_analysis.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allow_network_fetch": false,
+    "paper_id": "paper-shim-research-scheduler-run-scheduler",
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "smoke_mode": true
+  },
+  "limitations": [
+    "Solar AutoSci prepared the source without warnings."
+  ],
+  "node_id": "paper_analyze",
+  "outputs": {
+    "paper": {
+      "abstract": "This fixture paper exists only to test Solar-native adapter boundaries.",
+      "analysis": {
+        "evidence_ids": [
+          "paper-shim-research-scheduler-run-scheduler",
+          "plugins/autosci/tests/fixtures/sample_paper.md"
+        ],
+        "key_concepts": [
+          "paper source preparation",
+          "arXiv source recovery",
+          "Solar Evidence ABI"
+        ],
+        "summary": "Prepared and parsed AutoSci Adapter Fixture Paper through the Solar AutoSci paper preparation backend and emitted Solar Evidence ABI paper evidence."
+      },
+      "identifiers": {
+        "native_prepare_status": "completed",
+        "source_fetch_status": "not_applicable",
+        "source_prepare_status": "completed"
+      },
+      "paper_id": "paper-shim-research-scheduler-run-scheduler",
+      "parse_status": "parsed",
+      "preparation": {
+        "abstract_excerpt": "",
+        "artifacts": [],
+        "arxiv_id": "",
+        "canonical_ingest_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+        "extracted_text_path": null,
+        "ingest_format": "md",
+        "native_prepare_paper_source": {
+          "allow_network_fetch": false,
+          "canonical_ingest_path": "raw/input/sample_paper.md",
+          "ok": true,
+          "prepared_path": null,
+          "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_resear7/artifacts/autosci/workspace/raw",
+          "schema": "autosci_prepare_paper_source_cli.v1",
+          "source_path": "raw/input/sample_paper.md",
+          "status": "completed"
+        },
+        "original_format": "md",
+        "prepared_path": null,
+        "source_fetch_status": "not_applicable",
+        "source_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+        "status": "completed",
+        "title": "",
+        "warnings": []
+      },
+      "sections": [
+        {
+          "section_id": "abstract",
+          "source_anchor": "sample_paper.md#abstract",
+          "text": "This fixture paper exists only to test Solar-native adapter boundaries.",
+          "title": "Abstract"
+        },
+        {
+          "section_id": "method",
+          "source_anchor": "sample_paper.md#method",
+          "text": "The fixture method runs a deterministic bridge action and records the generated\nSolar Evidence ABI artifact.",
+          "title": "Method"
+        },
+        {
+          "section_id": "results",
+          "source_anchor": "sample_paper.md#results",
+          "text": "The fixture path should produce a `result.json` file and an `evidence.jsonl`\nledger entry without invoking a monolithic AutoSci workflow owner.",
+          "title": "Results"
+        }
+      ],
+      "source_ref": "plugins/autosci/tests/fixtures/sample_paper.md",
+      "source_type": "markdown",
+      "title": "AutoSci Adapter Fixture Paper"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T19:20:11Z"
+  },
+  "schema": "research_paper.v1",
+  "sprint_id": "shim-research-scheduler-run-scheduler",
+  "status": "completed",
+  "task_id": "task-shim-research-scheduler-run-scheduler-paper_analyze"
+}

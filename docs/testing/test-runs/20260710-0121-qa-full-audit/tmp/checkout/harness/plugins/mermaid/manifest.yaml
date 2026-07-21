@@ -1,0 +1,54 @@
+---
+# Solar Plugin Manifest — Mermaid Diagram Renderer
+id: mermaid
+name: "Mermaid Diagram Renderer"
+version: "1.0.0"
+description: "Renders Mermaid diagrams from markdown code blocks. Provides local HTTP preview server and SVG export. Used for architecture diagrams, sprint topology, and state machine visualization."
+status: enabled
+
+write_scope:
+  - "state/mermaid"
+  - "/tmp/solar-mermaid"
+
+read_scope:
+  - "~/Knowledge"
+  - "sprints"
+
+capabilities:
+  - "diagram.render"
+  - "diagram.export_svg"
+  - "diagram.preview"
+
+commands:
+  - "solar-harness mermaid"
+  - "solar-harness status"
+
+background_safety:
+  mode: service
+  idle_only: false
+  rate_limit: "local-only"
+  max_runtime_s: 30
+  max_memory_mb: 256
+
+eval_packs:
+  - "tests/external-integrations/test_endpoint_view.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable mermaid"
+
+integration_level: basic_usable
+
+entry: "mermaid-server.sh"
+
+events:
+  - "mermaid.render_complete"
+  - "mermaid.render_failed"
+
+depends_on: []
+
+tags:
+  - "diagrams"
+  - "visualization"
+  - "mermaid"

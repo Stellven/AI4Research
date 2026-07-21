@@ -1,0 +1,313 @@
+name: install-matrix
+
+on:
+  push:
+    branches:
+      - pkg/migration
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core-static:
+    name: core import resolution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check core import resolution
+        run: ./scripts/check-core-imports.sh
+
+  kernel-gen:
+    name: kernel-gen check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check kernel assemblies are clean
+        run: ./scripts/check-kernel-gen.sh
+
+      - name: Check daemon templates render clean
+        run: ./scripts/check-daemons-render.sh
+
+      - name: Check docs/COMPONENTS.md is in sync with the manifests
+        run: ./scripts/gen-components-doc.sh --check
+
+  ps1-lint:
+    name: install.ps1 lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+          # Exclusions appropriate for a user-facing installer bootstrapper:
+          # Write-Host is intentional CLI output; the internal state-changing
+          # helpers do not need ShouldProcess plumbing. All other Error/Warning
+          # rules stay active.
+          # PSReviewUnusedParameter is a false positive here: the params are
+          # consumed by script-scoped functions (closures), which PSSA does not
+          # track. The other two are installer idioms (CLI output; internal
+          # state-changing helpers).
+          $exclude = @('PSAvoidUsingWriteHost', 'PSUseShouldProcessForStateChangingFunctions', 'PSReviewUnusedParameter')
+          $issues = Invoke-ScriptAnalyzer -Path ./install.ps1 -Severity Error,Warning -ExcludeRule $exclude
+          $issues | Format-Table -AutoSize
+          foreach ($i in $issues) {
+            # Surface each issue as a public annotation (job logs are admin-only).
+            Write-Output "::error file=install.ps1,line=$($i.Line)::$($i.RuleName): $($i.Message)"
+          }
+          if ($issues.Count -gt 0) {
+            Write-Output "::error title=ps1 lint::PSScriptAnalyzer found $($issues.Count) issue(s)"
+            exit 1
+          }
+          Write-Output "install.ps1 lint clean"
+
+  ps1-pester:
+    name: install.ps1 Pester unit tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Unit-tests install.ps1's logic on real Windows (mocks wsl.exe / Get-RegisteredDistro), so
+      # the WSL2-bootstrap behavior is gated in CI, not just owner-Phase-F. Windows PowerShell 5.1
+      # matches the env install.ps1 actually runs in. Pester pinned to 5.x (6.x is alpha).
+      - name: Pester
+        shell: powershell
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0 -MaximumVersion 5.99 -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module Pester -MinimumVersion 5.0 -Force
+          $r = Invoke-Pester -Path ./tests/install.Tests.ps1 -Output Detailed -PassThru
+          if ($r.FailedCount -gt 0) {
+            Write-Output "::error title=install.ps1 pester::$($r.FailedCount) test(s) failed"
+            exit 1
+          }
+          Write-Output "install.ps1 Pester clean: $($r.PassedCount) passed"
+
+  mempalace-check:
+    name: mempalace deps-light check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: mempalace deps-light gate
+        shell: bash
+        run: |
+          status=0
+          ./scripts/mempalace-check.sh 2>&1 | tee "$RUNNER_TEMP/mempalace.log" || status=$?
+          if [ "$status" -ne 0 ]; then
+            # Job logs need admin rights on this fork; annotations are public.
+            tail -c 6000 "$RUNNER_TEMP/mempalace.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::error title=mempalace-check failure tail::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+            exit "$status"
+          fi
+          grep -E 'requirements resolve|missing-var gate|config.yaml render|doctor verdict|idempotent reinstall|mcp add|mcp remove|residue-free|mempalace-check passed' "$RUNNER_TEMP/mempalace.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::notice title=mempalace evidence::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+
+  privacy-gate:
+    name: privacy gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install gitleaks
+        run: |
+          mkdir -p "$RUNNER_TEMP/gl"
+          curl -fsSL -o "$RUNNER_TEMP/gl.tgz" https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz
+          tar xzf "$RUNNER_TEMP/gl.tgz" -C "$RUNNER_TEMP/gl" gitleaks
+          echo "$RUNNER_TEMP/gl" >> "$GITHUB_PATH"
+
+      - name: Privacy gate (secrets + personal-token scan + negative tests)
+        shell: bash
+        run: |
+          # Repo-wide PRIVACY gate. Architectural-name excision is gated
+          # separately and strictly in the INSTALLED tree by check-kernel-gen.sh;
+          # this job covers real secrets (gitleaks) + owner-identifying personal
+          # tokens (scripts/check-privacy.sh). See WORKLOG "privacy-gate scope".
+          status=0
+          {
+            set -e
+            echo "== gitleaks secret scan (repo-wide working tree)"
+            gitleaks detect --no-git --source . --config harness/gitleaks.toml --redact
+            echo "== personal-token negative self-test"
+            ./scripts/check-privacy.sh --self-test
+            echo "== personal-token live scan (tracked files)"
+            ./scripts/check-privacy.sh
+            echo "== negative test: a planted non-allowlisted secret must fail gitleaks"
+            mkdir -p "$RUNNER_TEMP/negtest"
+            python3 -c "print('LEAK=' + 'sk-ant-api03-' + 'A'*95)" > "$RUNNER_TEMP/negtest/planted.txt"
+            if gitleaks detect --no-git --source "$RUNNER_TEMP/negtest" --config harness/gitleaks.toml --redact; then
+              echo "FAIL: gitleaks did not flag a planted non-allowlisted secret"
+              exit 1
+            fi
+            echo "negative test ok: planted secret flagged (allowlist not over-broad)"
+            echo "privacy-gate passed"
+          } 2>&1 | tee "$RUNNER_TEMP/privacy.log" || status=$?
+          if [ "$status" -ne 0 ]; then
+            # Job logs need admin rights on this fork; annotations are public.
+            tail -c 6000 "$RUNNER_TEMP/privacy.log" | python3 -c 'import sys; d = sys.stdin.read(); print("::error title=privacy-gate failure tail::" + d.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+            exit "$status"
+          fi
+          grep -E 'gitleaks secret scan|negative self-test|live scan|negative test ok|privacy-gate passed' "$RUNNER_TEMP/privacy.log" | python3 -c 'import sys; d = sys.stdin.read(); print("::notice title=privacy-gate evidence::" + d.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+
+  shellcheck:
+    name: shellcheck installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install shellcheck 0.10.0
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/sc.tar.xz" https://github.com/koalaman/shellcheck/releases/download/v0.10.0/shellcheck-v0.10.0.linux.x86_64.tar.xz
+          tar xJf "$RUNNER_TEMP/sc.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/shellcheck-v0.10.0" >> "$GITHUB_PATH"
+
+      - name: shellcheck install.sh + get-solar.sh + lib/installer (warning severity)
+        run: shellcheck -S warning install.sh get-solar.sh lib/installer/*.sh
+
+  dry-run-check:
+    name: dry-run writes nothing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assert --dry-run writes zero files
+        run: ./scripts/check-dry-run.sh
+
+  installer-contract:
+    name: installer contract + wizard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Deterministic installer contract checks
+        run: ./scripts/check-installer-contract.sh
+
+      - name: PTY wizard smoke
+        run: ./scripts/smoke-installer-wizard-pty.py
+
+  docs-links:
+    name: docs link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install lychee
+        run: |
+          mkdir -p "$RUNNER_TEMP/ly"
+          curl -fsSL -o "$RUNNER_TEMP/ly.tgz" https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-musl.tar.gz
+          tar xzf "$RUNNER_TEMP/ly.tgz" -C "$RUNNER_TEMP/ly"
+          echo "$RUNNER_TEMP/ly/lychee-x86_64-unknown-linux-musl" >> "$GITHUB_PATH"
+
+      - name: Check canonical docs links
+        run: |
+          # Canonical/shipped docs only. The docs/ design-report corpus is a
+          # dev artifact (not shipped) and is intentionally not link-gated.
+          # WS8 extends this list with INSTALL.md / docs/COMPONENTS.md /
+          # docs/UNINSTALL.md as those canonical docs are created.
+          lychee --no-progress --max-retries 3 --timeout 20 --accept '200,206,429' \
+            README.md AGENTS.md INSTALL.md USER-GUIDE.md \
+            docs/COMPONENTS.md docs/UNINSTALL.md docs/WINDOWS.md \
+            docs/UPSTREAM-EXPORT-REQUEST.md
+
+  installed-clean:
+    name: installed-payload personal-clean
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Scan the shipped payload for personal tokens
+        run: |
+          ./scripts/check-installed-clean.sh --self-test
+          ./scripts/check-installed-clean.sh
+
+      - name: Negative test — a planted personal token must fail the gate
+        run: |
+          # Construct the token at runtime so this CI config carries no literal
+          # personal token (keeps the public tree / release-cut scan clean).
+          tok="siha"; tok="${tok}oli"
+          printf '\n# planted %s\n' "$tok" >> core/notify/ntfy.ts
+          if ./scripts/check-installed-clean.sh >/dev/null 2>&1; then
+            git checkout -- core/notify/ntfy.ts
+            echo "::error title=installed-clean negative test::gate missed a planted personal token"
+            exit 1
+          fi
+          git checkout -- core/notify/ntfy.ts
+          echo "negative test ok: planted personal token correctly caught"
+
+  daemons-lifecycle:
+    name: daemons render + lifecycle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Daemon render + placement + removal (not start)
+        run: ./scripts/check-daemons-lifecycle.sh
+
+  install:
+    name: ${{ matrix.os }} / ${{ matrix.profile }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        profile:
+          - minimal
+          - full-non-rust
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        if: matrix.profile == 'full-non-rust'
+        with:
+          bun-version: latest
+
+      - name: Pin bash to /bin/bash on macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/system-bash"
+          ln -sf /bin/bash "$RUNNER_TEMP/system-bash/bash"
+          echo "$RUNNER_TEMP/system-bash" >> "$GITHUB_PATH"
+
+      - name: Assert macOS leg runs system bash 3.2
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          echo "bash resolves to: $(command -v bash)"
+          echo "BASH_VERSION=$BASH_VERSION"
+          case "$BASH_VERSION" in
+            3.2.*) echo "confirmed macOS system bash 3.2" ;;
+            *)
+              echo "expected /bin/bash 3.2 on the macOS leg, got: $BASH_VERSION" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Install and uninstall smoke
+        shell: bash
+        run: |
+          status=0
+          ./scripts/smoke-install-matrix.sh "${{ matrix.profile }}" 2>&1 | tee "$RUNNER_TEMP/smoke.log" || status=$?
+          if [ "$status" -ne 0 ]; then
+            # Surface the failure tail as a check-run annotation: job logs
+            # need admin rights on this fork, annotations are public.
+            tail -c 6000 "$RUNNER_TEMP/smoke.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::error title=smoke failure tail::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+            exit "$status"
+          fi
+          # Positive evidence: emit the gate lines as a public notice
+          # annotation so success is verifiable without log access.
+          grep -E 'smoke profile passed|db schema assertions passed|config.env rendered|settings hook registration|daemon socket gate|dashboard http gate|solar update round-trip|install complete' "$RUNNER_TEMP/smoke.log" | python3 -c 'import sys; data = sys.stdin.read(); print("::notice title=smoke evidence::" + data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'

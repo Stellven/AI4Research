@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "gem_name": "李教授提示词大师",
+  "rewritten_prompt": "rewrite",
+  "analysis_markdown": "## Analysis",
+  "citations": [
+    {
+      "title": "A",
+      "url": "https://a.test"
+    }
+  ]
+}

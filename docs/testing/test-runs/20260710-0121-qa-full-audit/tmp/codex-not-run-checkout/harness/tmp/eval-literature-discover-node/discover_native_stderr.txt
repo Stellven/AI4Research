@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/tools/discover.py", line 1295, in <module>
+    main()
+    ~~~~^^
+  File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/tools/discover.py", line 1255, in main
+    payload = build_shortlist(
+        mode="wiki",
+    ...<4 lines>...
+        citation_limit=args.citation_limit,
+    )
+  File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/tools/discover.py", line 1008, in build_shortlist
+    raise ValueError("from-wiki found no anchorable papers under wiki/papers/")
+ValueError: from-wiki found no anchorable papers under wiki/papers/

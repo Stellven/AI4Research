@@ -1,0 +1,10 @@
+contract,status,exit_code,assertions_passed,assertions_failed,evidence_note
+graph_scheduler,PASS,0,55,0,"Validated compile/schema/topology/cycle/readiness/batches/assignment/enrichment/enqueue/mark/failure propagation/CLI routing in a temporary graph workspace."
+graph_node_dispatcher,BLOCKED_EXPECTED,1,37,0,"Drain, dispatch, dry-run, evaluator dispatch and first node verdict assertions passed; the legacy script then stopped because the runtime correctly blocked a self-graded evaluator without an independent report."
+knowledge_ingest_dispatcher,PASS,0,11,0,"Validated temporary registry status, migration idempotence, submit-event audit/idempotence, raw/vault discovery, process-queue and table/watermark creation."
+knowledge_ingest_health,PASS,0,4,0,"Validated temporary health audit, circuit pause, pause artifact and red health state."
+knowledge_qmd_watermarks,FAIL,2,0,1,"Tracked test still passes --layer extracted, while the locked CLI accepts only raw/vault/semantic; stale test/protocol drift."
+installer_contract,PASS,0,1,0,"Passed with isolated HOME and deps-light mode."
+autosci_install_closure,PASS,0,1,0,"Passed with isolated HOME and deps-light mode."
+smoke_minimal,PASS,0,1,0,"Passed isolated install/doctor/repair/uninstall lifecycle with deps-light mode."
+update_contract,PASS,0,3,0,"Offline update forward, no-op, migration and version receipt checks passed."

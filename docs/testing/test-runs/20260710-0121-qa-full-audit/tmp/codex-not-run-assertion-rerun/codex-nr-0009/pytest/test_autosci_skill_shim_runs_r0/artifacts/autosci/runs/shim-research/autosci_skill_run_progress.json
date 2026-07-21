@@ -1,0 +1,238 @@
+{
+  "action_count": 16,
+  "actions": [
+    {
+      "action": "ingest_paper",
+      "evidence_ids": [
+        "failed:ingest_paper"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/ingest_paper.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "analyze_paper",
+      "evidence_ids": [
+        "failed:analyze_paper"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/analyze_paper.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "update_memory",
+      "evidence_ids": [
+        "failed:update_memory"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/update_memory.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "update_graph",
+      "evidence_ids": [
+        "failed:update_graph"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/update_graph.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "discover_literature",
+      "evidence_ids": [
+        "failed:discover_literature"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/discover_literature.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "extract_claims",
+      "evidence_ids": [
+        "failed:extract_claims"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/extract_claims.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "extract_methods",
+      "evidence_ids": [
+        "failed:extract_methods"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/extract_methods.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "map_code_evidence",
+      "evidence_ids": [
+        "failed:map_code_evidence"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/map_code_evidence.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "generate_ideas",
+      "evidence_ids": [
+        "failed:generate_ideas"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/generate_ideas.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "evaluate_ideas",
+      "evidence_ids": [
+        "failed:evaluate_ideas"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/evaluate_ideas.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "design_experiment",
+      "evidence_ids": [
+        "failed:design_experiment"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/design_experiment.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "run_experiment",
+      "evidence_ids": [
+        "failed:run_experiment"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/run_experiment.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "monitor_experiment",
+      "evidence_ids": [
+        "failed:monitor_experiment"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/monitor_experiment.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "verify_claim",
+      "evidence_ids": [
+        "failed:verify_claim"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/verify_claim.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "write_report",
+      "evidence_ids": [
+        "failed:write_report"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/write_report.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    },
+    {
+      "action": "evolve_workflow",
+      "evidence_ids": [
+        "failed:evolve_workflow"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r0/artifacts/autosci/runs/shim-research/envelopes/evolve_workflow.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    }
+  ],
+  "completed_count": 16,
+  "current_action": "",
+  "remaining_actions": [],
+  "run_id": "shim-research",
+  "schema": "autosci_skill_run_progress.v1",
+  "skill": "research",
+  "status": "failed",
+  "updated_at": "2026-07-10T19:15:34Z",
+  "work_dir": "artifacts/autosci/runs/shim-research"
+}

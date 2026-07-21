@@ -1,0 +1,39 @@
+{
+  "schema": "experiment_plan.v1",
+  "task_id": "task.phase1.sample.experiment_plan",
+  "sprint_id": "sprint.autosci.phase1",
+  "node_id": "node.experiment_design",
+  "status": "completed",
+  "inputs": {
+    "idea_id": "idea.sample.001"
+  },
+  "outputs": {
+    "experiment_plan": {
+      "experiment_id": "experiment.sample.001",
+      "objective": "Compare evidence coverage with and without code mapping.",
+      "hypothesis": "Source-plus-code mapping increases covered claims.",
+      "variables": [
+        "evidence_mode"
+      ],
+      "metrics": [],
+      "procedure": [],
+      "approval_required": false,
+      "expected_artifacts": [
+        "coverage.json",
+        "comparison.md"
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "type": "experiment_plan",
+      "path": "artifacts/autosci/fixtures/experiment_plan.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificExperimentDesigner",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": []
+}

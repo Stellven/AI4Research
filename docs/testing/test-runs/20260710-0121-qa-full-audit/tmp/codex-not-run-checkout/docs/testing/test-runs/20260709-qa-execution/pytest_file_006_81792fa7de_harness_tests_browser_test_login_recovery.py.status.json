@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_006_81792fa7de_harness_tests_browser_test_login_recovery.py",
+  "source": "harness/tests/browser/test_login_recovery.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/browser/test_login_recovery.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.194,
+  "timeout": false
+}

@@ -1,0 +1,1 @@
+{"schema": "autosci_remote_cli.v1", "command": "launch", "status": "inconclusive", "ok": false, "run_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_st0/session-run", "result_collected": false, "runtime_evidence_path": ""}

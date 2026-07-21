@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-07-10T14:04:15Z",
+  "proofs": [
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci `paper-plan` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-paper-plan-citation-review/scientific_report.plan.json",
+        "review-paper-plan"
+      ],
+      "native_skill": "paper-plan",
+      "production_ready": true,
+      "proof_id": "runtime:paper-plan:review-paper-plan:20260710T140415Z",
+      "provenance": {
+        "artifact_kind": "artifact_review",
+        "captured_at": "2026-07-10T14:04:15Z",
+        "command": "review_llm_evidence:review-paper-plan",
+        "source": "review-paper-plan"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

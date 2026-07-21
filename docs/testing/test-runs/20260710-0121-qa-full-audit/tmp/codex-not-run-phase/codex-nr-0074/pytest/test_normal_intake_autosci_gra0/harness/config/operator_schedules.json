@@ -1,0 +1,62 @@
+{
+  "schema_version": "solar.operator_schedules.v1",
+  "generated_at": "2026-05-30T23:55:19Z",
+  "bindings": {
+    "x_social": {
+      "line": "x_social",
+      "primary": "scripts/ai_influence_daily.py",
+      "source_schedule": "daily",
+      "type": "cron",
+      "cron": "0 8 * * *"
+    },
+    "hf_papers": {
+      "line": "hf_papers",
+      "primary": "scripts/tech_hotspot_radar.py",
+      "source_schedule": "weekly",
+      "type": "cron",
+      "cron": "0 9 * * 1"
+    },
+    "github": {
+      "line": "github",
+      "primary": "scripts/tech_hotspot_radar.py",
+      "source_schedule": "daily",
+      "type": "cron",
+      "cron": "0 8/6 * * *"
+    },
+    "gemini_research": {
+      "line": "gemini_research",
+      "primary": "tools/gemini_deep_research_operator.py",
+      "source_schedule": "on_demand",
+      "type": "manual",
+      "cron": null
+    },
+    "chatgpt_thinking_high": {
+      "line": "chatgpt_thinking_high",
+      "primary": "tools/chatgpt_browser_agent_task_operator.py",
+      "source_schedule": "on_demand",
+      "type": "manual",
+      "cron": null
+    },
+    "chatgpt_report_chapter_writer": {
+      "line": "chatgpt_report_chapter_writer",
+      "primary": "tools/chatgpt_report_operator.py",
+      "source_schedule": "on_demand",
+      "type": "manual",
+      "cron": null
+    },
+    "technology_diagram": {
+      "line": "technology_diagram",
+      "primary": "tools/technology_diagram_painter_operator.py",
+      "source_schedule": "on_demand",
+      "type": "manual",
+      "cron": null
+    },
+    "youtube": {
+      "line": "youtube",
+      "primary": "scripts/youtube_influence_digest.py",
+      "source_schedule": "daily",
+      "type": "cron",
+      "cron": "30 9 * * *"
+    }
+  }
+}

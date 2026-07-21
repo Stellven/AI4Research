@@ -1,0 +1,19 @@
+{
+  "operator_id": "test-command-builder",
+  "runtime_state": "cooldown",
+  "state": "idle",
+  "heartbeat_at": "2026-07-10T19:01:06Z",
+  "resolved_persona": "builder",
+  "model_route": {
+    "requested_model": "local-command",
+    "routing_model": "local-command",
+    "effective_provider": "command",
+    "effective_model": "local-command"
+  },
+  "requested_model": "local-command",
+  "routing_model": "local-command",
+  "effective_provider": "command",
+  "effective_model": "local-command",
+  "expires_at": "2026-07-10T20:01:06Z",
+  "updated_at": "2026-07-10T19:01:06Z"
+}

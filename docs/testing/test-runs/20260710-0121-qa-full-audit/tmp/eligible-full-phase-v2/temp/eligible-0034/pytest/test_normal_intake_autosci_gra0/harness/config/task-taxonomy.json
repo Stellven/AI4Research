@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-05-30T00:00:00Z",
+  "description": "APO task classification taxonomy. Defines task_classes, signal patterns, and workflow stage mappings used by the goal-driven APO classifier.",
+  "task_classes": {
+    "PERFORMANCE_REGRESSION": {
+      "id": "PERFORMANCE_REGRESSION",
+      "description": "A previously-passing performance metric has degraded. Root cause is unknown and must be traced.",
+      "primary_signals": ["regression", "slower", "degraded", "latency", "throughput", "ttft", "p50", "p99", "baseline"],
+      "secondary_signals": ["benchmark", "performance", "memory", "mlx", "flashmlx"],
+      "negative_signals": ["frontend", "ui", "visual", "css"],
+      "min_signal_score": 2,
+      "default_workflow": "performance_debug_workflow",
+      "preferred_capsule_tags": ["performance", "debug", "benchmark"]
+    },
+    "PERFORMANCE_KERNEL_DEBUG": {
+      "id": "PERFORMANCE_KERNEL_DEBUG",
+      "description": "Low-level kernel or hardware-accelerated path (e.g. MLX gather_qmm, CUDA kernel) shows unexpected throughput or memory behavior.",
+      "primary_signals": ["gather_qmm", "kernel", "cuda", "metal", "gpu", "npu", "flashmlx", "mlx", "attention", "fused"],
+      "secondary_signals": ["throughput", "memory", "benchmark", "profile", "trace"],
+      "negative_signals": ["frontend", "ui", "api", "rest"],
+      "min_signal_score": 2,
+      "default_workflow": "performance_debug_workflow",
+      "preferred_capsule_tags": ["performance", "debug", "ai_infra", "mlx"]
+    },
+    "SOFT_HW_OPT": {
+      "id": "SOFT_HW_OPT",
+      "description": "Software-hardware co-optimization: tuning batch sizes, precision, quantization, scheduling, or memory layout to better utilize hardware.",
+      "primary_signals": ["quantization", "batch", "precision", "fp16", "int8", "bfloat16", "tiling", "layout", "paged_attention"],
+      "secondary_signals": ["optimize", "throughput", "memory", "mlx", "gpu", "npu"],
+      "negative_signals": ["regression", "bug", "crash", "error"],
+      "min_signal_score": 2,
+      "default_workflow": "design_and_optimize_workflow",
+      "preferred_capsule_tags": ["performance", "ai_infra"]
+    },
+    "CODE_IMPL_REQUIRED": {
+      "id": "CODE_IMPL_REQUIRED",
+      "description": "A new feature, module, or API must be implemented from spec or requirements.",
+      "primary_signals": ["implement", "feature", "add", "create", "write", "build", "develop"],
+      "secondary_signals": ["spec", "requirement", "prd", "api", "module", "function"],
+      "negative_signals": ["benchmark", "profile", "regression"],
+      "min_signal_score": 2,
+      "default_workflow": "implementation_workflow",
+      "preferred_capsule_tags": ["implementation", "builder"]
+    },
+    "FAST_PROTOTYPE": {
+      "id": "FAST_PROTOTYPE",
+      "description": "Quick proof-of-concept or prototype to validate feasibility. Speed over quality; may not be production-ready.",
+      "primary_signals": ["prototype", "poc", "proof-of-concept", "quick", "draft", "spike"],
+      "secondary_signals": ["try", "explore", "experiment", "validate"],
+      "negative_signals": ["production", "deploy", "release", "stable"],
+      "min_signal_score": 1,
+      "default_workflow": "prototype_workflow",
+      "preferred_capsule_tags": ["builder", "implementation"]
+    }
+  },
+  "signal_weights": {
+    "primary": 2,
+    "secondary": 1,
+    "negative": -3
+  },
+  "confidence_thresholds": {
+    "high": 6,
+    "medium": 3,
+    "low": 1
+  }
+}

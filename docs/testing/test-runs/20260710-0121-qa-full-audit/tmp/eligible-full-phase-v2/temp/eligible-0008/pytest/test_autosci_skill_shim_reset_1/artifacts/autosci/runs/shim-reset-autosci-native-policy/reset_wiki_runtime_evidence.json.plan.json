@@ -1,0 +1,14 @@
+{
+  "actions": [],
+  "delete_files": [
+    "wiki/papers/old.md",
+    "wiki/log.md",
+    "wiki/graph/context_brief.md"
+  ],
+  "project_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_reset_1/reset-native-project",
+  "reset_files": [],
+  "scopes": [
+    "wiki"
+  ],
+  "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_reset_1/reset-native-project/wiki"
+}

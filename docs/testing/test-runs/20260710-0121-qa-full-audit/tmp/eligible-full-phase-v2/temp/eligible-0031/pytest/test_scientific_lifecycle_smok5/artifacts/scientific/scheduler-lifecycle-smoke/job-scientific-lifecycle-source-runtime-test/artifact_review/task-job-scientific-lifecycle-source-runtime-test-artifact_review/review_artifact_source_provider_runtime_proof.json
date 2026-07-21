@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-07-10T14:05:58Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed target artifact source evidence for AutoSci `review` parity.",
+      "evidence_refs": [
+        "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/artifact_review/task-job-scientific-lifecycle-source-runtime-test-artifact_review/artifact_review.json",
+        "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/scientific_report.json",
+        "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/artifact_review/task-job-scientific-lifecycle-source-runtime-test-artifact_review/artifact_review.md",
+        "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/artifact_review/task-job-scientific-lifecycle-source-runtime-test-artifact_review/review_final_acceptance_boundary.json"
+      ],
+      "native_skill": "review",
+      "production_ready": true,
+      "proof_id": "runtime:review:target-artifact:20260710T140558Z",
+      "provenance": {
+        "artifact_kind": "review_target",
+        "captured_at": "2026-07-10T14:05:58Z",
+        "command": "review_artifact:target_source",
+        "source": "review_target_artifact"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-07-10T05:54:05Z",
+  "distributed": false,
+  "job_id": "shim-research-human-gate-scheduler",
+  "lease_id": "46d099b6c22a104c6d270a77ea8391ae4349e4e8",
+  "limitations": [
+    "This is a local smoke-run lease record, not a distributed scheduler lease."
+  ],
+  "owner": "harness.tools.run_scientific_lifecycle_smoke",
+  "production_ready": false,
+  "required_nodes": [
+    "literature_discover"
+  ],
+  "schema": "autosci_scheduler_lease.v1",
+  "scope": "local_smoke_runner"
+}

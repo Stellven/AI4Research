@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_269_9fdbb1fc3c_harness_tests_test-status-server-thunderomlx.py",
+  "source": "harness/tests/test-status-server-thunderomlx.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-status-server-thunderomlx.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.196,
+  "timeout": false
+}

@@ -1,0 +1,70 @@
+tracks:
+  - name: "Agent Runtime / MCP"
+    keywords: ["mcp", "model context protocol", "agent runtime", "copilot runtime", "agent host"]
+    github_topics: ["mcp", "model-context-protocol", "agent-runtime", "agent"]
+    languages: ["typescript", "python", "go", "rust"]
+    internal_capabilities: ["agent-orchestrator", "mcp-builder"]
+    alert_threshold: 1.5
+
+  - name: "Coding Agent / DevTools"
+    keywords: ["swe-bench", "coding agent", "code assistant", "aider", "autodev", "openhands", "devin"]
+    github_topics: ["coding-agent", "developer-tools", "swe-agent", "code-generation"]
+    languages: ["python", "typescript", "rust"]
+    internal_capabilities: ["clawdwork", "skill-creator"]
+    alert_threshold: 2.0
+
+  - name: "Context Engineering"
+    keywords: ["context window", "needle in a haystack", "rag", "long context", "prompt compression", "context caching"]
+    github_topics: ["context-engineering", "rag", "prompt-engineering", "long-context"]
+    languages: ["python", "typescript"]
+    internal_capabilities: ["solar-knowledge-ingest"]
+    alert_threshold: 1.8
+
+  - name: "Vector Database / Retrieval Infra"
+    keywords: ["vector database", "pgvector", "milvus", "qdrant", "chroma", "hnsw", "ann"]
+    github_topics: ["vector-database", "vector-search", "ann-search", "retrieval"]
+    languages: ["cpp", "rust", "go", "python"]
+    internal_capabilities: ["solar-knowledge-ingest"]
+    alert_threshold: 1.5
+
+  - name: "Inference / vLLM / Triton / MLX"
+    keywords: ["vllm", "triton", "mlx", "tensorrt", "llama.cpp", "gguf", "inference engine", "quantization"]
+    github_topics: ["inference", "vllm", "triton", "mlx", "quantization"]
+    languages: ["cpp", "python", "cuda", "swift"]
+    internal_capabilities: ["mlx-source", "llama.cpp"]
+    alert_threshold: 2.2
+
+  - name: "SIMD / Kernel Optimization"
+    keywords: ["simd", "neon", "avx512", "flashattention", "metal kernel", "cuda kernel", "cutlass"]
+    github_topics: ["simd", "kernel-optimization", "cuda", "metal"]
+    languages: ["cuda", "cpp", "metal", "rust"]
+    internal_capabilities: ["mlx-source"]
+    alert_threshold: 2.5
+
+  - name: "Hardware-Software Co-design"
+    keywords: ["npu", "tpu", "edge ai", "onnx runtime", "coreml", "tinygrad", "hardware acceleration"]
+    github_topics: ["hardware-acceleration", "edge-ai", "npu", "tpu"]
+    languages: ["cpp", "python", "rust"]
+    internal_capabilities: ["mlx-source"]
+    alert_threshold: 2.0
+
+  - name: "Multimodal Tooling"
+    keywords: ["vision language model", "vlm", "speech-to-text", "whisper", "tts", "image generation", "stable diffusion"]
+    github_topics: ["multimodal", "vlm", "speech-to-text", "whisper", "tts"]
+    languages: ["python", "cpp", "typescript"]
+    internal_capabilities: ["mlx-whisper"]
+    alert_threshold: 1.8
+
+  - name: "Robotics / Physical AI"
+    keywords: ["physical ai", "robotics", "mujoco", "ros2", "spatial ai", "dexterous manipulation"]
+    github_topics: ["robotics", "physical-ai", "ros2", "simulation"]
+    languages: ["cpp", "python"]
+    internal_capabilities: ["robotics"]
+    alert_threshold: 1.5
+
+  - name: "AI Safety / Evals"
+    keywords: ["jailbreak", "red teaming", "alignment", "evals", "prompt injection", "guardrails"]
+    github_topics: ["ai-safety", "alignment", "llm-evals", "guardrails"]
+    languages: ["python", "typescript"]
+    internal_capabilities: ["rules-catalog"]
+    alert_threshold: 1.2

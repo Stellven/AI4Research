@@ -1,0 +1,19 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "test-sprint-001",
+  "graph_ref": "test-sprint-001.task_graph.json",
+  "node_results": {},
+  "gate_results": {},
+  "leases": {},
+  "dispatch_ids": {},
+  "events": [
+    {
+      "ts": "2026-07-10T14:06:36Z",
+      "event": "state_initialized",
+      "by": "task_graph_state_io",
+      "note": "Empty state skeleton created."
+    }
+  ],
+  "updated_at": "2026-07-10T14:06:36Z",
+  "event_cursor": 0
+}

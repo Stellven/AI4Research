@@ -1,0 +1,35 @@
+---
+skill: retro
+namespace: builtin
+status: stable
+min_score: 0.75
+version: "1.0"
+created_at: "2026-05-09T00:00:00Z"
+
+cases:
+  - id: retro-01
+    description: "Extracts root causes, not symptoms"
+    input: "eval.md: FAIL — handoff missing evidence for D3"
+    expect:
+      - root_cause_identified: true
+      - not_just_symptom: true
+    weight: 0.4
+
+  - id: retro-02
+    description: "Writes at least one cortex entry"
+    input: "sprint with 2 FAIL items"
+    expect:
+      - cortex_entries_written: true
+      - count_gte: 1
+    weight: 0.35
+
+  - id: retro-03
+    description: "Updates STATE.md"
+    input: "any sprint retro"
+    expect:
+      - state_md_updated: true
+    weight: 0.25
+
+scoring:
+  method: weighted_sum
+  pass_threshold: 0.75

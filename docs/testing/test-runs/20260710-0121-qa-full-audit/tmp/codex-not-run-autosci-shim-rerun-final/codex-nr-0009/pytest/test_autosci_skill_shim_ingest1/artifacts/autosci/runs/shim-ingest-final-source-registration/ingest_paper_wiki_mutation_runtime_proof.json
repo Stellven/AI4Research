@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-07-10T19:23:42Z",
+  "proofs": [
+    {
+      "categories": [
+        "wiki_mutation_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed wiki registration evidence for AutoSci `ingest` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ingest-final-source-registration/research_paper.json",
+        "artifacts/autosci/runs/shim-ingest-final-source-registration/ingest_final_source_registration_boundary.json",
+        "artifacts/autosci/runs/shim-ingest-final-source-registration/research_memory_update.json",
+        "artifacts/autosci/runs/shim-ingest-final-source-registration/research_graph_update.json",
+        "custom-wiki/papers/paper-registered-source.md",
+        "custom-wiki/log.md",
+        "custom-wiki/graph/edges.jsonl",
+        "custom-wiki/index.md",
+        "custom-wiki/graph/context_brief.md"
+      ],
+      "native_skill": "ingest",
+      "production_ready": true,
+      "proof_id": "runtime:ingest:wiki-registration:20260710T192342Z",
+      "provenance": {
+        "artifact_kind": "ingest_wiki_registration_boundary",
+        "captured_at": "2026-07-10T19:23:42Z",
+        "command": "ingest_paper:wiki_registration_boundary",
+        "paper_id": "paper-registered-source",
+        "source": "ingest_wiki_registration"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

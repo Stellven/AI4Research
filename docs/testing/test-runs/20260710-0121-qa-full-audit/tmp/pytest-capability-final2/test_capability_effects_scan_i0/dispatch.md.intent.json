@@ -1,0 +1,37 @@
+{
+  "capabilities": [
+    {
+      "provider": "qa-provider",
+      "capabilities": [
+        "document.convert"
+      ]
+    }
+  ],
+  "effect": {
+    "status": "eval_passed_with_worker_evidence",
+    "worker_used": true,
+    "eval_passed": true,
+    "verdict": "pass",
+    "used_providers": [
+      "qa-provider"
+    ],
+    "evidence": [
+      {
+        "provider": "qa-provider",
+        "capabilities": [
+          "document.convert"
+        ],
+        "matched_terms": [
+          "document.convert",
+          "qa-provider"
+        ]
+      }
+    ],
+    "evidence_files": {
+      "handoff": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-capability-final2/test_capability_effects_scan_i0/handoff.md",
+      "eval": "",
+      "eval_json": ""
+    },
+    "boundary": "Observable handoff/eval evidence only; does not inspect private model reasoning."
+  }
+}

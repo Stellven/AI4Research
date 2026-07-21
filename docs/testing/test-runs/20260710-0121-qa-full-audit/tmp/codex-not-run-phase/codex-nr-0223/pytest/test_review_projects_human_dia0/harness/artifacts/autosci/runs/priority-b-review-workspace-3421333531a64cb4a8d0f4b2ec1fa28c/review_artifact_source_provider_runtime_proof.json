@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-07-10T18:52:34Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed target artifact source evidence for AutoSci `review` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/priority-b-review-workspace-3421333531a64cb4a8d0f4b2ec1fa28c/artifact_review.json",
+        "artifacts/autosci/workspace/wiki/outputs/priority-b-review.md",
+        "artifacts/autosci/runs/priority-b-review-workspace-3421333531a64cb4a8d0f4b2ec1fa28c/artifact_review.md",
+        "artifacts/autosci/runs/priority-b-review-workspace-3421333531a64cb4a8d0f4b2ec1fa28c/review_final_acceptance_boundary.json"
+      ],
+      "native_skill": "review",
+      "production_ready": true,
+      "proof_id": "runtime:review:target-artifact:20260710T185234Z",
+      "provenance": {
+        "artifact_kind": "review_target",
+        "captured_at": "2026-07-10T18:52:34Z",
+        "command": "review_artifact:target_source",
+        "source": "review_target_artifact"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

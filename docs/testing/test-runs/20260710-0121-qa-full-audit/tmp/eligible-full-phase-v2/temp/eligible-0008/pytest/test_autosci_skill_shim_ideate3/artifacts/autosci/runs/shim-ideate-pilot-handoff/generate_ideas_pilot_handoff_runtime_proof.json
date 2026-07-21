@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-07-10T14:04:45Z",
+  "proofs": [
+    {
+      "categories": [
+        "pilot_handoff_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed pilot handoff evidence for AutoSci `ideate` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ideate-pilot-handoff/idea_candidate.json",
+        "artifacts/autosci/runs/shim-ideate-pilot-handoff/ideate_pilot_handoff_boundary.json",
+        "ideate-pilot-handoff.json"
+      ],
+      "native_skill": "ideate",
+      "production_ready": true,
+      "proof_id": "runtime:ideate:pilot_handoff:20260710T140445Z",
+      "provenance": {
+        "artifact_kind": "ideate_pilot_handoff",
+        "captured_at": "2026-07-10T14:04:45Z",
+        "command": "generate_ideas:pilot_handoff_evidence",
+        "evidence_ids": [
+          "pilot-handoff:ideate"
+        ],
+        "source": "pilot_handoff"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -1,0 +1,3 @@
+=== test-multi-task-pane-state-writer.sh ===
+
+--- T1: dry-run produces valid JSON ---

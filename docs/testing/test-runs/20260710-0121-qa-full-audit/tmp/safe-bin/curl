@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+for arg in "$@"; do
+  case "$arg" in
+    http://127.0.0.1:*|http://localhost:*|https://127.0.0.1:*|https://localhost:*)
+      exec /usr/bin/curl "$@"
+      ;;
+  esac
+done
+printf 'QA_AUDIT_BLOCKED_COMMAND: curl is limited to loopback URLs\n' >&2
+exit 77

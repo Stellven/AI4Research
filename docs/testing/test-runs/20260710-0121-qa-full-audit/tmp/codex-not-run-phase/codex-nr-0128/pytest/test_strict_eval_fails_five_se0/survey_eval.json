@@ -1,0 +1,464 @@
+{
+  "ok": false,
+  "scorecard": {
+    "verdict": "FAIL",
+    "chapter_count": 1,
+    "section_count": 5,
+    "finalized_sections": 0,
+    "blocked_sections": 0,
+    "unsupported_claim_rate": 1.0,
+    "citation_span_accuracy": 0.0,
+    "contradiction_coverage": 0.0,
+    "source_diversity_score": 0.0,
+    "taxonomy_depth_score": 0.0,
+    "section_repetition_rate": 0.0,
+    "terminology_consistency_score": 1.0,
+    "cross_section_conflict_count": 0,
+    "chapter_coherence_score": 0.0,
+    "issues": [
+      "chapter_count_low:1<8",
+      "section_count_low:5<30",
+      "source_type_count_low:0<2",
+      "evidence_count_low:0<5",
+      "claim_count_low:0<5",
+      "ready_pack_ratio_low:0.0000<0.8000",
+      "taxonomy_depth_score_low:0.0000<0.7500",
+      "contradiction_coverage_low:0.0000<0.8000",
+      "section_p0_issue_count:5",
+      "survey_source_count_low:0<4",
+      "survey_missing_required_source_types:benchmark,code,official_doc,paper",
+      "paper_like_source_count_low:0<2",
+      "high_authority_source_count_low:0<2",
+      "source_authority_average_low:0.0000<0.5500",
+      "cited_source_ratio_low:0.0000<0.5000",
+      "source_type_count_too_low:0<2",
+      "missing_required_source_types:paper",
+      "high_authority_sources_too_low:0<2",
+      "literature_source_type_count_low:0<4",
+      "literature_chapter_coverage_low:0.0000<0.8000",
+      "literature_evidence_backed_source_ratio_low:0.0000<0.7500",
+      "controversy_section_coverage_low:0.0000<0.8000",
+      "controversy_chapter_coverage_low:0.0000<0.8000",
+      "controversy_mixed_source_ratio_low:0.0000<0.8000",
+      "controversy_axis_coverage_low:0<1",
+      "chapter_p0_issue_count:2",
+      "finalized_sections_low:0<3"
+    ],
+    "schema_version": "solar.research.survey.v1"
+  },
+  "strict": true,
+  "coverage": {
+    "source_count": 0,
+    "source_type_count": 0,
+    "source_types": [],
+    "evidence_count": 0,
+    "claim_count": 0,
+    "claim_evidence_link_count": 0,
+    "evidence_source_coverage": 0.0,
+    "claim_support_coverage": 0.0
+  },
+  "taxonomy": {
+    "ok": false,
+    "taxonomy_depth_score": 0.0,
+    "chapter_axes": [
+      "other"
+    ],
+    "required_source_types": [],
+    "observed_source_types": [],
+    "method_axis_present": false,
+    "evaluation_axis_present": false,
+    "contradiction_axis_present": false
+  },
+  "contradiction_matrix": {
+    "ok": false,
+    "contradiction_coverage": 0.0,
+    "required_sections": 5,
+    "covered_sections": 0,
+    "missing_section_ids": [
+      "ch1/sec0",
+      "ch1/sec1",
+      "ch1/sec2",
+      "ch1/sec3",
+      "ch1/sec4"
+    ],
+    "contradiction_axis_present": false
+  },
+  "section_factual_audit": {
+    "ok": false,
+    "section_factual_accuracy": 0.0,
+    "section_grounding_accuracy": 0.0,
+    "audited_sections": 0,
+    "passed_sections": 0,
+    "grounded_sections": 0,
+    "missing_final_sections": [
+      "ch1/sec0",
+      "ch1/sec1",
+      "ch1/sec2",
+      "ch1/sec3",
+      "ch1/sec4"
+    ],
+    "failed_sections": []
+  },
+  "section_scorecard": {
+    "ok": false,
+    "section_count": 5,
+    "needs_rewrite_count": 0,
+    "top_issues": [
+      {
+        "section_id": "ch1/sec0",
+        "status": "pending",
+        "risk_score": 100,
+        "p0_count": 1,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [
+          {
+            "severity": "P0",
+            "code": "evidence_pack_not_ready",
+            "detail": []
+          }
+        ],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch1/sec1",
+        "status": "pending",
+        "risk_score": 100,
+        "p0_count": 1,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [
+          {
+            "severity": "P0",
+            "code": "evidence_pack_not_ready",
+            "detail": []
+          }
+        ],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch1/sec2",
+        "status": "pending",
+        "risk_score": 100,
+        "p0_count": 1,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [
+          {
+            "severity": "P0",
+            "code": "evidence_pack_not_ready",
+            "detail": []
+          }
+        ],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch1/sec3",
+        "status": "pending",
+        "risk_score": 100,
+        "p0_count": 1,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [
+          {
+            "severity": "P0",
+            "code": "evidence_pack_not_ready",
+            "detail": []
+          }
+        ],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch1/sec4",
+        "status": "pending",
+        "risk_score": 100,
+        "p0_count": 1,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [
+          {
+            "severity": "P0",
+            "code": "evidence_pack_not_ready",
+            "detail": []
+          }
+        ],
+        "rewrite_recommended": false
+      }
+    ]
+  },
+  "final_quality": {
+    "ok": false,
+    "final_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0128/pytest/test_strict_eval_fails_five_se0/final.md",
+    "target_chars": 0,
+    "final_char_count": 0,
+    "min_final_chars": 0,
+    "finalized_sections": 0,
+    "total_sections": 5,
+    "missing_sections": [
+      "ch1/sec0",
+      "ch1/sec1",
+      "ch1/sec2",
+      "ch1/sec3",
+      "ch1/sec4"
+    ],
+    "avg_section_chars": 0.0,
+    "min_avg_section_chars": 500,
+    "pending_placeholder_count": 0,
+    "heading_count": 0,
+    "min_heading_count": 0,
+    "claim_tag_count": 0,
+    "evidence_tag_count": 0,
+    "claim_tag_density_per_1k_chars": 0.0,
+    "evidence_tag_density_per_1k_chars": 0.0,
+    "repetition_rate": 1.0,
+    "long_sentence_count": 0,
+    "unique_long_sentence_count": 0,
+    "duplicate_long_sentence_occurrences": 0,
+    "duplicate_long_sentence_ratio": 0.0,
+    "max_duplicate_long_sentence_count": 0,
+    "top_duplicate_long_sentences": [],
+    "issues": [
+      "final_repetition_rate_high:1.0000>0.9900"
+    ]
+  },
+  "source_coverage": {
+    "ok": false,
+    "source_count": 0,
+    "min_sources": 4,
+    "source_type_counts": {},
+    "required_source_types": [
+      "benchmark",
+      "code",
+      "official_doc",
+      "paper"
+    ],
+    "missing_required_source_types": [
+      "benchmark",
+      "code",
+      "official_doc",
+      "paper"
+    ],
+    "paper_like_source_count": 0,
+    "min_paper_like_sources": 2,
+    "high_authority_source_count": 0,
+    "min_high_authority_sources": 2,
+    "source_authority_average": 0.0,
+    "low_value_source_count": 0,
+    "low_value_source_ratio": 0.0,
+    "cited_source_ratio": 0.0,
+    "source_audit": {
+      "ok": false,
+      "output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0128/pytest/test_strict_eval_fails_five_se0",
+      "research_profile": "technical_architecture",
+      "strict_profile": true,
+      "policy_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/research/policies/source_authority.json",
+      "source_count": 0,
+      "source_type_counts": {},
+      "source_type_count": 0,
+      "missing_required_source_types": [
+        "paper"
+      ],
+      "missing_recommended_source_types": [
+        "benchmark",
+        "code",
+        "official_doc"
+      ],
+      "source_authority_average": 0.0,
+      "source_high_authority_count": 0,
+      "source_high_authority_threshold": 0.75,
+      "invalid_source_type_count": 0,
+      "low_authority_source_count": 0,
+      "sources": [],
+      "replacement_suggestions": [
+        "Add paper source for profile technical_architecture",
+        "Add benchmark source for profile technical_architecture",
+        "Add code source for profile technical_architecture",
+        "Add official_doc source for profile technical_architecture"
+      ],
+      "errors": [
+        "source_type_count_too_low:0<2",
+        "missing_required_source_types:paper",
+        "high_authority_sources_too_low:0<2"
+      ],
+      "warnings": [
+        "missing_recommended_source_types:benchmark,code,official_doc"
+      ]
+    },
+    "issues": [
+      "survey_source_count_low:0<4",
+      "survey_missing_required_source_types:benchmark,code,official_doc,paper",
+      "paper_like_source_count_low:0<2",
+      "high_authority_source_count_low:0<2",
+      "source_authority_average_low:0.0000<0.5500",
+      "cited_source_ratio_low:0.0000<0.5000",
+      "source_type_count_too_low:0<2",
+      "missing_required_source_types:paper",
+      "high_authority_sources_too_low:0<2"
+    ]
+  },
+  "literature_map": {
+    "ok": false,
+    "source_count": 0,
+    "source_types": [],
+    "chapter_count": 1,
+    "covered_chapters": 0,
+    "chapter_coverage": 0.0,
+    "evidence_backed_source_ratio": 0.0,
+    "claim_backed_source_ratio": 0.0,
+    "sources": [],
+    "chapters": [
+      {
+        "chapter_id": "ch1",
+        "title": "Brief",
+        "axis": "other",
+        "ok": false,
+        "source_count": 0,
+        "source_types": [],
+        "evidence_count": 0,
+        "claim_count": 0
+      }
+    ],
+    "issues": [
+      "literature_source_type_count_low:0<4",
+      "literature_chapter_coverage_low:0.0000<0.8000",
+      "literature_evidence_backed_source_ratio_low:0.0000<0.7500"
+    ]
+  },
+  "controversy_review": {
+    "ok": false,
+    "section_coverage": 0.0,
+    "chapter_coverage": 0.0,
+    "mixed_source_ratio": 0.0,
+    "axes_with_controversy": [],
+    "rows": [],
+    "issues": [
+      "controversy_section_coverage_low:0.0000<0.8000",
+      "controversy_chapter_coverage_low:0.0000<0.8000",
+      "controversy_mixed_source_ratio_low:0.0000<0.8000",
+      "controversy_axis_coverage_low:0<1"
+    ]
+  },
+  "chapter_review": {
+    "ok": false,
+    "chapter_count": 1,
+    "p0_chapter_issue_count": 2,
+    "p1_chapter_issue_count": 1,
+    "chapters": [
+      {
+        "chapter_id": "ch1",
+        "title": "Brief",
+        "axis": "other",
+        "section_ids": [
+          "ch1/sec0",
+          "ch1/sec1",
+          "ch1/sec2",
+          "ch1/sec3",
+          "ch1/sec4"
+        ],
+        "section_count": 5,
+        "ready_pack_ratio": 0.0,
+        "source_types": [],
+        "finalized_sections": 0,
+        "avg_final_chars": 0.0,
+        "p0_count": 5,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P0",
+            "code": "chapter_ready_pack_ratio_low",
+            "detail": "0.0000<0.8000"
+          },
+          {
+            "severity": "P1",
+            "code": "chapter_source_diversity_low",
+            "detail": "0<2"
+          },
+          {
+            "severity": "P0",
+            "code": "chapter_section_p0_issues",
+            "detail": 5
+          },
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch1/sec0",
+              "ch1/sec1",
+              "ch1/sec2",
+              "ch1/sec3",
+              "ch1/sec4"
+            ]
+          }
+        ]
+      }
+    ],
+    "issues": [
+      "chapter_p0_issue_count:2"
+    ]
+  },
+  "chief_editor_review": {
+    "ok": true,
+    "complete_context": false,
+    "finalized_sections": 0,
+    "total_sections": 5,
+    "chapter_final_coverage": 0.0,
+    "section_duplicate_rate": 1.0,
+    "terminology_profile": "latent_reasoning",
+    "terminology_counts": {
+      "latent_reasoning": 0,
+      "continuous_thought": 0,
+      "chain_of_thought": 0,
+      "coconut": 0,
+      "hidden_state": 0
+    },
+    "terminology_variants": [],
+    "chapters": [
+      {
+        "chapter_id": "ch1",
+        "title": "Brief",
+        "section_count": 5,
+        "finalized_sections": 0,
+        "ready_for_chief_edit": false
+      }
+    ],
+    "warnings": [],
+    "issues": []
+  },
+  "depth_profile": {
+    "ok": true,
+    "complete_context": false,
+    "finalized_sections": 0,
+    "total_sections": 5,
+    "claim_tag_density_per_1k_chars": 0.0,
+    "evidence_tag_density_per_1k_chars": 0.0,
+    "chapter_structure_coverage": 0.0,
+    "academic_marker_counts": {
+      "taxonomy": 0,
+      "mechanism": 0,
+      "evaluation_protocol": 0,
+      "baseline_or_ablation": 0,
+      "reproducibility": 0,
+      "deployment": 0,
+      "failure_mode": 0,
+      "controversy": 0,
+      "auditability": 0,
+      "evolution": 0
+    },
+    "academic_marker_variants": [],
+    "section_marker_coverage": 0.0,
+    "section_marker_rows": [],
+    "terminology_profile": "latent_reasoning",
+    "terminology_counts": {
+      "latent_reasoning": 0,
+      "continuous_thought": 0,
+      "chain_of_thought": 0,
+      "coconut": 0,
+      "hidden_state": 0
+    },
+    "terminology_variants": [],
+    "terminology_evolution_edges": [],
+    "literature_map_ok": false,
+    "controversy_matrix_ok": false,
+    "issues": []
+  }
+}

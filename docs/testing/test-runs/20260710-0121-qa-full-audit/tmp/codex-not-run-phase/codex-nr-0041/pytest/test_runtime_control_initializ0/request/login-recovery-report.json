@@ -1,0 +1,63 @@
+{
+  "schema": "browser.login_recovery_report.v1",
+  "status": "success",
+  "success": true,
+  "logged_in_state_verified": true,
+  "lease_released": true,
+  "account_identifier": "alice@example.com",
+  "profile_ref": {
+    "schema": "browser.profile_ref.v1",
+    "profile_id": "chatgpt/alice",
+    "storage_state_ref": null,
+    "allowed_account_identifiers": [
+      "alice@example.com"
+    ]
+  },
+  "created_at": "2026-07-10T18:49:44Z",
+  "details": {
+    "success": true,
+    "release": {
+      "released": true,
+      "reason": "released",
+      "profile_id": "chatgpt/alice"
+    },
+    "case": "unit",
+    "detector": {
+      "service": "chatgpt",
+      "state": "healthy",
+      "reason": "healthy",
+      "human_required": false,
+      "success": true
+    },
+    "executor": {
+      "kind": "browser_use_dom_executor",
+      "runtime_owner": "browser_use",
+      "capabilities": [
+        "login_clicks",
+        "dom_evaluate",
+        "account_selection"
+      ]
+    },
+    "policy": {
+      "schema": "browser.auth_policy.v1",
+      "service": "chatgpt",
+      "profile_id": "chatgpt/alice",
+      "allowed_accounts": [
+        "alice@example.com"
+      ],
+      "safe_auto_steps": [
+        "click_login",
+        "click_continue_with_google",
+        "select_allowed_account",
+        "click_continue"
+      ],
+      "human_gate": [
+        "password",
+        "otp",
+        "passkey",
+        "cloudflare",
+        "captcha"
+      ]
+    }
+  }
+}

@@ -1,0 +1,35 @@
+=== test-prompt-quarantine.sh ===
+
+--- clean pane (no residue) ---
+  ✅ clean pane → exit 0
+  ✅ no prompt → exit 0
+  ✅ historical prompt line near footer → exit 0
+
+--- residue detection + fix keys (≤3 attempts) ---
+  ✅ 1st residue → exit 1
+  ✅ 1st residue → counter=1
+  ✅ 2nd residue → exit 1
+  ✅ 2nd residue → counter=2
+  ✅ 3rd residue → exit 1
+  ✅ 3rd residue → counter=3
+  ✅ inbox has 3 fixkeys_sent entries
+
+--- quarantine on 4th attempt ---
+  ✅ 4th attempt → exit 2 (quarantined)
+  ✅ cooldown file created
+  ✅ inbox has quarantined entry
+  ✅ pane in cooldown → exit 3
+
+--- cooldown expiry ---
+  ✅ expired cooldown → exit 0 (clean)
+  ✅ expired cooldown file removed
+
+--- prompt_quarantine_resolve ---
+  ✅ resolve: cooldown file removed
+  ✅ resolve: counter file removed
+  ✅ resolve: inbox has resolved entry
+
+--- coordinator.sh has no direct send-keys Escape/C-u ---
+  ✅ coordinator.sh: 0 direct C-u/Escape send-keys
+
+=== RESULT: PASS=20 FAIL=0 ===

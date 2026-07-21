@@ -1,0 +1,91 @@
+{
+  "dag_id": "bench-dag-20260710141328",
+  "dag_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328",
+  "planner": {
+    "stage": "planner",
+    "verdict": "pass",
+    "model": "gpt-5.4",
+    "instruction_chars": 44,
+    "contract": {
+      "workspace": "/app",
+      "write_scope": [
+        "/app"
+      ],
+      "success_predicates": [
+        "builder exits successfully",
+        "workspace changes or existing required files remain available",
+        "Terminal-Bench verifier computes final score"
+      ]
+    }
+  },
+  "graph_dispatch": {
+    "enabled": true,
+    "mode": "graph-dispatch-live",
+    "ok": true,
+    "dispatcher_ok": false,
+    "return_code": 2,
+    "stdout": "{\"ok\": false, \"drain\": {\"processed\": 1, \"results\": [{\"ok\": false, \"reason\": \"send_failed\"}]}}",
+    "stderr": "",
+    "parsed": {
+      "ok": false,
+      "drain": {
+        "processed": 1,
+        "results": [
+          {
+            "ok": false,
+            "reason": "send_failed"
+          }
+        ]
+      }
+    },
+    "processed": 1,
+    "isolated_harness": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328/graph-dispatch-harness",
+    "dispatch_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328/graph-dispatch-harness/sprints/bench-dag-20260710141328.N2-dispatch.md",
+    "handoff_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328/graph-dispatch-harness/sprints/bench-dag-20260710141328.N2-handoff.md",
+    "live_completion": {
+      "completed": true,
+      "reason": "workspace_changed_and_handoff_exists",
+      "workspace_changed": true,
+      "handoff_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328/graph-dispatch-harness/sprints/bench-dag-20260710141328.N2-handoff.md",
+      "file_count_after": 1
+    },
+    "command_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328/graph-dispatch-command.txt"
+  },
+  "builder": {
+    "stage": "builder",
+    "leaf_backend": "graph-dispatch-live",
+    "return_code": 0,
+    "stdout": "",
+    "stderr": "",
+    "graph_dispatch": {
+      "ok": true,
+      "processed": 1,
+      "dispatch_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328/graph-dispatch-harness/sprints/bench-dag-20260710141328.N2-dispatch.md",
+      "handoff_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328/graph-dispatch-harness/sprints/bench-dag-20260710141328.N2-handoff.md",
+      "live_completion": {
+        "completed": true,
+        "reason": "workspace_changed_and_handoff_exists",
+        "workspace_changed": true,
+        "handoff_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0017/pytest/test_dag_backend_graph_dispatc0/logs/dag/bench-dag-20260710141328/graph-dispatch-harness/sprints/bench-dag-20260710141328.N2-handoff.md",
+        "file_count_after": 1
+      }
+    }
+  },
+  "repair": {
+    "stage": "repair",
+    "applied": false,
+    "reason": "no_known_repair"
+  },
+  "evaluator": {
+    "stage": "evaluator",
+    "verdict": "pass",
+    "workspace_changed": true,
+    "file_count_before": 0,
+    "file_count_after": 1,
+    "builder_return_code": 0
+  },
+  "leaf_backend": "codex",
+  "return_code": 0,
+  "stdout": "",
+  "stderr": ""
+}

@@ -1,0 +1,53 @@
+{
+  "action_count": 1,
+  "actions": [
+    {
+      "action": "evaluate_pilot_result",
+      "evidence_ids": [
+        "artifacts/autosci/runs/shim-evaluate_pilot_result/pilot_final_acceptance_boundary.json",
+        "pilot_eval_final_acceptance_boundary_json",
+        "artifacts/autosci/runs/shim-evaluate_pilot_result/claim_verdict.pilot.json",
+        "solar_evidence_json",
+        "pilot-claim-001",
+        "Pilot evaluation is lenient and bounded to supplied local result/runtime evidence.",
+        "Pilot wiki writes remain proposed-only until explicitly approved.",
+        "Pilot evaluation remains inconclusive because result/runtime evidence is missing or non-supportive.",
+        "Final pilot acceptance requires a non-inconclusive pilot verdict.",
+        "Final pilot acceptance requires completed approved wiki writeback.",
+        "node-evaluate-pilot-result",
+        "pilot-eval:pilot-claim-001",
+        "autosci_pilot_experiment_final_acceptance_boundary.v1",
+        "pilot_eval",
+        "pilot_acceptance_incomplete",
+        "N/A",
+        "Claim verdict writeback was not requested.",
+        "not_requested",
+        "Pilot-specific result evidence was not supplied; no wiki idea update was applied.",
+        "inconclusive",
+        "plugins/autosci",
+        "autosci-bridge",
+        "2026-07-10T19:26:28Z",
+        "claim_verdict.v1",
+        "phase19-skillgen-operator-smoke",
+        "task-autosci-skillgen-evaluate_pilot_result"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_runs_r1/artifacts/autosci/runs/shim-evaluate_pilot_result/claim_verdict.pilot.json",
+      "gate_status": "schema_only",
+      "reasons": [],
+      "schema": "claim_verdict.v1",
+      "status": "schema_only",
+      "warnings": [
+        "evidence status is inconclusive"
+      ]
+    }
+  ],
+  "completed_count": 1,
+  "current_action": "",
+  "remaining_actions": [],
+  "run_id": "shim-evaluate_pilot_result",
+  "schema": "autosci_skill_run_progress.v1",
+  "skill": "exp-pilot-eval",
+  "status": "inconclusive",
+  "updated_at": "2026-07-10T19:26:29Z",
+  "work_dir": "artifacts/autosci/runs/shim-evaluate_pilot_result"
+}

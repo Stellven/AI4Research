@@ -1,0 +1,22 @@
+{
+  "verdict": "warn",
+  "verdict_reasons": ["decorative_matrix_warning"],
+  "matrix_row_count": 2,
+  "decorative": true,
+  "rows": [
+    {
+      "claim_id": "c1",
+      "synthesis_referenced": false,
+      "supporting_count": 2,
+      "contradicting_count": 0,
+      "uncertain_count": 1
+    },
+    {
+      "claim_id": "c2",
+      "synthesis_referenced": false,
+      "supporting_count": 1,
+      "contradicting_count": 0,
+      "uncertain_count": 0
+    }
+  ]
+}

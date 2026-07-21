@@ -1,0 +1,76 @@
+{
+  "task_id": "task-job-scientific-lifecycle-resume-test-workflow_evolve",
+  "sprint_id": "job-scientific-lifecycle-resume-test",
+  "node_id": "workflow_evolve",
+  "operator_id": "autosci-workflow-evolve-worker",
+  "task_type": "scientific-workflow-evolve",
+  "objective": "Scheduler-dispatched bounded smoke for ScientificWorkflowEvolver.",
+  "mode": "bounded_runtime_smoke",
+  "runner_contract": "bounded_node_smoke",
+  "output_dir": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/workflow_evolve/task-job-scientific-lifecycle-resume-test-workflow_evolve",
+  "inputs": {
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "paper_id": "paper-job-scientific-lifecycle-resume-test",
+    "allow_network_fetch": false,
+    "smoke_mode": true,
+    "failed_run": {
+      "workflow_id": "scientific_research_lifecycle_full_v1",
+      "sprint_id": "scheduler-lifecycle-smoke-synthetic-failed-run",
+      "nodes": [
+        {
+          "id": "publication_produce",
+          "logical_operator": "ScientificPublicationProducer",
+          "gate": "G_PUBLICATION_PRODUCE",
+          "status": "failed"
+        }
+      ],
+      "gate_results": {
+        "G_PUBLICATION_PRODUCE": {
+          "status": "failed",
+          "reasons": [
+            "publication_produce currently lacks a scheduler-bound publication_bundle.v1 action"
+          ]
+        }
+      },
+      "ambiguous_manuals_or_prompts": [
+        {
+          "manual_id": "scientific-publication-produce.dispatch",
+          "description": "Scheduler publication dispatch does not yet distinguish report drafting from publication bundle compilation."
+        }
+      ],
+      "insufficient_schemas": [],
+      "poor_operator_bindings": [
+        {
+          "logical_operator": "ScientificPublicationProducer",
+          "physical_operator": "autosci-report-worker",
+          "description": "Current report worker emits scientific_report.v1 as the primary evidence."
+        }
+      ],
+      "human_intervention_points": [
+        {
+          "point": "publication_compile_approval",
+          "description": "Compiled publication output requires explicit bounded compile or human-approved external execution."
+        }
+      ],
+      "runtime_errors": [
+        {
+          "error_id": "runtime.publication-bundle-action-missing",
+          "message": "No dedicated scheduler physical operator currently emits publication_bundle.v1."
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/workflow_evolve/task-job-scientific-lifecycle-resume-test-workflow_evolve/evolve_workflow.result.json",
+    "evidence_payload_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/workflow_evolve/task-job-scientific-lifecycle-resume-test-workflow_evolve/workflow_evolution.json",
+    "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/workflow_evolve/task-job-scientific-lifecycle-resume-test-workflow_evolve/evidence.jsonl",
+    "memory_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/workflow_evolve/task-job-scientific-lifecycle-resume-test-workflow_evolve/research_memory_update.json",
+    "graph_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/workflow_evolve/task-job-scientific-lifecycle-resume-test-workflow_evolve/research_graph_update.json"
+  },
+  "expected_schema": "workflow_evolution.v1",
+  "expected_action": "evolve_workflow",
+  "logical_operator": "ScientificWorkflowEvolver",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T14:06:19Z",
+  "lease_expires_at": "2026-07-10T14:08:19Z"
+}

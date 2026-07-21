@@ -1,0 +1,43 @@
+T1: py_compile
+  PASS: modules compile
+T1b: dispatcher reads model registry for worker capability
+  PASS: main builder model aliases include configured Opus
+  PASS: lab4 model aliases include explicit Anthropic Sonnet
+T2: dispatch-ready dry-run creates explicit node dispatch files
+  PASS: dispatch-ready ok
+  PASS: S1 drained
+  PASS: S2 drained
+  PASS: S3 not dispatched before join
+  PASS: S1 dispatch file exists
+  PASS: S2 dispatch file exists
+  PASS: dispatch text has node id
+  PASS: dispatch text has write scope
+  PASS: dispatch text has required capabilities section
+  PASS: dispatch text lists browser capability
+  PASS: dispatch text forbids parent pass
+  PASS: dispatch text lists document capability
+  PASS: dispatch text lists persona capability
+T3: dry-run does not enqueue or mutate graph status
+  PASS: queue empty
+  PASS: dry-run did not assign panes
+  PASS: dry-run did not mark dispatched
+  PASS: S3 not marked dispatched
+T4: drain-queue dry-run consumes pre-enqueued graph node payload
+  PASS: drain-queue ok
+  PASS: drain-queue S1
+  PASS: drain dispatch file exists
+T5: node-level evaluator dispatch and downstream release
+  PASS: dispatch-evals ok
+  PASS: S1 eval dispatched
+  PASS: S1 eval dispatch file exists
+  PASS: eval text node only
+  PASS: eval text forbids parent pass
+  PASS: eval text has required capabilities section
+  PASS: eval text lists browser capability
+  PASS: eval text lists document capability
+  PASS: planner pane excluded from evaluator candidates
+  PASS: primary evaluator candidate retained
+  PASS: S1 verdict ok
+  PASS: S1 dry-run effect reports missing sidecar
+  PASS: S3 still blocked until S2 pass
+{"ok": false, "reason": "self_graded_eval_requires_independent_report", "node": "S2", "status": "blocked", "eval_json": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.ht12lc5Wm0/sprints/sprint-test-graph-node-dispatch.S2-eval.json", "handoff_md": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.ht12lc5Wm0/sprints/sprint-test-graph-node-dispatch.S2-handoff.md"}

@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "accepted_at": "2026-07-10T19:25:58Z",
+      "collection_identity": "3d22a26b68898e630f2575b408df55357de3eaf1",
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/remote.py pull-results --result-dir /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_co3/live-remote-results --approval-ref approval-live-remote-pull-provider --allowlist-evidence /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_co3/live-remote-provider-allowlist.json --pull-command '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python' '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_exp_co3/fake_live_pull_results_provider.py' --transport ssh --session-id ssh-session-collect-123 --execute-approved",
+      "evidence_ids": [
+        "remote-collect:exp-live-remote-collect",
+        "live-remote-results/results.json",
+        "result:exp-live-remote-collect"
+      ],
+      "experiment_id": "exp-live-remote-collect",
+      "files": [
+        {
+          "bytes": 183,
+          "path": "live-remote-results/results.json",
+          "sha256": "4d7280b47fd8e9de6e7588b62a482f8ec78764a0ef06fb37187093b51dd43f17"
+        }
+      ]
+    }
+  ],
+  "schema": "autosci_collection_ledger.v1"
+}

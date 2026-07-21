@@ -1,0 +1,28 @@
+{
+  "blocking_reasons": [
+    "review_mode is `local_surrogate`, not `review_llm`",
+    "review_available is not true",
+    "review_llm status is `unavailable`, not `completed`"
+  ],
+  "evidence_ids": [
+    "review-target:readme-md"
+  ],
+  "final_acceptance_ready": false,
+  "invocation_mode": "unavailable",
+  "limitations": [
+    "Final review acceptance requires Review LLM evidence from supplied evidence, command bridge, or provider mode."
+  ],
+  "model": "",
+  "provider": "",
+  "recommendation": "inconclusive",
+  "request_sha256": "",
+  "required": false,
+  "response_sha256": "",
+  "review_available": false,
+  "review_llm_status": "unavailable",
+  "review_mode": "local_surrogate",
+  "schema": "autosci_review_final_acceptance_boundary.v1",
+  "score": 0.0,
+  "source_path": "",
+  "status": "review_llm_incomplete"
+}

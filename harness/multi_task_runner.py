@@ -1418,8 +1418,64 @@ def tmux_start(window: str, runner: Path, cwd: Path, dry_run: bool = False) -> N
     )
 
 
+def _plan_validator_env_on() -> bool:
+    return str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _plan_validator_launch_refusal(graph: dict[str, Any]) -> dict[str, Any] | None:
+    """Validator dispatch guard shared by schedule_once and launch_node.
+
+    launch_node() is a public dispatch surface: a direct caller skips the
+    schedule_once guard, so the check must run again BEFORE any dispatch/
+    status/runstate write (G2b fix-round 2 finding 1). Returns a refusal
+    record ({reason, errors}) or None when dispatch may proceed."""
+    try:
+        import plan_validator  # type: ignore
+
+        plan_guard = plan_validator.check_planner_graph_dispatchable(
+            graph,
+            sprints_dir=SPRINTS_DIR,
+            sid=str(graph.get("sprint_id") or ""),
+        )
+    except Exception as guard_exc:
+        if _plan_validator_env_on():
+            return {
+                "reason": "plan_validator_dispatch_refused",
+                "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"],
+            }
+        return None
+    if plan_guard.get("ok"):
+        return None
+    try:
+        # G3 fix: a PASS-certified graph refused for hash mismatch is
+        # unrecoverable at dispatch time — terminalize the sprint truthfully
+        # instead of re-refusing every scheduler tick (helper is scoped to
+        # PLAN_CERTIFICATE_HASH_MISMATCH; uncertified refusals untouched).
+        plan_validator.record_certificate_mismatch_refusal(
+            SPRINTS_DIR, graph, plan_guard.get("errors")
+        )
+    except Exception:
+        pass
+    errors = []
+    for error in plan_guard.get("errors") or []:
+        if isinstance(error, dict):
+            errors.append(f"{error.get('code')}:{error.get('node_id', '?')}")
+        else:
+            errors.append(str(error))
+    return {"reason": "plan_validator_dispatch_refused", "errors": errors}
+
+
 def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], args: argparse.Namespace,
                 dry_run: bool = False) -> dict[str, Any]:
+    refusal = _plan_validator_launch_refusal(graph)
+    if refusal is not None:
+        return {
+            "status": "plan_validator_dispatch_refused",
+            "graph": str(graph_path),
+            "sprint_id": sprint_id_for(graph, graph_path),
+            "node_id": str(node.get("id") or ""),
+            **refusal,
+        }
     sid = sprint_id_for(graph, graph_path)
     node_id = str(node.get("id") or "")
     profile = select_profile(node, getattr(args, "profile", "") or "", getattr(args, "model", "") or "", getattr(args, "backend", "") or "")
@@ -1505,6 +1561,13 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
         try:
             graph = load_graph(graph_path)
             summaries.append(status_summary_for_graph(graph_path))
+            # P5 G2b review finding 1: this root entrypoint launched uncertified
+            # generic graphs — the validator dispatch guard only covered the
+            # graph_node_dispatcher paths. Same guard as lib/multi_task_runner.
+            refusal = _plan_validator_launch_refusal(graph)
+            if refusal is not None:
+                skipped.append({"graph": str(graph_path), **refusal})
+                continue
             candidates = ready_nodes(graph)
         except Exception as exc:
             skipped.append({"graph": str(graph_path), "reason": "graph_error", "error": str(exc)})

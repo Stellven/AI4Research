@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_control_plane_test-graph-scheduler.sh",
+  "source": "harness/tests/control_plane/test-graph-scheduler.sh",
+  "command": [
+    "bash",
+    "harness/tests/control_plane/test-graph-scheduler.sh"
+  ],
+  "exit_code": 2,
+  "runtime_seconds": 0.191,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-nttyph74"
+}

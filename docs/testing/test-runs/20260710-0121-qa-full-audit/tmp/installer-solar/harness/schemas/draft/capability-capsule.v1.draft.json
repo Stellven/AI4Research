@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/capability-capsule.v1.draft.json",
+  "title": "Solar Capability Capsule v1",
+  "description": "Formal schema for Capability Capsules. Distinct from the existing State Capsule in schemas/capsule-schema.yaml. Execution Capsule / ECapsule is kept as a deprecated alias during one migration cycle.",
+  "type": "object",
+  "required": [
+    "capability_capsule_id",
+    "capsule_kind",
+    "metadata",
+    "applicability",
+    "contract",
+    "composition",
+    "effects",
+    "bindings",
+    "verification",
+    "operator_compatibility",
+    "provenance"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "capability_capsule_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capsule_kind": {
+      "type": "string",
+      "enum": ["capability", "guard", "resource"]
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "description"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1}
+      }
+    },
+    "applicability": {
+      "type": "object",
+      "required": ["task_types", "positive_signals", "negative_signals"],
+      "additionalProperties": true,
+      "properties": {
+        "task_types": {"type": "array", "items": {"type": "string"}},
+        "positive_signals": {"type": "array", "items": {"type": "string"}},
+        "negative_signals": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "contract": {
+      "type": "object",
+      "required": ["inputs", "outputs", "preconditions", "postconditions", "invariants"],
+      "additionalProperties": true,
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "required": ["required", "optional"],
+          "properties": {
+            "required": {"type": "array", "items": {"type": "object"}},
+            "optional": {"type": "array", "items": {"type": "object"}}
+          }
+        },
+        "outputs": {
+          "type": "object",
+          "required": ["required", "optional"],
+          "properties": {
+            "required": {"type": "array", "items": {"type": "object"}},
+            "optional": {"type": "array", "items": {"type": "object"}}
+          }
+        },
+        "preconditions": {"type": "array", "items": {"type": "object"}},
+        "postconditions": {"type": "array", "items": {"type": "object"}},
+        "invariants": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "composition": {
+      "type": "object",
+      "required": ["consumes", "produces", "compatible_with", "incompatible_with", "requires_after"],
+      "additionalProperties": true,
+      "properties": {
+        "consumes": {"type": "array", "items": {"type": "object"}},
+        "produces": {"type": "array", "items": {"type": "object"}},
+        "compatible_with": {"type": "array", "items": {"type": "string"}},
+        "incompatible_with": {"type": "array", "items": {"type": "string"}},
+        "requires_after": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "effects": {
+      "type": "object",
+      "required": ["read", "write", "execute", "network", "cost", "risk"],
+      "additionalProperties": true,
+      "properties": {
+        "read": {"type": "array", "items": {"type": "string"}},
+        "write": {"type": "array", "items": {"type": "string"}},
+        "execute": {"type": "array", "items": {"type": "string"}},
+        "network": {"type": "array", "items": {"type": "string"}},
+        "cost": {"type": "array", "items": {"type": "string"}},
+        "risk": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "required": ["skills", "mcp_capabilities", "data_refs", "secret_refs"],
+      "additionalProperties": true,
+      "properties": {
+        "skills": {
+          "type": "object",
+          "required": ["required", "optional"],
+          "properties": {
+            "required": {"type": "array", "items": {"type": "string"}},
+            "optional": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "mcp_capabilities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "data_refs": {"type": "array", "items": {"type": "string"}},
+        "secret_refs": {"type": "array", "items": {"type": "string"}},
+        "required_guard_capsules": {"type": "array", "items": {"type": "string"}},
+        "required_resource_capsules": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["self_check", "external_verifier", "pass_conditions"],
+      "additionalProperties": true,
+      "properties": {
+        "self_check": {"type": "array", "items": {"type": "string"}},
+        "external_verifier": {
+          "type": "object",
+          "required": ["required"],
+          "additionalProperties": true,
+          "properties": {
+            "required": {"type": "boolean"}
+          }
+        },
+        "pass_conditions": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "operator_compatibility": {
+      "type": "object",
+      "required": ["preferred", "forbidden"],
+      "additionalProperties": true,
+      "properties": {
+        "preferred": {"type": "array", "items": {"type": "string"}},
+        "forbidden": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["owner"],
+      "additionalProperties": true,
+      "properties": {
+        "owner": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

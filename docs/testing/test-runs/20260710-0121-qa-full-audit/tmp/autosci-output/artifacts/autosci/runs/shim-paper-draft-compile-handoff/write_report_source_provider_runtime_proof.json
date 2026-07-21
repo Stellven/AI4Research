@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-07-10T05:54:49Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed citation/source evidence for AutoSci `paper-draft` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-paper-draft-compile-handoff/scientific_report.json",
+        "artifacts/autosci/runs/shim-paper-draft-compile-handoff/report_plan.json",
+        "artifacts/autosci/runs/shim-paper-draft-compile-handoff/report.md",
+        "artifacts/autosci/runs/shim-paper-draft-compile-handoff/paper_draft_citation_map.json",
+        "artifacts/autosci/runs/shim-paper-draft-compile-handoff/paper_draft_final_manuscript_boundary.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-discovery.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_paper_4/paper-draft-review-llm.json",
+        "https://arxiv.org/abs/2601.00003",
+        "artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+        "artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+        "artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+        "artifacts/autosci/workspace/wiki/papers/paper-skillgen.md",
+        "https://arxiv.org/abs/2601.00001"
+      ],
+      "native_skill": "paper-draft",
+      "production_ready": true,
+      "proof_id": "runtime:paper-draft:search-s2-wiki:20260710T055449Z",
+      "provenance": {
+        "artifact_kind": "publication_citation_map",
+        "captured_at": "2026-07-10T05:54:49Z",
+        "citation_count": 5,
+        "command": "write_report:citation_source_map",
+        "source": "search_s2+wiki"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

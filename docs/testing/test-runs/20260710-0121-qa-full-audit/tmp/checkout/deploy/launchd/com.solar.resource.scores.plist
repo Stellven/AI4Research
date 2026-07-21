@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.solar.resource.scores</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__SOLAR_HOME__/core/resource/update-scores.sh</string>
+    </array>
+
+    <!-- 每 1 小时执行一次 -->
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>__HOME_DIR__/.solar/logs/launchd-scores.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__HOME_DIR__/.solar/logs/launchd-scores-error.log</string>
+</dict>
+</plist>

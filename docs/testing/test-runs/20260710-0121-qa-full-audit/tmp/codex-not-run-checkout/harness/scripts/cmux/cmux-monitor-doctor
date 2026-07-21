@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""cmux-monitor-doctor: machine-verifiable health check for cmux workspace config.
+
+Outputs JSON: {"ok": bool, "workspace": str, "checks": [{"name": str, "ok": bool, "reason"?: str}]}
+"""
+
+import sys
+import json
+import shutil
+import subprocess
+import argparse
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("ERROR: PyYAML not installed. Run: pip3 install pyyaml", file=sys.stderr)
+    sys.exit(1)
+
+SCRIPTS_DIR = Path(__file__).parent
+CMUX_BIN_CANDIDATES = [
+    "/Applications/cmux.app/Contents/Resources/bin/cmux",
+    "/usr/local/bin/cmux",
+    "/opt/homebrew/bin/cmux",
+]
+
+
+def find_cmux():
+    for p in CMUX_BIN_CANDIDATES:
+        if Path(p).exists():
+            return p
+    return None
+
+
+def check(name: str, ok: bool, reason: str = "") -> dict:
+    result = {"name": name, "ok": ok}
+    if not ok and reason:
+        result["reason"] = reason
+    return result
+
+
+def safe_run(cmd: list, timeout: int = 5) -> tuple[bool, str]:
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return r.returncode == 0, r.stderr.strip() or r.stdout.strip()
+    except subprocess.TimeoutExpired:
+        return False, "timeout"
+    except FileNotFoundError as e:
+        return False, str(e)
+
+
+def check_ssh_profile(profile_name: str, profile_cfg: dict) -> list:
+    checks = []
+    host = profile_cfg.get("host", profile_name)
+    user = profile_cfg.get("user", "")
+    dest = f"{user}@{host}" if user else host
+
+    # Basic connectivity
+    ok, reason = safe_run(["ssh", "-o", "ConnectTimeout=4", "-o", "BatchMode=yes",
+                           dest, "echo ok"], timeout=8)
+    checks.append(check(f"ssh_{profile_name}_connect", ok,
+                        reason if not ok else ""))
+
+    # ControlMaster check (if configured)
+    if profile_cfg.get("control_master", False):
+        ctl_path = Path(f"~/.ssh/cmux-%r@%h:%p").expanduser()
+        # Check if any control socket for this host exists
+        sockets = list(Path("~/.ssh/").expanduser().glob(f"cmux-*@{host}*"))
+        socket_ok = len(sockets) > 0
+        checks.append(check(f"ssh_{profile_name}_control_master",
+                            socket_ok,
+                            "no control socket found — run ssh once first" if not socket_ok else ""))
+    return checks
+
+
+def check_tmux_target(target: str, remote_dest: str = "") -> dict:
+    name = "tmux_target_" + target.replace(":", "_").replace(".", "_")
+    if remote_dest:
+        ok, reason = safe_run(["ssh", remote_dest, f"tmux has-session -t '{target}' 2>/dev/null && echo ok || echo fail"],
+                              timeout=8)
+        ok = ok and "ok" in reason
+        return check(name, ok, f"target_not_found on {remote_dest}" if not ok else "")
+    else:
+        ok, reason = safe_run(["tmux", "has-session", "-t", target])
+        return check(name, ok, "target_not_found" if not ok else "")
+
+
+def check_log_path(log_path: str, remote_dest: str = "") -> dict:
+    name = "log_path_" + log_path.replace("/", "_").replace("~", "home").replace(".", "_")
+    if remote_dest:
+        ok, reason = safe_run(["ssh", remote_dest, f"test -r '{log_path}' && echo ok || echo fail"])
+        ok = ok and "ok" in reason
+        return check(name, ok, f"log_not_readable on {remote_dest}" if not ok else "")
+    else:
+        expanded = Path(log_path).expanduser()
+        ok = expanded.exists() and expanded.is_file()
+        return check(name, ok, "log_not_found" if not ok else "")
+
+
+def run_doctor(config_path: Path) -> dict:
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
+
+    workspace_name = cfg.get("workspace_name", "cmux-workspace")
+    ssh_profiles = cfg.get("ssh_profiles", {})
+    tabs = cfg.get("tabs", [])
+    checks = []
+
+    # 1. cmux binary
+    cmux_bin = find_cmux()
+    checks.append(check("cmux_exists", cmux_bin is not None,
+                         "cmux not found in known paths" if cmux_bin is None else ""))
+
+    # 2. tmux binary
+    checks.append(check("tmux_exists", shutil.which("tmux") is not None,
+                         "tmux not in PATH" if shutil.which("tmux") is None else ""))
+
+    # 3. SSH profiles
+    checked_profiles = set()
+    for tab in tabs:
+        for pane in tab.get("panes", []):
+            if pane.get("source") == "remote":
+                profile = pane.get("ssh_profile")
+                if profile and profile not in checked_profiles:
+                    checked_profiles.add(profile)
+                    prof_cfg = ssh_profiles.get(profile, {})
+                    checks.extend(check_ssh_profile(profile, prof_cfg))
+
+    # 4. tmux targets + log paths
+    for tab in tabs:
+        for pane in tab.get("panes", []):
+            src = pane.get("source", "local")
+            mode = pane.get("mode", "capture")
+            target = pane.get("tmux_target")
+
+            remote_dest = ""
+            if src == "remote":
+                profile = pane.get("ssh_profile", "")
+                prof_cfg = ssh_profiles.get(profile, {})
+                host = prof_cfg.get("host", profile)
+                user = prof_cfg.get("user", "")
+                remote_dest = f"{user}@{host}" if user else host
+
+            if target:
+                checks.append(check_tmux_target(target, remote_dest))
+
+            if mode == "tail":
+                log_path = pane.get("log_path", "")
+                if log_path:
+                    checks.append(check_log_path(log_path, remote_dest))
+
+    all_ok = all(c["ok"] for c in checks)
+    return {"ok": all_ok, "workspace": workspace_name, "checks": checks}
+
+
+def main():
+    parser = argparse.ArgumentParser(description="cmux workspace doctor — health check")
+    parser.add_argument("config", help="Path to workspace.yaml")
+    parser.add_argument("--pretty", action="store_true", default=True,
+                        help="Pretty-print JSON output (default)")
+    parser.add_argument("--compact", action="store_true", help="Compact JSON output")
+    args = parser.parse_args()
+
+    config_path = Path(args.config).expanduser()
+    if not config_path.exists():
+        print(f"ERROR: config not found: {config_path}", file=sys.stderr)
+        sys.exit(1)
+
+    report = run_doctor(config_path)
+
+    indent = None if args.compact else 2
+    print(json.dumps(report, indent=indent))
+
+    sys.exit(0 if report["ok"] else 1)
+
+
+if __name__ == "__main__":
+    main()

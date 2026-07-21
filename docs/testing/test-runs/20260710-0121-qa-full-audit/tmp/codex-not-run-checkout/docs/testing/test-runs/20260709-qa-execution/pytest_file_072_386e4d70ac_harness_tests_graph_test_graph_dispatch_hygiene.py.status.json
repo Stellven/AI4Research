@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_072_386e4d70ac_harness_tests_graph_test_graph_dispatch_hygiene.py",
+  "source": "harness/tests/graph/test_graph_dispatch_hygiene.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph/test_graph_dispatch_hygiene.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.364,
+  "timeout": false
+}

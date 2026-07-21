@@ -1,0 +1,11 @@
+T1: py_compile
+[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/solar_state_db.py'  FAIL: solar_state_db.py compile error
+[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/task_queue.py'  FAIL: task_queue.py compile error
+[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/pane_lease.py'  FAIL: pane_lease.py compile error
+[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/autopilot.py'  FAIL: autopilot.py compile error
+T2: bash -n solar-harness.sh
+bash: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/solar-harness.sh: No such file or directory
+  FAIL: syntax error
+T3: task-lifecycle.schema.json valid
+  FAIL: schema invalid
+T4: solar_state_db init

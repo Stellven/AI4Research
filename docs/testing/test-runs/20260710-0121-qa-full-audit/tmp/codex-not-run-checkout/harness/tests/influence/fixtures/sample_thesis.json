@@ -1,0 +1,10 @@
+{
+  "schema_version": "influence.thesis.v1",
+  "thesis_id": "thesis-fixture-001",
+  "derived_from_statements": ["stmt-fixture-001"],
+  "claim": "Next-gen frontier model capability gains will significantly exceed current scaling law predictions.",
+  "viewpoint_cluster": "scaling-optimism",
+  "confidence": 0.8,
+  "extraction_method": "fixture",
+  "extraction_source": "rule_based_v0"
+}

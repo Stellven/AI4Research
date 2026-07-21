@@ -1,0 +1,15 @@
+{
+  "section_id": "ch07/sec04",
+  "chapter_id": "ch07",
+  "title": "风险、安全与可解释性：工程取舍与评价标准",
+  "order": 28,
+  "target_chars": 1562,
+  "research_question": "latent reasoning 在“风险、安全与可解释性/工程取舍与评价标准”上的证据、架构取舍和争议是什么？",
+  "required_source_types": [
+    "paper",
+    "benchmark"
+  ],
+  "min_evidence": 4,
+  "min_claims": 3,
+  "schema_version": "solar.research.survey.v1"
+}

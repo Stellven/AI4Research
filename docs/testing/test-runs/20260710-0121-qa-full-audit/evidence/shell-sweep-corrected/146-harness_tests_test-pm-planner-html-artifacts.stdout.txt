@@ -1,0 +1,5 @@
+PASS: syntax checks pass
+PASS: coordinator prompts require HTML helper registration
+PASS: personas document HTML as human artifact
+PASS: workflow_guard leaves HTML out of route gate
+PASS

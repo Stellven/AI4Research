@@ -1,0 +1,111 @@
+{
+  "generated_at": "2026-07-10T14:04:45Z",
+  "proofs": [
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci novelty parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ideate-full-evidence-boundary/idea_evaluation.json",
+        "ideate-review-llm.json"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:users-jamesyuan-developer-github-repos-on-git-bettersolar-docs-testing-test-runs-20260710-0121-qa-full-audit-tmp-eligible-full-phase-v2-temp-eligible-0008-pytest-test-autosci-skill-shim-ideate2-ideate-review-llm-json:20260710T140445Z",
+      "provenance": {
+        "artifact_kind": "artifact_review",
+        "captured_at": "2026-07-10T14:04:45Z",
+        "command": "review_llm_evidence:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json",
+        "source": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json"
+      }
+    },
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci novelty parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ideate-full-evidence-boundary/idea_evaluation.json",
+        "ideate-review-llm.json"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:users-jamesyuan-developer-github-repos-on-git-bettersolar-docs-testing-test-runs-20260710-0121-qa-full-audit-tmp-eligible-full-phase-v2-temp-eligible-0008-pytest-test-autosci-skill-shim-ideate2-ideate-review-llm-json:20260710T140445Z",
+      "provenance": {
+        "artifact_kind": "artifact_review",
+        "captured_at": "2026-07-10T14:04:45Z",
+        "command": "review_llm_evidence:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json",
+        "source": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json"
+      }
+    },
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci novelty parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ideate-full-evidence-boundary/idea_evaluation.json",
+        "ideate-review-llm.json"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:users-jamesyuan-developer-github-repos-on-git-bettersolar-docs-testing-test-runs-20260710-0121-qa-full-audit-tmp-eligible-full-phase-v2-temp-eligible-0008-pytest-test-autosci-skill-shim-ideate2-ideate-review-llm-json:20260710T140445Z",
+      "provenance": {
+        "artifact_kind": "artifact_review",
+        "captured_at": "2026-07-10T14:04:45Z",
+        "command": "review_llm_evidence:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json",
+        "source": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json"
+      }
+    },
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci novelty parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ideate-full-evidence-boundary/idea_evaluation.json",
+        "ideate-review-llm.json"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:users-jamesyuan-developer-github-repos-on-git-bettersolar-docs-testing-test-runs-20260710-0121-qa-full-audit-tmp-eligible-full-phase-v2-temp-eligible-0008-pytest-test-autosci-skill-shim-ideate2-ideate-review-llm-json:20260710T140445Z",
+      "provenance": {
+        "artifact_kind": "artifact_review",
+        "captured_at": "2026-07-10T14:04:45Z",
+        "command": "review_llm_evidence:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json",
+        "source": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json"
+      }
+    },
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci novelty parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ideate-full-evidence-boundary/idea_evaluation.json",
+        "ideate-review-llm.json"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:users-jamesyuan-developer-github-repos-on-git-bettersolar-docs-testing-test-runs-20260710-0121-qa-full-audit-tmp-eligible-full-phase-v2-temp-eligible-0008-pytest-test-autosci-skill-shim-ideate2-ideate-review-llm-json:20260710T140445Z",
+      "provenance": {
+        "artifact_kind": "artifact_review",
+        "captured_at": "2026-07-10T14:04:45Z",
+        "command": "review_llm_evidence:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json",
+        "source": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_ideate2/ideate-review-llm.json"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

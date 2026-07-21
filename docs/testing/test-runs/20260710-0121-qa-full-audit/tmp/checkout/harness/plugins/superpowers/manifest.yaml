@@ -1,0 +1,53 @@
+---
+id: superpowers
+name: "Superpowers Skill Framework"
+version: "1.0.0"
+description: "Codex/Solar skill methodology and curated Superpowers plugin. Provides planning, TDD, debugging and collaboration workflow discipline."
+status: enabled
+
+write_scope:
+  - "state/superpowers"
+
+read_scope:
+  - "~/.codex/plugins/cache/openai-curated/superpowers"
+  - "~/.agents/skills/using-superpowers"
+  - "~/.claude/skills/using-superpowers"
+
+capabilities:
+  - "skill.methodology"
+  - "workflow.planning"
+  - "debug.systematic"
+  - "test.tdd"
+
+commands:
+  - "codex plugin superpowers"
+  - "solar-harness skills inventory"
+
+background_safety:
+  mode: none
+  idle_only: false
+  rate_limit: "none"
+  max_runtime_s: 30
+  max_memory_mb: 128
+
+eval_packs:
+  - "tests/plugins/test-s4-extension-framework.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable superpowers"
+
+integration_level: default_usable
+
+entry: "~/.agents/skills/using-superpowers/SKILL.md"
+
+events:
+  - "superpowers.skill_selected"
+
+depends_on: []
+
+tags:
+  - "skills"
+  - "planning"
+  - "tdd"

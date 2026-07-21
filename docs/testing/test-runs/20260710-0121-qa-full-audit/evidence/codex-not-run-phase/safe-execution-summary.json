@@ -1,0 +1,18 @@
+{
+  "schema": "qa.codex_not_run_execution.v1",
+  "target_count": 282,
+  "completed_target_count": 282,
+  "status_counts": {
+    "PASS": 186,
+    "FAIL": 87,
+    "SKIPPED_ENV": 1,
+    "NOT_COLLECTED": 8
+  },
+  "testcase_counts": {
+    "testcase_pass": 1903,
+    "testcase_fail": 284,
+    "testcase_error": 9,
+    "testcase_skip": 14
+  },
+  "all_targets_attempted": true
+}

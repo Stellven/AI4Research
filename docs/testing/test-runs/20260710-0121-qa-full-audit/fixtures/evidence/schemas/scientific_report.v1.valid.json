@@ -1,0 +1,24 @@
+{
+  "schema": "scientific_report.v1",
+  "task_id": "f",
+  "sprint_id": "f",
+  "node_id": "f",
+  "status": "completed",
+  "inputs": {},
+  "outputs": {
+    "report": {
+      "report_id": "f",
+      "title": "f",
+      "sections": [],
+      "evidence_ids": [],
+      "unsupported_claims": []
+    }
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "f",
+    "implementation_package": "f",
+    "timestamp": "2026-07-10T00:00:00Z"
+  },
+  "limitations": []
+}

@@ -15,7 +15,7 @@ from typing import Any
 
 logger = logging.getLogger("github_intelligence.alerts")
 
-_DEFAULT_CONFIG_PATH = "/Users/lisihao/Solar/harness/config/github_intelligence_config.yaml"
+_DEFAULT_CONFIG_PATH = "~/Solar/harness/config/github_intelligence_config.yaml"
 
 VALID_DETECTORS = {
     "sudden_hot",

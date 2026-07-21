@@ -1,0 +1,6 @@
+{
+  "run_id": "test_finalize_run_cli0",
+  "finalized_at": "2026-07-10T18:50:35Z",
+  "closeout_artifact": "final_closeout.json",
+  "verdict": "pass"
+}

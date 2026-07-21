@@ -1,0 +1,204 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/smoke/experiment_evaluation_final_verdict_boundary.json",
+      "type": "experiment_evaluation_final_verdict_boundary_json"
+    },
+    {
+      "path": "artifacts/scientific/smoke/claim_verdict.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "claim_id": "claim-001",
+    "claims_evidence": "artifacts/scientific/smoke/research_claims.json",
+    "code_evidence": "artifacts/scientific/smoke/code_evidence_map.json",
+    "experiment_result": "plugins/autosci/tests/fixtures/supported_experiment_result.json"
+  },
+  "limitations": [
+    "Fixture verdict is derived only from supplied local evidence; it is not external scientific validation.",
+    "Review LLM second-opinion evidence was not supplied or did not complete.",
+    "Final experiment evaluation requires completed experiment_result.v1 evidence.",
+    "Final experiment evaluation requires completed Review LLM proof.",
+    "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+  ],
+  "node_id": "node-verify-claim-supported",
+  "outputs": {
+    "final_verdict_boundary": {
+      "claim_evidence_ids": [
+        "claim-001",
+        "paper-sample-paper",
+        "sample_paper.md#results"
+      ],
+      "claim_evidence_linked": true,
+      "claim_id": "claim-001",
+      "code_evidence_ids": [
+        "task-autosci-code-evidence-fixture",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "claim-001"
+      ],
+      "code_evidence_linked": true,
+      "evidence_ids": [
+        "claim-001",
+        "paper-sample-paper",
+        "sample_paper.md#results",
+        "exp-supported-001",
+        "experiment.supported.001",
+        "metric.fixture_passed",
+        "task-autosci-code-evidence-fixture",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py"
+      ],
+      "experiment_evidence_ids": [
+        "exp-supported-001",
+        "experiment.supported.001",
+        "metric.fixture_passed"
+      ],
+      "experiment_result_ready": false,
+      "experiment_schema": "missing",
+      "experiment_status": "missing",
+      "final_verdict_ready": false,
+      "limitations": [
+        "Final experiment evaluation requires completed experiment_result.v1 evidence.",
+        "Final experiment evaluation requires completed Review LLM proof.",
+        "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+      ],
+      "review_llm_completed": false,
+      "review_llm_status": "unavailable",
+      "schema": "autosci_experiment_evaluation_final_verdict_boundary.v1",
+      "status": "final_verdict_incomplete",
+      "verdict": "supported",
+      "writeback_completed": false,
+      "writeback_status": {
+        "applied": false,
+        "approval_ref": "N/A",
+        "limitations": [
+          "Claim verdict writeback was not requested."
+        ],
+        "path": "",
+        "requested": false,
+        "status": "not_requested"
+      }
+    },
+    "verdicts": [
+      {
+        "basis": "Verdict derived from raw fixture experiment outcome `supports` for `exp-supported-001`. Claim text: The fixture path should produce a `result.json` file and an `evidence.jsonl` ledger entry without invoking a monolithic AutoSci workflow owner.",
+        "claim_evidence_ids": [
+          "claim-001",
+          "paper-sample-paper",
+          "sample_paper.md#results"
+        ],
+        "claim_id": "claim-001",
+        "code_evidence_ids": [
+          "task-autosci-code-evidence-fixture",
+          "map-001",
+          "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+          "claim-001"
+        ],
+        "confidence": 0.72,
+        "evidence_ids": [
+          "claim-001",
+          "paper-sample-paper",
+          "sample_paper.md#results",
+          "exp-supported-001",
+          "experiment.supported.001",
+          "metric.fixture_passed",
+          "task-autosci-code-evidence-fixture",
+          "map-001",
+          "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py"
+        ],
+        "evidence_outcome": "supports",
+        "experiment_evidence_ids": [
+          "exp-supported-001",
+          "experiment.supported.001",
+          "metric.fixture_passed"
+        ],
+        "experiment_id": "exp-supported-001",
+        "final_verdict_boundary": {
+          "claim_evidence_ids": [
+            "claim-001",
+            "paper-sample-paper",
+            "sample_paper.md#results"
+          ],
+          "claim_evidence_linked": true,
+          "claim_id": "claim-001",
+          "code_evidence_ids": [
+            "task-autosci-code-evidence-fixture",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+            "claim-001"
+          ],
+          "code_evidence_linked": true,
+          "evidence_ids": [
+            "claim-001",
+            "paper-sample-paper",
+            "sample_paper.md#results",
+            "exp-supported-001",
+            "experiment.supported.001",
+            "metric.fixture_passed",
+            "task-autosci-code-evidence-fixture",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py"
+          ],
+          "experiment_evidence_ids": [
+            "exp-supported-001",
+            "experiment.supported.001",
+            "metric.fixture_passed"
+          ],
+          "experiment_result_ready": false,
+          "experiment_schema": "missing",
+          "experiment_status": "missing",
+          "final_verdict_ready": false,
+          "limitations": [
+            "Final experiment evaluation requires completed experiment_result.v1 evidence.",
+            "Final experiment evaluation requires completed Review LLM proof.",
+            "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+          ],
+          "review_llm_completed": false,
+          "review_llm_status": "unavailable",
+          "schema": "autosci_experiment_evaluation_final_verdict_boundary.v1",
+          "status": "final_verdict_incomplete",
+          "verdict": "supported",
+          "writeback_completed": false,
+          "writeback_status": {
+            "applied": false,
+            "approval_ref": "N/A",
+            "limitations": [
+              "Claim verdict writeback was not requested."
+            ],
+            "path": "",
+            "requested": false,
+            "status": "not_requested"
+          }
+        },
+        "final_verdict_ready": false,
+        "limitations": [
+          "Fixture verdict is derived only from supplied local evidence; it is not external scientific validation.",
+          "Review LLM second-opinion evidence was not supplied or did not complete.",
+          "Final experiment evaluation requires completed experiment_result.v1 evidence.",
+          "Final experiment evaluation requires completed Review LLM proof.",
+          "Final experiment evaluation requires completed approved wiki writeback before treating the verdict as final."
+        ],
+        "review_llm": {
+          "checked_paths": [],
+          "claim_id": "claim-001",
+          "reasons": [
+            "No Review LLM evidence was supplied."
+          ],
+          "status": "unavailable"
+        },
+        "verdict": "supported"
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T14:05:03Z"
+  },
+  "schema": "claim_verdict.v1",
+  "sprint_id": "sprint-autosci-phase13",
+  "status": "completed",
+  "task_id": "task-autosci-verdict-supported-fixture"
+}

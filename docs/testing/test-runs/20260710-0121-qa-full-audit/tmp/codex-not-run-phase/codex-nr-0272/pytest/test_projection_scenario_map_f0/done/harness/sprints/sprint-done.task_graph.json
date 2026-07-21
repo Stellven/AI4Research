@@ -1,0 +1,11 @@
+{
+  "sprint_id": "sprint-done",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "done",
+      "depends_on": [],
+      "status": "passed"
+    }
+  ]
+}

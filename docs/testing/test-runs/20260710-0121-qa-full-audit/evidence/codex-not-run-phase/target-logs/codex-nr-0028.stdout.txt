@@ -1,0 +1,54 @@
+Extracted 17 functions to /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.45s2a7wHmo/extracted.sh
+=== test-coordinator-routing.sh ===
+
+TC1: SOLAR_PANE_EVALUATOR env override returns correct pane (not fallback)
+  ✅ PASS: choose_evaluator_pane returns env override value
+  ✅ PASS: result is not planner pane (0.0)
+
+TC2: SOLAR_PANE_BUILDER env override returns correct pane
+  ✅ PASS: choose_builder_pane returns env override
+
+TC3: SOLAR_PANE_PLANNER env override routes planner
+  ✅ PASS: choose_planner_pane returns env override
+
+TC4: No tmux session → discover_pane_by_persona returns fallback
+  ✅ PASS: returns fallback when tmux session absent
+
+TC5: Strict regex — 'Persona: evaluator' only matches exact line format
+  ✅ PASS: random 'evaluator' text does not match strict pattern
+  ✅ PASS: exact 'Persona: evaluator' line matches strict pattern
+  ✅ PASS: 'evaluator-pending' does not match strict pattern
+
+TC6: coordinator.sh session defaults honor custom-session env
+  ✅ PASS: SESSION_NAME reads SOLAR_HARNESS_SESSION
+  ✅ PASS: LAB_SESSION_NAME derives from custom session unless explicitly set
+
+TC7: Codex idle composer is treated as idle, slash residue is not
+  ✅ PASS: Codex suggestion composer is idle
+  ✅ PASS: Codex slash residue is not idle
+  ✅ PASS: Codex prompt glyph is detected
+  ✅ PASS: Codex default suggestion is not treated as typed residue
+  ✅ PASS: Codex slash residue remains visible to quarantine logic
+
+TC8: Codex processing markers count as real direct-dispatch processing
+  ✅ PASS: Codex Working marker is processing
+  ✅ PASS: Codex esc-to-interrupt marker is processing
+
+TC9: ACK contract uses active worktree SPRINTS_DIR
+  ✅ PASS: ACK path points at active SPRINTS_DIR
+  ✅ PASS: ACK contract no longer hard-codes Path.home ~/.solar harness
+
+TC10: coordinator sends dispatch command as literal tmux text
+  ✅ PASS: dispatch_to_pane uses tmux send-keys -l for short command
+  ✅ PASS: dispatch_to_pane no longer sends short command through key-name parser
+
+TC11: coordinator prompt text is harness-dir aware
+  ✅ PASS: coordinator.sh no longer hard-codes ~/.solar/harness in worker prompts
+  ✅ PASS: coordinator.sh prompt text uses active SPRINTS_DIR
+  ✅ PASS: coordinator.sh prompt text uses active HARNESS_DIR for helper commands
+
+TC12: capture-verified direct dispatch writes control-plane ACK
+  ✅ PASS: dispatch_to_pane writes in-progress ACK after capture verification
+  ✅ PASS: ACK watcher still launches after capture ACK
+
+=== Results: PASS=26 FAIL=0 ===

@@ -11,7 +11,8 @@
 #   - dispatch_id format: d-<YYYYMMDDTHHMMSSz>-<6hex>; unique per call
 #   - All reads are pure; no state mutation
 
-DISPATCH_LEDGER_FILE="${HARNESS_DIR:-$HOME/.solar/harness}/run/dispatch-ledger.jsonl"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
+DISPATCH_LEDGER_FILE="$HARNESS_DIR/run/dispatch-ledger.jsonl"
 
 # ── new_dispatch_id ───────────────────────────────────────────────────────────
 new_dispatch_id() {
@@ -31,7 +32,8 @@ dispatch_ledger_append() {
     local sid="${2:?dispatch_ledger_append: sid required}"
     local pane="${3:-unknown}"
     local dispatch_id="${4:-$(new_dispatch_id)}"
-    local extra_json="${5:-{}}"
+    local extra_json="${5:-}"
+    [[ -n "$extra_json" ]] || extra_json="{}"
     local ledger_file="$DISPATCH_LEDGER_FILE"
 
     python3 -c "

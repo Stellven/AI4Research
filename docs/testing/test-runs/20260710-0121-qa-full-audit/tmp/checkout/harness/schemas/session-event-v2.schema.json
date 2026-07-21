@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "solar-harness-session-event-v2",
+  "title": "Solar Harness Session Event v2",
+  "description": "Durable, event-sourced record for the managed-agent runtime. Each event is an immutable fact appended to the session log.",
+  "type": "object",
+  "required": ["event_id", "session_id", "seq", "ts", "type", "actor", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "UUID4 — globally unique event identity",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Durable session identifier shared by all events in one execution session",
+      "minLength": 1
+    },
+    "seq": {
+      "type": "integer",
+      "description": "Monotonically increasing per-session sequence number (1-based)",
+      "minimum": 1
+    },
+    "ts": {
+      "type": "string",
+      "description": "ISO 8601 UTC timestamp (YYYY-MM-DDTHH:MM:SSZ)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "type": {
+      "type": "string",
+      "description": "Event type discriminator",
+      "enum": [
+        "command_issued",
+        "activity_started",
+        "activity_succeeded",
+        "activity_failed",
+        "activity_cancelled",
+        "activity_retry_scheduled",
+        "activity_handoff",
+        "state_transition",
+        "human_feedback",
+        "context_injected",
+        "log_message",
+        "session_started",
+        "session_ended"
+      ]
+    },
+    "actor": {
+      "type": "string",
+      "description": "Who produced this event (coordinator, builder, evaluator, planner, pm, runtime, human)",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "description": "Subsystem or file that emitted the event",
+      "minLength": 1
+    },
+    "sprint_id": {
+      "type": ["string", "null"],
+      "description": "Sprint this event is scoped to; null for session-level events"
+    },
+    "activity_id": {
+      "type": ["string", "null"],
+      "description": "Stable identifier for the unit of work being tracked across command→started→result lifecycle"
+    },
+    "correlation_id": {
+      "type": ["string", "null"],
+      "description": "Groups logically related events across actors (e.g. one wake cycle)"
+    },
+    "causation_id": {
+      "type": ["string", "null"],
+      "description": "event_id of the event that directly caused this one"
+    },
+    "idempotency_key": {
+      "type": ["string", "null"],
+      "description": "If set, duplicate events with the same key are suppressed; enables at-least-once delivery without duplicate side effects"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific structured data"
+    }
+  }
+}

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 使用数据仪表盘</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-card: #21262d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-cyan: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+            --border-color: #30363d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .metric-card .value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        .metric-card .label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .metric-card.green .value { color: var(--accent-green); }
+        .metric-card.orange .value { color: var(--accent-orange); }
+        .metric-card.purple .value { color: var(--accent-purple); }
+        .metric-card.red .value { color: var(--accent-red); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .chart-card h3 {
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        .table-container h3 {
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        td {
+            color: var(--text-primary);
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
+            border-radius: 4px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-green { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+        .badge-orange { background: rgba(210, 153, 34, 0.2); color: var(--accent-orange); }
+        .badge-red { background: rgba(248, 81, 73, 0.2); color: var(--accent-red); }
+
+        .insights {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .insights h3 {
+            margin-bottom: 15px;
+        }
+
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .insight-item:last-child {
+            border-bottom: none;
+        }
+
+        .insight-icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+        }
+
+        .insight-content h4 {
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .insight-content p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>Claude Code 使用数据仪表盘</h1>
+            <p class="subtitle">数据范围: 2026-01-14 ~ 2026-02-03 (20天) | 生成时间: 2026-02-03</p>
+        </div>
+
+        <!-- 核心指标 -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="value">270</div>
+                <div class="label">总会话数</div>
+            </div>
+            <div class="metric-card green">
+                <div class="value">97.7K</div>
+                <div class="label">总消息数</div>
+            </div>
+            <div class="metric-card orange">
+                <div class="value">11.2M</div>
+                <div class="label">总 Token 数</div>
+            </div>
+            <div class="metric-card purple">
+                <div class="value">$375</div>
+                <div class="label">估算成本</div>
+            </div>
+            <div class="metric-card">
+                <div class="value">196</div>
+                <div class="label">子代理数</div>
+            </div>
+            <div class="metric-card red">
+                <div class="value">2.65x</div>
+                <div class="label">子代理/主会话</div>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>项目 Token 分布</h3>
+                <div class="chart-container">
+                    <canvas id="projectTokenChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Input vs Output Token</h3>
+                <div class="chart-container">
+                    <canvas id="ioTokenChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>会话深度分布</h3>
+                <div class="chart-container">
+                    <canvas id="depthChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>每小时活跃度 (UTC+8)</h3>
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card full-width">
+                <h3>日活跃度趋势</h3>
+                <div class="chart-container">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 项目详情表 -->
+        <div class="table-container">
+            <h3>项目详情</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>项目</th>
+                        <th>会话数</th>
+                        <th>子代理</th>
+                        <th>消息数</th>
+                        <th>Tokens</th>
+                        <th>占比</th>
+                        <th>深度/会话</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>NEXEN</td>
+                        <td>83</td>
+                        <td>62</td>
+                        <td>28,839</td>
+                        <td>5.32M</td>
+                        <td>
+                            <div class="progress-bar"><div class="fill" style="width: 47.5%"></div></div>
+                        </td>
+                        <td><span class="badge badge-orange">347</span></td>
+                    </tr>
+                    <tr>
+                        <td>ThunderDuck</td>
+                        <td>119</td>
+                        <td>103</td>
+                        <td>47,315</td>
+                        <td>3.81M</td>
+                        <td>
+                            <div class="progress-bar"><div class="fill" style="width: 34.1%"></div></div>
+                        </td>
+                        <td><span class="badge badge-orange">398</span></td>
+                    </tr>
+                    <tr>
+                        <td>ThunderDuck-docs</td>
+                        <td>14</td>
+                        <td>9</td>
+                        <td>8,206</td>
+                        <td>795K</td>
+                        <td>
+                            <div class="progress-bar"><div class="fill" style="width: 7.1%"></div></div>
+                        </td>
+                        <td><span class="badge badge-red">586</span></td>
+                    </tr>
+                    <tr>
+                        <td>ThunderDuck-src-core</td>
+                        <td>23</td>
+                        <td>11</td>
+                        <td>6,601</td>
+                        <td>456K</td>
+                        <td>
+                            <div class="progress-bar"><div class="fill" style="width: 4.1%"></div></div>
+                        </td>
+                        <td><span class="badge badge-green">287</span></td>
+                    </tr>
+                    <tr>
+                        <td>Solar</td>
+                        <td>10</td>
+                        <td>6</td>
+                        <td>5,035</td>
+                        <td>381K</td>
+                        <td>
+                            <div class="progress-bar"><div class="fill" style="width: 3.4%"></div></div>
+                        </td>
+                        <td><span class="badge badge-red">504</span></td>
+                    </tr>
+                    <tr>
+                        <td>Home (~)</td>
+                        <td>16</td>
+                        <td>5</td>
+                        <td>1,428</td>
+                        <td>436K</td>
+                        <td>
+                            <div class="progress-bar"><div class="fill" style="width: 3.9%"></div></div>
+                        </td>
+                        <td><span class="badge badge-green">89</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TPC-H 性能基准 -->
+        <div class="table-container">
+            <h3>TPC-H 性能基准 (ThunderDuck)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Query</th>
+                        <th>DuckDB (ms)</th>
+                        <th>ThunderDuck (ms)</th>
+                        <th>加速比</th>
+                        <th>评级</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Q21</td>
+                        <td>44.28</td>
+                        <td>1.95</td>
+                        <td><strong style="color: var(--accent-green)">22.73x</strong></td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>Q22</td>
+                        <td>10.70</td>
+                        <td>1.26</td>
+                        <td><strong style="color: var(--accent-green)">8.49x</strong></td>
+                        <td>⭐⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>Q1</td>
+                        <td>34.94</td>
+                        <td>4.16</td>
+                        <td><strong style="color: var(--accent-green)">8.39x</strong></td>
+                        <td>⭐⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>Q19</td>
+                        <td>31.01</td>
+                        <td>4.60</td>
+                        <td><strong style="color: var(--accent-cyan)">6.74x</strong></td>
+                        <td>⭐⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>几何平均</td>
+                        <td colspan="2" style="text-align: center">-</td>
+                        <td><strong style="color: var(--accent-purple)">3.24x</strong></td>
+                        <td>整体优秀</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 洞察与建议 -->
+        <div class="insights">
+            <h3>关键洞察与演进建议</h3>
+            <div class="insight-item">
+                <div class="insight-icon">💰</div>
+                <div class="insight-content">
+                    <h4>成本优化机会: 实现多模型路由</h4>
+                    <p>当前全部使用 Opus 4.5，建议简单任务使用 Haiku，日常编码使用 Sonnet，预计节省 50-60% 成本 (~$180)</p>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon">📊</div>
+                <div class="insight-content">
+                    <h4>Input Token 占比过高 (69%)</h4>
+                    <p>大量 Token 用于上下文传递，建议优化长会话摘要策略，减少重复输入</p>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon">🤖</div>
+                <div class="insight-content">
+                    <h4>子代理使用率高 (2.65x)</h4>
+                    <p>任务分解充分，但建议建立子代理性能基线，优化低效子代理调用</p>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon">⏰</div>
+                <div class="insight-content">
+                    <h4>活跃时段: 早 (07:00)、午 (12:00)、晚 (20:00)</h4>
+                    <p>建议在这些高峰时段准备好复杂任务的上下文，提高效率</p>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon">🎯</div>
+                <div class="insight-content">
+                    <h4>演进路线图</h4>
+                    <p>短期: 多模型路由 → 中期: 跨会话记忆 → 长期: 自主学习能力</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Powered by <a href="#">Solar v2.0</a> | 数据由 Claude Code 生成</p>
+            <p style="margin-top: 10px; font-size: 0.85rem;">完整报告: <a href="./CLAUDE_USAGE_REPORT.md">docs/CLAUDE_USAGE_REPORT.md</a></p>
+        </div>
+    </div>
+
+    <script>
+        // 配置 Chart.js 全局样式
+        Chart.defaults.color = '#8b949e';
+        Chart.defaults.borderColor = '#30363d';
+
+        // 项目 Token 分布饼图
+        new Chart(document.getElementById('projectTokenChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['NEXEN', 'ThunderDuck', 'TD-docs', 'TD-core', 'Solar', 'Home'],
+                datasets: [{
+                    data: [5316490, 3813707, 795489, 455595, 381051, 435809],
+                    backgroundColor: [
+                        '#58a6ff',
+                        '#3fb950',
+                        '#d29922',
+                        '#a371f7',
+                        '#f85149',
+                        '#8b949e'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+
+        // Input vs Output 饼图
+        new Chart(document.getElementById('ioTokenChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Input Tokens', 'Output Tokens'],
+                datasets: [{
+                    data: [7744117, 3456356],
+                    backgroundColor: ['#58a6ff', '#3fb950'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+
+        // 会话深度分布柱状图
+        new Chart(document.getElementById('depthChart'), {
+            type: 'bar',
+            data: {
+                labels: ['短 (<10)', '中 (10-50)', '长 (50-200)', '超长 (>200)'],
+                datasets: [{
+                    label: '会话数',
+                    data: [25, 116, 93, 36],
+                    backgroundColor: ['#8b949e', '#58a6ff', '#d29922', '#f85149']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#30363d'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // 每小时活跃度
+        const hourlyData = [8, 6, 9, 4, 4, 9, 7, 14, 11, 6, 1, 8, 14, 8, 8, 11, 8, 4, 6, 8, 15, 8, 11, 10];
+        new Chart(document.getElementById('hourlyChart'), {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                datasets: [{
+                    label: '活动数',
+                    data: hourlyData,
+                    backgroundColor: hourlyData.map(v => v >= 14 ? '#3fb950' : v >= 10 ? '#58a6ff' : '#8b949e')
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#30363d'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // 日活跃度趋势
+        const dailyLabels = ['01-14', '01-15', '01-16', '01-17', '01-18', '01-19', '01-20', '01-21', '01-22', '01-23', '01-24', '01-25', '01-26', '01-27', '01-28', '01-29', '01-30', '01-31', '02-01', '02-02', '02-03'];
+        const dailyData = [2, 3, 11, 18, 14, 2, 1, 6, 7, 11, 18, 6, 7, 16, 24, 22, 26, 28, 2, 2, 9];
+        new Chart(document.getElementById('dailyChart'), {
+            type: 'line',
+            data: {
+                labels: dailyLabels,
+                datasets: [{
+                    label: '会话数',
+                    data: dailyData,
+                    borderColor: '#58a6ff',
+                    backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#30363d'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: '#30363d'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

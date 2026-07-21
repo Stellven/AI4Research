@@ -1,0 +1,2 @@
+DRY-RUN: upstream modules (event_ledger / execution_broker) not importable
+DRY-RUN: skipping integration chain — re-run after S03 upstream is installed

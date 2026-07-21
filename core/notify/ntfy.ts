@@ -5,7 +5,7 @@
  */
 
 const NTFY_SERVER = 'https://ntfy.sh';
-const DEFAULT_TOPIC = 'solar-sihaoli-notify';
+const DEFAULT_TOPIC = process.env.SOLAR_NTFY_TOPIC || 'solar-notify';
 
 interface NtfyMessage {
   topic?: string;

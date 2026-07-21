@@ -1,0 +1,13 @@
+{
+  "actors": {
+    "builder-a": {
+      "actor_id": "builder-a",
+      "host_id": "mini",
+      "role": "builder",
+      "capability_profile": {
+        "harness.status": 5,
+        "dag.ready_nodes": 4
+      }
+    }
+  }
+}

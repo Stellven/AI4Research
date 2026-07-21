@@ -1,0 +1,48 @@
+{
+  "run_id": "run_typical_001",
+  "selected_directions": [
+    {
+      "direction_id": "d1",
+      "direction_name": "Transformer Scaling",
+      "query": "scaling laws for transformer architectures",
+      "status": "selected",
+      "source_matrix": null,
+      "elimination_record": null,
+      "schema_version": "solar.research.survey.v1"
+    },
+    {
+      "direction_id": "d2",
+      "direction_name": "Efficient Attention",
+      "query": "efficient attention mechanisms comparison",
+      "status": "selected",
+      "source_matrix": null,
+      "elimination_record": null,
+      "schema_version": "solar.research.survey.v1"
+    }
+  ],
+  "eliminated_directions": [
+    {
+      "direction_id": "d3",
+      "direction_name": "RNN Revival",
+      "query": "modern RNN architectures",
+      "status": "eliminated",
+      "source_matrix": null,
+      "elimination_record": {
+        "direction_id": "d3",
+        "direction_name": "RNN Revival",
+        "score": 0.25,
+        "kill_reason": "insufficient_source_coverage",
+        "evidence_refs": ["src_r1", "src_r2"],
+        "decision_ts": "2026-05-17T12:00:00Z",
+        "direction_query": "modern RNN architectures",
+        "candidate_count": 3,
+        "score_breakdown": {"source_coverage": 0.2, "novelty": 0.3, "feasibility": 0.2, "evidence_density": 0.3},
+        "schema_version": "solar.research.survey.v1"
+      },
+      "schema_version": "solar.research.survey.v1"
+    }
+  ],
+  "elimination_log_path": "runtime/survey-continue/run_typical_001/elimination_log.jsonl",
+  "source_matrix_consumed": null,
+  "schema_version": "solar.research.survey.v1"
+}

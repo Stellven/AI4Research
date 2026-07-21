@@ -18,7 +18,7 @@ import { Database } from "bun:sqlite";
 import { readFileSync } from "fs";
 import { homedir } from "os";
 
-const DB_PATH = `${homedir()}/.solar/solar.db`;
+const DB_PATH = process.env.SOLAR_DB_PATH || `${homedir()}/.solar/db/solar.db`;
 
 interface SemanticMemory {
   namespace: string;

@@ -1,0 +1,8 @@
+{
+  "schema": "fixture_evidence.v1",
+  "fixture_source": true,
+  "status": "complete",
+  "evidence_refs": [
+    "fixture://local"
+  ]
+}

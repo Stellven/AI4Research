@@ -1,0 +1,174 @@
+{
+  "action": "reset_plan",
+  "after_artifacts": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_after_snapshot.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_reset_1/artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_after_snapshot.json",
+      "verifiable": true
+    }
+  ],
+  "after_ready": true,
+  "allowlist_evidence": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_plan_gate_policy_allowlist.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_plan_gate_policy_allowlist.json",
+      "verifiable": true
+    }
+  ],
+  "allowlist_ready": true,
+  "approval_ref": "policy:auto:autosci_native:reset_plan:2026-07-10T14:04:23Z",
+  "approval_state": "verified",
+  "approved": true,
+  "authorization_request": {
+    "action": "reset_plan",
+    "approval_state": "verified",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [],
+        "allowlist_evidence": [],
+        "approval_ref": "",
+        "before_artifacts": [],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": []
+      },
+      "request_fingerprint": "a472757fe9819e2dd7f08ff85ba118b525e4a4da7838927cce199879e361498f",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": false,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "ready"
+    },
+    "missing": [],
+    "non_error_contract": {
+      "approval_state": "verified",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": false,
+      "allowlist_evidence": false,
+      "approval_ref": false,
+      "before_artifacts": false,
+      "runtime_evidence": false
+    },
+    "requested_side_effects": [
+      "destructive_reset",
+      "state_archive",
+      "workspace_rebuild"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "authorized"
+  },
+  "before_artifacts": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_plan_gate_policy_decision.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_plan_gate_policy_decision.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_before_snapshot.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_reset_1/artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_before_snapshot.json",
+      "verifiable": true
+    }
+  ],
+  "before_ready": true,
+  "execution_verified": true,
+  "missing": [],
+  "policy_auto_approved": true,
+  "policy_decision": {
+    "action": "reset_plan",
+    "allow_destructive": true,
+    "allow_email": true,
+    "allow_network": true,
+    "allow_remote": true,
+    "allowed": true,
+    "allowed_write_roots": [
+      "artifacts/autosci",
+      "artifacts/scientific"
+    ],
+    "blocked": false,
+    "execute_side_effects": true,
+    "mode": "autosci_native",
+    "proof_best_effort": true,
+    "proof_required": false,
+    "reasons": [
+      "autosci_native allows side effects without Solar gate blocking.",
+      "autosci_native allows side effects without Solar gate blocking.",
+      "autosci_native allows side effects without Solar gate blocking.",
+      "autosci_native allows side effects without Solar gate blocking.",
+      "autosci_native allows side effects without Solar gate blocking."
+    ],
+    "require_approval_ref": false,
+    "require_before_after_artifacts": false,
+    "require_hitl": false,
+    "require_runtime_evidence": false,
+    "sandbox_required": false,
+    "side_effects": [
+      "read_local",
+      "write_artifact",
+      "local_command",
+      "wiki_mutation",
+      "destructive_mutation"
+    ],
+    "synthetic_approval_ref": "policy:auto:autosci_native:reset_plan:2026-07-10T14:04:23Z",
+    "warnings": [
+      "Auto-approved by gate policy mode `autosci_native`; no human approval was requested.",
+      "Solar gates are bypassed in autosci_native mode; evidence is best-effort only."
+    ]
+  },
+  "ready_for_execution": true,
+  "runtime_evidence": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_reset_1/artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_runtime_evidence.json",
+      "verifiable": true
+    }
+  ],
+  "runtime_ready": true,
+  "schema": "autosci_approval_contract.v1",
+  "semantic_runtime": {
+    "action": "reset_plan",
+    "checks": [
+      {
+        "check": "approval_contract_execution_verified",
+        "detail": "Approval, allowlist, runtime, and before/after artifact paths are present.",
+        "status": "ok"
+      },
+      {
+        "check": "runtime_records_loaded",
+        "detail": "1 runtime record(s) loaded.",
+        "status": "ok"
+      }
+    ],
+    "detail": {
+      "errors": [],
+      "evidence_ids": [
+        "reset:policy:auto:autosci_native:reset_plan:2026-07-10T14:04:23Z",
+        "wiki:wiki",
+        "reset-wiki-runtime",
+        "node-reset-wiki",
+        "artifacts/autosci/runs/shim-reset-autosci-native-policy/reset_wiki_runtime_evidence.json"
+      ],
+      "records_loaded": 1
+    },
+    "schema": "autosci_runtime_semantic_verification.v1",
+    "status": "verified",
+    "verified": true
+  },
+  "side_effects": [
+    "destructive_reset",
+    "state_archive",
+    "workspace_rebuild"
+  ]
+}

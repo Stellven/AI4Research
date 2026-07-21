@@ -43,7 +43,7 @@ python3 "${LIB_DIR}/model_call_runtime.py" request --session-id "$SESSION_ID" --
 python3 "${LIB_DIR}/model_call_runtime.py" succeeded --session-id "$SESSION_ID" --pane "%test-model-pane" --dispatch-id "dispatch-1" --instruction-file "$DISPATCH_FILE" --status "tmux_submit_accepted" --tries 1 --json >/tmp/model-call-success.$$.json
 OUT=$(python3 - "$SESSION_ID" <<'PY'
 import sys
-sys.path.insert(0, "/Users/sihaoli/.solar/harness/lib")
+sys.path.insert(0, "~/.solar/harness/lib")
 from session_log import SessionLog
 events = SessionLog(sys.argv[1]).all_events()
 types = [e["type"] for e in events]

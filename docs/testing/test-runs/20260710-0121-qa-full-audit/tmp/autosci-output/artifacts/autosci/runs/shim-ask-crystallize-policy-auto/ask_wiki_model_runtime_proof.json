@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-07-10T05:55:09Z",
+  "proofs": [
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed model response evidence for AutoSci `ask` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ask-crystallize-policy-auto/research_memory_update.ask.json",
+        "artifacts/autosci/runs/shim-ask-crystallize-policy-auto/ask_wiki_model_stdout.json"
+      ],
+      "native_skill": "ask",
+      "production_ready": true,
+      "proof_id": "runtime:ask:command:20260710T055509Z",
+      "provenance": {
+        "artifact_kind": "model_response",
+        "captured_at": "2026-07-10T05:55:09Z",
+        "command": "'/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python' '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_ask_cr1/ask_model_command.py'",
+        "source": "command"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

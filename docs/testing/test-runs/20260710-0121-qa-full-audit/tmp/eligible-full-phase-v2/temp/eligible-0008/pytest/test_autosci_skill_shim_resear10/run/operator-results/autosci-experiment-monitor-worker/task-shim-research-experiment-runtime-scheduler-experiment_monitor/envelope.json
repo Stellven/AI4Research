@@ -1,0 +1,46 @@
+{
+  "task_id": "task-shim-research-experiment-runtime-scheduler-experiment_monitor",
+  "sprint_id": "shim-research-experiment-runtime-scheduler",
+  "node_id": "experiment_monitor",
+  "operator_id": "autosci-experiment-monitor-worker",
+  "task_type": "scientific-experiment-monitor",
+  "objective": "Scheduler-dispatched bounded smoke for ScientificExperimentMonitor.",
+  "mode": "bounded_runtime_smoke",
+  "runner_contract": "bounded_node_smoke",
+  "output_dir": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-experiment-runtime-scheduler/experiment_monitor/task-shim-research-experiment-runtime-scheduler-experiment_monitor",
+  "inputs": {
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "paper_id": "paper-shim-research-experiment-runtime-scheduler",
+    "allow_network_fetch": false,
+    "smoke_mode": true,
+    "execution_mode": "human_approved",
+    "experiment_plan_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-experiment-runtime-scheduler/experiment_design/task-shim-research-experiment-runtime-scheduler-experiment_design/experiment_plan.json",
+    "collect": true,
+    "approval_ref": "approval-experiment-runtime-shim",
+    "runtime_evidence": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear10/external-experiment-runtime/experiment-runtime.json"
+    ],
+    "allowlist_evidence": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear10/external-experiment-runtime/experiment-allowlist.json"
+    ],
+    "before_artifacts": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear10/external-experiment-runtime/experiment-before.json"
+    ],
+    "after_artifacts": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_resear10/external-experiment-runtime/experiment-after.json"
+    ]
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-experiment-runtime-scheduler/experiment_monitor/task-shim-research-experiment-runtime-scheduler-experiment_monitor/monitor_experiment.result.json",
+    "evidence_payload_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-experiment-runtime-scheduler/experiment_monitor/task-shim-research-experiment-runtime-scheduler-experiment_monitor/experiment_status.json",
+    "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-experiment-runtime-scheduler/experiment_monitor/task-shim-research-experiment-runtime-scheduler-experiment_monitor/evidence.jsonl",
+    "memory_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-experiment-runtime-scheduler/experiment_monitor/task-shim-research-experiment-runtime-scheduler-experiment_monitor/research_memory_update.json",
+    "graph_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-experiment-runtime-scheduler/experiment_monitor/task-shim-research-experiment-runtime-scheduler-experiment_monitor/research_graph_update.json"
+  },
+  "expected_schema": "experiment_status.v1",
+  "expected_action": "monitor_experiment",
+  "logical_operator": "ScientificExperimentMonitor",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T14:03:44Z",
+  "lease_expires_at": "2026-07-10T14:05:44Z"
+}

@@ -1,0 +1,10 @@
+{
+  "section_id": "ch01/sec03",
+  "verdict": "PASS",
+  "unsupported_claim_rate": 0.0,
+  "citation_span_accuracy": 1.0,
+  "source_diversity_score": 1.0,
+  "repetition_score": 0.0,
+  "issues": [],
+  "schema_version": "solar.research.survey.v1"
+}

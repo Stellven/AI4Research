@@ -1,0 +1,544 @@
+{
+  "action": "evaluate_ideas",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-deploy-native/novelty_final_acceptance_boundary.json",
+        "type": "novelty_final_acceptance_boundary_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-deploy-native/wiki_state_resolver.json",
+        "type": "wiki_state_resolver_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-exp-run-deploy-native/idea_evaluation.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "claims_evidence": "artifacts/autosci/runs/shim-exp-run-deploy-native/research_claims.json",
+      "ideas_evidence": "artifacts/autosci/runs/shim-exp-run-deploy-native/idea_candidate.json",
+      "memory_evidence": "artifacts/autosci/runs/shim-exp-run-deploy-native/research_memory_update.json",
+      "method_evidence": "artifacts/autosci/runs/shim-exp-run-deploy-native/research_method.json",
+      "native_options": {
+        "add": "",
+        "affiliation_logo": "",
+        "after_artifacts": [],
+        "all": false,
+        "allowlist_evidence": [],
+        "anonymous": false,
+        "approval_ref": "",
+        "authors": "",
+        "auto": false,
+        "auto_figures": false,
+        "before_artifacts": [],
+        "canvas": false,
+        "checklist": false,
+        "claims_evidence": [],
+        "code_evidence": [],
+        "collect": false,
+        "collect_ready": false,
+        "compile_after_artifacts": [],
+        "compile_allowlist_evidence": [],
+        "compile_approval_ref": "",
+        "compile_before_artifacts": [],
+        "compile_execute_approved": false,
+        "compile_executor_timeout_seconds": 120,
+        "compile_runtime_evidence": [],
+        "compile_target": "",
+        "conference_logo": "",
+        "crystallize": false,
+        "daily_categories": [],
+        "daily_decisions": "",
+        "daily_feed": "",
+        "daily_hours": 0,
+        "daily_max_auto_ingest": 0,
+        "daily_max_recommendations": 0,
+        "daily_mode": "",
+        "daily_no_external": false,
+        "daily_send_email": "",
+        "depth": 0,
+        "difficulty": "",
+        "discover": false,
+        "double_blind": false,
+        "edge_types": "",
+        "env": "local",
+        "execute_approved": false,
+        "experiment_after_artifacts": [],
+        "experiment_allowlist_evidence": [],
+        "experiment_approval_ref": "",
+        "experiment_before_artifacts": [],
+        "experiment_execute_approved": false,
+        "experiment_executor_timeout_seconds": 120,
+        "experiment_result_evidence": [],
+        "experiment_runtime_evidence": [],
+        "fix": false,
+        "focus": "",
+        "format": "",
+        "full": false,
+        "idea_approval_ref": "",
+        "layout": "",
+        "lifecycle_summary": [],
+        "max_ideas": 0,
+        "max_rounds": 0,
+        "min_font_size": null,
+        "model_command": "",
+        "model_evidence": [],
+        "no_figures": false,
+        "no_introduction": false,
+        "no_logos": false,
+        "no_refine": false,
+        "novelty_evidence": [],
+        "obsidian": false,
+        "online": false,
+        "page_count": null,
+        "page_limit": null,
+        "paper_slug": "",
+        "pdf_inspection": "",
+        "pilot_handoff_evidence": [],
+        "pilot_runtime_evidence": [],
+        "pipeline": "",
+        "quick": false,
+        "refine_iterations": 0,
+        "remote_check_command": "",
+        "remote_run_dir": "",
+        "render": false,
+        "require_review_llm": false,
+        "results_approval_ref": "",
+        "review": true,
+        "review_llm_command": "",
+        "review_llm_endpoint": "",
+        "review_llm_evidence": [],
+        "review_llm_model": "",
+        "review_llm_provider": "",
+        "reviewer_thread_evidence": [],
+        "runtime_evidence": [],
+        "scheduler_demo": false,
+        "scheduler_dispatch_external_evidence": false,
+        "scheduler_include_blocked_external": false,
+        "scheduler_include_human_gates": false,
+        "scheduler_legacy_smoke_runner": false,
+        "scheduler_node_id": [],
+        "scheduler_require_workflow_config_alignment": false,
+        "scheduler_run": false,
+        "scheduler_timeout": 30.0,
+        "scope": "",
+        "serve": false,
+        "skip_paper": false,
+        "skip_pilot": false,
+        "skip_validation": false,
+        "source_evidence": [],
+        "start_from": "",
+        "stress_test": null,
+        "submission_audit": "",
+        "submission_mode": "",
+        "submission_profile": "",
+        "target_score": 0.0,
+        "title": "",
+        "types": "",
+        "verbose": false,
+        "verified_min_font_size": null,
+        "verified_page_count": null,
+        "visualize": false,
+        "write": false
+      },
+      "online_novelty": true,
+      "review_llm_requested": true,
+      "smoke_mode": false,
+      "topic": "exp-skillgen"
+    },
+    "limitations": [
+      "Novelty/review signals are derived from local wiki/discovery evidence.",
+      "Independent Review LLM and live external search are still required before promotion.",
+      "Novelty final acceptance boundary is incomplete for at least one evaluated idea.",
+      "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+      "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+    ],
+    "node_id": "node-evaluate-ideas",
+    "outputs": {
+      "evaluations": [
+        {
+          "closest_prior_work": [
+            {
+              "kind": "discovery",
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research/literature_discovery.json",
+              "similarity": 1.0,
+              "source_id": "discovery:AutoSci Adapter Fixture Paper",
+              "title": "AutoSci Adapter Fixture Paper"
+            },
+            {
+              "kind": "discovery",
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-discover-wiki-runtime-proof/literature_discovery.json",
+              "similarity": 1.0,
+              "source_id": "discovery:Runtime Verified Local Wiki Source",
+              "title": "Runtime Verified Local Wiki Source"
+            },
+            {
+              "kind": "paper",
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+              "similarity": 0.667,
+              "source_id": "wiki:papers/paper-registered-source",
+              "title": "Registered SkillGen Source"
+            },
+            {
+              "kind": "discovery",
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-discover-provider-runtime-proof/literature_discovery.json",
+              "similarity": 0.6,
+              "source_id": "discovery:Runtime Verified Skill Generation Source",
+              "title": "Runtime Verified Skill Generation Source"
+            },
+            {
+              "kind": "paper",
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+              "similarity": 0.429,
+              "source_id": "wiki:papers/paper-skillgen-operator-smoke-paper",
+              "title": "SKILLGEN: Verified Inference-Time Agent Skill Synthesis"
+            }
+          ],
+          "duplicate_status": "new",
+          "evidence_ids": [
+            "idea-wiki-discovery-001",
+            "discovery:AutoSci Adapter Fixture Paper",
+            "discovery:Runtime Verified Local Wiki Source",
+            "wiki:papers/paper-registered-source",
+            "discovery:Runtime Verified Skill Generation Source",
+            "wiki:papers/paper-skillgen-operator-smoke-paper"
+          ],
+          "external_novelty": {
+            "checked_paths": [],
+            "provenance": {
+              "checked_source_count": 0,
+              "completed_provider_count": 0,
+              "issues": [
+                "Online novelty providers returned no usable sources."
+              ],
+              "status": "unavailable"
+            },
+            "provider_statuses": [
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "semantic_scholar",
+                "query": "exp-skillgen",
+                "reason": "<urlopen error [Errno 61] Connection refused>",
+                "status": "failed"
+              },
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "web",
+                "query": "exp-skillgen",
+                "reason": "missing AUTOSCI_WEB_SEARCH_EVIDENCE_URL or SERPER_API_KEY",
+                "status": "unavailable"
+              },
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "deepxiv",
+                "query": "exp-skillgen",
+                "reason": "missing AUTOSCI_DEEPXIV_SEARCH_URL",
+                "status": "unavailable"
+              }
+            ],
+            "query": "exp-skillgen",
+            "reason": "Online novelty providers returned no usable sources.",
+            "source_count": 0,
+            "status": "unavailable"
+          },
+          "external_source_count": 0,
+          "failed_overlap": "",
+          "feasibility": 0.6,
+          "feasibility_rationale": "Local review checks source grounding, failed-idea overlap, and closest-prior similarity; independent Review LLM evidence is still required.",
+          "final_acceptance_boundary": {
+            "blocking_reasons": [
+              "external_novelty status is `unavailable`, not `completed`",
+              "external_novelty provenance status is `unavailable`, not `passed`",
+              "review_llm status is `unavailable`, not `completed`"
+            ],
+            "evidence_ids": [
+              "idea-wiki-discovery-001",
+              "discovery:AutoSci Adapter Fixture Paper",
+              "discovery:Runtime Verified Local Wiki Source",
+              "wiki:papers/paper-registered-source",
+              "discovery:Runtime Verified Skill Generation Source",
+              "wiki:papers/paper-skillgen-operator-smoke-paper"
+            ],
+            "external_novelty_provenance_status": "unavailable",
+            "external_novelty_status": "unavailable",
+            "external_source_count": 0,
+            "final_acceptance_ready": false,
+            "idea_id": "idea-wiki-discovery-001",
+            "limitations": [
+              "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+            ],
+            "novelty": 0.33,
+            "novelty_score": 2,
+            "provider_statuses": [
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "semantic_scholar",
+                "query": "exp-skillgen",
+                "reason": "<urlopen error [Errno 61] Connection refused>",
+                "status": "failed"
+              },
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "web",
+                "query": "exp-skillgen",
+                "reason": "missing AUTOSCI_WEB_SEARCH_EVIDENCE_URL or SERPER_API_KEY",
+                "status": "unavailable"
+              },
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "deepxiv",
+                "query": "exp-skillgen",
+                "reason": "missing AUTOSCI_DEEPXIV_SEARCH_URL",
+                "status": "unavailable"
+              }
+            ],
+            "recommendation": "reject",
+            "review_available": false,
+            "review_invocation_mode": "provider",
+            "review_llm_status": "unavailable",
+            "review_mode": "local_surrogate",
+            "schema": "autosci_novelty_final_acceptance_boundary.v1",
+            "status": "novelty_acceptance_incomplete"
+          },
+          "idea_id": "idea-wiki-discovery-001",
+          "local_source_count": 12,
+          "novelty": 0.33,
+          "novelty_label": "high-overlap",
+          "novelty_rationale": "Novelty is estimated from overlap against local wiki/discovery evidence and supplied external novelty evidence. Closest similarity=1.000; source_count=12; external_source_count=0.",
+          "recommendation": "reject",
+          "review_available": false,
+          "review_llm": {
+            "checked_paths": [],
+            "endpoint": "https://api.openai.com/v1/chat/completions",
+            "invocation_mode": "provider",
+            "model": "gpt-5.5",
+            "provider": "openai",
+            "reason": "Review LLM provider openai is configured but no API key is available.",
+            "status": "unavailable",
+            "tool": "mcp__llm-review__chat"
+          },
+          "review_mode": "local_surrogate",
+          "review_score": 0.6,
+          "risks": [
+            "Review LLM cross-verify is not connected; this is a local conservative review signal.",
+            "Run /novelty with live search and /review with Review LLM before promotion.",
+            "External Web/Semantic Scholar/DeepXiv novelty evidence is unavailable or invalid."
+          ],
+          "source_count": 12,
+          "source_mode": "mixed"
+        },
+        {
+          "closest_prior_work": [
+            {
+              "kind": "discovery",
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-discover-wiki-runtime-proof/literature_discovery.json",
+              "similarity": 0.2,
+              "source_id": "discovery:Runtime Verified Local Wiki Source",
+              "title": "Runtime Verified Local Wiki Source"
+            },
+            {
+              "kind": "method",
+              "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/workspace/wiki/methods/method-001.md",
+              "similarity": 0.091,
+              "source_id": "wiki:methods/method-001",
+              "title": "Method protocol"
+            }
+          ],
+          "duplicate_status": "new",
+          "evidence_ids": [
+            "idea-method-incremental-001",
+            "wiki:methods/method-001",
+            "discovery:Runtime Verified Local Wiki Source"
+          ],
+          "external_novelty": {
+            "checked_paths": [],
+            "provenance": {
+              "checked_source_count": 0,
+              "completed_provider_count": 0,
+              "issues": [
+                "Online novelty providers returned no usable sources."
+              ],
+              "status": "unavailable"
+            },
+            "provider_statuses": [
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "semantic_scholar",
+                "query": "exp-skillgen",
+                "reason": "<urlopen error [Errno 61] Connection refused>",
+                "status": "failed"
+              },
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "web",
+                "query": "exp-skillgen",
+                "reason": "missing AUTOSCI_WEB_SEARCH_EVIDENCE_URL or SERPER_API_KEY",
+                "status": "unavailable"
+              },
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "deepxiv",
+                "query": "exp-skillgen",
+                "reason": "missing AUTOSCI_DEEPXIV_SEARCH_URL",
+                "status": "unavailable"
+              }
+            ],
+            "query": "exp-skillgen",
+            "reason": "Online novelty providers returned no usable sources.",
+            "source_count": 0,
+            "status": "unavailable"
+          },
+          "external_source_count": 0,
+          "failed_overlap": "",
+          "feasibility": 0.72,
+          "feasibility_rationale": "Local review checks source grounding, failed-idea overlap, and closest-prior similarity; independent Review LLM evidence is still required.",
+          "final_acceptance_boundary": {
+            "blocking_reasons": [
+              "external_novelty status is `unavailable`, not `completed`",
+              "external_novelty provenance status is `unavailable`, not `passed`",
+              "review_llm status is `unavailable`, not `completed`"
+            ],
+            "evidence_ids": [
+              "idea-method-incremental-001",
+              "wiki:methods/method-001",
+              "discovery:Runtime Verified Local Wiki Source"
+            ],
+            "external_novelty_provenance_status": "unavailable",
+            "external_novelty_status": "unavailable",
+            "external_source_count": 0,
+            "final_acceptance_ready": false,
+            "idea_id": "idea-method-incremental-001",
+            "limitations": [
+              "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+            ],
+            "novelty": 0.69,
+            "novelty_score": 4,
+            "provider_statuses": [
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "semantic_scholar",
+                "query": "exp-skillgen",
+                "reason": "<urlopen error [Errno 61] Connection refused>",
+                "status": "failed"
+              },
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "web",
+                "query": "exp-skillgen",
+                "reason": "missing AUTOSCI_WEB_SEARCH_EVIDENCE_URL or SERPER_API_KEY",
+                "status": "unavailable"
+              },
+              {
+                "fetched_at": "2026-07-10T05:54:15Z",
+                "provider": "deepxiv",
+                "query": "exp-skillgen",
+                "reason": "missing AUTOSCI_DEEPXIV_SEARCH_URL",
+                "status": "unavailable"
+              }
+            ],
+            "recommendation": "revise",
+            "review_available": false,
+            "review_invocation_mode": "provider",
+            "review_llm_status": "unavailable",
+            "review_mode": "local_surrogate",
+            "schema": "autosci_novelty_final_acceptance_boundary.v1",
+            "status": "novelty_acceptance_incomplete"
+          },
+          "idea_id": "idea-method-incremental-001",
+          "local_source_count": 12,
+          "novelty": 0.69,
+          "novelty_label": "source-grounded",
+          "novelty_rationale": "Novelty is estimated from overlap against local wiki/discovery evidence and supplied external novelty evidence. Closest similarity=0.200; source_count=12; external_source_count=0.",
+          "recommendation": "revise",
+          "review_available": false,
+          "review_llm": {
+            "checked_paths": [],
+            "endpoint": "https://api.openai.com/v1/chat/completions",
+            "invocation_mode": "provider",
+            "model": "gpt-5.5",
+            "provider": "openai",
+            "reason": "Review LLM provider openai is configured but no API key is available.",
+            "status": "unavailable",
+            "tool": "mcp__llm-review__chat"
+          },
+          "review_mode": "local_surrogate",
+          "review_score": 0.72,
+          "risks": [
+            "Review LLM cross-verify is not connected; this is a local conservative review signal.",
+            "Run /novelty with live search and /review with Review LLM before promotion.",
+            "External Web/Semantic Scholar/DeepXiv novelty evidence is unavailable or invalid."
+          ],
+          "source_count": 12,
+          "source_mode": "mixed"
+        },
+        {
+          "duplicate_status": "duplicate",
+          "evidence_ids": [
+            "idea-wiki-discovery-002",
+            "discovery:AutoSci Adapter Fixture Paper",
+            "discovery:Runtime Verified Skill Generation Source"
+          ],
+          "feasibility": 0.8,
+          "feasibility_rationale": "It is easy to run but does not add meaningful evidence.",
+          "final_acceptance_boundary": {
+            "blocking_reasons": [
+              "external_novelty status is `missing`, not `completed`",
+              "external_novelty provenance status is `missing`, not `passed`",
+              "review_llm status is `missing`, not `completed`"
+            ],
+            "evidence_ids": [
+              "idea-wiki-discovery-002",
+              "discovery:AutoSci Adapter Fixture Paper",
+              "discovery:Runtime Verified Skill Generation Source"
+            ],
+            "external_novelty_provenance_status": "missing",
+            "external_novelty_status": "missing",
+            "external_source_count": "N/A",
+            "final_acceptance_ready": false,
+            "idea_id": "idea-wiki-discovery-002",
+            "limitations": [
+              "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+            ],
+            "novelty": 0.15,
+            "novelty_score": 2,
+            "provider_statuses": [],
+            "recommendation": "reject",
+            "review_available": false,
+            "review_invocation_mode": "N/A",
+            "review_llm_status": "missing",
+            "review_mode": "N/A",
+            "schema": "autosci_novelty_final_acceptance_boundary.v1",
+            "status": "novelty_acceptance_incomplete"
+          },
+          "idea_id": "idea-wiki-discovery-002",
+          "novelty": 0.15,
+          "novelty_rationale": "The idea duplicates known fixture validation rather than adding a new research question.",
+          "recommendation": "reject",
+          "risks": [
+            "Marked duplicate of an existing fixture smoke path."
+          ],
+          "source_mode": "mixed"
+        }
+      ]
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T05:54:15Z"
+    },
+    "schema": "idea_evaluation.v1",
+    "sprint_id": "phase19-skillgen-operator-smoke",
+    "status": "completed",
+    "task_id": "task-autosci-skillgen-evaluate_ideas"
+  },
+  "evidence_jsonl": "artifacts/autosci/runs/shim-exp-run-deploy-native/evidence.jsonl",
+  "evidence_path": "artifacts/autosci/runs/shim-exp-run-deploy-native/idea_evaluation.json",
+  "ok": true,
+  "result_path": "artifacts/autosci/runs/shim-exp-run-deploy-native/evaluate_ideas.result.json",
+  "schema": "idea_evaluation.v1",
+  "sidecar_evidence_paths": [
+    "artifacts/autosci/runs/shim-exp-run-deploy-native/research_memory_update.ideas.json"
+  ],
+  "status": "completed"
+}

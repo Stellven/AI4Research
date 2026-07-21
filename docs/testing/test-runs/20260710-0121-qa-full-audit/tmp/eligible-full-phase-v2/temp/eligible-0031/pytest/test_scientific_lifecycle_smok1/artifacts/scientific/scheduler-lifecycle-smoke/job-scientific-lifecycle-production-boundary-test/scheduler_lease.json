@@ -1,0 +1,31 @@
+{
+  "acquired_at": "2026-07-10T14:05:32Z",
+  "distributed": false,
+  "job_id": "job-scientific-lifecycle-production-boundary-test",
+  "lease_id": "431598d74ce2490ac8da4a32f6fbfb7184fd7e6b",
+  "limitations": [
+    "This is a local smoke-run lease record, not a distributed scheduler lease."
+  ],
+  "owner": "harness.tools.run_scientific_lifecycle_smoke",
+  "production_ready": false,
+  "required_nodes": [
+    "literature_discover",
+    "paper_ingest",
+    "paper_analyze",
+    "memory_update_initial",
+    "graph_update",
+    "claim_extract",
+    "method_extract",
+    "code_evidence_map",
+    "idea_generate",
+    "idea_evaluate",
+    "experiment_design",
+    "experiment_run",
+    "experiment_monitor",
+    "claim_verify",
+    "report_plan",
+    "publication_produce"
+  ],
+  "schema": "autosci_scheduler_lease.v1",
+  "scope": "local_smoke_runner"
+}

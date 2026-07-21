@@ -1,0 +1,8 @@
+[31merror: Solar requires Python 3.11+ for the harness runtime. Found: none.
+The unchanged harness invokes 'python3', currently: /usr/bin/python3 (3.9.6).
+macOS system python3 is often 3.9 and will not work. Install a supported Python and put it first on PATH, then re-run:
+  macOS: brew install python
+         export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+  Ubuntu/Debian: sudo apt-get install python3 python3-venv python3-pip
+  Fedora: sudo dnf install python3 python3-pip
+  Arch: sudo pacman -S python python-pip[0m

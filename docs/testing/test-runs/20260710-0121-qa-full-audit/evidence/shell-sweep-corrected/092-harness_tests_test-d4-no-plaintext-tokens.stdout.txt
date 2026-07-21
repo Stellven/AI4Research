@@ -1,0 +1,8 @@
+[D4] 无明文 Token 测试
+  [0;31m✗[0m secrets/zhipu.env 不存在
+  [0;31m✗[0m model-config.sh 未引用 secrets 文件
+  [0;32m✓[0m harness 脚本无明文 token
+  [0;31m✗[0m persona-config.sh 未引用 secrets
+  [0;32m✓[0m pane-launcher.sh 无硬编码 token
+
+  [0;32mPASS: 2[0m  [0;31mFAIL: 3[0m

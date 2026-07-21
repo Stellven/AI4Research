@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/capability-token.schema.json",
+  "title": "Solar Capability Token",
+  "description": "A scoped, time-limited capability grant issued at task dispatch time. Controls what a specific actor may do during a specific task. Tokens must be narrow by default: secret paths, git push, destructive shell actions, and unrestricted network require explicit grants.",
+  "type": "object",
+  "required": ["token_id", "task_id", "actor_id", "issued_at", "expires_at", "file_scope", "shell_scope", "network", "git"],
+  "additionalProperties": false,
+  "properties": {
+    "token_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique capability token identifier."
+    },
+    "task_id": {
+      "type": "string",
+      "description": "The DAG node task_id this token is scoped to."
+    },
+    "sprint_id": {
+      "type": ["string", "null"],
+      "description": "Sprint this token was issued for."
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "Actor that holds this token."
+    },
+    "issued_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when the token was issued."
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when the token expires. Required — tokens must have a finite lifetime."
+    },
+    "file_scope": {
+      "$ref": "#/$defs/file_scope",
+      "description": "File read/write permissions for this token."
+    },
+    "shell_scope": {
+      "$ref": "#/$defs/shell_scope",
+      "description": "Shell command execution permissions."
+    },
+    "network": {
+      "$ref": "#/$defs/network_scope",
+      "description": "Network access permissions."
+    },
+    "git": {
+      "$ref": "#/$defs/git_scope",
+      "description": "Git operation permissions."
+    },
+    "secrets": {
+      "$ref": "#/$defs/secrets_scope",
+      "description": "Access to secrets. Denied by default."
+    },
+    "failure_fingerprint": {
+      "$ref": "#/$defs/failure_fingerprint",
+      "description": "Known failure patterns for this actor/task combination."
+    },
+    "revoked": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, this token has been revoked and must not be honored."
+    },
+    "revoked_at": {
+      "type": ["string", "null"],
+      "description": "ISO 8601 timestamp of revocation."
+    },
+    "revoked_reason": {
+      "type": ["string", "null"],
+      "description": "Reason for revocation."
+    }
+  },
+  "$defs": {
+    "file_scope": {
+      "type": "object",
+      "required": ["write_paths", "secret_paths_allowed"],
+      "additionalProperties": false,
+      "description": "File system access scope.",
+      "properties": {
+        "write_paths": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Allowed write path prefixes. Empty means no writes allowed."
+        },
+        "read_only_paths": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Additional read-only path prefixes beyond write_paths."
+        },
+        "secret_paths_allowed": {
+          "type": "boolean",
+          "description": "Whether access to secret/credential paths is allowed. MUST be false by default.",
+          "default": false
+        },
+        "destructive_allowed": {
+          "type": "boolean",
+          "description": "Whether destructive file operations (rm, truncate, overwrite) are permitted. MUST be false by default.",
+          "default": false
+        }
+      }
+    },
+    "shell_scope": {
+      "type": "object",
+      "required": ["allowed"],
+      "additionalProperties": false,
+      "description": "Shell execution scope.",
+      "properties": {
+        "allowed": {
+          "type": "boolean",
+          "description": "Whether shell command execution is permitted at all."
+        },
+        "destructive_commands_allowed": {
+          "type": "boolean",
+          "description": "Whether destructive commands (rm -rf, kill, format, drop) are permitted. MUST be false by default.",
+          "default": false
+        },
+        "allowed_commands": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Explicit allowlist of command names/prefixes. Empty = all allowed (when allowed=true)."
+        },
+        "denied_commands": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Explicit denylist of command names/prefixes. Takes precedence over allowed_commands."
+        }
+      }
+    },
+    "network_scope": {
+      "type": "object",
+      "required": ["allowed"],
+      "additionalProperties": false,
+      "description": "Network access scope.",
+      "properties": {
+        "allowed": {
+          "type": "boolean",
+          "description": "Whether any network access is permitted."
+        },
+        "unrestricted": {
+          "type": "boolean",
+          "description": "Whether unrestricted external network access is permitted. MUST be false by default — unrestricted network is a broad grant.",
+          "default": false
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Explicit allowlist of hostnames/CIDRs. Empty = internal only (when allowed=true, unrestricted=false)."
+        }
+      }
+    },
+    "git_scope": {
+      "type": "object",
+      "required": ["commit_allowed", "push_allowed"],
+      "additionalProperties": false,
+      "description": "Git operation scope.",
+      "properties": {
+        "commit_allowed": {
+          "type": "boolean",
+          "description": "Whether git commit is permitted."
+        },
+        "push_allowed": {
+          "type": "boolean",
+          "description": "Whether git push is permitted. MUST be false by default — push has external side effects.",
+          "default": false
+        },
+        "force_push_allowed": {
+          "type": "boolean",
+          "description": "Whether git push --force is permitted. MUST be false by default.",
+          "default": false
+        },
+        "allowed_remotes": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Allowed remote names for push operations. Empty = push denied regardless of push_allowed."
+        }
+      }
+    },
+    "secrets_scope": {
+      "type": "object",
+      "required": ["allowed"],
+      "additionalProperties": false,
+      "description": "Secrets access scope. Denied by default.",
+      "properties": {
+        "allowed": {
+          "type": "boolean",
+          "description": "Whether secrets access is permitted at all. MUST be false by default.",
+          "default": false
+        },
+        "allowed_secret_refs": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Explicit allowlist of secret references (names/paths). Empty = no secrets (when allowed=true)."
+        }
+      }
+    },
+    "failure_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Known failure patterns for diagnostic routing. Populated from historical execution data.",
+      "properties": {
+        "common_failures": {
+          "type": "array",
+          "description": "Ordered list of known failure patterns for this actor/task combination.",
+          "items": {
+            "type": "object",
+            "required": ["label", "pattern"],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string",
+                "enum": [
+                  "PERMISSION_DENIED",
+                  "QUOTA_EXHAUSTED",
+                  "CONTEXT_STALE",
+                  "TOOL_TIMEOUT",
+                  "SCHEMA_VALIDATION",
+                  "NETWORK_UNREACHABLE",
+                  "GIT_CONFLICT",
+                  "SECRETS_INACCESSIBLE",
+                  "DESTRUCTIVE_BLOCKED",
+                  "ACTOR_UNAVAILABLE",
+                  "UNKNOWN"
+                ],
+                "description": "Canonical failure label for routing and alerting."
+              },
+              "pattern": {
+                "type": "string",
+                "description": "Regex or substring pattern that identifies this failure in error messages/logs."
+              },
+              "frequency": {
+                "type": "string",
+                "enum": ["rare", "occasional", "frequent"],
+                "description": "How often this failure occurs for this actor/task type."
+              },
+              "suggested_action": {
+                "type": "string",
+                "description": "Suggested remediation or routing action."
+              }
+            }
+          }
+        },
+        "last_failure_at": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 timestamp of the last known failure."
+        },
+        "failure_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total failure count for this actor/task combination."
+        }
+      }
+    }
+  }
+}

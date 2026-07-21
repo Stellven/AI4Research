@@ -1,0 +1,21 @@
+{
+  "schema_version": "solar.task_graph.v1",
+  "sprint_id": "sprint-ac3-fail",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "test node",
+      "depends_on": [],
+      "acceptance": [
+        "ac1"
+      ],
+      "write_scope": [
+        "test_output.txt"
+      ],
+      "status": "failed",
+      "updated_at": "2026-07-10T14:06:35Z",
+      "artifacts": {},
+      "capability_effect": {}
+    }
+  ]
+}

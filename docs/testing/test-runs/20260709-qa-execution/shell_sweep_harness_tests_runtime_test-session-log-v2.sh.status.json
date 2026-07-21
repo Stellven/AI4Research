@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_runtime_test-session-log-v2.sh",
+  "source": "harness/tests/runtime/test-session-log-v2.sh",
+  "command": [
+    "bash",
+    "harness/tests/runtime/test-session-log-v2.sh"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.316,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-6tsx540o"
+}

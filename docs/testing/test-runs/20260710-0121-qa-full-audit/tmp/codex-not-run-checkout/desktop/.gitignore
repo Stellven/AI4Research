@@ -1,0 +1,10 @@
+# Desktop shell — track source only; build artifacts and deps are produced by CI.
+node_modules/
+dist/
+renderer/
+npm-debug.log*
+
+# Dev screenshots (kept out of git; build/icon.png IS tracked).
+/fresh-dashboard.png
+/gate-dashboard.png
+/shot.png

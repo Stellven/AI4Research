@@ -164,6 +164,8 @@ def _seconds_until(moment: dt.datetime | None, fallback: int) -> int:
     if moment is None:
         return max(0, int(fallback or 0))
     seconds = int((moment - _now()).total_seconds())
+    if int(fallback or 0) > 0:
+        seconds = min(seconds, int(fallback))
     return max(1, seconds)
 
 

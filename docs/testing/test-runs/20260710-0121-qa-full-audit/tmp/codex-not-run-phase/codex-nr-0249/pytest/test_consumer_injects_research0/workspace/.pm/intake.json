@@ -1,0 +1,14 @@
+{
+  "request_type": "full_spec",
+  "intent_summary": "通过 Browser Agent 前门研究后再编译 requirement package。",
+  "source_inputs": {
+    "papers": [],
+    "logs": [],
+    "repo_context": []
+  },
+  "output_mode": {
+    "prd": "standard",
+    "contract": "standard",
+    "dag": "standard"
+  }
+}

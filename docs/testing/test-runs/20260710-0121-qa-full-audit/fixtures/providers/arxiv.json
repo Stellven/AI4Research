@@ -1,0 +1,11 @@
+{
+  "fixture_source": true,
+  "provider": "arxiv",
+  "entries": [
+    {
+      "id": "fixture-arxiv-1",
+      "title": "Fixture Paper",
+      "url": "https://example.invalid/arxiv"
+    }
+  ]
+}

@@ -1,0 +1,429 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/agent-actors.schema.json",
+  "title": "Solar Agent Actor Registry",
+  "description": "Registry of logical agent actors. tmux pane index is display metadata only — actor_id is the durable key.",
+  "type": "object",
+  "required": ["version", "actors"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string"},
+    "actors": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/agent_actor"}
+    }
+  },
+  "$defs": {
+    "agent_actor": {
+      "type": "object",
+      "required": ["actor_id", "host_id"],
+      "additionalProperties": true,
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable, durable logical identity. Must not be a tmux pane index."
+        },
+        "host_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference to actor-hosts.json host_id."
+        },
+        "operator_alias": {
+          "type": "string",
+          "description": "Backward-compatibility alias to a physical-operators.json operator key."
+        },
+        "aliases": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Additional backward-compatibility aliases including physical operator ids."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["planner", "builder", "evaluator", "knowledge-extractor", "router", "auditor"]
+        },
+        "persona_binding": {
+          "$ref": "#/$defs/persona_binding"
+        },
+        "lease": {
+          "$ref": "#/$defs/lease"
+        },
+        "capability": {
+          "$ref": "#/$defs/capability"
+        },
+        "capability_profile": {
+          "$ref": "#/$defs/capability_profile"
+        },
+        "risk_profile": {
+          "$ref": "#/$defs/risk_profile"
+        },
+        "cost_profile": {
+          "$ref": "#/$defs/cost_profile"
+        },
+        "quota": {
+          "$ref": "#/$defs/quota"
+        },
+        "policy": {
+          "$ref": "#/$defs/policy"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "fallback_ladder": {
+          "$ref": "#/$defs/fallback_ladder"
+        },
+        "mailbox": {
+          "$ref": "#/$defs/mailbox"
+        },
+        "context_packet_ref": {
+          "$ref": "#/$defs/context_packet_ref"
+        },
+        "evidence_ledger_ref": {
+          "$ref": "#/$defs/evidence_ledger_ref"
+        },
+        "display_meta": {
+          "$ref": "#/$defs/display_meta"
+        }
+      }
+    },
+    "lease": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Lease state. All fields nullable when idle.",
+      "properties": {
+        "acquired_at": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 timestamp when lease was acquired, null if idle."
+        },
+        "expires_at": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 timestamp when lease expires, null if idle."
+        },
+        "renewable": {
+          "type": "boolean",
+          "description": "Whether the lease can be renewed without restarting the actor."
+        },
+        "preemptible": {
+          "type": "boolean",
+          "description": "Whether a higher-priority task can preempt this actor's current lease."
+        },
+        "heartbeat_timeout_sec": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Seconds of missed heartbeats before the lease is declared expired."
+        },
+        "lease_id": {
+          "type": ["string", "null"],
+          "description": "Opaque lease token, null if idle."
+        },
+        "holder_sprint": {
+          "type": ["string", "null"],
+          "description": "Sprint ID currently holding this lease, null if idle."
+        }
+      }
+    },
+    "mailbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Filesystem paths for actor mailbox, relative to harness_dir unless absolute.",
+      "properties": {
+        "inbox": {
+          "type": "string",
+          "description": "Path to inbox directory for incoming dispatch messages."
+        },
+        "outbox": {
+          "type": "string",
+          "description": "Path to outbox directory for outgoing handoff/status messages."
+        },
+        "logs": {
+          "type": "string",
+          "description": "Path to logs directory for actor execution logs."
+        },
+        "state_json": {
+          "type": "string",
+          "description": "Path to state.json file tracking actor runtime state."
+        },
+        "heartbeat_json": {
+          "type": "string",
+          "description": "Path to heartbeat.json file written by actor to signal liveness."
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Legacy aggregate capability scores (0-5). Prefer capability_profile for new actors.",
+      "patternProperties": {
+        "^(planning|coding|debugging|testing|research|browser|shell|long_context|speed|cost_efficiency|reliability|multimodal|local_privacy|knowledge_extraction|data_extraction)$": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        }
+      }
+    },
+    "capability_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Granular capability scores (0-5) for logical operator routing. Replaces vague aggregate 'capability'.",
+      "properties": {
+        "architecture_reasoning": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Depth of system architecture and design reasoning."
+        },
+        "code_impl": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Code generation and implementation quality."
+        },
+        "root_cause_debug": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Ability to find root causes in failing systems."
+        },
+        "test_generation": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Quality of test cases generated."
+        },
+        "test_execution": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Ability to run tests and interpret results."
+        },
+        "research_synthesis": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Depth of research and synthesis across sources."
+        },
+        "academic_critique": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Ability to critically evaluate technical claims and papers."
+        },
+        "browser_use": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Web browser automation and scraping capability."
+        },
+        "data_extraction": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Information and structured data extraction from DOM/visual sources."
+        },
+        "gui_use": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "GUI/desktop interaction capability."
+        },
+        "long_context": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Effective reasoning over very long contexts (>100K tokens)."
+        },
+        "multi_agent_coordination": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Ability to coordinate and orchestrate multiple sub-agents."
+        },
+        "speed": {
+          "type": "integer", "minimum": 0, "maximum": 5,
+          "description": "Relative throughput speed (5=fastest)."
+        }
+      }
+    },
+    "risk_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Risk and safety constraints for this actor. Controls what the actor is allowed to do.",
+      "properties": {
+        "allowed_write_scope": {
+          "type": "string",
+          "enum": ["harness", "harness_readonly", "project", "denied"],
+          "description": "Scope of file writes permitted: harness=all harness paths, harness_readonly=reads only, project=project workspace, denied=no writes."
+        },
+        "allowed_shell_scope": {
+          "type": "string",
+          "enum": ["allowed", "read_only", "denied"],
+          "description": "Shell command execution permissions."
+        },
+        "allowed_network": {
+          "type": "string",
+          "enum": ["allowed", "internal_only", "denied"],
+          "description": "Network access permissions."
+        },
+        "allowed_secrets": {
+          "type": "string",
+          "enum": ["denied", "secret_ref_only", "allowed"],
+          "description": "Access to secrets: denied=none, secret_ref_only=references only, allowed=full."
+        },
+        "destructive_actions": {
+          "type": "string",
+          "enum": ["allowed", "denied"],
+          "description": "Whether actor may perform destructive file/resource operations."
+        },
+        "git_commit": {
+          "type": "string",
+          "enum": ["allowed", "denied"],
+          "description": "Whether actor may create git commits."
+        },
+        "git_push": {
+          "type": "string",
+          "enum": ["allowed", "denied"],
+          "description": "Whether actor may push to remote git repositories."
+        },
+        "payment_or_external_action": {
+          "type": "string",
+          "enum": ["allowed", "denied"],
+          "description": "Whether actor may trigger payment flows or external service actions."
+        },
+        "requires_human_for": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Actions that must be approved by a human before execution."
+        }
+      }
+    },
+    "cost_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cost and budget profile for routing and quota decisions.",
+      "properties": {
+        "cost_tier": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Relative cost tier for this actor."
+        },
+        "token_budget_class": {
+          "type": "string",
+          "enum": ["small", "medium", "large", "xlarge"],
+          "description": "Typical token budget per task: small<2K, medium<8K, large<32K, xlarge>32K."
+        },
+        "quota_period": {
+          "type": "string",
+          "enum": ["none", "daily", "weekly", "monthly", "api_balance"],
+          "description": "Period over which quota refreshes."
+        },
+        "reserve_ratio": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Fraction of quota to reserve for high-priority tasks (0.0=no reserve)."
+        },
+        "effort": {
+          "type": "string",
+          "enum": ["light", "medium", "heavy"],
+          "description": "Typical task effort level for this actor."
+        },
+        "prefer_for": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Task types where this actor is cost-optimal."
+        },
+        "avoid_for": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Task types that are too expensive or inappropriate for this actor."
+        }
+      }
+    },
+    "context_packet_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reference to the active per-task context packet. Context is external to long-lived panes to prevent stale state.",
+      "properties": {
+        "path": {
+          "type": ["string", "null"],
+          "description": "Relative path to current context packet JSON file, null when actor is idle."
+        },
+        "packet_id": {
+          "type": ["string", "null"],
+          "description": "Opaque packet identifier from context-store, null when actor is idle."
+        }
+      }
+    },
+    "evidence_ledger_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reference to the audit evidence ledger for this actor. Audit paths are external to long-lived panes.",
+      "properties": {
+        "path": {
+          "type": ["string", "null"],
+          "description": "Relative path to evidence ledger directory, null if not yet configured."
+        }
+      }
+    },
+    "quota": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "quota_type": {"type": "string"},
+        "period": {"type": "string"},
+        "reserve_for": {"type": "array", "items": {"type": "string"}},
+        "on_exhausted": {"type": "string"}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "write_files": {"type": "string"},
+        "run_shell": {"type": "string"},
+        "network": {"type": "string"},
+        "secrets_access": {
+          "type": "string",
+          "enum": ["denied", "secret_ref_only", "allowed"]
+        },
+        "git_commit": {"type": "string"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Audit trail and smoke-test evidence for this actor.",
+      "properties": {
+        "last_smoke_at": {"type": ["string", "null"]},
+        "last_smoke_result": {"type": ["string", "null"]},
+        "last_task_at": {"type": ["string", "null"]},
+        "last_task_id": {"type": ["string", "null"]},
+        "last_task_result": {
+          "type": ["string", "null"],
+          "enum": ["pass", "fail", "partial", null]
+        },
+        "provenance": {
+          "type": "string",
+          "description": "Source or migration info for this actor record."
+        }
+      }
+    },
+    "persona_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Links this actor to a persona definition.",
+      "properties": {
+        "persona_id": {"type": "string"},
+        "persona_file": {"type": ["string", "null"]},
+        "knobs_override": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "fallback_ladder": {
+      "type": "array",
+      "description": "Ordered list of fallback actor_ids when this actor is unavailable.",
+      "items": {
+        "type": "object",
+        "required": ["actor_id"],
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {"type": "string"},
+          "condition": {
+            "type": "string",
+            "description": "Condition triggering this fallback: quota_exhausted, unavailable, error, always."
+          }
+        }
+      }
+    },
+    "display_meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Non-durable display and debug metadata. tmux_pane_index MUST only appear here.",
+      "properties": {
+        "display_name": {"type": "string"},
+        "tmux_pane_index": {
+          "type": ["integer", "null"],
+          "description": "tmux pane index for display/debug only. NOT a durable identity key."
+        },
+        "tmux_session": {"type": ["string", "null"]},
+        "tmux_window": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

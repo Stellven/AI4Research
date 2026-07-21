@@ -9,9 +9,13 @@
 #   3. 后台执行，不阻塞退出
 #   4. 如果 HONCHO_API_KEY 未设置，静默退出
 #
-# @module solar-farm/honcho-session-end
-
 set -u
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -r "$HOOK_DIR/lib/portable.sh" ]]; then
+    # shellcheck source=lib/portable.sh
+    . "$HOOK_DIR/lib/portable.sh"
+fi
 
 # 消耗 stdin
 cat > /dev/null 2>&1 || true
@@ -35,7 +39,7 @@ HONCHO_KEY="${HONCHO_API_KEY:-self-hosted}"
 
     # 从最近事件提取关键信息 (最近 30 分钟的事件)
     if [[ -f "$SESSION_LOG" ]]; then
-        CUTOFF=$(date -v-30M -u +"%Y-%m-%dT%H:%M" 2>/dev/null || date -u -d '30 minutes ago' +"%Y-%m-%dT%H:%M" 2>/dev/null || echo "")
+        CUTOFF=$(date_add -30M "%Y-%m-%dT%H:%M" 2>/dev/null || date -u -d '30 minutes ago' +"%Y-%m-%dT%H:%M" 2>/dev/null || echo "")
 
         if [[ -n "$CUTOFF" ]]; then
             RECENT=$(grep "$CUTOFF" "$SESSION_LOG" 2>/dev/null | tail -20)

@@ -1,0 +1,16 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+______ TestDeadlockHookFailOpen.test_hook_exits_0_on_python_syntax_error _______
+harness/tests/livework/test_negative_control.py:186: in test_hook_exits_0_on_python_syntax_error
+    assert result.returncode == 0
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20.../tmp/eligible-full-phase-v2/temp/eligible-0062/pytest/test_hook_exits_0_on_python_sy0/bad.py 2>/dev/null || exit 0'\n").returncode
+__________ TestDeadlockHookFailOpen.test_hook_exits_0_on_import_error __________
+harness/tests/livework/test_negative_control.py:200: in test_hook_exits_0_on_import_error
+    assert result.returncode == 0
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...igible-full-phase-v2/temp/eligible-0062/pytest/test_hook_exits_0_on_import_er0/importfail.py 2>/dev/null || exit 0'\n").returncode
+=========================== short test summary info ============================
+FAILED harness/tests/livework/test_negative_control.py::TestDeadlockHookFailOpen::test_hook_exits_0_on_python_syntax_error
+FAILED harness/tests/livework/test_negative_control.py::TestDeadlockHookFailOpen::test_hook_exits_0_on_import_error
+2 failed, 26 deselected in 0.07s

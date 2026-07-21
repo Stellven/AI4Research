@@ -1,0 +1,46 @@
+{
+  "name": "default",
+  "version": "1.0",
+  "colors": {
+    "primary": "yellow",
+    "secondary": "cyan",
+    "success": "green",
+    "warning": "yellow",
+    "error": "red",
+    "info": "blue",
+    "muted": "gray"
+  },
+  "borders": {
+    "default": "round"
+  },
+  "icons": {
+    "ok": "🟢",
+    "warning": "🟡",
+    "error": "🔴",
+    "info": "🔵",
+    "active": "🔵",
+    "success": "✅",
+    "failed": "❌",
+    "pending": "⏳",
+    "running": "🔄"
+  },
+  "agents": {
+    "Researcher": { "emoji": "🔬", "color": "magenta" },
+    "Architect": { "emoji": "🏗️", "color": "blue" },
+    "Coder": { "emoji": "💻", "color": "green" },
+    "Tester": { "emoji": "🧪", "color": "yellow" },
+    "Reviewer": { "emoji": "👁️", "color": "cyan" },
+    "Docs": { "emoji": "📖", "color": "white" },
+    "Ops": { "emoji": "⚙️", "color": "gray" },
+    "PM": { "emoji": "📊", "color": "blue" },
+    "Secretary": { "emoji": "📝", "color": "white" },
+    "Guard": { "emoji": "🛡️", "color": "red" }
+  },
+  "phases": {
+    "P1": { "name": "Research", "emoji": "🔬" },
+    "P2": { "name": "Design", "emoji": "🏗️" },
+    "P3": { "name": "Code", "emoji": "💻" },
+    "P4": { "name": "Verify", "emoji": "🧪" },
+    "P5": { "name": "Final", "emoji": "📦" }
+  }
+}

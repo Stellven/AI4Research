@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_060_5438d322cb_harness_tests_evaluators_scientific_test_workflow_evolution_gate.py",
+  "source": "harness/tests/evaluators/scientific/test_workflow_evolution_gate.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/evaluators/scientific/test_workflow_evolution_gate.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.246,
+  "timeout": false
+}

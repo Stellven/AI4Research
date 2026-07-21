@@ -1,0 +1,519 @@
+{
+  "authorization_prompt": "",
+  "authorization_requests": [],
+  "authorization_required": false,
+  "blocked_nodes": {},
+  "checks": [
+    {
+      "check": "literature_discover_dispatched",
+      "detail": "failed",
+      "status": "error"
+    },
+    {
+      "check": "scheduler_local_lease_boundary",
+      "detail": "artifacts/autosci/runs/shim-research-scheduler-production-boundary/scheduler_lifecycle/scheduler_lease.json",
+      "status": "ok"
+    },
+    {
+      "check": "production_dispatch_boundary",
+      "detail": "runner_contract=bounded_smoke_runner,node_inputs_include_smoke_mode,node_inputs_include_fixture_or_fixture_fallback",
+      "status": "error"
+    },
+    {
+      "check": "lifecycle_runtime_gate_passed",
+      "detail": "failed",
+      "status": "error"
+    }
+  ],
+  "dispatch_boundary": {
+    "blocking_reasons": [
+      "runner_contract=bounded_smoke_runner",
+      "node_inputs_include_smoke_mode",
+      "node_inputs_include_fixture_or_fixture_fallback"
+    ],
+    "fixture_nodes": [
+      "literature_discover"
+    ],
+    "limitations": [
+      "This lifecycle is dispatched through the bounded smoke runner, not a generic production scheduler.",
+      "Production parity requires a non-smoke workflow dispatcher with no fixture/smoke input markers and durable resume/runtime proof."
+    ],
+    "production_ready": false,
+    "profiled_nodes": [
+      "literature_discover"
+    ],
+    "required_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify"
+    ],
+    "runner": "tools/run_scientific_lifecycle_smoke.py",
+    "runner_contract": "bounded_smoke_runner",
+    "schema": "autosci_scheduler_dispatch_boundary.v1",
+    "smoke_nodes": [
+      "literature_discover"
+    ],
+    "status": "bounded_smoke",
+    "workflow_config_path": "workflows/scientific_research_lifecycle_full_v1.json",
+    "workflow_config_sha256": "61bcd747f0ade7361ec2c7f15916eea8d23210067483a516b8103541d8b67ac8",
+    "workflow_id": "scientific_research_lifecycle_full_v1"
+  },
+  "dispatch_input_profiles": {
+    "literature_discover": {
+      "action": "discover_literature",
+      "execution_mode": "N/A",
+      "fixture_markers": [
+        "smoke_mode=true",
+        "fixture_fallback=true",
+        "fixture_reference_in_paper"
+      ],
+      "logical_operator": "ScientificLiteratureDiscoverer",
+      "node_id": "literature_discover",
+      "operator_id": "autosci-literature-discover-worker",
+      "runner_mode": "bounded_runtime_smoke",
+      "smoke_mode": true,
+      "uses_fixture_or_smoke_input": true
+    }
+  },
+  "execution_owner": "solar.operator_runtime.scheduler_lifecycle_smoke",
+  "gate_results": {},
+  "job_id": "shim-research-scheduler-production-boundary-scheduler",
+  "lease_boundary": {
+    "blocking_reasons": [
+      "lease_scope=local_smoke_runner",
+      "distributed_lease_not_verified"
+    ],
+    "distributed_lease_verified": false,
+    "lease_id": "81629c9e9adaee1e256d5616f98cfd7f59dd8575",
+    "lease_path": "artifacts/autosci/runs/shim-research-scheduler-production-boundary/scheduler_lifecycle/scheduler_lease.json",
+    "lease_scope": "local_smoke_runner",
+    "limitations": [
+      "Scheduler lease ownership is recorded locally for auditability; production parity requires a distributed lease/quota manager."
+    ],
+    "local_lease_recorded": true,
+    "production_ready": false,
+    "required_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify"
+    ],
+    "schema": "autosci_scheduler_lease_boundary.v1",
+    "status": "local_smoke_lease"
+  },
+  "lifecycle_gate_result": {
+    "evidence_status": "failed",
+    "exit_code": 2,
+    "ok": false,
+    "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/artifacts/autosci/runs/shim-research-scheduler-production-boundary/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+    "reasons": [
+      "node_results must be a non-empty map",
+      "gate_results must be a non-empty map",
+      "node_results.literature_discover is required",
+      "node_results.paper_ingest is required",
+      "node_results.paper_analyze is required",
+      "node_results.memory_update_initial is required",
+      "node_results.graph_update is required",
+      "node_results.claim_extract is required",
+      "node_results.method_extract is required",
+      "node_results.code_evidence_map is required",
+      "node_results.idea_generate is required",
+      "node_results.idea_evaluate is required",
+      "node_results.experiment_design is required",
+      "node_results.experiment_run is required",
+      "node_results.experiment_monitor is required",
+      "node_results.claim_verify is required"
+    ],
+    "schema": "scientific_lifecycle.v1",
+    "status": "failed",
+    "warnings": []
+  },
+  "lifecycle_status": "failed",
+  "node_results": {},
+  "node_summaries": {
+    "literature_discover": {
+      "action": "discover_literature",
+      "bridge_result": {
+        "action": null,
+        "evidence_jsonl": null,
+        "evidence_path": null,
+        "ok": null,
+        "result_path": null,
+        "schema": null,
+        "status": null
+      },
+      "bridge_result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-production-boundary-scheduler/literature_discover/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/discover_literature.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-scheduler-production-boundary-scheduler-literature_discover', 'operator_id': 'autosci-literature-discover-worker', 'lease_id': 'autosci-literature-discover-worker:task-shim-research-scheduler-production-boundary-scheduler-literature_discover:2026-07-10T05:54:03Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/run/operator-inbox/autosci-literature-discover-worker/task-shim-research-scheduler-production-boundary-scheduler-literature_discover.json', 'status': 'submitted', 'submitted_at': '2026-07-10T05:54:03Z', 'daemon_pid': 33716}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.416, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "failed",
+          "status": "error"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "1",
+          "status": "error"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-production-boundary-scheduler/literature_discover/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/discover_literature.result.json",
+          "status": "error"
+        },
+        {
+          "check": "bridge_action_discover_literature",
+          "detail": "missing bridge result",
+          "status": "error"
+        },
+        {
+          "check": "evidence_schema_literature_discovery.v1",
+          "detail": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-production-boundary-scheduler/literature_discover/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/literature_discovery.json",
+          "status": "error"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "missing evidence",
+          "status": "error"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "missing evidence",
+          "status": "error"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "missing evidence",
+          "status": "error"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/output.log",
+          "status": "error"
+        }
+      ],
+      "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-production-boundary-scheduler/literature_discover/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/literature_discovery.json",
+      "gate_result": {
+        "ok": false,
+        "reasons": [
+          "gate not run"
+        ],
+        "status": "failed"
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output",
+      "logical_operator": "ScientificLiteratureDiscoverer",
+      "materialized_envelope_path": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/envelope.json",
+      "node_id": "literature_discover",
+      "operator_id": "autosci-literature-discover-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 1,
+        "finished_at": "2026-07-10T05:54:04Z",
+        "log_tail": "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/plugins/autosci/bin/autosci_bridge.py\", line 16, in <module>\n    from datetime import UTC, datetime\nImportError: cannot import name 'UTC' from 'datetime' (/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/datetime.py)",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "literature_discover",
+        "operator_id": "autosci-literature-discover-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-scheduler-production-boundary-scheduler",
+        "started_at": "2026-07-10T05:54:04Z",
+        "status": "failed",
+        "task_id": "task-shim-research-scheduler-production-boundary-scheduler-literature_discover"
+      },
+      "operator_result_path": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/result.json",
+      "output_log_path": "run/operator-results/autosci-literature-discover-worker/task-shim-research-scheduler-production-boundary-scheduler-literature_discover/output.log",
+      "runner_contract": "bounded_node_smoke",
+      "runtime_mode": "bounded_runtime_smoke",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-scheduler-production-boundary-scheduler",
+      "status": "failed",
+      "submission": {
+        "daemon_pid": 33716,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/autosci-output/run/operator-inbox/autosci-literature-discover-worker/task-shim-research-scheduler-production-boundary-scheduler-literature_discover.json",
+        "lease_id": "autosci-literature-discover-worker:task-shim-research-scheduler-production-boundary-scheduler-literature_discover:2026-07-10T05:54:03Z",
+        "operator_id": "autosci-literature-discover-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T05:54:03Z",
+        "task_id": "task-shim-research-scheduler-production-boundary-scheduler-literature_discover"
+      },
+      "task_id": "task-shim-research-scheduler-production-boundary-scheduler-literature_discover",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.416
+      }
+    }
+  },
+  "nodes": [
+    {
+      "action": "discover_literature",
+      "gate": "G_LITERATURE_DISCOVER",
+      "id": "literature_discover",
+      "logical_operator": "ScientificLiteratureDiscoverer",
+      "operator_id": "autosci-literature-discover-worker"
+    },
+    {
+      "action": "ingest_paper",
+      "gate": "G_PAPER_INGEST",
+      "id": "paper_ingest",
+      "logical_operator": "ScientificPaperIngestor",
+      "operator_id": "autosci-paper-ingest-worker"
+    },
+    {
+      "action": "analyze_paper",
+      "gate": "G_PAPER_ANALYZE",
+      "id": "paper_analyze",
+      "logical_operator": "ScientificPaperAnalyzer",
+      "operator_id": "autosci-paper-analyze-worker"
+    },
+    {
+      "action": "update_memory",
+      "gate": "G_MEMORY_UPDATE_INITIAL",
+      "id": "memory_update_initial",
+      "logical_operator": "ScientificMemoryUpdater",
+      "operator_id": "autosci-memory-update-worker"
+    },
+    {
+      "action": "update_graph",
+      "gate": "G_GRAPH_UPDATE",
+      "id": "graph_update",
+      "logical_operator": "ScientificGraphUpdater",
+      "operator_id": "autosci-graph-update-worker"
+    },
+    {
+      "action": "extract_claims",
+      "gate": "G_CLAIM_EXTRACT",
+      "id": "claim_extract",
+      "logical_operator": "ScientificClaimExtractor",
+      "operator_id": "autosci-claim-extract-worker"
+    },
+    {
+      "action": "extract_methods",
+      "gate": "G_METHOD_EXTRACT",
+      "id": "method_extract",
+      "logical_operator": "ScientificMethodExtractor",
+      "operator_id": "autosci-method-extract-worker"
+    },
+    {
+      "action": "map_code_evidence",
+      "gate": "G_CODE_EVIDENCE_MAP",
+      "id": "code_evidence_map",
+      "logical_operator": "ScientificCodeEvidenceMapper",
+      "operator_id": "autosci-code-evidence-map-worker"
+    },
+    {
+      "action": "generate_ideas",
+      "gate": "G_IDEA_GENERATE",
+      "id": "idea_generate",
+      "logical_operator": "ScientificIdeaGenerator",
+      "operator_id": "autosci-idea-worker"
+    },
+    {
+      "action": "evaluate_ideas",
+      "gate": "G_IDEA_EVALUATE",
+      "id": "idea_evaluate",
+      "logical_operator": "ScientificIdeaEvaluator",
+      "operator_id": "autosci-idea-evaluate-worker"
+    },
+    {
+      "action": "design_experiment",
+      "gate": "G_EXPERIMENT_DESIGN",
+      "id": "experiment_design",
+      "logical_operator": "ScientificExperimentDesigner",
+      "operator_id": "autosci-experiment-design-worker"
+    },
+    {
+      "action": "run_experiment",
+      "gate": "G_EXPERIMENT_RUN",
+      "id": "experiment_run",
+      "logical_operator": "ScientificExperimentRunner",
+      "operator_id": "autosci-experiment-run-worker"
+    },
+    {
+      "action": "monitor_experiment",
+      "gate": "G_EXPERIMENT_MONITOR",
+      "id": "experiment_monitor",
+      "logical_operator": "ScientificExperimentMonitor",
+      "operator_id": "autosci-experiment-monitor-worker"
+    },
+    {
+      "action": "verify_claim",
+      "gate": "G_CLAIM_VERIFY",
+      "id": "claim_verify",
+      "logical_operator": "ScientificClaimVerifier",
+      "operator_id": "autosci-claim-verify-worker"
+    }
+  ],
+  "required_nodes": [
+    "literature_discover",
+    "paper_ingest",
+    "paper_analyze",
+    "memory_update_initial",
+    "graph_update",
+    "claim_extract",
+    "method_extract",
+    "code_evidence_map",
+    "idea_generate",
+    "idea_evaluate",
+    "experiment_design",
+    "experiment_run",
+    "experiment_monitor",
+    "claim_verify"
+  ],
+  "schema": "scientific_lifecycle.v1",
+  "sprint_id": "shim-research-scheduler-production-boundary-scheduler",
+  "summary_path": "artifacts/autosci/runs/shim-research-scheduler-production-boundary/scheduler_lifecycle/scientific_lifecycle_runtime.json",
+  "workflow_config_alignment": {
+    "configured_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_plan",
+      "report_draft",
+      "artifact_review",
+      "publication_produce",
+      "memory_update_final",
+      "workflow_evolve"
+    ],
+    "configured_nodes_missing_from_runner": [],
+    "configured_nodes_not_required_by_run": [
+      "report_plan",
+      "report_draft",
+      "artifact_review",
+      "publication_produce",
+      "memory_update_final",
+      "workflow_evolve"
+    ],
+    "configured_required_order": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify"
+    ],
+    "issues": [
+      "configured_nodes_not_required_by_run"
+    ],
+    "ok": false,
+    "order_matches": true,
+    "required_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify"
+    ],
+    "required_run_nodes_not_declared_in_config": [],
+    "runner_available_nodes": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify",
+      "report_draft",
+      "artifact_review",
+      "memory_update_final",
+      "workflow_evolve",
+      "report_plan",
+      "publication_produce"
+    ],
+    "runner_configured_order": [
+      "literature_discover",
+      "paper_ingest",
+      "paper_analyze",
+      "memory_update_initial",
+      "graph_update",
+      "claim_extract",
+      "method_extract",
+      "code_evidence_map",
+      "idea_generate",
+      "idea_evaluate",
+      "experiment_design",
+      "experiment_run",
+      "experiment_monitor",
+      "claim_verify"
+    ],
+    "runner_nodes_not_declared_in_config": [],
+    "status": "drift",
+    "workflow_config_path": "workflows/scientific_research_lifecycle_full_v1.json"
+  },
+  "workflow_id": "scientific_research_lifecycle_full_v1"
+}

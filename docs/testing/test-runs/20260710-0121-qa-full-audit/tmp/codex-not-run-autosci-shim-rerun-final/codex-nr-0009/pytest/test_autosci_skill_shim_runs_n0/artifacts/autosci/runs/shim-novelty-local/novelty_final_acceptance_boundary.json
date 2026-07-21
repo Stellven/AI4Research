@@ -1,0 +1,37 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "external_novelty status is `unavailable`, not `completed`",
+        "external_novelty provenance status is `unavailable`, not `passed`",
+        "review_llm status is `unavailable`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-target-generated-skills-for-inference-time-agents",
+        "target:user-supplied",
+        "wiki:papers/skillgen",
+        "wiki:ideas/failed-skillgen"
+      ],
+      "external_novelty_provenance_status": "unavailable",
+      "external_novelty_status": "unavailable",
+      "external_source_count": 0,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-target-generated-skills-for-inference-time-agents",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.53,
+      "novelty_score": 3,
+      "provider_statuses": [],
+      "recommendation": "revise",
+      "review_available": false,
+      "review_invocation_mode": "unavailable",
+      "review_llm_status": "unavailable",
+      "review_mode": "local_surrogate",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

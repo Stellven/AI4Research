@@ -1,0 +1,1285 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"/>
+<title>AI4RnD Feature List</title>
+<style>
+body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#f2f5fb;color:#0f172a;}
+.container{max-width:1440px;margin:24px auto;padding:0 16px;}
+h1{font-size:2rem;letter-spacing:.2px;margin:0 0 20px;font-weight:700;}
+.sheet{background:#fff;border:1px solid #dbe1f0;border-radius:14px;padding:14px 14px 10px;margin:0 0 22px;box-shadow:0 10px 26px rgba(2,6,23,.06);}
+h2{font-size:1.2rem;margin:0 0 8px;color:#0f172a;}
+.meta{font-size:.84rem;color:#64748b;margin-bottom:10px;}
+.grid{overflow:auto;border:1px solid #e7ecf8;border-radius:10px;}
+table{width:100%;min-width:1100px;border-collapse:collapse;font-size:13px;}
+thead th{position:sticky;top:0;background:#0f172a;color:#fff;padding:9px 10px;text-align:left;border-right:1px solid #334155;}
+tbody td{padding:8px 10px;border-right:1px solid #e2e8f0;vertical-align:top;}
+tbody tr:nth-child(odd){background:#f9fbff;}
+tbody tr:hover{background:#eaf2ff;}
+.r{color:#64748b;white-space:nowrap;width:64px;}
+</style>
+</head><body>
+<div class="container">
+<h1>AI4RnD Feature List</h1>
+<section class="sheet">
+<h2>Workflow Features</h2>
+<div class="meta">Rows: 55</div>
+<div class="grid"><table><thead><tr>
+<th>Row</th>
+<th>Column 1</th>
+<th>Column 2</th>
+<th>Column 3</th>
+<th>Column 4</th>
+<th>Column 5</th>
+</tr></thead><tbody>
+<tr><td class="r">1</td>
+<td>level_1_feature</td>
+<td>level 1 feature description</td>
+<td>level_2_feature</td>
+<td>level 2 feature description</td>
+<td>Notes</td>
+</tr>
+<tr><td class="r">2</td>
+<td>Ingestion</td>
+<td>Entry: Unstructured user inputs, including a natural-language request and user-supplied materials such as PDF, Markdown, office documents, datasets, code repositories, URLs, or pasted content.    A source-linked raw requirement inventory, where each raw requirement points back to the user&#39;s natural-language request or supplied input material that expressed it.</td>
+<td>1. Request Capture</td>
+<td>Receives the user’s question, instruction, desired outcome, and requested deliverable as an intake candidate without prematurely treating it as a formal requirement.</td>
+<td></td>
+</tr>
+<tr><td class="r">3</td>
+<td>2. Qualified Channel Signal Intake</td>
+<td>Accepts a V-05-qualified Slack or internal-tool clue with its permitted context, sensitivity, relevance, and provenance; raw channel traffic remains outside Workflow.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">4</td>
+<td>3. User-Supplied Material Import</td>
+<td>Imports documents, uploads, pasted content, datasets, and explicit file, repository, or URL references supplied by the user; related-source discovery belongs to Search &amp; Ideation.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">5</td>
+<td>4. Intake Context Binding</td>
+<td>Binds the candidate to the authorized user, session, workspace, project, originating signal, and explicitly selected prior artifacts needed for interpretation.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">6</td>
+<td>5. Real-Time Intake Deduplication &amp; Cleaning</td>
+<td>Canonicalizes incoming candidates, filters malformed or noisy content, and merges replays, exact duplicates, and near-duplicates while preserving meaningful revisions and independent corroboration.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">7</td>
+<td>6. Intake Provenance Registration</td>
+<td>Records origin, identity, version, timestamp, access path, acquisition mode, and transformations for every accepted intake input.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">8</td>
+<td>7. Intake Qualification</td>
+<td>Checks accessibility, authorization, readability, and minimum completeness, then emits a qualified intake package or an explicit rejection or quarantine reason.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">9</td>
+<td>Requirement compilation</td>
+<td>Entry: A list of raw requirements.  A confirmed research and ideation brief containing interpreted objectives, scope, constraints, priorities, acceptance criteria, evidence requirements, and permitted ideation directions.</td>
+<td>1. Intent Interpretation</td>
+<td>Determines the user’s actual problem, desired change, audience, decision, and deliverable without selecting an opportunity or solution.</td>
+<td></td>
+</tr>
+<tr><td class="r">10</td>
+<td>2. Context Scoping</td>
+<td>Resolves applicable context, affected entities, time horizon, inclusions, exclusions, and the boundary of the decision to support.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">11</td>
+<td>3. Ambiguity Resolution</td>
+<td>Finds missing information, conflicting instructions, undefined terms, and consequential assumptions and resolves them through focused questions or explicit defaults.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">12</td>
+<td>4. Constraint Resolution</td>
+<td>Identifies and reconciles authorization, scope, time, cost, data, safety, policy, tool, environment, and output-format constraints with the user’s intended outcome.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">13</td>
+<td>5. Requirement Prioritization</td>
+<td>Separates mandatory outcomes, preferences, tradeable qualities, dependencies, exclusions, and deferred requests.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">14</td>
+<td>6. Acceptance Definition</td>
+<td>Defines observable success criteria, proof obligations, decision thresholds, failure conditions, and stopping rules.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">15</td>
+<td>7. Requirement Contract Confirmation</td>
+<td>Assembles a versioned contract with executable task semantics, presents consequential interpretations, and records user confirmation or authorized assumptions.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">16</td>
+<td>Search &amp; ideation</td>
+<td>Entry: The permitted ideation directions in the confirmed research and ideation brief.  An evidence-grounded candidate idea set, with source-linked supporting and opposing observations, claims, data, methods, results, technical signals, coverage, and known limitations.</td>
+<td>1. Search Strategy Formation</td>
+<td>Turns the requirement contract into technical themes, source families, queries, time horizons, counter-signals, diversity goals, and coverage targets.</td>
+<td></td>
+</tr>
+<tr><td class="r">17</td>
+<td>2. Multi-Source Signal Discovery</td>
+<td>Uses parallel research agents to search open-source projects, papers, patents, standards, experts, think tanks, industry reports, big-tech dynamics, technical communities, the open web, and authorized internal history.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">18</td>
+<td>3. Source Qualification</td>
+<td>Screens discovered material for intent relevance, authority, recency, independence, incentives, duplication, access limits, and potential bias.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">19</td>
+<td>4. Technical Signal Extraction</td>
+<td>Extracts claims, data, methods, mechanisms, results, benchmarks, limitations, failures, dependencies, adoption signals, and unresolved questions.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">20</td>
+<td>5. Signal Organization</td>
+<td>Normalizes signals, binds provenance, clusters related findings, and maps convergence, divergence, dependencies, and opposing viewpoints.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">21</td>
+<td>6. Trend &amp; Gap Analysis</td>
+<td>Detects momentum, decay, contradictions, bottlenecks, missing capabilities, abandoned directions, and technical white spaces.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">22</td>
+<td>7. Idea Generation</td>
+<td>Expands a diverse candidate set from signal clusters, gaps, adjacencies, cross-domain transfers, and contrarian combinations while retaining initial supporting and opposing evidence.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">23</td>
+<td>8. Search Coverage Review</td>
+<td>Tests source-family, technical, geographic, temporal, viewpoint, and counter-evidence coverage before the candidate space is allowed to narrow.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">24</td>
+<td>Idea identification / screening / opportunity selection</td>
+<td>Entry: The evidence-grounded candidate idea set.  A list of opportunity cards, each a structured record containing one opportunity and its relevant information, formed by synthesizing, screening, and consolidating related ideas.</td>
+<td>1. Candidate Consolidation</td>
+<td>Combines parallel search outputs, resolves semantic duplicates, and preserves variants whose assumptions, evidence, or opportunity boundaries materially differ.</td>
+<td></td>
+</tr>
+<tr><td class="r">25</td>
+<td>2. Idea Identification</td>
+<td>Converts meaningful signal combinations and gaps into discrete candidate ideas with a recognizable technical or user value proposition.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">26</td>
+<td>3. Idea Card Formation</td>
+<td>Forms the governing Idea Card with the candidate’s opportunity, relevance, linked evidence, assumptions, novelty, uncertainty, risks, and open questions; evidence formation is part of this card.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">27</td>
+<td>4. Opportunity Definition</td>
+<td>States the unmet need, technical bottleneck, missing capability, unserved user, or unexploited combination that makes the idea actionable.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">28</td>
+<td>5. Technical Opportunity Screening</td>
+<td>Screens novelty, evidence maturity, reachable data, known mechanisms, technical feasibility, and the existence of a credible verification path.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">29</td>
+<td>6. Strategic Opportunity Screening</td>
+<td>Screens user or company value, timing, defensibility, strategic fit, adoption, safety, legal exposure, dependencies, and resource implications.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">30</td>
+<td>7. Opportunity Portfolio Prioritization</td>
+<td>Ranks and selects a bounded, diverse opportunity portfolio using transparent criteria and records why other directions were deferred or rejected.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">31</td>
+<td>Generate technical claims &amp; hypothesis</td>
+<td>Entry: The list of opportunity cards.  Testable technical claims, one or more competing or complementary hypotheses, and a verification-ready POC design defining metrics, evidence requirements, success and failure criteria, constraints, and required resources.</td>
+<td>1. Research Question &amp; Technical Claim Formation</td>
+<td>turn passed opportunity to specific research questions and testable technical claims, clarify research object, expected effects and applicable situations.</td>
+<td></td>
+</tr>
+<tr><td class="r">32</td>
+<td>2. Claim, Evidence, Data &amp; Method Modeling</td>
+<td>Set up claim, data, means of measuring, approaches, and the relationship between baseline and missing evidence</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">33</td>
+<td>3. Hypothesis Pool &amp; Mechanism Formation</td>
+<td>Form the hypothesis from opportunities, and form the mechanism to test the hypothesis.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">34</td>
+<td>4. Falsifiability Screening &amp; Hypothesis Contracting</td>
+<td>Determine if the hypothesis can be overthrowed by obtained data, or methods for the experiment. Also form the contract for testing the hypothesis</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">35</td>
+<td>5. Verification-Ready POC Design</td>
+<td>Design the minimum viable verification plan. Define input, output, evidence requirements, index requirement for success, success/fail criteria, resource needed, restraints and verification steps.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">36</td>
+<td>POC implementation</td>
+<td>Entry: The verification-ready POC design.  An implemented and testable POC artifact, in a domain-appropriate form, that realizes the POC design and is ready for benchmarking.</td>
+<td>1. POC Implementation Environment Preparation</td>
+<td>Setup the environment needed for the POC (dependencies, data, runtime, access permissions, compute resources and configs)</td>
+<td></td>
+</tr>
+<tr><td class="r">37</td>
+<td>2. POC Construction</td>
+<td>Construct the code, model, prompt, etc. for validating the POC.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">38</td>
+<td>3. POC Component Integration &amp; Configuration</td>
+<td>Connect each part into a POC workable E2E, and prepare for the smoke test.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">39</td>
+<td>4. POC Functional Readiness Validation</td>
+<td>Perform smoke test run, make sure POC runs, outputs are in the right format, and faliures can be observed.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">40</td>
+<td>5. Testable POC Artifact Consolidation &amp; Benchmark Handoff</td>
+<td>Organize final POC, config, dependencies, runtime, known constraints and necessary explanations, form an artifact that is benchmark-ready.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">41</td>
+<td>Benchmarking</td>
+<td>Entry: The implemented and testable POC artifact produced by POC implementation.  A benchmark result containing the measured outcomes, comparison context, run conditions, and known limitations.</td>
+<td>1. Benchmark Framing</td>
+<td>Define the claims to be compared, the runtime for the benchmark, baseline used, reference system, and version history.</td>
+<td></td>
+</tr>
+<tr><td class="r">42</td>
+<td>2. Benchmark Protocol &amp; Asset Preparation</td>
+<td>define workload, dataset, figures, repetitions, resource limits, methods for data collection, comparision rules, and reletive assets.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">43</td>
+<td>3. Benchmark Execution</td>
+<td>Run the benchmark according to the rules.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">44</td>
+<td>4. Metrics &amp; Run Evidence Collection</td>
+<td>Collect benchmark results (index, log, run condition, status, faliure lgos, resource used, and provenance, to make sure result is trackable)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">45</td>
+<td>5. Comparative Result Analysis &amp; Benchmark Result Packaging</td>
+<td>Compare POC and baseline, organize info and form benchmark result.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">46</td>
+<td>Evaluation</td>
+<td>1. Evaluation Scope &amp; Evidence Assembly</td>
+<td>Clarify the strategy and standard used for this evaluation, collect benchmark results, claims, and reletive evidence</td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">47</td>
+<td>2. Evidence Completeness &amp; Provenance Review</td>
+<td>Check if evidence is complete, source tracable, completeness on key experiments, and existence of false materials</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">48</td>
+<td>3. Experimental, Reasoning &amp; External Validity Review</td>
+<td>Check experiment design, and if the result make sense in external world</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">49</td>
+<td>4. Claim &amp; Acceptance-Criteria Comparison</td>
+<td>Compare the benchmakr with technical claims, hypothesis and the original accept criteria</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">50</td>
+<td>5. Verdict, Blocker &amp; Residual-Risk Classification</td>
+<td>Tag the hypothesis as pass/fail/inconclusive/conditionally acceptable/etc.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">51</td>
+<td>6. Refinement &amp; Follow-Up Recording</td>
+<td>Note down the points that needs improvement, but no improvements are implemented in this step.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">52</td>
+<td>Delivery</td>
+<td>1. Delivery Planning &amp; Evidence Handoff</td>
+<td>Define the target audience, delivery format, delivery content, evidence index, permission, and a handoff checklist</td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">53</td>
+<td>2. User-Facing Deliverable Generation</td>
+<td>generate the report the user needs, including proposal, technical roadmap, investment recommendation, paper, poster, rebuttal or visualization, etc.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">54</td>
+<td>3. Deliverable, Reusable Asset &amp; Knowledge Packaging</td>
+<td>Organize all the deliverables.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">55</td>
+<td>4. Authorized Distribution, Knowledge Transfer &amp; Lifecycle Closure</td>
+<td>Send the deliverable to the user, confirme acceptance, complete artifact transferring, save success/faliure experience, and close the current workflow lifecycle.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table></div>
+</section>
+<section class="sheet">
+<h2>Foundation Features</h2>
+<div class="meta">Rows: 66</div>
+<div class="grid"><table><thead><tr>
+<th>Row</th>
+<th>Column 1</th>
+<th>Column 2</th>
+<th>Column 3</th>
+<th>Column 4</th>
+<th>Column 5</th>
+<th>Column 6</th>
+<th>Column 7</th>
+</tr></thead><tbody>
+<tr><td class="r">1</td>
+<td>level_1_feature</td>
+<td>level 1 feature description</td>
+<td>level_2_feature</td>
+<td>level 2 feature description</td>
+<td>level_3_feature_bundle</td>
+<td>Notes</td>
+<td>Notes 2</td>
+</tr>
+<tr><td class="r">2</td>
+<td>Capability capsule </td>
+<td>【中文注释】输入：workflow 对能力的需求、route/operator 声明和 evidence schema 期望；处理：声明能力边界、能力 ID、可路由条件和所需证据；输出：可查询/可匹配的 capability contract，以及 route 到 operator/schema 的一致性结果</td>
+<td>1. Capability Capsule Definition &amp; Assembly</td>
+<td>Define the capsule’s contract, metadata, dependencies, resources, and executable entry points.</td>
+<td>capability should do everything that skills can do, and share some mechanisms together.</td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">3</td>
+<td>2. Capsule Governance, Certification &amp; Registry Management</td>
+<td>Validate, certify, register, version, publish, suspend, deprecate, and audit capsules.</td>
+<td>capability  is a upgrade of skills -&gt; capsule skill + rule + boundary + governance</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">4</td>
+<td>3. Capability Discovery, Scoring &amp; Selection</td>
+<td>Find and rank eligible capsules by compatibility, policy, quality, cost, and performance.</td>
+<td>reusable: - governable, cominable, verifiable is a medium for self-evolution</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">5</td>
+<td>4. Capsule Invocation &amp; Composition</td>
+<td>Execute capsules with governed inputs and compose compatible capsules into reusable capabilities.</td>
+<td>one capsule have multiple contracts inside??? Contract comes before operators 参考‘十二项系统抽象的组合’</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">6</td>
+<td>5. Capability Capsule Evolution &amp; Version Promotion</td>
+<td>Improve capsules from runtime evidence, validate candidates, and promote or roll back versions.</td>
+<td>merge some of the leve l2 features that focus on capsule management</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">7</td>
+<td>Operators</td>
+<td>【中文注释】输入：任务 envelope、参数、上下文和证据引用；处理：由 logical/physical operator 执行或规划具体动作，并遵守 capability、side-effect 和 evidence 约束；输出：操作结果、typed evidence、sidecar artifact、日志或明确的 blocked/inconclusive 状态。</td>
+<td>1. 逻辑算子定义、组装与注册 — Logical Operator Definition, Assembly &amp; Registration</td>
+<td>Creates a stable, DAG-callable logical operator  identity/version, inputs and outputs, required capabilities/capsules, side effects, write scope, evidence requirements, completion conditions, concurrency constraints and fallback semantics.</td>
+<td>the level 2 for this level 1 feature is too broken refer to solar-harness:如何利用AI coding实现从洞察到规划。。。</td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">8</td>
+<td>2. 算子准入、认证与治理 — Operator Qualification, Admission &amp; Governance</td>
+<td>Determines whether a logical or physical operator may be enabled, promoted or deprecated. It consumes evaluator verdicts to check contract compliance, permissions, safety, reliability, independence and architectural boundaries.</td>
+<td>参考十二条设计原则</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">9</td>
+<td>3. 逻辑—物理算子匹配、选择与绑定 — Logical-to-Physical Matching, Selection &amp; Binding</td>
+<td>For the logical operator specified by a DAG node, filters eligible physical operators and ranks them using capabilities, capsule compatibility, permissions, health, host, quota, cost, latency, load and fallback policy.</td>
+<td>如何定义逻辑算子：需求编译，绑定，。。。</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">10</td>
+<td>4. 物理算子与执行舰队管理 — Physical Operator &amp; Execution Fleet Management</td>
+<td>Registers and manages API models, subscription agents, browser/Web operators, Code Agent panes, and local/remote environments as first-class physical operators. Maintains profiles, adapters, availability, health, capacity, quota, cost and concurrency state.</td>
+<td>现在需要新加一个“如何添加逻辑算子”的feature</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">11</td>
+<td>5. 算子运行评估与能力画像 — Operator Runtime Evaluation &amp; Capability Profiling</td>
+<td>Aggregates execution evidence into task-specific success, quality, latency, cost and failure profiles. These profiles support future binding decisions, qualification and evolution.</td>
+<td>逻辑算子是封装好的功能，但可以指定执行者。例如，logical operators should be able to be called by the DAG</td>
+<td>DAG generates the nodes of the workflow user intent-&gt;requirement compilation-&gt;Capsule-&gt;research contract-&gt;planner-&gt;dag</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">12</td>
+<td>6. 评估器驱动的算子演进 — Evaluator-Driven Operator Evolution</td>
+<td>Produces versioned improvement candidates, tests and benchmarks them, compares quality/cost/risk trade-offs, and supports approval, promotion and rollback. It should evolve definitions, profiles and binding policies—not silently rewrite an operator through “reflection”.</td>
+<td>6. Model Response Normalization  Convert provider-specific text, structured output, tool calls, usage data, and errors into one standard response format.</td>
+<td>打包的时候从外往里包，执行时从小往外打开。 Capsule-&gt;contract-&gt;logical operator （例如：capsule仅仅是车辆维修，contract是不同车型的维修计划，operators是具体修理项的修理工具）</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">13</td>
+<td>Evaluator</td>
+<td>【中文注释】输入：证据 payload、运行结果、artifact、gate policy 和验收标准；处理：执行 schema/gate/quality/parity/lifecycle 检查；输出：PASS/FAIL/BLOCKED/INCONCLUSIVE verdict、reasons、warnings 和可审计 gate evidence。</td>
+<td>1. Contract, Schema &amp; Artifact Conformance Evaluator</td>
+<td>Verifies input/output contracts, schemas, scopes, required artifacts, proof obligations, structural completeness, and admissibility of submitted evidence.</td>
+<td>Evaluator is also a logical operator, but is an importatn one. Evaluator is in essence how to organize the chain of evidence</td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">14</td>
+<td>2. Engineering Correctness &amp; Code Quality Evaluator</td>
+<td>Combines automated unit, integration, regression, smoke, and end-to-end testing with static analysis, type checking, linting, maintainability checks, and architecture-boundary validation.</td>
+<td>evaluator have different pipeline for different things to be evaluated, and we should split them up. Split them up as level 2 features(参考pg25 of 跨领域大颗粒技术创新）HITL 在紫，橙，绿里面都有， 也可以看pg28</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">15</td>
+<td>3. Performance, Cost &amp; Benchmark Evaluator</td>
+<td>Measures quality, latency, throughput, resource usage, scalability, and cost, and compares results against defined baselines and regression thresholds.</td>
+<td>compliance, 合规与知识产权test security scan benchmark staic analysis autotest</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">16</td>
+<td>4. Security, Privacy, Compliance &amp; IP Evaluator</td>
+<td>Checks vulnerabilities, secrets, permissions, unsafe effects, sensitive-data exposure, regulatory and organizational policies, licenses, copyright, attribution, and permitted data use.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">17</td>
+<td>5. Evidence, Factuality &amp; Scientific Validity Evaluator</td>
+<td>Evaluates claim-to-evidence support, citation and source quality, reasoning consistency, reproducibility, experimental validity, uncertainty, and external plausibility.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">18</td>
+<td>6. Lifecycle, Parity &amp; Human Review Evaluator</td>
+<td>Verifies real execution, workflow completion, required gates, side effects, and feature or semantic parity; aggregates results and invokes attributable HITL review for high-risk, ambiguous, or policy-required decisions.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">19</td>
+<td>Foundational models</td>
+<td>【中文注释】输入：prompt、检索上下文、模型/provider 配置和模型证据请求；处理：调用或验证 LLM/Review LLM/模型命令的输出边界；输出：模型响应、review evidence、ranking/critique、provider 状态和不可用/不可信说明。</td>
+<td>1. Model Capability Registry</td>
+<td>Record declared and verified model capabilities such as modality, context size, tool use, structured output, cost class, and suitable tasks.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">20</td>
+<td>2. Model Routing &amp; Selection</td>
+<td>Match and select a model route using task needs, capability, quality, cost, policy, quota, and current health. Allow models to obtain tasks in their advantaged field</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">21</td>
+<td>3. Model Usage Auditing</td>
+<td>Record model calls, routes, users, tokens, cost, quota consumption, and policy decisions for audit and accounting.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">22</td>
+<td>RSI</td>
+<td>【中文注释】输入：失败运行、gate 拒绝原因、质量反馈、历史缺陷和 workflow 证据；处理：挖掘改进机会、生成 patch/proposal、更新工作流或策略建议；输出：workflow_evolution evidence、改进建议、候选补丁、学习记录和风险提示。</td>
+<td>1. Text-Based Artifacts (GEPA / MIPROv2 / TextGrad)</td>
+<td>Improves prompts, rules, and rubrics. Validate with holdout tasks, A/B tests, and regression checks.</td>
+<td>RSI事实上是自演进的一套东西，参考PPT结构图里面的优化层  xiamiande dong</td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">23</td>
+<td>2. Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)</td>
+<td>Optimizes model, tool, budget, retry, and concurrency decisions. Validate with traces, load tests, and cost–latency metrics.</td>
+<td>GEPA的路径作为一个level 2 features，并且要有GEPA是什么的说明 （是解决文本化的自我改进）</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">24</td>
+<td>3. Capability Capsules and Physical Operators (Trajectory Mining / Code Evolution / CEGIS)</td>
+<td>Improves reusable capability contracts and implementations. Validate with compatibility tests, sandbox runs, and performance benchmarks.</td>
+<td>除了GEPA，还有voyager，让系统从成功执行中自动沉淀</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">25</td>
+<td>4. DAG and Agent Organization (AFlow / MCTS / ADAS)</td>
+<td>Optimizes workflow structure, agent roles, and coordination. Validate with replay tests, simulations, and success–cost comparisons.</td>
+<td>self-refine:运行时自我改进（参考ChatGPT AI4Research的pin chat）</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">26</td>
+<td>5. Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS)</td>
+<td>Improves acceptance rules, rewards, gates, and policies. Validate with golden sets, agreement rates, and violation tests.</td>
+<td>Capability capsule self-improvement (by generating new skills when run)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">27</td>
+<td>6. Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training)</td>
+<td>Improves storage, retrieval, citation, and evidence binding. Validate with recall, precision, citation accuracy, and provenance checks.</td>
+<td>DAG/workflow self-improvement</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">28</td>
+<td>7. Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL)</td>
+<td>Learns stronger planning, tool use, and evaluation behavior. Validate with holdout benchmarks, robustness tests, and regressions.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">29</td>
+<td>8. Data, Benchmarks, Curriculum, and Observability (Active Learning / Hard-Case Mining / Credit Assignment)</td>
+<td>Improves task coverage, difficulty, data quality, and change attribution. Validate with coverage, contamination, trace, and ablation tests.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">30</td>
+<td>Data foundations </td>
+<td>【中文注释】输入：原始文档、wiki/memory/graph、证据 JSON、日志、checkpoint 和 artifact；处理：标准化、索引、关联、持久化和校验数据来源；输出：可检索数据层、evidence ledger、graph edges、artifact tree、provenance 和一致性状态。</td>
+<td>1. Persistent Memory &amp; Context Retrieval</td>
+<td>Store accepted facts, decisions, summaries, failures, lessons, and reusable context in durable memory; support indexing, retrieval, compression, expiration, and context assembly.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">31</td>
+<td>2. Concept Graph Management</td>
+<td>Define and connect business concepts, entities, terminology, attributes, and semantic relationships.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">32</td>
+<td>3. Dataset Graph Management</td>
+<td>Register datasets, schemas, fields, versions, sources, quality states, dependencies, and relationships to business concepts.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">33</td>
+<td>4. Code Graph Management</td>
+<td>Model repositories, modules, APIs, functions, tests, configurations, dependencies, and their relationships to concepts, datasets, and runtime behavior.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">34</td>
+<td>5. Policy Graph Management</td>
+<td>Represent permissions, approvals, security rules, compliance constraints, retention requirements, and policies governing data and actions.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">35</td>
+<td>6. Workflow Graph Management</td>
+<td>Model reusable processes, SOPs, approval chains, workflow stages, transitions, and their required inputs, outputs, policies, and capabilities.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">36</td>
+<td>7. Trace Graph Management</td>
+<td>Connect requests, plans, executions, operator decisions, tool calls, artifacts, evidence, evaluations, and state transitions into an auditable execution history.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">37</td>
+<td>8. Memory Graph Management</td>
+<td>Represent relationships among remembered facts, decisions, experiences, failures, lessons, entities, workflows, and their originating evidence.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">38</td>
+<td>9. TaskGraph Persistence &amp; Lifecycle Management</td>
+<td>Store and version executable TaskGraph specifications and their runtime state, including nodes, dependencies, scopes, gates, checkpoints, results, and closure records.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">39</td>
+<td>Harness Core</td>
+<td>【中文注释】输入：任务请求、runtime 状态、queue/lease、operator envelope、配置和审批状态；处理：调度、分发、恢复、状态管理和 evidence 写入；输出：sprint/runtime artifacts、dispatch results、status、logs、resume state 和失败/阻塞边界。</td>
+<td>1. Runtime Control Loop &amp; Run Lifecycle Management</td>
+<td>Initialize run/sprint identity and configuration; drive the main control loop; maintain durable run/node state and status projections; close the run only when required nodes and gates are satisfied.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">40</td>
+<td>2. Message Bus &amp; Durable Task Queue</td>
+<td>Transport commands, events, and ready-node work with persistent queueing, priority, ordering, deduplication/idempotency, and backpressure.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">41</td>
+<td>3. DAG Scheduler, TaskGraph Readiness &amp; Operator Binding</td>
+<td>Validate the DAG, determine readiness from dependencies, gates and external waits, and form safe parallel batches using scope, effect, resource, and capacity constraints.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">42</td>
+<td>4. Execution Admission, Lease &amp; Concurrency Control</td>
+<td>Enforce approval, policy and availability checks; acquire/release/reap leases; prevent duplicate dispatch; and enforce concurrency, quota, exclusion, and capacity limits.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">43</td>
+<td>5. Main Loop Dispatch &amp; Runtime Supervision</td>
+<td>Consume an already-resolved operator binding, create the execution envelope/instruction, dispatch it to the runtime or host, monitor heartbeat/progress, and collect normalized results, handoffs, artifacts, and evidence references.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">44</td>
+<td>6. Failure Recovery &amp; Resumability</td>
+<td>Detect failed or stale execution, retry/requeue/compensate or terminate safely, recover expired leases, replay durable state, and resume without rerunning already-passed work.</td>
+<td>planning and taskgraph generation (should belong to planner, not here)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">45</td>
+<td>Intention compilers</td>
+<td>【中文注释】输入：自然语言意图、上下文、文件/仓库状态和用户约束；处理：解析、规范化、绑定 route/capability、生成任务合同或执行 envelope；输出：structured intent、任务图、acceptance criteria、执行边界和可测试输入。</td>
+<td>1. Intent Classification &amp; Compilation Variant Selection</td>
+<td>Classify the request as implementation, full specification or research, and select the corresponding lane, output variant, priority and acceptance profile.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">46</td>
+<td>2. Goal, Scope and Context normalization</td>
+<td>Extract goals, parameters, priorities, success conditions, scope and non-goals, while collecting only the relevant repository, file, attachment and historical context.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">47</td>
+<td>3. Ambiguity Resolution &amp; Readiness</td>
+<td>Detect missing, conflicting or unclear requirements; generate the minimum necessary clarification questions; determine whether the intent is ready for planning.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">48</td>
+<td>4. Constraint Compilation</td>
+<td>Convert budget, time, permission, data, security, quality and side-effect requirements into enforceable constraints, including what approvals will be required.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">49</td>
+<td>5. Task Contract &amp; Acceptance Compilation</td>
+<td>Produce a stable, versioned task contract containing normalized inputs and outputs, objectives, constraints, acceptance criteria and required evidence.</td>
+<td>task graph is a kind of contract. What other kind of contract?</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">50</td>
+<td>Planner</td>
+<td>【中文注释】输入：任务/研究合同、上下文、capability 可用性和约束；处理：拆解目标、安排步骤、定义依赖、选择验证路径和交付计划；输出：计划、TaskGraph、实验/报告计划、优先级和后续执行清单。</td>
+<td>1. Task Contract Decomposition</td>
+<td>Interpret the validated task contract, select an appropriate planning pattern, and split the goal into bounded work units with explicit objectives, inputs, outputs and completion conditions. Also generate the planning plan text artifact for RSI.</td>
+<td>what are the planning strategy avaliable? Is it a template, or is it real time generated?</td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">51</td>
+<td>2. TaskGraph Construction</td>
+<td>Compile the work units into a logical Plan IR/TaskGraph, defining dependencies, parent-child relationships, ordering, parallelizable branches and critical paths.</td>
+<td>Acceptance, Evidence &amp; Gate Planning  Map contract requirements to node-level acceptance criteria, expected evidence, tests, evaluator requirements, human gates and stop or rollback conditions.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">52</td>
+<td>3. TaskGraph Validation &amp; Feasibility Analysis</td>
+<td>Validate schema completeness, missing dependencies, cycles, requirement coverage, scope conflicts, capability feasibility, risk, policy compliance and useful parallelism. Invalid or infeasible plans must be blocked or returned for clarification/replanning.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">53</td>
+<td>Builder</td>
+<td>【中文注释】输入：计划、规格、代码/实验/报告目标、工具配置和审批结果；处理：构建代码、实验、报告、UI 或其他交付工件；输出：实现产物、变更、运行脚本、文档/报告、artifact bundle 和构建证据。</td>
+<td>1. Build Contract Interpretation</td>
+<td>Translate the task or build contract into implementation goals, interfaces, write scope, acceptance conditions, and prohibited changes.</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">54</td>
+<td>2. Build Preparation</td>
+<td>Prepare source material, dependencies, templates, data, workspace, toolchain, and pre-build readiness checks.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">55</td>
+<td>3. Code Construction</td>
+<td>Create or modify deterministic source code, scripts, tests, and configuration to implement the required technical function.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">56</td>
+<td>4. Model Construction</td>
+<td>Build, train, fine-tune, or assemble reproducible algorithmic, statistical, or machine-learning models.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">57</td>
+<td>5. Experimental Asset Construction</td>
+<td>Build experiment code, data processing, instrumentation, environment descriptions, and run scripts.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">58</td>
+<td>6. Benchmark Asset Construction</td>
+<td>Build benchmark datasets, harnesses, workloads, baselines, metric implementations, and comparison scripts.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">59</td>
+<td>7. Verification Asset Construction</td>
+<td>Build unit, integration, and end-to-end tests, validators, fixtures, checklists, and verification scripts.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">60</td>
+<td>8. Decision Artifact Construction</td>
+<td>Create opportunity cards, decision records, trade-off matrices, and recommendation packets for decision-making.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">61</td>
+<td>9. Prototype Assembly</td>
+<td>Combine code, models, data, and interfaces into a bounded, runnable, and demonstrable proof of concept.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">62</td>
+<td>10. Product Integration</td>
+<td>Integrate verified components into target product interfaces, data flows, and production-oriented operational boundaries.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">63</td>
+<td>11. Defect Repair</td>
+<td>Use failure evidence to identify and repair code, configuration, contract, or integration defects and prevent regression.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">64</td>
+<td>12. Build Evidence Generation</td>
+<td>Generate diffs, manifests, hashes, compile and test results, provenance, and acceptance evidence for the build.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">65</td>
+<td>13. Report/Paper/Deliverable Construction</td>
+<td>Create and assemble human-facing reports, papers, slides, posters, rebuttals, and narrative delivery packages.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">66</td>
+<td>14. Runtime Deliverable Construction</td>
+<td>Build executable or deployable services, packages, containers, workflow bundles, and deployment configuration.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table></div>
+</section>
+<section class="sheet">
+<h2>Vertical Features</h2>
+<div class="meta">Rows: 24</div>
+<div class="grid"><table><thead><tr>
+<th>Row</th>
+<th>Column 1</th>
+<th>Column 2</th>
+<th>Column 3</th>
+<th>Column 4</th>
+<th>Column 5</th>
+<th>Column 6</th>
+<th>Column 7</th>
+<th>Column 8</th>
+</tr></thead><tbody>
+<tr><td class="r">1</td>
+<td>level_1_feature</td>
+<td>level 1 feature description</td>
+<td>level_2_feature</td>
+<td>level 2 feature description</td>
+<td>level_3_feature_bundle</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">2</td>
+<td>Visibility / Statistics</td>
+<td>【中文注释】输入：运行日志、测试结果、状态、指标和 QA evidence；处理：汇总、统计、可视化并暴露给用户/维护者；输出：dashboard、status view、统计报表、command log、coverage summary 和健康状态。</td>
+<td>1. Workflow &amp; Platform Status Visibility</td>
+<td>Show workflow progress, blockers, gates, budgets, and the health of hosts, providers, queues, data sources, and other platform components without changing authoritative runtime state.</td>
+<td>可视化：图形化方式表达 可见：从看不见到看得见  &lt;-- 这是artifact&#39;s status visibility</td>
+<td>3. Opportunity &amp; Innovation Portfolio Analytics  Analyze source coverage, signal momentum, opportunity maturity, risk, value, ranking, strategic fit, and portfolio diversity at both opportunity and portfolio levels.</td>
+<td>4. Experiment &amp; Evaluation Analytics  Aggregate experiment queues, variants, iteration history, failures, budget burn, baseline comparisons, uncertainty, regressions, reproducibility, and evaluation verdicts.</td>
+<td>6. Evidence &amp; Decision Reporting  Produce and export source-backed reports containing evidence, provenance, metrics, evaluations, decisions, investment judgments, and capability references.</td>
+</tr>
+<tr><td class="r">3</td>
+<td>2. Execution Trace Search &amp; Inspection</td>
+<td>Search and inspect time-ordered requests, transitions, tool calls, approvals, failures, artifacts, decisions, and outcomes using filters for project, run, actor, and time range.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">4</td>
+<td>3. Runtime status visibility</td>
+<td>Statistics like cpu usage, gpu usage, etc.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">5</td>
+<td>4. Resource Usage, Cost &amp; Capacity Management</td>
+<td>Report model, compute, token, tool, storage, data, quota, human-review, budget, cost, and capacity consumption by project, experiment, capability, and time.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">6</td>
+<td>Installer &amp; CLI &amp; Webapp</td>
+<td>【中文注释】输入：安装参数、组件选择、环境变量、CLI 命令和 webapp 构建/运行请求；处理：安装/验证/修复/更新/打包/启动；输出：安装 receipt、可用 CLI、webapp/status 服务、doctor 结果和可复现安装证据。</td>
+<td>1. Windows App</td>
+<td>Package, install, launch, update, repair, and uninstall the Windows desktop application and its supported runtime dependencies; guide first-run setup and authentication, preserve user data, and produce installation and health-check evidence.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">7</td>
+<td>2. MacOS App</td>
+<td>Package, install, launch, update, repair, and uninstall the macOS desktop application; guide first-run permissions, runtime and provider setup, preserve user data, and verify application and backend readiness.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">8</td>
+<td>3. MacOS CLI</td>
+<td>Install and operate the Solar CLI on macOS, including dependency checks, PATH and configuration initialization, provider-authentication readiness, status and doctor checks, backup and restore, update and repair, and uninstall.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">9</td>
+<td>4. Linux Cli</td>
+<td>Install and operate the Solar CLI on supported Linux distributions, including dependency and package-manager checks, runtime and configuration initialization, service startup, status and doctor checks, backup and restore, update and repair, and uninstall.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">10</td>
+<td>5. Web Application &amp; Status Service</td>
+<td>Build, serve, configure, and health-check the browser-based application and status API; connect it to authentication, configuration, workflow state, runtime visibility, and artifact views across development and packaged deployments.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">11</td>
+<td>UI</td>
+<td>【中文注释】输入：用户操作、runtime/status 数据、deliverable 列表和错误状态；处理：渲染页面、状态、表单、预览和交互反馈；输出：可理解的 UI 视图、错误/空态、可访问控件和交付物预览。</td>
+<td>1. CLI</td>
+<td>Provide a scriptable command-response interface for submitting work, inspecting status, managing lifecycle and configuration, and retrieving logs, artifacts, and evidence, with stable exit codes and human-readable or structured JSON output.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">12</td>
+<td>2. GUI</td>
+<td>Provide a graphical desktop or web interface for task intake, setup and configuration, workflow and gate monitoring, approval, artifact and evidence inspection, and deliverable access, including loading, empty, error, and accessibility states.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">13</td>
+<td>3. TUI</td>
+<td>Provide an interactive terminal interface for monitoring runs, TaskGraph nodes, agents or panes, queues, gates, logs, and resource state, and for issuing explicit authorized control actions through keyboard-driven views.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">14</td>
+<td>Account management</td>
+<td>【中文注释】输入：用户身份、凭证、授权状态、profile 和账号/配额信息；处理：检查认证、权限、隔离边界和敏感信息保护；输出：认证就绪状态、缺失凭证提示、权限边界和安全处理结果。</td>
+<td>1. Account Registration</td>
+<td>Create an individual product account with verified identity, accepted terms, and initial personal settings.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">15</td>
+<td>2. Authentication &amp; Session Security</td>
+<td>Support secure sign-in, sign-out, session establishment, reauthentication, recovery, session revocation, and suspicious-access visibility.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">16</td>
+<td>3. User Profile Management</td>
+<td>Manage identity, expertise, role, research preferences, notification choices, accessibility choices, and default product behavior.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">17</td>
+<td>4. Privacy &amp; Personal Data Controls</td>
+<td>Let users inspect, export, retain, or delete personal settings and supplied data and manage consent for message-derived information.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">18</td>
+<td>Message Channels</td>
+<td>【中文注释】输入：任务事件、审批请求、通知、agent 消息和外部 channel 事件；处理：路由、记录、重试或阻塞消息流；输出：可审计消息、approval request、queue/status artifact、通知结果和失败说明。</td>
+<td>1. Wechat</td>
+<td>Accept user-authorized WeChat article links or copied content through the supported intake path; fetch and normalize permitted content, preserve provenance, deduplicate revisions, redact sensitive data, and dispatch qualified material to ingestion.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">19</td>
+<td>2. Discord</td>
+<td>Connect an authorized Discord workspace through a bot or application, scope guild and channel permissions, ingest permitted messages as qualified signals, deliver approved notifications, preserve provenance, and support credential revocation and audit.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">20</td>
+<td>3. TMUX</td>
+<td>Register and operate tmux sessions and panes as controlled terminal and runtime surfaces, including ownership, attach and detach, pane-state and log inspection, notifications, recovery, and isolation between runs.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">21</td>
+<td>System Configurations</td>
+<td>【中文注释】输入：配置文件、环境变量、provider keys、模型选择和 runtime 参数；处理：解析、校验、合并并应用配置；输出：有效 provider/runtime 配置、模型路由、缺失配置提示和安全的 secret/provider 边界。</td>
+<td>1. LLM Config</td>
+<td>Configure provider endpoints and credential references, register available models and aliases, assign role-specific model defaults, and validate the effective model-routing configuration without exposing raw secrets.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">22</td>
+<td>2. User Settings</td>
+<td>Manage persistent user-local preferences such as display identity, timezone, workspace and knowledge paths, runtime choice, search and reasoning options, UI behavior, and ingestion defaults, with validated configuration precedence.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">23</td>
+<td>3. Cost/Budget Settings</td>
+<td>Define and enforce token, call, monetary, compute, and storage budgets and quotas by provider, model, project, or task; track consumption, warn near limits, and block or reroute work when hard limits are reached.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr><td class="r">24</td>
+<td>4. Cluster setting</td>
+<td>Declare local and remote execution hosts, host types, addresses, lifecycle settings, heartbeat and probe rules, and capacity or concurrency limits, and expose the validated cluster topology to operator binding and scheduling.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table></div>
+</section>
+</div></body></html>

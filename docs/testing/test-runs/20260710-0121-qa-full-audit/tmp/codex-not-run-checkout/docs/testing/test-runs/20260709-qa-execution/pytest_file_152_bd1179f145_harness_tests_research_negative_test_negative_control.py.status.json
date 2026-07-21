@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_152_bd1179f145_harness_tests_research_negative_test_negative_control.py",
+  "source": "harness/tests/research/negative/test_negative_control.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research/negative/test_negative_control.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.198,
+  "timeout": false
+}

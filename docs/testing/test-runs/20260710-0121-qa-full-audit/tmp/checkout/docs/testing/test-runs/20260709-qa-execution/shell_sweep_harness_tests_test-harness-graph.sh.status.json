@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-harness-graph.sh",
+  "source": "harness/tests/test-harness-graph.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-harness-graph.sh"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.136,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-0eycat39"
+}

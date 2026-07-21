@@ -1,0 +1,52 @@
+{
+  "publication_bundle_path": "artifacts/autosci/runs/priority-b-workspace-index-bc4c0f99326a477998c840af1fe1b221/publication_bundle.json",
+  "report_id": "report-skillgen-operator-smoke",
+  "sections": [
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "summary",
+      "title": "Summary"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "findings",
+      "title": "Findings"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "evidence-map",
+      "title": "Evidence Map"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "final-manuscript-boundary",
+      "title": "Final Manuscript Boundary"
+    },
+    {
+      "evidence_ids": [
+        "paper-draft-compile-handoff",
+        "claim-001",
+        "exp-supported-001"
+      ],
+      "section_id": "limitations",
+      "title": "Limitations"
+    }
+  ],
+  "title": "Priority B Workspace Index"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_450_df33c97619_harness_tests_test_tech_hotspot_social_browser_backend_v3.py",
+  "source": "harness/tests/test_tech_hotspot_social_browser_backend_v3.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_tech_hotspot_social_browser_backend_v3.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.816,
+  "timeout": false
+}

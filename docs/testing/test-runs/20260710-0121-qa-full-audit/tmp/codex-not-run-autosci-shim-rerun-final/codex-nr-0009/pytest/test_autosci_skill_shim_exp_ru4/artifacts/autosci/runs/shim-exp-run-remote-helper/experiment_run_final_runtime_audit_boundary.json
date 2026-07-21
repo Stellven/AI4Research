@@ -1,0 +1,34 @@
+{
+  "approval_contract_verified": true,
+  "approval_state": "verified",
+  "artifact_types": [
+    "approval_contract_json",
+    "executor_stderr",
+    "executor_stdout",
+    "experiment_deploy_report_json",
+    "experiment_run_log",
+    "experiment_run_report_json",
+    "experiment_runtime_evidence_json",
+    "gate_policy_decision_json",
+    "run_experiment_result_json",
+    "wiki_experiment_state",
+    "wiki_graph_edges",
+    "wiki_log"
+  ],
+  "collection_ledger_recorded": false,
+  "experiment_id": "exp-remote",
+  "final_runtime_audit_ready": false,
+  "limitations": [
+    "Final lifecycle audit also requires an approved monitor/collect stage with collection ledger evidence."
+  ],
+  "live_remote_collection_verified": false,
+  "remote_collection_boundary_status": "N/A",
+  "result_collected": true,
+  "runtime_semantic_status": "verified",
+  "runtime_semantic_verified": true,
+  "schema": "autosci_experiment_run_final_runtime_audit_boundary.v1",
+  "stage": "run",
+  "stage_audit_ready": true,
+  "status": "stage_runtime_audit_ready",
+  "wiki_state_mutated": true
+}

@@ -1,0 +1,42 @@
+---
+skill: review
+namespace: builtin
+status: stable
+min_score: 0.8
+version: "1.0"
+created_at: "2026-05-09T00:00:00Z"
+
+cases:
+  - id: review-01
+    description: "Detects SQL injection in Python code"
+    input: |
+      def get_user(user_id):
+          query = f"SELECT * FROM users WHERE id = {user_id}"
+          return db.execute(query)
+    expect:
+      - finds_injection: true
+      - severity_blocker: true
+    weight: 0.4
+
+  - id: review-02
+    description: "Finds missing error handling"
+    input: |
+      def read_file(path):
+          with open(path) as f:
+              return f.read()
+    expect:
+      - finds_missing_exception: true
+      - severity_warn_or_above: true
+    weight: 0.3
+
+  - id: review-03
+    description: "Outputs structured findings with severity"
+    input: "any diff"
+    expect:
+      - has_blocker_section: true
+      - has_verdict: true
+    weight: 0.3
+
+scoring:
+  method: weighted_sum
+  pass_threshold: 0.8

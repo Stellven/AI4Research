@@ -1,0 +1,21 @@
+{
+  "task_id": "T-cooldown-001",
+  "operator_id": "test-command-builder",
+  "sprint_id": "sprint-command",
+  "node_id": "N1",
+  "status": "failed",
+  "exit_code": 1,
+  "started_at": "2026-07-10T18:53:02Z",
+  "finished_at": "2026-07-10T18:53:03Z",
+  "log_tail": "You've hit your limit \u00b7 resets 1:40pm\n[flow-control] runtime_state=cooldown",
+  "model_route": {
+    "requested_model": "local-command",
+    "routing_model": "local-command",
+    "effective_provider": "command",
+    "effective_model": "local-command"
+  },
+  "requested_model": "local-command",
+  "routing_model": "local-command",
+  "effective_provider": "command",
+  "effective_model": "local-command"
+}

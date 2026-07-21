@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_299_3fda9dbe45_harness_tests_test_antigravity_auth_bootstrap.py",
+  "source": "harness/tests/test_antigravity_auth_bootstrap.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_antigravity_auth_bootstrap.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.195,
+  "timeout": false
+}

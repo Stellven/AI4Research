@@ -1,0 +1,13 @@
+{
+  "report_id": "gate_report_abc123def456",
+  "run_metadata": {"run": "test_all_pass"},
+  "gate_verdicts": {
+    "argument_density": {"gate_id": "argument_density", "verdict": "pass", "evidence_refs": [], "report_section": {"registered_name": "argument_density"}},
+    "controversy_matrix": {"gate_id": "controversy_matrix", "verdict": "pass", "evidence_refs": ["c1","c2"], "report_section": {"registered_name": "controversy_matrix"}},
+    "exploration_log": {"gate_id": "exploration_log", "verdict": "pass", "evidence_refs": [], "report_section": {"registered_name": "exploration_log"}},
+    "source_quality": {"gate_id": "source_quality", "verdict": "pass", "evidence_refs": ["src_1"], "report_section": {"registered_name": "source_quality"}}
+  },
+  "artifact_paths": {"gate_report": "/tmp/gate_report.json", "elimination_log": "/tmp/elimination.jsonl"},
+  "scorecard_ref": {},
+  "schema_version": "survey.schemas.v1"
+}

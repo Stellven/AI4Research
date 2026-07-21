@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_423_fbe3acdeaf_harness_tests_test_report_validation.py",
+  "source": "harness/tests/test_report_validation.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_report_validation.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.195,
+  "timeout": false
+}

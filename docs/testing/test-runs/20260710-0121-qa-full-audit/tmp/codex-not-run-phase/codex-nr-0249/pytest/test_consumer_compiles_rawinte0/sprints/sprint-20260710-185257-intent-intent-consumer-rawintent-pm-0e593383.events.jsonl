@@ -1,0 +1,1 @@
+{"ts": "2026-07-10T18:52:57Z", "actor": "pm_dispatch", "event": "compiled_requirement_package_created", "sid": "sprint-20260710-185257-intent-intent-consumer-rawintent-pm-0e593383", "status": "info", "detail": {"phase": "prd_ready", "handoff_to": "planner", "target_role": "planner"}}

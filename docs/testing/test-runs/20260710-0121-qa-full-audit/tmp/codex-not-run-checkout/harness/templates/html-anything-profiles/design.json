@@ -1,0 +1,35 @@
+{
+  "id": "design",
+  "surface_label": "Architecture / Design HTML",
+  "kicker": "HTML Anything · Design",
+  "title": "Solar Architecture Design",
+  "default_lede": "架构设计文档默认也走 html-anything 渲染链，和 PM/Planner HTML 保持同一工具家族。",
+  "footer_left": "Solar Harness",
+  "footer_right": "Architecture readable artifact",
+  "upstream": {
+    "skill": "web-proto-editorial",
+    "path": "next/src/lib/templates/skills/web-proto-editorial/example.html"
+  },
+  "theme": {
+    "colors": {
+      "background": "#0f1115",
+      "surface": "#171a21",
+      "ink": "#f4f6f8",
+      "muted": "#a5adb8",
+      "accent": "#8cc6ff",
+      "rule": "#293241",
+      "badge_bg": "#1f2835"
+    },
+    "typography": {
+      "hero_size": "clamp(46px, 6vw, 88px)",
+      "serif": "'Source Serif 4', Georgia, serif",
+      "sans": "'Inter Tight', system-ui, sans-serif",
+      "mono": "'JetBrains Mono', ui-monospace, monospace"
+    },
+    "layout": {
+      "max_width": "1120px",
+      "toc_width": "280px",
+      "card_min_height": "190px"
+    }
+  }
+}

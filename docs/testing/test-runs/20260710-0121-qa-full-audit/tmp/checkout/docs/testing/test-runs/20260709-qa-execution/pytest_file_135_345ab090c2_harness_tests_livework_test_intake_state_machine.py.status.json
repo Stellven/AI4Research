@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_135_345ab090c2_harness_tests_livework_test_intake_state_machine.py",
+  "source": "harness/tests/livework/test_intake_state_machine.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/livework/test_intake_state_machine.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.2,
+  "timeout": false
+}

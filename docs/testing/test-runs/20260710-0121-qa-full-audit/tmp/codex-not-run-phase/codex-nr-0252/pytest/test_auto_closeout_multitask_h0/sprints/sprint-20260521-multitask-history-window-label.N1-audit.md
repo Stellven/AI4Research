@@ -1,0 +1,5 @@
+render_plain
+render_screen_status_lines
+render_tvs
+pane_title
+rename-window

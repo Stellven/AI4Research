@@ -1,0 +1,70 @@
+============================================================
+OPEN_SOLAR_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar
+ M .DS_Store
+ M harness/.pane-restart-state
+ M harness/PLANNER-INBOX.md
+ M harness/config/physical-operators.json
+ M harness/logs/pane-exit.jsonl
+============================================================
+STELLVEN_SOLAR_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar
+============================================================
+NATIVE_AUTOSCI_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci
+ M .claude/skills/discover/SKILL.md
+ M .claude/skills/discover/references/ranking-signals.md
+ M .claude/skills/discover/references/seed-modes.md
+ M .claude/skills/ideate/SKILL.md
+ M .github/ISSUE_TEMPLATE/bug_report.md
+ M .github/PULL_REQUEST_TEMPLATE.md
+ M .github/workflows/daily-arxiv.yml
+ M README.md
+ M config/README.md
+ M config/daily-arxiv.yml.example
+ M config/setup-guide.md
+ M docs/daily-arxiv-deployment.md
+ M docs/runtime-directory-structure.en.md
+ M docs/runtime-directory-structure.zh.md
+ M i18n/en/CLAUDE.md
+ M i18n/en/shared-references/cross-model-review.md
+ M i18n/en/skills/ask/SKILL.md
+ M i18n/en/skills/daily-arxiv/SKILL.md
+ M i18n/en/skills/daily-arxiv/references/automation-scaffold.md
+ M i18n/en/skills/exp-design/SKILL.md
+ M i18n/en/skills/exp-eval/SKILL.md
+ M i18n/en/skills/exp-pilot-eval/SKILL.md
+ M i18n/en/skills/exp-pilot-run/SKILL.md
+ M i18n/en/skills/exp-run/SKILL.md
+ M i18n/en/skills/exp-status/SKILL.md
+ M i18n/en/skills/ideate/SKILL.md
+ M i18n/en/skills/ingest/SKILL.md
+ M i18n/en/skills/ingest/references/cross-references.md
+ M i18n/en/skills/novelty/SKILL.md
+ M i18n/en/skills/paper-compile/SKILL.md
+ M i18n/en/skills/paper-draft/SKILL.md
+ M i18n/en/skills/paper-plan/SKILL.md
+ M i18n/en/skills/poster/SKILL.md
+ M i18n/en/skills/prefill/SKILL.md
+ M i18n/en/skills/rebuttal/SKILL.md
+ M i18n/en/skills/refine/SKILL.md
+ M i18n/en/skills/research/SKILL.md
+ M i18n/en/skills/reset/SKILL.md
+ M i18n/en/skills/review/SKILL.md
+ M i18n/en/skills/setup/SKILL.md
+ M i18n/en/skills/survey/SKILL.md
+ M i18n/en/skills/visualize/SKILL.md
+ M runtime/CLAUDE.md
+ M runtime/policy/writers.yaml
+ M setup.sh
+ M wiki/index.md
+ M wiki/log.md
+?? .agents/
+?? .codex/
+?? .tmp/
+?? AGENTS.md
+?? checkpoints/
+?? config/codex.config.toml.example
+?? experiments/
+?? i18n/en/AGENTS.md
+?? logs/
+?? paper/
+?? results/
+?? runtime/AGENTS.md

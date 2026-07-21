@@ -1,0 +1,10 @@
+{
+  "name": "desktop_functional_after_install",
+  "command": [
+    "bash",
+    "-lc",
+    "cd desktop && PLAYWRIGHT_BROWSERS_PATH=0 node functional.test.js"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 4
+}

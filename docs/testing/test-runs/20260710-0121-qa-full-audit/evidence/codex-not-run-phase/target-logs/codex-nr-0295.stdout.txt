@@ -1,0 +1,29 @@
+=== Git Push Failure Handling Tests ===
+
+Scenario 1: git push failure doesn't exit script (set -e compatible)
+  PASS: script continued after push failure
+  PASS: error logged to log.md
+  PASS: error details in log.md
+Scenario 2: failure info is written to log.md
+  PASS: has section header
+  PASS: has timestamp
+  PASS: has branch name
+  PASS: has error code
+  PASS: has error output
+Scenario 3: uncommitted changes trigger stash and retry
+Saved working directory and index state WIP on feature/test
+Dropped refs/stash@{0}
+  PASS: stash attempt logged
+  PASS: retry attempt logged
+Scenario 4: retry failure still outputs recovery suggestions
+Saved working directory and index state WIP on feature/test
+Dropped refs/stash@{0}
+  PASS: suggestions in terminal.log
+  PASS: manual push command suggested
+  PASS: retry failure in log.md
+Scenario 5: successful push works normally
+  PASS: push succeeded
+  PASS: log.md has no errors
+
+=== Test Summary ===
+Total: 15, Passed: 15, Failed: 0

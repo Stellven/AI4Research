@@ -1,0 +1,17 @@
+{
+  "operator_id": "autosci-claim-verify-worker",
+  "runtime_state": "idle",
+  "state": "idle",
+  "heartbeat_at": "2026-07-10T14:12:49Z",
+  "resolved_persona": "scientific-claim-verifier",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

@@ -1,0 +1,9 @@
+{
+  "schema_version": "solar.physical_plan_node.v1",
+  "node_id": "literature_discover",
+  "logical_operator": "ScientificLiteratureDiscoverer",
+  "selected_operator_id": "",
+  "execution_candidates": [],
+  "attached_capsules": [],
+  "verifier_plans": []
+}

@@ -1,0 +1,43 @@
+{
+  "enabled": false,
+  "base_url": "",
+  "base_url_env": "RAGFLOW_BASE_URL",
+  "api_key_env": "RAGFLOW_API_KEY",
+  "retrieval_path": "/api/v1/retrieval",
+  "datasets": {
+    "raw_sources": {
+      "name": "solar_raw_sources",
+      "dataset_ids": [],
+      "doc_type": "raw_chunk",
+      "role": "evidence"
+    },
+    "compiled_wiki": {
+      "name": "solar_compiled_wiki",
+      "dataset_ids": [],
+      "doc_type": "wiki_page",
+      "role": "synthesis"
+    }
+  },
+  "retrieval_defaults": {
+    "page": 1,
+    "page_size": 8,
+    "similarity_threshold": 0.2,
+    "vector_similarity_weight": 0.3,
+    "top_k": 1024,
+    "keyword": true,
+    "highlight": false,
+    "use_kg": false,
+    "toc_enhance": true
+  },
+  "metadata_contract": [
+    "doc_type",
+    "source_id",
+    "source_hash",
+    "wiki_page",
+    "created_at",
+    "updated_at",
+    "confidence",
+    "citation_required",
+    "ragflow_dataset"
+  ]
+}

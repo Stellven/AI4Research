@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_370_e92e633565_harness_tests_test_hf_s02_architecture_closeout.py",
+  "source": "harness/tests/test_hf_s02_architecture_closeout.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_hf_s02_architecture_closeout.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.201,
+  "timeout": false
+}

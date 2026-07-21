@@ -1,0 +1,12 @@
+{
+  "name": "root_ts_individual_tests_tvs.test.ts",
+  "source": "tests/tvs.test.ts",
+  "command": [
+    "bun",
+    "test",
+    "tests/tvs.test.ts"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.133,
+  "timeout": false
+}

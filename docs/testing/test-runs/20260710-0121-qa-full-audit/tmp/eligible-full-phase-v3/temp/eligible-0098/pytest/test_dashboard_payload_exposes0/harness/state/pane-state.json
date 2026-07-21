@@ -1,0 +1,10 @@
+{
+  "panes": [
+    {
+      "id": "pane-builder",
+      "role": "builder",
+      "state": "active",
+      "model": "spark"
+    }
+  ]
+}

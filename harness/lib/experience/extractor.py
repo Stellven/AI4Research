@@ -11,11 +11,13 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from harness_paths import resolve_runtime_harness_dir
+
 from .schema import validate_trajectory
 
 logger = logging.getLogger(__name__)
 
-HARNESS_DIR = os.path.expanduser("~/.solar/harness")
+HARNESS_DIR = str(resolve_runtime_harness_dir())
 SPRINTS_DIR = os.path.join(HARNESS_DIR, "sprints")
 EXPERIENCE_DIR = os.path.join(HARNESS_DIR, "experience", "trajectory")
 SCHEMA_VERSION = "1.0.0"

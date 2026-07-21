@@ -1,0 +1,135 @@
+
+tests/taur-sdk.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2/sdk' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/taur-sdk.test.ts'
+-------------------------------
+
+
+tests/realtime.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/realtime.test.ts'
+-------------------------------
+
+
+tests/tvs.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'tvs' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/tvs.test.ts'
+-------------------------------
+
+
+tests/llm-integration.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/termplane/llm' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/core/llm/index.ts'
+-------------------------------
+
+
+tests/taur-integration.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2/sdk' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/taur-integration.test.ts'
+-------------------------------
+
+
+tests/platform.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/platform.test.ts'
+-------------------------------
+
+
+tests/console.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/console.test.ts'
+-------------------------------
+
+
+tests/taur-v2.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2/sdk' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/taur-v2.test.ts'
+-------------------------------
+
+
+tests/braille.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/braille.test.ts'
+-------------------------------
+
+
+tests/tvs-v2.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/tvs-v2.test.ts'
+-------------------------------
+
+
+tests/semantic-design.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/semantic-design.test.ts'
+-------------------------------
+
+
+tests/ui-engine.test.ts:
+
+tests/ui-integration.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/termplane/render/grid' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/core/ui/index.ts'
+-------------------------------
+
+
+tests/theme.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/theme.test.ts'
+-------------------------------
+
+
+tests/ui-watcher.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'tvs' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/core/daemon/ui-watcher.ts'
+-------------------------------
+
+
+tests/display.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2/display' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/display.test.ts'
+-------------------------------
+
+
+tests/grid.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module 'tvs/v2' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tests/grid.test.ts'
+-------------------------------
+
+
+desktop/overhaul-visual.test.js:
+
+desktop/frontend-scenarios.test.js:
+need SOLAR_STATUS_SERVER + SOLAR_HARNESS_LIB

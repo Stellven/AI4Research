@@ -1,0 +1,63 @@
+---
+# Solar Storage Configuration — S3 Storage & Data Access Layer
+# Sprint: sprint-20260509-solar-product-platform S3
+# Managed by: lib/source_manifest.py, lib/solar_mirage.py
+# NEVER print secret values in --json output or events.
+
+version: "1.0"
+created_at: "2026-05-09T00:00:00Z"
+
+# ── Source library (canonical, permanent) ─────────────────────────────────────
+sources:
+  root: "~/.solar/harness/_sources"
+  papers_subdir: "papers"
+  ingested_subdir: "ingested"
+  manifest_filename: "manifest.json"
+  # SHA-prefix depth for papers: first 2 chars of sha256 → subdirectory
+  sha_prefix_length: 2
+
+# ── Staging area (_raw) ───────────────────────────────────────────────────────
+staging:
+  root: "~/Knowledge/_raw"
+  ttl_days: 14                  # keep _raw copy for 14 days after migration
+  semantic: "staging_only"      # _raw is NOT canonical; source of truth is _sources
+  documentation: >
+    _raw is a transient staging area. PDFs ingested here are copied (not moved)
+    to _sources/papers/ with SHA-256 verification. Original _raw files are kept
+    for 14 days TTL then eligible for cleanup. Do NOT treat _raw as canonical.
+
+# ── Migration policy ──────────────────────────────────────────────────────────
+migration:
+  dry_run_default: true         # safe default: --dry-run unless --apply passed
+  require_checksum: true        # files without SHA-256 checksum are NEVER moved
+  stop_on_missing_checksum: true
+  preserve_originals: true      # never delete _raw original during migration
+  stop_on_qmd_break: true       # abort if QMD/wiki links would break
+
+# ── MinerU idle worker ────────────────────────────────────────────────────────
+mineru:
+  mode: launchd_idle
+  plist_label: "com.solar.mineru-idle"
+  plist_path: "~/Library/LaunchAgents/com.solar.mineru-idle.plist"
+  rate_limit_rpm: 3             # max 3 PDFs/minute
+  memory_cap_mb: 2048           # launchd SoftResourceLimit
+  cpu_priority: idle            # SCHED_IDLE so shell is never blocked
+  log_path: "~/.solar/logs/mineru-idle.log"
+
+# ── Google Drive ──────────────────────────────────────────────────────────────
+drive:
+  mode: mirror_cold_backup      # read-only mirror, not primary
+  credential_env: "GOOGLE_APPLICATION_CREDENTIALS"
+  status_when_missing: degraded # NEVER "ok" when no credentials
+  required_env_vars:
+    - GOOGLE_APPLICATION_CREDENTIALS
+  ui_unblock_path: "/integrations#drive"
+
+# ── QMD ──────────────────────────────────────────────────────────────────────
+qmd:
+  index_mode: incremental       # only re-embed new/changed files
+  sources_watched:
+    - "~/Knowledge"
+    - "~/.solar/harness/_sources/ingested"
+  adapter: "lib/qmd_adapter.py"
+  wiki_link_check: true         # verify no links break after rebuild

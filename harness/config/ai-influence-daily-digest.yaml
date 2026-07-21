@@ -1,11 +1,11 @@
 version: 1
 name: AI Influence Daily Digest
-accounts_path: /Users/lisihao/Solar/harness/ai-influence-digest/references/accounts_extended.txt
+accounts_path: ~/Solar/harness/ai-influence-digest/references/accounts_extended.txt
 
 mac_mini_only: true
 allowed_hostnames:
-  - lisihaodeMac-mini-3.local
-  - lisihaodeMac-mini-3
+  - solar-host.local
+  - solar-host
 
 timezone: America/Toronto
 schedule:
@@ -14,8 +14,8 @@ schedule:
   minute: 7
 
 output:
-  raw_dir: /Users/lisihao/Knowledge/_raw/ai-influence-daily-digest
-  state_dir: /Users/lisihao/.solar/harness/state/ai-influence-daily-digest
+  raw_dir: ~/Knowledge/_raw/ai-influence-daily-digest
+  state_dir: ~/.solar/harness/state/ai-influence-daily-digest
   max_items_per_run: 120
   per_account_limit: 3
   lookback_hours: 36

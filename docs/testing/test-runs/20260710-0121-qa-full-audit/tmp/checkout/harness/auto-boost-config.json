@@ -1,0 +1,7 @@
+{
+  "daily_limit": 3,
+  "quality_threshold": 0.5,
+  "min_used_count": 3,
+  "target_score": 0.7,
+  "updated_at": "2026-04-18T00:00:00Z"
+}

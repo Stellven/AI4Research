@@ -59,7 +59,8 @@ def test_continue_survey_pauses_on_source_gap(tmp_path):
     assert any(step.get("executed") == "survey-finalize-run" for step in payload["steps"])
 
 
-def test_continue_survey_imports_returned_markdown_and_finishes(tmp_path):
+def test_continue_survey_imports_returned_markdown_and_finishes(tmp_path, monkeypatch):
+    monkeypatch.setenv("HARNESS_DIR", str(tmp_path / "installed-harness"))
     plan = create_survey_plan("latent reasoning", target_chars=50000)
     write_survey_plan(plan, tmp_path)
     returned = tmp_path / "returned_sources.md"
@@ -73,11 +74,19 @@ def test_continue_survey_imports_returned_markdown_and_finishes(tmp_path):
         repair_limit=1,
         min_finalized=1,
         min_chars=100,
+        narrative_backend="deterministic",
+        narrative_min_chars=100,
     )
     assert payload["ok"] is True
     assert payload["completed"] is True
     assert payload["status"] == "done"
     assert (tmp_path / "final.md").exists()
+    assert (tmp_path / "chief_editor_final.md").exists()
+    assert any(
+        step.get("executed") == "survey-import-search-results"
+        and (step.get("narrative") or {}).get("ok") is True
+        for step in payload["steps"]
+    )
     assert any(step.get("executed") == "survey-import-search-results" for step in payload["steps"])
 
 

@@ -1,0 +1,18 @@
+{
+  "id": "s5-basic",
+  "description": "S5 evolution loop gate: plugin framework, capability registry, and Mirage contract must pass before promotion.",
+  "checks": [
+    {
+      "name": "s4 extension framework",
+      "cmd": "bash tests/plugins/test-s4-extension-framework.sh",
+      "expect_exit": 0,
+      "timeout_s": 60
+    },
+    {
+      "name": "capability registry query",
+      "cmd": "python3 lib/capability_registry.py query vfs.search --json >/tmp/solar-s5-vfs-search.json",
+      "expect_exit": 0,
+      "timeout_s": 15
+    }
+  ]
+}

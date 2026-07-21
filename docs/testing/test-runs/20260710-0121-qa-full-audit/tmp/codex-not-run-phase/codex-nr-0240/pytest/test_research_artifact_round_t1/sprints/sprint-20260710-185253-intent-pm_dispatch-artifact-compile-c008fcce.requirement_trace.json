@@ -1,0 +1,26 @@
+{
+  "schema_version": "solar.requirement_trace.v1",
+  "intent_id": "intent-20260710-185253-c008fcce52",
+  "created_at": "2026-07-10T18:52:53Z",
+  "artifacts": {
+    "raw_intent": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0240/pytest/test_research_artifact_round_t1/intents/intent-20260710-185253-c008fcce52/raw_intent.json",
+    "rewritten_intent": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0240/pytest/test_research_artifact_round_t1/intents/intent-20260710-185253-c008fcce52/rewritten_intent.json",
+    "requirement_ir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0240/pytest/test_research_artifact_round_t1/intents/intent-20260710-185253-c008fcce52/requirement_ir.json"
+  },
+  "stages": [
+    {
+      "stage": "raw_intent_capture",
+      "status": "ok"
+    },
+    {
+      "stage": "intent_rewrite",
+      "status": "ok",
+      "method": "deterministic_fallback"
+    },
+    {
+      "stage": "requirement_ir_compile",
+      "status": "ok"
+    }
+  ],
+  "sprint_id": "sprint-20260710-185253-intent-pm_dispatch-artifact-compile-c008fcce"
+}

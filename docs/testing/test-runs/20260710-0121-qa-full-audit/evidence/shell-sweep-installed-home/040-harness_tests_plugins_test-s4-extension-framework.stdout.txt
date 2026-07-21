@@ -1,0 +1,32 @@
+T1: syntax and schema files
+  PASS: python modules compile
+  PASS: plugin/capability schemas parse
+T2: plugin manifests validate and declare safety metadata
+  PASS: validate ok
+  PASS: at least five manifests checked
+  PASS: all manifests include commands/background/eval/rollback
+T3: four-level integrations status
+  PASS: plugin status ok
+  PASS: closed_loop bucket
+  PASS: default_usable bucket
+  PASS: basic_usable bucket
+  PASS: external status has integration_levels
+  PASS: external status has dead_end
+T4: capability registry persists to state DB
+  PASS: sync ok
+  PASS: vfs.search found
+  PASS: vfs.search provider mirage
+T5: scope guard allows declared writes and rejects overreach
+  PASS: declared scope allowed
+  PASS: overreach returns nonzero
+  PASS: overreach rejected
+  PASS: overreach alert
+  PASS: scope violation event emitted
+T6: install/disable/list CLI works on temporary candidate plugin
+  PASS: probe appears in list
+  PASS: probe install ok
+  PASS: probe disable ok
+T7: Mirage mount contract matches S3/S4 required names
+  PASS: required Mirage mounts present
+
+=== S4 Extension Framework: PASS=23 FAIL=0 ===

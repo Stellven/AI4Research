@@ -1,0 +1,353 @@
+{
+  "action": "init_sources",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_approval_contract.json",
+        "type": "approval_contract_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_gate_policy_decision.json",
+        "type": "gate_policy_decision_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_gate_policy_allowlist.json",
+        "type": "gate_policy_allowlist_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/source_fan_in_writeback.json",
+        "type": "source_fan_in_writeback_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_wiki_mutation_runtime_proof.json",
+        "type": "wiki_mutation_runtime_proof_manifest_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_final_fan_in_boundary.json",
+        "type": "init_sources_final_fan_in_boundary_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_approval_boundary_runtime_proof.json",
+        "type": "approval_runtime_proof_manifest_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_source_provider_runtime_proof.json",
+        "type": "provider_source_runtime_proof_manifest_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/literature_discovery.init.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "approval_ref": "policy:auto:parity_demo:init_sources:2026-07-10T19:22:16Z",
+      "execute_approved_side_effect": true,
+      "gate_mode": "parity_demo",
+      "limit": 10,
+      "native_options": {
+        "add": "",
+        "affiliation_logo": "",
+        "after_artifacts": [],
+        "all": false,
+        "allowlist_evidence": [],
+        "anonymous": false,
+        "approval_ref": "",
+        "authors": "",
+        "auto": false,
+        "auto_figures": false,
+        "before_artifacts": [],
+        "canvas": false,
+        "checklist": false,
+        "claims_evidence": [],
+        "code_evidence": [],
+        "collect": false,
+        "collect_ready": false,
+        "compile_after_artifacts": [],
+        "compile_allowlist_evidence": [],
+        "compile_approval_ref": "",
+        "compile_before_artifacts": [],
+        "compile_execute_approved": false,
+        "compile_executor_timeout_seconds": 120,
+        "compile_runtime_evidence": [],
+        "compile_target": "",
+        "conference_logo": "",
+        "crystallize": false,
+        "daily_categories": [],
+        "daily_decisions": "",
+        "daily_feed": "",
+        "daily_hours": 0,
+        "daily_max_auto_ingest": 0,
+        "daily_max_recommendations": 0,
+        "daily_mode": "",
+        "daily_no_external": false,
+        "daily_send_email": "",
+        "depth": 0,
+        "difficulty": "",
+        "discover": false,
+        "double_blind": false,
+        "edge_types": "",
+        "env": "",
+        "execute_approved": false,
+        "experiment_after_artifacts": [],
+        "experiment_allowlist_evidence": [],
+        "experiment_approval_ref": "",
+        "experiment_before_artifacts": [],
+        "experiment_execute_approved": false,
+        "experiment_executor_timeout_seconds": 120,
+        "experiment_result_evidence": [],
+        "experiment_runtime_evidence": [],
+        "fix": false,
+        "focus": "",
+        "format": "",
+        "full": false,
+        "idea_approval_ref": "",
+        "layout": "",
+        "lifecycle_summary": [],
+        "max_ideas": 0,
+        "max_rounds": 0,
+        "min_font_size": null,
+        "model_command": "",
+        "model_evidence": [],
+        "no_figures": false,
+        "no_introduction": false,
+        "no_logos": false,
+        "no_refine": false,
+        "novelty_evidence": [],
+        "obsidian": false,
+        "online": false,
+        "page_count": null,
+        "page_limit": null,
+        "paper_slug": "",
+        "pdf_inspection": "",
+        "pilot_handoff_evidence": [],
+        "pilot_runtime_evidence": [],
+        "pipeline": "",
+        "quick": false,
+        "refine_iterations": 0,
+        "remote_check_command": "",
+        "remote_run_dir": "",
+        "render": false,
+        "require_review_llm": false,
+        "results_approval_ref": "",
+        "review": false,
+        "review_llm_command": "",
+        "review_llm_endpoint": "",
+        "review_llm_evidence": [],
+        "review_llm_model": "",
+        "review_llm_provider": "",
+        "reviewer_thread_evidence": [],
+        "runtime_evidence": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_init_p0/init-parity-runtime.json"
+        ],
+        "scheduler_demo": false,
+        "scheduler_dispatch_external_evidence": false,
+        "scheduler_include_blocked_external": false,
+        "scheduler_include_human_gates": false,
+        "scheduler_legacy_smoke_runner": false,
+        "scheduler_node_id": [],
+        "scheduler_require_workflow_config_alignment": false,
+        "scheduler_run": false,
+        "scheduler_timeout": 30.0,
+        "scope": "",
+        "serve": false,
+        "skip_paper": false,
+        "skip_pilot": false,
+        "skip_validation": false,
+        "source_evidence": [],
+        "start_from": "",
+        "stress_test": null,
+        "submission_audit": "",
+        "submission_mode": "",
+        "submission_profile": "",
+        "target_score": 0.0,
+        "title": "",
+        "types": "",
+        "verbose": false,
+        "verified_min_font_size": null,
+        "verified_page_count": null,
+        "visualize": false,
+        "write": true
+      },
+      "policy_auto_execute_side_effect": true,
+      "query": "skill generation",
+      "runtime_evidence": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_init_p0/init-parity-runtime.json"
+      ],
+      "smoke_mode": false,
+      "target": "skill generation",
+      "topic": "SkillGen verified inference-time agent skill synthesis",
+      "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_init_p0/artifacts/autosci/workspace/wiki"
+    },
+    "limitations": [
+      "Init source runtime was verified from supplied approval-gated evidence; this bridge did not execute the fetch.",
+      "Approved source fan-in wrote runtime candidates into wiki papers, graph edges, log, and views.",
+      "Policy auto approval applied only to wiki fan-in; source candidates came from supplied runtime evidence.",
+      "Init source final fan-in boundary passed with provider candidates and wiki mutation/rebuild evidence."
+    ],
+    "node_id": "node-init-sources",
+    "outputs": {
+      "candidates": [
+        {
+          "abstract": "Runtime-discovered source candidate for parity fan-in.",
+          "candidate_id": "skillgen-parity-source",
+          "dedup_status": "unknown",
+          "fetch_status": "fetched",
+          "ranking_rationale": "Approved runtime evidence supplied this discovery candidate.",
+          "ranking_score": 1.0,
+          "source_channels": [
+            "arxiv"
+          ],
+          "source_ref": "https://arxiv.org/abs/2601.00004",
+          "title": "SkillGen Parity Source Candidate"
+        }
+      ],
+      "final_fan_in_boundary": {
+        "approval_contract_verified": true,
+        "approval_state": "verified",
+        "candidate_count": 1,
+        "edge_paths": [
+          "artifacts/autosci/workspace/wiki/graph/edges.jsonl"
+        ],
+        "fan_in_completed": true,
+        "final_fan_in_ready": true,
+        "graph_log_rebuild_ready": true,
+        "limitations": [
+          "Init source final fan-in boundary passed with provider candidates and wiki mutation/rebuild evidence."
+        ],
+        "log_path": "artifacts/autosci/workspace/wiki/log.md",
+        "provider_boundary_completed": true,
+        "provider_boundary_status": "completed",
+        "rebuilt_paths": [
+          "artifacts/autosci/workspace/wiki/index.md",
+          "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+        ],
+        "schema": "autosci_init_sources_final_fan_in_boundary.v1",
+        "semantic_runtime_status": "verified",
+        "semantic_runtime_verified": true,
+        "stage_provider_ready": true,
+        "status": "init_sources_final_fan_in_ready",
+        "written_count": 1
+      },
+      "limit": 10,
+      "mode": "init_runtime_verified",
+      "policy_decision": {
+        "action": "init_sources",
+        "allow_destructive": false,
+        "allow_email": false,
+        "allow_network": false,
+        "allow_remote": false,
+        "allowed": true,
+        "allowed_write_roots": [
+          "artifacts/autosci",
+          "artifacts/scientific"
+        ],
+        "blocked": false,
+        "execute_side_effects": true,
+        "mode": "parity_demo",
+        "proof_best_effort": false,
+        "proof_required": true,
+        "reasons": [
+          "read_local is allowed in parity_demo.",
+          "write_artifact is allowed in parity_demo.",
+          "wiki_mutation is auto-allowed in parity_demo."
+        ],
+        "require_approval_ref": false,
+        "require_before_after_artifacts": false,
+        "require_hitl": false,
+        "require_runtime_evidence": false,
+        "sandbox_required": true,
+        "side_effects": [
+          "read_local",
+          "write_artifact",
+          "wiki_mutation"
+        ],
+        "synthetic_approval_ref": "policy:auto:parity_demo:init_sources:2026-07-10T19:22:16Z",
+        "warnings": [
+          "Auto-approved by gate policy mode `parity_demo`; no human approval was requested."
+        ]
+      },
+      "query": "skill generation",
+      "source_fan_in": {
+        "applied": true,
+        "approval_ref": "policy:auto:parity_demo:init_sources:2026-07-10T19:22:16Z",
+        "approval_state": "verified",
+        "candidate_count": 1,
+        "edge_paths": [
+          "artifacts/autosci/workspace/wiki/graph/edges.jsonl"
+        ],
+        "ingest_completed": true,
+        "log_path": "artifacts/autosci/workspace/wiki/log.md",
+        "policy_auto_after_artifacts": [
+          "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/source_fan_in_writeback.json",
+          "artifacts/autosci/workspace/wiki/papers/skillgen-parity-source.md",
+          "artifacts/autosci/workspace/wiki/log.md",
+          "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+          "artifacts/autosci/workspace/wiki/index.md",
+          "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+          "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources_wiki_mutation_runtime_proof.json"
+        ],
+        "policy_auto_fan_in": true,
+        "rebuilt_paths": [
+          "artifacts/autosci/workspace/wiki/index.md",
+          "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+        ],
+        "requested": true,
+        "semantic_runtime_status": "incomplete",
+        "sidecar_path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/source_fan_in_writeback.json",
+        "source_runtime_verified_for_policy": true,
+        "status": "completed",
+        "wiki_root": "artifacts/autosci/workspace/wiki",
+        "written_count": 1,
+        "written_pages": [
+          "artifacts/autosci/workspace/wiki/papers/skillgen-parity-source.md"
+        ]
+      },
+      "source_provider_boundary": {
+        "action": "init_sources",
+        "candidate_count": 1,
+        "candidate_ids": [
+          "skillgen-parity-source"
+        ],
+        "completed": true,
+        "generic_channels": [],
+        "invalid_reasons": [],
+        "limitations": [],
+        "provider_channels": [
+          "arxiv"
+        ],
+        "runtime_record_sources": [
+          "init-parity-runtime.json"
+        ],
+        "schema": "autosci_source_provider_boundary.v1",
+        "source_channels": [
+          "arxiv"
+        ],
+        "status": "completed"
+      }
+    },
+    "provenance": {
+      "gate_policy": {
+        "action": "init_sources",
+        "allowed": true,
+        "execute_side_effects": true,
+        "mode": "parity_demo",
+        "proof_best_effort": false,
+        "proof_required": true,
+        "synthetic_approval_ref": "policy:auto:parity_demo:init_sources:2026-07-10T19:22:16Z"
+      },
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T19:22:16Z"
+    },
+    "schema": "literature_discovery.v1",
+    "sprint_id": "phase19-skillgen-operator-smoke",
+    "status": "completed",
+    "task_id": "task-autosci-skillgen-init_sources"
+  },
+  "evidence_jsonl": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/evidence.jsonl",
+  "evidence_path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/literature_discovery.init.json",
+  "ok": true,
+  "result_path": "artifacts/autosci/runs/shim-init-parity-demo-source-fan-in/init_sources.result.json",
+  "schema": "literature_discovery.v1",
+  "status": "completed"
+}

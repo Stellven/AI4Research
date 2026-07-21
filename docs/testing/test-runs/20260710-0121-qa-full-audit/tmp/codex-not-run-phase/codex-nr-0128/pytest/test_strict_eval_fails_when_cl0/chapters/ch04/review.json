@@ -1,0 +1,15 @@
+{
+  "chapter_id": "ch04",
+  "verdict": "REVISE",
+  "finalized_sections": 0,
+  "missing_sections": [
+    "ch04/sec01",
+    "ch04/sec02",
+    "ch04/sec03",
+    "ch04/sec04"
+  ],
+  "issues": [
+    "missing_sections:4"
+  ],
+  "schema_version": "solar.research.survey.v1"
+}

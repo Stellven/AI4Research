@@ -1,0 +1,7 @@
+# Base Python dependencies for the Solar harness component.
+# Derived from import audit of harness/lib.
+jsonschema>=4.0
+pydantic>=2.0
+pypdf>=4.0
+PyYAML>=6.0
+rich>=13.0

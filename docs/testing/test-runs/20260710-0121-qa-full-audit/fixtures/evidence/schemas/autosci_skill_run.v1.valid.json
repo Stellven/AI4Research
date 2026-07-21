@@ -1,0 +1,35 @@
+{
+  "schema": "autosci_skill_run.v1",
+  "task_id": "f",
+  "sprint_id": "f",
+  "node_id": "f",
+  "status": "completed",
+  "inputs": {
+    "skill": "f",
+    "run_id": "f",
+    "work_dir": "f",
+    "route_config": "f",
+    "binding_config": "f"
+  },
+  "outputs": {
+    "skill_run": {
+      "selected_skill": "f",
+      "autosci_command": "f",
+      "execution_status": "completed",
+      "side_effect_policy": "none",
+      "action_count": 0,
+      "passed_count": 0,
+      "schema_only_count": 0,
+      "failed_count": 0,
+      "actions": [],
+      "route": {}
+    }
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "f",
+    "implementation_package": "f",
+    "timestamp": "2026-07-10T00:00:00Z"
+  },
+  "limitations": []
+}

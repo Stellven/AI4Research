@@ -1,0 +1,23 @@
+{
+  "id": "skill-healthcheck-evolution",
+  "checks": [
+    {
+      "name": "skill healthcheck module compiles",
+      "cmd": "python3 -m py_compile lib/skill_healthcheck.py",
+      "timeout_s": 20,
+      "expect_exit": 0
+    },
+    {
+      "name": "skill healthcheck emits MemRL SkillRL and evolution gate",
+      "cmd": "./solar-harness.sh skills healthcheck --force --no-remote --json > /tmp/solar-skill-healthcheck-evolution.json && python3 - <<'PY'\nimport json, pathlib\np = pathlib.Path('/tmp/solar-skill-healthcheck-evolution.json')\ntext = p.read_text()\nstart = text.find('{')\ndata = json.loads(text[start:])\nassert data['ok'] is True\nassert data['memrl_status']['implementation_exists'] is True\nassert 'sys_skill_bank' in data['memrl_status']['required_tables_present']\nassert data['skillrl_status']['knowledge_doc_exists'] is True\nassert data['evolution_engine']['ok'] is True\nassert data['evolution_gate']['promotion_allowed'] is False\nassert 'external_eval_pack_not_passed' in data['evolution_gate']['promotion_blockers']\nassert data['memrl_feedback']['jsonl']\nPY",
+      "timeout_s": 45,
+      "expect_exit": 0
+    },
+    {
+      "name": "skill evolution runner blocks unimplemented candidate promotion",
+      "cmd": "./solar-harness.sh skills evolve run --candidate solar-prompt-residue-quarantine --eval-pack evals/packs/s5-basic/eval.json --no-remote --update-memrl --json > /tmp/solar-skill-evolution-runner.json || true; python3 - <<'PY'\nimport json, pathlib\np = pathlib.Path('/tmp/solar-skill-evolution-runner.json')\ntext = p.read_text()\nstart = text.find('{')\nassert start >= 0, text\ndata = json.loads(text[start:])\nassert data['selected_count'] == 1\nrun = data['runs'][0]\nassert run['candidate'] == 'solar-prompt-residue-quarantine'\nassert run['promoted'] is False\nassert 'candidate_skill_not_implemented' in run['blockers']\nassert run['eval']['ok'] is True\nPY",
+      "timeout_s": 60,
+      "expect_exit": 0
+    }
+  ]
+}

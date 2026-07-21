@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="1.028" timestamp="2026-07-13T16:22:37.820280-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0264_reset_missing_scope_is_rejected_without_source_mutation" time="0.369"><failure message="AssertionError: assert 'completed' in {'failed', 'inconclusive'}">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-327/test_wf_0264_reset_missing_sco0')
+
+    def test_wf_0264_reset_missing_scope_is_rejected_without_source_mutation(tmp_path: Path) -&gt; None:
+        wiki = tmp_path / "project/wiki"
+        (wiki / "papers").mkdir(parents=True)
+        source = wiki / "papers/keep.md"
+        source.write_text("# Keep\n", encoding="utf-8")
+        before = tree_digest(wiki)
+        result = bridge_run("reset_plan", tmp_path, {"target": "qa-reset", "wiki_root": str(wiki)})
+&gt;       assert result["evidence"]["status"] in {"failed", "inconclusive"}
+E       AssertionError: assert 'completed' in {'failed', 'inconclusive'}
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:401: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0265_reset_dry_run_lists_exact_mutations_without_mutating_source" time="0.298"><failure message="AssertionError: assert 'completed' == 'inconclusive'&#10;  &#10;  - inconclusive&#10;  + completed">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-327/test_wf_0265_reset_dry_run_lis0')
+
+    def test_wf_0265_reset_dry_run_lists_exact_mutations_without_mutating_source(tmp_path: Path) -&gt; None:
+        wiki = tmp_path / "project/wiki"
+        (wiki / "papers").mkdir(parents=True)
+        source = wiki / "papers/old.md"
+        source.write_text("# Old\n", encoding="utf-8")
+        before = tree_digest(wiki)
+        result = bridge_run(
+            "reset_plan",
+            tmp_path,
+            {"target": "qa-reset", "wiki_root": str(wiki), "reset_scope": "wiki"},
+        )
+        plan = artifact_payload(result, "reset_plan_json")
+        assert any(str(path).endswith("papers/old.md") for path in plan["delete_files"])
+        assert plan["status"] == "dry_run"
+&gt;       assert result["evidence"]["status"] == "inconclusive"
+E       AssertionError: assert 'completed' == 'inconclusive'
+E         
+E         - inconclusive
+E         + completed
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:421: AssertionError</failure></testcase><testcase classname="docs.testing.test-runs.20260710-0121-qa-full-audit.evidence.codex-not-run-phase.audit-tests.test_remaining_safe_atomic_contracts" name="test_wf_0277_check_dry_run_proposes_exact_fixes_without_mutation" time="0.293"><failure message="assert 'graph/edges.jsonl' in '[{&quot;application_state&quot;: &quot;proposed_only&quot;, &quot;category&quot;: &quot;manual&quot;, &quot;change_id&quot;: &quot;change.manual.wiki-health-evidence&quot;, &quot;des...mesyuan/pytest-327/test_wf_0277_check_dry_run_pro0/wiki&quot;], &quot;review_required&quot;: true, &quot;target&quot;: &quot;wiki structural gate&quot;}]'">tmp_path = PosixPath('/private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/pytest-of-jamesyuan/pytest-327/test_wf_0277_check_dry_run_pro0')
+
+    def test_wf_0277_check_dry_run_proposes_exact_fixes_without_mutation(tmp_path: Path) -&gt; None:
+        wiki = tmp_path / "wiki"
+        (wiki / "papers").mkdir(parents=True)
+        (wiki / "graph").mkdir()
+        (wiki / "papers/paper.md").write_text("# Paper\n", encoding="utf-8")
+        (wiki / "graph/edges.jsonl").write_text('{"bad": "edge"}\n', encoding="utf-8")
+        before = tree_digest(wiki)
+        result = bridge_run(
+            "check_wiki_health",
+            tmp_path,
+            {"target": str(wiki), "wiki_root": str(wiki), "fix": True, "dry_run": True},
+        )
+        evidence = result["evidence"]
+        proposed = evidence["outputs"]["evolution"]["proposed_changes"]
+        proposed_text = json.dumps(proposed).lower()
+&gt;       assert "graph/edges.jsonl" in proposed_text
+E       assert 'graph/edges.jsonl' in '[{"application_state": "proposed_only", "category": "manual", "change_id": "change.manual.wiki-health-evidence", "des...mesyuan/pytest-327/test_wf_0277_check_dry_run_pro0/wiki"], "review_required": true, "target": "wiki structural gate"}]'
+
+docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/codex-not-run-phase/audit-tests/test_remaining_safe_atomic_contracts.py:440: AssertionError</failure></testcase></testsuite></testsuites>

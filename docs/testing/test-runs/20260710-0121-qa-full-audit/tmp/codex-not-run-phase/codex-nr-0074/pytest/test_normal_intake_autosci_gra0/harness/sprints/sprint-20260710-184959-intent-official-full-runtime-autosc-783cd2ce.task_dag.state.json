@@ -1,0 +1,40 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce",
+  "graph_ref": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.task_graph.json",
+  "node_results": {
+    "paper_ingest": {
+      "status": "passed",
+      "updated_at": "2026-07-10T18:50:01Z",
+      "note": "AutoSci scientific evidence gate passed.; eval_json=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_normal_intake_autosci_gra0/harness/sprints/sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.paper_ingest-eval.json",
+      "artifacts": {
+        "handoff_md": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.paper_ingest-handoff.md",
+        "eval_json": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.paper_ingest-eval.json"
+      },
+      "eval_json": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce.paper_ingest-eval.json"
+    },
+    "literature_discover": {
+      "status": "queued",
+      "updated_at": "2026-07-10T18:50:01Z",
+      "blocking_reason": "no_pane",
+      "queued_pane": "operator:autosci-literature-discover-worker"
+    },
+    "paper_analyze": {
+      "status": "queued",
+      "updated_at": "2026-07-10T18:50:01Z",
+      "blocking_reason": "no_pane",
+      "queued_pane": "operator:autosci-paper-analyze-worker"
+    }
+  },
+  "gate_results": {
+    "G_PAPER_INGEST": {
+      "status": "passed",
+      "node": "paper_ingest",
+      "updated_at": "2026-07-10T18:50:01Z"
+    }
+  },
+  "leases": {},
+  "dispatch_ids": {},
+  "updated_at": "2026-07-10T18:50:01Z",
+  "events": []
+}

@@ -1,0 +1,79 @@
+{
+  "acceptance_checks": [
+    {
+      "check": "native_skill_doc_exists",
+      "detail": "Original AutoSci native skill document exists.",
+      "evidence_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0021/pytest/test_full_assessment_writes_fu0/AutoSci/i18n/en/skills/ask/SKILL.md"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "solar_wrapper_doc_exists",
+      "detail": "Solar wrapper skill document exists.",
+      "evidence_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0021/pytest/test_full_assessment_writes_fu0/solar-wrappers/ask/SKILL.md"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "solar_route_binding_declared",
+      "detail": "Solar feature parity route declares a backend action.",
+      "evidence_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0021/pytest/test_full_assessment_writes_fu0/feature_parity_routes.v1.json"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "native_command_surface",
+      "detail": "Assessment-supplied check.",
+      "evidence_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0021/pytest/test_full_assessment_writes_fu0/AutoSci/i18n/en/skills/ask/SKILL.md"
+      ],
+      "status": "ok"
+    },
+    {
+      "check": "solar_route_behavior",
+      "detail": "Assessment-supplied check.",
+      "evidence_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0021/pytest/test_full_assessment_writes_fu0/feature_parity_routes.v1.json"
+      ],
+      "status": "passed"
+    }
+  ],
+  "audited_at": "2026-07-10T18:47:37Z",
+  "auditor": "unit-semantic-auditor",
+  "findings": [],
+  "native_evidence_refs": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0021/pytest/test_full_assessment_writes_fu0/AutoSci/i18n/en/skills/ask/SKILL.md"
+  ],
+  "native_skill": "ask",
+  "provenance": {
+    "assessment_schema": "autosci_semantic_parity_assessment.v1",
+    "timestamp": "2026-07-10T18:47:37Z",
+    "tool": "tools/semantic_parity_audit_matrix.py"
+  },
+  "remaining_requirements": [],
+  "route_snapshot": {
+    "autosci_command": "/ask",
+    "backend_mode": "route_plan",
+    "coverage_status": "partial",
+    "limitations": [
+      "Needs completed semantic audit."
+    ],
+    "required_capabilities": [
+      "wiki retrieval",
+      "answer synthesis"
+    ],
+    "side_effect_policy": "none",
+    "solar_backend_action": "ask_wiki"
+  },
+  "schema": "autosci_semantic_parity_audit.v1",
+  "semantic_parity": "full",
+  "solar_evidence_refs": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0021/pytest/test_full_assessment_writes_fu0/feature_parity_routes.v1.json",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0021/pytest/test_full_assessment_writes_fu0/solar-wrappers/ask/SKILL.md"
+  ],
+  "status": "completed",
+  "summary": "Full semantic equivalence audit supplied and passed."
+}

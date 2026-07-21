@@ -1,0 +1,41 @@
+{
+  "schema_version": "solar.raw_intent.v1",
+  "intent_id": "intent-20260710-185252-89d3e49129",
+  "source": {
+    "channel": "pm_dispatch",
+    "actor": "user",
+    "device": "",
+    "session_id": "",
+    "thread_ref": ""
+  },
+  "raw": {
+    "text": "pm_dispatch 研究完成后必须接 Planner handoff，不允许停在 compile。",
+    "attachments": [],
+    "quoted_context": [],
+    "received_at": "2026-07-10T18:52:52Z"
+  },
+  "context": {
+    "repo": "",
+    "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout",
+    "related_sprints": [],
+    "knowledge_query": ""
+  },
+  "routing_hints": {
+    "urgency": "normal",
+    "mode": "delivery",
+    "allow_autodispatch": true,
+    "requires_human_confirm": false,
+    "require_research_artifact": true
+  },
+  "trust": {
+    "source_trust": "pm_dispatch",
+    "prompt_injection_risk": "unknown",
+    "contains_secrets": "unknown"
+  },
+  "research": {
+    "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0240/pytest/test_planner_handoff_auto_disp1/research-pm_dispatch.json",
+    "project_name": "需求研究-2026-05",
+    "conversation_id": "conv-pm_dispatch",
+    "source_url": "https://chatgpt.com/c/conv-pm_dispatch"
+  }
+}

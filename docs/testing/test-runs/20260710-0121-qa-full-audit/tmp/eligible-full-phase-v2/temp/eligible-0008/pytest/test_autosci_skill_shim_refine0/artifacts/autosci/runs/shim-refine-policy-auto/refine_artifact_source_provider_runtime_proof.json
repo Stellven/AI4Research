@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-07-10T14:04:34Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed approved source artifact evidence for AutoSci `refine` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-refine-policy-auto/workflow_evolution.refine.json",
+        "report-policy-after.md",
+        "artifacts/autosci/workspace/wiki/outputs/report-policy.md",
+        "artifacts/autosci/runs/shim-refine-policy-auto/refine_apply_writeback.json"
+      ],
+      "native_skill": "refine",
+      "production_ready": true,
+      "proof_id": "runtime:refine:approved-refine-apply:20260710T140434Z",
+      "provenance": {
+        "artifact_kind": "refine_apply_writeback",
+        "captured_at": "2026-07-10T14:04:34Z",
+        "command": "refine_artifact:approved_mutation",
+        "source": "approved_refine_apply"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -1,0 +1,14 @@
+{
+  "sprint_id": "sprint-stalled",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "email",
+      "depends_on": [],
+      "status": "blocked",
+      "required_capabilities": [
+        "transactional_email"
+      ]
+    }
+  ]
+}

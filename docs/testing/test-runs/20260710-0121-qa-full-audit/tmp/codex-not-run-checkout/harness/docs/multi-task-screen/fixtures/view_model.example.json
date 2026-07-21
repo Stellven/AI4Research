@@ -1,0 +1,48 @@
+{
+  "schema_version": "multi_task_screen.view_model.v1",
+  "generated_at": "2026-05-20T21:45:00Z",
+  "width_hint": 80,
+  "height_hint": 20,
+  "health": {
+    "overall": "warn",
+    "capsules": [
+      {"name": "coordinator", "state": "ok",   "detail": "pid 2391"},
+      {"name": "tmux",        "state": "ok",   "detail": "session ready"},
+      {"name": "models",      "state": "warn", "detail": "1 quota low"},
+      {"name": "profile",     "state": "ok",   "detail": "default"}
+    ]
+  },
+  "panes": [
+    {"plane": "main", "slot": 0, "role": "PM",    "state": "ready",   "model": "Opus",   "marker": " "},
+    {"plane": "main", "slot": 1, "role": "PLAN",  "state": "ready",   "model": "Opus",   "marker": " "},
+    {"plane": "main", "slot": 2, "role": "BUILD", "state": "working", "model": "Opus",   "marker": ">"},
+    {"plane": "main", "slot": 3, "role": "EVAL",  "state": "ready",   "model": "Opus",   "marker": " "},
+    {"plane": "lab",  "slot": 0, "role": "LAB",   "state": "ready",   "model": "GLM",    "marker": " "},
+    {"plane": "lab",  "slot": 1, "role": "LAB",   "state": "ready",   "model": "GLM",    "marker": " "},
+    {"plane": "lab",  "slot": 2, "role": "LAB",   "state": "ready",   "model": "GLM",    "marker": " "},
+    {"plane": "lab",  "slot": 3, "role": "LAB",   "state": "ready",   "model": "Sonnet", "marker": " "}
+  ],
+  "workers": {
+    "active": 0,
+    "tracked": 8,
+    "counts": {"dry_run": 8, "idle": 0, "blocked": 0, "active": 0}
+  },
+  "last_dispatch": {
+    "time": "20:01",
+    "role": "evaluator",
+    "pane": "main:3",
+    "target_sprint_short": "S04",
+    "target_node": "N8-eval"
+  },
+  "dag": {
+    "sprint_short": "S04",
+    "counts": {"pass": 7, "pending": 1, "reviewing": 1},
+    "ready": []
+  },
+  "meta": {
+    "source_intent": "screen",
+    "degraded": [
+      {"source": "lab", "reason": "lab_session_missing"}
+    ]
+  }
+}

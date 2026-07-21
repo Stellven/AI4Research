@@ -1,0 +1,17 @@
+{
+  "operator_id": "test-local-builder",
+  "runtime_state": "idle",
+  "state": "idle",
+  "heartbeat_at": "2026-07-10T18:53:02Z",
+  "resolved_persona": "builder",
+  "model_route": {
+    "requested_model": "local",
+    "routing_model": "local",
+    "effective_provider": "local",
+    "effective_model": "local"
+  },
+  "requested_model": "local",
+  "routing_model": "local",
+  "effective_provider": "local",
+  "effective_model": "local"
+}

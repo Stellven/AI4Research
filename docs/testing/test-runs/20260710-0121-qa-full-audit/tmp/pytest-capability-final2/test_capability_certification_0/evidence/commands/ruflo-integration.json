@@ -1,0 +1,17 @@
+{
+  "id": "ruflo-integration",
+  "name": "Ruflo safe vendor capability",
+  "cmd": [
+    "bash",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tests/plugins/test-ruflo-integration.sh"
+  ],
+  "exit_code": 1,
+  "duration_s": 0.306,
+  "status": "error",
+  "dimensions": [
+    "complete",
+    "default",
+    "usable"
+  ],
+  "allow_fail_reason": ""
+}

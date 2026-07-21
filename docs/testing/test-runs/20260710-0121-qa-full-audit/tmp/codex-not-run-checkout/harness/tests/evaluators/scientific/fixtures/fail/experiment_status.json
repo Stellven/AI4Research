@@ -1,0 +1,31 @@
+{
+  "schema": "experiment_status.v1",
+  "task_id": "task.phase12.sample.experiment_status",
+  "sprint_id": "sprint.autosci.phase12",
+  "node_id": "node.experiment_monitor",
+  "status": "completed",
+  "inputs": {
+    "experiment_id": "experiment.sample.001"
+  },
+  "outputs": {
+    "status_report": {
+      "experiment_id": "experiment.sample.001",
+      "state": "completed",
+      "observations": [],
+      "next_actions": [],
+      "evidence_ids": []
+    }
+  },
+  "artifacts": [
+    {
+      "type": "experiment_status",
+      "path": "tests/evaluators/scientific/fixtures/pass/artifacts/experiment_status.txt"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificExperimentMonitor",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-18T20:30:00Z"
+  },
+  "limitations": []
+}

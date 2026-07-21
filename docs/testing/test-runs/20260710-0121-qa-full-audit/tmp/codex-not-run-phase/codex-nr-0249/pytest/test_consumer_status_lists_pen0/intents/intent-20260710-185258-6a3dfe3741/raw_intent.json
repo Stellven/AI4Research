@@ -1,0 +1,35 @@
+{
+  "schema_version": "solar.raw_intent.v1",
+  "intent_id": "intent-20260710-185258-6a3dfe3741",
+  "source": {
+    "channel": "cli",
+    "actor": "user",
+    "device": "",
+    "session_id": "",
+    "thread_ref": ""
+  },
+  "raw": {
+    "text": "pending intent",
+    "attachments": [],
+    "quoted_context": [],
+    "received_at": "2026-07-10T18:52:58Z"
+  },
+  "context": {
+    "repo": "",
+    "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout",
+    "related_sprints": [],
+    "knowledge_query": ""
+  },
+  "routing_hints": {
+    "urgency": "normal",
+    "mode": "delivery",
+    "allow_autodispatch": true,
+    "requires_human_confirm": false,
+    "require_research_artifact": false
+  },
+  "trust": {
+    "source_trust": "user_direct",
+    "prompt_injection_risk": "unknown",
+    "contains_secrets": "unknown"
+  }
+}

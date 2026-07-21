@@ -51,7 +51,7 @@ async function initFromHistory() {
   console.log();
 
   // 2. 初始化本体系统
-  const dbPath = `${process.env.HOME}/.solar/solar.db`;
+  const dbPath = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
   const db = new Database(dbPath);
   const ontology = new OntologyManager(db);
   ontology.initialize();

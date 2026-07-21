@@ -45,10 +45,17 @@ PHYSICAL_OPERATORS_PATH = Path(
     )
 )
 
-# Insert lib directory so the shared persona resolver can be imported regardless
-# of the working directory from which operatord is invoked.
+# Force the sibling lib directory to the FRONT of sys.path. The tools dir is
+# sys.path[0] when operatord runs as a script and shadows shared-name lib
+# modules with stale copies; an inherited PYTHONPATH that merely CONTAINS
+# harness/lib (the live-e2e sandbox env) used to satisfy the membership guard
+# here without granting precedence, so `from operator_runtime import ...`
+# resolved the tools copy — the one whose write_result has no route-record
+# hook (P2 smoke-4: zero 'completed' route records).
 _LIB_DIR = Path(__file__).resolve().parent.parent / "lib"
-if str(_LIB_DIR) not in sys.path:
+if sys.path and sys.path[0] != str(_LIB_DIR):
+    while str(_LIB_DIR) in sys.path:
+        sys.path.remove(str(_LIB_DIR))
     sys.path.insert(0, str(_LIB_DIR))
 
 from operator_persona import (  # noqa: E402  (import after path setup)
@@ -287,6 +294,18 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     graph_path = str(envelope.get("graph_path") or "").strip()
     if graph_path:
         env["GRAPH"] = graph_path
+    work_dir = str(envelope.get("work_dir") or "").strip()
+    if not work_dir:
+        sid = str(envelope.get("sprint_id") or "").strip()
+        if sid:
+            work_dir = str(HARNESS_DIR / "sprints" / sid / "workdir")
+    if work_dir:
+        try:
+            Path(work_dir).expanduser().mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        env["WORK_DIR"] = work_dir
+        env["CODEX_WORKDIR"] = work_dir
     if str(envelope.get("node_id") or "").strip():
         env["NODE_ID"] = str(envelope["node_id"])
     if str(envelope.get("task_id") or "").strip():
@@ -335,6 +354,38 @@ def _claude_print_command(config: dict[str, Any]) -> list[str]:
         ),
     ])
     return ["bash", "-lc", command]
+
+
+
+def _register_worker_process(pid: int, envelope: dict) -> None:
+    """Register a spawned task worker in the harness run registry.
+
+    G4-lite run 2: workers are spawned with start_new_session=True (their own
+    session — deliberate, so a worker survives an operatord restart mid-task),
+    which also means no teardown owned them: the repair builder (PID 572280)
+    outlived `solar-harness kill` and kept writing after the sprint's truthful
+    terminal. Registration hands ownership to the ONE existing teardown
+    (run_process_registry.teardown --run-id harness), with a cmdline snapshot
+    for identity-safe kills. Best-effort by design: a terminal run refuses
+    registration (the respawn-past-teardown guard) and no registry failure
+    may break task execution."""
+    try:
+        import run_process_registry as _rpr
+
+        _rpr.register(
+            "harness",
+            "operator-task",
+            int(pid),
+            meta={
+                "operator_id": str(envelope.get("operator_id") or ""),
+                "task_id": str(envelope.get("task_id") or ""),
+                "sprint_id": str(envelope.get("sprint_id") or ""),
+                "node_id": str(envelope.get("node_id") or ""),
+            },
+            harness_dir=HARNESS_DIR,
+        )
+    except Exception as exc:
+        _info(f"worker registry registration skipped: {exc}")
 
 
 def _build_command(config: dict, envelope: dict) -> list[str]:
@@ -835,6 +886,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 )
                 _state["current_proc"] = proc
                 _state["current_task_id"] = task_id
+                _register_worker_process(proc.pid, envelope)
                 update_operator_lease_metadata(
                     operator_id,
                     worker_pid=int(proc.pid),

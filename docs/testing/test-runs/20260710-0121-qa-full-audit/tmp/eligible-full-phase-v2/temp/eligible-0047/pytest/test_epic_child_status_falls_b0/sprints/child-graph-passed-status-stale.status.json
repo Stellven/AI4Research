@@ -1,0 +1,33 @@
+{
+  "id": "child-graph-passed-status-stale",
+  "sprint_id": "child-graph-passed-status-stale",
+  "status": "passed",
+  "active_node": null,
+  "round": 0,
+  "history": [
+    {
+      "ts": "2026-07-10T14:06:36Z",
+      "event": "child_graph_parent_ready_status_sync",
+      "by": "epic_decomposer",
+      "graph_sync": true,
+      "graph_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0047/pytest/test_epic_child_status_falls_b0/sprints/child-graph-passed-status-stale.task_graph.json"
+    }
+  ],
+  "phase": "completed",
+  "handoff_to": "",
+  "target_role": "",
+  "stage": "completed",
+  "graph_parent_ready": {
+    "ok": true,
+    "sprint_id": "child-graph-passed-status-stale",
+    "ready": true,
+    "node_count": 1,
+    "open_nodes": [],
+    "failed_nodes": [],
+    "required_gates": [],
+    "missing_gates": []
+  },
+  "task_graph_status": "passed",
+  "updated_at": "2026-07-10T14:06:36Z",
+  "runtime_state_source": "activity_runtime"
+}

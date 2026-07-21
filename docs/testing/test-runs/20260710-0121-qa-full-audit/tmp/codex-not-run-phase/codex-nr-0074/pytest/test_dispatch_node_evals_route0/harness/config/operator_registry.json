@@ -1,0 +1,84 @@
+{
+  "schema_version": "solar.operator_registry.v1",
+  "lines": {
+    "x_social": {
+      "primary": "scripts/ai_influence_daily.py",
+      "executors": [
+        "tools/playwright_twitter_scraper.py"
+      ],
+      "fallback": [],
+      "schedule": "daily",
+      "output_dir": "reports/x-social/"
+    },
+    "hf_papers": {
+      "primary": "scripts/tech_hotspot_radar.py",
+      "executors": [],
+      "fallback": [],
+      "helper": [
+        "scripts/run_tech_hotspot_radar.sh"
+      ],
+      "schedule": "weekly",
+      "output_dir": "reports/hf-papers/"
+    },
+    "github": {
+      "primary": "scripts/tech_hotspot_radar.py",
+      "executors": [],
+      "fallback": [],
+      "helper": [
+        "scripts/run_tech_hotspot_radar.sh"
+      ],
+      "schedule": "daily",
+      "output_dir": "reports/github/",
+      "report_operator": "chatgpt_report_chapter_writer",
+      "external_sources": [
+        "trendshift"
+      ]
+    },
+    "gemini_research": {
+      "primary": "tools/gemini_deep_research_operator.py",
+      "executors": [
+        "scripts/browser_agent_gemini_deep_research_wrapper.py"
+      ],
+      "fallback": [],
+      "schedule": "on_demand",
+      "output_dir": "reports/gemini/"
+    },
+    "chatgpt_thinking_high": {
+      "primary": "tools/chatgpt_browser_agent_task_operator.py",
+      "executors": [
+        "scripts/browser_agent_chatgpt_wrapper.py",
+        "tools/chatgpt_report_operator.py"
+      ],
+      "fallback": [],
+      "schedule": "on_demand",
+      "output_dir": "reports/chatgpt-thinking-high/"
+    },
+    "chatgpt_report_chapter_writer": {
+      "primary": "tools/chatgpt_report_operator.py",
+      "executors": [
+        "scripts/browser_agent_chatgpt_wrapper.py"
+      ],
+      "fallback": [],
+      "schedule": "on_demand",
+      "output_dir": "reports/chatgpt-report-chapters/"
+    },
+    "technology_diagram": {
+      "primary": "tools/technology_diagram_painter_operator.py",
+      "executors": [
+        "scripts/browser_agent_technology_diagram_painter_wrapper.py"
+      ],
+      "fallback": [],
+      "schedule": "on_demand",
+      "output_dir": "reports/technology-diagrams/"
+    },
+    "youtube": {
+      "primary": "scripts/youtube_influence_digest.py",
+      "executors": [
+        "scripts/browser_agent_youtube_transcript_wrapper.py"
+      ],
+      "fallback": [],
+      "schedule": "daily",
+      "output_dir": "reports/youtube/"
+    }
+  }
+}

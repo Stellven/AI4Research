@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-07-10T14:04:30Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed workspace wiki source retrieval evidence for AutoSci `ask` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ask-crystallize-concept/research_memory_update.ask.json",
+        "artifacts/autosci/runs/shim-ask-crystallize-concept/ask_wiki_retrieval.json",
+        "artifacts/autosci/workspace/wiki/papers/skillgen.md",
+        "artifacts/autosci/workspace/wiki/graph/open_questions.md",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "ask",
+      "production_ready": true,
+      "proof_id": "runtime:ask:workspace_wiki:20260710T140430Z",
+      "provenance": {
+        "artifact_kind": "workspace_wiki_retrieval",
+        "captured_at": "2026-07-10T14:04:30Z",
+        "command": "ask_wiki:wiki_retrieval",
+        "source": "workspace_wiki"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

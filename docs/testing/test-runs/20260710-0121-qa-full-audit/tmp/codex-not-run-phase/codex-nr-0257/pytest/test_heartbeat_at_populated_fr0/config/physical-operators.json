@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "operators": {
+    "test-builder-01": {
+      "display_name": "Test Builder 01",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "anthropic",
+      "vendor": "anthropic",
+      "model": "sonnet",
+      "enabled": true
+    },
+    "test-evaluator-01": {
+      "display_name": "Test Evaluator 01",
+      "role": "evaluator",
+      "persona": "evaluator",
+      "provider": "anthropic",
+      "vendor": "anthropic",
+      "model": "opus",
+      "enabled": true
+    },
+    "test-disabled-01": {
+      "display_name": "Disabled Op",
+      "role": "builder",
+      "persona": "builder",
+      "provider": "anthropic",
+      "vendor": "anthropic",
+      "model": "sonnet",
+      "enabled": false
+    }
+  }
+}

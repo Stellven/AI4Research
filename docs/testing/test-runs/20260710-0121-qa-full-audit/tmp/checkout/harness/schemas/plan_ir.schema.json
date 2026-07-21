@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "solar.plan_ir.v1",
+  "title": "Plan IR",
+  "description": "Stable intermediate representation for Sprint/Node/Action hierarchy. Frozen by S02 architecture, implemented by S03 core-runtime.",
+  "type": "object",
+  "required": ["schema_version", "sprint_id", "epic_id", "nodes", "actions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "solar.plan_ir.v1"
+    },
+    "sprint_id": {
+      "type": "string",
+      "pattern": "^sprint-"
+    },
+    "epic_id": {
+      "type": "string",
+      "pattern": "^epic-"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "goal", "depends_on", "read_scope", "write_scope", "required_capabilities", "actions"],
+        "additionalProperties": false,
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "pattern": "^[A-Z]\\d+$"
+          },
+          "goal": {
+            "type": "string",
+            "minLength": 5
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {"type": "string", "pattern": "^[A-Z]\\d+$"}
+          },
+          "read_scope": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "write_scope": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "required_capabilities": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "actions": {
+            "type": "array",
+            "items": {"type": "string", "pattern": "^[A-Z]\\d+$"}
+          },
+          "gate": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {"type": "object"}
+    }
+  }
+}

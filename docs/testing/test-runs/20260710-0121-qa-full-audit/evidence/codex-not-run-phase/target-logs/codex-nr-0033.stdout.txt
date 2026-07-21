@@ -1,0 +1,36 @@
+=== test-product-brief-schema.sh ===
+
+--- T1: Schema file exists ---
+  FAIL: T1a: schema is not valid JSON
+
+--- T2: Required fields ---
+  FAIL: T2: title missing from required
+  FAIL: T2: source missing from required
+  FAIL: T2: intent missing from required
+  FAIL: T2: problem missing from required
+  FAIL: T2: priority missing from required
+  FAIL: T2: lane_hint missing from required
+  FAIL: T2: acceptance missing from required
+  FAIL: T2: non_goals missing from required
+  FAIL: T2: stop_rules missing from required
+  FAIL: T2: handoff_to missing from required
+
+--- T3: lane_hint enums ---
+  FAIL: T3: lane_hint missing delivery
+  FAIL: T3: lane_hint missing lab
+  FAIL: T3: lane_hint missing strategy
+
+--- T4: Valid sample ---
+  FAIL: T4: valid sample fails
+
+--- T5: Invalid sample ---
+  FAIL: T5: invalid sample not detected
+
+--- T6: Template exists ---
+  FAIL: T6: template missing
+
+--- T7: farm-layout.json ---
+  FAIL: T7: farm-layout.json invalid
+
+=== Results: 0 PASS / 18 FAIL ===
+FAIL

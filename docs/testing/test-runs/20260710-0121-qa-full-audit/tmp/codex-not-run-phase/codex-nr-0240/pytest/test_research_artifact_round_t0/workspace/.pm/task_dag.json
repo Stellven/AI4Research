@@ -1,0 +1,488 @@
+{
+  "dag_variant": "research",
+  "research_mode": true,
+  "quality_gates": {
+    "parallelism": {
+      "min_ready_width": 1
+    }
+  },
+  "evidence_policy": {
+    "ledger_required": true,
+    "unsupported_claim_guard": true,
+    "citation_required": true
+  },
+  "required_gates": [
+    "G_SOURCE",
+    "G_EVIDENCE",
+    "G_SYNTHESIS",
+    "G_REVIEW"
+  ],
+  "nodes": [
+    {
+      "id": "R1",
+      "goal": "Ingest papers, links, and source metadata into the research run.",
+      "logical_operator": "ResearchScout",
+      "depends_on": [],
+      "acceptance": [
+        "Source manifest is recorded."
+      ],
+      "estimated_cost": 1,
+      "gate": "G_SOURCE",
+      "type": "research",
+      "owner": "subagent",
+      "inputs": [
+        "requirement_ir.json"
+      ],
+      "outputs": [
+        "source_manifest.json"
+      ],
+      "validation": [
+        {
+          "kind": "artifact",
+          "target": "source_manifest.json",
+          "required": true
+        }
+      ],
+      "risk": "medium",
+      "uncertainty": 0.55,
+      "parallelizable": true,
+      "approval_gate": false,
+      "capability_native": true,
+      "capability_capsule_id": "cap.requirement-research-scout",
+      "dispatch_task_type": "knowledge-extraction",
+      "capsule_plan": {
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-research-scout",
+        "dispatch_task_type": "knowledge-extraction",
+        "selection_mode": "static_default_fallback",
+        "fallback_used": true,
+        "fallback_reason": "classifier_score_below_threshold",
+        "request_type": "research",
+        "lane_hint": "strategy",
+        "logical_operator": "ResearchScout",
+        "node_goal": "Ingest papers, links, and source metadata into the research run.",
+        "required_guard_capsules": [
+          "guard.secret-leak-guard"
+        ],
+        "required_resource_capsules": [
+          "resource.github-readonly"
+        ],
+        "selected_skills": [
+          "skill.research-triage"
+        ],
+        "operator_constraints": {
+          "preferred": [
+            "mini-thunderomlx-qwen36-knowledge"
+          ],
+          "forbidden": [
+            "mini-antigravity-gemini35-flash-high"
+          ],
+          "default_operator_profile": "mini-thunderomlx-qwen36-knowledge"
+        }
+      },
+      "requirement_ids": [
+        "REQ-000"
+      ],
+      "priority": 60,
+      "required_phase": "planning_complete",
+      "required_node_id": null,
+      "required_node_status": null,
+      "acceptance_ids": [
+        "ACC-R1-1"
+      ]
+    },
+    {
+      "id": "R2",
+      "goal": "Extract claims, findings, and relevant technical levers.",
+      "logical_operator": "ResearchScout",
+      "depends_on": [
+        "R1"
+      ],
+      "acceptance": [
+        "Claims ledger is produced."
+      ],
+      "estimated_cost": 2,
+      "gate": "G_EVIDENCE",
+      "type": "research",
+      "owner": "subagent",
+      "inputs": [
+        "upstream_artifact"
+      ],
+      "outputs": [
+        "claims.jsonl"
+      ],
+      "validation": [
+        {
+          "kind": "artifact",
+          "target": "claims.jsonl",
+          "required": true
+        }
+      ],
+      "risk": "medium",
+      "uncertainty": 0.55,
+      "parallelizable": true,
+      "approval_gate": false,
+      "capability_native": true,
+      "capability_capsule_id": "cap.requirement-research-scout",
+      "dispatch_task_type": "knowledge-extraction",
+      "capsule_plan": {
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-research-scout",
+        "dispatch_task_type": "knowledge-extraction",
+        "selection_mode": "static_default_fallback",
+        "fallback_used": true,
+        "fallback_reason": "classifier_score_below_threshold",
+        "request_type": "research",
+        "lane_hint": "strategy",
+        "logical_operator": "ResearchScout",
+        "node_goal": "Extract claims, findings, and relevant technical levers.",
+        "required_guard_capsules": [
+          "guard.secret-leak-guard"
+        ],
+        "required_resource_capsules": [
+          "resource.github-readonly"
+        ],
+        "selected_skills": [
+          "skill.research-triage"
+        ],
+        "operator_constraints": {
+          "preferred": [
+            "mini-thunderomlx-qwen36-knowledge"
+          ],
+          "forbidden": [
+            "mini-antigravity-gemini35-flash-high"
+          ],
+          "default_operator_profile": "mini-thunderomlx-qwen36-knowledge"
+        }
+      },
+      "requirement_ids": [
+        "REQ-000",
+        "REQ-001",
+        "REQ-002",
+        "REQ-003"
+      ],
+      "priority": 50,
+      "required_phase": "planning_complete",
+      "required_node_id": "R1",
+      "required_node_status": "passed",
+      "acceptance_ids": [
+        "ACC-R2-1"
+      ]
+    },
+    {
+      "id": "R3",
+      "goal": "Scan contradictions, gaps, and unsupported assumptions.",
+      "logical_operator": "Critic",
+      "depends_on": [
+        "R2"
+      ],
+      "acceptance": [
+        "Contradictions or gaps are enumerated."
+      ],
+      "estimated_cost": 2,
+      "gate": "G_EVIDENCE",
+      "type": "review",
+      "owner": "solar-harness",
+      "inputs": [
+        "upstream_artifact"
+      ],
+      "outputs": [
+        "contradictions.jsonl"
+      ],
+      "validation": [
+        {
+          "kind": "artifact",
+          "target": "contradictions.jsonl",
+          "required": true
+        }
+      ],
+      "risk": "high",
+      "uncertainty": 0.55,
+      "parallelizable": false,
+      "approval_gate": true,
+      "capability_native": true,
+      "capability_capsule_id": "cap.requirement-compiler-verification",
+      "dispatch_task_type": "review",
+      "capsule_plan": {
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-compiler-verification",
+        "dispatch_task_type": "review",
+        "selection_mode": "static_default_fallback",
+        "fallback_used": true,
+        "fallback_reason": "classifier_score_below_threshold",
+        "request_type": "research",
+        "lane_hint": "strategy",
+        "logical_operator": "Critic",
+        "node_goal": "Scan contradictions, gaps, and unsupported assumptions.",
+        "required_guard_capsules": [
+          "guard.secret-leak-guard"
+        ],
+        "required_resource_capsules": [
+          "resource.github-readonly"
+        ],
+        "selected_skills": [
+          "skill.patch-review-hardcore"
+        ],
+        "operator_constraints": {
+          "preferred": [
+            "mini-claude-opus-evaluator"
+          ],
+          "forbidden": [
+            "mini-antigravity-gemini35-flash-high"
+          ],
+          "default_operator_profile": "mini-claude-opus-evaluator"
+        }
+      },
+      "requirement_ids": [
+        "REQ-000",
+        "REQ-001",
+        "REQ-002",
+        "REQ-003"
+      ],
+      "priority": 40,
+      "required_phase": "planning_complete",
+      "required_node_id": "R2",
+      "required_node_status": "passed",
+      "acceptance_ids": [
+        "ACC-R3-1"
+      ]
+    },
+    {
+      "id": "R4",
+      "goal": "Synthesize the research into actionable insights.",
+      "logical_operator": "ResearchSynthesizer",
+      "depends_on": [
+        "R2",
+        "R3"
+      ],
+      "acceptance": [
+        "Synthesis report is drafted."
+      ],
+      "estimated_cost": 3,
+      "gate": "G_SYNTHESIS",
+      "type": "research",
+      "owner": "subagent",
+      "inputs": [
+        "upstream_artifact"
+      ],
+      "outputs": [
+        "synthesis.md"
+      ],
+      "validation": [
+        {
+          "kind": "artifact",
+          "target": "synthesis.md",
+          "required": true
+        }
+      ],
+      "risk": "medium",
+      "uncertainty": 0.55,
+      "parallelizable": true,
+      "approval_gate": false,
+      "capability_native": true,
+      "capability_capsule_id": "cap.requirement-research-synthesizer",
+      "dispatch_task_type": "research",
+      "capsule_plan": {
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-research-synthesizer",
+        "dispatch_task_type": "research",
+        "selection_mode": "static_default_fallback",
+        "fallback_used": true,
+        "fallback_reason": "classifier_score_below_threshold",
+        "request_type": "research",
+        "lane_hint": "strategy",
+        "logical_operator": "ResearchSynthesizer",
+        "node_goal": "Synthesize the research into actionable insights.",
+        "required_guard_capsules": [
+          "guard.secret-leak-guard"
+        ],
+        "required_resource_capsules": [
+          "resource.github-readonly"
+        ],
+        "selected_skills": [
+          "skill.research-synthesis"
+        ],
+        "operator_constraints": {
+          "preferred": [
+            "mini-claude-opus-planner",
+            "mini-claude-opus-evaluator"
+          ],
+          "forbidden": [
+            "mini-antigravity-gemini35-flash-high"
+          ],
+          "default_operator_profile": "mini-claude-opus-planner"
+        }
+      },
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003"
+      ],
+      "priority": 30,
+      "required_phase": "planning_complete",
+      "required_node_id": null,
+      "required_node_status": "passed",
+      "acceptance_ids": [
+        "ACC-R4-1"
+      ]
+    },
+    {
+      "id": "R5",
+      "goal": "Perform independent critique and evidence verification.",
+      "logical_operator": "Verifier",
+      "depends_on": [
+        "R4"
+      ],
+      "acceptance": [
+        "Critique and verifier decision are recorded."
+      ],
+      "estimated_cost": 2,
+      "gate": "G_REVIEW",
+      "type": "review",
+      "owner": "solar-harness",
+      "inputs": [
+        "upstream_artifact"
+      ],
+      "outputs": [
+        "critique.md"
+      ],
+      "validation": [
+        {
+          "kind": "artifact",
+          "target": "critique.md",
+          "required": true
+        }
+      ],
+      "risk": "high",
+      "uncertainty": 0.55,
+      "parallelizable": false,
+      "approval_gate": true,
+      "capability_native": true,
+      "capability_capsule_id": "cap.requirement-compiler-verification",
+      "dispatch_task_type": "verification",
+      "capsule_plan": {
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-compiler-verification",
+        "dispatch_task_type": "verification",
+        "selection_mode": "static_default_fallback",
+        "fallback_used": true,
+        "fallback_reason": "classifier_score_below_threshold",
+        "request_type": "research",
+        "lane_hint": "strategy",
+        "logical_operator": "Verifier",
+        "node_goal": "Perform independent critique and evidence verification.",
+        "required_guard_capsules": [
+          "guard.secret-leak-guard"
+        ],
+        "required_resource_capsules": [
+          "resource.github-readonly"
+        ],
+        "selected_skills": [
+          "skill.patch-review-hardcore"
+        ],
+        "operator_constraints": {
+          "preferred": [
+            "mini-claude-opus-evaluator"
+          ],
+          "forbidden": [
+            "mini-antigravity-gemini35-flash-high"
+          ],
+          "default_operator_profile": "mini-claude-opus-evaluator"
+        }
+      },
+      "requirement_ids": [
+        "REQ-000",
+        "REQ-001",
+        "REQ-002",
+        "REQ-003"
+      ],
+      "priority": 20,
+      "required_phase": "planning_complete",
+      "required_node_id": "R4",
+      "required_node_status": "passed",
+      "acceptance_ids": [
+        "ACC-R5-1"
+      ]
+    },
+    {
+      "id": "R6",
+      "goal": "Translate research findings into PRD/DAG implications.",
+      "logical_operator": "ArtifactCurator",
+      "depends_on": [
+        "R5"
+      ],
+      "acceptance": [
+        "Final implications document is produced."
+      ],
+      "estimated_cost": 1,
+      "gate": "G_REVIEW",
+      "type": "release",
+      "owner": "subagent",
+      "inputs": [
+        "upstream_artifact"
+      ],
+      "outputs": [
+        "final_prd_implications.md"
+      ],
+      "validation": [
+        {
+          "kind": "artifact",
+          "target": "final_prd_implications.md",
+          "required": true
+        }
+      ],
+      "risk": "medium",
+      "uncertainty": 0.55,
+      "parallelizable": true,
+      "approval_gate": false,
+      "capability_native": true,
+      "capability_capsule_id": "cap.requirement-research-synthesizer",
+      "dispatch_task_type": "evidence",
+      "capsule_plan": {
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-research-synthesizer",
+        "dispatch_task_type": "evidence",
+        "selection_mode": "static_default_fallback",
+        "fallback_used": true,
+        "fallback_reason": "classifier_score_below_threshold",
+        "request_type": "research",
+        "lane_hint": "strategy",
+        "logical_operator": "ArtifactCurator",
+        "node_goal": "Translate research findings into PRD/DAG implications.",
+        "required_guard_capsules": [
+          "guard.secret-leak-guard"
+        ],
+        "required_resource_capsules": [
+          "resource.github-readonly"
+        ],
+        "selected_skills": [
+          "skill.research-synthesis"
+        ],
+        "operator_constraints": {
+          "preferred": [
+            "mini-claude-opus-planner",
+            "mini-claude-opus-evaluator"
+          ],
+          "forbidden": [
+            "mini-antigravity-gemini35-flash-high"
+          ],
+          "default_operator_profile": "mini-claude-opus-planner"
+        }
+      },
+      "requirement_ids": [
+        "REQ-000",
+        "REQ-001",
+        "REQ-002",
+        "REQ-003"
+      ],
+      "priority": 10,
+      "required_phase": "planning_complete",
+      "required_node_id": "R5",
+      "required_node_status": "passed",
+      "acceptance_ids": [
+        "ACC-R6-1"
+      ]
+    }
+  ],
+  "sprint_id": "sprint-20260710-185252-intent-codex_bridge-artifact-compil-660277c5"
+}

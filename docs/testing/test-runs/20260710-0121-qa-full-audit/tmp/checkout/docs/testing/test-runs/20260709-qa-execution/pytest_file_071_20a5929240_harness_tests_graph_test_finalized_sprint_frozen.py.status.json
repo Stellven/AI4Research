@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_071_20a5929240_harness_tests_graph_test_finalized_sprint_frozen.py",
+  "source": "harness/tests/graph/test_finalized_sprint_frozen.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph/test_finalized_sprint_frozen.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.25,
+  "timeout": false
+}

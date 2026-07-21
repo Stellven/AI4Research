@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_254_f88ad00c0d_harness_tests_test-physical-operator-logical-selector.py",
+  "source": "harness/tests/test-physical-operator-logical-selector.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-physical-operator-logical-selector.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.199,
+  "timeout": false
+}

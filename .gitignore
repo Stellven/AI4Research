@@ -3,6 +3,7 @@ secrets/
 *.key
 *.pem
 *.env
+.env
 .env*
 *_secret*
 *_private*
@@ -11,18 +12,26 @@ secrets/
 *.db
 *.sqlite
 *.sqlite3
+.solar/
+core/db/*.db
+core/db/*.db-wal
+core/db/*.db-shm
+core/db/*.sqlite
+core/db/*.sqlite3
 .solar/solar.db
 
 # 缓存和临时文件
 *.log
 *.tmp
 .DS_Store
-node_modules/
-.bun-cache/
-.uv-cache/
-.venv/
-.test-home/
+**/.DS_Store
 __pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+.uv-cache/
+.pytest_cache/
+node_modules/
 bun.lockb
 *.cache
 
@@ -34,6 +43,7 @@ bun.lockb
 
 # 备份文件
 *.backup
+*.backup.*
 *.bak
 *~
 
@@ -55,33 +65,54 @@ coverage/
 
 # Solar Harness 运行时/证据产物
 harness/.coverage
-harness/.pm/
-harness/run/
-harness/state/
-harness/events/
-harness/sessions/
-harness/cache/
-harness/.builder-flow-dispatched
-harness/.coordinator-state
-harness/.coordinator.pid
-harness/.dispatch-pane-*.lock/
-harness/.pane-restart-state
+harness/.workdir
 harness/.planner-inbox.md
-harness/.planner-last-notice
-harness/.planner-last-notice.read
-harness/.watchdog-session-recovered-at
-harness/.watchdog-state
-harness/.watchdog.pid
-.worktrees/
+harness/.!*.planner-inbox.md
+harness/PLANNER-INBOX.md
+harness/.brain-router-probe-cache.json
+harness/.intent-hash
+harness/.drafting-notified
+harness/.next-last-sid
+harness/.last-seen-by-planner
+harness/.coordinator*
+harness/.watchdog*
+harness/.pane-*
+harness/cache/
+harness/run/
+harness/runs/
+harness/queue/
+harness/state/
+harness/config/*.lock
+harness/integrations/*-state.json
+harness/patch.diff
+harness/rss_public
+harness/logs/
+harness/test-dispatch-report.txt
+harness/release/artifacts/
 reports/
 harness/intake-requests/
+harness/intents/
 harness/intents/intent-*/
-harness/sprints/sprint-*
+harness/sprints/
+harness/sprints/**
+insight-reports/
+insight-reports/**
+core/dashboard/state.json
+docs/.report-checkpoint-*.json
 harness/handovers/*.md
 harness/sprints/*-eval.json
 harness/sprints/*-handoff.md
 harness/sprints/*.handoff.md
 harness/sprints/*.traceability.json
+harness/artifacts/autosci/runs/
+harness/artifacts/autosci/workspace/
+harness/artifacts/autosci/webui/
+harness/artifacts/autosci/operator-smoke/
+harness/artifacts/autosci/phase19/current-parity-inventory-*.json
+harness/harness/
+harness/artifacts/scientific/workflow-runs/
+.solar-backups/
+.worktrees/
 
 # 其他
 paste-cache/
@@ -92,3 +123,11 @@ shell-snapshots/
 client_secret_*.json
 *.googleusercontent.com.json
 *credentials*.json
+
+# 本地工作文件（策略要求：仅本地，不得提交）
+MIGRATION_PLAN.md
+WORKLOG.md
+docs/SIHAO_CHANGE_LIST.md
+
+# Generated dev telemetry (written to ~/Solar/data by scripts/extract-usage-data.ts)
+data/usage-stats.json

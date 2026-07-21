@@ -11,28 +11,30 @@
 # ================================================================
 set -eu
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HARNESS_DIR="${HARNESS_DIR:-$SCRIPT_DIR}"
-REPO_DIR="$(cd "$HARNESS_DIR/.." && pwd)"
-if [[ -x "$REPO_DIR/.venv/bin/python3" ]]; then
-  case ":$PATH:" in
-    *":$REPO_DIR/.venv/bin:"*) ;;
-    *) export PATH="$REPO_DIR/.venv/bin:$PATH" ;;
-  esac
-fi
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 export HARNESS_DIR
-SESSION_NAME="solar-harness"
-LAB_SESSION_NAME="solar-harness-lab"
+SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"
+LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"
+SOLAR_PANE_RUNTIME="${SOLAR_PANE_RUNTIME:-claude}"
 
 # --- JSON 模式 (默认) ---
 doctor_json() {
   python3 << 'PYEOF'
-import json, subprocess, os, re, sys
+import json, subprocess, os, re, shutil, sys
 from pathlib import Path
 
-SESSION_NAME = "solar-harness"
-LAB_SESSION_NAME = "solar-harness-lab"
-HARNESS_DIR = os.environ.get("HARNESS_DIR") or os.path.expanduser("~/.solar/harness")
+SESSION_NAME = os.environ.get("SOLAR_HARNESS_SESSION", "solar-harness")
+LAB_SESSION_NAME = os.environ.get("SOLAR_HARNESS_LAB_SESSION", f"{SESSION_NAME}-lab")
+PANE_RUNTIME = os.environ.get("SOLAR_PANE_RUNTIME", "claude").strip().lower()
+if PANE_RUNTIME not in {"claude", "codex"}:
+    PANE_RUNTIME = "claude"
+RUNTIME_COMMAND = "codex" if PANE_RUNTIME == "codex" else "claude"
+RUNTIME_LABEL = "Codex" if PANE_RUNTIME == "codex" else "Claude"
+HARNESS_DIR = os.path.abspath(os.path.expanduser(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or "~/.solar/harness"
+))
 sys.path.insert(0, os.path.join(HARNESS_DIR, "lib"))
 try:
     from qmd_resolver import resolve_qmd_bin
@@ -49,8 +51,13 @@ result = {
     "watchdog_alive": False,
     "bash_version": "",
     "bash_path": "",
+    "bash_major": 0,
     "panes": [],
     "warnings": [],
+    "pane_runtime": PANE_RUNTIME,
+    "required_checks": [],
+    "manual_checks": [],
+    "optional_checks": [],
     "repairs_available": [],
     "qmd": {
         "resolver": "",
@@ -79,12 +86,33 @@ result = {
     },
 }
 
+def command_path(name):
+    return shutil.which(name) or ""
+
+def add_check(bucket, name, status, detail="", hint=""):
+    result[bucket].append({
+        "name": name,
+        "status": status,
+        "detail": detail,
+        "hint": hint,
+    })
+
+def run_quiet(args, timeout=5, env=None):
+    return subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=env)
+
+def classify_runtime_tail(text):
+    if re.search(r"You(?:'|’)ve hit .*limit|rate[- ]limit|quota exhausted|RESOURCE_EXHAUSTED|429|/rate-limit-options|Upgrade your plan", text, re.I):
+        return "auth_or_quota_blocked"
+    if re.search(r"trust|trusted|Do you trust|permission|auth|login|Press Enter|press enter", text, re.I):
+        return "manual_pending"
+    return "manual_pending"
+
 layout_personas = {}
 layout_path = os.path.join(HARNESS_DIR, "farm-layout.json")
 if os.path.isfile(layout_path):
     try:
         layout = json.load(open(layout_path))
-        default_session = layout.get("session_name", SESSION_NAME)
+        default_session = SESSION_NAME
         for w in layout.get("windows", []):
             session = w.get("session") or default_session
             win = w.get("index", 0)
@@ -94,23 +122,78 @@ if os.path.isfile(layout_path):
     except Exception:
         pass
 
+required_hints = {
+    "python3": "macOS: brew install python; Ubuntu/Debian: sudo apt-get install python3",
+    "tmux": "macOS: brew install tmux; Ubuntu/Debian: sudo apt-get install tmux",
+    "claude": "Install the Claude Code CLI and confirm 'claude --version' works before launching panes",
+    "codex": "Install the Codex CLI and confirm 'codex --version' works before launching panes",
+    "jq": "macOS: brew install jq; Ubuntu/Debian: sudo apt-get install jq",
+}
+
 # bash version
-for b in [os.environ.get("SOLAR_BASH4", ""), os.environ.get("BASH4", ""), "/opt/homebrew/bin/bash", "/usr/local/bin/bash"]:
+bash_candidates = [
+    "/opt/homebrew/bin/bash",
+    "/usr/local/bin/bash",
+    command_path("bash"),
+    "/bin/bash",
+]
+seen_bash = set()
+for b in bash_candidates:
+    if not b or b in seen_bash:
+        continue
+    seen_bash.add(b)
     if os.path.isfile(b):
         try:
-            r = subprocess.run([b, "--version"], capture_output=True, text=True, timeout=5)
+            r = run_quiet([b, "--version"])
             if r.returncode == 0:
-                result["bash_version"] = r.stdout.split("\n")[0]
-                result["bash_path"] = b
-                break
+                version_line = r.stdout.split("\n")[0]
+                major_match = re.search(r"version\s+([0-9]+)", version_line)
+                major = int(major_match.group(1)) if major_match else 0
+                if major >= 4 or not result["bash_path"]:
+                    result["bash_version"] = version_line
+                    result["bash_path"] = b
+                    result["bash_major"] = major
+                if major >= 4:
+                    break
         except Exception:
             pass
 
+if result["bash_major"] >= 4:
+    add_check("required_checks", "bash>=4", "ok", f"{result['bash_path']} ({result['bash_version']})")
+else:
+    detail = f"{result['bash_path']} ({result['bash_version']})" if result["bash_path"] else "not found"
+    add_check("required_checks", "bash>=4", "fail", detail, "macOS: brew install bash; Ubuntu/Debian: sudo apt-get install bash")
+
+for cmd in ["python3", "tmux", RUNTIME_COMMAND, "jq"]:
+    path = command_path(cmd)
+    if path:
+        add_check("required_checks", cmd, "ok", path)
+    else:
+        add_check("required_checks", cmd, "fail", "not found on PATH", required_hints[cmd])
+
+if os.access(HARNESS_DIR, os.W_OK):
+    add_check("required_checks", "harness_dir_writable", "ok", HARNESS_DIR)
+else:
+    add_check("required_checks", "harness_dir_writable", "fail", HARNESS_DIR, f"fix ownership/permissions for {HARNESS_DIR}; do not run Solar as root")
+
 # tmux sessions
-for key, session in [("tmux_session_alive", SESSION_NAME), ("lab_session_alive", LAB_SESSION_NAME)]:
-    r = subprocess.run(["tmux", "has-session", "-t", session],
-                       capture_output=True, timeout=5)
-    result[key] = (r.returncode == 0)
+tmux_path = command_path("tmux")
+if tmux_path:
+    for key, session in [("tmux_session_alive", SESSION_NAME), ("lab_session_alive", LAB_SESSION_NAME)]:
+        r = run_quiet(["tmux", "has-session", "-t", session])
+        result[key] = (r.returncode == 0)
+else:
+    result["warnings"].append("tmux unavailable; session status not checked")
+
+if result["tmux_session_alive"]:
+    add_check("required_checks", "product_delivery_session", "ok", SESSION_NAME)
+else:
+    add_check("required_checks", "product_delivery_session", "fail", f"{SESSION_NAME} not running", "run: solar-harness start <workdir>")
+
+if result["lab_session_alive"]:
+    add_check("optional_checks", "builder_lab_session", "ok", LAB_SESSION_NAME)
+else:
+    add_check("optional_checks", "builder_lab_session", "optional_warning", f"{LAB_SESSION_NAME} not running", "optional: run solar-harness 扩展 <workdir> when you need the lab")
 
 # coordinator pid
 pidfile = os.path.join(HARNESS_DIR, ".coordinator.pid")
@@ -124,6 +207,12 @@ if os.path.isfile(pidfile):
         result["warnings"].append(f"coordinator pidfile stale: {pidfile}")
     except PermissionError:
         result["coordinator_alive"] = True
+if result["coordinator_alive"]:
+    add_check("required_checks", "coordinator", "ok", f"pid={result['coordinator_pid']}")
+elif result["tmux_session_alive"]:
+    add_check("required_checks", "coordinator", "fail", "not alive", "run: solar-harness wake or restart solar-harness")
+else:
+    add_check("manual_checks", "coordinator", "manual_pending", "not expected until Product Delivery is started")
 
 # watchdog pid
 wpidfile = os.path.join(HARNESS_DIR, ".watchdog.pid")
@@ -137,6 +226,10 @@ if os.path.isfile(wpidfile):
         result["warnings"].append(f"watchdog pidfile stale: {wpidfile}")
     except PermissionError:
         result["watchdog_alive"] = True
+if result["watchdog_alive"]:
+    add_check("optional_checks", "watchdog", "ok", f"pid={result['watchdog_pid']}")
+else:
+    add_check("optional_checks", "watchdog", "optional_warning", "not alive", "watchdog is resilience only; Product Delivery can be manually verified without it")
 
 def scan_session(session):
     panes = []
@@ -163,8 +256,9 @@ def scan_session(session):
                 "persona": "",
                 "persona_source": "",
                 "layout_persona": layout_personas.get(f"{parts[0]}:{parts[1]}", ""),
+                "runtime": PANE_RUNTIME,
                 "runtime_alive": False,
-                "runtime_process": ""
+                "runtime_state": "unknown"
             }
             # Prefer the launch wrapper argv. Pane scrollback can lose the
             # Persona header after long conversations; argv remains reliable.
@@ -180,13 +274,13 @@ def scan_session(session):
                         ["ps", "-p", str(pid), "-o", "args="],
                         capture_output=True, text=True, timeout=2
                     ).stdout.strip()
-                    if re.search(r"(^|/)(claude|claude\.exe|codex|codex\.exe)(\s|$)", args):
+                    if PANE_RUNTIME == "codex":
+                        runtime_re = r"(^|[/\s])codex($|\s)"
+                    else:
+                        runtime_re = r"(^|/)(claude|claude\.exe)(\s|$)"
+                    if re.search(runtime_re, args):
                         pane["runtime_alive"] = True
-                        if re.search(r"(^|/)(codex|codex\.exe)(\s|$)", args):
-                            pane["runtime_process"] = "codex"
-                        elif re.search(r"(^|/)(claude|claude\.exe)(\s|$)", args):
-                            pane["runtime_process"] = "claude"
-                    m = re.search(r"start-(?:incarnation|launcher)\.sh\s+([A-Za-z0-9_-]+)", args)
+                    m = re.search(r"(?:start-(?:incarnation|launcher)|pane-launcher)\.sh\s+([A-Za-z0-9_-]+)", args)
                     if m and not pane["persona"]:
                         pane["persona"] = m.group(1)
                         pane["persona_source"] = "process"
@@ -200,10 +294,9 @@ def scan_session(session):
             # detect persona from pane content
             if not pane["persona"]:
                 try:
-                    content = subprocess.run(
+                    content = run_quiet(
                         ["tmux", "capture-pane", "-t",
                          pane["target"], "-p", "-S", "-80"],
-                        capture_output=True, text=True, timeout=5
                     ).stdout
                     matches = re.findall(r"Persona:\s*([A-Za-z0-9_-]+)", content)
                     if matches:
@@ -214,6 +307,14 @@ def scan_session(session):
             if not pane["persona"]:
                 pane["persona"] = pane["layout_persona"]
                 pane["persona_source"] = "layout" if pane["persona"] else ""
+            try:
+                tail = run_quiet(["tmux", "capture-pane", "-t", pane["target"], "-p", "-S", "-80"]).stdout
+            except Exception:
+                tail = ""
+            if pane["runtime_alive"]:
+                pane["runtime_state"] = "live_child_present"
+            else:
+                pane["runtime_state"] = classify_runtime_tail(tail)
             panes.append(pane)
     except Exception as e:
         result["warnings"].append(f"pane scan failed for {session}: {e}")
@@ -236,8 +337,21 @@ for p in result["panes"]:
             f"pane {p['target']} persona mismatch: layout={layout_persona}, actual={actual_persona}, source={p.get('persona_source','?')}"
         )
     if layout_persona and not p.get("runtime_alive"):
-        result["warnings"].append(
-            f"pane {p['target']} has no live solar runtime child (layout={layout_persona}, actual={actual_persona or '?'})"
+        state = p.get("runtime_state") or "manual_pending"
+        add_check(
+            "manual_checks",
+            f"pane {p['target']} {PANE_RUNTIME}",
+            state,
+            f"layout={layout_persona}, actual={actual_persona or '?'}",
+            f"start the pane runtime and resolve {RUNTIME_LABEL} trust/auth/quota prompts",
+        )
+    elif layout_persona and p.get("runtime_alive"):
+        add_check(
+            "manual_checks",
+            f"pane {p['target']} {PANE_RUNTIME}",
+            "live_child_present",
+            f"layout={layout_persona}, actual={actual_persona or '?'}",
+            f"child process is present; real {RUNTIME_LABEL} response/delegation still requires owner manual verification",
         )
 
 # repairs available
@@ -277,9 +391,9 @@ if os.path.isfile(qmd_resolver_script):
         )
         result["qmd"]["stripped_status_ok"] = (h.returncode == 0)
         if h.returncode != 0:
-            result["warnings"].append("qmd stripped-PATH status check failed")
+            add_check("optional_checks", "qmd_stripped_path_status", "optional_warning", "qmd stripped-PATH status check failed", "install qmd/mineru-document-explorer or set QMD_BIN when using wiki/QMD features")
     except Exception as e:
-        result["warnings"].append(f"qmd stripped-PATH resolver check failed: {e}")
+        add_check("optional_checks", "qmd_stripped_path_resolver", "optional_warning", f"qmd stripped-PATH resolver check failed: {e}", "optional for core harness")
 
 if not result["qmd"]["resolver"]:
     qmd_bin = resolve_qmd_bin()
@@ -299,11 +413,11 @@ if qmd_bin:
                 elif s.startswith("Pending:"):
                     result["qmd"]["pending"] = s.split(":", 1)[1].strip()
         else:
-            result["warnings"].append("qmd status failed")
+            add_check("optional_checks", "qmd_status", "optional_warning", "qmd status failed", "optional for core harness")
     except Exception as e:
-        result["warnings"].append(f"qmd status failed: {e}")
+        add_check("optional_checks", "qmd_status", "optional_warning", f"qmd status failed: {e}", "optional for core harness")
 else:
-    result["warnings"].append("qmd resolver found no executable")
+    add_check("optional_checks", "qmd", "optional_warning", "qmd resolver found no executable", "optional for core harness; install qmd/mineru-document-explorer when using wiki/QMD features")
 
 qmd_repair = os.path.join(HARNESS_DIR, "lib", "qmd-launcher-repair.sh")
 if os.path.isfile(qmd_repair) and os.access(qmd_repair, os.X_OK):
@@ -316,9 +430,9 @@ if os.path.isfile(qmd_repair) and os.access(qmd_repair, os.X_OK):
         if r.returncode == 2:
             result["repairs_available"].append("qmd-launcher-abi: run solar-harness wiki qmd-repair --apply")
         elif r.returncode not in (0,):
-            result["warnings"].append("qmd launcher repair check failed")
+            add_check("optional_checks", "qmd_launcher_repair", "optional_warning", "qmd launcher repair check failed", "optional for core harness")
     except Exception as e:
-        result["warnings"].append(f"qmd launcher repair check failed: {e}")
+        add_check("optional_checks", "qmd_launcher_repair", "optional_warning", f"qmd launcher repair check failed: {e}", "optional for core harness")
 
 # symphony section
 symphony_dir = os.path.join(HARNESS_DIR, "lib", "symphony")
@@ -379,13 +493,15 @@ if os.path.isfile(gateway_script):
         result["gateway_compat"]["checked"] = True
         result["gateway_compat"]["ok"] = (r.returncode == 0)
         if r.returncode != 0:
-            result["warnings"].append("gateway compatibility check failed; run test-gateway-compat.sh")
+            add_check("optional_checks", "gateway_compat", "optional_warning", "gateway compatibility check failed", "run test-gateway-compat.sh if using third-party Anthropic-compatible gateways")
+        else:
+            add_check("optional_checks", "gateway_compat", "ok", "compatible")
     except Exception as e:
         result["gateway_compat"]["checked"] = True
         result["gateway_compat"]["ok"] = False
-        result["warnings"].append(f"gateway compatibility check failed: {e}")
+        add_check("optional_checks", "gateway_compat", "optional_warning", f"gateway compatibility check failed: {e}", "optional for core harness")
 else:
-    result["warnings"].append("gateway compatibility check missing: test-gateway-compat.sh")
+    add_check("optional_checks", "gateway_compat", "optional_warning", "gateway compatibility check missing: test-gateway-compat.sh", "optional for core harness")
 
 reports_dir = Path(HARNESS_DIR) / "reports"
 audit_reports = sorted(reports_dir.glob("task-graph-gate-backfill-audit-*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -423,54 +539,100 @@ PYEOF
 # --- Summary 模式 (人类可读) ---
 doctor_summary() {
   local json_output
-  json_output=$(doctor_json)
+  # Reuse a JSON sweep the caller already computed (DOCTOR_JSON_CACHE) so the
+  # entry point can render the summary and decide the exit code from one sweep
+  # instead of running the expensive doctor_json twice.
+  json_output="${DOCTOR_JSON_CACHE:-$(doctor_json)}"
 
-  local tmux_alive lab_alive coord_alive watchdog_alive gateway_ok qmd_ok qmd_pending bash_ver panes_count warnings_count gate_audit_summary
-  tmux_alive=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin)['tmux_session_alive'])" 2>/dev/null)
-  lab_alive=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin).get('lab_session_alive', False))" 2>/dev/null)
-  coord_alive=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin)['coordinator_alive'])" 2>/dev/null)
-  watchdog_alive=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin)['watchdog_alive'])" 2>/dev/null)
-  gateway_ok=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin).get('gateway_compat',{}).get('ok', False))" 2>/dev/null)
-  qmd_ok=$(echo "$json_output" | python3 -c "import json,sys; d=json.load(sys.stdin).get('qmd',{}); print(d.get('stripped_path_ok', False) and d.get('stripped_status_ok', False) and d.get('status_ok', False))" 2>/dev/null)
-  qmd_pending=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin).get('qmd',{}).get('pending',''))" 2>/dev/null)
-  bash_ver=$(echo "$json_output" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('bash_version','?'))" 2>/dev/null)
-  panes_count=$(echo "$json_output" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['panes']))" 2>/dev/null)
-  warnings_count=$(echo "$json_output" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['warnings']))" 2>/dev/null)
-  gate_audit_summary=$(echo "$json_output" | python3 -c "import json,sys; print(json.load(sys.stdin).get('task_graph_gate_audit',{}).get('summary','N/A'))" 2>/dev/null)
+  SOLAR_DOCTOR_JSON="$json_output" python3 <<'PY'
+import json
+import os
 
-  echo ""
-  echo "  ┌─ Doctor Summary ─────────────────────────┐"
-  echo "  │ bash:   ${bash_ver:0:30}"
-  echo "  │ tmux:   $([ "$tmux_alive" == "True" ] && echo "✅ alive" || echo "❌ down")"
-  echo "  │ lab:    $([ "$lab_alive" == "True" ] && echo "✅ alive" || echo "❌ down")"
-  echo "  │ coord:  $([ "$coord_alive" == "True" ] && echo "✅ alive" || echo "❌ down")"
-  echo "  │ watch:  $([ "$watchdog_alive" == "True" ] && echo "✅ alive" || echo "❌ down")"
-  echo "  │ gateway:$([ "$gateway_ok" == "True" ] && echo " ✅ compat" || echo " ❌ check")"
-  echo "  │ qmd:    $([ "$qmd_ok" == "True" ] && echo "✅ resolver" || echo "❌ check") ${qmd_pending:0:22}"
-  echo "  │ panes:  ${panes_count}"
-  echo "  │ gates:  ${gate_audit_summary:0:30}"
-  echo "  │ warns:  ${warnings_count}"
-  echo "  └────────────────────────────────────────────┘"
+d = json.loads(os.environ["SOLAR_DOCTOR_JSON"])
 
-  # Show warnings if any
-  if [[ "$warnings_count" != "0" ]]; then
-    echo "$json_output" | python3 -c "
+def icon(status):
+    return {
+        "ok": "OK",
+        "fail": "FAIL",
+        "manual_pending": "MANUAL-PENDING",
+        "auth_or_quota_blocked": "AUTH/QUOTA-BLOCKED",
+        "optional_warning": "OPTIONAL-WARN",
+        "live_child_present": "LIVE-CHILD-PRESENT",
+    }.get(status, status.upper() if status else "UNKNOWN")
+
+required = d.get("required_checks", [])
+manual = d.get("manual_checks", [])
+optional = d.get("optional_checks", [])
+required_fail = [c for c in required if c.get("status") != "ok"]
+pane_runtime = d.get("pane_runtime") or "claude"
+runtime_label = "Codex" if pane_runtime == "codex" else "Claude"
+
+print("")
+print("  ┌─ Harness Runtime Status ─────────────────────────")
+print(f"  │ required: {'FAIL' if required_fail else 'OK'}")
+for c in required:
+    line = f"  │   [{icon(c.get('status'))}] {c.get('name')}: {c.get('detail')}"
+    print(line[:140])
+    if c.get("status") != "ok" and c.get("hint"):
+        print(f"  │      hint: {c.get('hint')}"[:140])
+
+print("  │ manual boundary:")
+if manual:
+    for c in manual:
+        print(f"  │   [{icon(c.get('status'))}] {c.get('name')}: {c.get('detail')}"[:140])
+        if c.get("hint"):
+            print(f"  │      {c.get('hint')}"[:140])
+else:
+    print(f"  │   [MANUAL-PENDING] live {runtime_label} panes are not verified until the owner starts {runtime_label} and observes a response")
+
+print("  │ optional:")
+for c in optional[:12]:
+    print(f"  │   [{icon(c.get('status'))}] {c.get('name')}: {c.get('detail')}"[:140])
+if len(optional) > 12:
+    print(f"  │   ... {len(optional) - 12} more optional checks")
+
+print(f"  │ panes: {len(d.get('panes', []))}")
+print(f"  │ task-graph gates: {d.get('task_graph_gate_audit', {}).get('summary', 'N/A')}")
+print("  └──────────────────────────────────────────────────")
+print(f"  deterministic status only; real {runtime_label} response/delegation remains owner-manual until quota/auth allows it.")
+
+for w in d.get("warnings", []):
+    print(f"  warning: {w}")
+print("")
+PY
+}
+
+# Exit nonzero when any REQUIRED check failed, so callers (solar-harness doctor,
+# migrate import gate) can branch on the exit code instead of always passing.
+# Optional/manual warnings do not change the exit. A malformed JSON body is left
+# to the JSON validity of the output, not masked here.
+doctor_required_exit() {
+  if printf '%s' "$1" | python3 -c '
 import json, sys
-d = json.load(sys.stdin)
-for w in d.get('warnings', []):
-    print(f'  ⚠ {w}')
-" 2>/dev/null
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+req = d.get("required_checks", [])
+sys.exit(1 if any(c.get("status") != "ok" for c in req) else 0)
+'; then
+    :
+  else
+    exit 1
   fi
-  echo ""
 }
 
 # --- 入口 ---
 case "${1:-}" in
   --summary|-s)
-    doctor_summary
+    _out="$(doctor_json)"
+    DOCTOR_JSON_CACHE="$_out" doctor_summary
+    doctor_required_exit "$_out"
     ;;
   --json|"")
-    doctor_json
+    _out="$(doctor_json)"
+    printf '%s\n' "$_out"
+    doctor_required_exit "$_out"
     ;;
   --help|-h)
     echo "solar-harness doctor — 纯只读健康诊断"
@@ -483,6 +645,6 @@ case "${1:-}" in
     ;;
   *)
     echo "未知参数: $1" >&2
-    exit 1
+    exit 2
     ;;
 esac

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/acceptance-verdict.schema.json",
+  "title": "Solar Acceptance Verdict",
+  "type": "object",
+  "required": ["schema_version", "sprint_id", "requirement_ir_id", "requested_verdict", "coverage_summary", "verdict", "reasons"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "type": "string", "const": "solar.acceptance_verdict.v1" },
+    "sprint_id": { "type": "string" },
+    "requirement_ir_id": { "type": "string" },
+    "requested_verdict": { "type": "string" },
+    "coverage_summary": { "type": "object", "additionalProperties": true },
+    "verdict": { "type": "string", "enum": ["PASS", "FAIL"] },
+    "reasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

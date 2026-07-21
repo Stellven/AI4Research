@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "backend": "deterministic",
+  "model": "opus",
+  "requested_model": "opus",
+  "fallback_models": [],
+  "model_attempts": [],
+  "source_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/human_final.md",
+  "chief_editor_final": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/chief_editor_final.md",
+  "chapter_results": [
+    {
+      "heading": "架构范式",
+      "prompt_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/chief_editor/prompts/01-chapter.md",
+      "output_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/chief_editor/chapters/01.md",
+      "char_count": 122
+    },
+    {
+      "heading": "评估体系",
+      "prompt_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/chief_editor/prompts/02-chapter.md",
+      "output_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/chief_editor/chapters/02.md",
+      "char_count": 119
+    }
+  ],
+  "quality_gate": {
+    "ok": true,
+    "char_count": 443,
+    "chapter_count": 2,
+    "issues": []
+  },
+  "model_usage_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/model_usage.jsonl",
+  "hitl_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/survey_chief_editor_hitl.md",
+  "approval_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0078/pytest/test_chief_editor_deterministi0/chief_editor_approval.txt",
+  "hitl_required": false,
+  "status_projection_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/reports/test_chief_editor_deterministi0",
+  "status_projection_eval_json": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/reports/test_chief_editor_deterministi0/test_chief_editor_deterministi0-research_eval.json",
+  "status_projection_report": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/reports/test_chief_editor_deterministi0/chief_editor_final.md"
+}

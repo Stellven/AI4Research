@@ -1,0 +1,10 @@
+{
+  "fixture_source": true,
+  "provider": "semantic-scholar",
+  "data": [
+    {
+      "paperId": "fixture-s2-1",
+      "title": "Fixture Paper"
+    }
+  ]
+}

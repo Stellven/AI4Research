@@ -1,0 +1,36 @@
+{
+  "schema": "literature_discovery.v1",
+  "task_id": "task.phase1.sample.discovery",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.literature_discover",
+  "status": "completed",
+  "inputs": {
+    "query": "efficient scientific claim verification"
+  },
+  "outputs": {
+    "query": "efficient scientific claim verification",
+    "candidates": [
+      {
+        "candidate_id": "candidate.001",
+        "title": "Evidence-Grounded Claim Verification",
+        "source_channels": ["arxiv", "semantic_scholar"],
+        "ranking_score": 0.82,
+        "ranking_rationale": "Matches claim verification and experiment reproducibility terms.",
+        "dedup_status": "new",
+        "fetch_status": "not_requested"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "discovery_shortlist",
+      "path": "artifacts/scientific/fixtures/literature_discovery.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificLiteratureDiscoverer",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": ["Fixture candidate is synthetic and not a live search result."]
+}

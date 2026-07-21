@@ -1,0 +1,11 @@
+{
+  "command": "pull-results",
+  "count": 1,
+  "files": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co2/remote-parity-results/results.json"
+  ],
+  "ok": true,
+  "result_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co2/remote-parity-results",
+  "schema": "autosci_remote_cli.v1",
+  "status": "completed"
+}

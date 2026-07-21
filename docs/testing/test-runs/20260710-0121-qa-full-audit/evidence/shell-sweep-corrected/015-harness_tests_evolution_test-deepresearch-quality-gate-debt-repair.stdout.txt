@@ -1,0 +1,3 @@
+{"ok": true, "phase": "dry_run"}
+{"ok": true, "phase": "apply"}
+PASS: evolution engine repairs historical DeepResearch quality gate debt

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_250_76078e4666_harness_tests_test-github-trends-digest.py",
+  "source": "harness/tests/test-github-trends-digest.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-github-trends-digest.py"
+  ],
+  "exit_code": 5,
+  "runtime_seconds": 0.194,
+  "timeout": false
+}

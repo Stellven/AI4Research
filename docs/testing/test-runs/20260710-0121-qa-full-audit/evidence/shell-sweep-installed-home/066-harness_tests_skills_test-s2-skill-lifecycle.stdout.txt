@@ -1,0 +1,41 @@
+T1: py_compile
+  PASS: solar_skills.py compiles
+  PASS: skill_metrics.py compiles
+  PASS: skill_export.py compiles
+T2: bash -n solar-harness.sh
+  PASS: solar-harness.sh syntax ok
+T3: registry.yaml structure
+  PASS: registry: >=5 builtin, >=10 total, >=5 stable
+T4: builtin SKILL.md files
+  PASS: SKILL.md exists: plan
+  PASS: SKILL.md exists: review
+  PASS: SKILL.md exists: ship
+  PASS: SKILL.md exists: browse
+  PASS: SKILL.md exists: retro
+T5: eval packs
+  PASS: eval packs: 5 >= 5
+T6: skill_metrics emit
+  PASS: skill_metrics emit
+  PASS: events.jsonl created
+T7: skill_export canary rejection
+  PASS: canary rejected without --allow-non-stable
+T8: skill_export stable dry-run
+  PASS: stable skill export dry-run ok
+T9: solar_skills eval
+  PASS: eval: ok=true
+  PASS: eval: passed
+T10: solar_skills registry
+  PASS: registry: total
+  PASS: registry: stable entries
+T11: solar-harness skills CLI routing
+  PASS: skills inventory: routes ok
+  PASS: skills eval: routes ok
+  PASS: skills promote: routes ok
+  PASS: skills rollback: routes ok
+  PASS: skills export: routes ok
+T12: candidate/canary isolation
+  PASS: candidate/canary separate from stable
+T13: promote dual-gate flow
+  PASS: promote: returns output (gate active)
+
+=== S2 Skill Platform: PASS=26 FAIL=0 ===

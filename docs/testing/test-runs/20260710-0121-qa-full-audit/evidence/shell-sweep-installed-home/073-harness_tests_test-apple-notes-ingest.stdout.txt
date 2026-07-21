@@ -1,0 +1,39 @@
+PASS: A1-doctor-notes_access
+PASS: A1-doctor-target_folder
+PASS: A8-config-all_notes-false
+PASS: A2-dry-run-candidates
+PASS: A2-dry-run-flag
+PASS: A2-dry-run-no-files
+PASS: A3-scan-exported-key
+PASS: A3-scan-exported-count-gt0
+PASS: A3-md-files-exist
+PASS: A3-frontmatter-source
+PASS: A3-frontmatter-note_id
+PASS: A3-frontmatter-ingest_status
+PASS: A3-wechat-fetch-status
+PASS: A3-wechat-web-body
+PASS: A4-idempotent-no-duplicates
+PASS: A4-manifest-exists
+PASS: A4-manifest-has-notes
+PASS: A4b-recreated-note-no-export
+PASS: A4b-manifest-duplicate-status
+PASS: A5-force-dispatch-key
+PASS: A5-wiki-dispatch-key
+PASS: A5-dispatches-not-empty
+PASS: A5-wiki-dispatches-not-empty
+PASS: A5-dispatch-instructions
+PASS: A5-wiki-dispatch-frontmatter
+PASS: A5-wiki-dispatch-source
+PASS: A6-scheduler-interval
+PASS: A6-scheduler-dry-run
+PASS: A6-no-plist-written
+PASS: Redaction-email-removed
+PASS: Redaction-phone-removed
+PASS: Redaction-token-removed
+PASS: status-ok
+PASS: status-last_scan_at
+PASS: uninstall-scheduler-ok
+
+═══════════════════════════════════
+PASS=35 FAIL=0
+═══════════════════════════════════

@@ -1,0 +1,97 @@
+capability_capsule_id: cap.research-idea-evaluate
+capsule_kind: capability
+metadata:
+  name: Scientific Idea Evaluate
+  description: Evaluate novelty, feasibility, risks, and recommendation for scientific idea candidates.
+applicability:
+  task_types:
+    - scientific-research
+    - idea-evaluation
+  positive_signals:
+    - evaluate idea
+    - novelty review
+    - feasibility review
+  negative_signals:
+    - run experiment
+    - write report
+contract:
+  inputs:
+    required:
+      - name: idea_candidate
+        schema_ref: schemas/evidence/idea_candidate.v1.schema.json
+    optional:
+      - name: review_context
+        description: Literature, memory, or constraints used for evaluation.
+  outputs:
+    required:
+      - name: idea_evaluation
+        schema_ref: schemas/evidence/idea_evaluation.v1.schema.json
+    optional:
+      - name: review_notes
+        description: Evidence-grounded novelty or feasibility notes.
+  preconditions:
+    - check: idea_candidate_present
+      description: Idea evidence is available for evaluation.
+  postconditions:
+    - check: evaluation_evidenced
+      description: Evaluation has novelty, feasibility, recommendation, risks, and evidence ids.
+  invariants:
+    - Does not execute experiments.
+    - Does not promote an idea without evidence ids.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/idea_candidate.v1.schema.json
+      purpose: Candidate idea evidence.
+    - schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+      purpose: Optional novelty context.
+  produces:
+    - schema_ref: schemas/evidence/idea_evaluation.v1.schema.json
+      purpose: Idea review evidence.
+  compatible_with:
+    - cap.research-experiment-design
+    - cap.research-memory-update
+  incompatible_with: []
+  requires_after:
+    - cap.research-idea-generate
+effects:
+  read:
+    - idea candidate evidence
+    - optional literature evidence
+    - schemas/evidence/idea_evaluation.v1.schema.json
+  write:
+    - artifacts/scientific/idea_evaluation/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - optional literature lookup when physical operator permits
+  cost:
+    - bounded evaluation cost
+  risk:
+    - novelty and feasibility judgments can be uncertain
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.idea_evaluate
+      - autosci.novelty
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/idea_evaluation.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against idea_evaluation.v1.schema.json.
+    - Confirm recommendation is advance, revise, reject, or inconclusive.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Fixture evaluation emits valid idea_evaluation.v1 evidence.
+    - Insufficient novelty evidence is marked inconclusive or as a risk.
+operator_compatibility:
+  preferred:
+    - autosci-idea-evaluate-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase2_autosci_solar_native_capsules

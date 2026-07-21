@@ -1,0 +1,145 @@
+{
+  "action": "ask_wiki",
+  "after_artifacts": [
+    {
+      "artifact_path": "after.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_ask_cr2/after.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-ask-crystallize-concept/ask_wiki_local_mutation_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-ask-crystallize-concept/ask_wiki_local_mutation_runtime_evidence.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/concepts/skillgen-support.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/concepts/skillgen-support.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/log.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/log.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/index.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/index.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "verifiable": true
+    }
+  ],
+  "after_ready": true,
+  "allowlist_evidence": [
+    {
+      "artifact_path": "allowlist.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_ask_cr2/allowlist.json",
+      "verifiable": true
+    }
+  ],
+  "allowlist_ready": true,
+  "approval_ref": "approval-ask-concept",
+  "approval_state": "verified",
+  "approved": true,
+  "authorization_request": {
+    "action": "ask_wiki",
+    "approval_state": "verified",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [],
+        "allowlist_evidence": [],
+        "approval_ref": "",
+        "before_artifacts": [],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": []
+      },
+      "request_fingerprint": "f60e74e99014c8592b31b8ffda10b8acb7cfd2c310234ea670a342951996c543",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": false,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "ready"
+    },
+    "missing": [],
+    "non_error_contract": {
+      "approval_state": "verified",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": false,
+      "allowlist_evidence": false,
+      "approval_ref": false,
+      "before_artifacts": false,
+      "runtime_evidence": false
+    },
+    "requested_side_effects": [
+      "wiki_output_write",
+      "wiki_graph_edge",
+      "wiki_navigation_rebuild"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "authorized"
+  },
+  "before_artifacts": [
+    {
+      "artifact_path": "before.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_ask_cr2/before.json",
+      "verifiable": true
+    }
+  ],
+  "before_ready": true,
+  "execution_verified": true,
+  "missing": [],
+  "ready_for_execution": true,
+  "runtime_evidence": [
+    {
+      "artifact_path": "runtime.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_ask_cr2/runtime.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-ask-crystallize-concept/ask_wiki_local_mutation_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-ask-crystallize-concept/ask_wiki_local_mutation_runtime_evidence.json",
+      "verifiable": true
+    }
+  ],
+  "runtime_ready": true,
+  "schema": "autosci_approval_contract.v1",
+  "side_effects": [
+    "wiki_output_write",
+    "wiki_graph_edge",
+    "wiki_navigation_rebuild"
+  ]
+}

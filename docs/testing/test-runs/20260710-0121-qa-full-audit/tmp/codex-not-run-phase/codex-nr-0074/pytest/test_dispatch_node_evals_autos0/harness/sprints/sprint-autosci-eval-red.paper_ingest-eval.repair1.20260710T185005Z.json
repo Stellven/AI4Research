@@ -1,0 +1,64 @@
+{
+  "command_line": "'/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/plugins/autosci/bin/autosci_eval_adapter.py' --graph '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/sprints/sprint-autosci-eval-red.task_graph.json' --node paper_ingest --eval-json '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/sprints/sprint-autosci-eval-red.paper_ingest-eval.json' --eval-md '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/sprints/sprint-autosci-eval-red.paper_ingest-eval.md' --instruction-file '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/sprints/sprint-autosci-eval-red.paper_ingest-eval-dispatch-q1.md'",
+  "errors": [
+    {
+      "cond": "autosci_scientific_gate",
+      "evidence": "paper parse_status is failed",
+      "fix_hint": "Inspect the AutoSci evidence payload and rerun the producing Scientific* node.",
+      "severity": "high"
+    }
+  ],
+  "evidence": {
+    "adapter": "autosci_eval_adapter.py",
+    "candidate_paths": [
+      {
+        "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/artifacts/red/research_paper.v1.json",
+        "raw": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/artifacts/red/research_paper.v1.json",
+        "source": "node.write_scope[0]"
+      }
+    ],
+    "capability_capsule_id": "cap.research-paper-ingest",
+    "evidence_paths": [
+      "artifacts/red/research_paper.v1.json"
+    ],
+    "expected_schema": "research_paper.v1",
+    "gate_result": {
+      "evidence_status": "completed",
+      "exit_code": 2,
+      "ok": false,
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/artifacts/red/research_paper.v1.json",
+      "reasons": [
+        "paper parse_status is failed"
+      ],
+      "schema": "research_paper.v1",
+      "status": "failed",
+      "warnings": []
+    },
+    "logical_operator": "ScientificPaperIngestor",
+    "observed_schema": "research_paper.v1",
+    "workflow_contract": "research.autosci.v1"
+  },
+  "failed_conditions": [
+    "paper parse_status is failed"
+  ],
+  "generated_by": "autosci-evaluator-worker",
+  "generation_mode": "autosci_eval_adapter",
+  "independent_author": "autosci-evaluator-worker",
+  "node_id": "paper_ingest",
+  "passed_conditions": [],
+  "proof_level": "independent_verification",
+  "provenance": {
+    "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/artifacts/red/research_paper.v1.json",
+    "graph_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0074/pytest/test_dispatch_node_evals_autos0/harness/sprints/sprint-autosci-eval-red.task_graph.json",
+    "implementation_package": "harness.plugins.autosci",
+    "operator_id": "autosci-evaluator-worker",
+    "timestamp": "2026-07-10T18:50:05Z"
+  },
+  "schema_version": "solar.eval.v1",
+  "sprint_id": "sprint-autosci-eval-red",
+  "status": "failed",
+  "summary": "AutoSci scientific evidence gate failed.",
+  "verdict": "FAIL",
+  "warnings": [],
+  "workspace_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout"
+}

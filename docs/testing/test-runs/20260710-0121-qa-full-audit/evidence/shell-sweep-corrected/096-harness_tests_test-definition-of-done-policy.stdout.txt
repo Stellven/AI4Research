@@ -1,0 +1,6 @@
+PASS: Harness runtime prompt has DoD
+PASS: Coordinator dispatch template has DoD
+PASS: Coordinator dispatch template escapes DoD backticks
+PASS: DAG dispatcher has DoD constant
+PASS: DAG dispatcher requires structured closeout
+PROBES_PASSED=5 PROBES_FAILED=2

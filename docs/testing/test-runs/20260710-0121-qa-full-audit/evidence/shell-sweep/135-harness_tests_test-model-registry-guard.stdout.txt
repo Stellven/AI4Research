@@ -1,0 +1,22 @@
+not ok - model registry exists: missing /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/config/model-registry.json
+not ok - model registry helper exists: missing /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/model_registry.py
+not ok - harness config reads registry helper: missing 'solar_model_registry()' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/harness-config.sh
+not ok - persona config normalizes through registry: missing 'solar_model_alias_canonical' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/persona-config.sh
+not ok - footer consumes persona model id: missing 'MODEL_ID' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/quota-footer.sh
+not ok - config UI exports registry model options: missing 'model_registry_options' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/integrations/solar-config-server.py
+not ok - graph dispatcher resolves worker models through registry: missing '_models_for_pane' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/graph_node_dispatcher.py
+not ok - launcher uses shared clean env prefix: missing 'claude_clean_env_prefix' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/solar-harness.sh
+not ok - pane launcher sanitizes Claude settings: missing 'prepare_sanitized_claude_settings' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/pane-launcher.sh
+not ok - pane launcher pins setting sources: missing 'setting-sources' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/pane-launcher.sh
+not ok - pane launcher strips global Claude env overrides: missing 'data.pop("env", None)' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/pane-launcher.sh
+not ok - watchdog launcher sanitizes Claude settings: missing 'prepare_sanitized_claude_settings' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/start-incarnation.sh
+not ok - watchdog launcher pins setting sources: missing 'setting-sources' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/start-incarnation.sh
+not ok - watchdog launcher strips global Claude env overrides: missing 'data.pop("env", None)' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/start-incarnation.sh
+not ok - models doctor checks live pane route: missing 'models_live_route_check' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/solar-harness.sh
+not ok - main-status exposes live pane route: missing 'route:' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/solar-harness.sh
+ok - main model help does not advertise ambiguous bare sonnet
+ok - launcher has no legacy DeepSeek lab default
+ok - config UI model options are not const-hardcoded
+ok - config UI does not expose stale DeepSeek R1 option
+ok - graph dispatcher has no title-guessed model list
+not ok - models doctor command is advertised: missing 'models doctor' in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/solar-harness.sh

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_146_b349b9213b_harness_tests_remote_test_remote_dispatch_cli.py",
+  "source": "harness/tests/remote/test_remote_dispatch_cli.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/remote/test_remote_dispatch_cli.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.309,
+  "timeout": false
+}

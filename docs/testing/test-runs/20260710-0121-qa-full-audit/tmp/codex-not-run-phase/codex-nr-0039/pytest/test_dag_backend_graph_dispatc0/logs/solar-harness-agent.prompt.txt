@@ -1,0 +1,13 @@
+Create a result file through live dispatch.
+
+
+Solar-Harness benchmark execution contract:
+- You are solving a Terminal-Bench task in a local copy of /app.
+- First inspect the actual files in the current directory; do not guess.
+- Create or edit the required files in the current directory only.
+- The verifier reads files after the workspace is synced back to Docker.
+- If Linux/container-native installation is required, create .solar-harness-container.sh in the current directory. It will run in the benchmark container from /app after sync.
+- Do not treat host macOS binaries as valid Linux container outputs.
+- Prefer executable checks over explanation-only answers.
+- If cancellation, concurrency, cleanup, or signal behavior matters, write and run a small local reproduction before finishing.
+- Before the final response, verify the expected files exist.

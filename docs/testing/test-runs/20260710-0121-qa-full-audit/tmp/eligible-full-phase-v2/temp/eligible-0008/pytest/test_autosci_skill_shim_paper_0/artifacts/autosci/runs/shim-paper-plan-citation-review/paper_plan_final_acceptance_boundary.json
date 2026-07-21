@@ -1,0 +1,31 @@
+{
+  "blocking_reasons": [
+    "validated idea graph with succeeded experiment evidence is missing",
+    "verified downstream compile/PDF handoff is missing"
+  ],
+  "citation_count": 1,
+  "citation_ids": [
+    "arxiv:2601.00001"
+  ],
+  "compile_handoff_status": "not_requested",
+  "compile_handoff_verified": false,
+  "compiled_pdf_paths": [],
+  "draft_compile_ready": false,
+  "figure_citation_plan_present": true,
+  "final_plan_accepted": false,
+  "idea_count": 0,
+  "idea_graph_ready": false,
+  "limitations": [
+    "Paper plan final acceptance requires validated idea graph evidence, source-backed citation planning, completed Review LLM proof, and verified downstream compile/PDF handoff."
+  ],
+  "plan_scope": "plan_scaffold",
+  "review_boundary_status": "completed",
+  "review_evidence_ids": [
+    "review:paper-plan"
+  ],
+  "review_llm_completed": true,
+  "schema": "autosci_paper_plan_final_acceptance_boundary.v1",
+  "source_evidence_supplied": true,
+  "status": "paper_plan_final_acceptance_incomplete",
+  "supporting_experiment_count": 0
+}

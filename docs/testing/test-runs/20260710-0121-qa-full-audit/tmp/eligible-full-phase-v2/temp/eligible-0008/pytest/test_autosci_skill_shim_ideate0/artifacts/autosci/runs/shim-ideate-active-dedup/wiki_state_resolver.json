@@ -1,0 +1,57 @@
+{
+  "action": "generate_ideas",
+  "existing_wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ],
+  "experiments": [],
+  "graph_edges": [],
+  "graph_errors": [],
+  "ideas": [
+    {
+      "frontmatter_keys": [
+        "idea_id",
+        "slug",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": false,
+      "id": "idea-existing-agent-skill-gap",
+      "idea_id": "idea-existing-agent-skill-gap",
+      "linked_experiments": [],
+      "novelty_score": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/ideas/existing-agent-skill-gap.md",
+      "slug": "existing-agent-skill-gap",
+      "status": "proposed",
+      "title": "Close the evidence gap around agent skill learning"
+    }
+  ],
+  "indexes": {
+    "experiments_by_slug": {},
+    "ideas_by_slug": {
+      "existing-agent-skill-gap": "idea-existing-agent-skill-gap"
+    },
+    "outputs_by_slug": {}
+  },
+  "limitations": [
+    "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+    "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+  ],
+  "outputs": [],
+  "resolution": {
+    "fallback_used": false,
+    "target": "agent skill learning",
+    "target_id": "",
+    "target_path": "",
+    "target_type": "unresolved",
+    "warnings": [
+      "Target `agent skill learning` was not found in wiki ideas, experiments, outputs, or graph edges."
+    ]
+  },
+  "schema": "autosci_wiki_state_resolver.v1",
+  "selected_root": "artifacts/autosci/workspace/wiki",
+  "status": "completed",
+  "wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ]
+}

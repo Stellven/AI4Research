@@ -1,0 +1,19 @@
+{
+  "sprint_id": "sprint-n9-integration-test",
+  "event_count": 30,
+  "event_ledger_lag_seconds": 0.033494,
+  "broker_coverage": {
+    "uncontracted_action_count": 0,
+    "unscoped_write_count": 0,
+    "total_actions": 3,
+    "contracted_actions": 3,
+    "coverage_ratio": 1.0,
+    "legacy_path_actions": 0,
+    "by_kind": {
+      "shell": 1,
+      "file_write": 1,
+      "tool_call": 1
+    },
+    "health": "PASS"
+  }
+}

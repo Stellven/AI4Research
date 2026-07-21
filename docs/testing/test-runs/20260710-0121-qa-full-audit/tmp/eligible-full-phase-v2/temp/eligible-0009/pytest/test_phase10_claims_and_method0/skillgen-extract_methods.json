@@ -1,0 +1,1 @@
+{"task_id": "skillgen-extract_methods", "sprint_id": "phase10-test", "node_id": "node-extract_methods", "mode": "fixture", "output_dir": "artifacts/scientific/skillgen", "inputs": {"paper_path": "plugins/autosci/tests/fixtures/skillgen_sample_paper.md"}, "outputs": {"evidence_payload_path": "artifacts/scientific/skillgen/research_method.json"}}

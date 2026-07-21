@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "defaults": {
+    "profile": "builder",
+    "backend": "claude-cli",
+    "max_workers": 2
+  },
+  "profiles": {
+    "builder": {
+      "role": "builder",
+      "label": "构建者",
+      "persona": "builder",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "approval_mode": "yolo",
+      "best_for": ["implementation", "debugging", "tests", "refactor"],
+      "max_parallel": 2
+    },
+    "planner": {
+      "role": "planner",
+      "label": "规划者",
+      "persona": "planner",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "approval_mode": "auto_edit",
+      "best_for": ["planning", "architecture", "decomposition", "risk"],
+      "max_parallel": 1
+    },
+    "evaluator": {
+      "role": "evaluator",
+      "label": "审判者",
+      "persona": "evaluator",
+      "backend": "claude-cli",
+      "model": "opus",
+      "approval_mode": "auto_edit",
+      "best_for": ["verification", "review", "evidence", "regression"],
+      "max_parallel": 1
+    },
+    "pm": {
+      "role": "pm",
+      "label": "PM",
+      "persona": "pm",
+      "backend": "claude-cli",
+      "model": "sonnet",
+      "approval_mode": "auto_edit",
+      "best_for": ["requirements", "acceptance", "prioritization", "handoff"],
+      "max_parallel": 1
+    },
+    "gemini-builder": {
+      "role": "builder",
+      "label": "Gemini 构建者",
+      "persona": "builder",
+      "backend": "gemini-cli",
+      "model": "gemini",
+      "approval_mode": "auto_edit",
+      "best_for": ["large-context", "implementation", "code-search", "tests"],
+      "max_parallel": 1
+    },
+    "gemini-evaluator": {
+      "role": "evaluator",
+      "label": "Gemini 评审者",
+      "persona": "evaluator",
+      "backend": "gemini-cli",
+      "model": "gemini",
+      "approval_mode": "auto_edit",
+      "best_for": ["verification", "review", "evidence", "regression"],
+      "max_parallel": 1
+    },
+    "knowledge-extractor": {
+      "role": "builder",
+      "label": "知识库抽取器",
+      "persona": "builder",
+      "backend": "command",
+      "model": "thunderomlx",
+      "approval_mode": "default",
+      "best_for": ["knowledge-extraction", "knowledge-preprocess", "evidence-atom", "wiki-ingest", "qmd-indexing"],
+      "command": "PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/thunderomlx_knowledge_extract_agent.py\"",
+      "max_parallel": 1
+    },
+    "thunderomlx-benchmark": {
+      "role": "builder",
+      "label": "ThunderOMLX 缓存基准",
+      "persona": "builder",
+      "backend": "command",
+      "model": "thunderomlx",
+      "approval_mode": "default",
+      "best_for": ["benchmark", "cache-metrics", "knowledge-extraction"],
+      "command": "PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\" python3 \"$HARNESS_DIR/tools/thunderomlx_cache_benchmark_agent.py\"",
+      "max_parallel": 1
+    },
+    "deepseek-builder": {
+      "role": "builder",
+      "label": "DeepSeek 构建者",
+      "persona": "lab-builder",
+      "backend": "claude-cli",
+      "model": "deepseek",
+      "approval_mode": "yolo",
+      "best_for": ["implementation", "fast-patch", "code-edit"],
+      "max_parallel": 1
+    },
+    "glm-planner": {
+      "role": "planner",
+      "label": "GLM 规划者",
+      "persona": "planner",
+      "backend": "claude-cli",
+      "model": "glm-5.1",
+      "approval_mode": "auto_edit",
+      "best_for": ["planning", "analysis", "chinese-reasoning"],
+      "max_parallel": 1
+    },
+    "thunderomlx-local": {
+      "role": "builder",
+      "label": "ThunderOMLX 本地",
+      "persona": "builder",
+      "backend": "claude-cli",
+      "model": "thunderomlx",
+      "approval_mode": "default",
+      "best_for": ["local", "offline", "low-cost"],
+      "max_parallel": 1
+    }
+  }
+}

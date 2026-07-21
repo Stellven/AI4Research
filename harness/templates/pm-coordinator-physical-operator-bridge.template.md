@@ -25,7 +25,7 @@ Every new operator record should include:
 {
   "display_name": "Human label",
   "plane": "headless",
-  "owner_host": "lisihao@100.122.223.55",
+  "owner_host": "solar@example-host",
   "pane": "solar-harness-multi-task:*",
   "profile": "builder",
   "role": "builder",
@@ -104,7 +104,7 @@ tmux new-window -d -t solar-harness -n bridge-<short-name> \
 Codex pulls:
 
 ```bash
-ssh lisihao@100.122.223.55 \
+ssh solar@example-host \
   'cat ~/.solar/harness/run/monitor-bridge/<short-name>.latest.json; tail -20 ~/.solar/harness/run/monitor-bridge/<short-name>.events.jsonl'
 ```
 

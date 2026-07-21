@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="0.146" timestamp="2026-07-10T14:54:05.091369-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.test_youtube_acceptance_suite" name="test_generate_reports_and_traceability" time="0.003"><failure message="FileNotFoundError: [Errno 2] No such file or directory: PosixPath('~/Solar/harness')">harness/tests/test_youtube_acceptance_suite.py:21: in test_generate_reports_and_traceability
+    reports = generate_acceptance_reports(root, report_dir)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/lib/youtube/acceptance_suite.py:340: in generate_acceptance_reports
+    "pytest": run_pytest_report(root, report_dir),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/lib/youtube/acceptance_suite.py:137: in run_pytest_report
+    proc = subprocess.run(" ".join(str(item) for item in cmd), shell=True, text=True, capture_output=True, cwd=root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: PosixPath('~/Solar/harness')</failure></testcase><testcase classname="harness.tests.test_youtube_acceptance_suite" name="test_build_closeout_eval_payloads_and_auto_closeout" time="0.003"><failure message="FileNotFoundError: [Errno 2] No such file or directory: PosixPath('~/Solar/harness')">harness/tests/test_youtube_acceptance_suite.py:40: in test_build_closeout_eval_payloads_and_auto_closeout
+    reports = generate_acceptance_reports(root, report_dir)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/lib/youtube/acceptance_suite.py:340: in generate_acceptance_reports
+    "pytest": run_pytest_report(root, report_dir),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/lib/youtube/acceptance_suite.py:137: in run_pytest_report
+    proc = subprocess.run(" ".join(str(item) for item in cmd), shell=True, text=True, capture_output=True, cwd=root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: PosixPath('~/Solar/harness')</failure></testcase><testcase classname="harness.tests.test_youtube_acceptance_suite" name="test_run_pollution_report_uses_schema_aware_audit" time="0.002"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '~/Solar/harness/tests/fixtures/pollution_seed.sql'">harness/tests/test_youtube_acceptance_suite.py:116: in test_run_pollution_report_uses_schema_aware_audit
+    report = run_pollution_report(root, tmp_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/lib/youtube/acceptance_suite.py:273: in run_pollution_report
+    conn.executescript(seed_path.read_text(encoding="utf-8"))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '~/Solar/harness/tests/fixtures/pollution_seed.sql'</failure></testcase></testsuite></testsuites>

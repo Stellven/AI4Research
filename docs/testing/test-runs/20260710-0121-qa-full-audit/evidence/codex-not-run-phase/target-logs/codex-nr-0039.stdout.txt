@@ -1,0 +1,13 @@
+.........                                                                [100%]
+=============================== warnings summary ===============================
+harness/tests/benchmark/test_solar_solver.py::test_dag_backend_records_graph_dispatch_dry_run
+harness/tests/benchmark/test_solar_solver.py::test_dag_backend_graph_dispatch_live_does_not_fallback_to_leaf
+harness/tests/benchmark/test_solar_solver.py::test_dag_backend_graph_dispatch_live_accepts_durable_completion_after_send_failure
+harness/tests/benchmark/test_solar_solver.py::test_dag_backend_graph_dispatch_failure_blocks_leaf_fallback
+harness/tests/benchmark/test_solar_solver.py::test_dag_backend_known_repair_short_circuits_failed_graph_dispatch
+harness/tests/benchmark/test_solar_solver.py::test_dag_backend_known_repair_skips_leaf_builder
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/benchmark/solar_solver.py:240: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    dag_id = f"bench-dag-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+9 passed, 6 warnings in 0.07s

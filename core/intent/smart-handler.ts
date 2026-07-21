@@ -9,7 +9,7 @@
 import { $ } from 'bun';
 import Database from 'bun:sqlite';
 
-const DB_PATH = `${process.env.HOME}/.solar/solar.db`;
+const DB_PATH = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`;
 const SESSIONS_DIR = `${process.env.HOME}/.solar/sessions`;
 
 // 输入类型

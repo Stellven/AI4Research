@@ -1,0 +1,13 @@
+{
+  "command_id": "phase4_autosci_plugin_pytest_final",
+  "phase": "deterministic",
+  "linked_feature_ids": "AUTOSCI_FEATURE_SET",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "\"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python\" -m pytest harness/plugins/autosci/tests -q --tb=short -o \"cache_dir=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/pytest-cache/autosci-final\" \"--junitxml=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/pytest/autosci-plugin-final.xml\"",
+  "start_time": "2026-07-10T02:02:48-04:00",
+  "end_time": "2026-07-10T02:06:32-04:00",
+  "duration_seconds": "224.354",
+  "exit_code": 1,
+  "stdout_path": "evidence/commands/phase4_autosci_plugin_pytest_final.stdout.txt",
+  "stderr_path": "evidence/commands/phase4_autosci_plugin_pytest_final.stderr.txt"
+}

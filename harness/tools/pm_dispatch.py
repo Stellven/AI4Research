@@ -35,8 +35,27 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+# The tools dir is sys.path[0] when this file runs as a script, and it shadows
+# ~150 shared-name lib modules with stale copies. An inherited PYTHONPATH that
+# merely CONTAINS harness/lib (the live-e2e sandbox env) satisfies the usual
+# 'if lib not in sys.path' guard without granting PRECEDENCE, so
+# `import operator_runtime` still resolved the tools copy — the one without
+# the Lane 3 route-record hooks (P2 smoke-4: zero route records while every
+# other ledger kind landed). Force this script's sibling lib to the front.
+_PM_LIB_DIR = str(Path(__file__).resolve().parents[1] / "lib")
+if sys.path and sys.path[0] != _PM_LIB_DIR:
+    while _PM_LIB_DIR in sys.path:
+        sys.path.remove(_PM_LIB_DIR)
+    sys.path.insert(0, _PM_LIB_DIR)
+
+from task_lifecycle import activate_execution_attempt
+
 HOME = Path.home()
-HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or HOME / ".solar" / "harness"
+)
 PHYSICAL_OPERATORS_PATH = Path(
     os.environ.get("SOLAR_MULTI_TASK_OPERATORS", HARNESS_DIR / "config" / "physical-operators.json")
 )
@@ -73,6 +92,128 @@ ROLE_ALIASES: dict[str, str] = {
 
 NON_DISPATCHABLE_STATES = {"leased", "running", "draining", "cooldown", "quota_exhausted", "auth_expired", "disabled"}
 RATE_LIMIT_PRUNER_LABEL = os.environ.get("SOLAR_RATE_LIMIT_PRUNER_LABEL", "com.solar.harness-rate-limit-pruner")
+DEFAULT_OPERATOR_PROVIDERS = frozenset(
+    p.strip().lower()
+    for p in os.environ.get(
+        "SOLAR_PM_DEFAULT_PROVIDERS",
+        os.environ.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS", ""),
+    ).split(",")
+    if p.strip()
+)
+
+
+def _operator_matches_provider_policy(op: dict[str, Any]) -> bool:
+    if not DEFAULT_OPERATOR_PROVIDERS:
+        return True
+    provider = str(op.get("provider") or op.get("vendor") or "").strip().lower()
+    return bool(provider and provider in DEFAULT_OPERATOR_PROVIDERS)
+
+
+def _provider_policy_label() -> str:
+    return ",".join(sorted(DEFAULT_OPERATOR_PROVIDERS))
+
+
+def _runtime_mode_from_env() -> str:
+    runtime = str(os.environ.get("SOLAR_PANE_RUNTIME") or os.environ.get("SOLAR_RUNTIME") or "").strip().lower()
+    if runtime in {"codex", "claude"}:
+        return runtime
+    if DEFAULT_OPERATOR_PROVIDERS == {"openai"}:
+        return "codex"
+    if DEFAULT_OPERATOR_PROVIDERS == {"anthropic"}:
+        return "claude"
+    return runtime or "mixed"
+
+
+def _pm_work_dir_for_sprint(sprint_id: str, explicit: str = "") -> str:
+    explicit = str(explicit or "").strip()
+    if explicit:
+        path = Path(explicit).expanduser()
+    else:
+        sid = str(sprint_id or "").strip() or f"pm-adhoc-{_short_id()}"
+        path = SPRINTS_DIR / sid / "workdir"
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path)
+
+
+def _graph_path_for_sprint(sprint_id: str) -> str:
+    sid = str(sprint_id or "").strip()
+    if not sid:
+        return ""
+    path = SPRINTS_DIR / f"{sid}.task_graph.json"
+    return str(path) if path.exists() else ""
+
+
+def _build_pm_operator_envelope(
+    *,
+    task_id: str,
+    sprint_id: str,
+    node_id: str,
+    operator_id: str,
+    operator: dict[str, Any],
+    task_type: str,
+    objective: str,
+    dispatch_file: Path,
+    result_path: str,
+    context: str = "",
+    role: str = "",
+    work_dir: str = "",
+    logical_operator: str = "",
+    task_graph_node: dict[str, Any] | None = None,
+    capsule_submit: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the canonical PM/operator envelope.
+
+    PM/planner dispatch and graph/multi-task dispatch used to carry different
+    execution context. Codex command operators need the same deterministic
+    workdir contract regardless of the path that submitted them.
+    """
+    capsule_submit = capsule_submit or {}
+    envelope: dict[str, Any] = {
+        "task_id": task_id,
+        "sprint_id": sprint_id,
+        "node_id": node_id,
+        "operator_id": operator_id,
+        "task_type": task_type or "pm_order",
+        "objective": objective[:300],
+        "dispatch_file": str(dispatch_file),
+        "result_path": result_path,
+        "issued_by": "pm_pane",
+        "issued_at": _now(),
+        "pm_context": context[:500] if context else "",
+        "requested_role": normalize_role(role),
+        "work_dir": _pm_work_dir_for_sprint(sprint_id, work_dir),
+        "graph_path": _graph_path_for_sprint(sprint_id),
+        "runtime_mode": _runtime_mode_from_env(),
+        "provider_policy": _provider_policy_label(),
+        "operator_provider": str(operator.get("provider") or operator.get("vendor") or ""),
+        "operator_backend": str(operator.get("backend") or ""),
+        "operator_model": str(operator.get("model") or ""),
+    }
+    if not envelope["graph_path"]:
+        envelope.pop("graph_path", None)
+    if operator.get("borrowed_for_role"):
+        envelope["borrowed_for_role"] = operator.get("borrowed_for_role")
+        envelope["borrowed_from_roles"] = operator.get("borrowed_from_roles", [])
+        envelope["borrowed_original_role"] = operator.get("borrowed_original_role", "")
+        envelope["borrowed_reason"] = operator.get("borrowed_reason", "")
+    if logical_operator:
+        envelope["logical_operator"] = logical_operator
+    if task_graph_node:
+        envelope["task_graph_node"] = {
+            "id": task_graph_node.get("id"),
+            "goal": task_graph_node.get("goal"),
+            "acceptance": task_graph_node.get("acceptance", []),
+            "requirement_ids": task_graph_node.get("requirement_ids", []),
+        }
+    if capsule_submit.get("capability_capsule_id"):
+        envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
+        envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
+        envelope["capsule_plan"] = capsule_submit.get("capsule_plan", {})
+    if capsule_submit.get("capsule_override_reason"):
+        envelope["capsule_override_reason"] = str(capsule_submit["capsule_override_reason"])
+    return envelope
+
+
 CODE_EXEC_TASK_TYPES = {
     "implementation",
     "code-edit",
@@ -87,7 +228,6 @@ CODE_EXEC_TASK_TYPES = {
 }
 CODE_EXEC_ROLES = {"builder", "implementation", "implementer", "coder", "dev"}
 CODE_EXEC_AVOID_MARKERS = {"implementation", "code-edit", "repo-modification"}
-CODEX_FIRST_ROUTING_BOOST = int(os.environ.get("SOLAR_CODEX_FIRST_ROUTING_BOOST", "80") or "80")
 BUILDER_READY_LOGICAL_OPERATORS = {
     "ImplementationWorker",
     "PatchWorker",
@@ -110,32 +250,6 @@ NON_BUILDER_READY_LOGICAL_OPERATORS = {
 }
 
 
-def codex_first_routing_enabled() -> bool:
-    return os.environ.get("SOLAR_CODEX_FIRST_ROUTING", "1").strip().lower() not in {"0", "false", "off", "no"}
-
-
-def _operator_is_codex(op: dict[str, Any], op_id: str = "") -> bool:
-    values: list[str] = [
-        op_id,
-        str(op.get("operator_id") or ""),
-        str(op.get("actor_id") or ""),
-        str(op.get("profile") or ""),
-        str(op.get("provider") or ""),
-        str(op.get("vendor") or ""),
-        str(op.get("model") or ""),
-        str(op.get("model_config") or ""),
-        str(op.get("base_url") or ""),
-        str(op.get("backend") or ""),
-    ]
-    for key in ("preferred_for", "task_classes", "roles", "strengths"):
-        raw = op.get(key) or []
-        if isinstance(raw, str):
-            values.append(raw)
-        else:
-            values.extend(str(item) for item in raw)
-    return "codex" in " ".join(values).lower()
-
-
 def _load_concurrency_policy_module() -> Any | None:
     try:
         lib_dir = HARNESS_DIR / "lib"
@@ -150,6 +264,40 @@ def _load_concurrency_policy_module() -> Any | None:
 
 def _now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _env_truthy(name: str) -> bool:
+    return str(os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _pm_operator_pool_enabled() -> bool:
+    return _env_truthy("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH") or _env_truthy("SOLAR_PM_OPERATOR_DISPATCH")
+
+
+def _new_planner_dispatch_claim(now: str) -> dict[str, Any]:
+    """Claim planner dispatch before ``prd_ready`` becomes externally visible.
+
+    Intake publishes the status before the one-shot autopilot submits the
+    physical planner task.  Without a claim, the concurrently polling
+    coordinator can dispatch the legacy planner pane in that gap.  The claim
+    is a bounded lease: autopilot promotes it to submitted or releases it on
+    failure, and the coordinator may recover after expiry if intake crashes.
+    The default covers the 120s consumer boundary plus the 60s role-submit
+    boundary; deployments may tune it without changing code.
+    """
+    try:
+        ttl_seconds = max(1, int(os.environ.get("SOLAR_PLANNER_DISPATCH_CLAIM_TTL_SEC", "180") or "180"))
+    except (TypeError, ValueError):
+        ttl_seconds = 180
+    expires = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=ttl_seconds)
+    return {
+        "owner": "operator_pool",
+        "state": "pending",
+        "claimed_at": now,
+        "expires_at": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "ttl_seconds": ttl_seconds,
+        "source": "requirement_compiler",
+    }
 
 
 def _short_id() -> str:
@@ -252,6 +400,13 @@ def _load_operator_runtime_module() -> Any | None:
             sys.path.insert(0, str(lib_dir))
         import operator_runtime  # type: ignore
 
+        operator_runtime.HARNESS_DIR = HARNESS_DIR
+        operator_runtime.OPERATOR_LEASE_DIR = HARNESS_DIR / "run" / "operator-leases"
+        operator_runtime.OPERATOR_STATUS_DIR = HARNESS_DIR / "run" / "operator-status"
+        operator_runtime.OPERATOR_INBOX_DIR = HARNESS_DIR / "run" / "operator-inbox"
+        operator_runtime.OPERATOR_RESULTS_DIR = HARNESS_DIR / "run" / "operator-results"
+        operator_runtime.OPERATOR_PERSONAS_DIR = HARNESS_DIR / "personas"
+        operator_runtime.PHYSICAL_OPERATORS_PATH = PHYSICAL_OPERATORS_PATH
         return operator_runtime
     except Exception:
         return None
@@ -286,6 +441,18 @@ def get_operator_status_data(operator_id: str) -> dict[str, Any]:
         return json.loads(status_file.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def _runtime_state_for_operator_record(operator_id: str, op: dict[str, Any]) -> str:
+    state = get_operator_runtime_state(operator_id)
+    if state == "disabled" and operator_id:
+        status = get_operator_status_data(str(operator_id))
+        status_state = str(status.get("runtime_state") or "").strip()
+        if status_state:
+            return status_state
+        if op.get("enabled", False) and op.get("available", False):
+            return "idle"
+    return state
 
 
 def _pid_exists(pid: int | None) -> bool:
@@ -482,6 +649,32 @@ def _write_health_cache(operator_id: str, ok: bool, reason: str) -> None:
     os.replace(tmp, str(path))
 
 
+def _operator_uses_codex(op: dict[str, Any]) -> bool:
+    haystack = " ".join(
+        str(op.get(key) or "")
+        for key in ("operator_id", "provider", "vendor", "backend", "base_url", "model", "model_config", "command", "command_path")
+    ).lower()
+    return "codex" in haystack or ("openai" in haystack and "gpt" in haystack)
+
+
+def _command_path_available(command_path: str, op: dict[str, Any]) -> tuple[bool, str]:
+    command_path = str(command_path or "").strip()
+    if not command_path:
+        return False, "command_path_missing:N/A"
+    if command_path.startswith("/"):
+        if Path(command_path).exists():
+            return True, ""
+    elif shutil.which(command_path) is not None:
+        return True, ""
+
+    name = Path(command_path).name
+    if name == "codex" and _operator_uses_codex(op):
+        resolved = shutil.which("codex")
+        if resolved:
+            return True, f"command_path_resolved_via_path:{resolved}"
+    return False, f"command_path_missing:{command_path}"
+
+
 def _operator_external_health(op: dict[str, Any]) -> tuple[bool, str]:
     """Check declared command/http health for pool members without hard failing legacy operators."""
     operator_id = str(op.get("operator_id") or "")
@@ -489,8 +682,7 @@ def _operator_external_health(op: dict[str, Any]) -> tuple[bool, str]:
     if not health:
         command_path = str(op.get("command_path") or "").strip()
         if command_path:
-            exists = Path(command_path).exists() if command_path.startswith("/") else shutil.which(command_path) is not None
-            return (True, "") if exists else (False, f"command_path_missing:{command_path}")
+            return _command_path_available(command_path, op)
         return True, ""
 
     policy_mod = _load_concurrency_policy_module()
@@ -501,7 +693,15 @@ def _operator_external_health(op: dict[str, Any]) -> tuple[bool, str]:
         cache_seconds = 60
     cached_ok, cached_reason = _read_health_cache(operator_id, cache_seconds)
     if cached_ok is not None:
-        return cached_ok, cached_reason
+        command_path = str(health.get("command_path") or op.get("command_path") or "").strip()
+        if (
+            not cached_ok
+            and cached_reason.startswith("command_path_missing:")
+            and _command_path_available(command_path, op)[0]
+        ):
+            cached_ok = None
+        else:
+            return cached_ok, cached_reason
 
     kind = str(health.get("type") or "").strip().lower()
     timeout = float(health.get("timeout_seconds", 0.5))
@@ -521,8 +721,7 @@ def _operator_external_health(op: dict[str, Any]) -> tuple[bool, str]:
                 result = (False, f"http_unreachable:{type(exc).__name__}")
     elif kind == "command":
         command_path = str(health.get("command_path") or op.get("command_path") or "").strip()
-        exists = Path(command_path).exists() if command_path.startswith("/") else shutil.which(command_path) is not None
-        result = ((True, "") if exists else (False, f"command_path_missing:{command_path or 'N/A'}"))
+        result = _command_path_available(command_path, op)
     else:
         result = (True, "")
 
@@ -603,7 +802,12 @@ def is_dispatchable(op: dict[str, Any]) -> tuple[bool, str]:
             if expires_at:
                 reason += f" (until {expires_at})"
             return False, reason
-    state = get_operator_runtime_state(operator_id)
+    # The central classifier reads the on-disk registry. Unit tests and some
+    # dry-run probes pass an already-selected operator dict whose registry may
+    # be monkeypatched/in-memory. In that case, "disabled" only means "not
+    # visible to the central registry", so defer to the operator record/status
+    # provided by the selector.
+    state = _runtime_state_for_operator_record(str(operator_id), op)
     state = _maybe_clear_stale_runtime(str(operator_id), state)
     if state in NON_DISPATCHABLE_STATES:
         if state in ("cooldown", "quota_exhausted", "auth_expired"):
@@ -655,6 +859,136 @@ def _capsule_submit_metadata(node: dict[str, Any] | None) -> dict[str, Any]:
         "logical_operator": node.get("logical_operator", ""),
         "capsule_plan": capsule_plan,
     }
+
+
+EVALUATOR_VERIFICATION_TASK_TYPES = {
+    "graph_eval",
+    "verification",
+    "review",
+    "evidence",
+    "tests",
+    "quality-gate",
+    "acceptance",
+}
+PM_CLOSEOUT_KINDS = {
+    "planner",
+    "builder",
+    "evaluator",
+    "graph_node_execution",
+    "graph_eval",
+}
+VERIFICATION_CAPSULE_ID = "cap.requirement-compiler-verification"
+IMPLEMENTATION_CAPSULE_ID = "cap.requirement-compiler-implementation"
+IMPLEMENTATION_CAPSULE_TASK_TYPE_ALIASES = {
+    "test": "implementation",
+    "tests": "implementation",
+    "test_gen": "implementation",
+    "test_generation": "implementation",
+    "test_authoring": "implementation",
+}
+AUDIT_CAPSULE_ID = "cap.requirement-compiler-audit"
+AUDIT_CAPSULE_TASK_TYPE_ALIASES = {
+    "": "audit_inventory",
+    "analysis": "audit_inventory",
+    "audit": "audit_inventory",
+    "audit_inventory": "audit_inventory",
+    "inventory": "audit_inventory",
+    "inspection": "audit_inventory",
+    "scope": "audit_inventory",
+    "scope_review": "audit_inventory",
+    "documentation": "documentation",
+    "docs": "documentation",
+    "report": "reporting",
+    "reporting": "reporting",
+    "evidence": "evidence",
+}
+
+
+def _canonicalize_capsule_task_type(capsule_submit: dict[str, Any], task_type: str) -> str:
+    capsule_id = str(capsule_submit.get("capability_capsule_id") or "").strip()
+    value = str(task_type or "").strip().lower()
+    if capsule_id == IMPLEMENTATION_CAPSULE_ID:
+        return IMPLEMENTATION_CAPSULE_TASK_TYPE_ALIASES.get(value, value or "implementation")
+    if capsule_id == AUDIT_CAPSULE_ID:
+        return AUDIT_CAPSULE_TASK_TYPE_ALIASES.get(value, value or "audit_inventory")
+    return value
+
+
+def _apply_role_capsule_override(
+    *,
+    role: str,
+    task_type: str,
+    capsule_submit: dict[str, Any],
+    logical_operator: str,
+) -> tuple[dict[str, Any], str]:
+    """Make evaluator dispatch evaluate with the verification capsule.
+
+    Graph eval submits against the builder node id (B1/S1/etc.) because the evaluator must review
+    that node's handoff. Without this override, pm_dispatch inherits the builder node's
+    implementation capsule/logical_operator and operator_runtime correctly rejects
+    task_type=graph_eval. Role is the dispatch contract here: evaluator + graph_eval is a
+    verification task even when the reviewed node is an implementation node.
+    """
+    norm_role = normalize_role(str(role or ""))
+    task = str(task_type or "").strip().lower()
+    if norm_role != "evaluator" or task not in EVALUATOR_VERIFICATION_TASK_TYPES:
+        return capsule_submit, logical_operator
+
+    out = dict(capsule_submit or {})
+    capsule_plan = dict(out.get("capsule_plan") or {})
+    capsule_plan["capability_capsule_id"] = VERIFICATION_CAPSULE_ID
+    capsule_plan["dispatch_task_type"] = task or "verification"
+    out.update(
+        {
+            "capability_native": True,
+            "capability_capsule_id": VERIFICATION_CAPSULE_ID,
+            "dispatch_task_type": task or "verification",
+            "logical_operator": "Verifier",
+            "capsule_plan": capsule_plan,
+            "capsule_override_reason": "evaluator_role_requires_verification_capsule",
+        }
+    )
+    return out, "Verifier"
+
+
+def _pm_result_path_for_role(
+    sprint_id: str,
+    node_id: str,
+    role: str,
+    task_type: str,
+    expected_artifacts: list[str] | None = None,
+) -> Path:
+    norm_role = normalize_role(str(role or ""))
+    task = str(task_type or "").strip().lower()
+    if norm_role == "evaluator" and task == "graph_eval":
+        if expected_artifacts:
+            eval_md = Path(expected_artifacts[0])
+            return SPRINTS_DIR / f"{eval_md.stem}.pm-result.md"
+        return SPRINTS_DIR / f"{sprint_id}.{node_id}-eval.pm-result.md"
+    return SPRINTS_DIR / f"{sprint_id}.{node_id}.pm-result.md"
+
+
+def _resolve_pm_closeout_kind(role: str, task_type: str, requested: str = "") -> str:
+    """Resolve the artifact contract once, when the task is submitted.
+
+    Logical graph-node roles are not sufficient authority for closeout.  A
+    Verifier node is still an ordinary graph-node execution (handoff), while
+    the later independent graph evaluation writes eval sidecars.  Callers that
+    know the submission phase pass an explicit kind; legacy/adhoc callers keep
+    the historical role-derived behavior.
+    """
+    explicit = str(requested or "").strip().lower()
+    if explicit:
+        if explicit not in PM_CLOSEOUT_KINDS:
+            raise ValueError(f"unsupported_pm_closeout_kind:{explicit}")
+        return explicit
+    norm_role = normalize_role(str(role or ""))
+    task = str(task_type or "").strip().lower()
+    if norm_role == "evaluator" and task == "graph_eval":
+        return "graph_eval"
+    if norm_role in {"planner", "builder", "evaluator"}:
+        return norm_role
+    return "builder"
 
 
 # ── 算子选择 ──────────────────────────────────────────────────────────────────
@@ -796,8 +1130,13 @@ def _operator_priority(
         priority += 20
     if default_profile and (op_id == default_profile or str(op.get("profile", "")) == default_profile):
         priority += 8
-    if codex_first_routing_enabled() and _operator_is_codex(op, op_id):
-        priority += CODEX_FIRST_ROUTING_BOOST
+
+    if DEFAULT_OPERATOR_PROVIDERS:
+        provider = str(op.get("provider") or op.get("vendor") or "").strip().lower()
+        if provider in DEFAULT_OPERATOR_PROVIDERS:
+            priority += 50
+        elif provider:
+            priority -= 20
 
     if spillover_spec and policy_mod:
         group = policy_mod.infer_builder_group(op)
@@ -808,12 +1147,6 @@ def _operator_priority(
             else:
                 priority -= 10
     return priority
-
-
-def _operator_candidate_sort_key(item: tuple[int, str, dict[str, Any]]) -> tuple[int, int, str]:
-    priority, op_id, op = item
-    codex_rank = 1 if codex_first_routing_enabled() and _operator_is_codex(op, op_id) else 0
-    return codex_rank, priority, op_id
 
 
 def _role_spillover_candidates(
@@ -850,6 +1183,10 @@ def _role_spillover_candidates(
         op = dict(spec)
         op["operator_id"] = op_id
         if op_id in forbidden_ops:
+            continue
+        if bool(op.get("deprecated")):
+            continue
+        if not _operator_matches_provider_policy(op):
             continue
         op_roles = _operator_roles(op)
         if norm_role in op_roles:
@@ -920,6 +1257,9 @@ def select_operator_by_role(
         if prefer_operator in operators:
             op = dict(operators[prefer_operator])
             op["operator_id"] = prefer_operator
+            if not _operator_matches_provider_policy(op):
+                provider = str(op.get("provider") or op.get("vendor") or "unknown")
+                return "", {}, f"preferred_operator_provider_mismatch: {prefer_operator}: {provider}"
             task_reject_reason = _operator_reject_reason_for_task(op, norm_role, task_type)
             if task_reject_reason:
                 return "", {}, f"preferred_operator_rejected_for_task: {prefer_operator}: {task_reject_reason}"
@@ -935,6 +1275,10 @@ def select_operator_by_role(
     for op_id, spec in operators.items():
         op = dict(spec)
         op["operator_id"] = op_id
+        if bool(op.get("deprecated")):
+            continue
+        if not _operator_matches_provider_policy(op):
+            continue
         ok, _ = is_dispatchable(op)
         if not ok:
             continue
@@ -969,6 +1313,19 @@ def select_operator_by_role(
         candidates.append((priority, op_id, op))
 
     if not candidates:
+        # In explicit single-provider modes (Codex-only / Claude-only), role spillover is unsafe:
+        # it can borrow a builder as an evaluator and make the selected runtime look successful
+        # while violating the user-visible role contract. Fail closed unless explicitly opted in.
+        provider_mode_spillover = str(os.environ.get("SOLAR_PM_ALLOW_ROLE_SPILLOVER_IN_PROVIDER_MODE", "")).strip().lower() in {
+            "1",
+            "true",
+            "on",
+            "yes",
+        }
+        if DEFAULT_OPERATOR_PROVIDERS and not provider_mode_spillover:
+            if pool_mode:
+                return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
+            return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; provider_mode_role_spillover_disabled"
         spillover_spec = _role_spillover_spec(policy_mod, policy, norm_role)
         if spillover_spec and not prefer_operator:
             spillover_candidates, spillover_reason = _role_spillover_candidates(
@@ -984,7 +1341,7 @@ def select_operator_by_role(
                 spillover_spec=spillover_spec,
             )
             if spillover_candidates:
-                spillover_candidates.sort(key=_operator_candidate_sort_key, reverse=True)
+                spillover_candidates.sort(key=lambda x: -x[0])
                 _, best_id, best_op = spillover_candidates[0]
                 return best_id, best_op, ""
             if spillover_reason:
@@ -993,7 +1350,7 @@ def select_operator_by_role(
             return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
         return "", {}, f"no_dispatchable_operator_for_role: {norm_role}"
 
-    candidates.sort(key=_operator_candidate_sort_key, reverse=True)
+    candidates.sort(key=lambda x: -x[0])
     _, best_id, best_op = candidates[0]
     return best_id, best_op, ""
 
@@ -1018,6 +1375,8 @@ def build_pm_dispatch_text(
     node_id: str,
     result_path: str,
     context: str = "",
+    expected_artifacts: list[str] | None = None,
+    closeout_kind: str = "",
 ) -> str:
     persona_name = str(operator.get("persona") or operator.get("role") or "builder")
     persona_path, persona_body = persona_text(persona_name)
@@ -1032,6 +1391,11 @@ def build_pm_dispatch_text(
     ctx_block = ""
     if context.strip():
         ctx_block = f"\n## PM Context\n\n{context.strip()}\n"
+
+    artifact_lines = "\n".join(
+        f"- `{path}`" for path in (expected_artifacts or [])
+    ) or "- No additional role artifact is required."
+    closeout_contract = str(closeout_kind or "legacy_role_contract")
 
     return textwrap.dedent(f"""\
         <!-- SOLAR_PM_DISPATCH -->
@@ -1069,6 +1433,13 @@ def build_pm_dispatch_text(
         {objective}
 
         ## Required Closeout
+
+        Closeout contract: `{closeout_contract}`
+
+        Required contract artifacts (these exact paths are checked by
+        `pm_dispatch complete`):
+
+        {artifact_lines}
 
         把结论写到：`{result_path}`
 
@@ -1329,6 +1700,28 @@ def _builder_ready_nodes_for_sprint(sprint_id: str) -> tuple[list[dict[str, Any]
     try:
         graph_scheduler.SPRINTS_DIR = SPRINTS_DIR
         graph = graph_scheduler.load_graph(graph_path)
+        try:
+            import plan_validator  # type: ignore
+
+            plan_guard = plan_validator.check_planner_graph_dispatchable(
+                graph, sprints_dir=SPRINTS_DIR, sid=sprint_id
+            )
+        except Exception as guard_exc:
+            if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
+                return [], {
+                    "ok": False,
+                    "reason": "plan_validator_dispatch_refused",
+                    "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"],
+                    "graph": str(graph_path),
+                }
+            plan_guard = {"ok": True}
+        if not plan_guard.get("ok"):
+            return [], {
+                "ok": False,
+                "reason": "plan_validator_dispatch_refused",
+                "errors": plan_guard.get("errors") or [],
+                "graph": str(graph_path),
+            }
         ready = graph_scheduler.ready_nodes(graph)
     except Exception as exc:
         return [], {"ok": False, "reason": f"ready_nodes_failed:{type(exc).__name__}", "error": str(exc), "graph": str(graph_path)}
@@ -1375,35 +1768,188 @@ def _latent_builder_ready_backlog_count() -> int:
 
 
 def _pm_expected_artifacts(record: dict[str, Any]) -> list[Path]:
-    """Artifacts that prove a PM role task actually satisfied its contract."""
+    """Artifacts that prove the persisted submission contract was satisfied.
+
+    New records carry an explicit closeout kind.  Old records deliberately
+    retain the historical role-derived behavior so an upgrade does not change
+    the meaning of already-running tasks.
+    """
     role = normalize_role(str(record.get("requested_role") or ""))
     sprint_id = str(record.get("sprint_id") or "").strip()
     node_id = str(record.get("node_id") or "").strip()
     if not sprint_id:
         return []
-    if role == "planner":
-        return [
+    requested_kind = str(record.get("closeout_kind") or "").strip()
+    if requested_kind:
+        kind = _resolve_pm_closeout_kind(
+            role,
+            str(record.get("task_type") or ""),
+            requested_kind,
+        )
+    else:
+        # Backward compatibility is intentional: role was the only authority
+        # in records written before the explicit closeout contract existed.
+        kind = role
+    if kind == "graph_node_execution" and node_id:
+        canonical = [SPRINTS_DIR / f"{sprint_id}.{node_id}-handoff.md"]
+    elif kind == "planner":
+        canonical = [
             SPRINTS_DIR / f"{sprint_id}.plan.md",
             SPRINTS_DIR / f"{sprint_id}.task_graph.json",
         ]
-    if role == "builder" and node_id:
-        return [SPRINTS_DIR / f"{sprint_id}.{node_id}-handoff.md"]
-    if role == "evaluator" and node_id:
-        return [
+    elif kind == "builder" and node_id:
+        canonical = [SPRINTS_DIR / f"{sprint_id}.{node_id}-handoff.md"]
+    elif kind in {"evaluator", "graph_eval"} and node_id:
+        canonical = [
             SPRINTS_DIR / f"{sprint_id}.{node_id}-eval.md",
             SPRINTS_DIR / f"{sprint_id}.{node_id}-eval.json",
         ]
-    return []
+    else:
+        canonical = []
+
+    declared = record.get("expected_artifacts")
+    if declared is None:
+        return canonical
+    if not isinstance(declared, list) or not all(isinstance(item, str) for item in declared):
+        raise ValueError("expected_artifacts_must_be_string_list")
+    explicit = [Path(item) for item in declared]
+    if kind != "graph_eval":
+        if explicit != canonical:
+            raise ValueError("expected_artifacts_do_not_match_closeout_kind")
+        return explicit
+
+    # Quorum evaluation assigns q2/q3/... sidecars to secondary evaluators.
+    # Allow only one exact md/json pair for this sprint+node, directly under
+    # SPRINTS_DIR.  The CLI cannot turn expected artifacts into arbitrary path
+    # write authority.
+    if len(explicit) != 2:
+        raise ValueError("graph_eval_requires_exact_md_json_pair")
+    root = SPRINTS_DIR
+    for path in explicit:
+        if not path.is_absolute() or path.parent != root:
+            raise ValueError("expected_artifact_outside_sprints_root")
+    prefix = re.escape(f"{sprint_id}.{node_id}-eval")
+    match_md = re.fullmatch(rf"{prefix}(?:-q([2-9][0-9]*))?\.md", explicit[0].name)
+    match_json = re.fullmatch(rf"{prefix}(?:-q([2-9][0-9]*))?\.json", explicit[1].name)
+    if not match_md or not match_json or match_md.group(1) != match_json.group(1):
+        raise ValueError("graph_eval_artifact_pair_not_canonical")
+    return explicit
+
+
+def _pm_recover_missing_artifact(expected: Path, sprint_id: str) -> dict[str, str] | None:
+    """Deterministic closeout recovery for the nested-write failure class.
+
+    Workers are given the flat sprints path, but a path transcription slip can
+    land the artifact — exact expected basename, non-empty — inside the
+    sprint's own directory tree instead (P2 smoke-5: the S2 builder wrote
+    sprints/<sid>/<basename> and then failed contract closeout with the file
+    sitting right there). If EXACTLY ONE such candidate exists under
+    SPRINTS_DIR/<sid>/, copy it to the canonical path and report the recovery;
+    zero or multiple matches keep the failure, and files outside the sprint
+    tree are never adopted. Only ever fires where the closeout would otherwise
+    FAIL. Kill-switch: SOLAR_PM_CLOSEOUT_RECOVERY=0."""
+    flag = str(os.environ.get("SOLAR_PM_CLOSEOUT_RECOVERY", "1")).strip().lower()
+    if flag in {"0", "false", "no", "off"}:
+        return None
+    sprint_tree = SPRINTS_DIR / sprint_id
+    if not sprint_id or not sprint_tree.is_dir():
+        return None
+    try:
+        matches = [
+            path for path in sprint_tree.rglob(expected.name)
+            if path.is_file() and path.stat().st_size > 0
+        ]
+    except Exception:
+        return None
+    if len(matches) != 1:
+        return None
+    try:
+        shutil.copy2(matches[0], expected)
+    except Exception:
+        return None
+    return {"artifact": str(expected), "recovered_from": str(matches[0])}
+
+
+def _pm_repair_archived_artifact(expected: Path, record: dict[str, Any]) -> dict[str, str] | None:
+    """G4 UI-rung run 3 trigger (also G3 run 12's failed_contract_closeout):
+    the worker DID deliver the artifact — the gate consumed it and the repair
+    flow ARCHIVED it to <stem>.repair*.<ts><suffix> seconds before this
+    closeout check ran — and the closeout jailed the only builder for 900s
+    (completed_without_required_artifacts), starving the pool. A non-empty
+    repair-archived copy, no older than this task's submission, IS proof of
+    delivery. It is acknowledged, never copied back: the repair flow archived
+    it deliberately, and resurrecting the canonical file would confuse the
+    repair-generation machinery. Shares the SOLAR_PM_CLOSEOUT_RECOVERY kill
+    switch with the nested-write net above."""
+    flag = str(os.environ.get("SOLAR_PM_CLOSEOUT_RECOVERY", "1")).strip().lower()
+    if flag in {"0", "false", "no", "off"}:
+        return None
+    try:
+        candidates = sorted(expected.parent.glob(f"{expected.stem}.repair*{expected.suffix}"))
+    except Exception:
+        return None
+    submitted = _parse_utc(str(record.get("submitted_at") or ""))
+    for candidate in reversed(candidates):
+        try:
+            if not candidate.is_file() or candidate.stat().st_size <= 0:
+                continue
+            if submitted is not None:
+                mtime = datetime.datetime.fromtimestamp(
+                    candidate.stat().st_mtime, tz=datetime.timezone.utc
+                )
+                if mtime < submitted:
+                    continue
+            return {"artifact": str(expected), "archived_by_repair": str(candidate)}
+        except Exception:
+            continue
+    return None
 
 
 def _pm_closeout_status(record: dict[str, Any]) -> dict[str, Any]:
-    expected = _pm_expected_artifacts(record)
-    missing = [str(path) for path in expected if not path.exists() or path.stat().st_size <= 0]
-    return {
+    try:
+        expected = _pm_expected_artifacts(record)
+    except ValueError as exc:
+        return {
+            "ok": False,
+            "expected_artifacts": [],
+            "missing_artifacts": [],
+            "contract_error": str(exc),
+        }
+    persisted_expected = record.get("expected_artifacts")
+    if persisted_expected is not None:
+        observed = [str(path) for path in persisted_expected] if isinstance(persisted_expected, list) else []
+        canonical = [str(path) for path in expected]
+        if observed != canonical:
+            return {
+                "ok": False,
+                "expected_artifacts": canonical,
+                "missing_artifacts": [],
+                "contract_error": "persisted_expected_artifacts_mismatch",
+                "persisted_expected_artifacts": observed,
+            }
+    sprint_id = str(record.get("sprint_id") or "").strip()
+    missing: list[str] = []
+    recovered: list[dict[str, str]] = []
+    for path in expected:
+        if path.exists() and path.stat().st_size > 0:
+            continue
+        recovery = _pm_recover_missing_artifact(path, sprint_id)
+        if recovery:
+            recovered.append(recovery)
+            continue
+        archived = _pm_repair_archived_artifact(path, record)
+        if archived:
+            recovered.append(archived)
+            continue
+        missing.append(str(path))
+    closeout: dict[str, Any] = {
         "ok": not missing,
         "expected_artifacts": [str(path) for path in expected],
         "missing_artifacts": missing,
     }
+    if recovered:
+        closeout["recovered_artifacts"] = recovered
+    return closeout
 
 
 def _record_age_minutes(record: dict[str, Any], path: Path) -> float:
@@ -1432,7 +1978,16 @@ def _new_sprint_id() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("sprint-%Y%m%d-%H%M%S")
 
 
-def ensure_compiled_sprint_status(sprint_id: str, title: str, summary: str) -> Path:
+def ensure_compiled_sprint_status(
+    sprint_id: str,
+    title: str,
+    summary: str,
+    *,
+    status_value: str = "drafting",
+    phase: str = "prd_ready",
+    handoff_to: str = "planner",
+    target_role: str = "planner",
+) -> Path:
     status_path = SPRINTS_DIR / f"{sprint_id}.status.json"
     now = _now()
     if status_path.exists():
@@ -1455,13 +2010,27 @@ def ensure_compiled_sprint_status(sprint_id: str, title: str, summary: str) -> P
             "id": sprint_id,
             "title": title,
             "summary": summary,
-            "status": "drafting",
-            "phase": "prd_ready",
-            "handoff_to": "planner",
-            "target_role": "planner",
+            "status": status_value,
+            "phase": phase,
+            "handoff_to": handoff_to,
+            "target_role": target_role,
             "updated_at": now,
         }
     )
+    if target_role == "planner":
+        # Runtime-owned birth provenance: a planner may replace the graph,
+        # but it cannot thereby turn a governed intake into legacy work.
+        status["plan_compile_required"] = True
+    else:
+        # Fixed workflow contracts (for example research.autosci.v1) already
+        # have their own structural guard and deliberately bypass the generic
+        # planner. Do not misclassify them as uncertified generic graphs.
+        status.pop("plan_compile_required", None)
+        status.pop("planner_dispatch_claim", None)
+    if _pm_operator_pool_enabled() and target_role == "planner":
+        # This is written in the same atomic status replace as ``prd_ready``;
+        # there is no coordinator-visible state in which owner is ambiguous.
+        status["planner_dispatch_claim"] = _new_planner_dispatch_claim(now)
     history = list(status.get("history") or [])
     history.append({"ts": now, "event": "compiled_requirement_package_created", "by": "codex-pm-router"})
     status["history"] = history[-20:]
@@ -1475,9 +2044,9 @@ def ensure_compiled_sprint_status(sprint_id: str, title: str, summary: str) -> P
             "sid": sprint_id,
             "status": "info",
             "detail": {
-                "phase": "prd_ready",
-                "handoff_to": "planner",
-                "target_role": "planner",
+                "phase": phase,
+                "handoff_to": handoff_to,
+                "target_role": target_role,
             },
         },
     )
@@ -1486,7 +2055,7 @@ def ensure_compiled_sprint_status(sprint_id: str, title: str, summary: str) -> P
 
 def _planner_objective_for_compiled_sprint(sprint_id: str) -> str:
     base = str(SPRINTS_DIR / sprint_id)
-    return textwrap.dedent(
+    objective = textwrap.dedent(
         f"""\
         请接手 {sprint_id}：Requirement Compiler 已生成首版需求编译包。
 
@@ -1505,6 +2074,19 @@ def _planner_objective_for_compiled_sprint(sprint_id: str) -> str:
         4. 如果 compiled package 缺失关键字段，先写明 blocker 和修正建议。
         """
     ).strip()
+    # P5 G2: teach the planner the compile rules it will be checked against
+    # (env-gated inside the helper; "" when SOLAR_PLAN_VALIDATOR is off, so
+    # legacy prompts stay byte-identical). Prompt enrichment must never break
+    # dispatch — enforcement lives at the compile/dispatch seams.
+    try:
+        import plan_validator  # type: ignore
+
+        policy_block = plan_validator.planner_compile_policy_block(SPRINTS_DIR, sprint_id)
+    except Exception:
+        policy_block = ""
+    if policy_block:
+        objective = f"{objective}\n\n{policy_block}"
+    return objective
 
 
 def cmd_compile_request(args: argparse.Namespace) -> int:
@@ -1564,10 +2146,16 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
         sprint_root=SPRINTS_DIR,
         sprint_id=sprint_id,
     )
+    task_graph_payload = payload.get("compiled_artifacts", {}).get("task_dag", {})
+    autosci_contract_bound = str(task_graph_payload.get("workflow_contract") or "") == "research.autosci.v1"
     status_path = ensure_compiled_sprint_status(
         sprint_id,
         title=payload["compiled_artifacts"]["product_brief"]["title"],
         summary=payload["compiled_artifacts"]["product_brief"]["problem"][:180],
+        status_value="active" if autosci_contract_bound else "drafting",
+        phase="planning_complete" if autosci_contract_bound else "prd_ready",
+        handoff_to="builder_main" if autosci_contract_bound else "planner",
+        target_role="builder_main" if autosci_contract_bound else "planner",
     )
     emitted["status"] = str(status_path)
 
@@ -1601,6 +2189,26 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
 
 # ── 核心 submit 逻辑 ──────────────────────────────────────────────────────────
 
+def _with_planner_compile_policy(objective: str, sprint_id: str) -> str:
+    """P5 G2b: the submit choke point every role-pool planner dispatch flows
+    through. The G2b battery proved objective-builder-level injection misses
+    live paths (the autopilot role-handoff objective reached the planner with
+    no policy block); enriching HERE covers every caller. Env-gated inside
+    the helper ("" when SOLAR_PLAN_VALIDATOR is off); idempotent so an
+    already-enriched objective (intent_consumer) is not double-appended."""
+    if "## Plan compile policy" in objective:
+        return objective
+    try:
+        import plan_validator  # type: ignore
+
+        policy_block = plan_validator.planner_compile_policy_block(SPRINTS_DIR, sprint_id)
+    except Exception:
+        policy_block = ""
+    if policy_block:
+        return f"{objective}\n\n{policy_block}"
+    return objective
+
+
 def cmd_submit(args: argparse.Namespace) -> int:
     role = str(args.role or "builder")
     objective = str(args.objective or "").strip()
@@ -1632,11 +2240,24 @@ def cmd_submit(args: argparse.Namespace) -> int:
     task_type = str(args.task_type or "")
     dry_run: bool = bool(args.dry_run)
     context = str(args.context or "")
+    if normalize_role(role) == "planner":
+        objective = _with_planner_compile_policy(objective, sprint_id)
     task_graph_node = load_task_graph_node(sprint_id, node_id)
     capsule_submit = _capsule_submit_metadata(task_graph_node)
     logical_operator = str(capsule_submit.get("logical_operator") or (task_graph_node or {}).get("logical_operator") or "")
     if not task_type:
         task_type = str(capsule_submit.get("dispatch_task_type") or (task_graph_node or {}).get("type") or "")
+    capsule_submit, logical_operator = _apply_role_capsule_override(
+        role=role,
+        task_type=task_type,
+        capsule_submit=capsule_submit,
+        logical_operator=logical_operator,
+    )
+    task_type = _canonicalize_capsule_task_type(capsule_submit, task_type)
+    if capsule_submit.get("capability_capsule_id"):
+        capsule_submit["dispatch_task_type"] = task_type
+        if isinstance(capsule_submit.get("capsule_plan"), dict):
+            capsule_submit["capsule_plan"]["dispatch_task_type"] = task_type
 
     resolved_capsule: dict[str, Any] | None = None
     if capsule_submit.get("capability_capsule_id"):
@@ -1656,8 +2277,42 @@ def cmd_submit(args: argparse.Namespace) -> int:
         except Exception:
             resolved_capsule = None
 
+    try:
+        closeout_kind = _resolve_pm_closeout_kind(
+            role,
+            task_type,
+            str(getattr(args, "closeout_kind", "") or ""),
+        )
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    contract_record = {
+        "requested_role": normalize_role(role),
+        "task_type": task_type,
+        "closeout_kind": closeout_kind,
+        "sprint_id": sprint_id,
+        "node_id": node_id,
+    }
+    requested_artifacts = list(getattr(args, "expected_artifact", []) or [])
+    if requested_artifacts:
+        contract_record["expected_artifacts"] = requested_artifacts
+    try:
+        expected_artifacts = [str(path) for path in _pm_expected_artifacts(contract_record)]
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     task_id = f"pm-{sprint_id}-{node_id}-{_short_id()}"
-    result_path = str(SPRINTS_DIR / f"{sprint_id}.{node_id}.pm-result.md")
+    result_path = str(
+        _pm_result_path_for_role(
+            sprint_id,
+            node_id,
+            role,
+            task_type,
+            expected_artifacts=expected_artifacts,
+        )
+    )
+    work_dir = _pm_work_dir_for_sprint(sprint_id, str(getattr(args, "work_dir", "") or ""))
 
     # 1. 选算子
     operator_id, operator, fallback_reason = select_operator_by_role(
@@ -1679,6 +2334,9 @@ def cmd_submit(args: argparse.Namespace) -> int:
             "submitted_at": _now(),
             "failed_at": _now(),
             "requested_role": normalize_role(role),
+            "task_type": task_type,
+            "closeout_kind": closeout_kind,
+            "expected_artifacts": expected_artifacts,
             "failure_reason": fallback_reason or "no_dispatchable_operator_for_role",
         }
         if capsule_submit.get("capability_capsule_id"):
@@ -1711,6 +2369,8 @@ def cmd_submit(args: argparse.Namespace) -> int:
         node_id=node_id,
         result_path=result_path,
         context=context,
+        expected_artifacts=expected_artifacts,
+        closeout_kind=closeout_kind,
     )
 
     dispatch_dir = HARNESS_DIR / "run" / "pm-dispatch-files"
@@ -1735,38 +2395,23 @@ def cmd_submit(args: argparse.Namespace) -> int:
     dispatch_file.write_text(dispatch_text, encoding="utf-8")
 
     # 5. 构建 task envelope → operator_runtime.submit
-    envelope = {
-        "task_id": task_id,
-        "sprint_id": sprint_id,
-        "node_id": node_id,
-        "operator_id": operator_id,
-        "task_type": task_type or "pm_order",
-        "objective": objective[:300],
-        "dispatch_file": str(dispatch_file),
-        "result_path": result_path,
-        "issued_by": "pm_pane",
-        "issued_at": _now(),
-        "pm_context": context[:500] if context else "",
-        "requested_role": normalize_role(role),
-    }
-    if operator.get("borrowed_for_role"):
-        envelope["borrowed_for_role"] = operator.get("borrowed_for_role")
-        envelope["borrowed_from_roles"] = operator.get("borrowed_from_roles", [])
-        envelope["borrowed_original_role"] = operator.get("borrowed_original_role", "")
-        envelope["borrowed_reason"] = operator.get("borrowed_reason", "")
-    if logical_operator:
-        envelope["logical_operator"] = logical_operator
-    if task_graph_node:
-        envelope["task_graph_node"] = {
-            "id": task_graph_node.get("id"),
-            "goal": task_graph_node.get("goal"),
-            "acceptance": task_graph_node.get("acceptance", []),
-            "requirement_ids": task_graph_node.get("requirement_ids", []),
-        }
-    if capsule_submit.get("capability_capsule_id"):
-        envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
-        envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
-        envelope["capsule_plan"] = capsule_submit.get("capsule_plan", {})
+    envelope = _build_pm_operator_envelope(
+        task_id=task_id,
+        sprint_id=sprint_id,
+        node_id=node_id,
+        operator_id=operator_id,
+        operator=operator,
+        task_type=task_type,
+        objective=objective,
+        dispatch_file=dispatch_file,
+        result_path=result_path,
+        context=context,
+        role=role,
+        work_dir=work_dir,
+        logical_operator=logical_operator,
+        task_graph_node=task_graph_node,
+        capsule_submit=capsule_submit,
+    )
 
     record: dict[str, Any] = {
         "task_id": task_id,
@@ -1777,9 +2422,15 @@ def cmd_submit(args: argparse.Namespace) -> int:
         "dispatch_file": str(dispatch_file),
         "dispatch_path": str(dispatch_file),
         "result_path": result_path,
+        "work_dir": work_dir,
         "status": "submitted",
         "submitted_at": _now(),
         "requested_role": normalize_role(role),
+        "task_type": task_type,
+        "closeout_kind": closeout_kind,
+        "expected_artifacts": expected_artifacts,
+        "runtime_mode": envelope.get("runtime_mode", ""),
+        "provider_policy": envelope.get("provider_policy", ""),
     }
     if operator.get("borrowed_for_role"):
         record["borrowed_for_role"] = operator.get("borrowed_for_role")
@@ -1789,6 +2440,8 @@ def cmd_submit(args: argparse.Namespace) -> int:
     if capsule_submit.get("capability_capsule_id"):
         record["capability_capsule_id"] = capsule_submit["capability_capsule_id"]
         record["logical_operator"] = logical_operator
+    if capsule_submit.get("capsule_override_reason"):
+        record["capsule_override_reason"] = str(capsule_submit["capsule_override_reason"])
 
     # 尝试通过 operator_runtime.submit 投递
     try:
@@ -1875,7 +2528,8 @@ def cmd_fleet_status(args: argparse.Namespace) -> int:
             rt_state = "disabled"
             cooldown_col = ""
         else:
-            rt_state = get_operator_runtime_state(op_id)
+            op["operator_id"] = op_id
+            rt_state = _runtime_state_for_operator_record(op_id, op)
             cooldown_col = ""
             if rt_state in ("cooldown", "quota_exhausted", "auth_expired"):
                 status = get_operator_status_data(op_id)
@@ -1929,6 +2583,7 @@ def builder_pool_snapshot(recover: bool = False) -> dict[str, Any]:
     groups: dict[str, dict[str, Any]] = {}
     rows: list[dict[str, Any]] = []
     recovery_actions: list[dict[str, Any]] = []
+    total_policy_available = 0
     for group, spec in groups_cfg.items():
         groups[group] = {
             "desired": int(policy_mod.pool_group_desired(group, policy) or (spec or {}).get("desired", 0)),
@@ -1949,6 +2604,7 @@ def builder_pool_snapshot(recover: bool = False) -> dict[str, Any]:
         op = {"operator_id": op_id, **dict(spec)}
         if not policy_mod.is_pool_member(op):
             continue
+        provider_policy_eligible = _operator_matches_provider_policy(op)
         group = policy_mod.infer_builder_group(op) or "unknown"
         groups.setdefault(
             group,
@@ -1976,6 +2632,8 @@ def builder_pool_snapshot(recover: bool = False) -> dict[str, Any]:
         block_type = str(block_info.get("block_type") or "none")
         if ok:
             groups[group]["available"] += 1
+            if provider_policy_eligible:
+                total_policy_available += 1
         else:
             groups[group]["blocked"] += 1
             if block_type in {"cooldown", "quota_exhausted", "auth_expired", "health", "busy", "disabled"}:
@@ -2003,6 +2661,7 @@ def builder_pool_snapshot(recover: bool = False) -> dict[str, Any]:
                 "enabled": bool(spec.get("enabled", False)),
                 "runtime_state": state,
                 "available": ok,
+                "provider_policy_eligible": provider_policy_eligible,
                 "reason": reason or "ok",
                 **block_info,
             }
@@ -2033,6 +2692,12 @@ def builder_pool_snapshot(recover: bool = False) -> dict[str, Any]:
         "total_desired": total_desired,
         "total_configured": total_configured,
         "total_available": total_available,
+        # Keep total_available as an all-provider health view, but expose the
+        # capacity the current dispatch policy can actually use.  Product DAG
+        # scheduling must not create virtual slots from an idle forbidden
+        # provider while its sole eligible builder is busy.
+        "total_policy_available": total_policy_available,
+        "provider_policy": _provider_policy_label(),
         "available_ratio": round(ratio, 3),
         "recommended_action": recommended_action,
         "recovery_actions": recovery_actions,
@@ -2167,9 +2832,20 @@ def _mark_graph_node_pm_dispatched(item: dict[str, Any], submitted: dict[str, An
         for node in graph.get("nodes", []) or []:
             if str(node.get("id") or "") != node_id:
                 continue
-            node["dispatched_via"] = "pm_dispatch"
-            node["pm_task_id"] = task_id
-            node["operator_id"] = operator_id
+            activate_execution_attempt(
+                node,
+                task_id=task_id,
+                dispatch_id=task_id,
+                operator_id=operator_id,
+                source="pm_dispatch",
+                logical_role=str(item.get("requested_role") or item.get("role") or "builder"),
+                status=str(submitted.get("status") or "submitted"),
+                requires_operator_result=True,
+                sprint_id=sprint_id,
+                node_id=node_id,
+                result_path=str(submitted.get("result_path") or ""),
+                now=str(submitted.get("submitted_at") or _now()),
+            )
             break
         graph.setdefault("node_results", {}).setdefault(node_id, {})
         graph["node_results"][node_id]["dispatched_via"] = "pm_dispatch"
@@ -2190,6 +2866,26 @@ def cmd_drain_builder_ready(args: argparse.Namespace) -> int:
 
     if requested_sprint:
         nodes, meta = _builder_ready_nodes_for_sprint(requested_sprint)
+        if not meta.get("ok"):
+            payload = {
+                "ok": False,
+                "dry_run": dry_run,
+                "max_items": max_items,
+                "sprint": requested_sprint,
+                "latent_builder_ready": 0,
+                "submitted": [],
+                "marked": [],
+                "skipped": [{**meta, "sprint_id": requested_sprint}],
+            }
+            if json_mode:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                print(
+                    "drain_builder_ready "
+                    f"dry_run={dry_run} latent=0 submitted=0 marked=0 skipped=1"
+                )
+                print(f"  - {requested_sprint} reason={meta.get('reason')}")
+            return 1
         items = [
             {
                 "sprint_id": requested_sprint,
@@ -2586,6 +3282,82 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     return 0
 
 
+def _preflight_task_type_for_role(role: str) -> str:
+    role = normalize_role(role)
+    if role == "planner":
+        return "planning"
+    if role == "evaluator":
+        return "graph_eval"
+    if role == "pm":
+        return "pm_order"
+    return "implementation"
+
+
+def _provider_aliases(provider: str) -> set[str]:
+    p = str(provider or "").strip().lower()
+    aliases = {p} if p else set()
+    if p == "openai":
+        aliases.update({"codex", "gpt"})
+    if p == "anthropic":
+        aliases.update({"claude", "claude-code"})
+    if p == "google":
+        aliases.update({"gemini"})
+    return aliases
+
+
+def cmd_route_preflight(args: argparse.Namespace) -> int:
+    """Verify that every requested runtime role resolves to the selected provider.
+
+    This is intentionally no-model and no-dispatch. It makes runtime selection a
+    hard contract before intake/approval spends user quota.
+    """
+    runtime = str(args.runtime or _runtime_mode_from_env() or "mixed").strip().lower()
+    expected_provider = str(args.expect_provider or "").strip().lower()
+    if not expected_provider:
+        if runtime == "codex":
+            expected_provider = "openai"
+        elif runtime == "claude":
+            expected_provider = "anthropic"
+    roles = [
+        normalize_role(item)
+        for item in re.split(r"[, ]+", str(args.roles or "planner,builder,evaluator"))
+        if str(item).strip()
+    ]
+    items: list[dict[str, Any]] = []
+    ok = True
+    for role in roles:
+        task_type = _preflight_task_type_for_role(role)
+        operator_id, operator, reason = select_operator_by_role(role, task_type=task_type)
+        provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower() if operator else ""
+        route_ok = bool(operator_id)
+        if expected_provider:
+            route_ok = route_ok and expected_provider in _provider_aliases(provider)
+        if not route_ok:
+            ok = False
+        items.append(
+            {
+                "role": role,
+                "task_type": task_type,
+                "ok": route_ok,
+                "operator_id": operator_id,
+                "provider": provider,
+                "backend": str(operator.get("backend") or "") if operator else "",
+                "model": str(operator.get("model") or "") if operator else "",
+                "runtime_state": get_operator_runtime_state(operator_id) if operator_id else "",
+                "reason": "" if route_ok else (reason or "provider_mismatch_or_no_operator"),
+            }
+        )
+    payload = {
+        "ok": ok,
+        "runtime": runtime,
+        "expected_provider": expected_provider,
+        "provider_policy": _provider_policy_label(),
+        "roles": items,
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2 if args.pretty else None))
+    return 0 if ok else 1
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -2603,7 +3375,20 @@ def main() -> int:
     s.add_argument("--sprint", default="", help="关联 sprint ID（可选，默认 pm-adhoc-xxx）")
     s.add_argument("--node", default="N1", help="关联 DAG 节点 ID（默认 N1）")
     s.add_argument("--task-type", default="", help="任务类型提示（用于算子评分）")
+    s.add_argument(
+        "--closeout-kind",
+        default="",
+        choices=sorted(PM_CLOSEOUT_KINDS),
+        help="显式完成产物契约；graph dispatch 必须声明 execution 或 eval 阶段",
+    )
+    s.add_argument(
+        "--expected-artifact",
+        action="append",
+        default=[],
+        help="closeout 检查的精确产物路径；仅 graph_eval 可覆盖为受限 quorum sidecar pair",
+    )
     s.add_argument("--context", default="", help="额外上下文（注入 dispatch 文件）")
+    s.add_argument("--work-dir", default="", help="算子工作目录；默认 <sprint>/workdir")
     s.add_argument("--dry-run", action="store_true", help="预览，不实际提交")
 
     cr = sub.add_parser("compile-request", help="捕获编译请求为 RawIntent（默认不直接创建 sprint/package）")
@@ -2620,6 +3405,12 @@ def main() -> int:
 
     # fleet-status
     sub.add_parser("fleet-status", help="查看所有物理算子的状态")
+
+    rp = sub.add_parser("route-preflight", help="验证当前 runtime/provider 下的 PM/planner/builder/evaluator 路由")
+    rp.add_argument("--runtime", default="", help="codex|claude；默认从环境/ provider policy 推断")
+    rp.add_argument("--expect-provider", default="", help="openai|anthropic；默认由 runtime 推断")
+    rp.add_argument("--roles", default="planner,builder,evaluator", help="逗号分隔角色列表")
+    rp.add_argument("--pretty", action="store_true", help="pretty JSON")
 
     # builder-pool-status
     bps = sub.add_parser("builder-pool-status", help="查看 builder pool 与并发旋钮状态")
@@ -2673,6 +3464,7 @@ def main() -> int:
         "submit": cmd_submit,
         "compile-request": cmd_compile_request,
         "fleet-status": cmd_fleet_status,
+        "route-preflight": cmd_route_preflight,
         "builder-pool-status": cmd_builder_pool_status,
         "drain-builder-ready": cmd_drain_builder_ready,
         "concurrency-status": cmd_concurrency_status,

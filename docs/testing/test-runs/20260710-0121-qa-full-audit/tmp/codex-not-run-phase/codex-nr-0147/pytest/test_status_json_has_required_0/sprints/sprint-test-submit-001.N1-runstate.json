@@ -1,0 +1,37 @@
+{
+  "sprint_id": "sprint-test-submit-001",
+  "node_id": "N1",
+  "updated_at": "2026-07-10T18:50:45Z",
+  "build_attribution": {
+    "dispatch_id": "mt-20260710-185045-sprint-test-submit-001-N1",
+    "backend": "claude-cli",
+    "vendor": "anthropic",
+    "model": "sonnet",
+    "provider": "anthropic",
+    "operator_id": "test-operator-1",
+    "profile": "builder",
+    "role": "builder",
+    "work_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0147/pytest/test_status_json_has_required_0/sprints/sprint-test-submit-001/workdir",
+    "status_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0147/pytest/test_status_json_has_required_0/run/multi-task/mt-20260710-185045-sprint-test-submit-001-N1/status.json",
+    "phase": "dispatched",
+    "status": "dispatched",
+    "created_at": "2026-07-10T18:50:45Z",
+    "updated_at": "2026-07-10T18:50:45Z"
+  },
+  "attribution": {
+    "dispatch_id": "mt-20260710-185045-sprint-test-submit-001-N1",
+    "backend": "claude-cli",
+    "vendor": "anthropic",
+    "model": "sonnet",
+    "provider": "anthropic",
+    "operator_id": "test-operator-1",
+    "profile": "builder",
+    "role": "builder",
+    "work_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0147/pytest/test_status_json_has_required_0/sprints/sprint-test-submit-001/workdir",
+    "status_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0147/pytest/test_status_json_has_required_0/run/multi-task/mt-20260710-185045-sprint-test-submit-001-N1/status.json",
+    "phase": "dispatched",
+    "status": "dispatched",
+    "created_at": "2026-07-10T18:50:45Z",
+    "updated_at": "2026-07-10T18:50:45Z"
+  }
+}

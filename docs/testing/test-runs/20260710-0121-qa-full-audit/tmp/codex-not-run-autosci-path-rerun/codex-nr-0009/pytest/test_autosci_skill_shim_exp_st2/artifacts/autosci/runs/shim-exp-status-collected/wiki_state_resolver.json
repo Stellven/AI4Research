@@ -1,0 +1,68 @@
+{
+  "action": "monitor_experiment",
+  "existing_wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ],
+  "experiments": [
+    {
+      "aliases": [
+        "skillgen-main"
+      ],
+      "evidence_ids": [
+        "runtime:exp-skillgen"
+      ],
+      "experiment_id": "exp-skillgen",
+      "frontmatter_keys": [
+        "evidence_ids",
+        "experiment_id",
+        "pipeline",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-skillgen",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-skillgen.md",
+      "pipeline": "skillgen-main",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-skillgen",
+      "status": "collected",
+      "title": "SkillGen Experiment"
+    }
+  ],
+  "graph_edges": [],
+  "graph_errors": [],
+  "ideas": [],
+  "indexes": {
+    "experiments_by_slug": {
+      "exp-skillgen": "exp-skillgen"
+    },
+    "ideas_by_slug": {},
+    "outputs_by_slug": {}
+  },
+  "limitations": [
+    "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+    "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+  ],
+  "outputs": [],
+  "resolution": {
+    "fallback_used": false,
+    "target": "skillgen-main",
+    "target_id": "exp-skillgen",
+    "target_path": "artifacts/autosci/workspace/wiki/experiments/exp-skillgen.md",
+    "target_type": "experiment",
+    "warnings": []
+  },
+  "schema": "autosci_wiki_state_resolver.v1",
+  "selected_root": "artifacts/autosci/workspace/wiki",
+  "status": "completed",
+  "wiki_roots": [
+    "artifacts/autosci/workspace/wiki",
+    "wiki",
+    "harness/artifacts/autosci/workspace/wiki"
+  ]
+}

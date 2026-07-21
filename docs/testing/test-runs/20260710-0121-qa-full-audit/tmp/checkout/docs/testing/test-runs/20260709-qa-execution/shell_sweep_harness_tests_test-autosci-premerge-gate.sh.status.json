@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_test-autosci-premerge-gate.sh",
+  "source": "harness/tests/test-autosci-premerge-gate.sh",
+  "command": [
+    "bash",
+    "harness/tests/test-autosci-premerge-gate.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.401,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-uirbnbez"
+}

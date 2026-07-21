@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import datetime
 import importlib.util
 import json
 import sys
@@ -37,14 +38,18 @@ def main() -> None:
         base = Path(td)
         harness = base / "harness"
         knowledge = base / "Knowledge"
-        run_dir = knowledge / "_raw" / "ai-influence-daily-digest" / "2026-05-23"
+        # Today-relative (UTC) digest date so it stays inside the default 30-day discovery window
+        # (_ai_influence_period_cutoff). A hardcoded calendar date made this a time-bomb that aged
+        # out once real time advanced past 30 days, dropping the digest and failing ok/count.
+        recent = (datetime.datetime.now(datetime.timezone.utc).date() - datetime.timedelta(days=1)).isoformat()
+        run_dir = knowledge / "_raw" / "ai-influence-daily-digest" / recent
         write(run_dir / "digest.md", "# AI Influence Digest\n")
         write(run_dir / "digest.html", "<!doctype html><h1>AI Influence</h1>")
         write(
             run_dir / "digest.json",
             json.dumps(
                 {
-                    "date": "2026-05-23",
+                    "date": recent,
                     "analysis": {
                         "analysis_status": "ok",
                         "model": "glm-5.1",
@@ -71,7 +76,7 @@ def main() -> None:
         assert payload["ok"] is True
         assert payload["count"] == 1
         item = next(item for item in payload["items"] if item.get("kind") == "daily_digest")
-        assert item["date"] == "2026-05-23"
+        assert item["date"] == recent
         assert item["metrics"]["条目"] == 1
         assert item["metrics"]["趋势"] == 1
         assert item["primary"]["view_url"].startswith("/ai-influence/report?")
@@ -123,7 +128,7 @@ def main() -> None:
         old_vault = os.environ.get("OBSIDIAN_VAULT_PATH")
         os.environ["OBSIDIAN_VAULT_PATH"] = str(knowledge)
         try:
-            dispatch = Path(ai.create_wiki_ingest_dispatch(run_dir, "2026-05-23"))
+            dispatch = Path(ai.create_wiki_ingest_dispatch(run_dir, recent))
         finally:
             if old_vault is None:
                 os.environ.pop("OBSIDIAN_VAULT_PATH", None)

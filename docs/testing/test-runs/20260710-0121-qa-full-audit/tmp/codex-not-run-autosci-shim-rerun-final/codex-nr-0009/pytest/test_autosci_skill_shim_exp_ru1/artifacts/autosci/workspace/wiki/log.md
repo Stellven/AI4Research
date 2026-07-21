@@ -1,0 +1,1 @@
+- 2026-07-10T19:25:33Z | experiment | completed `exp-approved` outcome `supports` evidence `exp-approved, Validate evidence coverage for `exp-approved` using an approval-gated native experiment., runtime:exp-approved, task-exp-approved-runtime, node-exp-approved-runtime, exp-runtime.json`

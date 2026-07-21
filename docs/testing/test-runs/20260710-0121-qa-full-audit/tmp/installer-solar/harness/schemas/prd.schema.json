@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Solar Harness PRD",
+  "description": "PM-produced product requirements document. Codex is PM when present; pane0 PM is the fallback when Codex is absent.",
+  "type": "object",
+  "required": [
+    "title",
+    "source",
+    "problem",
+    "goals",
+    "user_stories",
+    "requirements",
+    "acceptance",
+    "non_goals",
+    "constraints",
+    "risks",
+    "open_questions",
+    "handoff_to"
+  ],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "problem": { "type": "string", "minLength": 1 },
+    "goals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "user_stories": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "requirements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "acceptance": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "non_goals": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "handoff_to": {
+      "type": "string",
+      "enum": ["planner", "architect"]
+    }
+  },
+  "additionalProperties": true
+}

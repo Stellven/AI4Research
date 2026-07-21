@@ -1,0 +1,9 @@
+{
+  "name": "script_check_solar_harness_front_door",
+  "command": [
+    "bash",
+    "scripts/check-solar-harness-front-door.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 10
+}

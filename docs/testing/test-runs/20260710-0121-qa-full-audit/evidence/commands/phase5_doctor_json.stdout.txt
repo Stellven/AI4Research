@@ -1,0 +1,58 @@
+{
+  "components": [
+    "kernel",
+    "harness",
+    "autosci"
+  ],
+  "drift": [],
+  "models": {
+    "anthropic_credentials": "missing",
+    "claude_auth_note": "Claude Code must be authenticated once with `claude`; after login, panes self-initialize.",
+    "claude_cli": "missing",
+    "claude_cli_path": "",
+    "guidance": "Provide ZHIPU_AUTH_TOKEN in ~/.solar/secrets/zhipu.env or ~/.solar/secrets/solar-user-secrets.env, or run: solar-harness models set-lab-matrix anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet",
+    "lab_matrix": "glm,glm,glm,anthropic-sonnet",
+    "zhipu_credentials": "missing"
+  },
+  "paths": {
+    "claude_dir": "ok",
+    "db": "ok",
+    "kernel": "ok",
+    "receipt": "ok",
+    "solar_bin": "ok",
+    "solar_home": "ok"
+  },
+  "python": {
+    "harness_imports": {
+      "jsonschema": "ok",
+      "pydantic": "ok",
+      "rich": "ok",
+      "yaml": "ok"
+    },
+    "min_ok": true,
+    "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python3",
+    "requires": ">=3.11",
+    "version": "3.14.2"
+  },
+  "schema_version": "0",
+  "system": {
+    "bash>=4": {
+      "path": "/opt/homebrew/bin/bash",
+      "state": "ok"
+    },
+    "jq": {
+      "path": "/usr/bin/jq",
+      "state": "ok"
+    },
+    "tmux": {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/safe-bin/tmux",
+      "state": "ok"
+    }
+  },
+  "ts": "2026-07-10T06:16:38Z",
+  "verdict": "ok",
+  "warnings": [
+    "lab matrix uses GLM/Zhipu but no ZHIPU credentials were found",
+    "claude CLI missing; install/authenticate Claude Code before launching panes"
+  ]
+}

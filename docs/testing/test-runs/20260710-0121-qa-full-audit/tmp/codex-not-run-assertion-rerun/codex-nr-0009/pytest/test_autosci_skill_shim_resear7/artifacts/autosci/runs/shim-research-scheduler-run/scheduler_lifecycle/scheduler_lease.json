@@ -1,0 +1,29 @@
+{
+  "acquired_at": "2026-07-10T19:15:39Z",
+  "distributed": false,
+  "job_id": "shim-research-scheduler-run-scheduler",
+  "lease_id": "b448600da5d46afd6ce37b7df6418e1353c2b02e",
+  "limitations": [
+    "This is a local smoke-run lease record, not a distributed scheduler lease."
+  ],
+  "owner": "harness.tools.run_scientific_lifecycle_smoke",
+  "production_ready": false,
+  "required_nodes": [
+    "literature_discover",
+    "paper_ingest",
+    "paper_analyze",
+    "memory_update_initial",
+    "graph_update",
+    "claim_extract",
+    "method_extract",
+    "code_evidence_map",
+    "idea_generate",
+    "idea_evaluate",
+    "experiment_design",
+    "experiment_run",
+    "experiment_monitor",
+    "claim_verify"
+  ],
+  "schema": "autosci_scheduler_lease.v1",
+  "scope": "local_smoke_runner"
+}

@@ -5,7 +5,7 @@
 # 输出: exit 0 → stdout 作为压缩指令注入; exit 2 → 阻止压缩
 # 性能: 单次 awk 遍历 STATE.md + 单次 awk 处理日志, 目标 < 50ms
 
-source "$HOME/.claude/hooks/hook-logger.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/hook-logger.sh"
 _START_MS=$(hook_time_ms)
 
 set -u

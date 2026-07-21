@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/apo-planner-artifact.v1.json",
+  "title": "APO Planner Artifact v1",
+  "description": "Full output of compile_execution_plan_for_node(). Contains all supply-chain planning sections: task_classification, logical_workflow, skill_plan, mcp_plan, capsule_plan, physical_plan, evidence_policy.",
+  "schema_status": "stable",
+  "schema_version": "v1.0.0",
+  "type": "object",
+  "required": ["task_classification", "logical_workflow", "capsule_plan", "physical_plan"],
+  "additionalProperties": true,
+  "properties": {
+    "task_classification": {
+      "$ref": "https://solar.local/schemas/task-classification.v1.json",
+      "description": "Goal-driven task classification result."
+    },
+    "logical_workflow": {
+      "type": "object",
+      "required": ["template", "stages"],
+      "additionalProperties": false,
+      "properties": {
+        "template": {
+          "type": "string",
+          "description": "Workflow template name from logical-operators.json#workflow_templates (e.g. 'performance_debug_workflow')."
+        },
+        "stages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["stage_name", "logical_operators", "rationale"],
+            "additionalProperties": false,
+            "properties": {
+              "stage_name": {
+                "type": "string",
+                "enum": ["ScanContext", "DebugRCA", "DesignSolution", "ImplementPatch", "RunBenchmark", "ReviewPatch", "VerifyEvidence"]
+              },
+              "logical_operators": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Selected logical operator IDs for this stage."
+              },
+              "rationale": {
+                "type": "string",
+                "description": "Why these operators were selected for this stage."
+              },
+              "position": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "description": "Ordered workflow stages with operator selections."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this workflow template was chosen over alternatives."
+        }
+      }
+    },
+    "skill_plan": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["candidates", "selected"],
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["skill_id", "readiness_tier"],
+              "properties": {
+                "skill_id": {"type": "string"},
+                "readiness_tier": {"type": "string", "enum": ["stable", "draft", "missing"]},
+                "rationale": {"type": "string"}
+              }
+            }
+          },
+          "selected": {"type": ["string", "null"]},
+          "rejection_rationale": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "skill_id": {"type": "string"},
+                "reason": {"type": "string"}
+              }
+            }
+          }
+        }
+      },
+      "description": "Per-stage skill candidates and selections. Keys are workflow stage names."
+    },
+    "mcp_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required_mcp": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["capability", "why_needed"],
+            "additionalProperties": false,
+            "properties": {
+              "capability": {"type": "string", "description": "MCP capability token (e.g. 'git.read', 'shell.benchmark')."},
+              "why_needed": {"type": "string"},
+              "provider_candidates": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "selected_provider": {"type": ["string", "null"]}
+            }
+          },
+          "description": "All MCP capabilities required by the selected capsules and skills."
+        },
+        "optional_mcp": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["capability", "why_helpful"],
+            "additionalProperties": false,
+            "properties": {
+              "capability": {"type": "string"},
+              "why_helpful": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "capsule_plan": {
+      "type": "object",
+      "required": ["selected_capsule_id", "candidates", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "selected_capsule_id": {
+          "type": ["string", "null"],
+          "description": "The capsule selected for this node. Null if static fallback was used."
+        },
+        "fallback_used": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if the static DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR fallback was used instead of goal-driven selection."
+        },
+        "fallback_reason": {
+          "type": ["string", "null"],
+          "description": "Reason the fallback was used (e.g. 'no_capsule_matched_signals', 'classifier_score_below_threshold')."
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["capsule_id", "score", "selected"],
+            "additionalProperties": false,
+            "properties": {
+              "capsule_id": {"type": "string"},
+              "score": {"type": "number"},
+              "selected": {"type": "boolean"},
+              "selection_rationale": {"type": "string"},
+              "rejection_rationale": {"type": ["string", "null"]}
+            }
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Human-readable explanation of why the selected capsule was chosen."
+        }
+      }
+    },
+    "physical_plan": {
+      "type": "object",
+      "required": ["selected_operator_id", "candidates"],
+      "additionalProperties": true,
+      "properties": {
+        "selected_operator_id": {"type": ["string", "null"]},
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "actor_id": {"type": "string"},
+              "priority": {"type": "integer"},
+              "selected": {"type": "boolean"},
+              "rationale": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "proof_obligations": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "What must be proven for this node to be marked done."
+        },
+        "ledger_event_names": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Evidence ledger event names that will be emitted."
+        },
+        "verification_commands": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Shell commands the verifier should run to confirm completion."
+        }
+      }
+    }
+  }
+}

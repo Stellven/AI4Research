@@ -1,0 +1,17 @@
+[Unit]
+Description=Solar status-server (dashboard + API)
+After=default.target
+
+[Service]
+Type=simple
+Environment=HARNESS_DIR={{SOLAR_HOME}}/harness
+Environment=PYTHONPATH={{SOLAR_HOME}}/harness/lib
+WorkingDirectory={{SOLAR_HOME}}/harness
+ExecStart={{SOLAR_STATUS_PYTHON}} {{SOLAR_HOME}}/harness/lib/symphony/status-server.py
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:{{SOLAR_HOME}}/logs/status-server.log
+StandardError=append:{{SOLAR_HOME}}/logs/status-server.log
+
+[Install]
+WantedBy=default.target

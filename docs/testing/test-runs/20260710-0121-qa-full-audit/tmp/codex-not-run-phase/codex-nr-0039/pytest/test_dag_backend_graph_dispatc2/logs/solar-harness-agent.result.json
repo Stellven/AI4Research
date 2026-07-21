@@ -1,0 +1,98 @@
+{
+  "started_at": "2026-07-10T18:49:44Z",
+  "completed_at": "2026-07-10T18:49:44Z",
+  "duration_sec": 0.0010837079607881606,
+  "backend": "dag",
+  "model": "gpt-5.4",
+  "return_code": 2,
+  "workspace_changed": false,
+  "workspace": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_graph_dispatc2/workspace",
+  "logs_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_graph_dispatc2/logs",
+  "dag": {
+    "dag_id": "bench-dag-20260710184944",
+    "dag_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_graph_dispatc2/logs/dag/bench-dag-20260710184944",
+    "planner": {
+      "stage": "planner",
+      "verdict": "pass",
+      "model": "gpt-5.4",
+      "instruction_chars": 22,
+      "contract": {
+        "workspace": "/app",
+        "write_scope": [
+          "/app"
+        ],
+        "success_predicates": [
+          "builder exits successfully",
+          "workspace changes or existing required files remain available",
+          "Terminal-Bench verifier computes final score"
+        ]
+      }
+    },
+    "graph_dispatch": {
+      "enabled": true,
+      "mode": "graph-dispatch-dry-run",
+      "ok": false,
+      "dispatcher_ok": true,
+      "return_code": 0,
+      "stdout": "{\"ok\": true, \"drain\": {\"processed\": 0}}",
+      "stderr": "",
+      "parsed": {
+        "ok": true,
+        "drain": {
+          "processed": 0
+        }
+      },
+      "processed": 0,
+      "isolated_harness": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_graph_dispatc2/logs/dag/bench-dag-20260710184944/graph-dispatch-harness",
+      "dispatch_file": "",
+      "handoff_file": "",
+      "live_completion": {},
+      "command_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_graph_dispatc2/logs/dag/bench-dag-20260710184944/graph-dispatch-command.txt"
+    },
+    "builder": {
+      "stage": "builder",
+      "leaf_backend": "graph-dispatch",
+      "return_code": 2,
+      "stdout": "",
+      "stderr": "{\"reason\": \"graph_dispatch_failed\", \"mode\": \"graph-dispatch-dry-run\", \"ok\": false, \"processed\": 0, \"return_code\": 0, \"stderr\": \"\", \"live_completion\": {}}",
+      "graph_dispatch": {
+        "enabled": true,
+        "mode": "graph-dispatch-dry-run",
+        "ok": false,
+        "dispatcher_ok": true,
+        "return_code": 0,
+        "stdout": "{\"ok\": true, \"drain\": {\"processed\": 0}}",
+        "stderr": "",
+        "parsed": {
+          "ok": true,
+          "drain": {
+            "processed": 0
+          }
+        },
+        "processed": 0,
+        "isolated_harness": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_graph_dispatc2/logs/dag/bench-dag-20260710184944/graph-dispatch-harness",
+        "dispatch_file": "",
+        "handoff_file": "",
+        "live_completion": {},
+        "command_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_graph_dispatc2/logs/dag/bench-dag-20260710184944/graph-dispatch-command.txt"
+      }
+    },
+    "repair": {
+      "stage": "repair",
+      "applied": false,
+      "reason": "no_known_repair"
+    },
+    "evaluator": {
+      "stage": "evaluator",
+      "verdict": "fail",
+      "workspace_changed": false,
+      "file_count_before": 0,
+      "file_count_after": 0,
+      "builder_return_code": 2
+    },
+    "leaf_backend": "codex",
+    "return_code": 2,
+    "stdout": "",
+    "stderr": "{\"reason\": \"graph_dispatch_failed\", \"mode\": \"graph-dispatch-dry-run\", \"ok\": false, \"processed\": 0, \"return_code\": 0, \"stderr\": \"\", \"live_completion\": {}}"
+  }
+}

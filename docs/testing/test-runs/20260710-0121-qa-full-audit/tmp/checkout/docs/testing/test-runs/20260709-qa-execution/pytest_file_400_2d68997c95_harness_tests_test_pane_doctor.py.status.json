@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_400_2d68997c95_harness_tests_test_pane_doctor.py",
+  "source": "harness/tests/test_pane_doctor.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_pane_doctor.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.766,
+  "timeout": false
+}

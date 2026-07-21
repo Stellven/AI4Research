@@ -1,0 +1,2438 @@
+{
+  "ok": false,
+  "scorecard": {
+    "verdict": "FAIL",
+    "chapter_count": 8,
+    "section_count": 32,
+    "finalized_sections": 1,
+    "blocked_sections": 0,
+    "unsupported_claim_rate": 0.0,
+    "citation_span_accuracy": 1.0,
+    "contradiction_coverage": 1.0,
+    "source_diversity_score": 0.75,
+    "taxonomy_depth_score": 0.75,
+    "section_repetition_rate": 0.0,
+    "terminology_consistency_score": 1.0,
+    "cross_section_conflict_count": 0,
+    "chapter_coherence_score": 1.0,
+    "issues": [
+      "final_char_count_low:19244<30000",
+      "pending_placeholder_count:31",
+      "finalized_sections_low:1<32",
+      "incomplete_sections:31"
+    ],
+    "schema_version": "solar.research.survey.v1"
+  },
+  "strict": true,
+  "coverage": {
+    "source_count": 16,
+    "source_type_count": 4,
+    "source_types": [
+      "benchmark",
+      "code",
+      "official_doc",
+      "paper"
+    ],
+    "evidence_count": 32,
+    "claim_count": 32,
+    "claim_evidence_link_count": 32,
+    "evidence_source_coverage": 1.0,
+    "claim_support_coverage": 1.0
+  },
+  "taxonomy": {
+    "ok": true,
+    "taxonomy_depth_score": 0.75,
+    "chapter_axes": [
+      "architecture",
+      "definition",
+      "engineering",
+      "evaluation",
+      "history",
+      "risk"
+    ],
+    "required_source_types": [
+      "benchmark",
+      "code",
+      "official_doc",
+      "paper"
+    ],
+    "observed_source_types": [
+      "benchmark",
+      "code",
+      "official_doc",
+      "paper"
+    ],
+    "method_axis_present": true,
+    "evaluation_axis_present": true,
+    "contradiction_axis_present": false
+  },
+  "contradiction_matrix": {
+    "ok": true,
+    "contradiction_coverage": 1.0,
+    "required_sections": 32,
+    "covered_sections": 32,
+    "missing_section_ids": [],
+    "contradiction_axis_present": false
+  },
+  "section_factual_audit": {
+    "ok": true,
+    "section_factual_accuracy": 1.0,
+    "section_grounding_accuracy": 1.0,
+    "audited_sections": 1,
+    "passed_sections": 1,
+    "grounded_sections": 1,
+    "missing_final_sections": [
+      "ch01/sec02",
+      "ch01/sec03",
+      "ch01/sec04",
+      "ch02/sec01",
+      "ch02/sec02",
+      "ch02/sec03",
+      "ch02/sec04",
+      "ch03/sec01",
+      "ch03/sec02",
+      "ch03/sec03",
+      "ch03/sec04",
+      "ch04/sec01",
+      "ch04/sec02",
+      "ch04/sec03",
+      "ch04/sec04",
+      "ch05/sec01",
+      "ch05/sec02",
+      "ch05/sec03",
+      "ch05/sec04",
+      "ch06/sec01",
+      "ch06/sec02",
+      "ch06/sec03",
+      "ch06/sec04",
+      "ch07/sec01",
+      "ch07/sec02",
+      "ch07/sec03",
+      "ch07/sec04",
+      "ch08/sec01",
+      "ch08/sec02",
+      "ch08/sec03",
+      "ch08/sec04"
+    ],
+    "failed_sections": []
+  },
+  "section_scorecard": {
+    "ok": true,
+    "section_count": 32,
+    "needs_rewrite_count": 0,
+    "top_issues": [
+      {
+        "section_id": "ch01/sec01",
+        "status": "pass",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch01/sec02",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch01/sec03",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch01/sec04",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch02/sec01",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch02/sec02",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch02/sec03",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch02/sec04",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch03/sec01",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch03/sec02",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch03/sec03",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch03/sec04",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch04/sec01",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch04/sec02",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch04/sec03",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch04/sec04",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch05/sec01",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch05/sec02",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch05/sec03",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      },
+      {
+        "section_id": "ch05/sec04",
+        "status": "pending",
+        "risk_score": 0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "p2_count": 0,
+        "issues": [],
+        "rewrite_recommended": false
+      }
+    ]
+  },
+  "final_quality": {
+    "ok": false,
+    "final_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu5/final.md",
+    "target_chars": 50000,
+    "final_char_count": 19244,
+    "min_final_chars": 30000,
+    "finalized_sections": 1,
+    "total_sections": 32,
+    "missing_sections": [
+      "ch01/sec02",
+      "ch01/sec03",
+      "ch01/sec04",
+      "ch02/sec01",
+      "ch02/sec02",
+      "ch02/sec03",
+      "ch02/sec04",
+      "ch03/sec01",
+      "ch03/sec02",
+      "ch03/sec03",
+      "ch03/sec04",
+      "ch04/sec01",
+      "ch04/sec02",
+      "ch04/sec03",
+      "ch04/sec04",
+      "ch05/sec01",
+      "ch05/sec02",
+      "ch05/sec03",
+      "ch05/sec04",
+      "ch06/sec01",
+      "ch06/sec02",
+      "ch06/sec03",
+      "ch06/sec04",
+      "ch07/sec01",
+      "ch07/sec02",
+      "ch07/sec03",
+      "ch07/sec04",
+      "ch08/sec01",
+      "ch08/sec02",
+      "ch08/sec03",
+      "ch08/sec04"
+    ],
+    "avg_section_chars": 8892.0,
+    "min_avg_section_chars": 703,
+    "pending_placeholder_count": 31,
+    "heading_count": 87,
+    "min_heading_count": 5,
+    "claim_tag_count": 19,
+    "evidence_tag_count": 25,
+    "claim_tag_density_per_1k_chars": 0.9873,
+    "evidence_tag_density_per_1k_chars": 1.2991,
+    "repetition_rate": 0.1277,
+    "long_sentence_count": 45,
+    "unique_long_sentence_count": 45,
+    "duplicate_long_sentence_occurrences": 0,
+    "duplicate_long_sentence_ratio": 0.0,
+    "max_duplicate_long_sentence_count": 0,
+    "top_duplicate_long_sentences": [],
+    "issues": [
+      "final_char_count_low:19244<30000",
+      "pending_placeholder_count:31"
+    ]
+  },
+  "source_coverage": {
+    "ok": true,
+    "source_count": 16,
+    "min_sources": 8,
+    "source_type_counts": {
+      "paper": 4,
+      "code": 4,
+      "official_doc": 4,
+      "benchmark": 4
+    },
+    "required_source_types": [
+      "benchmark",
+      "code",
+      "official_doc",
+      "paper"
+    ],
+    "missing_required_source_types": [],
+    "paper_like_source_count": 4,
+    "min_paper_like_sources": 4,
+    "high_authority_source_count": 16,
+    "min_high_authority_sources": 4,
+    "source_authority_average": 0.8594,
+    "low_value_source_count": 0,
+    "low_value_source_ratio": 0.0,
+    "cited_source_ratio": 1.0,
+    "source_audit": {
+      "ok": true,
+      "output_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu5",
+      "research_profile": "technical_architecture",
+      "strict_profile": true,
+      "policy_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/research/policies/source_authority.json",
+      "source_count": 16,
+      "source_type_counts": {
+        "paper": 4,
+        "code": 4,
+        "official_doc": 4,
+        "benchmark": 4
+      },
+      "source_type_count": 4,
+      "missing_required_source_types": [],
+      "missing_recommended_source_types": [],
+      "source_authority_average": 0.8594,
+      "source_high_authority_count": 16,
+      "source_high_authority_threshold": 0.75,
+      "invalid_source_type_count": 0,
+      "low_authority_source_count": 0,
+      "sources": [
+        {
+          "source_id": "src_27a750b4c63e",
+          "source_type": "paper",
+          "title": "Latent Reasoning Source 1",
+          "url": "https://arxiv.org/abs/2412.06769",
+          "authority_score": 0.9,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.9,
+            "default": false,
+            "host_hits": [
+              "arxiv.org"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.9,
+              "host_contains": [
+                "arxiv.org",
+                "openreview.net",
+                "doi.org",
+                "semanticscholar.org"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_4335ac6f8e8c",
+          "source_type": "code",
+          "title": "Latent Reasoning Source 2",
+          "url": "https://github.com/example/latent-reasoning",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "github.com"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "github.com",
+                "gitlab.com",
+                "bitbucket.org"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_1c707361a977",
+          "source_type": "official_doc",
+          "title": "Latent Reasoning Source 3",
+          "url": "https://docs.example.edu/latent-reasoning",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              ".edu"
+            ],
+            "host_prefix_hits": [
+              "docs."
+            ],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_prefix": [
+                "docs."
+              ],
+              "host_contains": [
+                ".gov",
+                ".edu"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_dba273a3f5a0",
+          "source_type": "benchmark",
+          "title": "Latent Reasoning Source 4",
+          "url": "https://paperswithcode.com/task/latent-reasoning",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "paperswithcode.com"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "paperswithcode.com",
+                "huggingface.co",
+                "tbench.ai"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_4807f20572ff",
+          "source_type": "paper",
+          "title": "Latent Reasoning Source 5",
+          "url": "https://openreview.net/forum?id=latent-reasoning",
+          "authority_score": 0.9,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.9,
+            "default": false,
+            "host_hits": [
+              "openreview.net"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.9,
+              "host_contains": [
+                "arxiv.org",
+                "openreview.net",
+                "doi.org",
+                "semanticscholar.org"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_52c0b64fdc55",
+          "source_type": "code",
+          "title": "Latent Reasoning Source 6",
+          "url": "https://github.com/facebookresearch/coconut",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "github.com"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "github.com",
+                "gitlab.com",
+                "bitbucket.org"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_55165ae7a72e",
+          "source_type": "official_doc",
+          "title": "Latent Reasoning Source 7",
+          "url": "https://docs.example.edu/latent-reasoning/api",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              ".edu"
+            ],
+            "host_prefix_hits": [
+              "docs."
+            ],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_prefix": [
+                "docs."
+              ],
+              "host_contains": [
+                ".gov",
+                ".edu"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_f9ea2ab36972",
+          "source_type": "benchmark",
+          "title": "Latent Reasoning Source 8",
+          "url": "https://huggingface.co/datasets/example/latent-reasoning",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "huggingface.co"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "paperswithcode.com",
+                "huggingface.co",
+                "tbench.ai"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_431ac849d0c6",
+          "source_type": "paper",
+          "title": "Latent Reasoning Source 9",
+          "url": "https://doi.org/10.1145/latent-reasoning",
+          "authority_score": 0.9,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.9,
+            "default": false,
+            "host_hits": [
+              "doi.org"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.9,
+              "host_contains": [
+                "arxiv.org",
+                "openreview.net",
+                "doi.org",
+                "semanticscholar.org"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_a0196aa30236",
+          "source_type": "code",
+          "title": "Latent Reasoning Source 10",
+          "url": "https://github.com/example/latent-eval",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "github.com"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "github.com",
+                "gitlab.com",
+                "bitbucket.org"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_b85d05c2da67",
+          "source_type": "official_doc",
+          "title": "Latent Reasoning Source 11",
+          "url": "https://docs.example.edu/latent-reasoning/eval",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              ".edu"
+            ],
+            "host_prefix_hits": [
+              "docs."
+            ],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_prefix": [
+                "docs."
+              ],
+              "host_contains": [
+                ".gov",
+                ".edu"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_f22797f57f23",
+          "source_type": "benchmark",
+          "title": "Latent Reasoning Source 12",
+          "url": "https://paperswithcode.com/dataset/latent-eval",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "paperswithcode.com"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "paperswithcode.com",
+                "huggingface.co",
+                "tbench.ai"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_6c82a8482814",
+          "source_type": "paper",
+          "title": "Latent Reasoning Source 13",
+          "url": "https://ieeexplore.ieee.org/document/123456",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 1,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "ieee.org"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "acm.org",
+                "ieee.org",
+                "springer.com",
+                "nature.com",
+                "sciencedirect.com"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_76aba472fa84",
+          "source_type": "code",
+          "title": "Latent Reasoning Source 14",
+          "url": "https://github.com/example/continuous-thought",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "github.com"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "github.com",
+                "gitlab.com",
+                "bitbucket.org"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_af0a560ce4b0",
+          "source_type": "official_doc",
+          "title": "Latent Reasoning Source 15",
+          "url": "https://docs.example.edu/latent-reasoning/deploy",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              ".edu"
+            ],
+            "host_prefix_hits": [
+              "docs."
+            ],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_prefix": [
+                "docs."
+              ],
+              "host_contains": [
+                ".gov",
+                ".edu"
+              ]
+            }
+          }
+        },
+        {
+          "source_id": "src_6842d127ad44",
+          "source_type": "benchmark",
+          "title": "Latent Reasoning Source 16",
+          "url": "https://huggingface.co/spaces/example/latent-benchmark",
+          "authority_score": 0.85,
+          "high_authority": true,
+          "valid_source_type": true,
+          "matched_rule": {
+            "index": 0,
+            "score": 0.85,
+            "default": false,
+            "host_hits": [
+              "huggingface.co"
+            ],
+            "host_prefix_hits": [],
+            "text_hits": [],
+            "rule": {
+              "score": 0.85,
+              "host_contains": [
+                "paperswithcode.com",
+                "huggingface.co",
+                "tbench.ai"
+              ]
+            }
+          }
+        }
+      ],
+      "replacement_suggestions": [],
+      "errors": [],
+      "warnings": []
+    },
+    "issues": []
+  },
+  "literature_map": {
+    "ok": true,
+    "source_count": 16,
+    "source_types": [
+      "benchmark",
+      "code",
+      "official_doc",
+      "paper"
+    ],
+    "chapter_count": 8,
+    "covered_chapters": 8,
+    "chapter_coverage": 1.0,
+    "evidence_backed_source_ratio": 1.0,
+    "claim_backed_source_ratio": 1.0,
+    "sources": [
+      {
+        "source_id": "src_1c707361a977",
+        "source_type": "official_doc",
+        "title": "Latent Reasoning Source 3",
+        "url": "https://docs.example.edu/latent-reasoning",
+        "chapter_ids": [
+          "ch01",
+          "ch02",
+          "ch03",
+          "ch04",
+          "ch05",
+          "ch06",
+          "ch07",
+          "ch08"
+        ],
+        "section_ids": [
+          "ch01/sec01",
+          "ch01/sec02",
+          "ch01/sec03",
+          "ch01/sec04",
+          "ch02/sec01",
+          "ch02/sec02",
+          "ch02/sec03",
+          "ch02/sec04",
+          "ch03/sec01",
+          "ch03/sec02",
+          "ch03/sec03",
+          "ch03/sec04",
+          "ch04/sec01",
+          "ch04/sec02",
+          "ch04/sec03",
+          "ch04/sec04",
+          "ch05/sec01",
+          "ch05/sec02",
+          "ch05/sec03",
+          "ch05/sec04",
+          "ch06/sec01",
+          "ch06/sec02",
+          "ch06/sec03",
+          "ch06/sec04",
+          "ch07/sec01",
+          "ch07/sec02",
+          "ch07/sec03",
+          "ch07/sec04",
+          "ch08/sec01",
+          "ch08/sec02",
+          "ch08/sec03",
+          "ch08/sec04"
+        ],
+        "evidence_ids": [
+          "ev_ae1ef7ac27d0",
+          "ev_d7e1ced8f26f"
+        ],
+        "claim_ids": [
+          "cl_ae1ef7ac27d0",
+          "cl_d7e1ced8f26f"
+        ]
+      },
+      {
+        "source_id": "src_27a750b4c63e",
+        "source_type": "paper",
+        "title": "Latent Reasoning Source 1",
+        "url": "https://arxiv.org/abs/2412.06769",
+        "chapter_ids": [
+          "ch01",
+          "ch02",
+          "ch03",
+          "ch04",
+          "ch05",
+          "ch06",
+          "ch07",
+          "ch08"
+        ],
+        "section_ids": [
+          "ch01/sec01",
+          "ch01/sec02",
+          "ch01/sec03",
+          "ch01/sec04",
+          "ch02/sec01",
+          "ch02/sec02",
+          "ch02/sec03",
+          "ch02/sec04",
+          "ch03/sec01",
+          "ch03/sec02",
+          "ch03/sec03",
+          "ch03/sec04",
+          "ch04/sec01",
+          "ch04/sec02",
+          "ch04/sec03",
+          "ch04/sec04",
+          "ch05/sec01",
+          "ch05/sec02",
+          "ch05/sec03",
+          "ch05/sec04",
+          "ch06/sec01",
+          "ch06/sec02",
+          "ch06/sec03",
+          "ch06/sec04",
+          "ch07/sec01",
+          "ch07/sec02",
+          "ch07/sec03",
+          "ch07/sec04",
+          "ch08/sec01",
+          "ch08/sec02",
+          "ch08/sec03",
+          "ch08/sec04"
+        ],
+        "evidence_ids": [
+          "ev_17eb9bf9c1f4",
+          "ev_a4831dec67e5"
+        ],
+        "claim_ids": [
+          "cl_17eb9bf9c1f4",
+          "cl_a4831dec67e5"
+        ]
+      },
+      {
+        "source_id": "src_431ac849d0c6",
+        "source_type": "paper",
+        "title": "Latent Reasoning Source 9",
+        "url": "https://doi.org/10.1145/latent-reasoning",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_512c47935fd7",
+          "ev_6331b312929c"
+        ],
+        "claim_ids": [
+          "cl_512c47935fd7",
+          "cl_6331b312929c"
+        ]
+      },
+      {
+        "source_id": "src_4335ac6f8e8c",
+        "source_type": "code",
+        "title": "Latent Reasoning Source 2",
+        "url": "https://github.com/example/latent-reasoning",
+        "chapter_ids": [
+          "ch01",
+          "ch02",
+          "ch03",
+          "ch04",
+          "ch05",
+          "ch06",
+          "ch07",
+          "ch08"
+        ],
+        "section_ids": [
+          "ch01/sec01",
+          "ch01/sec02",
+          "ch01/sec03",
+          "ch01/sec04",
+          "ch02/sec01",
+          "ch02/sec02",
+          "ch02/sec03",
+          "ch02/sec04",
+          "ch03/sec01",
+          "ch03/sec02",
+          "ch03/sec03",
+          "ch03/sec04",
+          "ch04/sec01",
+          "ch04/sec02",
+          "ch04/sec03",
+          "ch04/sec04",
+          "ch05/sec01",
+          "ch05/sec02",
+          "ch05/sec03",
+          "ch05/sec04",
+          "ch06/sec01",
+          "ch06/sec02",
+          "ch06/sec03",
+          "ch06/sec04",
+          "ch07/sec01",
+          "ch07/sec02",
+          "ch07/sec03",
+          "ch07/sec04",
+          "ch08/sec01",
+          "ch08/sec02",
+          "ch08/sec03",
+          "ch08/sec04"
+        ],
+        "evidence_ids": [
+          "ev_95cf77e1386c",
+          "ev_c756b6aeb307"
+        ],
+        "claim_ids": [
+          "cl_95cf77e1386c",
+          "cl_c756b6aeb307"
+        ]
+      },
+      {
+        "source_id": "src_4807f20572ff",
+        "source_type": "paper",
+        "title": "Latent Reasoning Source 5",
+        "url": "https://openreview.net/forum?id=latent-reasoning",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_37ba7225295c",
+          "ev_b3d493535bc9"
+        ],
+        "claim_ids": [
+          "cl_37ba7225295c",
+          "cl_b3d493535bc9"
+        ]
+      },
+      {
+        "source_id": "src_52c0b64fdc55",
+        "source_type": "code",
+        "title": "Latent Reasoning Source 6",
+        "url": "https://github.com/facebookresearch/coconut",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_7a69d4bedcc7",
+          "ev_ec51a8d6c436"
+        ],
+        "claim_ids": [
+          "cl_7a69d4bedcc7",
+          "cl_ec51a8d6c436"
+        ]
+      },
+      {
+        "source_id": "src_55165ae7a72e",
+        "source_type": "official_doc",
+        "title": "Latent Reasoning Source 7",
+        "url": "https://docs.example.edu/latent-reasoning/api",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_debbbb0550d3",
+          "ev_f0cc79681b67"
+        ],
+        "claim_ids": [
+          "cl_debbbb0550d3",
+          "cl_f0cc79681b67"
+        ]
+      },
+      {
+        "source_id": "src_6842d127ad44",
+        "source_type": "benchmark",
+        "title": "Latent Reasoning Source 16",
+        "url": "https://huggingface.co/spaces/example/latent-benchmark",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_916988a4a71e",
+          "ev_bee6e593b815"
+        ],
+        "claim_ids": [
+          "cl_916988a4a71e",
+          "cl_bee6e593b815"
+        ]
+      },
+      {
+        "source_id": "src_6c82a8482814",
+        "source_type": "paper",
+        "title": "Latent Reasoning Source 13",
+        "url": "https://ieeexplore.ieee.org/document/123456",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_3809e59fb01e",
+          "ev_edf46a362b52"
+        ],
+        "claim_ids": [
+          "cl_3809e59fb01e",
+          "cl_edf46a362b52"
+        ]
+      },
+      {
+        "source_id": "src_76aba472fa84",
+        "source_type": "code",
+        "title": "Latent Reasoning Source 14",
+        "url": "https://github.com/example/continuous-thought",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_342b09025a24",
+          "ev_e35f522aaeb4"
+        ],
+        "claim_ids": [
+          "cl_342b09025a24",
+          "cl_e35f522aaeb4"
+        ]
+      },
+      {
+        "source_id": "src_a0196aa30236",
+        "source_type": "code",
+        "title": "Latent Reasoning Source 10",
+        "url": "https://github.com/example/latent-eval",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_0d152a939e71",
+          "ev_42b07793e55f"
+        ],
+        "claim_ids": [
+          "cl_0d152a939e71",
+          "cl_42b07793e55f"
+        ]
+      },
+      {
+        "source_id": "src_af0a560ce4b0",
+        "source_type": "official_doc",
+        "title": "Latent Reasoning Source 15",
+        "url": "https://docs.example.edu/latent-reasoning/deploy",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_823f20cd50ce",
+          "ev_fa0fef52593f"
+        ],
+        "claim_ids": [
+          "cl_823f20cd50ce",
+          "cl_fa0fef52593f"
+        ]
+      },
+      {
+        "source_id": "src_b85d05c2da67",
+        "source_type": "official_doc",
+        "title": "Latent Reasoning Source 11",
+        "url": "https://docs.example.edu/latent-reasoning/eval",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_4d5a65e19d1e",
+          "ev_e3dbb57285be"
+        ],
+        "claim_ids": [
+          "cl_4d5a65e19d1e",
+          "cl_e3dbb57285be"
+        ]
+      },
+      {
+        "source_id": "src_dba273a3f5a0",
+        "source_type": "benchmark",
+        "title": "Latent Reasoning Source 4",
+        "url": "https://paperswithcode.com/task/latent-reasoning",
+        "chapter_ids": [
+          "ch01",
+          "ch02",
+          "ch03",
+          "ch04",
+          "ch05",
+          "ch06",
+          "ch07",
+          "ch08"
+        ],
+        "section_ids": [
+          "ch01/sec03",
+          "ch01/sec04",
+          "ch02/sec03",
+          "ch02/sec04",
+          "ch03/sec03",
+          "ch03/sec04",
+          "ch04/sec03",
+          "ch04/sec04",
+          "ch05/sec03",
+          "ch05/sec04",
+          "ch06/sec03",
+          "ch06/sec04",
+          "ch07/sec03",
+          "ch07/sec04",
+          "ch08/sec03",
+          "ch08/sec04"
+        ],
+        "evidence_ids": [
+          "ev_38d3140061dd",
+          "ev_7b61cd27858e"
+        ],
+        "claim_ids": [
+          "cl_38d3140061dd",
+          "cl_7b61cd27858e"
+        ]
+      },
+      {
+        "source_id": "src_f22797f57f23",
+        "source_type": "benchmark",
+        "title": "Latent Reasoning Source 12",
+        "url": "https://paperswithcode.com/dataset/latent-eval",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_4cecc11214a9",
+          "ev_7a6b09bb89f5"
+        ],
+        "claim_ids": [
+          "cl_4cecc11214a9",
+          "cl_7a6b09bb89f5"
+        ]
+      },
+      {
+        "source_id": "src_f9ea2ab36972",
+        "source_type": "benchmark",
+        "title": "Latent Reasoning Source 8",
+        "url": "https://huggingface.co/datasets/example/latent-reasoning",
+        "chapter_ids": [],
+        "section_ids": [],
+        "evidence_ids": [
+          "ev_b22694e0866a",
+          "ev_fdcc7ed90b3b"
+        ],
+        "claim_ids": [
+          "cl_b22694e0866a",
+          "cl_fdcc7ed90b3b"
+        ]
+      }
+    ],
+    "chapters": [
+      {
+        "chapter_id": "ch01",
+        "title": "问题定义与研究边界",
+        "axis": "definition",
+        "ok": true,
+        "source_count": 4,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 8,
+        "claim_count": 8
+      },
+      {
+        "chapter_id": "ch02",
+        "title": "历史脉络与技术演进",
+        "axis": "history",
+        "ok": true,
+        "source_count": 4,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 8,
+        "claim_count": 8
+      },
+      {
+        "chapter_id": "ch03",
+        "title": "核心架构范式",
+        "axis": "architecture",
+        "ok": true,
+        "source_count": 4,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 8,
+        "claim_count": 8
+      },
+      {
+        "chapter_id": "ch04",
+        "title": "方法分类与代表系统",
+        "axis": "architecture",
+        "ok": true,
+        "source_count": 4,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 8,
+        "claim_count": 8
+      },
+      {
+        "chapter_id": "ch05",
+        "title": "评估方法与基准体系",
+        "axis": "evaluation",
+        "ok": true,
+        "source_count": 4,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 8,
+        "claim_count": 8
+      },
+      {
+        "chapter_id": "ch06",
+        "title": "工程实现与部署约束",
+        "axis": "engineering",
+        "ok": true,
+        "source_count": 4,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 8,
+        "claim_count": 8
+      },
+      {
+        "chapter_id": "ch07",
+        "title": "风险、安全与可解释性",
+        "axis": "risk",
+        "ok": true,
+        "source_count": 4,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 8,
+        "claim_count": 8
+      },
+      {
+        "chapter_id": "ch08",
+        "title": "产业生态与开源实现",
+        "axis": "engineering",
+        "ok": true,
+        "source_count": 4,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 8,
+        "claim_count": 8
+      }
+    ],
+    "issues": []
+  },
+  "controversy_review": {
+    "ok": true,
+    "section_coverage": 1.0,
+    "chapter_coverage": 1.0,
+    "mixed_source_ratio": 1.0,
+    "axes_with_controversy": [
+      "architecture",
+      "definition",
+      "engineering",
+      "evaluation",
+      "history",
+      "risk"
+    ],
+    "rows": [
+      {
+        "section_id": "ch01/sec01",
+        "chapter_id": "ch01",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch01/sec01:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch01/sec02",
+        "chapter_id": "ch01",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch01/sec02:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch01/sec03",
+        "chapter_id": "ch01",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch01/sec03:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch01/sec04",
+        "chapter_id": "ch01",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch01/sec04:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch02/sec01",
+        "chapter_id": "ch02",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch02/sec01:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch02/sec02",
+        "chapter_id": "ch02",
+        "axis": "history",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch02/sec02:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch02/sec03",
+        "chapter_id": "ch02",
+        "axis": "history",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch02/sec03:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch02/sec04",
+        "chapter_id": "ch02",
+        "axis": "history",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch02/sec04:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch03/sec01",
+        "chapter_id": "ch03",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch03/sec01:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch03/sec02",
+        "chapter_id": "ch03",
+        "axis": "architecture",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch03/sec02:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch03/sec03",
+        "chapter_id": "ch03",
+        "axis": "architecture",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch03/sec03:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch03/sec04",
+        "chapter_id": "ch03",
+        "axis": "evaluation",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch03/sec04:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch04/sec01",
+        "chapter_id": "ch04",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch04/sec01:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch04/sec02",
+        "chapter_id": "ch04",
+        "axis": "architecture",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch04/sec02:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch04/sec03",
+        "chapter_id": "ch04",
+        "axis": "architecture",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch04/sec03:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch04/sec04",
+        "chapter_id": "ch04",
+        "axis": "evaluation",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch04/sec04:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch05/sec01",
+        "chapter_id": "ch05",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch05/sec01:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch05/sec02",
+        "chapter_id": "ch05",
+        "axis": "evaluation",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch05/sec02:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch05/sec03",
+        "chapter_id": "ch05",
+        "axis": "evaluation",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch05/sec03:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch05/sec04",
+        "chapter_id": "ch05",
+        "axis": "evaluation",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch05/sec04:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch06/sec01",
+        "chapter_id": "ch06",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch06/sec01:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch06/sec02",
+        "chapter_id": "ch06",
+        "axis": "engineering",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch06/sec02:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch06/sec03",
+        "chapter_id": "ch06",
+        "axis": "engineering",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch06/sec03:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch06/sec04",
+        "chapter_id": "ch06",
+        "axis": "evaluation",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch06/sec04:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch07/sec01",
+        "chapter_id": "ch07",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch07/sec01:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch07/sec02",
+        "chapter_id": "ch07",
+        "axis": "risk",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch07/sec02:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch07/sec03",
+        "chapter_id": "ch07",
+        "axis": "risk",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch07/sec03:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch07/sec04",
+        "chapter_id": "ch07",
+        "axis": "evaluation",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch07/sec04:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch08/sec01",
+        "chapter_id": "ch08",
+        "axis": "definition",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch08/sec01:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch08/sec02",
+        "chapter_id": "ch08",
+        "axis": "engineering",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch08/sec02:required"
+        ],
+        "source_types": [
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 6,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch08/sec03",
+        "chapter_id": "ch08",
+        "axis": "engineering",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch08/sec03:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      },
+      {
+        "section_id": "ch08/sec04",
+        "chapter_id": "ch08",
+        "axis": "evaluation",
+        "ok": true,
+        "contradiction_slots": [
+          "contradiction:ch08/sec04:required"
+        ],
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "evidence_count": 7,
+        "mixed_source_evidence": true
+      }
+    ],
+    "issues": []
+  },
+  "chapter_review": {
+    "ok": true,
+    "chapter_count": 8,
+    "p0_chapter_issue_count": 0,
+    "p1_chapter_issue_count": 0,
+    "chapters": [
+      {
+        "chapter_id": "ch01",
+        "title": "问题定义与研究边界",
+        "axis": "definition",
+        "section_ids": [
+          "ch01/sec01",
+          "ch01/sec02",
+          "ch01/sec03",
+          "ch01/sec04"
+        ],
+        "section_count": 4,
+        "ready_pack_ratio": 1.0,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "finalized_sections": 1,
+        "avg_final_chars": 8892.0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch01/sec02",
+              "ch01/sec03",
+              "ch01/sec04"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "ch02",
+        "title": "历史脉络与技术演进",
+        "axis": "history",
+        "section_ids": [
+          "ch02/sec01",
+          "ch02/sec02",
+          "ch02/sec03",
+          "ch02/sec04"
+        ],
+        "section_count": 4,
+        "ready_pack_ratio": 1.0,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "finalized_sections": 0,
+        "avg_final_chars": 0.0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch02/sec01",
+              "ch02/sec02",
+              "ch02/sec03",
+              "ch02/sec04"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "ch03",
+        "title": "核心架构范式",
+        "axis": "architecture",
+        "section_ids": [
+          "ch03/sec01",
+          "ch03/sec02",
+          "ch03/sec03",
+          "ch03/sec04"
+        ],
+        "section_count": 4,
+        "ready_pack_ratio": 1.0,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "finalized_sections": 0,
+        "avg_final_chars": 0.0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch03/sec01",
+              "ch03/sec02",
+              "ch03/sec03",
+              "ch03/sec04"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "ch04",
+        "title": "方法分类与代表系统",
+        "axis": "architecture",
+        "section_ids": [
+          "ch04/sec01",
+          "ch04/sec02",
+          "ch04/sec03",
+          "ch04/sec04"
+        ],
+        "section_count": 4,
+        "ready_pack_ratio": 1.0,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "finalized_sections": 0,
+        "avg_final_chars": 0.0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch04/sec01",
+              "ch04/sec02",
+              "ch04/sec03",
+              "ch04/sec04"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "ch05",
+        "title": "评估方法与基准体系",
+        "axis": "evaluation",
+        "section_ids": [
+          "ch05/sec01",
+          "ch05/sec02",
+          "ch05/sec03",
+          "ch05/sec04"
+        ],
+        "section_count": 4,
+        "ready_pack_ratio": 1.0,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "finalized_sections": 0,
+        "avg_final_chars": 0.0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch05/sec01",
+              "ch05/sec02",
+              "ch05/sec03",
+              "ch05/sec04"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "ch06",
+        "title": "工程实现与部署约束",
+        "axis": "engineering",
+        "section_ids": [
+          "ch06/sec01",
+          "ch06/sec02",
+          "ch06/sec03",
+          "ch06/sec04"
+        ],
+        "section_count": 4,
+        "ready_pack_ratio": 1.0,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "finalized_sections": 0,
+        "avg_final_chars": 0.0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch06/sec01",
+              "ch06/sec02",
+              "ch06/sec03",
+              "ch06/sec04"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "ch07",
+        "title": "风险、安全与可解释性",
+        "axis": "risk",
+        "section_ids": [
+          "ch07/sec01",
+          "ch07/sec02",
+          "ch07/sec03",
+          "ch07/sec04"
+        ],
+        "section_count": 4,
+        "ready_pack_ratio": 1.0,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "finalized_sections": 0,
+        "avg_final_chars": 0.0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch07/sec01",
+              "ch07/sec02",
+              "ch07/sec03",
+              "ch07/sec04"
+            ]
+          }
+        ]
+      },
+      {
+        "chapter_id": "ch08",
+        "title": "产业生态与开源实现",
+        "axis": "engineering",
+        "section_ids": [
+          "ch08/sec01",
+          "ch08/sec02",
+          "ch08/sec03",
+          "ch08/sec04"
+        ],
+        "section_count": 4,
+        "ready_pack_ratio": 1.0,
+        "source_types": [
+          "benchmark",
+          "code",
+          "official_doc",
+          "paper"
+        ],
+        "finalized_sections": 0,
+        "avg_final_chars": 0.0,
+        "p0_count": 0,
+        "p1_count": 0,
+        "issues": [
+          {
+            "severity": "P2",
+            "code": "chapter_missing_final_sections",
+            "detail": [
+              "ch08/sec01",
+              "ch08/sec02",
+              "ch08/sec03",
+              "ch08/sec04"
+            ]
+          }
+        ]
+      }
+    ],
+    "issues": []
+  },
+  "chief_editor_review": {
+    "ok": true,
+    "complete_context": false,
+    "finalized_sections": 1,
+    "total_sections": 32,
+    "chapter_final_coverage": 0.125,
+    "section_duplicate_rate": 0.0,
+    "terminology_profile": "agentic_runtime",
+    "terminology_counts": {
+      "runtime_orchestration": 0,
+      "tool_execution": 0,
+      "memory_state": 21,
+      "multi_agent_handoff": 0,
+      "evaluation_benchmark": 22,
+      "safety_governance": 1,
+      "observability_trace": 10
+    },
+    "terminology_variants": [
+      "memory_state",
+      "evaluation_benchmark",
+      "safety_governance",
+      "observability_trace"
+    ],
+    "chapters": [
+      {
+        "chapter_id": "ch01",
+        "title": "问题定义与研究边界",
+        "section_count": 4,
+        "finalized_sections": 1,
+        "ready_for_chief_edit": false
+      },
+      {
+        "chapter_id": "ch02",
+        "title": "历史脉络与技术演进",
+        "section_count": 4,
+        "finalized_sections": 0,
+        "ready_for_chief_edit": false
+      },
+      {
+        "chapter_id": "ch03",
+        "title": "核心架构范式",
+        "section_count": 4,
+        "finalized_sections": 0,
+        "ready_for_chief_edit": false
+      },
+      {
+        "chapter_id": "ch04",
+        "title": "方法分类与代表系统",
+        "section_count": 4,
+        "finalized_sections": 0,
+        "ready_for_chief_edit": false
+      },
+      {
+        "chapter_id": "ch05",
+        "title": "评估方法与基准体系",
+        "section_count": 4,
+        "finalized_sections": 0,
+        "ready_for_chief_edit": false
+      },
+      {
+        "chapter_id": "ch06",
+        "title": "工程实现与部署约束",
+        "section_count": 4,
+        "finalized_sections": 0,
+        "ready_for_chief_edit": false
+      },
+      {
+        "chapter_id": "ch07",
+        "title": "风险、安全与可解释性",
+        "section_count": 4,
+        "finalized_sections": 0,
+        "ready_for_chief_edit": false
+      },
+      {
+        "chapter_id": "ch08",
+        "title": "产业生态与开源实现",
+        "section_count": 4,
+        "finalized_sections": 0,
+        "ready_for_chief_edit": false
+      }
+    ],
+    "warnings": [
+      "chief_editor_partial_review:1/32"
+    ],
+    "issues": []
+  },
+  "depth_profile": {
+    "ok": true,
+    "complete_context": false,
+    "finalized_sections": 1,
+    "total_sections": 32,
+    "claim_tag_density_per_1k_chars": 0.9873,
+    "evidence_tag_density_per_1k_chars": 1.2991,
+    "chapter_structure_coverage": 0.0312,
+    "academic_marker_counts": {
+      "taxonomy": 15,
+      "mechanism": 43,
+      "evaluation_protocol": 23,
+      "baseline_or_ablation": 6,
+      "reproducibility": 17,
+      "deployment": 48,
+      "failure_mode": 13,
+      "controversy": 29,
+      "auditability": 9,
+      "evolution": 25
+    },
+    "academic_marker_variants": [
+      "auditability",
+      "baseline_or_ablation",
+      "controversy",
+      "deployment",
+      "evaluation_protocol",
+      "evolution",
+      "failure_mode",
+      "mechanism",
+      "reproducibility",
+      "taxonomy"
+    ],
+    "section_marker_coverage": 1.0,
+    "section_marker_rows": [
+      {
+        "section_id": "ch01/sec01",
+        "academic_marker_count": 10,
+        "academic_markers": [
+          "auditability",
+          "baseline_or_ablation",
+          "controversy",
+          "deployment",
+          "evaluation_protocol",
+          "evolution",
+          "failure_mode",
+          "mechanism",
+          "reproducibility",
+          "taxonomy"
+        ],
+        "ok": true
+      }
+    ],
+    "terminology_profile": "agentic_runtime",
+    "terminology_counts": {
+      "runtime_orchestration": 0,
+      "tool_execution": 0,
+      "memory_state": 21,
+      "multi_agent_handoff": 0,
+      "evaluation_benchmark": 55,
+      "safety_governance": 11,
+      "observability_trace": 10
+    },
+    "terminology_variants": [
+      "evaluation_benchmark",
+      "memory_state",
+      "observability_trace",
+      "safety_governance"
+    ],
+    "terminology_evolution_edges": [
+      "evaluation_benchmark->safety_governance",
+      "safety_governance->observability_trace"
+    ],
+    "literature_map_ok": true,
+    "controversy_matrix_ok": true,
+    "issues": []
+  }
+}

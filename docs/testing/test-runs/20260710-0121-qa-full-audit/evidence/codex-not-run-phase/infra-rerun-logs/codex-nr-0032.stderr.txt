@@ -1,0 +1,16 @@
+[wiki] INFO:  Upstream repo already present at /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu
+[wiki] INFO:  Wrote config: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-infra-rerun/codex-nr-0032/home/.obsidian-wiki/config.test
+[wiki] INFO:  Vault skeleton ready at /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-vault.XXXXXX.QJyxCn01YB
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/codex/skills/wiki-query -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-query
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/codex/skills/wiki-setup -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-setup
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/codex/skills/wiki-update -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-update
+[wiki] INFO:  Skill install summary for /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/codex/skills: installed/updated=3 skipped=0
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/claude/skills/wiki-query -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-query
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/claude/skills/wiki-setup -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-setup
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/claude/skills/wiki-update -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-update
+[wiki] INFO:  Skill install summary for /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/claude/skills: installed/updated=3 skipped=0
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/agents/skills/wiki-query -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-query
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/agents/skills/wiki-setup -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-setup
+[wiki] INFO:  Created symlink: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/agents/skills/wiki-update -> /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-repo.XXXXXX.pRD180cAxu/.skills/wiki-update
+[wiki] INFO:  Skill install summary for /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-skills.XXXXXX.jPCefPx8OP/agents/skills: installed/updated=3 skipped=0
+[wiki] INFO:  Install complete.

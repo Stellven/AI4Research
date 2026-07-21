@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_runtime_test-session-diff-log-native-evaluator.sh",
+  "source": "harness/tests/runtime/test-session-diff-log-native-evaluator.sh",
+  "command": [
+    "bash",
+    "harness/tests/runtime/test-session-diff-log-native-evaluator.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.048,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-vtrhomzc"
+}

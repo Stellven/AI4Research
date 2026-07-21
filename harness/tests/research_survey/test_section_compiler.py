@@ -91,6 +91,8 @@ def test_compile_section_and_survey(tmp_path):
     assert "## Claim Map" not in human_text
     assert "## Evidence Map" not in human_text
     assert "prompt packet" not in human_text.lower()
+    assert "ch01/sec01" not in human_text
+    assert "Agentic Runtime" not in human_text
     assert "## 核心结论" in human_text
     assert "## 证据基础" in human_text
     matrix = json.loads((tmp_path / "survey_contribution_matrix.json").read_text(encoding="utf-8"))
@@ -346,7 +348,7 @@ def test_pane_packet_send_rejects_product_delivery_main_pane(monkeypatch):
     assert calls == [["tmux", "display-message", "-p", "-t", "solar-harness:0.0", "#{session_name}\t#{pane_title}"]]
 
 
-def test_pane_packet_send_allows_lab_builder_pane(monkeypatch):
+def test_pane_packet_send_uses_literal_text_then_separate_enter(monkeypatch):
     calls = []
 
     def fake_run(cmd, **kwargs):
@@ -367,7 +369,20 @@ def test_pane_packet_send_allows_lab_builder_pane(monkeypatch):
     backend = PanePacketSurveyWriterBackend(pane_target="solar-harness-lab:0.0", send=True)
 
     assert backend._send_to_pane("/tmp/dispatch.md", "/tmp/response.md") is True
-    assert any(cmd[:3] == ["tmux", "send-keys", "-t"] for cmd in calls)
+    prompt = "读取并执行 /tmp/dispatch.md; 完成后只把正文写入 /tmp/response.md"
+    assert calls == [
+        [
+            "tmux",
+            "display-message",
+            "-p",
+            "-t",
+            "solar-harness-lab:0.0",
+            "#{session_name}\t#{pane_title}",
+        ],
+        ["tmux", "send-keys", "-t", "solar-harness-lab:0.0", "C-u"],
+        ["tmux", "send-keys", "-t", "solar-harness-lab:0.0", "-l", prompt],
+        ["tmux", "send-keys", "-t", "solar-harness-lab:0.0", "Enter"],
+    ]
 
 
 def test_pane_packet_backend_consumes_response(tmp_path):

@@ -1,0 +1,21 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-000"
+    },
+    {
+      "id": "REQ-001"
+    },
+    {
+      "id": "REQ-002"
+    },
+    {
+      "id": "REQ-003"
+    }
+  ],
+  "required_gates": [
+    "G_PLAN",
+    "G_VERIFY",
+    "G_REVIEW"
+  ]
+}

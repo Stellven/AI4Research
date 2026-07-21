@@ -1,0 +1,8 @@
+{
+  "node_id": "N1",
+  "decision": "allow",
+  "detector": "builtin_secret_patterns",
+  "matches": [],
+  "scanned_paths": [],
+  "checked_at": "2026-07-10T06:27:56Z"
+}

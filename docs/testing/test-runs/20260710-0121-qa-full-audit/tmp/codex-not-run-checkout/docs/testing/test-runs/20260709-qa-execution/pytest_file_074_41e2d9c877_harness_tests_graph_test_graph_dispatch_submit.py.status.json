@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_074_41e2d9c877_harness_tests_graph_test_graph_dispatch_submit.py",
+  "source": "harness/tests/graph/test_graph_dispatch_submit.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph/test_graph_dispatch_submit.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 1.257,
+  "timeout": false
+}

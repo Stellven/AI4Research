@@ -1,0 +1,88 @@
+{
+  "blocking_checks": [
+    "anonymity_check",
+    "font_size_check",
+    "page_limit_check"
+  ],
+  "check_statuses": {
+    "anonymity_check": "warn",
+    "font_size_check": "warn",
+    "page_limit_check": "warn",
+    "unconfirmed_marker_scan": "ok"
+  },
+  "compiled_pdf_verified": true,
+  "limitations": [
+    "Publication compile evidence does not prove submission readiness; review blocking_checks and submission_checks.",
+    "Venue submission readiness is not proven; supply a valid submission_profile and pdf_inspection evidence.",
+    "Publication submission audit readiness is not proven; supply valid submission_audit evidence."
+  ],
+  "pdf_files": [
+    "approved-pdflatex-paper/main.pdf"
+  ],
+  "pdf_inspection": {
+    "applied_fields": [],
+    "evidence_ids": [],
+    "inspection_loaded": false,
+    "inspection_valid": false,
+    "invalid_reasons": [
+      "No pdf_inspection evidence path was supplied."
+    ],
+    "min_font_size": null,
+    "page_count": null,
+    "path": "",
+    "pdf_path": "",
+    "pdf_sha256": "",
+    "schema": "autosci_pdf_inspection_boundary.v1",
+    "sha256": "",
+    "status": "missing"
+  },
+  "portal_submission_completed": false,
+  "runtime_semantic_verified": true,
+  "schema": "autosci_publication_submission_boundary.v1",
+  "status": "submission_incomplete",
+  "submission_audit": {
+    "audit_loaded": false,
+    "audit_verified": false,
+    "blocking_checks": [],
+    "checks": [],
+    "evidence_ids": [],
+    "invalid_reasons": [
+      "No submission_audit evidence path was supplied."
+    ],
+    "path": "",
+    "portal_submission_completed": false,
+    "schema": "autosci_publication_submission_audit_boundary.v1",
+    "sha256": "",
+    "status": "missing",
+    "venue": ""
+  },
+  "submission_audit_blocking_checks": [
+    "venue_submission_ready",
+    "publication_submission_audit"
+  ],
+  "submission_audit_ready": false,
+  "submission_audit_status": "submission_audit_missing",
+  "submission_profile": {
+    "applied_fields": [],
+    "conflicts": [],
+    "evidence_ids": [],
+    "invalid_reasons": [
+      "No submission_profile evidence path was supplied."
+    ],
+    "path": "",
+    "profile_loaded": false,
+    "profile_valid": false,
+    "requirements": {},
+    "schema": "autosci_submission_profile_boundary.v1",
+    "sha256": "",
+    "status": "missing",
+    "venue": ""
+  },
+  "submission_ready": false,
+  "venue_blocking_checks": [
+    "venue_submission_profile",
+    "pdf_inspection"
+  ],
+  "venue_status": "venue_profile_missing",
+  "venue_submission_ready": false
+}

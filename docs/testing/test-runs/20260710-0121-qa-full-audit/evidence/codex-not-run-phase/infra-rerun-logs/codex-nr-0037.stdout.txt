@@ -1,0 +1,42 @@
+=== test-telemetry.sh ===
+Fixture SID: test-telemetry-63063
+
+--- T1: Backup telemetry data ---
+  PASS: T1a: backed up existing runs.jsonl
+
+--- T2: Create fixture sprint ---
+  PASS: T2a: fixture files created
+
+--- T3: telemetry_emit_run — write one run ---
+telemetry: test-telemetry-63063 passed
+  PASS: T3a: telemetry_emit_run exit 0
+  PASS: T3b: runs.jsonl grew by 1 line
+  PASS: T3c: run has 12 fields (>= 11)
+  PASS: T3d: sid=test-telemetry-63063 correct
+  PASS: T3e: verdict=passed correct
+  PASS: T3f: topology=standard correct
+  PASS: T3g: total_dones=3 correct (from contract)
+
+--- T4: solar-harness stats output ---
+  PASS: T4a: stats shows 总数
+  PASS: T4b: stats shows 通过
+  PASS: T4c: stats shows standard topology
+
+--- T5: solar-harness stats sprint ---
+  PASS: T5a: stats sprint shows sid
+  PASS: T5b: stats sprint shows verdict
+
+--- T6: _topology_degrade_check — mixture degradation ---
+  PASS: T6a: mixture degraded to standard (1/6 pass = 16.7%)
+
+--- T7: _topology_degrade_check — standard no degrade ---
+  PASS: T7a: standard not degraded (correct)
+
+--- T8: _topology_degrade_check — insufficient samples ---
+  PASS: T8a: deliberation not degraded with only 3 samples (< 5 min)
+
+--- T9: _topology_degrade_check — no data ---
+  PASS: T9a: no degradation with empty runs.jsonl
+
+=== Results: 18 PASS / 0 FAIL ===
+ALL_TESTS_PASS

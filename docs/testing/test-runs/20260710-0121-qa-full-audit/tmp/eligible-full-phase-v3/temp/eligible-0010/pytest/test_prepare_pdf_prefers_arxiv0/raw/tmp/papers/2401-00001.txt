@@ -1,0 +1,4 @@
+Solar PDF Fixture Title
+arXiv: 2401.00001
+Abstract
+This local PDF should recover an arXiv source.

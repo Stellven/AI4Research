@@ -6,13 +6,16 @@ scheduler_decision.json, per-node paths, and final_report.md target.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import datetime
 
 HOME = Path.home()
-HARNESS_DIR = Path.home() / ".solar" / "harness"
+# Honor HARNESS_DIR so an isolated runtime root (tests, an alternate install) writes evidence under
+# THAT root rather than the user's real ~/.solar/harness. Mirrors actor_runtime.py's resolution.
+HARNESS_DIR = Path(os.environ.get("HARNESS_DIR") or (HOME / ".solar" / "harness"))
 
 
 def _now_iso() -> str:

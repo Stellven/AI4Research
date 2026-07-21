@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_411_7da3c16c32_harness_tests_test_planner_prd_routing_preference.py",
+  "source": "harness/tests/test_planner_prd_routing_preference.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_planner_prd_routing_preference.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.141,
+  "timeout": false
+}

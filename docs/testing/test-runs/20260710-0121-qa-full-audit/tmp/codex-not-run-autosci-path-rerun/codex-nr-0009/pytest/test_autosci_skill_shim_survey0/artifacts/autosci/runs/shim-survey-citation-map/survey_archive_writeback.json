@@ -1,0 +1,31 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/workspace/wiki/outputs/related-work-topic-skillgen-2026-07-10.md",
+      "type": "wiki_page"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "type": "wiki_graph_edges"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/log.md",
+      "type": "wiki_log"
+    }
+  ],
+  "generated_at": "2026-07-10T19:22:03Z",
+  "limitations": [],
+  "outputs": {
+    "write": {
+      "applied": true,
+      "citation_count": 1,
+      "edge_count": 1,
+      "edge_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "log_path": "artifacts/autosci/workspace/wiki/log.md",
+      "target_path": "artifacts/autosci/workspace/wiki/outputs/related-work-topic-skillgen-2026-07-10.md",
+      "wiki_root": "artifacts/autosci/workspace/wiki"
+    }
+  },
+  "schema": "autosci_survey_archive_writeback.v1",
+  "status": "completed"
+}

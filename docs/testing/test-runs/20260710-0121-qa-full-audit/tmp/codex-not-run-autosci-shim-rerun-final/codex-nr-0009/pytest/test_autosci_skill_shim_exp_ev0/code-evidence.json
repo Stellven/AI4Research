@@ -1,0 +1,1 @@
+{"schema": "code_evidence_map.v1", "task_id": "code-skillgen", "status": "completed", "outputs": {"mappings": [{"mapping_id": "code-map-skillgen", "claim_id": "claim-skillgen-001", "evidence_ids": ["code:skillgen-eval"], "files": ["experiments/skillgen_eval.py"]}]}}

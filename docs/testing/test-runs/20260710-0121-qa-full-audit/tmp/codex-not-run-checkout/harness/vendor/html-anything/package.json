@@ -1,0 +1,21 @@
+{
+  "name": "solar-html-anything-vendor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pinned upstream reference for Solar Harness html-anything default renderer integration.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nexu-io/html-anything.git"
+  },
+  "solarPinnedUpstream": {
+    "repo": "https://github.com/nexu-io/html-anything.git",
+    "commit": "145a40ebd79624bbd6a28ec379148a895896573c",
+    "workspace": "@html-anything/workspace",
+    "defaultProfiles": {
+      "prd": "doc-kami-parchment",
+      "planning": "web-proto-editorial",
+      "design": "web-proto-editorial"
+    }
+  }
+}

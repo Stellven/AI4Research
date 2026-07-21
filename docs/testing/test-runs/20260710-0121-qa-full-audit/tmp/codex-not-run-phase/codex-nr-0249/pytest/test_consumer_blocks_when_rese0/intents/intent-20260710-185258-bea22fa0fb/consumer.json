@@ -1,0 +1,22 @@
+{
+  "ok": false,
+  "status": "blocked_missing_research_artifact",
+  "intent_id": "intent-20260710-185258-bea22fa0fb",
+  "sprint_id": "sprint-20260710-185258-intent-compile-ready-bea22fa0",
+  "updated_at": "2026-07-10T18:52:58Z",
+  "planner_handoff": {
+    "source_channel": "cli",
+    "source_trust": "user_direct",
+    "allow_autodispatch": true,
+    "requires_human_confirm": false,
+    "trusted_channels": [
+      "codex_bridge",
+      "github_webhook",
+      "pm_compile_request",
+      "pm_dispatch"
+    ],
+    "auto_dispatch_planner": true,
+    "requested": false,
+    "reason": "untrusted_channel"
+  }
+}

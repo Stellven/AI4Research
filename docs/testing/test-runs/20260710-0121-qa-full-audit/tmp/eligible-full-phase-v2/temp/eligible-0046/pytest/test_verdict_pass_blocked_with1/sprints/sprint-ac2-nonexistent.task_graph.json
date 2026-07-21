@@ -1,0 +1,1 @@
+{"schema_version": "solar.task_graph.v1", "sprint_id": "sprint-ac2-nonexistent", "nodes": [{"id": "N1", "goal": "test node", "depends_on": [], "acceptance": ["ac1"], "write_scope": ["test_output.txt"], "status": "reviewing"}], "node_results": {}}

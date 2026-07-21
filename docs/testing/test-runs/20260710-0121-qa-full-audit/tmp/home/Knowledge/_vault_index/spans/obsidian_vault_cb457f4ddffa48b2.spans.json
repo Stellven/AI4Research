@@ -1,0 +1,20 @@
+{
+  "doc_id": "obsidian_vault:cb457f4ddffa48b2",
+  "schema_version": "spans-v1",
+  "source_kind": "obsidian_vault",
+  "source_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/solar-knowledge-ingest-dispatcher-test-2182/vault/references/r1.md",
+  "source_sha256": "d3798de2052a04394847b77d5c87e3c313ec3e0ead023c2a5350ceaa2ae2e7c3",
+  "spans": [
+    {
+      "char_count": 4,
+      "end_line": 1,
+      "heading_path": [
+        "R1"
+      ],
+      "span_id": "S001",
+      "start_line": 1,
+      "text": "# R1",
+      "text_sha256": "a0673bae454212045ed252dfb0eec331c1ab9610f33fd5cc02bcee67229943e7"
+    }
+  ]
+}

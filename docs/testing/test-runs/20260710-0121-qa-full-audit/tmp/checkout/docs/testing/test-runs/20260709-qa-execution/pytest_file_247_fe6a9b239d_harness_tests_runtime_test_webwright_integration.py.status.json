@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_247_fe6a9b239d_harness_tests_runtime_test_webwright_integration.py",
+  "source": "harness/tests/runtime/test_webwright_integration.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/runtime/test_webwright_integration.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.756,
+  "timeout": false
+}

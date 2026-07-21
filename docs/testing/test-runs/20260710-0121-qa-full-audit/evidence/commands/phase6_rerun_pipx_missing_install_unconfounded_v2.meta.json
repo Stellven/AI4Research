@@ -1,0 +1,13 @@
+{
+  "command_id": "phase6_rerun_pipx_missing_install_unconfounded_v2",
+  "phase": "eligible-full-phase-v3",
+  "linked_feature_ids": "WF-0441-SETUP-STEPS-INSTALL-REQUIRED-08DB20",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "\"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python\" -m pytest distribution/pipx/tests/test_cli.py -q --tb=short -o \"cache_dir=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/retest-cache/pytest\" \"--basetemp=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/retest-temp/pytest\" \"--junitxml=/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/evidence/eligible-full-phase-v3/junit-reruns/eligible-0001.xml\" -k \"test_help_contains_install_commands_examples_and_warnings or test_missing_installed_solar_has_clear_error_for_lifecycle_commands\"",
+  "start_time": "2026-07-10T10:20:26-04:00",
+  "end_time": "2026-07-10T10:20:26-04:00",
+  "duration_seconds": "0.159",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase6_rerun_pipx_missing_install_unconfounded_v2.stdout.txt",
+  "stderr_path": "evidence/commands/phase6_rerun_pipx_missing_install_unconfounded_v2.stderr.txt"
+}

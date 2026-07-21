@@ -1,0 +1,58 @@
+{
+  "boundaries": [
+    {
+      "blocking_reasons": [
+        "review_llm status is `unavailable`, not `completed`"
+      ],
+      "evidence_ids": [
+        "idea-target-generated-skills-for-inference-time-agents",
+        "target:user-supplied",
+        "external:semantic_scholar:s2-001"
+      ],
+      "external_novelty_provenance_status": "passed",
+      "external_novelty_status": "completed",
+      "external_source_count": 1,
+      "final_acceptance_ready": false,
+      "idea_id": "idea-target-generated-skills-for-inference-time-agents",
+      "limitations": [
+        "Novelty final acceptance requires completed external novelty evidence, passed provider provenance, and completed Review LLM evidence."
+      ],
+      "novelty": 0.53,
+      "novelty_score": 3,
+      "provider_statuses": [
+        {
+          "fetched_at": "2026-06-24T00:00:00Z",
+          "provider": "supplied_evidence",
+          "query": "generated skills for inference-time agents",
+          "raw_payload_archive_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_novelt1/artifacts/autosci/runs/shim-novelty-external/external_novelty_payloads/supplied_evidence-622d10f6057076c3.json",
+          "raw_payload_archive_paths": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_novelt1/artifacts/autosci/runs/shim-novelty-external/external_novelty_payloads/supplied_evidence-622d10f6057076c3.json"
+          ],
+          "raw_payload_archive_status": "completed",
+          "raw_payload_archive_statuses": [
+            "completed"
+          ],
+          "raw_payload_ref": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_novelt1/semantic-scholar-novelty.json",
+          "raw_payload_refs": [
+            "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_novelt1/semantic-scholar-novelty.json"
+          ],
+          "raw_payload_sha256": "622d10f6057076c32bd3f3223f048be48bfd448ec5a698f8a3efd4d2e3c83bb0",
+          "raw_payload_sha256s": [
+            "622d10f6057076c32bd3f3223f048be48bfd448ec5a698f8a3efd4d2e3c83bb0"
+          ],
+          "source_count": 1,
+          "status": "completed"
+        }
+      ],
+      "recommendation": "revise",
+      "review_available": false,
+      "review_invocation_mode": "unavailable",
+      "review_llm_status": "unavailable",
+      "review_mode": "local_surrogate",
+      "schema": "autosci_novelty_final_acceptance_boundary.v1",
+      "status": "novelty_acceptance_incomplete"
+    }
+  ],
+  "schema": "autosci_novelty_final_acceptance_boundary_set.v1",
+  "status": "novelty_acceptance_incomplete"
+}

@@ -1,0 +1,23 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+________________ test_browser_session_pool_reuses_released_slot ________________
+harness/tests/runtime/test_browser_session_pool.py:16: in test_browser_session_pool_reuses_released_slot
+    pool = bjrt.BrowserSessionPool(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'BrowserSessionPool'. Did you mean: 'BrowserSessionBroker'?
+_________________ test_browser_session_pool_enforces_max_size __________________
+harness/tests/runtime/test_browser_session_pool.py:41: in test_browser_session_pool_enforces_max_size
+    pool = bjrt.BrowserSessionPool(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'browser_job_runtime' has no attribute 'BrowserSessionPool'. Did you mean: 'BrowserSessionBroker'?
+________________ test_run_real_browser_probe_records_pool_lease ________________
+harness/tests/runtime/test_browser_session_pool.py:87: in test_run_real_browser_probe_records_pool_lease
+    assert lease_path.exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-a...e/codex-nr-0141/pytest/test_run_real_browser_probe_re0/run/browser-jobs/job-test-001/daemon-artifacts/pool-lease.json').exists
+=========================== short test summary info ============================
+FAILED harness/tests/runtime/test_browser_session_pool.py::test_browser_session_pool_reuses_released_slot
+FAILED harness/tests/runtime/test_browser_session_pool.py::test_browser_session_pool_enforces_max_size
+FAILED harness/tests/runtime/test_browser_session_pool.py::test_run_real_browser_probe_records_pool_lease
+3 failed in 0.08s

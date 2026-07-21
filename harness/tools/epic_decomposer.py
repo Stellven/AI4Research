@@ -153,6 +153,26 @@ def write_json(path: Path, data: dict[str, Any]) -> None:
 
 
 def prd_markdown(epic_id: str, sid: str, title: str, raw_request: str, item: dict[str, Any]) -> str:
+    dependency_items = item.get("depends_on", [])
+    dependencies = (
+        ", ".join(f"`{value}`" for value in dependency_items)
+        if dependency_items
+        else "无；本切片可立即开始"
+    )
+    dependency_question = (
+        f"Planner 必须确认上游依赖（{dependencies}）已经提供本切片需要的全部输入。"
+        if dependency_items
+        else "Planner 必须确认父级 Epic、追踪矩阵和 task graph 已存在且彼此一致。"
+    )
+    write_scope = (
+        "\n".join(f"  - `{value}`" for value in item.get("write_scope", []))
+        or "  - 未声明写入范围；Planner 必须停止并先解决该缺口。"
+    )
+    capabilities = (
+        ", ".join(f"`{value}`" for value in item.get("required_capabilities", []))
+        or "未声明能力；Planner 必须停止并先解决该缺口"
+    )
+    acceptance = "\n".join(f"- {value}" for value in item["acceptance"])
     return f"""# PRD: {item['title']}
 
 epic_id: `{epic_id}`
@@ -163,25 +183,69 @@ slice: `{item['suffix']}`
 
 {raw_request}
 
-## 本切片目标
+## 背景
+
+父级 Epic `{epic_id}`（{title}）把用户需求拆成按依赖激活的可验收切片。本 PRD 只定义
+`{sid}` 的职责；它的结果必须能被父级追踪矩阵和后续切片独立验证。
+
+## 用户问题
+
+用户需要完整交付上述需求，但把全部工作压入一个执行节点会混淆依赖、写入边界和验收证据。
+本切片必须解决其中的“{item['title']}”问题，同时避免把其他切片的工作错误地宣称为已完成。
+
+## 用户目标
 
 {item['goal']}
 
-## 范围
+## 用户故事
 
-- 只交付本切片，不允许声称父 Epic 已完成。
-- 必须读取 `{epic_id}.epic.md`、`{epic_id}.traceability.json` 和父级 task_graph。
-- 必须在 handoff 中写明上游依赖、下游影响和未闭环项。
+- 作为提出父级需求的用户，我希望本切片产出可独立验收的结果，从而能看清整体工作真实进度。
+- 作为下游执行者，我需要明确的依赖、写入范围和完成条件，从而不会覆盖其他切片或伪造闭环。
+
+## 功能需求
+
+- 按本切片目标交付：{item['goal']}
+- 读取父级 Epic、追踪矩阵和 task graph，核对本切片的依赖状态。
+- 只在下列声明范围内写入；需要扩大范围时必须先回写计划和风险：
+{write_scope}
+- 为每一条验收标准提供可复现证据。
 
 ## 验收标准
 
-{chr(10).join(f"- {x}" for x in item['acceptance'])}
+{acceptance}
 
 ## 非目标
 
 - 不直接绕过 planner 派 builder。
 - 不用单个大 PRD 覆盖所有实现细节。
 - 不用“已完成”替代可复现证据。
+
+## 约束
+
+- 只交付本切片，不允许声称父 Epic 已完成。
+- 必须读取 `{epic_id}.epic.md`、`{epic_id}.traceability.json` 和父级 task_graph。
+- 必须在 handoff 中写明上游依赖、下游影响和未闭环项。
+- 上游依赖：{dependencies}
+- 所需能力：{capabilities}
+
+## 风险
+
+- 上游依赖未通过却提前执行，会使本切片建立在未经验证的输入上。
+- 实现超出声明写入范围，会与其他子切片冲突或隐藏工作归属。
+- 只有自然语言完成声明、没有命令输出或产物证据，会导致父级错误闭环。
+
+## 开放问题
+
+- {dependency_question}
+- Planner 必须把声明写入范围细化为实际文件，并记录任何必要的范围变更。
+- Planner 必须把实现中发现的新冲突、风险或未决事项回写父级追踪矩阵。
+
+## 架构交接
+
+- 父级输入：`{epic_id}.epic.md`、`{epic_id}.traceability.json`、`{epic_id}.task_graph.json`。
+- 子切片标识：`{sid}`；上游依赖：{dependencies}
+- 所需能力：{capabilities}
+- Planner 输出必须列出具体设计、文件级计划、task graph、验证方法和对下游切片的影响。
 
 ## 交付物
 
@@ -194,6 +258,12 @@ slice: `{item['suffix']}`
 
 
 def contract_markdown(epic_id: str, sid: str, item: dict[str, Any], priority: str) -> str:
+    capabilities = (
+        "\n".join(f"- {value}" for value in item.get("required_capabilities", []))
+        or "- No capabilities declared."
+    )
+    done_conditions = "\n".join(f"- [ ] {value}" for value in item["acceptance"])
+    dependencies = ", ".join(f"`{value}`" for value in item.get("depends_on", [])) or "None"
     return f"""# Contract: {item['title']}
 
 priority: `{priority}`
@@ -201,17 +271,20 @@ epic_id: `{epic_id}`
 sprint_id: `{sid}`
 handoff_to: `planner`
 
-## Intent
+## 需求描述
 
 {item['goal']}
 
+This contract is the independently gated `{sid}` slice of parent Epic `{epic_id}`.
+Its declared upstream dependencies are: {dependencies}.
+
 ## Required Capabilities
 
-{chr(10).join(f"- {x}" for x in item.get('required_capabilities', []))}
+{capabilities}
 
-## Acceptance
+## Done
 
-{chr(10).join(f"- {x}" for x in item['acceptance'])}
+{done_conditions}
 
 ## Stop Rules
 

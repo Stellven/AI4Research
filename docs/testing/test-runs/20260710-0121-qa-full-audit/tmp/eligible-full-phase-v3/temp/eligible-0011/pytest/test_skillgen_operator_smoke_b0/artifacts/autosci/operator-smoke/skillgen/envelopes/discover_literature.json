@@ -1,0 +1,15 @@
+{
+  "inputs": {
+    "query": "SkillGen verified inference-time agent skill synthesis"
+  },
+  "mode": "fixture",
+  "node_id": "node-discover-literature",
+  "output_dir": "artifacts/autosci/operator-smoke/skillgen",
+  "outputs": {
+    "evidence_jsonl": "artifacts/autosci/operator-smoke/skillgen/evidence.jsonl",
+    "evidence_payload_path": "artifacts/autosci/operator-smoke/skillgen/literature_discovery.json",
+    "result_path": "artifacts/autosci/operator-smoke/skillgen/discover_literature.result.json"
+  },
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "task_id": "task-autosci-skillgen-discover_literature"
+}

@@ -1,0 +1,26 @@
+version: 1
+default_adapter_capsule_id: adapter.artifact-type-bridge
+adapters:
+  - adapter_capsule_id: adapter.requirement-ir-to-design-brief
+    status: stable
+    source_artifacts:
+      - artifact.requirement_ir
+    target_artifacts:
+      - artifact.design_md
+    manifest_path: capability-capsules/adapter.requirement-ir-to-design-brief.yaml
+    reason: requirement_ir_to_design_bridge
+  - adapter_capsule_id: adapter.patch-diff-to-verification-pack
+    status: stable
+    source_artifacts:
+      - artifact.patch_diff
+    target_artifacts:
+      - artifact.test_log
+      - artifact.eval_json
+    manifest_path: capability-capsules/adapter.patch-diff-to-verification-pack.yaml
+    reason: patch_diff_to_verification_bridge
+  - adapter_capsule_id: adapter.artifact-type-bridge
+    status: stable
+    source_artifacts: []
+    target_artifacts: []
+    manifest_path: capability-capsules/adapter.artifact-type-bridge.yaml
+    reason: generic_artifact_bridge

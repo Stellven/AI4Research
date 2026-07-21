@@ -1,0 +1,9 @@
+T1: py_compile
+[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/plugin_loader.py'  FAIL: plugin_loader.py compile error
+[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/capability_registry.py'  FAIL: capability_registry.py compile error
+T2: solar-harness.sh syntax
+  FAIL: solar-harness.sh bash syntax error
+T3: JSON schemas
+  FAIL: schemas/plugin.schema.json: invalid JSON
+  FAIL: schemas/capability.schema.json: invalid JSON
+T4: plugin manifest count

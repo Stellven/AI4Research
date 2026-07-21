@@ -1,0 +1,133 @@
+# 密钥和隐私信息
+secrets/
+*.key
+*.pem
+*.env
+.env
+.env*
+*_secret*
+*_private*
+
+# 数据库（本地数据，不推送）
+*.db
+*.sqlite
+*.sqlite3
+.solar/
+core/db/*.db
+core/db/*.db-wal
+core/db/*.db-shm
+core/db/*.sqlite
+core/db/*.sqlite3
+.solar/solar.db
+
+# 缓存和临时文件
+*.log
+*.tmp
+.DS_Store
+**/.DS_Store
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+.uv-cache/
+.pytest_cache/
+node_modules/
+bun.lockb
+*.cache
+
+# 用户私有配置
+.solar/STATE.md
+.solar/DECISIONS.md
+.solar/LOG/
+.solar/session.md
+
+# 备份文件
+*.backup
+*.backup.*
+*.bak
+*~
+
+# IDE
+.vscode/
+.idea/
+
+# 构建产物
+dist/
+build/
+target/
+*.o
+*.so
+*.dylib
+
+# 测试覆盖
+coverage/
+*.cover
+
+# Solar Harness 运行时/证据产物
+harness/.coverage
+harness/.workdir
+harness/.planner-inbox.md
+harness/.!*.planner-inbox.md
+harness/PLANNER-INBOX.md
+harness/.brain-router-probe-cache.json
+harness/.intent-hash
+harness/.drafting-notified
+harness/.next-last-sid
+harness/.last-seen-by-planner
+harness/.coordinator*
+harness/.watchdog*
+harness/.pane-*
+harness/cache/
+harness/run/
+harness/runs/
+harness/queue/
+harness/state/
+harness/config/*.lock
+harness/integrations/*-state.json
+harness/patch.diff
+harness/rss_public
+harness/logs/
+harness/test-dispatch-report.txt
+harness/release/artifacts/
+reports/
+harness/intake-requests/
+harness/intents/
+harness/intents/intent-*/
+harness/sprints/
+harness/sprints/**
+insight-reports/
+insight-reports/**
+core/dashboard/state.json
+docs/.report-checkpoint-*.json
+harness/handovers/*.md
+harness/sprints/*-eval.json
+harness/sprints/*-handoff.md
+harness/sprints/*.handoff.md
+harness/sprints/*.traceability.json
+harness/artifacts/autosci/runs/
+harness/artifacts/autosci/workspace/
+harness/artifacts/autosci/webui/
+harness/artifacts/autosci/operator-smoke/
+harness/artifacts/autosci/phase19/current-parity-inventory-*.json
+harness/harness/
+harness/artifacts/scientific/workflow-runs/
+.solar-backups/
+.worktrees/
+
+# 其他
+paste-cache/
+file-history/
+shell-snapshots/
+
+# OAuth secrets — 防意外提交
+client_secret_*.json
+*.googleusercontent.com.json
+*credentials*.json
+
+# 本地工作文件（策略要求：仅本地，不得提交）
+MIGRATION_PLAN.md
+WORKLOG.md
+docs/SIHAO_CHANGE_LIST.md
+
+# Generated dev telemetry (written to ~/Solar/data by scripts/extract-usage-data.ts)
+data/usage-stats.json

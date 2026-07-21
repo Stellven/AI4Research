@@ -1,0 +1,43 @@
+=== test-mixture-topology.sh ===
+Fixture SID: test-mixture-fixture-60563
+
+--- T1: select_topology auto-inference ---
+  PASS: T1a: Done count=7 >= 7 → mixture inference
+
+--- T2: select_topology research keyword ---
+  PASS: T2a: title 'P1 Research 分析调研' matches research pattern → research
+
+--- T3: select_topology deliberation keyword ---
+  PASS: T3a: title 'P0 根因 critical 紧急修复' matches deliberation pattern
+
+--- T4: mixture Done list split ---
+  PASS: T4a: total=4, half=2
+  PASS: T4b: builder1 gets 2 Dones
+  PASS: T4c: builder2 gets 2 Dones
+  PASS: T4d: builder1 has D1+D2
+  PASS: T4e: builder2 has D3+D4
+
+--- T5: dispatch builder1/builder2 files ---
+  PASS: T5a: dispatch-builder1 contains D1+D2
+  PASS: T5b: dispatch-builder2 contains D3+D4
+
+--- T6: merge_handoffs ---
+  PASS: T6a: merged handoff file created
+  PASS: T6b: merged contains builder1 (file1) + builder2 (file3) files
+  PASS: T6c: merged contains D1 (builder1) + D3 (builder2) achievements
+  PASS: T6d: merged contains both verification methods
+
+--- T7: building_parallel status validation ---
+  PASS: T7a: building_parallel status accepted in JSON
+  PASS: T7b: rs_validate_status accepts building_parallel
+
+--- T8: odd Done count split (3 Dones) ---
+  PASS: T8a: 3 Dones → builder1=2, builder2=1 (half=2)
+
+--- T9: mixture dispatch file isolation ---
+  PASS: T9a: dispatch_to_pane supports explicit instruction file argument
+  PASS: T9b: dispatch_mixture sends dispatch-builderN.md to each pane
+  PASS: T9c: dispatch_mixture preserves per-builder dispatch files
+
+=== Results: 20 PASS / 0 FAIL ===
+ALL_TESTS_PASS

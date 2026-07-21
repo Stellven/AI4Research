@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "updated_at": "2026-07-10T18:53:56Z",
+  "bindings": {
+    "DeepArchitect": {
+      "round_robin_cursor": 2,
+      "candidate_count": 3,
+      "last_policy": "round_robin"
+    }
+  },
+  "actors": {}
+}

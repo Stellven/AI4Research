@@ -1,0 +1,1 @@
+{"schema": "autosci_model_response.v1", "status": "completed", "outputs": {"answer": "The wiki has the required structural blocks and a valid source-linked graph edge.", "confidence": 0.91, "evidence_ids": ["model:wiki-health-review"], "findings": [{"criterion": "source graph", "verdict": "pass"}], "model": "test-model", "provider": "command"}}

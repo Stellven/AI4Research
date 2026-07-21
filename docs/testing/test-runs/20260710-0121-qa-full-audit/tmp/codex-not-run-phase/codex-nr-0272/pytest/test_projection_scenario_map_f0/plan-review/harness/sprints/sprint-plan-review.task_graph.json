@@ -1,0 +1,11 @@
+{
+  "sprint_id": "sprint-plan-review",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "build",
+      "depends_on": [],
+      "status": "pending"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/operator-smoke/skillgen/prepare_paper_source_native_stdout.json",
+      "type": "prepare_paper_source_native_stdout_json"
+    },
+    {
+      "path": "artifacts/autosci/operator-smoke/skillgen/prepare_paper_source_native_stderr.txt",
+      "type": "prepare_paper_source_native_stderr"
+    },
+    {
+      "path": "artifacts/autosci/operator-smoke/skillgen/prepare_paper_source_native_payload.json",
+      "type": "prepare_paper_source_native_payload_json"
+    },
+    {
+      "path": "artifacts/autosci/operator-smoke/skillgen/research_paper.analyzed.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+  },
+  "limitations": [
+    "Solar AutoSci prepared the source without warnings."
+  ],
+  "node_id": "node-analyze-paper",
+  "outputs": {
+    "paper": {
+      "abstract": "The paper introduces SKILLGEN, a multi-agent inference-time framework for synthesizing reusable, auditable agent skills from successful and failed trajectories. It emphasizes contrastive induction, candidate verification, and empirical net-effect checks before deployment.",
+      "analysis": {
+        "evidence_ids": [
+          "paper-skillgen-operator-smoke-paper",
+          "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+        ],
+        "key_concepts": [
+          "paper source preparation",
+          "arXiv source recovery",
+          "Solar Evidence ABI"
+        ],
+        "summary": "Prepared and parsed SKILLGEN: Verified Inference-Time Agent Skill Synthesis through the Solar AutoSci paper preparation backend and emitted Solar Evidence ABI paper evidence."
+      },
+      "identifiers": {
+        "native_prepare_status": "completed",
+        "source_fetch_status": "not_applicable",
+        "source_prepare_status": "completed"
+      },
+      "paper_id": "paper-skillgen-operator-smoke-paper",
+      "parse_status": "parsed",
+      "preparation": {
+        "abstract_excerpt": "",
+        "artifacts": [],
+        "arxiv_id": "",
+        "canonical_ingest_path": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md",
+        "extracted_text_path": null,
+        "ingest_format": "md",
+        "native_prepare_paper_source": {
+          "allow_network_fetch": true,
+          "canonical_ingest_path": "raw/input/skillgen_operator_smoke_paper.md",
+          "ok": true,
+          "prepared_path": null,
+          "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0014/pytest/test_skillgen_operator_smoke_b0/artifacts/autosci/workspace/raw",
+          "schema": "autosci_prepare_paper_source_cli.v1",
+          "source_path": "raw/input/skillgen_operator_smoke_paper.md",
+          "status": "completed"
+        },
+        "original_format": "md",
+        "prepared_path": null,
+        "source_fetch_status": "not_applicable",
+        "source_path": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md",
+        "status": "completed",
+        "title": "",
+        "warnings": []
+      },
+      "sections": [
+        {
+          "section_id": "abstract",
+          "source_anchor": "skillgen_operator_smoke_paper.md#abstract",
+          "text": "The paper introduces SKILLGEN, a multi-agent inference-time framework for synthesizing reusable, auditable agent skills from successful and failed trajectories. It emphasizes contrastive induction, candidate verification, and empirical net-effect checks before deployment.",
+          "title": "Abstract"
+        },
+        {
+          "section_id": "method",
+          "source_anchor": "skillgen_operator_smoke_paper.md#method",
+          "text": "The workflow derives candidate skill procedures from trajectory data, compares success patterns and failure modes, and verifies whether the generated skill improves the base agent without introducing unacceptable regressions.",
+          "title": "Method"
+        },
+        {
+          "section_id": "evidence-notes",
+          "source_anchor": "skillgen_operator_smoke_paper.md#evidence-notes",
+          "text": "This compact markdown fixture is derived from the SkillGen paper for Solar-native AutoSci operator smoke testing.",
+          "title": "Evidence Notes"
+        }
+      ],
+      "source_ref": "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md",
+      "source_type": "markdown",
+      "title": "SKILLGEN: Verified Inference-Time Agent Skill Synthesis"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T14:05:06Z"
+  },
+  "schema": "research_paper.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-analyze_paper"
+}

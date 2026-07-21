@@ -1,0 +1,25 @@
+{
+  "schema": "research_method.v1",
+  "task_id": "task.phase1.sample.method",
+  "sprint_id": "sprint.autosci.phase1",
+  "node_id": "node.method_extract",
+  "status": "completed",
+  "inputs": {
+    "paper_evidence": "sample_research_paper.v1.json"
+  },
+  "outputs": {
+    "methods": []
+  },
+  "artifacts": [
+    {
+      "type": "method_record",
+      "path": "artifacts/autosci/fixtures/research_method.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificMethodExtractor",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": []
+}

@@ -1,0 +1,126 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/shim-exp-remote-collect/monitor_experiment_executor_stdout.txt",
+      "type": "executor_stdout"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-remote-collect/monitor_experiment_executor_stderr.txt",
+      "type": "executor_stderr"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/collections/collection-ledger.json",
+      "type": "collection_ledger_json"
+    },
+    {
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/remote-results/results.json",
+      "type": "remote_collected_file"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-remote-collect/experiment_run_report.json",
+      "type": "experiment_run_report_json"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "approval-exp-remote-collect"
+  },
+  "limitations": [
+    "Approved collect executor ran a real command locally and verified collected result files.",
+    "Remote results were collected from local files or unverified transport metadata, not a proven live SSH/provider pull-results operation."
+  ],
+  "node_id": "node-monitor-experiment",
+  "outputs": {
+    "runtime": {
+      "action": "run_experiment",
+      "approval_ref": "approval-exp-remote-collect",
+      "checks": [
+        {
+          "check": "command_allowlisted",
+          "detail": "Experiment command selected from allowlist:commands: command allowlist template matched by commands",
+          "status": "ok"
+        },
+        {
+          "check": "exit_code",
+          "detail": "exit_code=0",
+          "status": "ok"
+        },
+        {
+          "check": "remote_cli_output",
+          "detail": "remote_cli_runtime_evidence",
+          "status": "ok"
+        },
+        {
+          "check": "collected_files_present",
+          "detail": "1",
+          "status": "ok"
+        },
+        {
+          "check": "remote_collection_boundary",
+          "detail": "pull-results did not declare live provider collection,pull-results did not declare a recognized live transport,pull-results did not include a provider/session identifier,results were collected from a local result directory",
+          "status": "warn"
+        }
+      ],
+      "collection_duplicate": false,
+      "collection_identity": "86000898d8cdb04ce32c051762113401b916daf4",
+      "collection_ledger_path": "artifacts/autosci/workspace/wiki/collections/collection-ledger.json",
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/remote.py pull-results --result-dir /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/remote-results",
+      "evidence_ids": [
+        "remote-collect:exp-remote-collect",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/remote-results/results.json",
+        "result:exp-remote-collect"
+      ],
+      "exit_code": 0,
+      "logs": [
+        "remote pull-results collected metrics",
+        "remote_cli_status=completed"
+      ],
+      "metric_aggregates": [],
+      "metrics": [
+        {
+          "name": "accuracy",
+          "value": 0.94
+        }
+      ],
+      "outcome": "partially_supports",
+      "parsed_record_count": 1,
+      "remote_cli_command": "pull-results",
+      "remote_cli_status": "completed",
+      "remote_collection_boundary": {
+        "collection_scope": "",
+        "invalid_reasons": [
+          "pull-results did not declare live provider collection",
+          "pull-results did not declare a recognized live transport",
+          "pull-results did not include a provider/session identifier",
+          "results were collected from a local result directory"
+        ],
+        "limitations": [
+          "Remote results were collected from local files or unverified transport metadata, not a proven live SSH/provider pull-results operation."
+        ],
+        "live_remote_collection_verified": false,
+        "local_result_dir_collection": true,
+        "result_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/remote-results",
+        "result_paths": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/remote-results/results.json"
+        ],
+        "schema": "autosci_remote_collection_boundary.v1",
+        "session_id": "",
+        "status": "local_result_dir_collection",
+        "transport": ""
+      },
+      "result_collected": true,
+      "result_paths": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_co1/remote-results/results.json"
+      ],
+      "status": "completed"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-approved-side-effect-executor",
+    "timestamp": "2026-07-10T05:54:42Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-monitor_experiment"
+}

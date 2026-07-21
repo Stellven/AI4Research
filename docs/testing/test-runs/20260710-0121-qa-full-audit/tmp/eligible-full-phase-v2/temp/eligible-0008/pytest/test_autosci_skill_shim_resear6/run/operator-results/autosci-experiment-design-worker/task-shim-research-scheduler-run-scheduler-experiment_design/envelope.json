@@ -1,0 +1,33 @@
+{
+  "task_id": "task-shim-research-scheduler-run-scheduler-experiment_design",
+  "sprint_id": "shim-research-scheduler-run-scheduler",
+  "node_id": "experiment_design",
+  "operator_id": "autosci-experiment-design-worker",
+  "task_type": "scientific-experiment-design",
+  "objective": "Scheduler-dispatched bounded smoke for ScientificExperimentDesigner.",
+  "mode": "bounded_runtime_smoke",
+  "runner_contract": "bounded_node_smoke",
+  "output_dir": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design",
+  "inputs": {
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "paper_id": "paper-shim-research-scheduler-run-scheduler",
+    "allow_network_fetch": false,
+    "smoke_mode": true,
+    "claim_id": "claim-001",
+    "execution_mode": "fixture",
+    "idea_evaluation_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/idea_evaluate/task-shim-research-scheduler-run-scheduler-idea_evaluate/idea_evaluation.json"
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/design_experiment.result.json",
+    "evidence_payload_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/experiment_plan.json",
+    "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/evidence.jsonl",
+    "memory_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/research_memory_update.json",
+    "graph_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-scheduler-run-scheduler/experiment_design/task-shim-research-scheduler-run-scheduler-experiment_design/research_graph_update.json"
+  },
+  "expected_schema": "experiment_plan.v1",
+  "expected_action": "design_experiment",
+  "logical_operator": "ScientificExperimentDesigner",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T14:03:10Z",
+  "lease_expires_at": "2026-07-10T14:05:10Z"
+}

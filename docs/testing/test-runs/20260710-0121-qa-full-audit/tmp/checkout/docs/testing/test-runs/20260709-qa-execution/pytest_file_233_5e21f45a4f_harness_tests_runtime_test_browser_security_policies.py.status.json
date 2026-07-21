@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_233_5e21f45a4f_harness_tests_runtime_test_browser_security_policies.py",
+  "source": "harness/tests/runtime/test_browser_security_policies.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/runtime/test_browser_security_policies.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.196,
+  "timeout": false
+}

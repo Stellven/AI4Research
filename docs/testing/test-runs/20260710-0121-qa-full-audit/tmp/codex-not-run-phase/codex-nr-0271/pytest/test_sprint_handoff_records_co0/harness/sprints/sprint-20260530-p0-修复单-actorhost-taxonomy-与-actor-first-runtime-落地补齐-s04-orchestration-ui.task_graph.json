@@ -1,0 +1,46 @@
+{
+  "sprint_id": "sprint-20260530-p0-修复单-actorhost-taxonomy-与-actor-first-runtime-落地补齐-s04-orchestration-ui",
+  "required_gates": [
+    "G_S04_ORCHESTRATION_READY"
+  ],
+  "nodes": [
+    {
+      "id": "N3_status_api_surface",
+      "status": "passed",
+      "depends_on": [],
+      "goal": "status API",
+      "required_capabilities": [
+        "harness.status"
+      ],
+      "estimated_cost": 1
+    },
+    {
+      "id": "N4_orchestration_ui_rendering",
+      "status": "passed",
+      "depends_on": [
+        "N3_status_api_surface"
+      ],
+      "goal": "orchestration UI",
+      "required_capabilities": [
+        "harness.status"
+      ],
+      "estimated_cost": 1
+    },
+    {
+      "id": "N5_evidence_gate_handoff",
+      "status": "pending",
+      "depends_on": [
+        "N3_status_api_surface",
+        "N4_orchestration_ui_rendering"
+      ],
+      "goal": "evidence gate",
+      "required_capabilities": [
+        "dag.validate",
+        "harness.contracts",
+        "harness.status",
+        "test.tdd"
+      ],
+      "estimated_cost": 1
+    }
+  ]
+}

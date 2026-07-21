@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "accepted_at": "2026-07-10T14:04:14Z",
+      "collection_identity": "c14afe057638ce870afcec393ccd77274425f179",
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/tools/remote.py pull-results --result-dir /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_exp_co2/remote-once-results",
+      "evidence_ids": [
+        "remote-collect:exp-once",
+        "remote-once-results/results.json",
+        "result:exp-once"
+      ],
+      "experiment_id": "exp-once",
+      "files": [
+        {
+          "bytes": 148,
+          "path": "remote-once-results/results.json",
+          "sha256": "20c915eeb51db2b9a29cac764fdabd04f83871e1943d1b6af7cd213adf219928"
+        }
+      ]
+    }
+  ],
+  "schema": "autosci_collection_ledger.v1"
+}

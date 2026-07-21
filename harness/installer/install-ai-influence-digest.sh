@@ -2,14 +2,14 @@
 set -euo pipefail
 
 LABEL="com.solar.ai-influence-daily-digest"
-HARNESS_DIR="${HARNESS_DIR:-/Users/lisihao/Solar/harness}"
+HARNESS_DIR="${HARNESS_DIR:-${HOME}/Solar/harness}"
 PLIST_SRC="$HARNESS_DIR/${LABEL}.plist"
 PLIST_DST="$HOME/Library/LaunchAgents/${LABEL}.plist"
 CONFIG="$HARNESS_DIR/config/ai-influence-daily-digest.yaml"
 
 host="$(hostname 2>/dev/null || true)"
 case "$host" in
-  lisihaodeMac-mini-3.local|lisihaodeMac-mini-3) ;;
+  solar-host.local|solar-host) ;;
   *)
     echo "[ai-digest] skip install: Mac-mini-only job, current host=$host"
     exit 0

@@ -1,0 +1,31 @@
+{
+  "task_id": "task-shim-research-human-gate-scheduler-method_extract",
+  "sprint_id": "shim-research-human-gate-scheduler",
+  "node_id": "method_extract",
+  "operator_id": "autosci-method-extract-worker",
+  "task_type": "scientific-method-extract",
+  "objective": "Scheduler-dispatched bounded smoke for ScientificMethodExtractor.",
+  "mode": "bounded_runtime_smoke",
+  "runner_contract": "bounded_node_smoke",
+  "output_dir": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/method_extract/task-shim-research-human-gate-scheduler-method_extract",
+  "inputs": {
+    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+    "paper_id": "paper-shim-research-human-gate-scheduler",
+    "allow_network_fetch": false,
+    "smoke_mode": true,
+    "source_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/paper_ingest/task-shim-research-human-gate-scheduler-paper_ingest/research_paper.json"
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/method_extract/task-shim-research-human-gate-scheduler-method_extract/extract_methods.result.json",
+    "evidence_payload_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/method_extract/task-shim-research-human-gate-scheduler-method_extract/research_method.json",
+    "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/method_extract/task-shim-research-human-gate-scheduler-method_extract/evidence.jsonl",
+    "memory_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/method_extract/task-shim-research-human-gate-scheduler-method_extract/research_memory_update.json",
+    "graph_update_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/method_extract/task-shim-research-human-gate-scheduler-method_extract/research_graph_update.json"
+  },
+  "expected_schema": "research_method.v1",
+  "expected_action": "extract_methods",
+  "logical_operator": "ScientificMethodExtractor",
+  "lease_ttl_seconds": 120,
+  "submitted_at": "2026-07-10T19:24:34Z",
+  "lease_expires_at": "2026-07-10T19:26:34Z"
+}

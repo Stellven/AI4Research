@@ -1,0 +1,22 @@
+{
+  "schema": "qa.install_evidence_validation.v1",
+  "status": "PASS",
+  "checks": {
+    "doctor_verdict_ok": true,
+    "doctor_paths_all_ok": true,
+    "doctor_drift_empty": true,
+    "doctor_components_exact": true,
+    "python_minimum_ok": true,
+    "python_imports_ok": true,
+    "receipt_exists_and_object": true,
+    "solar_binary_exists": true,
+    "harness_exists": true,
+    "autosci_installed": true,
+    "all_install_targets_isolated": true,
+    "warnings_do_not_claim_provider_readiness": true
+  },
+  "limitations": [
+    "Install used --skip-py-deps and pre-existing local dependencies; this is not network/bootstrap parity.",
+    "Provider credentials and Claude CLI were intentionally absent; doctor warnings are expected."
+  ]
+}

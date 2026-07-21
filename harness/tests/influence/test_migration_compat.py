@@ -21,7 +21,7 @@ import tempfile
 
 import pytest
 
-# Paths — test file at tests/influence/ → parents[2] = /Users/lisihao/.solar/harness/
+# Paths — test file at tests/influence/ → parents[2] = ~/.solar/harness/
 HARNESS_ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = HARNESS_ROOT / "scripts"
 INFLUENCE_LIB = HARNESS_ROOT / "lib" / "influence"

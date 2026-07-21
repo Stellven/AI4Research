@@ -1,0 +1,1 @@
+{"schema": "scientific_workflow_runtime_manifest.v1", "proofs": [{"native_skill": "ingest", "proof_id": "workflow-runtime:paper_ingest", "categories": ["workflow_node_runtime_evidence"], "evidence_refs": ["run/operator-results/autosci-paper-ingest-worker/task/result.json"]}]}

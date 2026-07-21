@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "accepted_at": "2026-07-10T19:21:56Z",
+      "collection_identity": "12270e08fff3bbc57e1536f57b2db13937bd48ae",
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/remote.py pull-results --result-dir /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_exp_co2/remote-parity-results",
+      "evidence_ids": [
+        "remote-collect:exp-remote-parity-collect",
+        "remote-parity-results/results.json",
+        "result:exp-remote-parity-collect"
+      ],
+      "experiment_id": "exp-remote-parity-collect",
+      "files": [
+        {
+          "bytes": 185,
+          "path": "remote-parity-results/results.json",
+          "sha256": "8d5871106baf45c9edf9e034a0b6bedf93ae6716dbccb6358d5f28b1a39bc75d"
+        }
+      ]
+    }
+  ],
+  "schema": "autosci_collection_ledger.v1"
+}

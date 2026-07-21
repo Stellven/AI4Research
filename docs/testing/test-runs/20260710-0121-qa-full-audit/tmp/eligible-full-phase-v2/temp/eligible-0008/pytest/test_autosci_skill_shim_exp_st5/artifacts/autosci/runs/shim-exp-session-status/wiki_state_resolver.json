@@ -1,0 +1,184 @@
+{
+  "action": "monitor_experiment",
+  "existing_wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ],
+  "experiments": [
+    {
+      "aliases": [],
+      "evidence_ids": [],
+      "experiment_id": "exp-session",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "outcome",
+        "run_id",
+        "source_evidence",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "id": "exp-session",
+      "idea_id": "",
+      "linked_outputs": [],
+      "outcome": "inconclusive",
+      "path": "artifacts/autosci/workspace/wiki/experiments/exp-session.md",
+      "pipeline": "",
+      "run_log": "",
+      "run_log_exists": false,
+      "run_log_path": "",
+      "slug": "exp-session",
+      "status": "planned",
+      "title": "Validate evidence coverage for `exp-session` using an approval-gated native experiment."
+    }
+  ],
+  "graph_edges": [
+    {
+      "evidence_ids": [],
+      "line": 1,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "generated_from",
+      "source": "ideas/idea-source-missing.md",
+      "status": "",
+      "target": "missing:wiki-or-discovery-evidence"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 2,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "describes",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "concept.solar_evidence_abi"
+    },
+    {
+      "evidence_ids": [
+        "paper-sample-paper"
+      ],
+      "line": 3,
+      "path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+      "relation": "has_source",
+      "source": "paper-sample-paper",
+      "status": "",
+      "target": "plugins/autosci/tests/fixtures/sample_paper.md"
+    }
+  ],
+  "graph_errors": [],
+  "ideas": [
+    {
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": false,
+      "id": "idea-source-missing",
+      "idea_id": "idea-source-missing",
+      "linked_experiments": [],
+      "novelty_score": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/ideas/idea-source-missing.md",
+      "slug": "idea-source-missing",
+      "status": "unknown",
+      "title": "Insufficient sourced context for ideation"
+    }
+  ],
+  "indexes": {
+    "experiments_by_slug": {
+      "exp-session": "exp-session"
+    },
+    "ideas_by_slug": {
+      "idea-source-missing": "idea-source-missing"
+    },
+    "outputs_by_slug": {
+      "claims-shim-exp-session-launch": "claims-shim-exp-session-launch",
+      "experiment": "experiment",
+      "ideas": "ideas"
+    }
+  },
+  "limitations": [
+    "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+    "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+  ],
+  "outputs": [
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "claims-shim-exp-session-launch",
+      "idea_id": "",
+      "output_id": "claims-shim-exp-session-launch",
+      "path": "artifacts/autosci/workspace/wiki/outputs/claims-shim-exp-session-launch.md",
+      "slug": "claims-shim-exp-session-launch",
+      "status": "unknown",
+      "title": "Claims from shim-exp-session-launch"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "experiment",
+      "idea_id": "",
+      "output_id": "experiment",
+      "path": "artifacts/autosci/workspace/wiki/outputs/experiment.md",
+      "slug": "experiment",
+      "status": "unknown",
+      "title": "Experiment summary for shim-exp-session-launch"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "ideas",
+      "idea_id": "",
+      "output_id": "ideas",
+      "path": "artifacts/autosci/workspace/wiki/outputs/ideas.md",
+      "slug": "ideas",
+      "status": "unknown",
+      "title": "Idea summary for shim-exp-session-launch"
+    }
+  ],
+  "resolution": {
+    "fallback_used": false,
+    "target": "exp-session",
+    "target_id": "exp-session",
+    "target_path": "artifacts/autosci/workspace/wiki/experiments/exp-session.md",
+    "target_type": "experiment",
+    "warnings": []
+  },
+  "schema": "autosci_wiki_state_resolver.v1",
+  "selected_root": "artifacts/autosci/workspace/wiki",
+  "status": "completed",
+  "wiki_roots": [
+    "artifacts/autosci/workspace/wiki",
+    "wiki",
+    "harness/artifacts/autosci/workspace/wiki"
+  ]
+}

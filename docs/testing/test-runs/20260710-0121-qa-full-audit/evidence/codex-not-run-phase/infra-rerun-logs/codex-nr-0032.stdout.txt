@@ -1,0 +1,78 @@
+
+=== D2 — install ===
+  PASS: config file created at OBSIDIAN_WIKI_CONFIG
+  PASS: config contains OBSIDIAN_VAULT_PATH
+  PASS: vault/_raw created
+  PASS: vault/projects created
+  PASS: vault/concepts created
+  PASS: vault/entities created
+  PASS: vault/skills created
+  PASS: vault/references created
+  PASS: vault/synthesis created
+  PASS: vault/journal created
+  PASS: vault/index.md created
+  PASS: vault/log.md created
+  PASS: vault/hot.md created
+  PASS: vault/.manifest.json created
+  PASS: skill target exists: codex/skills
+  PASS: skill target exists: claude/skills
+  PASS: skill target exists: agents/skills
+
+=== D3 — status --json ===
+  PASS: status output is valid JSON
+  PASS: JSON has field: configured
+  PASS: JSON has field: repo_path
+  PASS: JSON has field: vault_path
+  PASS: JSON has field: config_path
+  PASS: JSON has field: skills_installed
+  PASS: JSON has field: last_checked_at
+  PASS: skills_installed has: codex
+  PASS: skills_installed has: claude
+  PASS: skills_installed has: agents
+  schema: OK
+
+=== D4 — export-sprint ===
+  WARN: No sprint contracts found in /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/sprints — skipping export content tests
+/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-vault.XXXXXX.QJyxCn01YB/_raw/solar-harness/sprint-20260507-test-export.md
+  PASS: export-sprint exited 0
+  PASS: export file created: _raw/solar-harness/sprint-20260507-test-export.md
+  PASS: frontmatter has 'source: solar-harness'
+  PASS: frontmatter has sprint_id
+  PASS: frontmatter has redacted field
+  PASS: redact: no leaked secrets detected
+
+=== D5 — update/query bridge ===
+/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-vault.XXXXXX.QJyxCn01YB/_raw/solar-harness/.dispatch/wiki-update-2026-07-10T19:00:11Z.md
+  PASS: wiki update exited 0
+  PASS: wiki update created dispatch file
+/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-vault.XXXXXX.QJyxCn01YB/_raw/solar-harness/.dispatch/wiki-query-2026-07-10T19:00:11Z.md
+  PASS: wiki query (with content) exited 0
+  PASS: wiki query created dispatch file
+  PASS: wiki query refuses empty string (exit 2)
+Based on the wiki quick search:
+
+Query: quick test
+Vault: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-vault.XXXXXX.QJyxCn01YB
+Terms: quick, test
+
+Top matches:
+1. [[_raw/solar-harness/sprint-20260507-test-export]] score=12
+   - L3: sprint_id: sprint-20260507-test-export
+   - L9: # Sprint Export: sprint-20260507-test-export
+   - L13: # Test Sprint Contract
+
+Mode: quick local search; page bodies were scanned for snippets, no agent synthesis was run.
+  PASS: wiki query --quick accepted
+
+=== D7 — safety (real dir overwrite protection) ===
+  PASS: install refused/warned about real dir at codex/skills target
+  PASS: real directory was NOT replaced by symlink
+  PASS: vault is a temp path: /private/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/solar-wiki-test-vault.XXXXXX.QJyxCn01YB
+
+=== D6 — status-server obsidian_wiki readiness ===
+Solar Harness status server listening on http://127.0.0.1:8765/
+  WARN: status-server did not start on port 8800 (skip live test)
+
+────────────────────────────────────────────────────
+  Results: PASS=42  FAIL=0
+────────────────────────────────────────────────────

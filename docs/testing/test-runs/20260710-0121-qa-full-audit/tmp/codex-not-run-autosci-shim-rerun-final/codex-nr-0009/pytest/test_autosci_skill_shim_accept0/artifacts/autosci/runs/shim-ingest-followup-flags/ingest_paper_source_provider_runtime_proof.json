@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-07-10T19:23:44Z",
+  "proofs": [
+    {
+      "categories": [
+        "provider_source_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed paper source preparation evidence for AutoSci `ingest` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-ingest-followup-flags/research_paper.json",
+        "artifacts/autosci/runs/shim-ingest-followup-flags/ingest_final_source_registration_boundary.json",
+        "artifacts/autosci/runs/shim-ingest-followup-flags/research_memory_update.json",
+        "artifacts/autosci/runs/shim-ingest-followup-flags/research_graph_update.json",
+        "plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md"
+      ],
+      "native_skill": "ingest",
+      "production_ready": true,
+      "proof_id": "runtime:ingest:md:20260710T192344Z",
+      "provenance": {
+        "artifact_kind": "paper_source_preparation",
+        "captured_at": "2026-07-10T19:23:44Z",
+        "command": "ingest_paper:source_registration_boundary",
+        "paper_id": "paper-skillgen-operator-smoke-paper",
+        "source": "md"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

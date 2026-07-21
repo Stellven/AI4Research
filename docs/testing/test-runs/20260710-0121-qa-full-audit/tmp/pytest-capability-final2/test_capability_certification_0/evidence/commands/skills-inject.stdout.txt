@@ -1,0 +1,9 @@
+[solar_skills] injected context blocks into test.dispatch.md; telemetry=test.dispatch.md.intent.json
+[solar_skills] injected context blocks into test.dispatch.md; telemetry=test.dispatch.md.intent.json
+PASS: inject idempotency — all blocks present exactly once after 2 inject calls
+PASS: solar-skills-context block: present
+PASS: solar-intent-context block: present
+PASS: solar-capability-context block: present
+PASS: solar-knowledge-context block: present
+PASS: capability auto-selection: gstack/Superpowers/ATLAS/OWL/MarkItDown/agency-agents
+PROBES_PASSED=6 PROBES_FAILED=0

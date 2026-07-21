@@ -1,0 +1,58 @@
+{
+  "checks": [
+    {
+      "name": "source_preparation_verified",
+      "status": "missing"
+    },
+    {
+      "name": "parse_quality_ready",
+      "status": "missing"
+    },
+    {
+      "name": "raw_artifact_provenance_ready",
+      "status": "missing"
+    },
+    {
+      "name": "downstream_handoff_ready",
+      "status": "ok"
+    },
+    {
+      "name": "wiki_registration_ready",
+      "status": "missing"
+    }
+  ],
+  "downstream_handoff_ready": true,
+  "final_registration_ready": false,
+  "graph_sidecar_ready": true,
+  "memory_sidecar_ready": true,
+  "missing": [
+    "source_preparation_verified",
+    "parse_quality_ready",
+    "raw_artifact_provenance_ready",
+    "wiki_registration_ready"
+  ],
+  "paper_id": "paper-missing",
+  "parse_quality_ready": false,
+  "raw_artifact_provenance_ready": false,
+  "schema": "autosci_ingest_final_source_registration_boundary.v1",
+  "sidecar_evidence_paths": [
+    "artifacts/autosci/runs/priority-b-ingest-workspace-71af6f71063c42629b992f82f6af34cd/research_memory_update.json",
+    "artifacts/autosci/runs/priority-b-ingest-workspace-71af6f71063c42629b992f82f6af34cd/research_graph_update.json"
+  ],
+  "source_preparation_verified": false,
+  "status": "ingest_source_registration_incomplete",
+  "wiki_registration": {
+    "context_brief_path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+    "context_rebuilt": false,
+    "graph_edges_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+    "graph_registered": false,
+    "index_path": "artifacts/autosci/workspace/wiki/index.md",
+    "index_rebuilt": false,
+    "log_path": "artifacts/autosci/workspace/wiki/log.md",
+    "log_registered": false,
+    "paper_page": "artifacts/autosci/workspace/wiki/papers/paper-missing.md",
+    "paper_registered": false,
+    "wiki_root": "artifacts/autosci/workspace/wiki"
+  },
+  "wiki_registration_ready": false
+}

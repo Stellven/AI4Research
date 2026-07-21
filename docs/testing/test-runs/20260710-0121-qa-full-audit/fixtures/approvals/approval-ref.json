@@ -1,0 +1,6 @@
+{
+  "schema": "fixture_approval.v1",
+  "fixture_source": true,
+  "approval_ref": "fixture-approval-denied-by-default",
+  "approved": false
+}

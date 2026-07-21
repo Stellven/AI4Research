@@ -1,0 +1,21 @@
+{
+  "task_id": "task-info-smoke-research-scheduler-paper_ingest",
+  "operator_id": "autosci-paper-ingest-worker",
+  "sprint_id": "info-smoke-research-scheduler",
+  "node_id": "paper_ingest",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-01T23:50:36Z",
+  "finished_at": "2026-07-01T23:50:36Z",
+  "log_tail": "        \"identifiers\": {\n          \"source_fetch_status\": \"not_applicable\",\n          \"source_prepare_status\": \"completed\"\n        },\n        \"paper_id\": \"paper-info-smoke-research-scheduler\",\n        \"parse_status\": \"parsed\",\n        \"preparation\": {\n          \"abstract_excerpt\": \"\",\n          \"artifacts\": [],\n          \"arxiv_id\": \"\",\n          \"canonical_ingest_path\": \"raw/demo-paper.md\",\n          \"extracted_text_path\": null,\n          \"ingest_format\": \"md\",\n          \"original_format\": \"md\",\n          \"prepared_path\": null,\n          \"source_fetch_status\": \"not_applicable\",\n          \"source_path\": \"raw/demo-paper.md\",\n          \"status\": \"completed\",\n          \"title\": \"\",\n          \"warnings\": []\n        },\n        \"sections\": [\n          {\n            \"section_id\": \"abstract\",\n            \"source_anchor\": \"demo-paper.md#abstract\",\n            \"text\": \"This paper is a tiny fixture for AutoSci-on-Solar information gathering.\",\n            \"title\": \"Abstract\"\n          },\n          {\n            \"section_id\": \"method\",\n            \"source_anchor\": \"demo-paper.md#method\",\n            \"text\": \"It checks product-level command dispatch and typed evidence.\",\n            \"title\": \"Method\"\n          },\n          {\n            \"section_id\": \"results\",\n            \"source_anchor\": \"demo-paper.md#results\",\n            \"text\": \"It should produce research_paper.v1 evidence.\",\n            \"title\": \"Results\"\n          }\n        ],\n        \"source_ref\": \"raw/demo-paper.md\",\n        \"source_type\": \"markdown\",\n        \"title\": \"Demo Paper\"\n      }\n    },\n    \"provenance\": {\n      \"implementation_package\": \"plugins/autosci\",\n      \"operator_id\": \"autosci-bridge\",\n      \"timestamp\": \"2026-07-01T23:50:36Z\"",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

@@ -1,0 +1,66 @@
+{
+  "dag_id": "bench-dag-20260710184943",
+  "dag_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_records_graph0/logs/dag/bench-dag-20260710184943",
+  "planner": {
+    "stage": "planner",
+    "verdict": "pass",
+    "model": "gpt-5.4",
+    "instruction_chars": 22,
+    "contract": {
+      "workspace": "/app",
+      "write_scope": [
+        "/app"
+      ],
+      "success_predicates": [
+        "builder exits successfully",
+        "workspace changes or existing required files remain available",
+        "Terminal-Bench verifier computes final score"
+      ]
+    }
+  },
+  "graph_dispatch": {
+    "enabled": true,
+    "mode": "graph-dispatch-dry-run",
+    "ok": true,
+    "dispatcher_ok": true,
+    "return_code": 0,
+    "stdout": "{\"ok\": true, \"drain\": {\"processed\": 1}}",
+    "stderr": "",
+    "parsed": {
+      "ok": true,
+      "drain": {
+        "processed": 1
+      }
+    },
+    "processed": 1,
+    "isolated_harness": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_records_graph0/logs/dag/bench-dag-20260710184943/graph-dispatch-harness",
+    "dispatch_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_records_graph0/logs/dag/bench-dag-20260710184943/graph-dispatch-harness/sprints/bench-dag-20260710184943.N2-dispatch.md",
+    "handoff_file": "",
+    "live_completion": {},
+    "command_file": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_records_graph0/logs/dag/bench-dag-20260710184943/graph-dispatch-command.txt"
+  },
+  "builder": {
+    "stage": "builder",
+    "leaf_backend": "codex",
+    "return_code": 0,
+    "stdout": "builder ok\n",
+    "stderr": ""
+  },
+  "repair": {
+    "stage": "repair",
+    "applied": false,
+    "reason": "no_known_repair"
+  },
+  "evaluator": {
+    "stage": "evaluator",
+    "verdict": "pass",
+    "workspace_changed": true,
+    "file_count_before": 0,
+    "file_count_after": 1,
+    "builder_return_code": 0
+  },
+  "leaf_backend": "codex",
+  "return_code": 0,
+  "stdout": "builder ok\n",
+  "stderr": ""
+}

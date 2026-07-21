@@ -1,0 +1,97 @@
+{
+  "schema": "solar.s05.e2e_runtime_results.v1",
+  "generated_at": "2026-06-02T09:57:01Z",
+  "checks": [
+    {
+      "name": "actor_status_has_actorhost_fields",
+      "status": "passed",
+      "evidence": {
+        "actor_count": 45,
+        "missing": {},
+        "sample": {
+          "actor_id": "mini-claude-opus-planner",
+          "host_id": "mini",
+          "host_type": "claude_code_session",
+          "host_state": "online",
+          "host_last_seen": "2026-05-23T01:06:55Z",
+          "lease_state": "idle",
+          "role": "planner",
+          "enabled": true,
+          "billing_pool": "high",
+          "capability_summary": {
+            "architecture_reasoning": 5,
+            "code_impl": 4,
+            "root_cause_debug": 4,
+            "test_generation": 2,
+            "test_execution": 1,
+            "research_synthesis": 4,
+            "academic_critique": 4,
+            "browser_use": 0,
+            "gui_use": 0,
+            "long_context": 4,
+            "multi_agent_coordination": 4,
+            "speed": 2
+          },
+          "risk_summary": {
+            "allowed_write_scope": "harness",
+            "allowed_shell_scope": "allowed",
+            "allowed_network": "allowed",
+            "destructive_actions": "denied",
+            "git_commit": "allowed",
+            "git_push": "denied",
+            "payment_or_external_action": "denied"
+          },
+          "cost_summary": {
+            "cost_tier": "high",
+            "token_budget_class": "large",
+            "reserve_ratio": 0.2,
+            "effort": "heavy"
+          },
+          "evidence_path": "actors/mini-claude-opus-planner/evidence",
+          "context_packet_id": "N/A",
+          "context_packet_path": "N/A",
+          "operator_score_summary": null,
+          "verification_gate_status": null,
+          "capability_token_summary": null,
+          "failure_fingerprint_penalties": null,
+          "antigravity_denials": null
+        }
+      }
+    },
+    {
+      "name": "host_status_covers_eight_host_types",
+      "status": "passed",
+      "evidence": {
+        "host_types": [
+          "antigravity_managed_env",
+          "claude_code_session",
+          "codex_cloud",
+          "codex_worktree",
+          "docker_sandbox",
+          "local_mlx_process",
+          "ssh_devbox",
+          "tmux_pane"
+        ]
+      }
+    },
+    {
+      "name": "logical_operators_no_tmux_pane_index",
+      "status": "passed",
+      "evidence": {
+        "tmux_pane_index_count": 0
+      }
+    },
+    {
+      "name": "logical_operators_no_raw_tmux_pane_scheduler_key",
+      "status": "passed",
+      "evidence": {
+        "tmux_pane_count": 0
+      }
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0
+  }
+}

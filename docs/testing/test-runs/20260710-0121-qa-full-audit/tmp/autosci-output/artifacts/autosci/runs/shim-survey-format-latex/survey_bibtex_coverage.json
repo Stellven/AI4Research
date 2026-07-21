@@ -1,0 +1,42 @@
+{
+  "entries": [
+    {
+      "arxiv_id": "",
+      "bibtex": "@misc{wikiartifactsautosciworkspacewikipaperspaperregi,\n  title = {Registered SkillGen Source [UNCONFIRMED]},\n  note = {artifacts/autosci/workspace/wiki/papers/paper-registered-source.md}\n}",
+      "key": "wikiartifactsautosciworkspacewikipaperspaperregi",
+      "source_ref": "artifacts/autosci/workspace/wiki/papers/paper-registered-source.md",
+      "title": "Registered SkillGen Source",
+      "verified": false
+    },
+    {
+      "arxiv_id": "",
+      "bibtex": "@misc{wikiartifactsautosciworkspacewikipaperspapersamp,\n  title = {AutoSci Adapter Fixture Paper [UNCONFIRMED]},\n  note = {artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md}\n}",
+      "key": "wikiartifactsautosciworkspacewikipaperspapersamp",
+      "source_ref": "artifacts/autosci/workspace/wiki/papers/paper-sample-paper.md",
+      "title": "AutoSci Adapter Fixture Paper",
+      "verified": false
+    },
+    {
+      "arxiv_id": "",
+      "bibtex": "@misc{wikiartifactsautosciworkspacewikipaperspaperskil,\n  title = {SKILLGEN: Verified Inference-Time Agent Skill Synthesis [UNCONFIRMED]},\n  note = {artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md}\n}",
+      "key": "wikiartifactsautosciworkspacewikipaperspaperskil",
+      "source_ref": "artifacts/autosci/workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md",
+      "title": "SKILLGEN: Verified Inference-Time Agent Skill Synthesis",
+      "verified": false
+    },
+    {
+      "arxiv_id": "",
+      "bibtex": "@misc{wikiartifactsautosciworkspacewikipaperspaperskil,\n  title = {SKILLGEN: Verified Inference-Time Agent Skill Synthesis [UNCONFIRMED]},\n  note = {https://arxiv.org/abs/2601.00001}\n}",
+      "key": "wikiartifactsautosciworkspacewikipaperspaperskil",
+      "source_ref": "https://arxiv.org/abs/2601.00001",
+      "title": "SKILLGEN: Verified Inference-Time Agent Skill Synthesis",
+      "verified": false
+    }
+  ],
+  "entry_count": 4,
+  "limitations": [],
+  "schema": "autosci_survey_bibtex_coverage.v1",
+  "status": "completed",
+  "unconfirmed_count": 4,
+  "verified_count": 0
+}

@@ -1,0 +1,34 @@
+{
+  "ok": false,
+  "queue_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/survey_rewrite_queue.json",
+  "processed": 1,
+  "passed": 0,
+  "failed": 1,
+  "waiting": 1,
+  "skipped": [],
+  "results": [
+    {
+      "ok": false,
+      "section_id": "ch01/sec01",
+      "reason": "human_response_missing",
+      "writer_backend": "human-packet",
+      "prompt_packets": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/sections/ch01/sec01/prompt_packets",
+      "expected_response": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/sections/ch01/sec01/human_responses/round_01.md",
+      "review": {
+        "section_id": "ch01/sec01",
+        "verdict": "WAITING_FOR_HUMAN",
+        "unsupported_claim_rate": 1.0,
+        "citation_span_accuracy": 0.0,
+        "source_diversity_score": 0.0,
+        "repetition_score": 0.0,
+        "issues": [
+          "human_response_missing:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/sections/ch01/sec01/human_responses/round_01.md"
+        ],
+        "schema_version": "solar.research.survey.v1"
+      },
+      "queue_id": "rewrite_ch01_sec01",
+      "rewrite_round_index": 1
+    }
+  ],
+  "run_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0077/pytest/test_auto_repair_waits_for_hum0/survey_rewrite_run.json"
+}

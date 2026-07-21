@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_070_c79bcc9509_harness_tests_graph_test_evaluator_pool_discovery.py",
+  "source": "harness/tests/graph/test_evaluator_pool_discovery.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/graph/test_evaluator_pool_discovery.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.308,
+  "timeout": false
+}

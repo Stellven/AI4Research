@@ -1,0 +1,235 @@
+{
+  "authorization_prompt": "",
+  "authorization_requests": [],
+  "authorization_required": false,
+  "blocked_nodes": {},
+  "checks": [
+    {
+      "check": "paper_ingest_dispatched",
+      "detail": "failed",
+      "status": "error"
+    },
+    {
+      "check": "generic_workflow_runtime_manifest_written",
+      "detail": "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/scientific_workflow_runtime_manifest.json",
+      "status": "ok"
+    },
+    {
+      "check": "lifecycle_runtime_gate_passed",
+      "detail": "failed",
+      "status": "error"
+    }
+  ],
+  "dispatch_boundary": {
+    "blocking_reasons": [],
+    "fixture_nodes": [],
+    "limitations": [],
+    "production_ready": true,
+    "profiled_nodes": [
+      "paper_ingest"
+    ],
+    "required_nodes": [
+      "paper_ingest"
+    ],
+    "runner": "tools/run_scientific_workflow.py",
+    "runner_contract": "generic_workflow_runner",
+    "schema": "autosci_scheduler_dispatch_boundary.v1",
+    "smoke_nodes": [],
+    "status": "generic_workflow_runner",
+    "summary_path": "artifacts/scientific/workflow-runs/shim-research-generic-scheduler-run-scheduler/scientific_lifecycle_runtime.json",
+    "workflow_config_path": "workflows/scientific_research_lifecycle_full_v1.json",
+    "workflow_config_sha256": "61bcd747f0ade7361ec2c7f15916eea8d23210067483a516b8103541d8b67ac8",
+    "workflow_id": "scientific_research_lifecycle_full_v1"
+  },
+  "dispatch_input_profiles": {
+    "paper_ingest": {
+      "action": "ingest_paper",
+      "fixture_markers": [],
+      "logical_operator": "ScientificPaperIngestor",
+      "node_id": "paper_ingest",
+      "operator_id": "autosci-paper-ingest-worker",
+      "runner_contract": "generic_workflow_runner",
+      "runner_mode": "solar_scientific_workflow",
+      "smoke_mode": false,
+      "uses_fixture_or_smoke_input": false
+    }
+  },
+  "execution_owner": "solar.operator_runtime.generic_scientific_workflow_runner",
+  "gate_results": {},
+  "job_id": "shim-research-generic-scheduler-run-scheduler",
+  "lifecycle_gate_result": {
+    "evidence_status": "failed",
+    "exit_code": 2,
+    "ok": false,
+    "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_resear4/artifacts/scientific/workflow-runs/shim-research-generic-scheduler-run-scheduler/scientific_lifecycle_runtime.json",
+    "reasons": [
+      "node_results must be a non-empty map",
+      "gate_results must be a non-empty map",
+      "node_results.paper_ingest is required"
+    ],
+    "schema": "scientific_lifecycle.v1",
+    "status": "failed",
+    "warnings": []
+  },
+  "lifecycle_status": "failed",
+  "node_results": {},
+  "node_summaries": {
+    "paper_ingest": {
+      "action": "ingest_paper",
+      "bridge_result": {
+        "action": null,
+        "evidence_jsonl": null,
+        "evidence_path": null,
+        "ok": null,
+        "result_path": null,
+        "schema": null,
+        "status": null
+      },
+      "bridge_result_path": "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/paper_ingest/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/ingest_paper.result.json",
+      "checks": [
+        {
+          "check": "operator_runtime_submit",
+          "detail": "{'task_id': 'task-shim-research-generic-scheduler-run-scheduler-paper_ingest', 'operator_id': 'autosci-paper-ingest-worker', 'lease_id': 'autosci-paper-ingest-worker:task-shim-research-generic-scheduler-run-scheduler-paper_ingest:2026-07-10T19:15:36Z', 'inbox_path': '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_resear4/run/operator-inbox/autosci-paper-ingest-worker/task-shim-research-generic-scheduler-run-scheduler-paper_ingest.json', 'status': 'submitted', 'submitted_at': '2026-07-10T19:15:36Z', 'daemon_pid': 57576}",
+          "status": "ok"
+        },
+        {
+          "check": "operatord_result_written",
+          "detail": "{'found': True, 'wait_seconds': 0.41, 'daemon_exit': None}",
+          "status": "ok"
+        },
+        {
+          "check": "materialized_envelope_written",
+          "detail": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/envelope.json",
+          "status": "ok"
+        },
+        {
+          "check": "operator_result_completed",
+          "detail": "failed",
+          "status": "error"
+        },
+        {
+          "check": "operator_result_exit_zero",
+          "detail": "1",
+          "status": "error"
+        },
+        {
+          "check": "bridge_result_completed",
+          "detail": "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/paper_ingest/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/ingest_paper.result.json",
+          "status": "error"
+        },
+        {
+          "check": "bridge_action_ingest_paper",
+          "detail": "missing bridge result",
+          "status": "error"
+        },
+        {
+          "check": "evidence_schema_research_paper.v1",
+          "detail": "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/paper_ingest/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/research_paper.json",
+          "status": "error"
+        },
+        {
+          "check": "evidence_task_matches_submission",
+          "detail": "missing evidence",
+          "status": "error"
+        },
+        {
+          "check": "evidence_node_matches_submission",
+          "detail": "missing evidence",
+          "status": "error"
+        },
+        {
+          "check": "evidence_gate_passed",
+          "detail": "missing evidence",
+          "status": "error"
+        },
+        {
+          "check": "operator_log_contains_bridge_action",
+          "detail": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/output.log",
+          "status": "error"
+        }
+      ],
+      "evidence_path": "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/paper_ingest/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/research_paper.json",
+      "gate_result": {
+        "ok": false,
+        "reasons": [
+          "gate not run"
+        ],
+        "status": "failed"
+      },
+      "harness_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_resear4",
+      "logical_operator": "ScientificPaperIngestor",
+      "materialized_envelope_path": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/envelope.json",
+      "node_id": "paper_ingest",
+      "operator_id": "autosci-paper-ingest-worker",
+      "operator_result": {
+        "effective_model": "N/A",
+        "effective_provider": "command",
+        "exit_code": 1,
+        "finished_at": "2026-07-10T19:15:36Z",
+        "log_tail": "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_resear4/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate",
+        "model_route": {
+          "effective_model": "N/A",
+          "effective_provider": "command",
+          "requested_model": "N/A",
+          "routing_model": "N/A"
+        },
+        "node_id": "paper_ingest",
+        "operator_id": "autosci-paper-ingest-worker",
+        "requested_model": "N/A",
+        "routing_model": "N/A",
+        "sprint_id": "shim-research-generic-scheduler-run-scheduler",
+        "started_at": "2026-07-10T19:15:36Z",
+        "status": "failed",
+        "task_id": "task-shim-research-generic-scheduler-run-scheduler-paper_ingest"
+      },
+      "operator_result_path": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/result.json",
+      "output_log_path": "run/operator-results/autosci-paper-ingest-worker/task-shim-research-generic-scheduler-run-scheduler-paper_ingest/output.log",
+      "runner_contract": "generic_workflow_runner",
+      "runtime_mode": "solar_scientific_workflow",
+      "schema": "scientific_node_runtime_smoke.v1",
+      "sprint_id": "shim-research-generic-scheduler-run-scheduler",
+      "status": "failed",
+      "submission": {
+        "daemon_pid": 57576,
+        "inbox_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-assertion-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_resear4/run/operator-inbox/autosci-paper-ingest-worker/task-shim-research-generic-scheduler-run-scheduler-paper_ingest.json",
+        "lease_id": "autosci-paper-ingest-worker:task-shim-research-generic-scheduler-run-scheduler-paper_ingest:2026-07-10T19:15:36Z",
+        "operator_id": "autosci-paper-ingest-worker",
+        "status": "submitted",
+        "submitted_at": "2026-07-10T19:15:36Z",
+        "task_id": "task-shim-research-generic-scheduler-run-scheduler-paper_ingest"
+      },
+      "task_id": "task-shim-research-generic-scheduler-run-scheduler-paper_ingest",
+      "wait": {
+        "daemon_exit": null,
+        "found": true,
+        "wait_seconds": 0.41
+      }
+    }
+  },
+  "nodes": [
+    {
+      "action": "ingest_paper",
+      "depends_on": [],
+      "gate": "G_PAPER_INGEST",
+      "id": "paper_ingest",
+      "logical_operator": "ScientificPaperIngestor",
+      "operator_id": "autosci-paper-ingest-worker"
+    }
+  ],
+  "required_nodes": [
+    "paper_ingest"
+  ],
+  "runtime_manifest": {
+    "generated_by": "harness.tools.run_scientific_workflow",
+    "job_id": "shim-research-generic-scheduler-run-scheduler",
+    "path": "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/scientific_workflow_runtime_manifest.json",
+    "proofs": [],
+    "schema": "scientific_workflow_runtime_manifest.v1",
+    "workflow_id": "scientific_research_lifecycle_full_v1"
+  },
+  "runtime_manifest_path": "artifacts/autosci/runs/shim-research-generic-scheduler-run/scheduler_lifecycle/scientific_workflow_runtime_manifest.json",
+  "schema": "scientific_lifecycle.v1",
+  "sprint_id": "shim-research-generic-scheduler-run-scheduler",
+  "summary_path": "artifacts/scientific/workflow-runs/shim-research-generic-scheduler-run-scheduler/scientific_lifecycle_runtime.json",
+  "workflow_id": "scientific_research_lifecycle_full_v1"
+}

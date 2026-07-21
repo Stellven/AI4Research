@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_432_b16ba03c60_harness_tests_test_selector_runtime_store.py",
+  "source": "harness/tests/test_selector_runtime_store.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_selector_runtime_store.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.19,
+  "timeout": false
+}

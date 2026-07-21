@@ -1,0 +1,5 @@
+[0;36m[D5][0m 通知端到端验证
+
+  [0;32m✓[0m Step 1: 测试 Sprint 已创建 (sprint-e2e-notify-20260710-022515)
+  [0;32m✓[0m Step 2: 状态推进到 passed
+  等待协调器 finalize...

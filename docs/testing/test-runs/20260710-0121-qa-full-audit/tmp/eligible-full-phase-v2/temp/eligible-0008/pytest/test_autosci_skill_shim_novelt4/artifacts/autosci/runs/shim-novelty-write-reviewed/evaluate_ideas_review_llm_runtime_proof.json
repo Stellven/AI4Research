@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-07-10T14:04:50Z",
+  "proofs": [
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci novelty parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-novelty-write-reviewed/idea_evaluation.json",
+        "review-llm-writeback.json"
+      ],
+      "native_skill": "novelty",
+      "production_ready": true,
+      "proof_id": "runtime:novelty:users-jamesyuan-developer-github-repos-on-git-bettersolar-docs-testing-test-runs-20260710-0121-qa-full-audit-tmp-eligible-full-phase-v2-temp-eligible-0008-pytest-test-autosci-skill-shim-novelt4-review-llm-writeback-json:20260710T140450Z",
+      "provenance": {
+        "artifact_kind": "artifact_review",
+        "captured_at": "2026-07-10T14:04:50Z",
+        "command": "review_llm_evidence:/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_novelt4/review-llm-writeback.json",
+        "source": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0008/pytest/test_autosci_skill_shim_novelt4/review-llm-writeback.json"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -1,0 +1,162 @@
+{
+  "schema": "autosci_phase_c_premerge_readiness_audit.v1",
+  "status": "ready_for_integration_branch_premerge",
+  "logged_on": "2026-07-01",
+  "source_inputs": {
+    "latest_attachment": "/Users/jamesyuan/.codex/attachments/3735d5e6-b4f4-4abf-a7d3-c368f88a54f0/pasted-text.txt",
+    "prior_attachment": "/Users/jamesyuan/.codex/attachments/d1462411-4aa9-4a88-8f05-5410e3e21707/pasted-text.txt",
+    "updated_plan": "/Users/jamesyuan/Downloads/AutoSci_Solar_Prioritized_Integration_Plan_2026-06-30.md",
+    "phase_c_manifest": "docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json"
+  },
+  "decision": {
+    "can_start_integration_merge_branch": true,
+    "direct_product_branch_merge_recommended": false,
+    "boss_demo_preconditions_present_in_source_branch": true,
+    "full_autosci_parity_complete": false,
+    "next_step": "Open an integration merge branch only after the user explicitly asks to start the merge."
+  },
+  "merge_activity": {
+    "integration_branch_created": false,
+    "stellven_product_branch_modified": false,
+    "fetch_or_merge_performed": false,
+    "git_maintenance_or_repack_performed": false
+  },
+  "attachment_p0_reconciliation": [
+    {
+      "id": "p0_1_product_autosci_dispatch",
+      "status": "ok",
+      "current_branch_evidence": [
+        "harness/solar-harness.sh: do_autosci_command()",
+        "harness/solar-harness.sh: autosci)",
+        "harness/solar-harness.sh: $*)"
+      ],
+      "notes": "The latest attachment's unknown-command blocker is stale for this source branch, but unified product CLI wiring must still be manually merged in the Stellven base."
+    },
+    {
+      "id": "p0_2_agent_skill_wrappers",
+      "status": "ok",
+      "current_branch_evidence": [
+        ".agents/skills/*/SKILL.md route through solar-harness.sh autosci '$<skill> <user args>'"
+      ],
+      "notes": "Wrappers now prefer the explicit autosci subcommand while the direct $command harness dispatch remains supported."
+    },
+    {
+      "id": "p0_3_product_level_smoke_tests",
+      "status": "ok",
+      "current_branch_evidence": [
+        "harness/tests/integration/test_autosci_routes_list.py",
+        "harness/tests/integration/test_autosci_cli_dispatch.py",
+        "harness/tests/integration/test_autosci_ingest_demo.py",
+        "harness/tests/integration/test_autosci_review_demo.py",
+        "harness/tests/integration/test_autosci_research_scheduler_demo.py",
+        "harness/tests/integration/test_autosci_artifact_root.py"
+      ],
+      "notes": "Current-branch product smokes use isolated HARNESS_DIR roots; the unified Stellven repo must rerun equivalent tests after import."
+    },
+    {
+      "id": "p0_4_research_scheduler_demo",
+      "status": "ok",
+      "current_branch_evidence": [
+        "harness/plugins/autosci/bin/autosci_skill_shim.py: --scheduler-demo",
+        "harness/plugins/autosci/tests/test_autosci_skill_shim.py: scheduler demo preset test"
+      ],
+      "notes": "The demo preset is intentionally paper-grounded and does not promote provider/model-dependent nodes without evidence."
+    },
+    {
+      "id": "p0_5_tracked_artifact_cleanup",
+      "status": "ok",
+      "current_branch_evidence": [
+        "git ls-files harness/artifacts/autosci/runs/* == 0",
+        "git ls-files harness/artifacts/autosci/operator-smoke/* == 0",
+        "git ls-files harness/artifacts/autosci/phase19/current-parity-inventory-*.json == 0",
+        "git ls-files harness/artifacts/scientific/workflow-runs/* == 0"
+      ],
+      "notes": "Generated artifacts must remain excluded from the future integration branch."
+    }
+  ],
+  "wrapper_policy": {
+    "status": "ok",
+    "required_entrypoint_template": "\"${HARNESS_DIR:-$HOME/.solar/harness}/solar-harness.sh\" autosci '$<skill> <user args>'",
+    "path_entrypoint_template": "solar-harness autosci '$<skill> <user args>'",
+    "direct_dollar_dispatch_supported_but_not_preferred_for_docs": true
+  },
+  "tracked_generated_artifacts": {
+    "status": "ok",
+    "must_remain_untracked_patterns": [
+      "harness/artifacts/autosci/runs/*",
+      "harness/artifacts/autosci/operator-smoke/*",
+      "harness/artifacts/autosci/phase19/current-parity-inventory-*.json",
+      "harness/artifacts/scientific/workflow-runs/*"
+    ]
+  },
+  "local_ci_gate": {
+    "status": "wired",
+    "script_path": "harness/tests/test-autosci-premerge-gate.sh",
+    "ci_workflow_path": ".github/workflows/solar-ci.yml",
+    "ci_job": "autosci-premerge-gate",
+    "runs_current_branch_contracts": true,
+    "runs_product_level_smokes": true,
+    "runs_scheduler_demo_shim_tests": true,
+    "checks_generated_artifact_tracking": true,
+    "checks_git_connectivity": true,
+    "starts_merge_branch": false,
+    "fetches_or_merges_stellven": false,
+    "claims_full_autosci_parity": false
+  },
+  "unified_repo_post_import_gates": [
+    {
+      "id": "routes_list",
+      "command": "solar harness autosci '$skills'",
+      "required": true
+    },
+    {
+      "id": "cli_dispatch",
+      "command": "solar harness autosci '$review --help'",
+      "required": true
+    },
+    {
+      "id": "ingest_demo",
+      "command": "solar harness autosci '$ingest harness/plugins/autosci/tests/fixtures/sample_paper.md --run-id demo-ingest'",
+      "required": true
+    },
+    {
+      "id": "review_demo",
+      "command": "solar harness autosci '$review README.md --focus method --run-id demo-review'",
+      "required": true
+    },
+    {
+      "id": "scheduler_demo",
+      "command": "solar harness autosci '$research \"agentic scientific workflow\" --scheduler-run --scheduler-demo --run-id demo-research'",
+      "required": true
+    },
+    {
+      "id": "artifact_root",
+      "command": "Verify AutoSci and scientific outputs stay under the unified HARNESS_DIR.",
+      "required": true
+    }
+  ],
+  "residual_risks": [
+    {
+      "id": "bin_solar_product_cli",
+      "status": "pending",
+      "notes": "bin/solar belongs to the Stellven product base and remains a manual merge item."
+    },
+    {
+      "id": "skill_dispatcher_execution_boundary",
+      "status": "pending",
+      "notes": "Stellven SkillDispatcher must not be treated as AutoSci execution until it dispatches to the native shim or equivalent bridge."
+    },
+    {
+      "id": "full_autosci_parity",
+      "status": "pending",
+      "notes": "Full native AutoSci parity continues after unification; this audit only covers merge-prep and demo-contract readiness."
+    }
+  ],
+  "verification_commands": [
+    "bash harness/tests/test-autosci-premerge-gate.sh",
+    "harness/bin/python3 -m py_compile harness/tests/test_autosci_phase_c_premerge_readiness.py",
+    "env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py -q",
+    "git diff --check -- docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json docs/integrations/autosci/phase19-progress-log.md harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py .agents/skills",
+    "git fsck --connectivity-only --no-dangling"
+  ]
+}

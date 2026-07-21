@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import importlib.util
 import json
 import sqlite3
@@ -22,17 +23,23 @@ def test_ai_influence_payload_discovers_all_report_kinds(tmp_path, monkeypatch):
     mod = _load_module()
     legacy_root = tmp_path / "legacy-ai-influence"
     hotspot_root = tmp_path / "tech-hotspot-radar"
-    legacy_run = legacy_root / "2026-05-26"
-    planned_report = hotspot_root / "ai-influence-planned" / "2026-05-26" / "reports" / "planned-one"
-    unified_run = hotspot_root / "2026-05-26"
-    phase_run = hotspot_root / "phase-2" / "2026-05-24"
+    # Today-relative dates so the fixture stays inside the default 30-day discovery window
+    # (_ai_influence_period_cutoff defaults to "30d"). Hardcoded calendar dates made this a
+    # time-bomb: the older report silently aged past the cutoff once real time advanced, dropping
+    # its kind from discovery and failing the count assertion on a date unrelated to any code change.
+    recent = datetime.date.today().isoformat()
+    older = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
+    legacy_run = legacy_root / recent
+    planned_report = hotspot_root / "ai-influence-planned" / recent / "reports" / "planned-one"
+    unified_run = hotspot_root / recent
+    phase_run = hotspot_root / "phase-2" / older
 
     for path in [legacy_run, planned_report, unified_run, phase_run]:
         path.mkdir(parents=True, exist_ok=True)
 
     (legacy_run / "digest.md").write_text("# digest\n", encoding="utf-8")
     (legacy_run / "digest.html").write_text("<html>digest</html>", encoding="utf-8")
-    (legacy_run / "digest.json").write_text(json.dumps({"date": "2026-05-26", "stats": {"top_scored": 3}, "items": [1, 2]}, ensure_ascii=False), encoding="utf-8")
+    (legacy_run / "digest.json").write_text(json.dumps({"date": recent, "stats": {"top_scored": 3}, "items": [1, 2]}, ensure_ascii=False), encoding="utf-8")
 
     (planned_report / "report.html").write_text("<html>planned</html>", encoding="utf-8")
     (planned_report / "report.md").write_text("# planned\n", encoding="utf-8")
@@ -41,7 +48,7 @@ def test_ai_influence_payload_discovers_all_report_kinds(tmp_path, monkeypatch):
 
     (unified_run / "report.html").write_text("<html>unified</html>", encoding="utf-8")
     (unified_run / "unified-overview.md").write_text("# unified\n", encoding="utf-8")
-    (unified_run / "youtube-transcripts-2026-05-26.txt").write_text("tx", encoding="utf-8")
+    (unified_run / f"youtube-transcripts-{recent}.txt").write_text("tx", encoding="utf-8")
 
     (phase_run / "report.html").write_text("<html>phase</html>", encoding="utf-8")
     (phase_run / "phase-report.md").write_text("# phase\n", encoding="utf-8")
@@ -80,7 +87,10 @@ def test_ai_influence_html_splits_reports_and_resources_tabs(tmp_path, monkeypat
     mod = _load_module()
     legacy_root = tmp_path / "legacy-ai-influence"
     hotspot_root = tmp_path / "tech-hotspot-radar"
-    planned_report = hotspot_root / "ai-influence-planned" / "2026-05-26" / "reports" / "planned-one"
+    # Today-relative so the report stays inside the default 30-day discovery window (a hardcoded
+    # calendar date made this a time-bomb that aged past _ai_influence_period_cutoff's cutoff).
+    recent = datetime.date.today().isoformat()
+    planned_report = hotspot_root / "ai-influence-planned" / recent / "reports" / "planned-one"
     planned_report.mkdir(parents=True, exist_ok=True)
 
     (planned_report / "report.html").write_text("<html>planned</html>", encoding="utf-8")

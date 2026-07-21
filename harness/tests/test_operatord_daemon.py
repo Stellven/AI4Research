@@ -94,7 +94,15 @@ def _setup_harness(tmp_path: Path) -> dict:
     else:
         dest_persona.write_text("# Builder\nYou are a builder.")
 
-    env = {**os.environ, "HARNESS_DIR": str(tmp_path)}
+    env = {
+        **os.environ,
+        "HARNESS_DIR": str(tmp_path),
+        # This suite exercises the explicit ``submit -> daemon --once``
+        # lifecycle.  Product submissions auto-kick operatord by default and
+        # have separate real-path coverage; leaving that enabled here races a
+        # second daemon against the one the test intentionally starts.
+        "SOLAR_OPERATORD_AUTO_KICK": "0",
+    }
     return env
 
 
@@ -156,7 +164,13 @@ raise SystemExit(2)
     )
     pm_dispatch.chmod(0o755)
 
-    env = {**os.environ, "HARNESS_DIR": str(tmp_path)}
+    env = {
+        **os.environ,
+        "HARNESS_DIR": str(tmp_path),
+        # Keep the command-backend fixtures on the same explicit daemon
+        # lifecycle as the local-backend fixtures above.
+        "SOLAR_OPERATORD_AUTO_KICK": "0",
+    }
     env["COMMAND_AGENT"] = f"python3 {writer}"
     return env
 
@@ -276,6 +290,43 @@ class TestWriteResult:
         assert result["started_at"] == "2026-05-22T00:00:00Z"
         assert result["finished_at"] == "2026-05-22T00:00:05Z"
         assert "log_tail" in result
+
+    def test_exact_result_converges_multi_task_status(self, tmp_path, monkeypatch):
+        """The durable result writer must close the matching submitted task row."""
+        self._patch_dirs(monkeypatch, tmp_path)
+        monkeypatch.setattr(_rt, "HARNESS_DIR", tmp_path)
+        status_path = tmp_path / "run" / "multi-task" / "T-converge" / "status.json"
+        status_path.parent.mkdir(parents=True)
+        status_path.write_text(
+            json.dumps(
+                {
+                    "id": "T-converge",
+                    "operator_id": "op1",
+                    "sprint_id": "sprint-1",
+                    "node_id": "N1",
+                    "status": "submitted",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result_path = _rt.write_result(
+            operator_id="op1",
+            task_id="T-converge",
+            sprint_id="sprint-1",
+            node_id="N1",
+            status="completed",
+            exit_code=0,
+            started_at="2026-05-22T00:00:00Z",
+            finished_at="2026-05-22T00:00:05Z",
+            log_tail="ok",
+        )
+
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+        assert status["status"] == "completed"
+        assert status["exit_code"] == 0
+        assert status["result_path"] == str(result_path)
+        assert status["result_converged"] is True
 
     def test_writes_model_route_fields(self, tmp_path, monkeypatch):
         self._patch_dirs(monkeypatch, tmp_path)

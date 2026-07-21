@@ -9,7 +9,7 @@ TOOLS = ROOT / "tools"
 if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
-from report_validation import build_quality_score, repair_chapter_markdown, run_chapter_verifier, write_validation_sidecars  # noqa: E402
+from report_validation import build_quality_score, run_chapter_verifier, write_validation_sidecars  # noqa: E402
 
 
 def _pack() -> dict:
@@ -56,24 +56,6 @@ def test_chapter_verifier_flags_internal_field_leaks_and_ungrounded_claims() -> 
     assert result["status"] == "failed"
     assert "no_internal_field_leak" in result["repair_reasons"]
     assert "grounded_claim_ratio_below_target" in result["repair_reasons"]
-
-
-def test_repair_downgrades_unsupported_claims_to_uncertainty() -> None:
-    markdown = (
-        "## Repairable\n\n"
-        "判断：这个方向已经证明会彻底改变市场。"
-        "V001 显示 agent runtime 正在从演示走向可执行工作流。"
-        "下一步建议观察调度、权限和失败恢复。"
-    )
-    initial = run_chapter_verifier({"chapter_id": "ch_01"}, markdown, _pack(), {"deep_proof_path": "proof/ch_01.deep.proof.json"})
-    assert initial["status"] == "repair_needed"
-
-    repaired = repair_chapter_markdown(markdown, initial, _pack())
-    assert repaired["changed"] is True
-    assert "暂不作为强结论" in repaired["markdown"]
-
-    verified = run_chapter_verifier({"chapter_id": "ch_01"}, repaired["markdown"], _pack(), {"deep_proof_path": "proof/ch_01.deep.proof.json"})
-    assert verified["status"] == "passed"
 
 
 def test_quality_score_blocks_failed_chapters_and_writes_sidecars(tmp_path: Path) -> None:

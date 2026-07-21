@@ -1,0 +1,7 @@
+{
+  "source_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0138/pytest/test_stage_browser_profile_per0/Chrome",
+  "seed_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0138/pytest/test_stage_browser_profile_per0/Chrome",
+  "profile_directory": "Profile 1",
+  "runtime_prepared_at": "2026-07-10T18:50:42Z",
+  "strategy": "persistent"
+}

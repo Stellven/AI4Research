@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+os.environ["HARNESS_DIR"] = str(ROOT)
+for _env in ("SOLAR_HARNESS_DIR", "HARNESS_SPRINTS_DIR"):
+    os.environ.pop(_env, None)
 sys.path.insert(0, str(ROOT / "lib"))
+for _module in ("graph_scheduler", "capability_inference", "apo_plan_compiler"):
+    sys.modules.pop(_module, None)
 
+import graph_scheduler as gs  # noqa: E402
 from graph_scheduler import assign_workers, enqueue_ready  # noqa: E402
 
 
@@ -38,14 +45,32 @@ def test_queue_reason_distinguishes_capacity_from_no_matching_worker() -> None:
     assert "details" in result["queued"][0]
 
 
-def test_queue_reason_remains_no_matching_worker_when_skills_are_missing() -> None:
-    worker = _worker("pane-a")
-    worker["skills"] = ["python"]
-    result = assign_workers([_node("N1")], [worker])
-    assert result["assigned"] == []
-    assert result["queued"][0]["node"] == "N1"
-    assert result["queued"][0]["reason"] == "no_matching_worker"
-    assert "pytest" in result["queued"][0]["details"]["missing_skills"]
+def test_skill_short_worker_is_assignable_but_capability_short_strands() -> None:
+    # graph_scheduler design: required SKILLS are a PREFERENCE (Layer-3 relaxed net) so a node never
+    # permanently strands on a free-form/unregistered skill string, while a required CAPABILITY stays
+    # the HARD gate. So a capability-qualified worker that is merely skill-short is still dispatched,
+    # but a worker missing a genuinely-unsatisfiable required capability strands as no_matching_worker.
+
+    # Skill-short (missing pytest/stub-llm) but capabilities satisfied -> assigned (skills are not a gate).
+    skill_short = _worker("pane-a")
+    skill_short["skills"] = ["python"]
+    relaxed = assign_workers([_node("N1")], [skill_short])
+    assert relaxed["queued"] == []
+    assert relaxed["assigned"][0]["node"] == "N1"
+
+    # GUARDRAIL (the real gate is kept): a genuinely-unsatisfiable required capability strands honestly.
+    cap_short = _worker("pane-b")
+    cap_node = {
+        "id": "N2",
+        "preferred_model": "sonnet",
+        "required_skills": [],
+        "required_capabilities": ["fake.capability.xyz"],
+    }
+    stranded = assign_workers([cap_node], [cap_short])
+    assert stranded["assigned"] == []
+    assert stranded["queued"][0]["node"] == "N2"
+    assert stranded["queued"][0]["reason"] == "no_matching_worker"
+    assert "fake.capability.xyz" in stranded["queued"][0]["details"]["missing_capabilities"]
 
 
 def test_busy_matching_worker_is_queued_instead_of_assigned() -> None:
@@ -230,7 +255,38 @@ def test_code_impl_and_test_generation_aliases_bind_general_builder_workers() ->
     assert result["assigned"][0]["node"] == "N1"
 
 
+def test_capability_alias_groups_do_not_bridge_unrelated_requirements() -> None:
+    worker = {
+        "skills": ["python"],
+        "capabilities": ["python"],
+    }
+
+    # Direct synonyms in one declared group remain equivalent.
+    assert gs._capabilities_match(worker, ["code_impl"])
+    # Overlap between the algorithm and API groups must not make every Python
+    # worker an algorithm-design worker through api-design -> python.
+    assert not gs._capabilities_match(worker, ["algorithm_design"])
+
+
+def test_repo_workspace_is_dispatch_provisioned_not_worker_advertised() -> None:
+    worker = _worker("pane-a")
+    worker["skills"] = ["python", "pytest", "ImplementationWorker"]
+    worker["capabilities"] = ["code_impl"]
+    node = {
+        "id": "N1",
+        "preferred_model": "glm-5.1",
+        "logical_operator": "ImplementationWorker",
+        "required_skills": ["python", "testing"],
+        "required_capabilities": ["repo-workspace", "python-cli-implementation"],
+    }
+    result = assign_workers([node], [worker])
+    assert result["queued"] == []
+    assert result["assigned"][0]["node"] == "N1"
+    assert result["assigned"][0]["required_capabilities"] == ["python-cli-implementation"]
+
+
 def test_enqueue_ready_marks_no_matching_worker_nodes_as_worker_blocked(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(gs, "SPRINTS_DIR", tmp_path / "sprints")
     graph = {
         "sprint_id": "sid",
         "nodes": [
@@ -259,6 +315,7 @@ def test_enqueue_ready_marks_no_matching_worker_nodes_as_worker_blocked(tmp_path
 
 
 def test_worker_blocked_nodes_are_retryable_after_capability_fix(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(gs, "SPRINTS_DIR", tmp_path / "sprints")
     graph = {
         "sprint_id": "sid",
         "nodes": [
@@ -294,6 +351,7 @@ def test_worker_blocked_nodes_are_retryable_after_capability_fix(tmp_path: Path,
 
 
 def test_worker_blocked_node_becomes_queued_when_matching_worker_is_pane_busy(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(gs, "SPRINTS_DIR", tmp_path / "sprints")
     graph = {
         "sprint_id": "sid",
         "nodes": [

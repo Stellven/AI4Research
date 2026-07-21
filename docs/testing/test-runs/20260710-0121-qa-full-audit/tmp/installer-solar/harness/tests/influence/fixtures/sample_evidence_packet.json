@@ -1,0 +1,31 @@
+{
+  "schema_version": "influence.evidence_packet.v1",
+  "packet_id": "pkt-fixture-001",
+  "thesis_id": "thesis-fixture-001",
+  "thesis_claim": "Next-gen frontier model capability gains will significantly exceed current scaling law predictions.",
+  "local_scores": {
+    "novelty": 0.7,
+    "signal_strength": 0.8,
+    "source_credibility": 0.6,
+    "cross_source_resonance": 0.3,
+    "timeliness": 0.9,
+    "actionability": 0.5,
+    "contrarian_score": 0.4
+  },
+  "mapped_evidence": {
+    "papers": [],
+    "github_repos": [],
+    "hf_assets": [],
+    "conference_events": [],
+    "company_releases": [],
+    "financial_events": [],
+    "major_news": [],
+    "coverage_gap": ["hf_paper_connector_missing"]
+  },
+  "questions_for_high_model": [
+    "Does the historical scaling law data support or contradict this claim?",
+    "What specific capability benchmarks would validate this prediction?"
+  ],
+  "source_statements": ["stmt-fixture-001"],
+  "generated_at": "2026-05-28T12:05:00Z"
+}

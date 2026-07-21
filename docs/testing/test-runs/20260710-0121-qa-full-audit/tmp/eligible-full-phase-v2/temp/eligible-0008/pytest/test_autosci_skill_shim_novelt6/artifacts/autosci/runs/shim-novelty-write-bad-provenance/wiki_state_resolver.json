@@ -1,0 +1,56 @@
+{
+  "action": "evaluate_ideas",
+  "existing_wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ],
+  "experiments": [],
+  "graph_edges": [],
+  "graph_errors": [],
+  "ideas": [
+    {
+      "frontmatter_keys": [
+        "novelty_score",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": true,
+      "id": "skillgen-writeback",
+      "idea_id": "skillgen-writeback",
+      "linked_experiments": [],
+      "novelty_score": 0.0,
+      "path": "artifacts/autosci/workspace/wiki/ideas/skillgen-writeback.md",
+      "slug": "skillgen-writeback",
+      "status": "proposed",
+      "title": "SkillGen Writeback"
+    }
+  ],
+  "indexes": {
+    "experiments_by_slug": {},
+    "ideas_by_slug": {
+      "skillgen-writeback": "skillgen-writeback"
+    },
+    "outputs_by_slug": {}
+  },
+  "limitations": [
+    "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+    "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+  ],
+  "outputs": [],
+  "resolution": {
+    "fallback_used": false,
+    "target": "skillgen-writeback",
+    "target_id": "skillgen-writeback",
+    "target_path": "artifacts/autosci/workspace/wiki/ideas/skillgen-writeback.md",
+    "target_type": "idea",
+    "warnings": []
+  },
+  "schema": "autosci_wiki_state_resolver.v1",
+  "selected_root": "artifacts/autosci/workspace/wiki",
+  "status": "completed",
+  "wiki_roots": [
+    "artifacts/autosci/workspace/wiki",
+    "wiki",
+    "harness/artifacts/autosci/workspace/wiki"
+  ]
+}

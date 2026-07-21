@@ -1,0 +1,1 @@
+{"event": "graph_parent_ready_passed", "by": "graph-dispatch", "data": {"node_count": 1, "required_gates": ["gate-1"]}, "ts": "2026-07-10T14:14:18Z", "sid": "test-parent-ready"}

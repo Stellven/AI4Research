@@ -1,0 +1,1 @@
+- 2026-07-10T19:25:57Z | experiment | completed `exp-remote-collect` outcome `partially_supports` evidence `exp-remote-collect, remote-collect:exp-remote-collect, remote-results/results.json, result:exp-remote-collect, task-autosci-skillgen-monitor_experiment, node-monitor-experiment, artifacts/autosci/runs/shim-exp-remote-collect/monitor_experiment_runtime_evidence.json`

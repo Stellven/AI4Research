@@ -1,0 +1,11 @@
+PaperSnapshot
+PaperCanonical
+PaperEnrichment
+PaperTaxonomy
+PaperSignal
+PaperEvidencePacket
+paper_signal_graph
+paper_route_graph
+paper_resonance_graph
+paper_claim_graph
+## §6

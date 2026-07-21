@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_197_2d726c40be_harness_tests_research_survey_test_finalize_run.py",
+  "source": "harness/tests/research_survey/test_finalize_run.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research_survey/test_finalize_run.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.482,
+  "timeout": false
+}

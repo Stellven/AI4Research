@@ -1,0 +1,480 @@
+{
+  "schema_version": "solar.requirement_ir.v1",
+  "id": "req-1563d15fa2ad",
+  "request_type": "implementation",
+  "priority": "P2",
+  "lane_hint": "delivery",
+  "source_inputs": {
+    "raw_request": "把 codex_pm_router 入口接到 RawIntent 主链。",
+    "raw_request_original": "# RawIntent Consumer Request - 把 codex_pm_router 入口接到 RawIntent 主链。\n\n## Source\n\n- intent_id: intent-20260710-185248-247df1a246\n- channel: codex_pm_router\n- actor: user\n- device: codex_pm_router_cli\n- thread_ref: \n\n## Rewritten Objective\n\n把 codex_pm_router 入口接到 RawIntent 主链。\n\n## Problem\n\n把 codex_pm_router 入口接到 RawIntent 主链。\n\n## Constraints\n\n- All execution must enter Solar-Harness through RawIntent and requirement compilation.\n- Do not bypass task_graph, operator runtime, quota-aware fallback, or evidence logging.\n\n## Acceptance\n\n- RawIntent, rewritten_intent, requirement_ir, and requirement_trace artifacts are persisted.\n- Compiled work is routable through PM/Planner/task_graph and multi-task operator runtime.\n- Completion requires evidence artifacts and verifier-visible status.\n\n## Raw User Intent\n\n把 codex_pm_router 入口接到 RawIntent 主链。",
+    "papers": [],
+    "logs": [],
+    "repo_context": []
+  },
+  "user_intent": "把 codex_pm_router 入口接到 RawIntent 主链。",
+  "normalized_goal": "把 codex_pm_router 入口接到 RawIntent 主链。",
+  "problem_statement": "把 codex_pm_router 入口接到 RawIntent 主链。",
+  "assumptions": [
+    "PM 产物需要兼容 solar-harness 现有 PM -> Planner -> Builder 主链。",
+    "Markdown PRD / contract 是编译视图，不是唯一事实源。",
+    "短实现类请求默认优先最小改动和 verifier gate。"
+  ],
+  "open_questions": [],
+  "risk_register": [
+    {
+      "id": "R1",
+      "level": "medium",
+      "title": "PRD / contract / DAG 多份产物漂移",
+      "mitigation": "用 Requirement IR 做唯一事实源，所有视图从 IR 编译。"
+    },
+    {
+      "id": "R2",
+      "level": "medium",
+      "title": "原始需求直接派给 Builder 导致执行发散",
+      "mitigation": "强制走 product-brief / planner handoff，不允许 raw request 直派 builder。"
+    },
+    {
+      "id": "R3",
+      "level": "medium",
+      "title": "验收标准没有映射到验证步骤",
+      "mitigation": "编译期做 acceptance coverage 检查，缺失时阻断派单。"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-000",
+      "source_text": "把 codex_pm_router 入口接到 RawIntent 主链。",
+      "success_criteria": [
+        "把 codex_pm_router 入口接到 RawIntent 主链。"
+      ],
+      "verification_method": "task_graph_closeout",
+      "priority": "P2"
+    },
+    {
+      "id": "REQ-001",
+      "source_text": "目标变更在声明范围内完成。",
+      "success_criteria": [
+        "目标变更在声明范围内完成。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "priority": "P2"
+    },
+    {
+      "id": "REQ-002",
+      "source_text": "至少一条测试/执行证据被记录。",
+      "success_criteria": [
+        "至少一条测试/执行证据被记录。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "priority": "P2"
+    },
+    {
+      "id": "REQ-003",
+      "source_text": "存在独立 verifier 决策。",
+      "success_criteria": [
+        "存在独立 verifier 决策。"
+      ],
+      "verification_method": "acceptance_evidence",
+      "priority": "P2"
+    }
+  ],
+  "scheduling": {
+    "queue_class": "requirements_compile",
+    "global_priority_boost": 1000,
+    "lane_hint": "delivery"
+  },
+  "confidence": 0.79,
+  "prd_view": {
+    "variant": "short",
+    "sections": [
+      {
+        "title": "Goal",
+        "body": "把 codex_pm_router 入口接到 RawIntent 主链。"
+      },
+      {
+        "title": "Context",
+        "body": "基于当前请求直接定位到局部改动范围。"
+      },
+      {
+        "title": "Scope",
+        "body": "- 把 codex_pm_router 入口接到 RawIntent 主链。"
+      },
+      {
+        "title": "Non-goals",
+        "body": "- 不做无关架构重写。\n- 不默认引入新的生产依赖。"
+      },
+      {
+        "title": "Acceptance Criteria",
+        "body": "- 目标变更在声明范围内完成。\n- 至少一条测试/执行证据被记录。\n- 存在独立 verifier 决策。"
+      },
+      {
+        "title": "Validation",
+        "body": "- 运行测试或 smoke check\n- 记录 diff / 风险 / 验证证据"
+      },
+      {
+        "title": "Rollback",
+        "body": "如验证失败，回退到变更前状态并保留失败证据。"
+      }
+    ]
+  },
+  "contracts": {
+    "product": {
+      "enabled": true,
+      "goal": "把 codex_pm_router 入口接到 RawIntent 主链。",
+      "success_metrics": [
+        "目标变更在声明范围内完成。",
+        "至少一条测试/执行证据被记录。",
+        "存在独立 verifier 决策。"
+      ],
+      "non_goals": [
+        "不做无关架构重写。",
+        "不默认引入新的生产依赖。"
+      ],
+      "acceptance": [
+        "目标变更在声明范围内完成。",
+        "至少一条测试/执行证据被记录。",
+        "存在独立 verifier 决策。"
+      ],
+      "stop_rules": [
+        "缺少可验证 acceptance 不得标记为完成。",
+        "缺少 verifier 决策不得进入 DONE。"
+      ]
+    },
+    "interface": {
+      "enabled": true,
+      "name": "RequirementCompilerAdapters",
+      "version": "1.0",
+      "inputs": [
+        "RequirementIR"
+      ],
+      "outputs": [
+        "ProductBrief",
+        "ContractsBundle",
+        "TaskDAG",
+        "HandoffPackage"
+      ],
+      "invariants": [
+        "Requirement IR is the only source of truth.",
+        "DAG nodes[*].id must be unique.",
+        "Every acceptance criterion maps to at least one validation step."
+      ],
+      "errors": [
+        {
+          "code": "CYCLE_DETECTED",
+          "action": "split dependencies or ask for clarification"
+        },
+        {
+          "code": "ACCEPTANCE_COVERAGE_MISSING",
+          "action": "add validation before dispatch"
+        }
+      ]
+    },
+    "agent_execution": {
+      "enabled": true,
+      "task_scope": "implementation",
+      "allowed_paths": [
+        "apps/pm-pane/**",
+        "packages/requirement-ir/**",
+        "harness/**"
+      ],
+      "forbidden_paths": [
+        "infra/prod/**",
+        ".env*",
+        "secrets/**"
+      ],
+      "commands": {
+        "test": [
+          "pnpm test",
+          "pnpm lint"
+        ],
+        "inspect": [
+          "rg",
+          "python3",
+          "pytest"
+        ]
+      },
+      "approval_required_when": [
+        "new production dependency",
+        "database migration",
+        "network access",
+        "touching auth or billing"
+      ],
+      "stop_conditions": [
+        "缺少可验证 acceptance 不得标记为完成。",
+        "缺少 verifier 决策不得进入 DONE。"
+      ]
+    },
+    "research": {
+      "enabled": false,
+      "hypothesis": "把 codex_pm_router 入口接到 RawIntent 主链。",
+      "source_papers": [],
+      "experiments": [],
+      "adoption_threshold": {},
+      "rejection_criteria": []
+    }
+  },
+  "dag_view": {
+    "dag_variant": "short",
+    "required_gates": [
+      "G_IMPL",
+      "G_TEST",
+      "G_REVIEW"
+    ],
+    "nodes": [
+      {
+        "id": "S1",
+        "goal": "Implement the requested targeted change.",
+        "logical_operator": "ImplementationWorker",
+        "depends_on": [],
+        "acceptance": [
+          "Patch or config change produced within declared scope."
+        ],
+        "verifier_required": true,
+        "estimated_cost": 1,
+        "gate": "G_IMPL",
+        "type": "implementation",
+        "owner": "codex",
+        "inputs": [
+          "requirement_ir.json"
+        ],
+        "outputs": [
+          "patch.diff"
+        ],
+        "validation": [
+          {
+            "kind": "artifact",
+            "target": "patch.diff",
+            "required": true
+          }
+        ],
+        "risk": "low",
+        "uncertainty": 0.2,
+        "parallelizable": false,
+        "approval_gate": false,
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-compiler-implementation",
+        "dispatch_task_type": "implementation",
+        "capsule_plan": {
+          "capability_native": true,
+          "capability_capsule_id": "cap.requirement-compiler-implementation",
+          "dispatch_task_type": "implementation",
+          "selection_mode": "static_default_fallback",
+          "fallback_used": true,
+          "fallback_reason": "no_capsule_matched_signals",
+          "request_type": "implementation",
+          "lane_hint": "delivery",
+          "logical_operator": "ImplementationWorker",
+          "node_goal": "Implement the requested targeted change.",
+          "required_guard_capsules": [
+            "guard.secret-leak-guard"
+          ],
+          "required_resource_capsules": [
+            "resource.repo-workspace"
+          ],
+          "selected_skills": [
+            "skill.implementation"
+          ],
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-sonnet-builder"
+            ],
+            "forbidden": [
+              "mini-antigravity-gemini35-flash-high"
+            ],
+            "default_operator_profile": "mini-claude-sonnet-builder"
+          }
+        },
+        "requirement_ids": [
+          "REQ-001",
+          "REQ-002",
+          "REQ-003"
+        ],
+        "priority": 30,
+        "required_phase": "planning_complete",
+        "required_node_id": null,
+        "required_node_status": null,
+        "acceptance_ids": [
+          "ACC-S1-1"
+        ]
+      },
+      {
+        "id": "S2",
+        "goal": "Run tests or collect execution evidence for the change.",
+        "logical_operator": "TestRunner",
+        "depends_on": [
+          "S1"
+        ],
+        "acceptance": [
+          "Test report or execution evidence captured."
+        ],
+        "estimated_cost": 1,
+        "gate": "G_TEST",
+        "type": "test",
+        "owner": "codex",
+        "inputs": [
+          "upstream_artifact"
+        ],
+        "outputs": [
+          "test_report.md"
+        ],
+        "validation": [
+          {
+            "kind": "artifact",
+            "target": "test_report.md",
+            "required": true
+          }
+        ],
+        "risk": "low",
+        "uncertainty": 0.2,
+        "parallelizable": false,
+        "approval_gate": false,
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-compiler-verification",
+        "dispatch_task_type": "tests",
+        "capsule_plan": {
+          "capability_native": true,
+          "capability_capsule_id": "cap.requirement-compiler-verification",
+          "dispatch_task_type": "tests",
+          "selection_mode": "static_default_fallback",
+          "fallback_used": true,
+          "fallback_reason": "classifier_score_below_threshold",
+          "request_type": "implementation",
+          "lane_hint": "delivery",
+          "logical_operator": "TestRunner",
+          "node_goal": "Run tests or collect execution evidence for the change.",
+          "required_guard_capsules": [
+            "guard.secret-leak-guard"
+          ],
+          "required_resource_capsules": [
+            "resource.github-readonly"
+          ],
+          "selected_skills": [
+            "skill.patch-review-hardcore"
+          ],
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-opus-evaluator"
+            ],
+            "forbidden": [
+              "mini-antigravity-gemini35-flash-high"
+            ],
+            "default_operator_profile": "mini-claude-opus-evaluator"
+          }
+        },
+        "requirement_ids": [
+          "REQ-001",
+          "REQ-002",
+          "REQ-003"
+        ],
+        "priority": 20,
+        "required_phase": "planning_complete",
+        "required_node_id": "S1",
+        "required_node_status": "passed",
+        "acceptance_ids": [
+          "ACC-S2-1"
+        ]
+      },
+      {
+        "id": "S3",
+        "goal": "Review implementation and evidence before closeout.",
+        "logical_operator": "Verifier",
+        "depends_on": [
+          "S2"
+        ],
+        "acceptance": [
+          "Independent verifier decision recorded."
+        ],
+        "estimated_cost": 1,
+        "gate": "G_REVIEW",
+        "type": "review",
+        "owner": "solar-harness",
+        "inputs": [
+          "upstream_artifact"
+        ],
+        "outputs": [
+          "review_decision.yaml"
+        ],
+        "validation": [
+          {
+            "kind": "artifact",
+            "target": "review_decision.yaml",
+            "required": true
+          }
+        ],
+        "risk": "high",
+        "uncertainty": 0.2,
+        "parallelizable": false,
+        "approval_gate": true,
+        "capability_native": true,
+        "capability_capsule_id": "cap.requirement-compiler-verification",
+        "dispatch_task_type": "verification",
+        "capsule_plan": {
+          "capability_native": true,
+          "capability_capsule_id": "cap.requirement-compiler-verification",
+          "dispatch_task_type": "verification",
+          "selection_mode": "static_default_fallback",
+          "fallback_used": true,
+          "fallback_reason": "classifier_score_below_threshold",
+          "request_type": "implementation",
+          "lane_hint": "delivery",
+          "logical_operator": "Verifier",
+          "node_goal": "Review implementation and evidence before closeout.",
+          "required_guard_capsules": [
+            "guard.secret-leak-guard"
+          ],
+          "required_resource_capsules": [
+            "resource.github-readonly"
+          ],
+          "selected_skills": [
+            "skill.patch-review-hardcore"
+          ],
+          "operator_constraints": {
+            "preferred": [
+              "mini-claude-opus-evaluator"
+            ],
+            "forbidden": [
+              "mini-antigravity-gemini35-flash-high"
+            ],
+            "default_operator_profile": "mini-claude-opus-evaluator"
+          }
+        },
+        "requirement_ids": [
+          "REQ-000",
+          "REQ-001",
+          "REQ-002",
+          "REQ-003"
+        ],
+        "priority": 10,
+        "required_phase": "planning_complete",
+        "required_node_id": "S2",
+        "required_node_status": "passed",
+        "acceptance_ids": [
+          "ACC-S3-1"
+        ]
+      }
+    ],
+    "sprint_id": "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2"
+  },
+  "handoff_view": {
+    "codex": {
+      "target": "Codex",
+      "artifacts": [
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.requirement_ir.json",
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.prd.md",
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.Contracts.yaml",
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.task_graph.json"
+      ]
+    },
+    "solar_harness": {
+      "target": "solar-harness",
+      "artifacts": [
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.requirement_ir.json",
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.prd.md",
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.Contracts.yaml",
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.task_graph.json",
+        "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2.handoff.md"
+      ]
+    }
+  },
+  "evidence_policy": {}
+}

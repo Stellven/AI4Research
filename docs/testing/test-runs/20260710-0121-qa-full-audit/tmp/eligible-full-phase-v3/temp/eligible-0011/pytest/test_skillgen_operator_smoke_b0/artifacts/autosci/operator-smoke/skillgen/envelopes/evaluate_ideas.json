@@ -1,0 +1,19 @@
+{
+  "inputs": {
+    "claims_evidence": "artifacts/autosci/operator-smoke/skillgen/research_claims.json",
+    "ideas_evidence": "artifacts/autosci/operator-smoke/skillgen/idea_candidate.json",
+    "memory_evidence": "artifacts/autosci/operator-smoke/skillgen/research_memory_update.json",
+    "method_evidence": "artifacts/autosci/operator-smoke/skillgen/research_method.json"
+  },
+  "mode": "fixture",
+  "node_id": "node-evaluate-ideas",
+  "output_dir": "artifacts/autosci/operator-smoke/skillgen",
+  "outputs": {
+    "evidence_jsonl": "artifacts/autosci/operator-smoke/skillgen/evidence.jsonl",
+    "evidence_payload_path": "artifacts/autosci/operator-smoke/skillgen/idea_evaluation.json",
+    "memory_update_path": "artifacts/autosci/operator-smoke/skillgen/research_memory_update.ideas.json",
+    "result_path": "artifacts/autosci/operator-smoke/skillgen/evaluate_ideas.result.json"
+  },
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "task_id": "task-autosci-skillgen-evaluate_ideas"
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "solar.task_graph_closure.v1",
+  "sprint_id": "closed-sprint",
+  "all_nodes_passed": false,
+  "all_required_gates_passed": false,
+  "acceptance_traceability_coverage": null,
+  "tests": [],
+  "evals": [],
+  "changed_files": [],
+  "residual_risks": [
+    "some risk"
+  ],
+  "closed_at": null,
+  "created_at": "2026-07-10T14:06:36Z"
+}

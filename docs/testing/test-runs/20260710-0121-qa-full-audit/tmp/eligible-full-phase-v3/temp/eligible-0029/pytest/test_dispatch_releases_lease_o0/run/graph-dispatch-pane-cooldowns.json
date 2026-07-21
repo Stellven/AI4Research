@@ -1,0 +1,9 @@
+{
+  "test:0.1": {
+    "reason": "send_failed_requeued",
+    "sid": "test-graph-submit",
+    "dispatch_id": "dispatch-123",
+    "marked_at": "2026-07-10T14:14:17Z",
+    "until": "2026-07-10T14:15:47Z"
+  }
+}

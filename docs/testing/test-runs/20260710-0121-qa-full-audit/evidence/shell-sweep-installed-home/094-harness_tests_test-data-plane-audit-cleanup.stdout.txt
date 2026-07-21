@@ -1,0 +1,2 @@
+PASS: fixture database created
+PASS: syntax checks

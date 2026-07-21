@@ -9,6 +9,7 @@ set -uo pipefail
 HARNESS_DIR="$HOME/.solar/harness"
 SPRINTS_DIR="$HARNESS_DIR/sprints"
 COORD="$HARNESS_DIR/coordinator.sh"
+[[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 
 G='\033[0;32m'; R='\033[0;31m'; C='\033[0;36m'; N='\033[0m'
 PASS=0; FAIL=0
@@ -55,7 +56,7 @@ test_get_latest() {
       continue
     fi
     local mtime
-    mtime=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo 0)
+    mtime=$(solar_file_mtime "$f" 2>/dev/null || echo 0)
     if [[ "$mtime" -gt "$best_mtime" ]]; then
       best_mtime="$mtime"; best="$f"
     fi

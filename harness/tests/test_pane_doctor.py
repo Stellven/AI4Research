@@ -349,6 +349,7 @@ def test_respawn_lab_allows_busy_needs_respawn_but_skips_leased_panes(tmp_path, 
     monkeypatch.setattr(pd.gnd, "_pane_tui_busy", lambda pane: pane.endswith(".0"))
     monkeypatch.setattr(pd, "_pane_visibly_idle", lambda *_: True)
     monkeypatch.setattr(pd, "read_lease", lambda pane: {"expires_at": "2999-01-01T00:00:00Z"} if pane.endswith(".1") else None)
+    monkeypatch.setattr(pd, "_tmux_pane_id", lambda pane: "%0" if pane.endswith(".0") else "%1")
 
     result = pd.respawn_lab(dry_run=True, max_items=2)
 

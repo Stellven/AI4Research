@@ -1,0 +1,413 @@
+{
+  "action": "daily_arxiv_prepare_finalize",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/autosci/runs/shim-side-effect-access-daily_arxiv_prepare_finalize/daily_arxiv_prepare_finalize_approval_contract.json",
+        "type": "approval_contract_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-side-effect-access-daily_arxiv_prepare_finalize/daily_arxiv_prepare_finalize_gate_policy_decision.json",
+        "type": "gate_policy_decision_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-side-effect-access-daily_arxiv_prepare_finalize/daily_arxiv_final_provider_delivery_boundary.json",
+        "type": "daily_arxiv_final_provider_delivery_boundary_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-side-effect-access-daily_arxiv_prepare_finalize/daily_arxiv_prepare_finalize_side_effect_access_request.json",
+        "type": "side_effect_access_request_json"
+      },
+      {
+        "path": "artifacts/autosci/runs/shim-side-effect-access-daily_arxiv_prepare_finalize/literature_discovery.daily_arxiv.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "daily_command": "run",
+      "gate_mode": "strict_hitl",
+      "limit": 10,
+      "native_options": {
+        "add": "",
+        "affiliation_logo": "",
+        "after_artifacts": [],
+        "all": false,
+        "allowlist_evidence": [],
+        "anonymous": false,
+        "approval_ref": "",
+        "authors": "",
+        "auto": false,
+        "auto_figures": false,
+        "before_artifacts": [],
+        "canvas": false,
+        "checklist": false,
+        "claims_evidence": [],
+        "code_evidence": [],
+        "collect": false,
+        "collect_ready": false,
+        "compile_after_artifacts": [],
+        "compile_allowlist_evidence": [],
+        "compile_approval_ref": "",
+        "compile_before_artifacts": [],
+        "compile_execute_approved": false,
+        "compile_executor_timeout_seconds": 120,
+        "compile_runtime_evidence": [],
+        "compile_target": "",
+        "conference_logo": "",
+        "crystallize": false,
+        "daily_categories": [],
+        "daily_decisions": "",
+        "daily_feed": "",
+        "daily_hours": 0,
+        "daily_max_auto_ingest": 0,
+        "daily_max_recommendations": 0,
+        "daily_mode": "",
+        "daily_no_external": false,
+        "daily_send_email": "",
+        "depth": 0,
+        "difficulty": "",
+        "discover": false,
+        "double_blind": false,
+        "edge_types": "",
+        "env": "",
+        "execute_approved": false,
+        "experiment_after_artifacts": [],
+        "experiment_allowlist_evidence": [],
+        "experiment_approval_ref": "",
+        "experiment_before_artifacts": [],
+        "experiment_execute_approved": false,
+        "experiment_executor_timeout_seconds": 120,
+        "experiment_result_evidence": [],
+        "experiment_runtime_evidence": [],
+        "fix": false,
+        "focus": "",
+        "format": "",
+        "full": false,
+        "idea_approval_ref": "",
+        "layout": "",
+        "lifecycle_summary": [],
+        "max_ideas": 0,
+        "max_rounds": 0,
+        "min_font_size": null,
+        "model_command": "",
+        "model_evidence": [],
+        "no_figures": false,
+        "no_introduction": false,
+        "no_logos": false,
+        "no_refine": false,
+        "novelty_evidence": [],
+        "obsidian": false,
+        "online": false,
+        "page_count": null,
+        "page_limit": null,
+        "paper_slug": "",
+        "pdf_inspection": "",
+        "pilot_handoff_evidence": [],
+        "pilot_runtime_evidence": [],
+        "pipeline": "",
+        "quick": false,
+        "refine_iterations": 0,
+        "remote_check_command": "",
+        "remote_run_dir": "",
+        "render": false,
+        "require_review_llm": false,
+        "results_approval_ref": "",
+        "review": false,
+        "review_llm_command": "",
+        "review_llm_endpoint": "",
+        "review_llm_evidence": [],
+        "review_llm_model": "",
+        "review_llm_provider": "",
+        "reviewer_thread_evidence": [],
+        "runtime_evidence": [],
+        "scheduler_demo": false,
+        "scheduler_dispatch_external_evidence": false,
+        "scheduler_include_blocked_external": false,
+        "scheduler_include_human_gates": false,
+        "scheduler_legacy_smoke_runner": false,
+        "scheduler_node_id": [],
+        "scheduler_require_workflow_config_alignment": false,
+        "scheduler_run": false,
+        "scheduler_timeout": 30.0,
+        "scope": "",
+        "serve": false,
+        "skip_paper": false,
+        "skip_pilot": false,
+        "skip_validation": false,
+        "source_evidence": [],
+        "start_from": "",
+        "stress_test": null,
+        "submission_audit": "",
+        "submission_mode": "",
+        "submission_profile": "",
+        "target_score": 0.0,
+        "title": "",
+        "types": "",
+        "verbose": false,
+        "verified_min_font_size": null,
+        "verified_page_count": null,
+        "visualize": false,
+        "write": false
+      },
+      "query": "SkillGen verified inference-time agent skill synthesis",
+      "smoke_mode": false,
+      "target": "agents"
+    },
+    "limitations": [
+      "Daily arXiv prepare/finalize is approval-gated; this bridge did not execute network feed fetch, email, or auto-ingest.",
+      "Provide approved feed fetch evidence before treating this digest as complete.",
+      "Approval/runtime evidence contract is not fully verified: approval_ref, allowlist_evidence, before_artifacts, runtime_evidence, after_artifacts",
+      "Source runtime evidence did not prove a non-fixture provider channel.",
+      "Daily arXiv finality requires a verified approval contract with runtime and after-artifact evidence.",
+      "Daily arXiv finality requires semantic runtime verification to pass.",
+      "Daily arXiv finality requires completed non-fixture provider source-channel evidence.",
+      "Daily arXiv finality requires at least one candidate.",
+      "Daily arXiv finality requires ranking score and rationale for every candidate.",
+      "Daily arXiv finality requires explicit digest delivery or completed /ingest evidence.",
+      "Side-effect access is required; no protected native side effects were executed."
+    ],
+    "node_id": "node-daily-arxiv-prepare-finalize",
+    "outputs": {
+      "blocking_reasons": [
+        "read_local is allowed in strict_hitl.",
+        "write_artifact is allowed in strict_hitl.",
+        "network_fetch requires HITL approval in strict_hitl."
+      ],
+      "candidates": [],
+      "final_provider_delivery_boundary": {
+        "approval_contract_verified": false,
+        "approval_state": "approval_required",
+        "candidate_count": 0,
+        "delivery_completed": false,
+        "delivery_evidence_ids": [],
+        "fan_in_completed": false,
+        "final_delivery_ready": false,
+        "limitations": [
+          "Daily arXiv finality requires a verified approval contract with runtime and after-artifact evidence.",
+          "Daily arXiv finality requires semantic runtime verification to pass.",
+          "Daily arXiv finality requires completed non-fixture provider source-channel evidence.",
+          "Daily arXiv finality requires at least one candidate.",
+          "Daily arXiv finality requires ranking score and rationale for every candidate.",
+          "Daily arXiv finality requires explicit digest delivery or completed /ingest evidence."
+        ],
+        "provider_boundary_completed": false,
+        "provider_boundary_status": "incomplete",
+        "ranking_ready": false,
+        "schema": "autosci_daily_arxiv_final_provider_delivery_boundary.v1",
+        "semantic_runtime_status": "incomplete",
+        "semantic_runtime_verified": false,
+        "source_channels": [],
+        "stage_provider_ready": false,
+        "status": "daily_provider_delivery_incomplete"
+      },
+      "limit": 10,
+      "mode": "daily_arxiv_plan",
+      "policy_decision": {
+        "action": "daily_arxiv_prepare_finalize",
+        "allow_destructive": false,
+        "allow_email": false,
+        "allow_network": false,
+        "allow_remote": false,
+        "allowed": false,
+        "allowed_write_roots": [
+          "artifacts/autosci",
+          "artifacts/scientific"
+        ],
+        "blocked": true,
+        "execute_side_effects": false,
+        "mode": "strict_hitl",
+        "proof_best_effort": false,
+        "proof_required": true,
+        "reasons": [
+          "read_local is allowed in strict_hitl.",
+          "write_artifact is allowed in strict_hitl.",
+          "network_fetch requires HITL approval in strict_hitl."
+        ],
+        "require_approval_ref": true,
+        "require_before_after_artifacts": true,
+        "require_hitl": true,
+        "require_runtime_evidence": true,
+        "sandbox_required": false,
+        "side_effects": [
+          "read_local",
+          "write_artifact",
+          "network_fetch"
+        ],
+        "synthetic_approval_ref": "",
+        "warnings": []
+      },
+      "query": "SkillGen verified inference-time agent skill synthesis",
+      "review_evidence_ids": [],
+      "review_llm": {
+        "checked_paths": [],
+        "claim_id": "daily_arxiv_digest_selection",
+        "reasons": [
+          "No Review LLM evidence was supplied."
+        ],
+        "status": "unavailable"
+      },
+      "review_llm_completed": false,
+      "side_effect_access_request": {
+        "action": "daily_arxiv_prepare_finalize",
+        "blocking_reasons": [
+          "read_local is allowed in strict_hitl.",
+          "write_artifact is allowed in strict_hitl.",
+          "network_fetch requires HITL approval in strict_hitl."
+        ],
+        "continuation": {
+          "access_patch_options": [
+            {
+              "env": [
+                "SOLAR_AUTOSCI_ALLOW_NETWORK=1"
+              ],
+              "inputs": {
+                "gate_mode": "parity_demo"
+              },
+              "limitations": [
+                "Use only for bounded local parity side effects. Network still requires SOLAR_AUTOSCI_ALLOW_NETWORK=1."
+              ],
+              "name": "bounded_policy_mode"
+            },
+            {
+              "env": [],
+              "inputs": {
+                "gate_mode": "autosci_native"
+              },
+              "limitations": [
+                "Bypasses Solar gate blocking; runtime evidence remains required before claiming full parity."
+              ],
+              "name": "native_policy_mode"
+            },
+            {
+              "env": [
+                "SOLAR_AUTOSCI_ALLOW_NETWORK=1"
+              ],
+              "inputs": {
+                "approval_ref": "<approval-ref>",
+                "execute_approved_side_effect": true
+              },
+              "limitations": [
+                "Strict HITL resume must provide enough typed artifacts for the action approval contract to verify."
+              ],
+              "name": "hitl_approval",
+              "required_artifacts": [
+                "allowlist_evidence",
+                "before_artifact",
+                "runtime_evidence",
+                "after_artifact"
+              ]
+            }
+          ],
+          "action": "daily_arxiv_prepare_finalize",
+          "non_error_contract": {
+            "blocked_runs_exit_successfully": true,
+            "evidence_status": "inconclusive",
+            "side_effect_access_status": "blocked_side_effect_access_required"
+          },
+          "request_fingerprint": "1fde7ae0b20f914b944584a7cf40c748a28cd5748b506fbda83dbdd948fcc289",
+          "resume_strategy": "rerun_same_action_with_access_patch",
+          "retriable": true,
+          "same_envelope_supported": true,
+          "schema": "autosci_side_effect_continuation.v1",
+          "status": "awaiting_side_effect_access"
+        },
+        "gate_policy": {
+          "allowed": false,
+          "blocked": true,
+          "execute_side_effects": false,
+          "mode": "strict_hitl",
+          "require_approval_ref": true,
+          "require_hitl": true,
+          "synthetic_approval_ref": ""
+        },
+        "generated_at": "2026-07-10T19:26:31Z",
+        "how_to_allow": [
+          "Re-run with an AutoSci gate mode that may execute the requested side effects, such as `--gate-mode parity_demo`, `--gate-mode unsafe_native`, or `--gate-mode autosci_native`, depending on risk.",
+          "For risky native side effects, set the explicit SOLAR_AUTOSCI_ALLOW_* opt-in variables listed in requested_access.environment_opt_ins.",
+          "When strict HITL is required, provide approval_ref plus before/allowlist/runtime/after evidence artifacts instead of relying on a silent dry run."
+        ],
+        "limitations": [
+          "Protected native side effects were not executed for this action.",
+          "This request is an access boundary, not proof that the side effects completed."
+        ],
+        "native_skill": "daily-arxiv",
+        "requested_access": {
+          "allowed_write_roots": [
+            "artifacts/autosci",
+            "artifacts/scientific"
+          ],
+          "approval_ref": true,
+          "before_after_artifacts": true,
+          "environment_opt_ins": [
+            "SOLAR_AUTOSCI_ALLOW_NETWORK=1"
+          ],
+          "runtime_evidence": true
+        },
+        "requested_side_effects": [
+          "read_local",
+          "write_artifact",
+          "network_fetch"
+        ],
+        "required_inputs": [
+          "approval_ref or permissive gate mode for live feed fetch",
+          "daily-arxiv decisions JSON for finalize",
+          "delivery or wiki-ingest runtime proof when email/auto-ingest is requested"
+        ],
+        "schema": "autosci_side_effect_access_request.v1",
+        "status": "blocked_side_effect_access_required"
+      },
+      "side_effect_access_required": true,
+      "side_effect_access_status": "blocked_side_effect_access_required",
+      "source_fan_in": {
+        "applied": false,
+        "candidate_count": 0,
+        "requested": false,
+        "status": "not_requested",
+        "written_count": 0
+      },
+      "source_provider_boundary": {
+        "action": "daily_arxiv_prepare_finalize",
+        "candidate_count": 0,
+        "candidate_ids": [],
+        "completed": false,
+        "generic_channels": [],
+        "invalid_reasons": [
+          "no source candidates were present",
+          "no non-fixture provider source channel was present"
+        ],
+        "limitations": [
+          "Source runtime evidence did not prove a non-fixture provider channel."
+        ],
+        "provider_channels": [],
+        "runtime_record_sources": [],
+        "schema": "autosci_source_provider_boundary.v1",
+        "source_channels": [],
+        "status": "incomplete"
+      }
+    },
+    "provenance": {
+      "gate_policy": {
+        "action": "daily_arxiv_prepare_finalize",
+        "allowed": false,
+        "execute_side_effects": false,
+        "mode": "strict_hitl",
+        "proof_best_effort": false,
+        "proof_required": true,
+        "synthetic_approval_ref": ""
+      },
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T19:26:31Z"
+    },
+    "schema": "literature_discovery.v1",
+    "sprint_id": "phase19-skillgen-operator-smoke",
+    "status": "inconclusive",
+    "task_id": "task-autosci-skillgen-daily_arxiv_prepare_finalize"
+  },
+  "evidence_jsonl": "artifacts/autosci/runs/shim-side-effect-access-daily_arxiv_prepare_finalize/evidence.jsonl",
+  "evidence_path": "artifacts/autosci/runs/shim-side-effect-access-daily_arxiv_prepare_finalize/literature_discovery.daily_arxiv.json",
+  "ok": true,
+  "result_path": "artifacts/autosci/runs/shim-side-effect-access-daily_arxiv_prepare_finalize/daily_arxiv_prepare_finalize.result.json",
+  "schema": "literature_discovery.v1",
+  "status": "inconclusive"
+}

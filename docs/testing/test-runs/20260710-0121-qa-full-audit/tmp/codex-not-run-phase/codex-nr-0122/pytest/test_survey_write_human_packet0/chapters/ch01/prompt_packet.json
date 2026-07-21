@@ -1,0 +1,48 @@
+{
+  "chapter_id": "ch01",
+  "chapter_title": "ch01",
+  "chapter_objective": "",
+  "active_section_id": "ch01/sec01",
+  "writer_backend": "human-packet",
+  "writing_policy": {
+    "policy_id": "solar.survey.professor_grade_writing.v1",
+    "purpose": "Turn evidence packs into auditable professor-grade survey sections instead of generic long-form summaries.",
+    "section_template": [
+      "Research Question",
+      "Position",
+      "Claim Map",
+      "Evidence Map",
+      "Source Map",
+      "Literature Lineage",
+      "Method Taxonomy",
+      "Architecture Synthesis",
+      "Comparative Positioning",
+      "Terminology Evolution",
+      "Evaluation Protocol Matrix",
+      "Evaluation And Risk Boundary",
+      "Limitations And Failure Modes",
+      "Controversy Matrix",
+      "Contradiction Slots",
+      "Open Problems"
+    ],
+    "synthesis_rules": [
+      "Separate mechanism, system, evaluation, and deployment claims.",
+      "State which source type supports each important conclusion.",
+      "Prefer bounded conclusions when evidence comes from narrow benchmarks or partial implementations.",
+      "Surface contradictions and missing evidence in the main body, not only in footnotes.",
+      "Preserve claim/evidence tags so factuality gates can audit the section mechanically."
+    ],
+    "forbidden_patterns": [
+      "Do not invent source names, URLs, metrics, benchmarks, or paper results.",
+      "Do not collapse paper evidence, official docs, code, and benchmarks into one undifferentiated citation bucket.",
+      "Do not turn open problems into vague future-work filler."
+    ]
+  },
+  "sibling_sections": [],
+  "chapter_synthesis_contract": [
+    "Ensure sibling sections do not repeat the same argument.",
+    "Keep terminology consistent across the chapter.",
+    "Preserve contradiction slots for chief-editor review.",
+    "Make source-type differences visible in section conclusions."
+  ]
+}

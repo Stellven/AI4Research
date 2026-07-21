@@ -48,7 +48,7 @@ export class FileIndexer {
   private rootPath: string;
   private stats: IndexStats;
 
-  constructor(dbPath: string = `${process.env.HOME}/.solar/solar.db`, rootPath: string = process.cwd()) {
+  constructor(dbPath: string = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`, rootPath: string = process.cwd()) {
     this.db = new Database(dbPath);
     this.rootPath = rootPath;
     this.stats = {

@@ -1,0 +1,37 @@
+{
+  "artifacts": [],
+  "inputs": {
+    "handoff_test": true
+  },
+  "limitations": [
+    "Synthetic strict lifecycle handoff fixture."
+  ],
+  "node_id": "memory_update_final",
+  "outputs": {
+    "evolution": {
+      "approval_state": "approved",
+      "change_type": "other",
+      "evidence_ids": [
+        "evidence:memory_update_final"
+      ],
+      "expected_effect": "Proves lifecycle summary handoff has runtime sidecars.",
+      "proposal_id": "proposal-memory_update_final",
+      "rationale": "Strict handoff fixture for memory_update_final.",
+      "review": {
+        "application_state": "not_applied",
+        "human_accept_reject_required": false,
+        "protected_core_edits_applied": false
+      },
+      "scope": "scheduler lifecycle handoff"
+    }
+  },
+  "provenance": {
+    "implementation_package": "harness.plugins.autosci.tests",
+    "operator_id": "operator-memory_update_final",
+    "timestamp": "2026-06-26T00:00:00Z"
+  },
+  "schema": "workflow_evolution.v1",
+  "sprint_id": "job-scheduler-lifecycle-strict",
+  "status": "completed",
+  "task_id": "task-memory_update_final"
+}

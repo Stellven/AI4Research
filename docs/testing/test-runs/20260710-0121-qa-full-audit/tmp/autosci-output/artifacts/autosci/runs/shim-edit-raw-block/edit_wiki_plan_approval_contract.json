@@ -1,0 +1,138 @@
+{
+  "action": "edit_wiki_plan",
+  "after_artifacts": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_edit_b0/raw-after.md",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_edit_b0/raw-after.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-edit-raw-block/edit_wiki_plan_local_mutation_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-edit-raw-block/edit_wiki_plan_local_mutation_runtime_evidence.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/raw/papers/existing-source.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/raw/papers/existing-source.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/log.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/log.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/index.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/index.md",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "verifiable": true
+    }
+  ],
+  "after_ready": true,
+  "allowlist_evidence": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_edit_b0/edit-allowlist.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_edit_b0/edit-allowlist.json",
+      "verifiable": true
+    }
+  ],
+  "allowlist_ready": true,
+  "approval_ref": "approval-edit-raw-block",
+  "approval_state": "approved_missing_preflight",
+  "approved": true,
+  "authorization_request": {
+    "action": "edit_wiki_plan",
+    "approval_state": "approved_missing_preflight",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [],
+        "allowlist_evidence": [],
+        "approval_ref": "",
+        "before_artifacts": [
+          "<before-artifact>"
+        ],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": []
+      },
+      "request_fingerprint": "1bdd55e14baf36bda0fd69e0ebdf79a2d32474edc69b4a4a2ba978bfba27b530",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": true,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "awaiting_authorization"
+    },
+    "missing": [
+      "before_artifacts"
+    ],
+    "non_error_contract": {
+      "approval_state": "approved_missing_preflight",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": false,
+      "allowlist_evidence": false,
+      "approval_ref": false,
+      "before_artifacts": true,
+      "runtime_evidence": false
+    },
+    "requested_side_effects": [
+      "raw_source_add",
+      "source_materialization",
+      "wiki_log_update",
+      "navigation_rebuild"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "awaiting_authorization"
+  },
+  "before_artifacts": [],
+  "before_ready": false,
+  "execution_verified": false,
+  "missing": [
+    "before_artifacts"
+  ],
+  "ready_for_execution": false,
+  "runtime_evidence": [
+    {
+      "artifact_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_edit_b0/edit-runtime.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_edit_b0/edit-runtime.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-edit-raw-block/edit_wiki_plan_local_mutation_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-edit-raw-block/edit_wiki_plan_local_mutation_runtime_evidence.json",
+      "verifiable": true
+    }
+  ],
+  "runtime_ready": true,
+  "schema": "autosci_approval_contract.v1",
+  "side_effects": [
+    "raw_source_add",
+    "source_materialization",
+    "wiki_log_update",
+    "navigation_rebuild"
+  ]
+}

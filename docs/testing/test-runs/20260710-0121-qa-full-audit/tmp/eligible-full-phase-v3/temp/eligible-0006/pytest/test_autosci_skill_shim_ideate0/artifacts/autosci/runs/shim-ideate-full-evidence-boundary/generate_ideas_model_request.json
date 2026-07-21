@@ -1,0 +1,54 @@
+{
+  "action": "generate_ideas",
+  "context": {
+    "local_candidate_count": 3,
+    "source_summary": {
+      "active_idea_count": 1,
+      "discovery_source_count": 0,
+      "failed_idea_count": 0,
+      "generation_path_count": 3,
+      "max_ideas": 0,
+      "selected_for_write_count": 3,
+      "source_ids": [
+        "wiki:papers/skillgen",
+        "wiki:methods/adaptation",
+        "wiki:ideas/existing-control",
+        "wiki:graph/open_questions.md"
+      ],
+      "source_mode": "wiki",
+      "source_refs": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_ideate0/artifacts/autosci/workspace/wiki/papers/skillgen.md",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_ideate0/artifacts/autosci/workspace/wiki/methods/adaptation.md",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_ideate0/artifacts/autosci/workspace/wiki/ideas/existing-control.md",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_ideate0/artifacts/autosci/workspace/wiki/graph/open_questions.md"
+      ],
+      "wiki_source_count": 4
+    },
+    "topic": "agent skill learning",
+    "wiki_state_resolution": {
+      "fallback_used": false,
+      "target": "agent skill learning",
+      "target_id": "",
+      "target_path": "",
+      "target_type": "unresolved",
+      "warnings": [
+        "Target `agent skill learning` was not found in wiki ideas, experiments, outputs, or graph edges."
+      ]
+    }
+  },
+  "prompt": "Brainstorm source-grounded AutoSci research ideas. Return JSON with outputs.ideas; each idea must include title, hypothesis, approach, novelty_hypothesis, origin_evidence_ids, and generation_path using exactly one native path: A:landscape-driven, B:incremental, C:combination, D:innovation, or E:cross-domain-transfer.",
+  "required_response_schema": {
+    "outputs": {
+      "answer": "source-grounded answer or assessment",
+      "confidence": "number between 0 and 1",
+      "evidence_ids": [
+        "source id used by the answer"
+      ],
+      "findings": [],
+      "ideas": []
+    },
+    "schema": "autosci_model_response.v1",
+    "status": "completed"
+  },
+  "schema": "autosci_model_request.v1"
+}

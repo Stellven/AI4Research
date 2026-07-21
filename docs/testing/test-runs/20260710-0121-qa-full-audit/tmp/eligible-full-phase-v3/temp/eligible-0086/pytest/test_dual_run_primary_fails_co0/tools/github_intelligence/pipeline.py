@@ -1,0 +1,1 @@
+print("control ok")

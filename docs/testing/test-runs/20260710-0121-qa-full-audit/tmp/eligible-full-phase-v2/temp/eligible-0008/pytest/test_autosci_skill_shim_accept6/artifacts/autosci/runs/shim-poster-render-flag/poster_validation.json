@@ -1,0 +1,228 @@
+{
+  "approval_contract": {
+    "action": "build_poster",
+    "after_artifacts": [],
+    "after_ready": false,
+    "allowlist_evidence": [],
+    "allowlist_ready": false,
+    "approval_ref": "",
+    "approval_state": "approval_required",
+    "approved": false,
+    "authorization_request": {
+      "action": "build_poster",
+      "approval_state": "approval_required",
+      "continuation": {
+        "access_patch": {
+          "after_artifacts": [
+            "<after-artifact>"
+          ],
+          "allowlist_evidence": [
+            "<allowlist-evidence.json>"
+          ],
+          "approval_ref": "<approval-ref>",
+          "before_artifacts": [
+            "<before-artifact>"
+          ],
+          "execute_approved_side_effect": true,
+          "runtime_evidence": [
+            "<runtime-evidence.json>"
+          ]
+        },
+        "request_fingerprint": "51aa20a4d7def77790c267728c9cb17b1473827a6eb0454c39d79e749bdabdd4",
+        "resume_strategy": "rerun_same_action_with_approval_patch",
+        "retriable": true,
+        "same_envelope_supported": true,
+        "schema": "autosci_gate_continuation.v1",
+        "status": "awaiting_authorization"
+      },
+      "missing": [
+        "approval_ref",
+        "allowlist_evidence",
+        "before_artifacts",
+        "runtime_evidence",
+        "after_artifacts"
+      ],
+      "non_error_contract": {
+        "approval_state": "approval_required",
+        "blocked_runs_exit_successfully": true,
+        "evidence_status": "inconclusive"
+      },
+      "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+      "requested_access": {
+        "after_artifacts": true,
+        "allowlist_evidence": true,
+        "approval_ref": true,
+        "before_artifacts": true,
+        "runtime_evidence": true
+      },
+      "requested_side_effects": [
+        "browser_render",
+        "overflow_probe",
+        "png_export"
+      ],
+      "schema": "autosci_gate_authorization_request.v1",
+      "status": "awaiting_authorization"
+    },
+    "before_artifacts": [],
+    "before_ready": false,
+    "execution_verified": false,
+    "missing": [
+      "approval_ref",
+      "allowlist_evidence",
+      "before_artifacts",
+      "runtime_evidence",
+      "after_artifacts"
+    ],
+    "ready_for_execution": false,
+    "runtime_evidence": [],
+    "runtime_ready": false,
+    "schema": "autosci_approval_contract.v1",
+    "semantic_runtime": {
+      "action": "build_poster",
+      "checks": [
+        {
+          "check": "approval_contract_execution_verified",
+          "detail": "Approval contract path-level verification is incomplete.",
+          "status": "error"
+        },
+        {
+          "check": "runtime_records_loaded",
+          "detail": "0 runtime record(s) loaded.",
+          "status": "error"
+        },
+        {
+          "check": "browser_rendered",
+          "detail": "False",
+          "status": "error"
+        },
+        {
+          "check": "overflow_probe_passed",
+          "detail": "False",
+          "status": "error"
+        },
+        {
+          "check": "png_exported",
+          "detail": "False",
+          "status": "error"
+        }
+      ],
+      "detail": {
+        "browser_rendered": false,
+        "errors": [],
+        "evidence_ids": [],
+        "overflow_probe_passed": false,
+        "png_exported": false,
+        "records_loaded": 0
+      },
+      "schema": "autosci_runtime_semantic_verification.v1",
+      "status": "incomplete",
+      "verified": false
+    },
+    "side_effects": [
+      "browser_render",
+      "overflow_probe",
+      "png_export"
+    ]
+  },
+  "browser_rendered": false,
+  "content_pipeline_report": "artifacts/autosci/runs/shim-poster-render-flag/poster_generation_report.json",
+  "content_pipeline_status": "paper_source_missing",
+  "critique_refine_ready": false,
+  "evidence_ids": [
+    "report-001"
+  ],
+  "limitations": [
+    "Poster HTML is generated locally; browser rendering, overflow probing, and PNG export are not executed by this bridge.",
+    "Poster output requires human/browser validation before publication use.",
+    "Approval/runtime evidence contract is not fully verified: approval_ref, allowlist_evidence, before_artifacts, runtime_evidence, after_artifacts",
+    "No report/evidence payload was supplied; poster content remains a scaffold.",
+    "No paper directory containing main.tex was resolved; native /poster precondition was not met.",
+    "Poster Review LLM critique/refine was not requested."
+  ],
+  "overflow_probe": "not_run",
+  "png_exported": false,
+  "policy_decision": {
+    "action": "build_poster",
+    "allow_destructive": false,
+    "allow_email": false,
+    "allow_network": false,
+    "allow_remote": false,
+    "allowed": false,
+    "allowed_write_roots": [
+      "artifacts/autosci",
+      "artifacts/scientific"
+    ],
+    "blocked": true,
+    "execute_side_effects": false,
+    "mode": "strict_hitl",
+    "proof_best_effort": false,
+    "proof_required": true,
+    "reasons": [
+      "read_local is allowed in strict_hitl.",
+      "write_artifact is allowed in strict_hitl.",
+      "browser_render requires HITL approval in strict_hitl.",
+      "png_export requires HITL approval in strict_hitl.",
+      "local_command requires HITL approval in strict_hitl."
+    ],
+    "require_approval_ref": true,
+    "require_before_after_artifacts": true,
+    "require_hitl": true,
+    "require_runtime_evidence": true,
+    "sandbox_required": false,
+    "side_effects": [
+      "read_local",
+      "write_artifact",
+      "browser_render",
+      "png_export",
+      "local_command"
+    ],
+    "synthetic_approval_ref": "",
+    "warnings": []
+  },
+  "poster_review_llm_boundary": "artifacts/autosci/runs/shim-poster-render-flag/poster_review_llm_boundary.json",
+  "review_llm_completed": false,
+  "review_llm_status": "not_requested",
+  "runtime_semantic": {
+    "action": "build_poster",
+    "checks": [
+      {
+        "check": "approval_contract_execution_verified",
+        "detail": "Approval contract path-level verification is incomplete.",
+        "status": "error"
+      },
+      {
+        "check": "runtime_records_loaded",
+        "detail": "0 runtime record(s) loaded.",
+        "status": "error"
+      },
+      {
+        "check": "browser_rendered",
+        "detail": "False",
+        "status": "error"
+      },
+      {
+        "check": "overflow_probe_passed",
+        "detail": "False",
+        "status": "error"
+      },
+      {
+        "check": "png_exported",
+        "detail": "False",
+        "status": "error"
+      }
+    ],
+    "detail": {
+      "browser_rendered": false,
+      "errors": [],
+      "evidence_ids": [],
+      "overflow_probe_passed": false,
+      "png_exported": false,
+      "records_loaded": 0
+    },
+    "schema": "autosci_runtime_semantic_verification.v1",
+    "status": "incomplete",
+    "verified": false
+  },
+  "target": "report-001",
+  "title": "report-001"
+}

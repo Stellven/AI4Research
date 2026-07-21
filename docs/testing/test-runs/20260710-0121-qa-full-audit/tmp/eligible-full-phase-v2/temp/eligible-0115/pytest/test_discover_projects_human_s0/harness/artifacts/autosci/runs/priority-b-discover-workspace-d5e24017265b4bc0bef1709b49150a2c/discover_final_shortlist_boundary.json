@@ -1,0 +1,19 @@
+{
+  "blocking_reasons": [
+    "discovery shortlist is empty",
+    "provider-backed source channel is missing",
+    "no source candidates were present",
+    "no non-fixture provider source channel was present"
+  ],
+  "candidate_count": 0,
+  "candidate_ids": [],
+  "final_shortlist_ready": false,
+  "limitations": [
+    "Final discovery shortlist requires non-empty candidates backed by non-fixture provider source channels."
+  ],
+  "mode": "wiki",
+  "provider_channels": [],
+  "schema": "autosci_discover_final_shortlist_boundary.v1",
+  "source_provider_boundary_status": "incomplete",
+  "status": "discover_shortlist_incomplete"
+}

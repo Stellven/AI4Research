@@ -1,0 +1,532 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/report_plan.json",
+      "type": "report_plan_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/report.md",
+      "type": "markdown_report"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/report_evidence_index.json",
+      "type": "report_evidence_index_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/optional_poster.html",
+      "type": "optional_poster_html"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/optional_rebuttal.md",
+      "type": "optional_rebuttal_markdown"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper_draft_compile_handoff.json",
+      "type": "paper_draft_compile_handoff_json"
+    },
+    {
+      "path": "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+      "type": "compiled_pdf"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper/main.tex",
+      "type": "latex_source"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper/math_commands.tex",
+      "type": "paper_math_commands_tex"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper/sections",
+      "type": "paper_sections_directory"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper/figures",
+      "type": "paper_figures_directory"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper/tables",
+      "type": "paper_tables_directory"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper_draft_citation_map.json",
+      "type": "citation_map_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper_draft_final_manuscript_boundary.json",
+      "type": "paper_draft_final_manuscript_boundary_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper/references.bib",
+      "type": "paper_references_bib"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper_draft_bibtex_coverage.json",
+      "type": "paper_draft_bibtex_coverage_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/write_report_review_llm_runtime_proof.json",
+      "type": "review_model_runtime_proof_manifest_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/write_report_source_provider_runtime_proof.json",
+      "type": "provider_source_runtime_proof_manifest_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/paper_draft_section_evidence_map.json",
+      "type": "paper_draft_section_evidence_map_json"
+    },
+    {
+      "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/scientific_report.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "allow_network_fetch": false,
+    "artifact_review_evidence": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0031/pytest/test_scientific_lifecycle_smok5/artifacts/scientific/external/source-runtime-test/review_llm_artifact_review.json"
+    ],
+    "claim_id": "claim-001",
+    "claim_verdict_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/claim_verify/task-job-scientific-lifecycle-source-runtime-test-claim_verify/claim_verdict.json",
+    "claims_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/claim_extract/task-job-scientific-lifecycle-source-runtime-test-claim_extract/research_claims.json",
+    "code_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/code_evidence_map/task-job-scientific-lifecycle-source-runtime-test-code_evidence_map/code_evidence_map.json",
+    "discovery_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/literature_discover/task-job-scientific-lifecycle-source-runtime-test-literature_discover/literature_discovery.json",
+    "experiment_id": "exp-supported-001",
+    "experiment_result": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/experiment_run/task-job-scientific-lifecycle-source-runtime-test-experiment_run/experiment_result.json",
+    "idea_evaluation_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/idea_evaluate/task-job-scientific-lifecycle-source-runtime-test-idea_evaluate/idea_evaluation.json",
+    "method_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/method_extract/task-job-scientific-lifecycle-source-runtime-test-method_extract/research_method.json",
+    "paper_draft": true,
+    "paper_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/paper_ingest/task-job-scientific-lifecycle-source-runtime-test-paper_ingest/research_paper.json",
+    "paper_id": "paper-job-scientific-lifecycle-source-runtime-test",
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0031/pytest/test_scientific_lifecycle_smok5/artifacts/scientific/external/source-runtime-test/compile_target",
+    "report_id": "report-scheduler-lifecycle-smoke",
+    "report_plan_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_plan/task-job-scientific-lifecycle-source-runtime-test-report_plan/scientific_report_plan.json",
+    "report_title": "Scheduler Lifecycle Smoke Report",
+    "review_llm_evidence": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0031/pytest/test_scientific_lifecycle_smok5/artifacts/scientific/external/source-runtime-test/review_llm_artifact_review.json"
+    ],
+    "smoke_mode": true,
+    "supplied_compile_target_evidence": true,
+    "target": "scheduler-lifecycle-draft"
+  },
+  "limitations": [
+    "Fixture report is assembled from supplied local Solar evidence only.",
+    "Publication files are local artifacts and require human approval before external handoff.",
+    "Final manuscript readiness is bounded to supplied source evidence, Review LLM proof, and verified compile/PDF handoff.",
+    "Compile/PDF handoff used an existing supplied PDF target; no TeX executor was run by this bridge."
+  ],
+  "node_id": "report_draft",
+  "outputs": {
+    "report": {
+      "compile_handoff": {
+        "approval_state": "supplied_compile_target",
+        "evidence_ids": [
+          "paper-draft-compile-handoff",
+          "supplied-compile-target-handoff",
+          "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf"
+        ],
+        "executor_result": {},
+        "limitations": [
+          "Paper draft includes verified compile/PDF handoff evidence.",
+          "Compile/PDF handoff used an existing supplied PDF target; no TeX executor was run by this bridge."
+        ],
+        "pdf_paths": [
+          "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf"
+        ],
+        "schema": "paper_draft_compile_handoff.v1",
+        "semantic_runtime": {
+          "checks": [
+            {
+              "check": "supplied_compile_target_evidence",
+              "detail": "Existing supplied compile target contains at least one PDF.",
+              "status": "ok"
+            },
+            {
+              "check": "tex_executor_not_run_by_bridge",
+              "detail": "No TeX executor was run by this bridge for the supplied handoff.",
+              "status": "ok"
+            }
+          ],
+          "detail": {
+            "evidence_ids": [
+              "supplied-compile-target-handoff",
+              "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf"
+            ],
+            "latex_paths": [
+              "artifacts/scientific/external/source-runtime-test/compile_target/main.tex"
+            ],
+            "pdf_paths": [
+              "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf"
+            ]
+          },
+          "status": "verified_supplied_compile_target",
+          "verified": true
+        },
+        "status": "completed",
+        "verified": true
+      },
+      "evidence_ids": [
+        "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+        "task-review-llm-full-external-test",
+        "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+        "claim-001",
+        "paper-job-scientific-lifecycle-source-runtime-test",
+        "sample_paper.md#results",
+        "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+        "exp-001",
+        "evidence:autosci-fixture-result",
+        "evidence:autosci-fixture-ledger",
+        "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+        "map-001",
+        "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+        "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+        "claim-002",
+        "sample_paper.md#abstract",
+        "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+        "idea-001",
+        "method-001",
+        "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+        "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+        "idea-duplicate-001",
+        "paper-draft-compile-handoff",
+        "supplied-compile-target-handoff",
+        "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+        "exp-supported-001",
+        "review-llm:full-external-test",
+        "runtime-source-001"
+      ],
+      "figures": [
+        {
+          "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/optional_poster.html",
+          "evidence_ids": [
+            "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+            "task-review-llm-full-external-test",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+            "claim-001",
+            "paper-job-scientific-lifecycle-source-runtime-test",
+            "sample_paper.md#results",
+            "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+            "exp-001",
+            "evidence:autosci-fixture-result",
+            "evidence:autosci-fixture-ledger",
+            "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+            "claim-002",
+            "sample_paper.md#abstract",
+            "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+            "idea-001",
+            "method-001",
+            "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+            "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+            "idea-duplicate-001",
+            "paper-draft-compile-handoff",
+            "supplied-compile-target-handoff",
+            "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+            "exp-supported-001"
+          ],
+          "figure_id": "fig.optional-poster",
+          "title": "Optional poster artifact"
+        }
+      ],
+      "publication_bundle_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/publication_bundle.json",
+      "report_id": "report-scheduler-lifecycle-smoke",
+      "sections": [
+        {
+          "body": "Claim `claim-001` has fixture verdict `supported`.",
+          "evidence_ids": [
+            "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+            "task-review-llm-full-external-test",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+            "claim-001",
+            "paper-job-scientific-lifecycle-source-runtime-test",
+            "sample_paper.md#results",
+            "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+            "exp-001",
+            "evidence:autosci-fixture-result",
+            "evidence:autosci-fixture-ledger",
+            "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+            "claim-002",
+            "sample_paper.md#abstract",
+            "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+            "idea-001",
+            "method-001",
+            "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+            "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+            "idea-duplicate-001",
+            "paper-draft-compile-handoff",
+            "supplied-compile-target-handoff",
+            "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+            "exp-supported-001"
+          ],
+          "section_id": "summary",
+          "title": "Summary"
+        },
+        {
+          "body": "Findings are limited to the linked claim, experiment, and code evidence artifacts.",
+          "evidence_ids": [
+            "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+            "task-review-llm-full-external-test",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+            "claim-001",
+            "paper-job-scientific-lifecycle-source-runtime-test",
+            "sample_paper.md#results",
+            "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+            "exp-001",
+            "evidence:autosci-fixture-result",
+            "evidence:autosci-fixture-ledger",
+            "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+            "claim-002",
+            "sample_paper.md#abstract",
+            "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+            "idea-001",
+            "method-001",
+            "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+            "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+            "idea-duplicate-001",
+            "paper-draft-compile-handoff",
+            "supplied-compile-target-handoff",
+            "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+            "exp-supported-001"
+          ],
+          "figures": [
+            {
+              "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/optional_poster.html",
+              "evidence_ids": [
+                "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+                "task-review-llm-full-external-test",
+                "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+                "claim-001",
+                "paper-job-scientific-lifecycle-source-runtime-test",
+                "sample_paper.md#results",
+                "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+                "exp-001",
+                "evidence:autosci-fixture-result",
+                "evidence:autosci-fixture-ledger",
+                "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+                "map-001",
+                "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+                "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+                "claim-002",
+                "sample_paper.md#abstract",
+                "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+                "idea-001",
+                "method-001",
+                "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+                "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+                "idea-duplicate-001",
+                "paper-draft-compile-handoff",
+                "supplied-compile-target-handoff",
+                "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+                "exp-supported-001"
+              ],
+              "figure_id": "fig.optional-poster",
+              "title": "Optional poster artifact"
+            }
+          ],
+          "section_id": "findings",
+          "title": "Findings"
+        },
+        {
+          "body": "The evidence map lists the concrete ids used to support the report sections.",
+          "evidence_ids": [
+            "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+            "task-review-llm-full-external-test",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+            "claim-001",
+            "paper-job-scientific-lifecycle-source-runtime-test",
+            "sample_paper.md#results",
+            "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+            "exp-001",
+            "evidence:autosci-fixture-result",
+            "evidence:autosci-fixture-ledger",
+            "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+            "claim-002",
+            "sample_paper.md#abstract",
+            "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+            "idea-001",
+            "method-001",
+            "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+            "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+            "idea-duplicate-001",
+            "paper-draft-compile-handoff",
+            "supplied-compile-target-handoff",
+            "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+            "exp-supported-001"
+          ],
+          "section_id": "evidence-map",
+          "tables": [
+            {
+              "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/report_evidence_index.json",
+              "evidence_ids": [
+                "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+                "task-review-llm-full-external-test",
+                "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+                "claim-001",
+                "paper-job-scientific-lifecycle-source-runtime-test",
+                "sample_paper.md#results",
+                "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+                "exp-001",
+                "evidence:autosci-fixture-result",
+                "evidence:autosci-fixture-ledger",
+                "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+                "map-001",
+                "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+                "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+                "claim-002",
+                "sample_paper.md#abstract",
+                "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+                "idea-001",
+                "method-001",
+                "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+                "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+                "idea-duplicate-001",
+                "paper-draft-compile-handoff",
+                "supplied-compile-target-handoff",
+                "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+                "exp-supported-001"
+              ],
+              "table_id": "table.evidence-map",
+              "title": "Evidence ids"
+            }
+          ],
+          "title": "Evidence Map"
+        },
+        {
+          "body": "Final manuscript boundary status: `final_manuscript_ready`. Publication-ready claim allowed: `True`. Review LLM completed: `True`. Compile handoff verified: `True`.",
+          "evidence_ids": [
+            "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+            "task-review-llm-full-external-test",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+            "claim-001",
+            "paper-job-scientific-lifecycle-source-runtime-test",
+            "sample_paper.md#results",
+            "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+            "exp-001",
+            "evidence:autosci-fixture-result",
+            "evidence:autosci-fixture-ledger",
+            "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+            "claim-002",
+            "sample_paper.md#abstract",
+            "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+            "idea-001",
+            "method-001",
+            "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+            "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+            "idea-duplicate-001",
+            "paper-draft-compile-handoff",
+            "supplied-compile-target-handoff",
+            "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+            "exp-supported-001",
+            "review-llm:full-external-test",
+            "runtime-source-001"
+          ],
+          "section_id": "final-manuscript-boundary",
+          "title": "Final Manuscript Boundary"
+        },
+        {
+          "body": "A compiled PDF handoff is attached from approved compile runtime evidence.",
+          "evidence_ids": [
+            "paper-draft-compile-handoff",
+            "supplied-compile-target-handoff",
+            "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf"
+          ],
+          "section_id": "compiled-paper",
+          "title": "Compiled Paper"
+        },
+        {
+          "body": "The report is not a substitute for external peer review or real benchmark validation.",
+          "evidence_ids": [
+            "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+            "task-review-llm-full-external-test",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+            "claim-001",
+            "paper-job-scientific-lifecycle-source-runtime-test",
+            "sample_paper.md#results",
+            "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+            "exp-001",
+            "evidence:autosci-fixture-result",
+            "evidence:autosci-fixture-ledger",
+            "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+            "claim-002",
+            "sample_paper.md#abstract",
+            "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+            "idea-001",
+            "method-001",
+            "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+            "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+            "idea-duplicate-001",
+            "paper-draft-compile-handoff",
+            "supplied-compile-target-handoff",
+            "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+            "exp-supported-001"
+          ],
+          "section_id": "limitations",
+          "title": "Limitations"
+        }
+      ],
+      "tables": [
+        {
+          "artifact_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/report_evidence_index.json",
+          "evidence_ids": [
+            "task-job-scientific-lifecycle-source-runtime-test-literature_discover",
+            "task-review-llm-full-external-test",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_verify",
+            "claim-001",
+            "paper-job-scientific-lifecycle-source-runtime-test",
+            "sample_paper.md#results",
+            "task-job-scientific-lifecycle-source-runtime-test-experiment_run",
+            "exp-001",
+            "evidence:autosci-fixture-result",
+            "evidence:autosci-fixture-ledger",
+            "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+            "map-001",
+            "plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py",
+            "task-job-scientific-lifecycle-source-runtime-test-claim_extract",
+            "claim-002",
+            "sample_paper.md#abstract",
+            "task-job-scientific-lifecycle-source-runtime-test-idea_evaluate",
+            "idea-001",
+            "method-001",
+            "task-job-scientific-lifecycle-source-runtime-test-paper_ingest",
+            "task-job-scientific-lifecycle-source-runtime-test-method_extract",
+            "idea-duplicate-001",
+            "paper-draft-compile-handoff",
+            "supplied-compile-target-handoff",
+            "artifacts/scientific/external/source-runtime-test/compile_target/main.pdf",
+            "exp-supported-001"
+          ],
+          "table_id": "table.evidence-map",
+          "title": "Evidence ids"
+        }
+      ],
+      "title": "Scheduler Lifecycle Smoke Report",
+      "unsupported_claims": []
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T14:05:57Z"
+  },
+  "schema": "scientific_report.v1",
+  "sprint_id": "job-scientific-lifecycle-source-runtime-test",
+  "status": "completed",
+  "task_id": "task-job-scientific-lifecycle-source-runtime-test-report_draft"
+}

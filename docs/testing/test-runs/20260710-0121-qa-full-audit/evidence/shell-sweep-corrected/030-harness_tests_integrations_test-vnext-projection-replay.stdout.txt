@@ -1,0 +1,2 @@
+DRY-RUN: upstream modules (event_ledger / projections) not importable
+DRY-RUN: skipping projection replay test

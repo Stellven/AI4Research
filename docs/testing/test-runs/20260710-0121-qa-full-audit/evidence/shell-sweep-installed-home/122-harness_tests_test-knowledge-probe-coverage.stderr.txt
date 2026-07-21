@@ -1,0 +1,81 @@
+not ok - space data center cooling missing 太空数据中心散热方案
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+降级源: mirage:nonzero
+not ok - obsidian wiki integration missing solar-harness-obsidian-wiki-integration
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+降级源: mirage:nonzero
+not ok - qmd idle embedding missing qmd-embedding-idle-background-status
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+降级源: mirage:nonzero
+not ok - mineru pdf chain missing mineru-pdf-deep-extraction-chain
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+降级源: mirage:nonzero
+not ok - symphony s1 s3 missing openai-symphony-s1-s3-solar-harness-structure
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+降级源: mirage:nonzero
+not ok - dag task graph scheduler missing solar-harness-dag-task-graph-scheduler
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+降级源: mirage:nonzero
+not ok - mia integration principle missing solar-mia-integration-principles
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+降级源: mirage:nonzero
+not ok - ruflo runtime status missing ruflo-runtime-sandbox-status
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+降级源: mirage:nonzero
+not ok - apple notes wechat ingest missing apple-notes-wechat-knowledge-ingest-chain
+## Solar Unified Context
+来源: Mirage + QMD solar-wiki + Obsidian Vault + Solar DB + CocoIndex + Understanding + RAGFlow(optional)
+规则: 开始开发/设计/分析前，优先参考这些命中；如不足，再主动搜索 vault/qmd。
+排序: synthesis/concepts/references/code/understanding 分层融合；raw 只作为证据层靠后。
+- [default:other] QMD solar-wiki (qmd://solar-wiki): MinerU Document Explorer 负责 PDF/Markdown/文档索引和语义检索；后台 `solar-harness wiki qmd-embed status` 处理 embedding backlog。
+- [default:other] Solar DB (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.solar/solar.db): Solar DB 保存 sprint、cortex、accepted artifacts、obsidian_vault_index 和 FTS 索引。设计/开发前先查已有资产，避免重复造轮子。
+- [default:other] Solar Obsidian Vault (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Knowledge): 本机默认知识库。优先用 `solar-harness wiki qmd-search "<query>" --json` 或 `solar-harness mirage search "<query>" --json` 检索。
+降级源: mirage:nonzero

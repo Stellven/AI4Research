@@ -1,0 +1,99 @@
+{
+  "ok": true,
+  "complete_context": false,
+  "finalized_sections": 3,
+  "total_sections": 32,
+  "claim_tag_density_per_1k_chars": 1.5182,
+  "evidence_tag_density_per_1k_chars": 2.0243,
+  "chapter_structure_coverage": 0.0625,
+  "academic_marker_counts": {
+    "taxonomy": 16,
+    "mechanism": 114,
+    "evaluation_protocol": 45,
+    "baseline_or_ablation": 12,
+    "reproducibility": 35,
+    "deployment": 69,
+    "failure_mode": 16,
+    "controversy": 40,
+    "auditability": 18,
+    "evolution": 29
+  },
+  "academic_marker_variants": [
+    "auditability",
+    "baseline_or_ablation",
+    "controversy",
+    "deployment",
+    "evaluation_protocol",
+    "evolution",
+    "failure_mode",
+    "mechanism",
+    "reproducibility",
+    "taxonomy"
+  ],
+  "section_marker_coverage": 0.6667,
+  "section_marker_rows": [
+    {
+      "section_id": "ch01/sec01",
+      "academic_marker_count": 0,
+      "academic_markers": [],
+      "ok": false
+    },
+    {
+      "section_id": "ch01/sec02",
+      "academic_marker_count": 10,
+      "academic_markers": [
+        "auditability",
+        "baseline_or_ablation",
+        "controversy",
+        "deployment",
+        "evaluation_protocol",
+        "evolution",
+        "failure_mode",
+        "mechanism",
+        "reproducibility",
+        "taxonomy"
+      ],
+      "ok": true
+    },
+    {
+      "section_id": "ch01/sec03",
+      "academic_marker_count": 10,
+      "academic_markers": [
+        "auditability",
+        "baseline_or_ablation",
+        "controversy",
+        "deployment",
+        "evaluation_protocol",
+        "evolution",
+        "failure_mode",
+        "mechanism",
+        "reproducibility",
+        "taxonomy"
+      ],
+      "ok": true
+    }
+  ],
+  "terminology_profile": "agentic_runtime",
+  "terminology_counts": {
+    "runtime_orchestration": 0,
+    "tool_execution": 0,
+    "memory_state": 43,
+    "multi_agent_handoff": 0,
+    "evaluation_benchmark": 98,
+    "safety_governance": 12,
+    "observability_trace": 20
+  },
+  "terminology_variants": [
+    "evaluation_benchmark",
+    "memory_state",
+    "observability_trace",
+    "safety_governance"
+  ],
+  "terminology_evolution_edges": [
+    "evaluation_benchmark->safety_governance",
+    "safety_governance->observability_trace"
+  ],
+  "literature_map_ok": true,
+  "controversy_matrix_ok": true,
+  "issues": []
+}

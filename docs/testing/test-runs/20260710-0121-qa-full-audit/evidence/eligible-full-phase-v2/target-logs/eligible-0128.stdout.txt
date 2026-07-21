@@ -1,0 +1,9 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ TestDualRunComparison.test_contracts_reflect_node_metadata __________
+harness/tests/test_dispatcher_integration.py:210: in test_contracts_reflect_node_metadata
+    assert "<path>r1.py</path>" in text
+E   assert '<path>r1.py</path>' in '<!-- SOLAR_STATE_READ_PREFLIGHT -->\n## 必须先读状态 (防写入 hook 卡死)\n\n在任何 Write/Edit/handoff/eval/status 更新之前，必须先用 Claude/C...ll-audit/tmp/checkout/harness/sprints/sprint-meta.task_graph.json" --node "N3" --status reviewing --in-place\n   ```\n'
+=========================== short test summary info ============================
+FAILED harness/tests/test_dispatcher_integration.py::TestDualRunComparison::test_contracts_reflect_node_metadata
+1 failed, 12 deselected in 0.05s

@@ -1,0 +1,33 @@
+{
+  "claim_id": "pilot-claim-parity-write",
+  "evidence_ids": [
+    "pilot-claim-parity-write",
+    "runtime:pilot-parity-write",
+    "pilot-runtime-parity-write",
+    "pilot-runtime-parity-write.json"
+  ],
+  "final_pilot_acceptance_ready": true,
+  "limitations": [
+    "Final pilot acceptance passed with runtime evidence, pilot verdict, and approved wiki writeback."
+  ],
+  "pilot_runtime_ready": true,
+  "pilot_verdict_ready": true,
+  "schema": "autosci_pilot_experiment_final_acceptance_boundary.v1",
+  "stage": "pilot_eval",
+  "status": "final_pilot_acceptance_ready",
+  "writeback_completed": true,
+  "writeback_status": {
+    "applied": true,
+    "approval_ref": "policy:auto:parity_demo:evaluate_pilot_result:2026-07-10T19:26:43Z",
+    "edge_path": "artifacts/autosci/workspace/wiki/graph/edges.jsonl",
+    "limitations": [
+      "Approved claim verdict write-back updated wiki frontmatter, log, graph edge, and lightweight wiki views."
+    ],
+    "log_path": "artifacts/autosci/workspace/wiki/log.md",
+    "path": "artifacts/autosci/runs/shim-pilot-eval-parity-writeback/claim_verdict_writeback.json",
+    "requested": true,
+    "review_llm_status": "missing",
+    "status": "completed",
+    "target_path": "artifacts/autosci/workspace/wiki/ideas/pilot-claim-parity-write.md"
+  }
+}

@@ -1,0 +1,98 @@
+capability_capsule_id: cap.research-artifact-review
+capsule_kind: capability
+metadata:
+  name: Scientific Artifact Review
+  description: Review scientific reports, publication bundles, and supporting artifacts against evidence, checklist, and unsupported-claim requirements.
+applicability:
+  task_types:
+    - scientific-research
+    - artifact-review
+  positive_signals:
+    - review artifact
+    - paper checklist
+    - publication review
+  negative_signals:
+    - run experiment
+    - discover literature
+contract:
+  inputs:
+    required:
+      - name: artifact_under_review
+        description: Scientific report, publication bundle, or generated research artifact evidence.
+    optional:
+      - name: review_focus
+        description: Venue, checklist, risk, or quality dimensions to emphasize.
+  outputs:
+    required:
+      - name: artifact_review
+        schema_ref: schemas/evidence/artifact_review.v1.schema.json
+    optional:
+      - name: revision_recommendations
+        description: Evidence-grounded recommendations and unresolved blocking issues.
+  preconditions:
+    - check: artifact_available
+      description: Source artifact evidence or bundle manifest exists.
+  postconditions:
+    - check: review_evidence_linked
+      description: Review findings cite artifact ids, evidence ids, and checklist items.
+  invariants:
+    - Does not mark unsupported claims as resolved.
+    - Does not compile or publish artifacts.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      purpose: Source report evidence when reviewing drafts.
+    - schema_ref: schemas/evidence/publication_bundle.v1.schema.json
+      purpose: Source publication bundle when reviewing compiled outputs.
+  produces:
+    - schema_ref: schemas/evidence/artifact_review.v1.schema.json
+      purpose: Review verdict, checklist status, risks, and evidence-linked notes.
+  compatible_with:
+    - cap.research-report-draft
+    - cap.research-publication-produce
+    - cap.research-claim-verify
+  incompatible_with:
+    - cap.research-experiment-run
+  requires_after: []
+effects:
+  read:
+    - scientific artifacts and evidence refs
+    - schemas/evidence/artifact_review.v1.schema.json
+  write:
+    - artifacts/scientific/artifact_review/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - none by default
+  cost:
+    - bounded review cost
+  risk:
+    - review quality depends on explicit evidence and checklist coverage
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.artifact_review
+      - autosci.review
+      - autosci.check
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/artifact_review.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against artifact_review.v1.schema.json.
+    - Confirm blocking issues, unsupported claims, and evidence ids remain visible.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - Fixture review emits valid artifact_review.v1 evidence.
+    - Missing evidence produces an inconclusive or failed review, not a pass.
+operator_compatibility:
+  preferred:
+    - autosci-artifact-review-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: phase19_autosci_registry_drift_restore

@@ -1,0 +1,52 @@
+---
+id: openai-agents-python
+name: "openai-agents-python PoC"
+version: "1.0.0"
+description: "Architecture PoC and migration design for using OpenAI Agents SDK as a future typed runtime under Solar. Registered as a design/provider capability, not production execution runtime."
+status: enabled
+
+write_scope:
+  - "state/openai-agents-python"
+  - "logs/openai-agents-python"
+
+read_scope:
+  - "~/.solar/reports/2026-04-20-openai-agents-integration-codex.md"
+
+capabilities:
+  - "agents_sdk.design"
+  - "agents_sdk.guardrails"
+  - "agents_sdk.tracing"
+  - "agents_sdk.handoff_model"
+
+commands:
+  - "solar-harness integrations status"
+  - "solar-harness context inject --query openai agents sdk"
+
+background_safety:
+  mode: none
+  idle_only: false
+  rate_limit: "none"
+  max_runtime_s: 30
+  max_memory_mb: 128
+
+eval_packs:
+  - "tests/integrations/test-expanded-capability-plane-e2e.sh"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness integrations disable openai-agents-python"
+
+integration_level: basic_usable
+
+entry: "~/.solar/reports/2026-04-20-openai-agents-integration-codex.md"
+
+events:
+  - "openai_agents_poc.referenced"
+
+depends_on: []
+
+tags:
+  - "agents-sdk"
+  - "poc"
+  - "architecture"

@@ -1,0 +1,1 @@
+{"event": "graph_autosci_evaluator_dispatched", "by": "graph-dispatch", "data": {"node": "paper_ingest", "operator_id": "autosci-evaluator-worker", "dispatch_id": "graph-eval-sprint-autosci-eval-green-paper_ingest-20260710T184958Z-q1"}, "ts": "2026-07-10T18:49:58Z", "sid": "sprint-autosci-eval-green"}

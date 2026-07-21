@@ -1,0 +1,13 @@
+{
+  "report_id": "gate_report_mixed789ghi",
+  "run_metadata": {"run": "test_mixed"},
+  "gate_verdicts": {
+    "argument_density": {"gate_id": "argument_density", "verdict": "warning", "evidence_refs": [], "report_section": {"registered_name": "argument_density"}},
+    "controversy_matrix": {"gate_id": "controversy_matrix", "verdict": "pass", "evidence_refs": ["c1"], "report_section": {"registered_name": "controversy_matrix"}},
+    "exploration_log": {"gate_id": "exploration_log", "verdict": "not_applicable", "evidence_refs": [], "report_section": {"reason": "gate_not_registered"}},
+    "source_quality": {"gate_id": "source_quality", "verdict": "fail", "evidence_refs": ["src_1","src_2"], "report_section": {"registered_name": "source_quality"}}
+  },
+  "artifact_paths": {"gate_report": "/tmp/gate_report.json"},
+  "scorecard_ref": {},
+  "schema_version": "survey.schemas.v1"
+}

@@ -1,0 +1,18 @@
+# Modules that are KNOWN-unresolvable in a default checkout, with reasons.
+# scripts/check-core-imports.sh fails CI for any unresolved core/ import
+# that does not match a pattern below (shell case patterns, one per line).
+#
+# TVS terminal-UI stack: imported only by the optional tvs-tui surfaces
+# (core/ui/**, core/daemon/ui-watcher.ts). TVS is not redistributable yet
+# and is supplied by the user via SOLAR_TVS_ROOT; these surfaces are not
+# part of the shipped core-runtime closure.
+tvs
+tvs/*
+# Unreferenced dev-side files under core/nerve/ (agents/recorder.ts,
+# evolution-council.ts, evolution-engine.ts) import these npm packages,
+# which package.json does not declare. No file in the repo imports those
+# three modules (verified 2026-06-10), so the dependencies are deliberately
+# not added for dead code. If a shipped surface ever starts importing them,
+# this gate fails and the dependency decision must be made explicitly.
+better-sqlite3
+@anthropic-ai/sdk

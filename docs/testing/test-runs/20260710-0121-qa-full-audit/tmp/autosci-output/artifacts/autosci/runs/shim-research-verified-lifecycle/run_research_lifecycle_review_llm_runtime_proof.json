@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-07-10T05:53:58Z",
+  "proofs": [
+    {
+      "categories": [
+        "review_llm_or_model_evidence",
+        "external_runtime_evidence"
+      ],
+      "collection_mode": "manual_review",
+      "description": "Completed Review LLM evidence for AutoSci `research` lifecycle parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-research-verified-lifecycle/workflow_evolution.research.json",
+        "artifacts/autosci/runs/shim-research-verified-lifecycle/research_lifecycle_recommended_changes.md",
+        "artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md",
+        "artifacts/autosci/workspace/wiki/outputs/PIPELINE_REPORT.md",
+        "artifacts/autosci/workspace/wiki/outputs/pipeline-state.json",
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_resear1/review-llm.json"
+      ],
+      "generated_at": "2026-07-10T05:53:58Z",
+      "native_skill": "research",
+      "production_ready": true,
+      "proof_id": "runtime:research:review-llm:20260710T055358Z",
+      "provenance": {
+        "artifact_kind": "research_lifecycle_review_evidence",
+        "captured_at": "2026-07-10T05:53:58Z",
+        "command": "run_research_lifecycle:review_llm_evidence_report",
+        "source": "review_llm"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

@@ -1,0 +1,35 @@
+{
+  "channel": "v1.0.0-rc.6",
+  "claude_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude",
+  "component_roots": {
+    "autosci": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/tools",
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/.agents/skills"
+    ],
+    "harness": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/harness"
+    ],
+    "kernel": [
+      "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude/solar"
+    ]
+  },
+  "components": [
+    "kernel",
+    "harness",
+    "autosci"
+  ],
+  "db": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/db/solar.db",
+  "git_sha": "fb3f589b",
+  "installed_at": "2026-07-10T06:16:11Z",
+  "os": "darwin",
+  "repo": "https://github.com/suraj-subrahmanyan/OpenSolar.git",
+  "schema": 1,
+  "sentinels": {
+    "begin": "<!-- BEGIN OPENSOLAR -->",
+    "claude_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude/CLAUDE.md",
+    "end": "<!-- END OPENSOLAR -->"
+  },
+  "solar_home": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar",
+  "source_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "version": "1.0.0-rc.8-14-gfb3f589b"
+}

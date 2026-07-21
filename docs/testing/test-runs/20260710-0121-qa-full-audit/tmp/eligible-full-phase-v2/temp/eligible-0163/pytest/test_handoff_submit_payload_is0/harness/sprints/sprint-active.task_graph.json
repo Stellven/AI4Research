@@ -1,0 +1,12 @@
+{
+  "sprint_id": "sprint-active",
+  "nodes": [
+    {
+      "id": "N1",
+      "goal": "handoff node",
+      "depends_on": [],
+      "status": "passed",
+      "required_capabilities": []
+    }
+  ]
+}

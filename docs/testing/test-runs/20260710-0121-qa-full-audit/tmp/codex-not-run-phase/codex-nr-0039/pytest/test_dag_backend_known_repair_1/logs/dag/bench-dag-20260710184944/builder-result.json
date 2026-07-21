@@ -1,0 +1,8 @@
+{
+  "stage": "builder",
+  "leaf_backend": "deterministic-repair",
+  "return_code": 0,
+  "stdout": "{\"stage\": \"repair\", \"applied\": true, \"reason\": \"chess_best_move_known_mate_contract\", \"path\": \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_backend_known_repair_1/workspace/move.txt\"}",
+  "stderr": "",
+  "repair_reason": "chess_best_move_known_mate_contract"
+}

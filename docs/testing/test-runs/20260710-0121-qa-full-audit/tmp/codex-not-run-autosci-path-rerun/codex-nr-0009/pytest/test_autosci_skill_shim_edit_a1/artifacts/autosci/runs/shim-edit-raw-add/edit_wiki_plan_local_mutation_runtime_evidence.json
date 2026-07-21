@@ -1,0 +1,69 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/workspace/raw/papers/new-source.md",
+      "type": "local_mutation_after_artifact"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/log.md",
+      "type": "local_mutation_after_artifact"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/index.md",
+      "type": "local_mutation_after_artifact"
+    },
+    {
+      "path": "artifacts/autosci/workspace/wiki/graph/context_brief.md",
+      "type": "local_mutation_after_artifact"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "approval-edit-raw-add"
+  },
+  "limitations": [
+    "Local writeback executed through the approved AutoSci side-effect path."
+  ],
+  "node_id": "node-edit-wiki-plan",
+  "outputs": {
+    "runtime": {
+      "action": "edit_wiki_plan",
+      "after_refs": [
+        "artifacts/autosci/workspace/raw/papers/new-source.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "approval_ref": "approval-edit-raw-add",
+      "checks": [
+        {
+          "check": "local_mutation_applied",
+          "detail": "4 after artifact(s) recorded.",
+          "status": "ok"
+        }
+      ],
+      "command_run": "edit_wiki_plan:local_raw_add",
+      "evidence_ids": [
+        "edit-raw:papers-new-source-md"
+      ],
+      "exit_code": 0,
+      "mutation_applied": true,
+      "raw_path": "raw/papers/new-source.md",
+      "side_effects": [
+        "raw_source_add",
+        "source_materialization",
+        "wiki_log_update",
+        "navigation_rebuild"
+      ],
+      "status": "completed"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-approved-side-effect-executor",
+    "timestamp": "2026-07-10T19:22:12Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-edit_wiki_plan"
+}

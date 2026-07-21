@@ -1,0 +1,118 @@
+capability_capsule_id: cap.requirement-compiler-audit
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Requirement Compiler Audit
+  description: Execute read-only audit, inventory, and reporting tasks derived from compiled requirement packages.
+applicability:
+  task_types:
+    - audit_inventory
+    - documentation
+    - reporting
+    - evidence
+  positive_signals:
+    - audit
+    - inventory
+    - report
+    - documentation
+    - readiness
+    - packaging
+  negative_signals:
+    - patch
+    - diff
+    - implement
+    - refactor
+contract:
+  inputs:
+    required:
+      - name: requirement_ir
+        type: json
+      - name: task_graph_node
+        type: json
+    optional:
+      - name: design_md
+        type: markdown
+  outputs:
+    required:
+      - name: handoff_md
+        type: markdown
+    optional:
+      - name: report_artifact
+        type: markdown
+      - name: structured_report
+        type: json
+  preconditions:
+    - check: task_type_in
+      values:
+        - audit_inventory
+        - documentation
+        - reporting
+        - evidence
+  postconditions:
+    - check: output_present
+      field: handoff_md
+  invariants:
+    - Audit tasks must not modify source code unless the graph explicitly opts into a mutating implementation capsule.
+    - Handoff must cite inspected files, commands, and any unverified assumptions.
+composition:
+  consumes:
+    - type: artifact.requirement_ir
+    - type: artifact.task_graph_node
+  produces:
+    - type: artifact.handoff_md
+    - type: artifact.report
+  compatible_with:
+    - guard.secret-leak-guard
+    - resource.repo-workspace
+  incompatible_with:
+    - cap.auto-merge-without-review
+  requires_after:
+    - cap.requirement-compiler-verification
+effects:
+  read:
+    - repo.read
+    - requirement.artifacts
+  write:
+    - artifacts.report
+    - artifacts.handoff
+  execute:
+    - shell.readonly
+  network: []
+  cost:
+    - medium_model_quota
+  risk:
+    - false_report
+bindings:
+  skills:
+    required:
+      - skill.context-scan
+    optional: []
+  mcp_capabilities: {}
+  data_refs:
+    - data.requirement_ir
+    - data.repo.snapshot
+  secret_refs: []
+  required_guard_capsules:
+    - guard.secret-leak-guard
+  required_resource_capsules:
+    - resource.repo-workspace
+verification:
+  self_check:
+    - check.handoff_written
+    - check.acceptance_evidence_recorded
+  external_verifier:
+    required: true
+    preferred_capsules:
+      - cap.requirement-compiler-verification
+  pass_conditions:
+    - handoff_md exists
+operator_compatibility:
+  preferred:
+    - mini-codex-gpt53-spark-builder-1
+    - mini-codex-gpt55-medium-builder-1
+    - mini-claude-sonnet-builder-2
+  forbidden:
+    - mini-antigravity-gemini35-flash-high
+provenance:
+  owner: opensolar
+  created_at: "2026-06-23T00:00:00Z"

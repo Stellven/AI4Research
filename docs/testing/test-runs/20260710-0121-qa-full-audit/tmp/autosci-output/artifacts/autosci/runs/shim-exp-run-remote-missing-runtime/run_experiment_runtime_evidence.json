@@ -1,0 +1,95 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/run_experiment_executor_stdout.txt",
+      "type": "executor_stdout"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/run_experiment_executor_stderr.txt",
+      "type": "executor_stderr"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/run_experiment_result.json",
+      "type": "run_experiment_result"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/experiment_deploy_report.json",
+      "type": "experiment_deploy_report_json"
+    },
+    {
+      "path": "artifacts/autosci/runs/shim-exp-run-remote-missing-runtime/experiment_run_report.json",
+      "type": "experiment_run_report_json"
+    }
+  ],
+  "inputs": {
+    "approval_ref": "approval-exp-remote-missing"
+  },
+  "limitations": [
+    "Approved experiment executor ran a real command locally (subject to allowlist and approval contract)."
+  ],
+  "node_id": "node-run-experiment",
+  "outputs": {
+    "runtime": {
+      "action": "run_experiment",
+      "approval_ref": "approval-exp-remote-missing",
+      "checks": [
+        {
+          "check": "command_allowlisted",
+          "detail": "Experiment command selected from allowlist:commands: command allowlist template matched by commands",
+          "status": "ok"
+        },
+        {
+          "check": "exit_code",
+          "detail": "exit_code=0",
+          "status": "ok"
+        },
+        {
+          "check": "result_collected",
+          "detail": "False",
+          "status": "warn"
+        },
+        {
+          "check": "result_payload_source",
+          "detail": "remote_cli_runtime_evidence",
+          "status": "ok"
+        }
+      ],
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_exp_ru5/fake_remote_stdout.py",
+      "evidence_ids": [
+        "experiment-runtime:exp-remote-missing"
+      ],
+      "exit_code": 0,
+      "logs": [
+        "Remote helper stdout parsed; semantic experiment result is delegated to runtime_evidence_path."
+      ],
+      "metric_aggregates": [],
+      "metrics": [],
+      "outcome": "inconclusive",
+      "parsed_record_count": 1,
+      "remote_runtime_evidence_path": "",
+      "result": {
+        "evidence_ids": [],
+        "experiment_id": "exp-remote-missing",
+        "logs": [
+          "Remote helper stdout parsed; semantic experiment result is delegated to runtime_evidence_path."
+        ],
+        "metrics": [],
+        "outcome": "inconclusive"
+      },
+      "result_artifacts": [],
+      "result_collected": false,
+      "result_path": "",
+      "session_registry_path": "",
+      "status": "failed"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-approved-side-effect-executor",
+    "timestamp": "2026-07-10T05:54:36Z"
+  },
+  "schema": "autosci_runtime_evidence.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "failed",
+  "task_id": "task-autosci-skillgen-run_experiment"
+}

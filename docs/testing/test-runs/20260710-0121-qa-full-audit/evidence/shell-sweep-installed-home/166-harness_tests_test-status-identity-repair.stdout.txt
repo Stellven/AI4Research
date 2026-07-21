@@ -1,0 +1,9 @@
+=== test-status-identity-repair.sh ===
+  ✅ missing identity is repaired
+  ✅ id recovered from filename
+  ✅ sprint_id recovered from filename
+  ✅ history records repair
+  ✅ second repair is idempotent
+  ✅ unreadable JSON is not rewritten
+
+=== RESULT: PASS=6 FAIL=0 ===

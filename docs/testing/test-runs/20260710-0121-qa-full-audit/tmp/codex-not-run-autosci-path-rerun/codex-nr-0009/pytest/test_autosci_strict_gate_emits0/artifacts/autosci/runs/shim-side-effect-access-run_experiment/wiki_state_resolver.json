@@ -1,0 +1,86 @@
+{
+  "action": "design_experiment",
+  "existing_wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ],
+  "experiments": [],
+  "graph_edges": [],
+  "graph_errors": [],
+  "ideas": [],
+  "indexes": {
+    "experiments_by_slug": {},
+    "ideas_by_slug": {},
+    "outputs_by_slug": {
+      "ideas": "ideas",
+      "pipeline-progress": "pipeline-progress",
+      "pipeline-report": "pipeline-report"
+    }
+  },
+  "limitations": [
+    "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+    "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+  ],
+  "outputs": [
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [],
+      "id": "pipeline-report",
+      "idea_id": "",
+      "output_id": "pipeline-report",
+      "path": "artifacts/autosci/workspace/wiki/outputs/PIPELINE_REPORT.md",
+      "slug": "pipeline-report",
+      "status": "unknown",
+      "title": "AutoSci Research Pipeline Report"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [
+        "entity_id",
+        "entity_type",
+        "managed_by",
+        "run_id",
+        "source_evidence",
+        "title"
+      ],
+      "id": "ideas",
+      "idea_id": "",
+      "output_id": "ideas",
+      "path": "artifacts/autosci/workspace/wiki/outputs/ideas.md",
+      "slug": "ideas",
+      "status": "unknown",
+      "title": "Idea summary for shim-side-effect-access-generate_ideas"
+    },
+    {
+      "artifact_type": "",
+      "experiment_id": "",
+      "frontmatter_keys": [],
+      "id": "pipeline-progress",
+      "idea_id": "",
+      "output_id": "pipeline-progress",
+      "path": "artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md",
+      "slug": "pipeline-progress",
+      "status": "unknown",
+      "title": "AutoSci Research Pipeline Progress"
+    }
+  ],
+  "resolution": {
+    "fallback_used": false,
+    "target": "idea-001",
+    "target_id": "",
+    "target_path": "",
+    "target_type": "unresolved",
+    "warnings": [
+      "Target `idea-001` was not found in wiki ideas, experiments, outputs, or graph edges."
+    ]
+  },
+  "schema": "autosci_wiki_state_resolver.v1",
+  "selected_root": "artifacts/autosci/workspace/wiki",
+  "status": "completed",
+  "wiki_roots": [
+    "artifacts/autosci/workspace/wiki",
+    "wiki",
+    "harness/artifacts/autosci/workspace/wiki"
+  ]
+}

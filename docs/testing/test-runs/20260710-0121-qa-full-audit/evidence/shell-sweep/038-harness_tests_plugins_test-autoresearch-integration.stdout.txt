@@ -1,0 +1,4 @@
+A1 — modules compile
+  FAIL: autoresearch modules compile
+  FAIL: coordinator injects autoresearch optimizer
+A2 — status is readable even before vendor

@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_289_1f3d1028a7_harness_tests_test_ai_influence_youtube_report_orchestration.py",
+  "source": "harness/tests/test_ai_influence_youtube_report_orchestration.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_ai_influence_youtube_report_orchestration.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.201,
+  "timeout": false
+}

@@ -1,0 +1,21 @@
+{
+  "blocking_reasons": [
+    "model quality review status is `unavailable`, not completed with answer and evidence ids"
+  ],
+  "final_quality_ready": false,
+  "limitations": [
+    "Final wiki quality readiness requires passing local wiki checks plus completed model-backed recommendation evidence."
+  ],
+  "local_blocking_reasons": [],
+  "local_structure_ready": true,
+  "model_confidence": "N/A",
+  "model_evidence_ids": [],
+  "model_name": "",
+  "model_provider": "",
+  "model_source": "",
+  "model_status": "unavailable",
+  "request_sha256": "",
+  "response_sha256": "",
+  "schema": "autosci_check_final_quality_boundary.v1",
+  "status": "check_final_quality_incomplete"
+}

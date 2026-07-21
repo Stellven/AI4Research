@@ -1,0 +1,12 @@
+{
+  "section_id": "ch01/sec01",
+  "verdict": "WRITER_FAILED",
+  "unsupported_claim_rate": 1.0,
+  "citation_span_accuracy": 0.0,
+  "source_diversity_score": 0.0,
+  "repetition_score": 0.0,
+  "issues": [
+    "local_command_writer_failed:exit_2:/bin/sh: -c: line 0: syntax error near unexpected token `(' /bin/sh: -c: line 0: `/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0083/pytest/test_local_command_backend_rec0/writer_json.py'"
+  ],
+  "schema_version": "solar.research.survey.v1"
+}

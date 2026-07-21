@@ -8,7 +8,7 @@ Usage:
                                      [--max-files N] [--dry-run]
 
 Environment:
-  OBSIDIAN_VAULT_PATH  — vault root (default /Users/sihaoli/Knowledge)
+  OBSIDIAN_VAULT_PATH  — vault root (default ~/Knowledge)
   SOLAR_DB             — database path (default ~/.solar/solar.db)
 """
 

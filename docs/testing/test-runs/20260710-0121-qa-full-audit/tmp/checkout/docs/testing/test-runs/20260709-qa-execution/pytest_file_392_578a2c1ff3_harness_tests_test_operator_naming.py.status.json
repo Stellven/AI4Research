@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_392_578a2c1ff3_harness_tests_test_operator_naming.py",
+  "source": "harness/tests/test_operator_naming.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_operator_naming.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.183,
+  "timeout": false
+}

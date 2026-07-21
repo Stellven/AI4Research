@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_018_9e180c35b9_harness_tests_code_signal_test_operators_knowledge_store.py",
+  "source": "harness/tests/code_signal/test_operators_knowledge_store.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/code_signal/test_operators_knowledge_store.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.191,
+  "timeout": false
+}

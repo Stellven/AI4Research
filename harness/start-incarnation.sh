@@ -17,9 +17,30 @@ done
 
 PERSONA="${1:?Usage: $0 <planner|builder|evaluator> [workdir]}"
 WORK_DIR="${2:-.}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HARNESS_DIR="${HARNESS_DIR:-$SCRIPT_DIR}"
+HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
 export HARNESS_DIR
+
+prepare_harness_cli_path() {
+  local runtime_bin="$HARNESS_DIR/run/bin"
+  local runtime_cli="$runtime_bin/solar-harness"
+  mkdir -p "$runtime_bin" 2>/dev/null || return 0
+  if [[ -f "$HARNESS_DIR/solar-harness.sh" ]]; then
+    [[ -L "$runtime_cli" ]] && rm -f "$runtime_cli"
+    if {
+      printf '%s\n' '#!/usr/bin/env bash'
+      printf 'export HARNESS_DIR=%q\n' "$HARNESS_DIR"
+      printf '%s\n' 'export SOLAR_HARNESS_DIR="${SOLAR_HARNESS_DIR:-$HARNESS_DIR}"'
+      printf 'exec %q "$@"\n' "$HARNESS_DIR/solar-harness.sh"
+    } > "$runtime_cli" 2>/dev/null; then
+      chmod +x "$runtime_cli" 2>/dev/null || true
+    fi
+  fi
+  case ":$PATH:" in
+    *":$runtime_bin:"*) ;;
+    *) export PATH="$runtime_bin:$PATH" ;;
+  esac
+}
+prepare_harness_cli_path
 
 # sprint-20260502-191700 follow-up: --print-config 必须**前置**
 # 旧 bug: 先 [[ -f PERSONA_FILE ]] || exit 1 → "--print-config" 当 PERSONA 找文件失败 → 永远进不到 --print-config 分支
@@ -27,12 +48,6 @@ export HARNESS_DIR
 if [[ "$PERSONA" == "--print-config" ]]; then
   bash "$HARNESS_DIR/lib/persona-config.sh" --print-config "${2:?missing persona arg}"
   exit $?
-fi
-
-# Legacy compatibility: Solar panes now launch through pane-launcher, which
-# owns the Codex/Claude runtime switch. Keep this file as a stable old entry.
-if [[ -x "$HARNESS_DIR/pane-launcher.sh" ]]; then
-  exec bash "$HARNESS_DIR/pane-launcher.sh" "$PERSONA" "$WORK_DIR"
 fi
 
 PERSONA_FILE="$HARNESS_DIR/personas/${PERSONA}.md"
@@ -138,7 +153,7 @@ else
   [[ -n "$CLAUDE_BIN" ]] || CLAUDE_BIN="$HOME/.npm-global/bin/claude"
 fi
 
-CLAUDE_CMD="$CLAUDE_BIN"
+CLAUDE_CMD=("$CLAUDE_BIN")
 SOLAR_CLAUDE_BYPASS="${SOLAR_CLAUDE_BYPASS:-1}"
 if [[ "$SOLAR_CLAUDE_BYPASS" == "1" ]]; then
   SOLAR_CLAUDE_PERMISSION_MODE="${SOLAR_CLAUDE_PERMISSION_MODE:-bypassPermissions}"
@@ -155,14 +170,14 @@ if [[ "$SOLAR_CLAUDE_BYPASS" == "1" ]]; then
   esac
   SOLAR_CLAUDE_SKIP_PERMISSIONS="${SOLAR_CLAUDE_SKIP_PERMISSIONS:-1}"
   if [[ "$SOLAR_CLAUDE_SKIP_PERMISSIONS" == "1" ]]; then
-    CLAUDE_CMD="$CLAUDE_BIN --dangerously-skip-permissions --permission-mode ${SOLAR_CLAUDE_PERMISSION_MODE}"
+    CLAUDE_CMD+=(--dangerously-skip-permissions --permission-mode "$SOLAR_CLAUDE_PERMISSION_MODE")
   else
-    CLAUDE_CMD="$CLAUDE_BIN --permission-mode ${SOLAR_CLAUDE_PERMISSION_MODE}"
+    CLAUDE_CMD+=(--permission-mode "$SOLAR_CLAUDE_PERMISSION_MODE")
   fi
 fi
-[[ -n "$MODEL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $MODEL_FLAG"
-[[ -n "$TOOL_FLAG" ]] && CLAUDE_CMD="$CLAUDE_CMD $TOOL_FLAG"
-[[ -n "${EXTRA_FLAGS:-}" ]] && CLAUDE_CMD="$CLAUDE_CMD $EXTRA_FLAGS"
+[[ -n "$MODEL_FLAG" ]] && CLAUDE_CMD+=( $MODEL_FLAG )
+[[ -n "$TOOL_FLAG" ]] && CLAUDE_CMD+=( $TOOL_FLAG )
+[[ -n "${EXTRA_FLAGS:-}" ]] && CLAUDE_CMD+=( $EXTRA_FLAGS )
 
 prepare_sanitized_claude_settings() {
   local persona="$1"
@@ -212,7 +227,7 @@ PY
 CLAUDE_SETTINGS_FILE="$(prepare_sanitized_claude_settings "$PERSONA")"
 export SOLAR_CLAUDE_SETTINGS_FILE="$CLAUDE_SETTINGS_FILE"
 export SOLAR_CLAUDE_SETTING_SOURCES="local"
-CLAUDE_CMD="$CLAUDE_CMD --setting-sources ${SOLAR_CLAUDE_SETTING_SOURCES} --settings ${CLAUDE_SETTINGS_FILE}"
+CLAUDE_CMD+=(--setting-sources "$SOLAR_CLAUDE_SETTING_SOURCES" --settings "$CLAUDE_SETTINGS_FILE")
 
 # 退出信号捕获 → pane-exit.jsonl
 EXIT_LOG="$HARNESS_DIR/logs/pane-exit.jsonl"
@@ -222,7 +237,7 @@ set +e
 _runtime_policy=$(inject_runtime_policy "$PERSONA")
 _prefix_policy=$(inject_prefix_policy "$PERSONA")
 _whisper=$(inject_whisper "$PERSONA")
-$CLAUDE_CMD --append-system-prompt "$_runtime_policy
+"${CLAUDE_CMD[@]}" --append-system-prompt "$_runtime_policy
 $_prefix_policy
 $(cat "$PERSONA_FILE")$_whisper"
 CLAUDE_EXIT=$?

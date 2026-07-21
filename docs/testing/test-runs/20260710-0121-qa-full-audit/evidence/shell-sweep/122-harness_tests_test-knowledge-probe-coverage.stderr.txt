@@ -1,0 +1,20 @@
+not ok - space data center cooling missing 太空数据中心散热方案
+
+not ok - obsidian wiki integration missing solar-harness-obsidian-wiki-integration
+
+not ok - qmd idle embedding missing qmd-embedding-idle-background-status
+
+not ok - mirage vfs role missing mirage
+
+not ok - mineru pdf chain missing mineru-pdf-deep-extraction-chain
+
+not ok - symphony s1 s3 missing openai-symphony-s1-s3-solar-harness-structure
+
+not ok - dag task graph scheduler missing solar-harness-dag-task-graph-scheduler
+
+not ok - mia integration principle missing solar-mia-integration-principles
+
+not ok - ruflo runtime status missing ruflo-runtime-sandbox-status
+
+not ok - apple notes wechat ingest missing apple-notes-wechat-knowledge-ingest-chain
+

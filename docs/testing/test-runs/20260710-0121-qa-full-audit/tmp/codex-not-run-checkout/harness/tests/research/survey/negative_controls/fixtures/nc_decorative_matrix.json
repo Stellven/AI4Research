@@ -1,0 +1,15 @@
+{
+  "evidence_pack": {
+    "claim_ids": ["claim-decorative-001"],
+    "section_id": "sec-decorative"
+  },
+  "claim_evidence_rows": [
+    {
+      "claim_id": "claim-decorative-001",
+      "evidence_id": "ev-001",
+      "source_id": "src-001",
+      "relation_type": "supporting",
+      "relation_strength": "weak"
+    }
+  ]
+}

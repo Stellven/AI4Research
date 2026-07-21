@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_394_f74aedb741_harness_tests_test_operator_router.py",
+  "source": "harness/tests/test_operator_router.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_operator_router.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.308,
+  "timeout": false
+}

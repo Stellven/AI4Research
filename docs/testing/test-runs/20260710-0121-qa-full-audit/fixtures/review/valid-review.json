@@ -1,0 +1,10 @@
+{
+  "fixture_source": true,
+  "verdict": "supported",
+  "limitations": [
+    "fixture-only"
+  ],
+  "evidence_refs": [
+    "fixture://local"
+  ]
+}

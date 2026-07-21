@@ -1,0 +1,107 @@
+{
+  "blocking_checks": [],
+  "check_statuses": {
+    "anonymity_check": "ok",
+    "font_size_check": "ok",
+    "page_limit_check": "ok",
+    "unconfirmed_marker_scan": "ok"
+  },
+  "compiled_pdf_verified": true,
+  "limitations": [],
+  "pdf_files": [
+    "paper-submission-audit/main.pdf"
+  ],
+  "pdf_inspection": {
+    "applied_fields": [
+      "verified_page_count",
+      "verified_min_font_size"
+    ],
+    "evidence_ids": [
+      "pdf-inspection:audit-main"
+    ],
+    "inspection_loaded": true,
+    "inspection_valid": true,
+    "invalid_reasons": [],
+    "min_font_size": 11.0,
+    "page_count": 6.0,
+    "path": "audit-pdf-inspection.json",
+    "pdf_path": "paper-submission-audit/main.pdf",
+    "pdf_sha256": "f66946c896bed1bc2fdd4a8e8e44ebab307588b424ff503923655b6a5ddcfd08",
+    "schema": "autosci_pdf_inspection_boundary.v1",
+    "sha256": "257cbae12a8cfdd46a4f3d3ac34e45de5ae59300466268a3f4d1ab9fe9077e5f",
+    "status": "loaded"
+  },
+  "portal_submission_completed": false,
+  "runtime_semantic_verified": false,
+  "schema": "autosci_publication_submission_boundary.v1",
+  "status": "submission_ready",
+  "submission_audit": {
+    "audit_loaded": true,
+    "audit_verified": true,
+    "blocking_checks": [],
+    "checks": [
+      {
+        "check": "anonymity",
+        "status": "ok"
+      },
+      {
+        "check": "page_limit",
+        "status": "ok"
+      },
+      {
+        "check": "font_size",
+        "status": "ok"
+      },
+      {
+        "check": "unconfirmed_markers",
+        "status": "ok"
+      }
+    ],
+    "evidence_ids": [
+      "submission-audit:iclr"
+    ],
+    "invalid_reasons": [],
+    "path": "submission-audit.json",
+    "portal_submission_completed": false,
+    "schema": "autosci_publication_submission_audit_boundary.v1",
+    "sha256": "1ba8bb2406e85936037f9a7fe41a7a540c8920e45b4d11e5617403aa7e822970",
+    "status": "loaded",
+    "venue": "ICLR"
+  },
+  "submission_audit_blocking_checks": [],
+  "submission_audit_ready": true,
+  "submission_audit_status": "submission_audit_ready",
+  "submission_profile": {
+    "applied_fields": [
+      "venue",
+      "submission_mode",
+      "anonymous",
+      "page_limit",
+      "min_font_size"
+    ],
+    "conflicts": [],
+    "evidence_ids": [
+      "venue-profile:iclr"
+    ],
+    "invalid_reasons": [],
+    "path": "audit-profile.json",
+    "profile_loaded": true,
+    "profile_valid": true,
+    "requirements": {
+      "anonymous": true,
+      "double_blind": null,
+      "min_font_size": 10.0,
+      "page_limit": 8.0,
+      "submission_mode": "double_blind",
+      "venue": "ICLR"
+    },
+    "schema": "autosci_submission_profile_boundary.v1",
+    "sha256": "2a17888c31891003daa0880098c5bf7933fb150257b92a794ba21cad2a93e2a3",
+    "status": "loaded",
+    "venue": "ICLR"
+  },
+  "submission_ready": true,
+  "venue_blocking_checks": [],
+  "venue_status": "venue_submission_ready",
+  "venue_submission_ready": true
+}

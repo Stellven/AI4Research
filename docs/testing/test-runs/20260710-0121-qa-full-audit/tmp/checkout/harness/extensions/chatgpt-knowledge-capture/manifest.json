@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Solar Knowledge Capture",
+  "version": "0.2.0",
+  "description": "Capture the current ChatGPT conversation or web page into the Solar knowledge ingest pipeline.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*",
+    "http://127.0.0.1:8788/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Capture to Solar Knowledge"
+  }
+}

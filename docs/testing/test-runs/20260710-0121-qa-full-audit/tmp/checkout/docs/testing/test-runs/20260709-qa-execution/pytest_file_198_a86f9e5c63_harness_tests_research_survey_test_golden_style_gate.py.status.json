@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_198_a86f9e5c63_harness_tests_research_survey_test_golden_style_gate.py",
+  "source": "harness/tests/research_survey/test_golden_style_gate.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/research_survey/test_golden_style_gate.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.206,
+  "timeout": false
+}

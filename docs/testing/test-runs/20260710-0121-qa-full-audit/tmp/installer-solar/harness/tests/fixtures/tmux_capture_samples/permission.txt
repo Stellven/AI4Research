@@ -1,0 +1,12 @@
+--- sample 1: Claude Code permission prompt ---
+█ claude-code v4.6
+> read ~/.aws/credentials
+
+The tool wants to read a file. Do you want to allow this? [y/n]
+--- sample 2: permission deny ---
+Tool: Bash
+Command: rm -rf /tmp/test
+Allow or deny this command? [A/d]
+--- sample 3: permission generic ---
+File access required for /etc/hosts
+Permission required to read system files.

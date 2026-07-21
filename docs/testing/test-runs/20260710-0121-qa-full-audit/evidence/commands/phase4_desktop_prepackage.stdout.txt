@@ -1,0 +1,1 @@
+[prepackage-check] OK: harness contains no symlinks

@@ -1,0 +1,51 @@
+[solar-install] system dependencies ok: tmux, jq, bash>=4
+[solar-install] wrote /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/config.env
+[solar-install] install component: kernel
+[solar-install] install component: harness
+[solar-install] deps-light: skipping pip install of /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/requirements/harness.txt (resolution validated separately)
+[solar-install] install component: autosci
+[solar-install] claude CLI unavailable; skipping MCP registration
+[32mOpenSolar install complete: kernel harness autosci[0m
+
+Environment check
+OpenSolar doctor
+  [     ok] solar_home  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar
+  [     ok] receipt     /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/install-receipt.json
+  [     ok] claude_dir  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude
+  [     ok] kernel      /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-claude/solar/SOLAR.md
+  [     ok] db          /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/db/solar.db
+  [     ok] solar_bin   /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/bin/solar
+  [     ok] python3     /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python3 3.14.2
+  [     ok] py:yaml     ok
+  [     ok] py:jsonschema ok
+  [     ok] py:pydantic ok
+  [     ok] py:rich     ok
+  [     ok] tmux        /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/safe-bin/tmux
+  [     ok] jq          /usr/bin/jq
+  [     ok] bash>=4     /opt/homebrew/bin/bash
+  model lab matrix: glm,glm,glm,anthropic-sonnet
+  credentials: zhipu=missing anthropic=missing claude_cli=missing
+  guidance: Provide ZHIPU_AUTH_TOKEN in ~/.solar/secrets/zhipu.env or ~/.solar/secrets/solar-user-secrets.env, or run: solar-harness models set-lab-matrix anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet
+  claude: Claude Code must be authenticated once with `claude`; after login, panes self-initialize.
+  schema_version: 0
+  warnings:
+    - lab matrix uses GLM/Zhipu but no ZHIPU credentials were found
+    - claude CLI missing; install/authenticate Claude Code before launching panes
+Verdict: ok
+
+Get started
+  1. Put solar on your PATH (or call it by full path /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/bin/solar):
+       export PATH="/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/installer-solar/bin:$PATH"
+  2. Check the install:
+       solar doctor
+  3. Start Claude Code and approve the one-time Solar import:
+       claude
+       (approve the prompt to import @~/.claude/solar/SOLAR.md)
+       Claude must be authenticated once; panes self-initialize after login.
+  4. Choose model credentials:
+       add ZHIPU_AUTH_TOKEN to ~/.solar/secrets/zhipu.env, or
+       solar-harness models set-lab-matrix anthropic-sonnet,anthropic-sonnet,anthropic-sonnet,anthropic-sonnet
+  5. In that session, describe what you want done --
+       Solar plans, delegates, and gates the work.
+
+More in INSTALL.md. Re-check health anytime with `solar doctor`.

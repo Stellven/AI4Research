@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_011_9ee047151a_harness_tests_code_signal_test_evidence_refs_required.py",
+  "source": "harness/tests/code_signal/test_evidence_refs_required.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/code_signal/test_evidence_refs_required.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.192,
+  "timeout": false
+}

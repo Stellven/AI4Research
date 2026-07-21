@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REAL_FIND="/usr/bin/find"
+SAFE_ROOT="${SOLAR_SAFE_FIND_ROOT:-}"
+
+if [[ -z "$SAFE_ROOT" ]]; then
+  exec "$REAL_FIND" "$@"
+fi
+
+python3 - "$SAFE_ROOT" "$PWD" "$@" <<'PY'
+from __future__ import annotations
+
+import os
+import pathlib
+import sys
+
+safe_root = pathlib.Path(sys.argv[1]).resolve()
+pwd = pathlib.Path(sys.argv[2]).resolve()
+args = sys.argv[3:]
+
+
+def starts_expression(token: str) -> bool:
+    return token.startswith("-") or token in {"!", "(", ")", ","}
+
+
+def resolve_path(raw: str) -> pathlib.Path:
+    expanded = os.path.expanduser(raw)
+    candidate = pathlib.Path(expanded)
+    if not candidate.is_absolute():
+        candidate = (pwd / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+    return candidate
+
+
+paths: list[str] = []
+for token in args:
+    if starts_expression(token):
+        break
+    paths.append(token)
+
+if not paths:
+    paths = ["."]
+
+for raw in paths:
+    resolved = resolve_path(raw)
+    try:
+        resolved.relative_to(safe_root)
+    except ValueError:
+        print(
+            f"[solar-safe-find] blocked path outside workspace: {raw} -> {resolved}\n"
+            f"[solar-safe-find] allowed root: {safe_root}\n"
+            "[solar-safe-find] use rg/find within the workspace root instead of scanning /Users, ~, or app data directories.",
+            file=sys.stderr,
+        )
+        raise SystemExit(64)
+PY
+
+exec "$REAL_FIND" "$@"

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/claim-compiler-v2-contract.draft.json",
+  "title": "Claim Compiler v2 Contract",
+  "description": "Draft contract for atomic claim + evidence alignment + contradiction search. Defines ClaimEvidenceAlignment, CounterEvidenceRequest, and the ClaimCompilerStrategy protocol interface.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "definitions": {
+    "AlignmentStatus": {
+      "type": "string",
+      "enum": ["supported", "contradicted", "mixed", "unverified"],
+      "description": "Result of aligning a claim against its evidence corpus."
+    },
+    "ClaimEvidenceAlignment": {
+      "type": "object",
+      "required": ["claim_id", "claim_text", "section_path", "alignment_status"],
+      "properties": {
+        "claim_id": {"type": "string"},
+        "claim_text": {"type": "string"},
+        "section_path": {"type": "string"},
+        "supporting_evidence_ids": {"type": "array", "items": {"type": "string"}, "default": []},
+        "contradicting_evidence_ids": {"type": "array", "items": {"type": "string"}, "default": []},
+        "neutral_evidence_ids": {"type": "array", "items": {"type": "string"}, "default": []},
+        "alignment_status": {"$ref": "#/definitions/AlignmentStatus"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1, "default": 0},
+        "is_high_impact": {"type": "boolean", "default": false},
+        "counter_evidence_requested": {"type": "boolean", "default": false},
+        "counter_evidence_ids": {"type": "array", "items": {"type": "string"}, "default": []},
+        "metadata": {"type": "object", "additionalProperties": true, "default": {}}
+      }
+    },
+    "CounterEvidenceRequest": {
+      "type": "object",
+      "required": ["claim_id", "claim_text", "section_path"],
+      "properties": {
+        "claim_id": {"type": "string"},
+        "claim_text": {"type": "string"},
+        "section_path": {"type": "string"},
+        "search_queries": {"type": "array", "items": {"type": "string"}, "default": []},
+        "max_results_per_query": {"type": "integer", "minimum": 1, "default": 5},
+        "priority": {"type": "string", "enum": ["normal", "high", "critical"], "default": "normal"},
+        "reason": {"type": "string", "default": ""}
+      }
+    },
+    "ProviderEntry": {
+      "type": "object",
+      "required": ["provider_id"],
+      "properties": {
+        "provider_id": {"type": "string"},
+        "priority": {"type": "integer", "default": 0},
+        "tags": {"type": "array", "items": {"type": "string"}, "default": []},
+        "has_connector": {"type": "boolean", "default": false}
+      }
+    }
+  }
+}

@@ -1,0 +1,196 @@
+{
+  "version": "2.0",
+  "updated": "2026-02-04",
+  "description": "Solar 外部依赖清单 - Claude 无法独立执行，需要外部触发的任务",
+
+  "background_services": {
+    "description": "后台服务 (launchd)",
+    "items": [
+      {
+        "id": "mail-agent",
+        "name": "邮件代理",
+        "plist": "com.solar.mail-agent",
+        "script": "~/Solar/core/agent-daemon/mail-agent.sh",
+        "interval": "2分钟",
+        "purpose": "监听邮件，自动执行监护人指令",
+        "status": "ACTIVE"
+      },
+      {
+        "id": "memory-consolidator",
+        "name": "记忆巩固器",
+        "plist": "com.solar.memory-consolidator",
+        "script": "~/Solar/core/ontology/memory-consolidator.sh",
+        "interval": "1小时",
+        "purpose": "Episodic → Semantic → Procedural 记忆转换",
+        "status": "ACTIVE",
+        "installed": "2026-02-04"
+      },
+      {
+        "id": "personality-learner",
+        "name": "人格学习器",
+        "plist": "com.solar.personality-learner",
+        "script": "~/Solar/core/ontology/personality-learner.sh",
+        "interval": "每天凌晨3点",
+        "purpose": "分析交互数据，更新 B 人格 Big Five 维度",
+        "status": "ACTIVE",
+        "installed": "2026-02-04"
+      },
+      {
+        "id": "ontology-reflector",
+        "name": "本体反思器",
+        "plist": "com.solar.ontology-reflector",
+        "script": "~/Solar/core/ontology/reflector.sh",
+        "interval": "6小时",
+        "purpose": "定期反思，生成洞察",
+        "status": "ACTIVE"
+      },
+      {
+        "id": "hn-monitor",
+        "name": "HN 监控",
+        "plist": "com.solar.hn-monitor",
+        "script": "~/.claude/skills/hn-monitor/fetch.ts",
+        "interval": "1小时",
+        "purpose": "抓取 Hacker News 热门话题",
+        "status": "ACTIVE"
+      }
+    ]
+  },
+
+  "initialization_tasks": {
+    "description": "一次性初始化任务",
+    "items": [
+      {
+        "id": "create-ontology-v2-tables",
+        "name": "创建本体 v2 表",
+        "command": "在 setup-all.sh 中执行",
+        "purpose": "创建六类记忆表、Big Five 表等",
+        "status": "DONE",
+        "completed": "2026-02-04"
+      },
+      {
+        "id": "backup-a-personality",
+        "name": "备份 A 人格",
+        "command": "在 setup-all.sh 中执行",
+        "purpose": "在实验前保护现有人格数据",
+        "status": "DONE",
+        "completed": "2026-02-04",
+        "snapshot_id": "a_backup_20260204112235"
+      },
+      {
+        "id": "init-core-memory",
+        "name": "初始化 Core Memory",
+        "command": "在 setup-all.sh 中执行",
+        "purpose": "写入身份、第一规律等不可变数据",
+        "status": "DONE",
+        "completed": "2026-02-04",
+        "records": 7
+      },
+      {
+        "id": "init-big-five",
+        "name": "初始化 Big Five 人格",
+        "command": "在 setup-all.sh 中执行",
+        "purpose": "初始化 A/B 人格的 Big Five 维度",
+        "status": "DONE",
+        "completed": "2026-02-04",
+        "records": 10
+      },
+      {
+        "id": "calculate-b-personality",
+        "name": "计算 B 人格数据",
+        "command": "从 evo_memory_semantic 等表提取",
+        "purpose": "基于实际数据计算 B 人格 Big Five",
+        "status": "DONE",
+        "completed": "2026-02-04",
+        "result": {
+          "O": 0.70,
+          "C": 0.95,
+          "E": 0.80,
+          "A": 0.75,
+          "N": 0.15
+        }
+      }
+    ]
+  },
+
+  "triggered_tasks": {
+    "description": "触发式任务 (Claude 可以请求，但需要外部执行)",
+    "items": [
+      {
+        "id": "run-benchmark",
+        "name": "运行基准测试",
+        "command": "/benchmark tpch",
+        "purpose": "性能验证",
+        "trigger": "代码修改后"
+      },
+      {
+        "id": "consolidate-now",
+        "name": "立即巩固记忆",
+        "command": "~/Solar/core/ontology/memory-consolidator.sh",
+        "purpose": "手动触发记忆转换",
+        "trigger": "重要学习后"
+      },
+      {
+        "id": "learn-personality-now",
+        "name": "立即学习人格",
+        "command": "~/Solar/core/ontology/personality-learner.sh",
+        "purpose": "手动触发人格学习",
+        "trigger": "积累足够数据后"
+      },
+      {
+        "id": "snapshot-personality",
+        "name": "人格快照",
+        "command": "sqlite3 ~/.solar/solar.db \"INSERT INTO sys_personality_snapshots ...\"",
+        "purpose": "保存当前人格状态",
+        "trigger": "重大变更前"
+      }
+    ]
+  },
+
+  "data_sources": {
+    "description": "人格/记忆数据来源",
+    "personality_extraction": {
+      "source_tables": [
+        "evo_memory_semantic",
+        "evo_agent_executions",
+        "evo_tool_calls (待积累)",
+        "evo_traces (待积累)",
+        "evo_feedback (待积累)"
+      ],
+      "extraction_model": {
+        "name": "Big Five Behavioral Mapping v2",
+        "method": "基于实际数据计算人格维度",
+        "mapping": {
+          "Openness": "knowledge_domains / 30",
+          "Conscientiousness": "execution_success_rate (max 0.95)",
+          "Extraversion": "knowledge_count × avg_length / 10000",
+          "Agreeableness": "relationship_knowledge_ratio × 2.5",
+          "Neuroticism": "error_rate × 2"
+        }
+      }
+    },
+    "memory_consolidation": {
+      "source": "evo_memory_episodic",
+      "target": "evo_memory_semantic → evo_memory_procedural",
+      "trigger_conditions": {
+        "episodic_to_semantic": "相似经历 >= 2 次",
+        "semantic_to_procedural": "访问 >= 5 次且置信度 >= 0.8"
+      }
+    }
+  },
+
+  "current_stats": {
+    "description": "当前数据统计 (2026-02-04)",
+    "memory": {
+      "core": 7,
+      "episodic": 0,
+      "semantic": 31,
+      "procedural": 0,
+      "links": 0
+    },
+    "personality": {
+      "snapshots": 1,
+      "big_five_records": 10,
+      "context_detectors": 5
+    }
+  }
+}

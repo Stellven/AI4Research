@@ -1,0 +1,5 @@
+{
+  "schema": "fixture_allowlist.v1",
+  "fixture_source": true,
+  "allowed_targets": []
+}

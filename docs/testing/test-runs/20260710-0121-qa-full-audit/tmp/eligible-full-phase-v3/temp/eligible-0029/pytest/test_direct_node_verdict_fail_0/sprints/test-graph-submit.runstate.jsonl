@@ -1,0 +1,1 @@
+{"ts": "2026-07-10T14:14:17Z", "kind": "eval_state", "sprint_id": "test-graph-submit", "node_id": "N1", "repair_attempt": 1, "max_repair_attempts": 1, "last_eval_result": "FAIL", "last_eval_reason": "Artifact omitted package manifests.", "next_action": "rebuild_and_reeval", "status": "failed_review"}

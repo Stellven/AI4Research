@@ -49,7 +49,7 @@ export class TaskScheduler {
   private readonly HIGH_PRIORITY_THRESHOLD = 0.95; // 95% 也执行高优先级
   private readonly TEMP_PRIORITY_THRESHOLD = 0.70; // 70% 以下执行临时任务
 
-  constructor(dbPath: string = `${process.env.HOME}/.solar/solar.db`) {
+  constructor(dbPath: string = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`) {
     this.db = new Database(dbPath);
   }
 

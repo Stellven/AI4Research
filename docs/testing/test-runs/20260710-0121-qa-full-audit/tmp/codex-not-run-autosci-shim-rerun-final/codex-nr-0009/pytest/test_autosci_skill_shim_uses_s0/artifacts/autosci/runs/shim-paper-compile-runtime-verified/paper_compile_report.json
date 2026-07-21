@@ -1,0 +1,81 @@
+{
+  "artifacts": {
+    "checklist": "artifacts/autosci/runs/shim-paper-compile-runtime-verified/paper_compile_checklist.json",
+    "diagnostics": "artifacts/autosci/runs/shim-paper-compile-runtime-verified/paper_compile_diagnostics.md",
+    "submission_boundary": "artifacts/autosci/runs/shim-paper-compile-runtime-verified/publication_submission_boundary.json"
+  },
+  "checks": {
+    "anonymity_check": "warn",
+    "approval_contract_verified": "ok",
+    "auto_fix_requested": "ok",
+    "bibliography_present": "warn",
+    "checklist_requested": "ok",
+    "compile_execution": "ok",
+    "compiled_pdf_present": "warn",
+    "font_size_check": "warn",
+    "latex_source_present": "ok",
+    "latexmk_available": "warn",
+    "page_limit_check": "warn",
+    "pdf_inspection": "warn",
+    "publication_submission_audit": "warn",
+    "publication_submission_boundary": "warn",
+    "runtime_semantic_verified": "ok",
+    "target_resolved": "ok",
+    "tex_executor_available": "ok",
+    "unconfirmed_marker_scan": "ok",
+    "venue_submission_profile": "warn"
+  },
+  "execution": {
+    "approval_ready": true,
+    "execution_verified": true,
+    "runtime_semantic_verified": true
+  },
+  "limitations": [
+    "Paper compile runtime was verified from supplied approval-gated evidence; this bridge did not execute a TeX executor.",
+    "No structurally valid compiled PDF was found in the target path.",
+    "Submission readiness includes warnings or unconfirmed checks; see submission_checks in the compile checklist.",
+    "Publication compile evidence does not prove submission readiness; review blocking_checks and submission_checks.",
+    "Venue submission readiness is not proven; supply a valid submission_profile and pdf_inspection evidence.",
+    "Publication submission audit readiness is not proven; supply valid submission_audit evidence."
+  ],
+  "pdf": {
+    "compiled_pdf_verified": true,
+    "pdf_files": [],
+    "pdf_integrity": [],
+    "verified_pdf_files": []
+  },
+  "schema": "paper_compile_report.v1",
+  "status": "completed",
+  "submission": {
+    "blocking_checks": [
+      "anonymity_check",
+      "font_size_check",
+      "page_limit_check"
+    ],
+    "portal_submission_completed": false,
+    "submission_audit_blocking_checks": [
+      "venue_submission_ready",
+      "publication_submission_audit"
+    ],
+    "submission_audit_ready": false,
+    "submission_ready": false,
+    "venue_blocking_checks": [
+      "venue_submission_profile",
+      "pdf_inspection"
+    ],
+    "venue_submission_ready": false
+  },
+  "target": {
+    "raw": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_uses_s0/runtime-paper",
+    "resolved": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_uses_s0/runtime-paper"
+  },
+  "toolchain": {
+    "available_tex_executors": [
+      "lualatex",
+      "pdflatex",
+      "xelatex"
+    ],
+    "latexmk_available": false,
+    "selected_executor": ""
+  }
+}

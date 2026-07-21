@@ -1,0 +1,6 @@
+=== Tech Hotspot Radar wiki bridge tests ===
+FAIL: top_level_help_mentions_bridge
+FAIL: wiki_help_mentions_bridge
+FAIL: bridge_help_routes_to_python_cli
+FAIL: bridge_validate_routes_to_runtime
+=== Summary: 0 passed, 4 failed ===

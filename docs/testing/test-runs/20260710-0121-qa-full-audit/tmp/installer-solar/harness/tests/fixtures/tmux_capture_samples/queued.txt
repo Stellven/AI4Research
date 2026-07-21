@@ -1,0 +1,12 @@
+--- sample 1: Claude Code queued messages ---
+█ claude-code v4.6
+> first command
+> second command
+
+Press up to edit queued messages, or Enter to continue
+--- sample 2: queued with context ---
+Some tool output here
+Press UP to edit queued messages
+--- sample 3: queued lowercase ---
+Output from previous step completed.
+press up to edit Queued Messages before proceeding

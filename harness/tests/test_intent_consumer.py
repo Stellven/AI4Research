@@ -68,8 +68,48 @@ def test_consumer_compiles_rawintent_to_sprint_package(tmp_path):
     assert (tmp_path / "sprints" / f"{sprint_id}.contract.md").exists()
     assert (tmp_path / "sprints" / f"{sprint_id}.task_graph.json").exists()
     ir = json.loads((tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text())
+    workspace_ir = json.loads(
+        (tmp_path / "workspace" / ".pm" / "requirement_ir.json").read_text()
+    )
+    trace = json.loads(
+        (tmp_path / "sprints" / f"{sprint_id}.requirement_trace.json").read_text()
+    )
     assert ir["intent_id"] == intent_id
     assert ir["sprint_id"] == sprint_id
+    assert ir["id"] == workspace_ir["id"]
+    assert ir["requirements"] == workspace_ir["requirements"]
+    assert len(ir["requirements"]) >= 4
+    assert ir["requirements"][0]["source_text"] != "N/A"
+    assert trace["requirement_ir_id"] == ir["id"]
+    assert len(trace["items"]) == len(ir["requirements"])
+
+
+def test_cli_intake_preserves_research_when_software_artifacts_are_explicit_non_goals(tmp_path):
+    env = _env(tmp_path)
+    prompt = (
+        "Create a deep research report comparing GitHub Copilot, Cursor, and Claude Code. "
+        "Use current official and independent sources, distinguish contradictory evidence, "
+        "and cite every material claim. Deliver Markdown, not a CLI or JSON tool."
+    )
+    intent_id = _capture(env, text=prompt, channel="cli_intake")
+
+    proc = subprocess.run(
+        [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--json"],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    result = json.loads(proc.stdout)["results"][0]
+    sprint_id = result["sprint_id"]
+    raw = json.loads((tmp_path / "intents" / intent_id / "raw_intent.json").read_text())
+    ir = json.loads((tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text())
+    graph = json.loads((tmp_path / "sprints" / f"{sprint_id}.task_graph.json").read_text())
+    roles = {node["logical_operator"] for node in graph["nodes"]}
+
+    assert raw["routing_hints"]["mode"] == "research"
+    assert ir["request_type"] == "research"
+    assert {"ResearchScout", "ResearchSynthesizer"}.issubset(roles)
 
 
 def test_consumer_dry_run_marks_trusted_pm_dispatch_for_planner_handoff(tmp_path):
@@ -88,6 +128,63 @@ def test_consumer_dry_run_marks_trusted_pm_dispatch_for_planner_handoff(tmp_path
     assert handoff["requested"] is True
     assert handoff["reason"] == "trusted_channel"
     assert handoff["source_channel"] == "pm_dispatch"
+
+
+def test_consumer_codex_runtime_suppresses_trusted_pm_operator_handoff(tmp_path):
+    env = _env(tmp_path)
+    env["SOLAR_PANE_RUNTIME"] = "codex"
+    intent_id = _capture(env, text="Codex runtime should use the cockpit planner pane.", channel="pm_dispatch")
+
+    proc = subprocess.run(
+        [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--dry-run", "--json"],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    handoff = json.loads(proc.stdout)["results"][0]["planner_handoff"]
+    assert handoff["requested"] is False
+    assert handoff["suppressed_requested"] is True
+    assert handoff["suppressed_reason"] == "trusted_channel"
+    assert handoff["reason"] == "codex_pane_runtime_uses_coordinator_planner_pane"
+
+
+def test_consumer_codex_runtime_suppresses_explicit_pm_operator_handoff(tmp_path):
+    env = _env(tmp_path)
+    env["SOLAR_PANE_RUNTIME"] = "codex"
+    intent_id = _capture(env, text="Even explicit CLI handoff must not launch Claude under Codex.", channel="test")
+
+    proc = subprocess.run(
+        [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--dry-run", "--dispatch-planner", "--json"],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    handoff = json.loads(proc.stdout)["results"][0]["planner_handoff"]
+    assert handoff["requested"] is False
+    assert handoff["suppressed_requested"] is True
+    assert handoff["suppressed_reason"] == "explicit_cli"
+    assert handoff["reason"] == "codex_pane_runtime_uses_coordinator_planner_pane"
+
+
+def test_consumer_codex_runtime_can_opt_into_pm_operator_handoff(tmp_path):
+    env = _env(tmp_path)
+    env["SOLAR_PANE_RUNTIME"] = "codex"
+    env["SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH"] = "1"
+    intent_id = _capture(env, text="Codex runtime operator dispatch remains explicit opt-in.", channel="pm_dispatch")
+
+    proc = subprocess.run(
+        [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--dry-run", "--json"],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    handoff = json.loads(proc.stdout)["results"][0]["planner_handoff"]
+    assert handoff["requested"] is True
+    assert handoff["reason"] == "trusted_channel"
+    assert "suppressed_requested" not in handoff
 
 
 def test_consumer_no_auto_dispatch_planner_disables_trusted_handoff(tmp_path):

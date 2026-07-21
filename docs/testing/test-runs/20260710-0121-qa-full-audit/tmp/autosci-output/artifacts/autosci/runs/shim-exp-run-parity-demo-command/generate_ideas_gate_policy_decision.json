@@ -1,0 +1,38 @@
+{
+  "action": "generate_ideas",
+  "allow_destructive": false,
+  "allow_email": false,
+  "allow_network": false,
+  "allow_remote": false,
+  "allowed": false,
+  "allowed_write_roots": [
+    "artifacts/autosci",
+    "artifacts/scientific"
+  ],
+  "blocked": true,
+  "execute_side_effects": false,
+  "mode": "parity_demo",
+  "proof_best_effort": false,
+  "proof_required": true,
+  "reasons": [
+    "read_local is allowed in parity_demo.",
+    "write_artifact is allowed in parity_demo.",
+    "network_fetch requires SOLAR_AUTOSCI_ALLOW_NETWORK=1 in parity_demo.",
+    "local_command is auto-allowed in parity_demo.",
+    "wiki_mutation is auto-allowed in parity_demo."
+  ],
+  "require_approval_ref": false,
+  "require_before_after_artifacts": false,
+  "require_hitl": false,
+  "require_runtime_evidence": false,
+  "sandbox_required": true,
+  "side_effects": [
+    "read_local",
+    "write_artifact",
+    "network_fetch",
+    "local_command",
+    "wiki_mutation"
+  ],
+  "synthetic_approval_ref": "",
+  "warnings": []
+}

@@ -1,0 +1,71 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/autosci/operator-smoke/skillgen/research_memory_update.ideas.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "claims_evidence": "artifacts/autosci/operator-smoke/skillgen/research_claims.json",
+    "ideas_evidence": "artifacts/autosci/operator-smoke/skillgen/idea_candidate.json",
+    "memory_evidence": "artifacts/autosci/operator-smoke/skillgen/research_memory_update.json",
+    "method_evidence": "artifacts/autosci/operator-smoke/skillgen/research_method.json"
+  },
+  "limitations": [
+    "Fixture proposes idea memory records; it does not mutate research memory."
+  ],
+  "node_id": "node-evaluate-ideas",
+  "outputs": {
+    "changes": [
+      {
+        "confidence": 0.76,
+        "entity_id": "idea-001",
+        "entity_type": "idea",
+        "evidence_ids": [
+          "idea-001",
+          "claim-003",
+          "method-001",
+          "task-autosci-skillgen-ingest_paper",
+          "task-autosci-skillgen-extract_claims",
+          "claim-001",
+          "claim-002",
+          "task-autosci-skillgen-extract_methods",
+          "paper-skillgen-operator-smoke-paper"
+        ],
+        "operation": "propose",
+        "path": "knowledge/research/ideas/idea-001.md",
+        "recommendation": "advance"
+      },
+      {
+        "confidence": 0.8,
+        "entity_id": "idea-duplicate-001",
+        "entity_type": "idea",
+        "evidence_ids": [
+          "idea-duplicate-001",
+          "claim-003",
+          "method-001",
+          "task-autosci-skillgen-ingest_paper",
+          "task-autosci-skillgen-extract_claims",
+          "claim-001",
+          "claim-002",
+          "claim-003",
+          "task-autosci-skillgen-extract_methods",
+          "method-001",
+          "paper-skillgen-operator-smoke-paper"
+        ],
+        "operation": "propose",
+        "path": "knowledge/research/ideas/idea-duplicate-001.md",
+        "recommendation": "reject"
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T14:05:09Z"
+  },
+  "schema": "research_memory_update.v1",
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "status": "completed",
+  "task_id": "task-autosci-skillgen-evaluate_ideas"
+}

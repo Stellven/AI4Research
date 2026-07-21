@@ -1,0 +1,36 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "sprint_id": "test-sprint-001",
+  "graph_ref": "test-sprint-001.task_graph.json",
+  "node_results": {
+    "N1": {
+      "status": "passed",
+      "updated_at": "2026-07-10T14:14:19Z"
+    }
+  },
+  "gate_results": {
+    "G1": {
+      "status": "passed",
+      "node": "",
+      "updated_at": "2026-07-10T14:14:19Z"
+    }
+  },
+  "leases": {},
+  "dispatch_ids": {},
+  "events": [
+    {
+      "ts": "2026-07-10T14:14:19Z",
+      "event": "state_initialized",
+      "by": "task_graph_state_io",
+      "note": "Empty state skeleton created."
+    },
+    {
+      "ts": "2026-07-10T14:14:19Z",
+      "event": "test",
+      "by": "unit",
+      "note": ""
+    }
+  ],
+  "updated_at": "2026-07-10T14:14:19Z",
+  "event_cursor": 2
+}

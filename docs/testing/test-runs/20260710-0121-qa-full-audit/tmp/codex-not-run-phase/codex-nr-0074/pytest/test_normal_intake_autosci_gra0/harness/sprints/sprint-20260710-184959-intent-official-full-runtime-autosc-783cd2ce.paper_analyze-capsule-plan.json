@@ -1,0 +1,7 @@
+{
+  "schema_version": "solar.capsule_plan_node.v1",
+  "node_id": "paper_analyze",
+  "logical_operator": "ScientificPaperAnalyzer",
+  "selected": false,
+  "stages": []
+}

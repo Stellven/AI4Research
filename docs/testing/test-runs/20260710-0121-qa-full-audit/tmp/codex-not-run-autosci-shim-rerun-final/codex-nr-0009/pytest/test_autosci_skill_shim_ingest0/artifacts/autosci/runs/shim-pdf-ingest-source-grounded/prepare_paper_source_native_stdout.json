@@ -1,0 +1,23 @@
+{
+  "entry_id": "local:input-skillgen-pdf",
+  "candidate_id": "local:input-skillgen-pdf",
+  "source_kind": "paper",
+  "source_path": "raw/input/SkillGen.pdf",
+  "resolved_source_path": "raw/input/SkillGen.pdf",
+  "prepared_path": "raw/tmp/papers/input-skillgen-pdf.tex",
+  "canonical_ingest_path": "raw/tmp/papers/input-skillgen-pdf.tex",
+  "original_format": "pdf",
+  "ingest_format": "tex",
+  "title": "SkillGen",
+  "abstract_excerpt": "This PDF describes inference-time skill synthesis with verifier gates and measurable gains.",
+  "arxiv_id": "",
+  "warnings": [],
+  "usable": true,
+  "schema": "autosci_prepare_paper_source_cli.v1",
+  "status": "completed",
+  "ok": true,
+  "allow_network_fetch": false,
+  "raw_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_ingest0/artifacts/autosci/workspace/raw",
+  "workspace_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_ingest0",
+  "repository_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness"
+}

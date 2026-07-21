@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_245_45e04036f1_harness_tests_runtime_test_operator_score.py",
+  "source": "harness/tests/runtime/test_operator_score.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/runtime/test_operator_score.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.191,
+  "timeout": false
+}

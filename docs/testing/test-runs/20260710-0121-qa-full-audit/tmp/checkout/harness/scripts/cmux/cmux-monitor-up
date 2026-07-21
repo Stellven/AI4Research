@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""cmux-monitor-up: launch a cmux workspace from yaml config."""
+
+import sys
+import json
+import subprocess
+import argparse
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("ERROR: PyYAML not installed. Run: pip3 install pyyaml", file=sys.stderr)
+    sys.exit(1)
+
+SCRIPTS_DIR = Path(__file__).parent
+RENDER_CMD = str(SCRIPTS_DIR / "render-cmux-workspace")
+CMUX_BIN_CANDIDATES = [
+    "/Applications/cmux.app/Contents/Resources/bin/cmux",
+    "/usr/local/bin/cmux",
+    "/opt/homebrew/bin/cmux",
+]
+
+
+def find_cmux():
+    for p in CMUX_BIN_CANDIDATES:
+        if Path(p).exists():
+            return p
+    return None
+
+
+def build_cmux_layout(tabs: list) -> dict:
+    """Build a cmux JSON layout for multi-tab workspace."""
+    if not tabs:
+        return {}
+
+    # cmux layout for a single tab's panes based on layout type
+    def pane_node(cmd: str, title: str) -> dict:
+        return {"pane": {"title": title, "surfaces": [{"type": "terminal", "command": cmd}]}}
+
+    def quad_split(panes: list) -> dict:
+        """2x2 equal split."""
+        p = panes + [{"command": "echo empty", "title": "empty"}] * (4 - len(panes))
+        return {
+            "direction": "horizontal",
+            "split": 0.5,
+            "children": [
+                {
+                    "direction": "vertical",
+                    "split": 0.5,
+                    "children": [pane_node(p[0]["command"], p[0]["title"]),
+                                 pane_node(p[2]["command"], p[2]["title"])],
+                },
+                {
+                    "direction": "vertical",
+                    "split": 0.5,
+                    "children": [pane_node(p[1]["command"], p[1]["title"]),
+                                 pane_node(p[3]["command"], p[3]["title"])],
+                },
+            ],
+        }
+
+    def split_layout(panes: list) -> dict:
+        """1x2 horizontal split."""
+        p = panes + [{"command": "echo empty", "title": "empty"}] * (2 - len(panes))
+        return {
+            "direction": "horizontal",
+            "split": 0.5,
+            "children": [pane_node(p[0]["command"], p[0]["title"]),
+                         pane_node(p[1]["command"], p[1]["title"])],
+        }
+
+    def tri_layout(panes: list) -> dict:
+        """top-two / bottom-one."""
+        p = panes + [{"command": "echo empty", "title": "empty"}] * (3 - len(panes))
+        return {
+            "direction": "vertical",
+            "split": 0.5,
+            "children": [
+                {
+                    "direction": "horizontal",
+                    "split": 0.5,
+                    "children": [pane_node(p[0]["command"], p[0]["title"]),
+                                 pane_node(p[1]["command"], p[1]["title"])],
+                },
+                pane_node(p[2]["command"], p[2]["title"]),
+            ],
+        }
+
+    layout_builders = {
+        "single": lambda p: pane_node(p[0]["command"], p[0]["title"]),
+        "split":  split_layout,
+        "tri":    tri_layout,
+        "quad":   quad_split,
+    }
+
+    # For now: first tab as main layout (multi-tab via workspace name prefixing)
+    first_tab = tabs[0]
+    builder = layout_builders.get(first_tab["layout"], quad_split)
+    return builder(first_tab["panes"])
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Launch cmux monitoring workspace")
+    parser.add_argument("config", help="Path to workspace.yaml")
+    parser.add_argument("--dry-run", action="store_true", help="Print plan, don't launch")
+    args = parser.parse_args()
+
+    config_path = Path(args.config).expanduser()
+    if not config_path.exists():
+        print(f"ERROR: config not found: {config_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # Render plan via render-cmux-workspace
+    result = subprocess.run(
+        [sys.executable, RENDER_CMD, str(config_path), "--json"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        print(f"ERROR: render failed:\n{result.stderr}", file=sys.stderr)
+        sys.exit(1)
+
+    plan = json.loads(result.stdout)
+    workspace_name = plan["workspace_name"]
+
+    if args.dry_run:
+        print(f"DRY-RUN: would launch workspace '{workspace_name}' with {len(plan['tabs'])} tab(s)")
+        for tab in plan["tabs"]:
+            print(f"  Tab: {tab['title']} (layout={tab['layout']})")
+            for p in tab["panes"]:
+                print(f"    pane[{p['title']}]: {p['command']}")
+        return
+
+    cmux_bin = find_cmux()
+    if not cmux_bin:
+        print("ERROR: cmux binary not found. Check CMUX_BIN_CANDIDATES in script.", file=sys.stderr)
+        sys.exit(1)
+
+    layout = build_cmux_layout(plan["tabs"])
+    cmd = [cmux_bin, "new-workspace", "--name", workspace_name, "--layout", json.dumps(layout)]
+
+    print(f"Launching: {workspace_name}")
+    subprocess.run(cmd, check=True)
+    print(f"OK: workspace '{workspace_name}' launched with {len(plan['tabs'])} tab(s)")
+
+
+if __name__ == "__main__":
+    main()

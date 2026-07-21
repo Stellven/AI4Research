@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_110_e16d8a2fe0_harness_tests_integration_test_autosci_cli_dispatch.py",
+  "source": "harness/tests/integration/test_autosci_cli_dispatch.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/integration/test_autosci_cli_dispatch.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.468,
+  "timeout": false
+}

@@ -1,0 +1,3 @@
+{"ts": "2026-07-10T06:27:56Z", "kind": "intent_injected", "sid": "test-graph-submit", "pane": "test:0.1", "dispatch_id": "dispatch-123", "intent_telemetry_file": "", "intent_telemetry_missing": true}
+{"ts": "2026-07-10T06:27:56Z", "kind": "pane_recover_cooldown", "sid": "test-graph-submit", "pane": "test:0.1", "dispatch_id": "dispatch-123", "reason": "send_failed_requeued", "cooldown_sec": 90}
+{"ts": "2026-07-10T06:27:56Z", "kind": "pane_recover_cooldown", "sid": "test-graph-submit", "pane": "test:0.1", "dispatch_id": "dispatch-123", "reason": "assigned_pane_unavailable:pane_outside_harness_session", "cooldown_sec": 90}

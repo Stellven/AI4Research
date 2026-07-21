@@ -1,0 +1,1 @@
+{"case_id": "golden-req-a442de134d69", "request_type": "research", "goal": "antigravity 入口的研究 artifact 必须出现在 compiled package。", "expected_dag_variant": "research", "expected_template_variant": "research"}

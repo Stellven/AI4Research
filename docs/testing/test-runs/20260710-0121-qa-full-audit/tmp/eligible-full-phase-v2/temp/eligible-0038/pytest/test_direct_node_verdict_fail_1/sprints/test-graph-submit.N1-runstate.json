@@ -1,0 +1,14 @@
+{
+  "sprint_id": "test-graph-submit",
+  "node_id": "N1",
+  "updated_at": "2026-07-10T14:06:32Z",
+  "eval_state": {
+    "repair_attempt": 1,
+    "max_repair_attempts": 1,
+    "last_eval_result": "FAIL",
+    "last_eval_reason": "repair_budget_exhausted",
+    "next_action": "terminal_failed",
+    "status": "reviewing",
+    "updated_at": "2026-07-10T14:06:32Z"
+  }
+}

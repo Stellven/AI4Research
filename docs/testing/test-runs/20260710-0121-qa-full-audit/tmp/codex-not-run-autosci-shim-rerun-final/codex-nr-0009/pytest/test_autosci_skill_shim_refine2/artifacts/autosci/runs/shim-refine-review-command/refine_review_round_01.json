@@ -1,0 +1,70 @@
+{
+  "limitations": [
+    "Review LLM evidence was produced through the configured command bridge.",
+    "Final acceptance still depends on the provenance and trustworthiness of the command bridge."
+  ],
+  "outputs": {
+    "artifact": {
+      "artifact_id": "artifact:report-review-loop",
+      "checked_paths": [
+        "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_refine2/artifacts/autosci/workspace/wiki/outputs/report-review-loop.md"
+      ],
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_refine2/artifacts/autosci/workspace/wiki/outputs/report-review-loop.md",
+      "target": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_refine2/artifacts/autosci/workspace/wiki/outputs/report-review-loop.md",
+      "title": "Report"
+    },
+    "findings": [
+      {
+        "category": "completeness",
+        "evidence": "The artifact is short for a standalone review target.",
+        "finding_id": "review.underspecified",
+        "line_refs": [],
+        "severity": "medium",
+        "suggestion": "Add enough method, evidence, and decision context for an independent reviewer."
+      }
+    ],
+    "review": {
+      "artifact_id": "artifact:report-review-loop",
+      "difficulty": "hard",
+      "evidence_ids": [
+        "artifact:report-review-loop",
+        "review.underspecified",
+        "review-llm:refine-command"
+      ],
+      "focus": "writing",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_refine2/artifacts/autosci/workspace/wiki/outputs/report-review-loop.md",
+      "recommendation": "revise",
+      "review_available": true,
+      "review_llm": {
+        "command": [
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python",
+          "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_refine2/review_llm_command.py"
+        ],
+        "difficulty": "hard",
+        "evidence_ids": [
+          "review-llm:refine-command"
+        ],
+        "findings": [],
+        "focus": "writing",
+        "invocation_mode": "command",
+        "recommendation": "pass_with_review_required",
+        "score": 0.92,
+        "source_path": "review-llm-command",
+        "status": "completed",
+        "tool": "mcp__llm-review__chat"
+      },
+      "review_mode": "review_llm",
+      "score": 0.61,
+      "target": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_refine2/artifacts/autosci/workspace/wiki/outputs/report-review-loop.md",
+      "title": "Report"
+    }
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci/backends/artifact_review.py",
+    "operator_id": "autosci-bridge",
+    "source": "refine_auto_review_loop",
+    "timestamp": "2026-07-10T19:26:42Z"
+  },
+  "schema": "artifact_review.v1",
+  "status": "completed"
+}

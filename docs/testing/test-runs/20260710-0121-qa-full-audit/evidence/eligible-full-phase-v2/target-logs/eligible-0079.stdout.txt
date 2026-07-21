@@ -1,0 +1,24 @@
+.F.....                                                                  [100%]
+=================================== FAILURES ===================================
+____________ test_survey_eval_cli_require_complete_fails_plan_only _____________
+harness/tests/research_survey/test_cli_survey.py:44: in test_survey_eval_cli_require_complete_fails_plan_only
+    rc = main([
+harness/lib/research/cli.py:4464: in main
+    return handler(args)
+           ^^^^^^^^^^^^^
+harness/lib/research/cli.py:3606: in cmd_survey_eval
+    payload = evaluate_survey(
+E   TypeError: evaluate_survey() got an unexpected keyword argument 'require_golden_style'
+=============================== warnings summary ===============================
+harness/tests/research_survey/test_cli_survey.py::test_survey_plan_cli
+harness/tests/research_survey/test_cli_survey.py::test_survey_eval_cli_require_complete_fails_plan_only
+harness/tests/research_survey/test_cli_survey.py::test_survey_eval_cli_require_complete_fails_plan_only
+harness/tests/research_survey/test_cli_survey.py::test_survey_diagnose_cli_reports_issue_groups_and_next_action
+harness/tests/research_survey/test_cli_survey.py::test_survey_diagnose_cli_reports_issue_groups_and_next_action
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/research/cli.py:3095: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "generated_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED harness/tests/research_survey/test_cli_survey.py::test_survey_eval_cli_require_complete_fails_plan_only
+1 failed, 6 passed, 2 deselected, 5 warnings in 0.24s

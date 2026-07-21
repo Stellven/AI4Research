@@ -1,0 +1,28 @@
+{
+  "inputs": {
+    "claim_id": "claim-001",
+    "claim_verdict_evidence": "artifacts/autosci/operator-smoke/skillgen/claim_verdict.json",
+    "claims_evidence": "artifacts/autosci/operator-smoke/skillgen/research_claims.json",
+    "code_evidence": "artifacts/autosci/operator-smoke/skillgen/code_evidence_map.json",
+    "experiment_id": "exp-supported-001",
+    "experiment_result": "artifacts/autosci/operator-smoke/skillgen/experiment_result.json",
+    "report_id": "report-skillgen-operator-smoke",
+    "report_title": "SkillGen Evidence-Linked Operator Smoke Report"
+  },
+  "mode": "fixture",
+  "node_id": "node-write-report",
+  "output_dir": "artifacts/autosci/operator-smoke/skillgen",
+  "outputs": {
+    "evidence_jsonl": "artifacts/autosci/operator-smoke/skillgen/evidence.jsonl",
+    "evidence_payload_path": "artifacts/autosci/operator-smoke/skillgen/scientific_report.json",
+    "poster_html_path": "artifacts/autosci/operator-smoke/skillgen/optional_poster.html",
+    "publication_bundle_path": "artifacts/autosci/operator-smoke/skillgen/publication_bundle.json",
+    "rebuttal_markdown_path": "artifacts/autosci/operator-smoke/skillgen/optional_rebuttal.md",
+    "report_evidence_index_path": "artifacts/autosci/operator-smoke/skillgen/report_evidence_index.json",
+    "report_markdown_path": "artifacts/autosci/operator-smoke/skillgen/report.md",
+    "report_plan_path": "artifacts/autosci/operator-smoke/skillgen/report_plan.json",
+    "result_path": "artifacts/autosci/operator-smoke/skillgen/write_report.result.json"
+  },
+  "sprint_id": "phase19-skillgen-operator-smoke",
+  "task_id": "task-autosci-skillgen-write_report"
+}

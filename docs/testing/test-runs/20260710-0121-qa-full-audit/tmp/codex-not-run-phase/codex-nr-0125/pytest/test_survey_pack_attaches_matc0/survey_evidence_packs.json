@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "packs": [
+    {
+      "pack_id": "pack_ch01_sec01",
+      "section_id": "ch01/sec01",
+      "evidence_ids": [
+        "ev_1",
+        "ev_2"
+      ],
+      "claim_ids": [
+        "cl_1",
+        "cl_2",
+        "cl_3"
+      ],
+      "source_ids": [
+        "src_1",
+        "src_2"
+      ],
+      "source_types": [
+        "code",
+        "paper"
+      ],
+      "contradiction_slots": [
+        "contradiction:ch01/sec01:required"
+      ],
+      "status": "ready",
+      "blockers": [],
+      "schema_version": "solar.research.survey.v1"
+    }
+  ],
+  "ready": 1,
+  "blocked": 0
+}

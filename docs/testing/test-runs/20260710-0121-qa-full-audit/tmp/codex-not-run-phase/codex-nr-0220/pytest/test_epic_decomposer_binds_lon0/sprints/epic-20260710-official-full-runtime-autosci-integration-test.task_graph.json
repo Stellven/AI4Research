@@ -1,0 +1,49 @@
+{
+  "schema_version": "solar.epic.task_graph.v1",
+  "epic_id": "epic-20260710-official-full-runtime-autosci-integration-test",
+  "title": "Official full-runtime AutoSci integration test",
+  "nodes": [
+    {
+      "id": "S01_autosci_workflow",
+      "goal": "通过 normal intake 生成 research.autosci.v1 合同绑定的 Scientific* task graph，并交给 graph scheduler 自动派发 AutoSci workers。",
+      "child_sprint_id": "sprint-20260710-official-full-runtime-autosci-integration-test-s01-autosci-workflow",
+      "depends_on": [],
+      "write_scope": [
+        "sprints/*task_graph.json",
+        "sprints/*plan.md",
+        "sprints/*design.md",
+        "artifacts/scientific/**"
+      ],
+      "read_scope": [
+        "epic-20260710-official-full-runtime-autosci-integration-test.epic.md",
+        "epic-20260710-official-full-runtime-autosci-integration-test.traceability.json"
+      ],
+      "required_capabilities": [
+        "research.autosci.v1",
+        "scientific-research",
+        "graph-dispatch"
+      ],
+      "preferred_model": "auto",
+      "gate": "sprint-20260710-official-full-runtime-autosci-integration-test-s01-autosci-workflow:passed",
+      "acceptance": [
+        "child sprint 的 task_graph 声明 workflow_contract=research.autosci.v1",
+        "所有 Scientific* 节点绑定 research capability capsule",
+        "status 进入 planning_complete/builder_main，autopilot 可直接派发 ready graph nodes"
+      ],
+      "estimated_cost": "M",
+      "status": "pending"
+    }
+  ],
+  "activation_policy": {
+    "ready_child_status": "active/prd_ready/planner",
+    "passed_child_statuses": [
+      "passed",
+      "completed",
+      "eval_passed"
+    ],
+    "max_activate_per_scan": 2
+  },
+  "workflow_contract": "research.autosci.v1",
+  "contract_bound": true,
+  "research_mode": true
+}

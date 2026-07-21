@@ -1,0 +1,1 @@
+{"report": "final-report.md", "feature_fail_rows": 36, "verdict": "NOT READY"}

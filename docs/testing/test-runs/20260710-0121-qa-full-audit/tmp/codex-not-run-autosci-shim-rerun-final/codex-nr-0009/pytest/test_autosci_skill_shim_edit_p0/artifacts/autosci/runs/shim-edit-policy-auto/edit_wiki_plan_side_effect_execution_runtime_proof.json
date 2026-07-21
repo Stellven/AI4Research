@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-07-10T19:26:15Z",
+  "proofs": [
+    {
+      "categories": [
+        "side_effect_execution_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed approved side-effect execution evidence for AutoSci `edit` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-edit-policy-auto/research_memory_update.edit_plan.json",
+        "artifacts/autosci/workspace/wiki/ideas/skillgen.md",
+        "artifacts/autosci/workspace/wiki/log.md",
+        "artifacts/autosci/workspace/wiki/index.md",
+        "artifacts/autosci/workspace/wiki/graph/context_brief.md"
+      ],
+      "native_skill": "edit",
+      "production_ready": true,
+      "proof_id": "runtime:edit:approved-mutation:20260710T192615Z",
+      "provenance": {
+        "artifact_kind": "wiki_edit_writeback",
+        "captured_at": "2026-07-10T19:26:15Z",
+        "command": "edit_wiki_plan:approved_mutation",
+        "source": "approved_mutation"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

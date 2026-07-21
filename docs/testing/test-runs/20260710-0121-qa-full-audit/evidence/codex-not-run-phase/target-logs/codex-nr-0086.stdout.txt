@@ -1,0 +1,14 @@
+FF.........                                                              [100%]
+=================================== FAILURES ===================================
+__________________ test_successful_handoff_defaults_to_passed __________________
+harness/tests/graph/test_multi_task_runner_success_status.py:49: in test_successful_handoff_defaults_to_passed
+    assert 'success_status="${SOLAR_MULTI_TASK_SUCCESS_STATUS:-passed}"' in script
+E   assert 'success_status="${SOLAR_MULTI_TASK_SUCCESS_STATUS:-passed}"' in '#!/usr/bin/env bash\nset -u\nTASK_DIR=\'/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/tes...s multi-task] sid=$SID node=$NODE_ID exit=$rc end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$OUTPUT_LOG"\nexit "$rc"\n'
+____________ test_review_required_node_can_still_stop_at_reviewing _____________
+harness/tests/graph/test_multi_task_runner_success_status.py:57: in test_review_required_node_can_still_stop_at_reviewing
+    assert "REVIEW_REQUIRED=1" in script
+E   assert 'REVIEW_REQUIRED=1' in '#!/usr/bin/env bash\nset -u\nTASK_DIR=\'/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/tes...s multi-task] sid=$SID node=$NODE_ID exit=$rc end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$OUTPUT_LOG"\nexit "$rc"\n'
+=========================== short test summary info ============================
+FAILED harness/tests/graph/test_multi_task_runner_success_status.py::test_successful_handoff_defaults_to_passed
+FAILED harness/tests/graph/test_multi_task_runner_success_status.py::test_review_required_node_can_still_stop_at_reviewing
+2 failed, 9 passed in 0.32s

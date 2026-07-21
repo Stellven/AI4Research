@@ -1,0 +1,13 @@
+{
+  "command_id": "phase1_2_static_inventory_refined",
+  "phase": "inventory",
+  "linked_feature_ids": "",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "python3 \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/build_inventory.py\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit\"",
+  "start_time": "2026-07-10T01:37:03-04:00",
+  "end_time": "2026-07-10T01:37:36-04:00",
+  "duration_seconds": "33.353",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase1_2_static_inventory_refined.stdout.txt",
+  "stderr_path": "evidence/commands/phase1_2_static_inventory_refined.stderr.txt"
+}

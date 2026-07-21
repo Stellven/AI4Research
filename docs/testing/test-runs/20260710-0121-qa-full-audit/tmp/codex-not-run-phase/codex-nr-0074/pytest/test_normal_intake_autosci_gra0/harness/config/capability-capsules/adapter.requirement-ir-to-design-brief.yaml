@@ -1,0 +1,78 @@
+capability_capsule_id: adapter.requirement-ir-to-design-brief
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Requirement IR To Design Brief Adapter
+  description: Expand requirement IR inputs into a design brief artifact for downstream planning and review stages.
+applicability:
+  task_types:
+    - planning
+    - requirements
+    - review
+  positive_signals:
+    - requirement_ir
+    - design
+    - planning
+  negative_signals: []
+contract:
+  inputs:
+    required:
+      - name: requirement_ir
+        type: json
+    optional: []
+  outputs:
+    required:
+      - name: design_md
+        type: markdown
+    optional: []
+  preconditions:
+    - check: task_type_in
+      values:
+        - planning
+        - requirements
+        - review
+  postconditions:
+    - check: output_present
+      field: design_md
+  invariants:
+    - Design brief adapters must preserve requirement IDs and assumptions.
+composition:
+  consumes:
+    - type: artifact.requirement_ir
+  produces:
+    - type: artifact.design_md
+  compatible_with: []
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+    - requirement.artifacts
+  write:
+    - artifacts.design
+  execute: []
+  network: []
+  cost: []
+  risk: []
+bindings:
+  skills:
+    required: []
+    optional: []
+  mcp_capabilities: {}
+  data_refs:
+    - data.requirement_ir
+  secret_refs: []
+  required_guard_capsules: []
+  required_resource_capsules: []
+verification:
+  self_check:
+    - check.design_brief_written
+  external_verifier:
+    required: false
+  pass_conditions:
+    - design_md exists
+operator_compatibility:
+  preferred: []
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-05-25T00:00:00Z"

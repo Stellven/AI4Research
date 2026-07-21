@@ -1,0 +1,12 @@
+{
+  "name": "shell_sweep_harness_tests_control_plane_test-worker-capability-catalog.sh",
+  "source": "harness/tests/control_plane/test-worker-capability-catalog.sh",
+  "command": [
+    "bash",
+    "harness/tests/control_plane/test-worker-capability-catalog.sh"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.02,
+  "timeout": false,
+  "isolated_home": "/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/bettersolar-shell-home-glhtf5df"
+}

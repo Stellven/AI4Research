@@ -1,0 +1,13 @@
+fetch_daily_snapshot
+fetch_weekly_snapshot
+fetch_monthly_snapshot
+enrich_hf
+enrich_arxiv
+enrich_hf_assets
+enrich_semantic_scholar
+enrich_github
+call_high_model
+insight_gate_check
+resonance_gate_check
+compile_research_judgment
+## §7

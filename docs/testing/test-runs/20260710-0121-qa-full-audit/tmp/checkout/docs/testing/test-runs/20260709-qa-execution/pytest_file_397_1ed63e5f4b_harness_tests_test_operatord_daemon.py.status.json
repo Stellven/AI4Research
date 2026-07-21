@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_397_1ed63e5f4b_harness_tests_test_operatord_daemon.py",
+  "source": "harness/tests/test_operatord_daemon.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_operatord_daemon.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 1.268,
+  "timeout": false
+}

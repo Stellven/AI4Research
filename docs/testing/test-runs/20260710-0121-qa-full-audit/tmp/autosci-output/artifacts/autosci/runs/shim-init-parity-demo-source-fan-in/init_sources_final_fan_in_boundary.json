@@ -1,0 +1,27 @@
+{
+  "approval_contract_verified": true,
+  "approval_state": "verified",
+  "candidate_count": 1,
+  "edge_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_p0/artifacts/autosci/workspace/wiki/graph/edges.jsonl"
+  ],
+  "fan_in_completed": true,
+  "final_fan_in_ready": true,
+  "graph_log_rebuild_ready": true,
+  "limitations": [
+    "Init source final fan-in boundary passed with provider candidates and wiki mutation/rebuild evidence."
+  ],
+  "log_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_p0/artifacts/autosci/workspace/wiki/log.md",
+  "provider_boundary_completed": true,
+  "provider_boundary_status": "completed",
+  "rebuilt_paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_p0/artifacts/autosci/workspace/wiki/index.md",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-1/test_autosci_skill_shim_init_p0/artifacts/autosci/workspace/wiki/graph/context_brief.md"
+  ],
+  "schema": "autosci_init_sources_final_fan_in_boundary.v1",
+  "semantic_runtime_status": "verified",
+  "semantic_runtime_verified": true,
+  "stage_provider_ready": true,
+  "status": "init_sources_final_fan_in_ready",
+  "written_count": 1
+}

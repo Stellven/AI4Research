@@ -1,0 +1,1 @@
+{"case_id": "golden-req-1563d15fa2ad", "request_type": "short_impl", "goal": "把 codex_pm_router 入口接到 RawIntent 主链。", "expected_dag_variant": "short", "expected_template_variant": "short"}

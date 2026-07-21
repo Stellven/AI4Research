@@ -1,0 +1,7 @@
+{"sprint_id":"sprint-20260626-overhaul--abc123","ts":"2026-06-26T10:00:00Z","type":"log_message","actor":"coordinator","payload":{"legacy_event":"intake_created"}}
+{"sprint_id":"sprint-20260626-overhaul--abc123","ts":"2026-06-26T10:00:05Z","type":"log_message","actor":"coordinator","payload":{"legacy_event":"dispatched","node_id":"build-api","role":"builder","round":1}}
+{"sprint_id":"sprint-20260626-overhaul--abc123","ts":"2026-06-26T10:00:05Z","type":"command_issued","actor":"coordinator","payload":{"legacy_event":"dispatched","node_id":"build-api","role":"builder","round":1}}
+{"sprint_id":"sprint-20260626-overhaul--abc123","ts":"2026-06-26T10:00:30Z","type":"log_message","actor":"solar-autopilot","payload":{"legacy_event":"autopilot_kb_probe_failed"}}
+{"sprint_id":"sprint-20260626-overhaul--abc123","ts":"2026-06-26T10:00:45Z","type":"log_message","actor":"coordinator","payload":{"legacy_event":"handle_passed_completed","node_id":"build-api","role":"builder","round":1}}
+{"sprint_id":"sprint-20260626-overhaul--abc123","ts":"2026-06-26T10:01:10Z","type":"log_message","actor":"coordinator","payload":{"legacy_event":"dispatch_failed","node_id":"eval-1","role":"evaluator","reason":"no_matching_worker","decision":"no_matching_worker"}}
+{"sprint_id":"sprint-20260626-overhaul--abc123","ts":"2026-06-26T10:01:20Z","type":"log_message","actor":"coordinator","payload":{"legacy_event":"state_changed","to":"reviewing","role":"coordinator"}}

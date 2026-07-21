@@ -1,0 +1,340 @@
+FF.FFsF.F.FFF..FFFFFFFFFFFF.FFFFFFFFFFFF.sFFFF.FFFF.........ss.......... [ 87%]
+..........                                                               [100%]
+=================================== FAILURES ===================================
+_________________ TestCanonicalPapersScan.test_manifest_exists _________________
+harness/tests/data_plane/test_mineru_canonical_sources.py:43: in test_manifest_exists
+    self.assertTrue(MANIFEST_JSONL.exists(), f"manifest missing: {MANIFEST_JSONL}")
+E   AssertionError: False is not true : manifest missing: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl
+__________ TestCanonicalPapersScan.test_original_fallback_resolution ___________
+harness/tests/data_plane/test_mineru_canonical_sources.py:78: in test_original_fallback_resolution
+    self.assertGreater(fallback_count, 0,
+E   AssertionError: 0 not greater than 0 : expected some papers to resolve via original_fallback
+----------------------------- Captured stdout call -----------------------------
+ERROR: manifest not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl
+______________ TestCanonicalPapersScan.test_scan_discovers_papers ______________
+harness/tests/data_plane/test_mineru_canonical_sources.py:48: in test_scan_discovers_papers
+    self.assertTrue(result.get("ok"), f"scan failed: {result}")
+E   AssertionError: False is not true : scan failed: {'ok': False, 'error': 'manifest not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl', 'papers': [], 'total': 0, 'resolvable': 0, 'unresolved': 0}
+----------------------------- Captured stdout call -----------------------------
+ERROR: manifest not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl
+_________ TestCanonicalPapersScan.test_scan_reports_already_extracted __________
+harness/tests/data_plane/test_mineru_canonical_sources.py:57: in test_scan_reports_already_extracted
+    self.assertIn("already_extracted", result)
+E   AssertionError: 'already_extracted' not found in {'ok': False, 'error': 'manifest not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl', 'papers': [], 'total': 0, 'resolvable': 0, 'unresolved': 0}
+----------------------------- Captured stdout call -----------------------------
+ERROR: manifest not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl
+___________ TestOutputPathUnderReferences.test_references_dir_exists ___________
+harness/tests/data_plane/test_mineru_canonical_sources.py:87: in test_references_dir_exists
+    self.assertTrue(REFERENCES_DIR.exists(), f"references dir missing: {REFERENCES_DIR}")
+E   AssertionError: False is not true : references dir missing: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/references
+________ TestWorkerIdleBackground.test_manifest_yaml_declares_idle_mode ________
+harness/tests/data_plane/test_mineru_canonical_sources.py:162: in test_manifest_yaml_declares_idle_mode
+    self.assertTrue(manifest_path.exists(), f"manifest missing: {manifest_path}")
+E   AssertionError: False is not true : manifest missing: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/plugins/mineru/manifest.yaml
+________ TestWorkerIdleBackground.test_queue_papers_is_background_only _________
+harness/tests/data_plane/test_mineru_canonical_sources.py:134: in test_queue_papers_is_background_only
+    self.assertTrue(result.get("ok"), f"queue failed: {result}")
+E   AssertionError: False is not true : queue failed: {'ok': False, 'error': 'manifest not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl', 'papers': [], 'total': 0, 'resolvable': 0, 'unresolved': 0}
+----------------------------- Captured stdout call -----------------------------
+ERROR: manifest not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl
+_____ TestWorkerIdleBackground.test_worker_script_exists_and_idle_guarded ______
+harness/tests/data_plane/test_mineru_canonical_sources.py:149: in test_worker_script_exists_and_idle_guarded
+    self.assertTrue(worker_script.exists(), f"worker script missing: {worker_script}")
+E   AssertionError: False is not true : worker script missing: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/mineru_worker.sh
+___ TestNoForegroundBlocking.test_extract_single_pdf_without_background_flag ___
+harness/tests/data_plane/test_mineru_canonical_sources.py:194: in test_extract_single_pdf_without_background_flag
+    self.assertEqual(result.get("mode"), "idle_background")
+E   AssertionError: None != 'idle_background'
+----------------------------- Captured stdout call -----------------------------
+ERROR: manifest not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl
+___________ TestMineruDoctor.test_doctor_canonical_papers_has_counts ___________
+harness/tests/data_plane/test_mineru_canonical_sources.py:226: in test_doctor_canonical_papers_has_counts
+    data = json.loads(r.stdout)
+           ^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/json/__init__.py:352: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/json/decoder.py:363: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+____________ TestMineruDoctor.test_doctor_reports_canonical_papers _____________
+harness/tests/data_plane/test_mineru_canonical_sources.py:209: in test_doctor_reports_canonical_papers
+    data = json.loads(r.stdout)
+           ^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/json/__init__.py:352: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/json/decoder.py:363: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+harness/tests/data_plane/test_mineru_canonical_sources.py:211: in test_doctor_reports_canonical_papers
+    self.fail(f"doctor output not valid JSON: {r.stdout[:500]}")
+E   AssertionError: doctor output not valid JSON:
+__________ TestMirageSourcesMount.test_doctor_includes_physical_root ___________
+harness/tests/data_plane/test_mirage_sources_mount.py:64: in test_doctor_includes_physical_root
+    sources = next(m for m in result["mounts"] if m["path"] == "/sources")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   StopIteration
+_______________ TestMirageSourcesMount.test_papers_physical_root _______________
+harness/tests/data_plane/test_mirage_sources_mount.py:51: in test_papers_physical_root
+    papers = next(m for m in mounts if m["path"] == "/papers")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   StopIteration
+_______________ TestMirageSourcesMount.test_resolve_papers_mount _______________
+harness/tests/data_plane/test_mirage_sources_mount.py:92: in test_resolve_papers_mount
+    self.assertIsNotNone(physical, "/papers should resolve to a physical path")
+E   AssertionError: unexpectedly None : /papers should resolve to a physical path
+______________ TestMirageSourcesMount.test_resolve_sources_mount _______________
+harness/tests/data_plane/test_mirage_sources_mount.py:85: in test_resolve_sources_mount
+    self.assertIsNotNone(physical, "/sources should resolve to a physical path")
+E   AssertionError: unexpectedly None : /sources should resolve to a physical path
+______________ TestMirageSourcesMount.test_sources_physical_root _______________
+harness/tests/data_plane/test_mirage_sources_mount.py:39: in test_sources_physical_root
+    sources = next(m for m in mounts if m["path"] == "/sources")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   StopIteration
+______________ TestMirageSourcesMount.test_sources_subdirs_exist _______________
+harness/tests/data_plane/test_mirage_sources_mount.py:74: in test_sources_subdirs_exist
+    self.assertTrue(sources_root.exists(), f"{sources_root} should exist")
+E   AssertionError: False is not true : /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_sources should exist
+______________ TestMirageLogicalAccess.test_cat_through_knowledge ______________
+harness/tests/data_plane/test_mirage_sources_mount.py:124: in test_cat_through_knowledge
+    r = self._mirage_exec("head -1 /knowledge/_meta/source-manifest.jsonl")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/data_plane/test_mirage_sources_mount.py:101: in _mirage_exec
+    r = subprocess.run(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: 'solar-harness'
+__________________ TestMirageLogicalAccess.test_find_sources ___________________
+harness/tests/data_plane/test_mirage_sources_mount.py:117: in test_find_sources
+    r = self._mirage_exec("find /sources -type d")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/data_plane/test_mirage_sources_mount.py:101: in _mirage_exec
+    r = subprocess.run(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: 'solar-harness'
+________________ TestMirageLogicalAccess.test_host_path_blocked ________________
+harness/tests/data_plane/test_mirage_sources_mount.py:131: in test_host_path_blocked
+    r = self._mirage_exec("ls /Users")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/data_plane/test_mirage_sources_mount.py:101: in _mirage_exec
+    r = subprocess.run(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: 'solar-harness'
+___________________ TestMirageLogicalAccess.test_ls_sources ____________________
+harness/tests/data_plane/test_mirage_sources_mount.py:109: in test_ls_sources
+    r = self._mirage_exec("ls /sources")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/data_plane/test_mirage_sources_mount.py:101: in _mirage_exec
+    r = subprocess.run(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: 'solar-harness'
+_____ TestDriveStatusHonesty.test_drive_not_in_mounts_status_when_missing ______
+harness/tests/data_plane/test_mirage_sources_mount.py:174: in test_drive_not_in_mounts_status_when_missing
+    drive_mount = next(m for m in mounts if m["path"] == "/drive")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   StopIteration
+_______________ TestDriveStatusHonesty.test_drive_optional_flag ________________
+harness/tests/data_plane/test_mirage_sources_mount.py:164: in test_drive_optional_flag
+    self.assertTrue(
+E   AssertionError: False is not true : Drive mount should have optional=true
+_____________ TestQMDReindexReportExists.test_qmd_index_is_current _____________
+harness/tests/data_plane/test_qmd_sources_reconcile.py:85: in test_qmd_index_is_current
+    r = subprocess.run(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: 'qmd'
+__________ TestQMDReindexReportExists.test_reindex_report_file_exists __________
+harness/tests/data_plane/test_qmd_sources_reconcile.py:65: in test_reindex_report_file_exists
+    self.assertTrue(report_path.exists(), f"Report should exist at {report_path}")
+E   AssertionError: False is not true : Report should exist at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/reports/data-plane-storage-access-unification/qmd-reindex.md
+_____ TestQMDReindexReportExists.test_reindex_report_has_required_sections _____
+harness/tests/data_plane/test_qmd_sources_reconcile.py:75: in test_reindex_report_has_required_sections
+    content = report_path.read_text()
+              ^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/reports/data-plane-storage-access-unification/qmd-reindex.md'
+____ TestQMDSampleQueriesHitCanonical.test_recently_ingested_pages_in_index ____
+harness/tests/data_plane/test_qmd_sources_reconcile.py:126: in test_recently_ingested_pages_in_index
+    self.assertTrue(
+E   AssertionError: False is not true : Re-ingested page '对谈田渊栋-ai走向何方-我们需要怎样的深度学习理论' should be in QMD index
+_____ TestQMDSampleQueriesHitCanonical.test_reference_pages_count_in_index _____
+harness/tests/data_plane/test_qmd_sources_reconcile.py:133: in test_reference_pages_count_in_index
+    r = subprocess.run(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: 'qmd'
+_____ TestQMDSampleQueriesHitCanonical.test_search_grokking_hits_reference _____
+harness/tests/data_plane/test_qmd_sources_reconcile.py:107: in test_search_grokking_hits_reference
+    self.assertTrue(len(hits) > 0, "'grokking' search should return hits")
+E   AssertionError: False is not true : 'grokking' search should return hits
+_____ TestQMDSampleQueriesHitCanonical.test_search_manifold_hits_reference _____
+harness/tests/data_plane/test_qmd_sources_reconcile.py:114: in test_search_manifold_hits_reference
+    self.assertTrue(len(hits) > 0, "'流形假设' search should return hits")
+E   AssertionError: False is not true : '流形假设' search should return hits
+___ TestQMDSampleQueriesHitCanonical.test_search_scaling_law_hits_reference ____
+harness/tests/data_plane/test_qmd_sources_reconcile.py:100: in test_search_scaling_law_hits_reference
+    self.assertTrue(len(hits) > 0, "'scaling law' search should return hits")
+E   AssertionError: False is not true : 'scaling law' search should return hits
+___ TestQMDProvenanceTraceability.test_manifest_covers_all_source_categories ___
+harness/tests/data_plane/test_qmd_sources_reconcile.py:168: in test_manifest_covers_all_source_categories
+    with open(manifest_path) as f:
+         ^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl'
+_____ TestQMDProvenanceTraceability.test_manifest_has_all_required_fields ______
+harness/tests/data_plane/test_qmd_sources_reconcile.py:155: in test_manifest_has_all_required_fields
+    with open(manifest_path) as f:
+         ^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl'
+__________ TestQMDProvenanceTraceability.test_source_manifest_exists ___________
+harness/tests/data_plane/test_qmd_sources_reconcile.py:150: in test_source_manifest_exists
+    self.assertTrue(manifest_path.exists(), "source-manifest.jsonl should exist")
+E   AssertionError: False is not true : source-manifest.jsonl should exist
+_______ TestQMDEmbeddingIsBackground.test_adapter_rebuild_is_incremental _______
+harness/tests/data_plane/test_qmd_sources_reconcile.py:247: in test_adapter_rebuild_is_incremental
+    self.assertEqual(r.returncode, 0, "dry-run rebuild should succeed")
+E   AssertionError: 2 != 0 : dry-run rebuild should succeed
+________ TestQMDEmbeddingIsBackground.test_embed_runner_is_gentle_mode _________
+harness/tests/data_plane/test_qmd_sources_reconcile.py:222: in test_embed_runner_is_gentle_mode
+    content = runner.read_text()
+              ^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/qmd-embed-runner.sh'
+_________ TestQMDEmbeddingIsBackground.test_embed_runner_script_exists _________
+harness/tests/data_plane/test_qmd_sources_reconcile.py:217: in test_embed_runner_script_exists
+    self.assertTrue(runner.exists(), "qmd-embed-runner.sh should exist")
+E   AssertionError: False is not true : qmd-embed-runner.sh should exist
+________________ TestScaffoldDirs.test_sources_categories_exist ________________
+harness/tests/data_plane/test_source_manifest.py:44: in test_sources_categories_exist
+    assert (base / cat).exists(), f"Missing _sources/{cat}"
+E   AssertionError: Missing _sources/papers
+E   assert False
+E    +  where False = exists()
+E    +    where exists = (PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_sources') / 'papers').exists
+____________________ TestScaffoldDirs.test_meta_dir_exists _____________________
+harness/tests/data_plane/test_source_manifest.py:47: in test_meta_dir_exists
+    assert (Path.home() / "Knowledge" / "_meta").exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = ((PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home') / 'Knowledge') / '_meta').exists
+E    +      where PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home') = home()
+E    +        where home = Path.home
+_________________ TestScaffoldDirs.test_manifest_jsonl_exists __________________
+harness/tests/data_plane/test_source_manifest.py:50: in test_manifest_jsonl_exists
+    assert sm.MANIFEST_JSONL.exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl').exists
+E    +      where PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest.jsonl') = sm.MANIFEST_JSONL
+___________________ TestScaffoldDirs.test_stats_json_exists ____________________
+harness/tests/data_plane/test_source_manifest.py:53: in test_stats_json_exists
+    assert sm.MANIFEST_STATS.exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest-stats.json').exists
+E    +      where PosixPath('/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/Knowledge/_meta/source-manifest-stats.json') = sm.MANIFEST_STATS
+=============================== warnings summary ===============================
+harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageSourcesMount::test_doctor_includes_physical_root
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/solar_mirage.py:509: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "last_probe_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+
+harness/tests/data_plane/test_source_manifest.py: 48 warnings
+  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/source_manifest.py:62: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestCanonicalPapersScan::test_manifest_exists
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestCanonicalPapersScan::test_original_fallback_resolution
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestCanonicalPapersScan::test_scan_discovers_papers
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestCanonicalPapersScan::test_scan_reports_already_extracted
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestOutputPathUnderReferences::test_references_dir_exists
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestWorkerIdleBackground::test_manifest_yaml_declares_idle_mode
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestWorkerIdleBackground::test_queue_papers_is_background_only
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestWorkerIdleBackground::test_worker_script_exists_and_idle_guarded
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestNoForegroundBlocking::test_extract_single_pdf_without_background_flag
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestMineruDoctor::test_doctor_canonical_papers_has_counts
+FAILED harness/tests/data_plane/test_mineru_canonical_sources.py::TestMineruDoctor::test_doctor_reports_canonical_papers
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageSourcesMount::test_doctor_includes_physical_root
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageSourcesMount::test_papers_physical_root
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageSourcesMount::test_resolve_papers_mount
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageSourcesMount::test_resolve_sources_mount
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageSourcesMount::test_sources_physical_root
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageSourcesMount::test_sources_subdirs_exist
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageLogicalAccess::test_cat_through_knowledge
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageLogicalAccess::test_find_sources
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageLogicalAccess::test_host_path_blocked
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestMirageLogicalAccess::test_ls_sources
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestDriveStatusHonesty::test_drive_not_in_mounts_status_when_missing
+FAILED harness/tests/data_plane/test_mirage_sources_mount.py::TestDriveStatusHonesty::test_drive_optional_flag
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDReindexReportExists::test_qmd_index_is_current
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDReindexReportExists::test_reindex_report_file_exists
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDReindexReportExists::test_reindex_report_has_required_sections
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDSampleQueriesHitCanonical::test_recently_ingested_pages_in_index
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDSampleQueriesHitCanonical::test_reference_pages_count_in_index
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDSampleQueriesHitCanonical::test_search_grokking_hits_reference
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDSampleQueriesHitCanonical::test_search_manifold_hits_reference
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDSampleQueriesHitCanonical::test_search_scaling_law_hits_reference
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDProvenanceTraceability::test_manifest_covers_all_source_categories
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDProvenanceTraceability::test_manifest_has_all_required_fields
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDProvenanceTraceability::test_source_manifest_exists
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDEmbeddingIsBackground::test_adapter_rebuild_is_incremental
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDEmbeddingIsBackground::test_embed_runner_is_gentle_mode
+FAILED harness/tests/data_plane/test_qmd_sources_reconcile.py::TestQMDEmbeddingIsBackground::test_embed_runner_script_exists
+FAILED harness/tests/data_plane/test_source_manifest.py::TestScaffoldDirs::test_sources_categories_exist
+FAILED harness/tests/data_plane/test_source_manifest.py::TestScaffoldDirs::test_meta_dir_exists
+FAILED harness/tests/data_plane/test_source_manifest.py::TestScaffoldDirs::test_manifest_jsonl_exists
+FAILED harness/tests/data_plane/test_source_manifest.py::TestScaffoldDirs::test_stats_json_exists
+41 failed, 37 passed, 4 skipped, 49 warnings in 1.18s

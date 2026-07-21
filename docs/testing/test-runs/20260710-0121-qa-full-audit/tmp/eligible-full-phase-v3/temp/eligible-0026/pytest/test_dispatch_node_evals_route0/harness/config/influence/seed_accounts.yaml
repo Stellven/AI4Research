@@ -1,0 +1,18 @@
+# Seed influencer accounts for InfluencerSeedRegistry (L0).
+# Superset of the legacy ai-influence-daily-digest account list. Read-only input;
+# seed_registry.py turns each entry into a canonical InfluencerProfile.
+influencers:
+  - influencer_id: inf-sample-001
+    display_name: Sample Researcher
+    tier: T1
+    categories: [ai_research, frontier_models]
+    platform_accounts:
+      x: "@sample_researcher"
+      youtube: "@SampleResearcherChannel"
+    expertise_tags: [scaling_laws, evaluation]
+    bias_profile:
+      lean: scaling_optimism
+    influence_weight: 0.8
+    role_at_time:
+      - role: research_scientist
+        since: "2024-01-01"

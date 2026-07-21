@@ -1,0 +1,1 @@
+{"schema": "experiment_result.v1", "task_id": "result-skillgen", "status": "completed", "outputs": {"result": {"experiment_id": "exp-skillgen", "outcome": "supports", "evidence_ids": ["experiment:skillgen"]}}}

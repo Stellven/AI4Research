@@ -1,0 +1,12 @@
+{
+  "command": "pull-results",
+  "count": 2,
+  "files": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_co0/remote-multiseed-results/seed-1.json",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_co0/remote-multiseed-results/seed-2.json"
+  ],
+  "ok": true,
+  "result_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_co0/remote-multiseed-results",
+  "schema": "autosci_remote_cli.v1",
+  "status": "completed"
+}

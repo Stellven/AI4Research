@@ -1,0 +1,10 @@
+......................F........................                          [100%]
+=================================== FAILURES ===================================
+____________________ test_row11_file_write_solar_repo_high _____________________
+harness/tests/test_policy.py:224: in test_row11_file_write_solar_repo_high
+    assert rule.rule_id == 11
+E   AssertionError: assert 10 == 11
+E    +  where 10 = RiskRule(rule_id=10, kind='file_write', description='write to sprint directory', risk_class='medium', approval_required=False, matcher_tag='sprint_dir_write').rule_id
+=========================== short test summary info ============================
+FAILED harness/tests/test_policy.py::test_row11_file_write_solar_repo_high - ...
+1 failed, 46 passed in 0.06s

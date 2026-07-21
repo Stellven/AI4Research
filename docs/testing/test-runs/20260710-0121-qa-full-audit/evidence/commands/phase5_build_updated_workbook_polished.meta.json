@@ -1,0 +1,13 @@
+{
+  "command_id": "phase5_build_updated_workbook_polished",
+  "phase": "reporting",
+  "linked_feature_ids": "ALL_ATOMIC_FEATURES",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit",
+  "command": "/Users/jamesyuan/.local/share/mise/installs/node/26.1.0/bin/node \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/build_updated_workbook.mjs\" \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit\"",
+  "start_time": "2026-07-10T02:41:05-04:00",
+  "end_time": "2026-07-10T02:41:25-04:00",
+  "duration_seconds": "19.100",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase5_build_updated_workbook_polished.stdout.txt",
+  "stderr_path": "evidence/commands/phase5_build_updated_workbook_polished.stderr.txt"
+}

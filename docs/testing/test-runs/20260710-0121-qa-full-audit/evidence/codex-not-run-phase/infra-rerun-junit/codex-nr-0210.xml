@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="4" time="0.048" timestamp="2026-07-10T15:01:04.050847-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.test_ai_influence_daily_recency" name="test_filter_recent_candidates_excludes_posts_older_than_30_days" time="0.000"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/~/Solar/harness/scripts/ai_influence_daily.py'">harness/tests/test_ai_influence_daily_recency.py:21: in test_filter_recent_candidates_excludes_posts_older_than_30_days
+    mod = _load_module()
+          ^^^^^^^^^^^^^^
+harness/tests/test_ai_influence_daily_recency.py:16: in _load_module
+    spec.loader.exec_module(module)
+&lt;frozen importlib._bootstrap_external&gt;:755: in exec_module
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:892: in get_code
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:950: in get_data
+    ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/~/Solar/harness/scripts/ai_influence_daily.py'</failure></testcase><testcase classname="harness.tests.test_ai_influence_daily_recency" name="test_rank_candidates_prefers_newer_post_on_score_tie" time="0.000"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/~/Solar/harness/scripts/ai_influence_daily.py'">harness/tests/test_ai_influence_daily_recency.py:51: in test_rank_candidates_prefers_newer_post_on_score_tie
+    mod = _load_module()
+          ^^^^^^^^^^^^^^
+harness/tests/test_ai_influence_daily_recency.py:16: in _load_module
+    spec.loader.exec_module(module)
+&lt;frozen importlib._bootstrap_external&gt;:755: in exec_module
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:892: in get_code
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:950: in get_data
+    ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/~/Solar/harness/scripts/ai_influence_daily.py'</failure></testcase><testcase classname="harness.tests.test_ai_influence_daily_recency" name="test_filter_pinned_candidates_excludes_pinned_rows" time="0.000"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/~/Solar/harness/scripts/ai_influence_daily.py'">harness/tests/test_ai_influence_daily_recency.py:73: in test_filter_pinned_candidates_excludes_pinned_rows
+    mod = _load_module()
+          ^^^^^^^^^^^^^^
+harness/tests/test_ai_influence_daily_recency.py:16: in _load_module
+    spec.loader.exec_module(module)
+&lt;frozen importlib._bootstrap_external&gt;:755: in exec_module
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:892: in get_code
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:950: in get_data
+    ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/~/Solar/harness/scripts/ai_influence_daily.py'</failure></testcase><testcase classname="harness.tests.test_ai_influence_daily_recency" name="test_prune_recent_per_handle_keeps_latest_four" time="0.000"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/~/Solar/harness/scripts/ai_influence_daily.py'">harness/tests/test_ai_influence_daily_recency.py:99: in test_prune_recent_per_handle_keeps_latest_four
+    mod = _load_module()
+          ^^^^^^^^^^^^^^
+harness/tests/test_ai_influence_daily_recency.py:16: in _load_module
+    spec.loader.exec_module(module)
+&lt;frozen importlib._bootstrap_external&gt;:755: in exec_module
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:892: in get_code
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:950: in get_data
+    ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/~/Solar/harness/scripts/ai_influence_daily.py'</failure></testcase></testsuite></testsuites>

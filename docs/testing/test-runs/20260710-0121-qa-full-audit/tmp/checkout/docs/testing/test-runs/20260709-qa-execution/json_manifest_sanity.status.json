@@ -1,0 +1,11 @@
+{
+  "name": "json_manifest_sanity",
+  "command": [
+    "python3",
+    "-m",
+    "json.tool",
+    "docs/testing/qa_inventory_manifest.json"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0
+}

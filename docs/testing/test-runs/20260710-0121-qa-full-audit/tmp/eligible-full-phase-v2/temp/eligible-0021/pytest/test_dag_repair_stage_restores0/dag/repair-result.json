@@ -1,0 +1,9 @@
+{
+  "stage": "repair",
+  "applied": true,
+  "reason": "fix_git_patch_files_restored",
+  "paths": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0021/pytest/test_dag_repair_stage_restores0/workspace/personal-site/_includes/about.md",
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0021/pytest/test_dag_repair_stage_restores0/workspace/personal-site/_layouts/default.html"
+  ]
+}

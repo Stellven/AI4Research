@@ -1,0 +1,13 @@
+{
+  "command_id": "phase5_install_help",
+  "phase": "installer",
+  "linked_feature_ids": "INSTALL_HELP",
+  "cwd": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout",
+  "command": "bash -lc \"/opt/homebrew/bin/bash ./install.sh --help\"",
+  "start_time": "2026-07-10T02:14:38-04:00",
+  "end_time": "2026-07-10T02:14:38-04:00",
+  "duration_seconds": "0.044",
+  "exit_code": 0,
+  "stdout_path": "evidence/commands/phase5_install_help.stdout.txt",
+  "stderr_path": "evidence/commands/phase5_install_help.stderr.txt"
+}

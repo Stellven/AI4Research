@@ -1,0 +1,8 @@
+python3: can't open file '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/runtime_status.py': [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<stdin>", line 7, in <module>
+AssertionError: {'id': 'sprint-runtime-rs-transition', 'sid': 'sprint-runtime-rs-transition', 'sprint_id': 'sprint-runtime-rs-transition', 'status': 'planning', 'round': 1, 'history': []}
+python3: can't open file '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/runtime_status.py': [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<stdin>", line 7, in <module>
+AssertionError: {'id': 'sprint-runtime-rs-bump', 'sid': 'sprint-runtime-rs-bump', 'sprint_id': 'sprint-runtime-rs-bump', 'status': 'active', 'round': 2, 'history': []}

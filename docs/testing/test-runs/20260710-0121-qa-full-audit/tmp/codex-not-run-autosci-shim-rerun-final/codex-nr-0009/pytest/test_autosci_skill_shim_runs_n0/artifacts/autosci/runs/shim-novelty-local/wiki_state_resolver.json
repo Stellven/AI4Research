@@ -1,0 +1,59 @@
+{
+  "action": "evaluate_ideas",
+  "existing_wiki_roots": [
+    "artifacts/autosci/workspace/wiki"
+  ],
+  "experiments": [],
+  "graph_edges": [],
+  "graph_errors": [],
+  "ideas": [
+    {
+      "failure_reason": "too similar to generated skills prior work",
+      "frontmatter_keys": [
+        "failure_reason",
+        "status",
+        "title"
+      ],
+      "graph_edge_count": 0,
+      "has_novelty_score": false,
+      "id": "failed-skillgen",
+      "idea_id": "failed-skillgen",
+      "linked_experiments": [],
+      "novelty_score": "N/A",
+      "path": "artifacts/autosci/workspace/wiki/ideas/failed-skillgen.md",
+      "slug": "failed-skillgen",
+      "status": "failed",
+      "title": "Failed SkillGen Duplicate"
+    }
+  ],
+  "indexes": {
+    "experiments_by_slug": {},
+    "ideas_by_slug": {
+      "failed-skillgen": "failed-skillgen"
+    },
+    "outputs_by_slug": {}
+  },
+  "limitations": [
+    "Resolver is read-only; it does not mutate wiki state, add graph edges, or rebuild wiki indexes.",
+    "Frontmatter parsing supports scalar values and simple lists only; complex YAML is reported through missing fields."
+  ],
+  "outputs": [],
+  "resolution": {
+    "fallback_used": false,
+    "target": "generated skills for inference-time agents",
+    "target_id": "",
+    "target_path": "",
+    "target_type": "unresolved",
+    "warnings": [
+      "Target `generated skills for inference-time agents` was not found in wiki ideas, experiments, outputs, or graph edges."
+    ]
+  },
+  "schema": "autosci_wiki_state_resolver.v1",
+  "selected_root": "artifacts/autosci/workspace/wiki",
+  "status": "completed",
+  "wiki_roots": [
+    "artifacts/autosci/workspace/wiki",
+    "wiki",
+    "harness/artifacts/autosci/workspace/wiki"
+  ]
+}

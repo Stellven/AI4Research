@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-07-10T19:22:09Z",
+  "proofs": [
+    {
+      "categories": [
+        "side_effect_execution_evidence"
+      ],
+      "collection_mode": "approved_side_effect",
+      "description": "Completed approved side-effect execution evidence for AutoSci `setup` parity.",
+      "evidence_refs": [
+        "artifacts/autosci/runs/shim-setup-external-runtime/workflow_evolution.setup.json",
+        "setup-runtime.json",
+        "setup-after.json",
+        "artifacts/autosci/runs/shim-setup-external-runtime/setup_recommended_changes.md",
+        "artifacts/autosci/runs/shim-setup-external-runtime/patch_candidates",
+        "artifacts/autosci/runs/shim-setup-external-runtime/setup_status.json",
+        "plugins/autosci/config/setup-guide.md",
+        "plugins/autosci/config/.env.example",
+        "artifacts/autosci/runs/shim-setup-external-runtime/setup_status_gate_policy_decision.json",
+        "artifacts/autosci/runs/shim-setup-external-runtime/setup_status_approval_contract.json"
+      ],
+      "native_skill": "setup",
+      "production_ready": true,
+      "proof_id": "runtime:setup:approved-mutation:20260710T192209Z",
+      "provenance": {
+        "artifact_kind": "setup_status_runtime",
+        "captured_at": "2026-07-10T19:22:09Z",
+        "command": "setup_status:approved_mutation",
+        "source": "approved_mutation"
+      }
+    }
+  ],
+  "schema": "autosci_runtime_proof_manifest.v1"
+}

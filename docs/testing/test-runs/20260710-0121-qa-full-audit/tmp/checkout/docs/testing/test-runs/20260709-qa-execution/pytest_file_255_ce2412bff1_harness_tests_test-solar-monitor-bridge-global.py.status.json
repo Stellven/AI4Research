@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_255_ce2412bff1_harness_tests_test-solar-monitor-bridge-global.py",
+  "source": "harness/tests/test-solar-monitor-bridge-global.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-solar-monitor-bridge-global.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.183,
+  "timeout": false
+}

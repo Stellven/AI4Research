@@ -1,0 +1,3 @@
+{"id": "cl_1", "claim_text": "Latent-space reasoning moves intermediate computation into hidden states rather than explicit token chains."}
+{"id": "cl_2", "claim_text": "Recurrent depth can add test-time computation through repeated blocks or hidden-state refinement."}
+{"id": "cl_3", "claim_text": "Soft thought vectors can be projected into existing language models as intermediate reasoning state."}

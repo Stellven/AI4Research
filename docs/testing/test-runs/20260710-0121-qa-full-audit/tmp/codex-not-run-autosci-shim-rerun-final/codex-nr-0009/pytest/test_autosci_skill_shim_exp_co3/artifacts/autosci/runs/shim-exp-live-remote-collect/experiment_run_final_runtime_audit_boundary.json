@@ -1,0 +1,33 @@
+{
+  "approval_contract_verified": true,
+  "approval_state": "verified",
+  "artifact_types": [
+    "approval_contract_json",
+    "collection_ledger_json",
+    "executor_stderr",
+    "executor_stdout",
+    "experiment_run_report_json",
+    "experiment_runtime_evidence_json",
+    "remote_collected_file",
+    "wiki_experiment_state",
+    "wiki_graph_edges",
+    "wiki_log",
+    "wiki_state_resolver_json"
+  ],
+  "collection_ledger_recorded": true,
+  "experiment_id": "exp-live-remote-collect",
+  "final_runtime_audit_ready": true,
+  "limitations": [
+    "Final runtime audit passed with approved runtime, live collection, collection ledger, and wiki mutation evidence."
+  ],
+  "live_remote_collection_verified": true,
+  "remote_collection_boundary_status": "live_remote_collection",
+  "result_collected": true,
+  "runtime_semantic_status": "verified",
+  "runtime_semantic_verified": true,
+  "schema": "autosci_experiment_run_final_runtime_audit_boundary.v1",
+  "stage": "collect",
+  "stage_audit_ready": true,
+  "status": "final_runtime_audit_ready",
+  "wiki_state_mutated": true
+}

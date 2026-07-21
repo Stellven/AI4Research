@@ -1,0 +1,53 @@
+{
+  "id": "test-graph-submit",
+  "sprint_id": "test-graph-submit",
+  "title": "test-graph-submit",
+  "status": "failed",
+  "phase": "failed",
+  "handoff_to": "",
+  "target_role": "",
+  "created_at": "2026-07-10T06:27:55Z",
+  "updated_at": "2026-07-10T06:27:55Z",
+  "task_graph": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/temp-final/pytest-of-jamesyuan/pytest-13/test_eval_fail_after_repair_li0/sprints/test-graph-submit.task_graph.json",
+  "graph_status_cache": true,
+  "graph_parent_ready": {
+    "ok": true,
+    "sprint_id": "test-graph-submit",
+    "ready": false,
+    "node_count": 2,
+    "open_nodes": [
+      "N1"
+    ],
+    "failed_nodes": [
+      "N1"
+    ],
+    "required_gates": [],
+    "missing_gates": []
+  },
+  "active_node": null,
+  "failed_nodes": [
+    "N1"
+  ],
+  "history": [
+    {
+      "ts": "2026-07-10T06:27:55Z",
+      "event": "graph_dependency_blocked_projection",
+      "by": "graph-dispatch",
+      "note": "created missing status cache from task_graph",
+      "graph_sync": true,
+      "graph_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/temp-final/pytest-of-jamesyuan/pytest-13/test_eval_fail_after_repair_li0/sprints/test-graph-submit.task_graph.json"
+    },
+    {
+      "ts": "2026-07-10T06:27:55Z",
+      "event": "graph_parent_failed",
+      "by": "graph-dispatch",
+      "note": "task_graph has terminal failed nodes and no runnable downstream nodes",
+      "graph_sync": true,
+      "graph_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/temp-final/pytest-of-jamesyuan/pytest-13/test_eval_fail_after_repair_li0/sprints/test-graph-submit.task_graph.json"
+    }
+  ],
+  "stage": "failed",
+  "task_graph_status": "failed",
+  "round": 0,
+  "runtime_state_source": "activity_runtime"
+}

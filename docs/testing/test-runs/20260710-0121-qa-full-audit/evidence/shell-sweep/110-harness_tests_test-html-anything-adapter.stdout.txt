@@ -1,0 +1,4 @@
+PASS: renders prd/planning/design via html-anything adapter
+PASS: registers prd_html planning_html design_html
+PASS: legacy override remains available
+PASS

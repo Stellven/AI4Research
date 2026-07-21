@@ -1,0 +1,12 @@
+{
+  "actors": {
+    "actor-a": {
+      "host_id": "mini",
+      "role": "builder",
+      "capability_profile": {
+        "code_impl": 5,
+        "testing": 4
+      }
+    }
+  }
+}

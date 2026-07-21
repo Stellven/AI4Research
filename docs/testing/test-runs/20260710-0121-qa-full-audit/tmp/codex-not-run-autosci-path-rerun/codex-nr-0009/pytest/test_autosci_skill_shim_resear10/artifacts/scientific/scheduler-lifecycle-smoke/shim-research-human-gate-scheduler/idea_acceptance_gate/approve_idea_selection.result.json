@@ -1,0 +1,14 @@
+{
+  "action": "approve_idea_selection",
+  "approval_ref": "approval-shim-idea-gate",
+  "artifact_sha256": "0236b3b6c492e08813ae962e760e92847207d61615af170ed37e488268299974",
+  "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/idea_acceptance_gate/idea_acceptance_gate.json",
+  "gate": "G_HUMAN_IDEA_ACCEPTANCE",
+  "job_id": "shim-research-human-gate-scheduler",
+  "node_id": "idea_acceptance_gate",
+  "ok": true,
+  "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/shim-research-human-gate-scheduler/idea_acceptance_gate/approve_idea_selection.result.json",
+  "schema": "workflow_evolution.v1",
+  "status": "completed",
+  "task_id": "task-shim-research-human-gate-scheduler-idea_acceptance_gate"
+}

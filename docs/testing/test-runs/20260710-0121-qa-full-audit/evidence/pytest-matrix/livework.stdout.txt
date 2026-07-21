@@ -1,0 +1,201 @@
+FFFFEEEEEEEEF....................................FFF........F........... [ 37%]
+..............................................FFFF...................... [ 75%]
+..............................................                           [100%]
+==================================== ERRORS ====================================
+_______ ERROR at setup of TestEventV2Schema.test_schema_version_present ________
+harness/tests/livework/test_activation_proof_replay.py:95: in events
+    return _parse_events(_run_proof(tmp_path))
+                         ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+________ ERROR at setup of TestEventV2Schema.test_timestamp_iso_format _________
+harness/tests/livework/test_activation_proof_replay.py:95: in events
+    return _parse_events(_run_proof(tmp_path))
+                         ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+___________ ERROR at setup of TestEventV2Schema.test_seq_increasing ____________
+harness/tests/livework/test_activation_proof_replay.py:95: in events
+    return _parse_events(_run_proof(tmp_path))
+                         ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+__________ ERROR at setup of TestPayloadFields.test_heartbeat_payload __________
+harness/tests/livework/test_activation_proof_replay.py:116: in events_by_type
+    events = _parse_events(_run_proof(tmp_path))
+                           ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+__________ ERROR at setup of TestPayloadFields.test_deadlock_payload ___________
+harness/tests/livework/test_activation_proof_replay.py:116: in events_by_type
+    events = _parse_events(_run_proof(tmp_path))
+                           ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+_____ ERROR at setup of TestPayloadFields.test_requirement_intake_payload ______
+harness/tests/livework/test_activation_proof_replay.py:116: in events_by_type
+    events = _parse_events(_run_proof(tmp_path))
+                           ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+_________ ERROR at setup of TestPayloadFields.test_pm_drafted_payload __________
+harness/tests/livework/test_activation_proof_replay.py:116: in events_by_type
+    events = _parse_events(_run_proof(tmp_path))
+                           ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+_______ ERROR at setup of TestPayloadFields.test_role_transition_payload _______
+harness/tests/livework/test_activation_proof_replay.py:116: in events_by_type
+    events = _parse_events(_run_proof(tmp_path))
+                           ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+=================================== FAILURES ===================================
+___________ TestActivationProofExecution.test_script_produces_jsonl ____________
+harness/tests/livework/test_activation_proof_replay.py:64: in test_script_produces_jsonl
+    output = _run_proof(tmp_path)
+             ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+___________ TestActivationProofExecution.test_all_events_valid_json ____________
+harness/tests/livework/test_activation_proof_replay.py:69: in test_all_events_valid_json
+    output = _run_proof(tmp_path)
+             ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+____ TestActivationProofExecution.test_event_type_coverage_at_least_4_of_5 _____
+harness/tests/livework/test_activation_proof_replay.py:75: in test_event_type_coverage_at_least_4_of_5
+    output = _run_proof(tmp_path)
+             ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+_________ TestActivationProofExecution.test_all_5_event_types_present __________
+harness/tests/livework/test_activation_proof_replay.py:84: in test_all_5_event_types_present
+    output = _run_proof(tmp_path)
+             ^^^^^^^^^^^^^^^^^^^^
+harness/tests/livework/test_activation_proof_replay.py:46: in _run_proof
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+E   AssertionError: Script failed: ERROR: livework/events.py not found at /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+______________ TestLongMode.test_long_mode_emits_extra_heartbeats ______________
+harness/tests/livework/test_activation_proof_replay.py:170: in test_long_mode_emits_extra_heartbeats
+    assert result.returncode == 0
+E   AssertionError: assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20... Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/livework/events.py\n').returncode
+_____________ TestHookFailOpen.test_hook_exits_0_when_runner_fails _____________
+harness/tests/livework/test_heartbeat_hook.py:55: in test_hook_exits_0_when_runner_fails
+    assert result.returncode == 0
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...t/tmp/system-tmp/pytest-of-jamesyuan/pytest-12/test_hook_exits_0_when_runner_1/bad_runner.py 2>/dev/null || exit 0'\n").returncode
+____________ TestHookFailOpen.test_hook_exits_0_when_python_crashes ____________
+harness/tests/livework/test_heartbeat_hook.py:71: in test_hook_exits_0_when_python_crashes
+    assert result.returncode == 0
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-12/test_hook_exits_0_when_python_0/crash.py 2>/dev/null || exit 0'\n").returncode
+_ TestRunnerEmitRealEvents.test_actual_runner_writes_event_from_arbitrary_cwd __
+harness/tests/livework/test_heartbeat_hook.py:92: in test_actual_runner_writes_event_from_arbitrary_cwd
+    assert result.returncode == 0, result.stderr
+E   AssertionError: python3: can't open file '/private/tmp/~/.solar/harness/autopilot/hooks/livework_heartbeat_runner.py': [Errno 2] No such file or directory
+E     
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['python3', '~/.solar/harness/autopilot/hooks/livework_heartbeat_runner.py'], returncode=2, stdo...e '/private/tmp/~/.solar/harness/autopilot/hooks/livework_heartbeat_runner.py': [Errno 2] No such file or directory\n").returncode
+______________ TestNoAutopilotChange.test_autopilot_sh_unchanged _______________
+harness/tests/livework/test_heartbeat_hook.py:167: in test_autopilot_sh_unchanged
+    result = subprocess.run(
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '~/.solar/harness'
+_________ TestDeadlockHookFailOpen.test_hook_exits_0_on_missing_runner _________
+harness/tests/livework/test_negative_control.py:172: in test_hook_exits_0_on_missing_runner
+    assert result.returncode == 0
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...stem-tmp/pytest-of-jamesyuan/pytest-12/test_hook_exits_0_on_missing_r0/nonexistent_runner.py 2>/dev/null || exit 0'\n").returncode
+______ TestDeadlockHookFailOpen.test_hook_exits_0_on_python_syntax_error _______
+harness/tests/livework/test_negative_control.py:186: in test_hook_exits_0_on_python_syntax_error
+    assert result.returncode == 0
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...ll-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-12/test_hook_exits_0_on_python_sy0/bad.py 2>/dev/null || exit 0'\n").returncode
+__________ TestDeadlockHookFailOpen.test_hook_exits_0_on_import_error __________
+harness/tests/livework/test_negative_control.py:200: in test_hook_exits_0_on_import_error
+    assert result.returncode == 0
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...t/tmp/system-tmp/pytest-of-jamesyuan/pytest-12/test_hook_exits_0_on_import_er0/importfail.py 2>/dev/null || exit 0'\n").returncode
+________ TestDeadlockHookFailOpen.test_hook_exits_0_on_runner_exception ________
+harness/tests/livework/test_negative_control.py:214: in test_hook_exits_0_on_runner_exception
+    assert result.returncode == 0
+E   assert 2 == 0
+E    +  where 2 = CompletedProcess(args=['bash', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20...-audit/tmp/system-tmp/pytest-of-jamesyuan/pytest-12/test_hook_exits_0_on_runner_ex0/crash.py 2>/dev/null || exit 0'\n").returncode
+=========================== short test summary info ============================
+FAILED harness/tests/livework/test_activation_proof_replay.py::TestActivationProofExecution::test_script_produces_jsonl
+FAILED harness/tests/livework/test_activation_proof_replay.py::TestActivationProofExecution::test_all_events_valid_json
+FAILED harness/tests/livework/test_activation_proof_replay.py::TestActivationProofExecution::test_event_type_coverage_at_least_4_of_5
+FAILED harness/tests/livework/test_activation_proof_replay.py::TestActivationProofExecution::test_all_5_event_types_present
+FAILED harness/tests/livework/test_activation_proof_replay.py::TestLongMode::test_long_mode_emits_extra_heartbeats
+FAILED harness/tests/livework/test_heartbeat_hook.py::TestHookFailOpen::test_hook_exits_0_when_runner_fails
+FAILED harness/tests/livework/test_heartbeat_hook.py::TestHookFailOpen::test_hook_exits_0_when_python_crashes
+FAILED harness/tests/livework/test_heartbeat_hook.py::TestRunnerEmitRealEvents::test_actual_runner_writes_event_from_arbitrary_cwd
+FAILED harness/tests/livework/test_heartbeat_hook.py::TestNoAutopilotChange::test_autopilot_sh_unchanged
+FAILED harness/tests/livework/test_negative_control.py::TestDeadlockHookFailOpen::test_hook_exits_0_on_missing_runner
+FAILED harness/tests/livework/test_negative_control.py::TestDeadlockHookFailOpen::test_hook_exits_0_on_python_syntax_error
+FAILED harness/tests/livework/test_negative_control.py::TestDeadlockHookFailOpen::test_hook_exits_0_on_import_error
+FAILED harness/tests/livework/test_negative_control.py::TestDeadlockHookFailOpen::test_hook_exits_0_on_runner_exception
+ERROR harness/tests/livework/test_activation_proof_replay.py::TestEventV2Schema::test_schema_version_present
+ERROR harness/tests/livework/test_activation_proof_replay.py::TestEventV2Schema::test_timestamp_iso_format
+ERROR harness/tests/livework/test_activation_proof_replay.py::TestEventV2Schema::test_seq_increasing
+ERROR harness/tests/livework/test_activation_proof_replay.py::TestPayloadFields::test_heartbeat_payload
+ERROR harness/tests/livework/test_activation_proof_replay.py::TestPayloadFields::test_deadlock_payload
+ERROR harness/tests/livework/test_activation_proof_replay.py::TestPayloadFields::test_requirement_intake_payload
+ERROR harness/tests/livework/test_activation_proof_replay.py::TestPayloadFields::test_pm_drafted_payload
+ERROR harness/tests/livework/test_activation_proof_replay.py::TestPayloadFields::test_role_transition_payload
+13 failed, 169 passed, 8 errors in 0.57s

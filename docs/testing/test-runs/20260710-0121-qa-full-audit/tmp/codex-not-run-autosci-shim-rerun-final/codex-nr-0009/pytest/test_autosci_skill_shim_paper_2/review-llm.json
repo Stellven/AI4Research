@@ -1,0 +1,1 @@
+{"schema": "artifact_review.v1", "task_id": "review-paper-plan-compile", "status": "completed", "outputs": {"review": {"review_available": true, "review_mode": "review_llm", "recommendation": "accept", "evidence_ids": ["review:paper-plan-compile"], "review_llm": {"status": "completed"}}}}

@@ -1,0 +1,13 @@
+enabled: true
+goal: 修复一个按钮文案 typo。
+success_metrics: &id001
+- 目标变更在声明范围内完成。
+- 至少一条测试/执行证据被记录。
+- 存在独立 verifier 决策。
+non_goals:
+- 不做无关架构重写。
+- 不默认引入新的生产依赖。
+acceptance: *id001
+stop_rules:
+- 缺少可验证 acceptance 不得标记为完成。
+- 缺少 verifier 决策不得进入 DONE。

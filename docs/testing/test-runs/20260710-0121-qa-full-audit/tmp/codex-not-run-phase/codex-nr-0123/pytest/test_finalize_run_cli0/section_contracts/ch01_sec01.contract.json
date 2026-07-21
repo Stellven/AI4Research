@@ -1,0 +1,31 @@
+{
+  "section_id": "ch01/sec01",
+  "chapter_id": "ch01",
+  "title": "问题定义与研究边界：研究问题与术语边界",
+  "order": 1,
+  "target_chars": 1562,
+  "research_question": "latent reasoning 在“问题定义与研究边界/研究问题与术语边界”上的证据、架构取舍和争议是什么？",
+  "required_source_types": [
+    "paper",
+    "official_doc"
+  ],
+  "min_evidence": 4,
+  "min_claims": 3,
+  "output_contract": [
+    "Markdown section draft.",
+    "At least six second-level headings.",
+    "Follow the professor-grade section template in writing_policy.section_template.",
+    "Include Literature Lineage, Method Taxonomy, Architecture Synthesis, Comparative Positioning, Terminology Evolution, Evaluation Protocol Matrix, Evaluation And Risk Boundary, Limitations And Failure Modes, Controversy Matrix, Contradiction Slots, and Open Problems.",
+    "All core claims must reference claim_id and evidence_id tags."
+  ],
+  "constraints": [
+    "Use the section evidence pack as the source of truth.",
+    "Bind important factual claims to [claim:<id>] and [evidence:<id>] tags.",
+    "Separate architecture synthesis, evaluation limits, contradiction slots, and open problems.",
+    "Do not invent sources, results, paper names, URLs, or benchmark numbers.",
+    "Preserve uncertainty when evidence is weak or contradictory."
+  ],
+  "metadata": {
+    "schema_version": "v1.0.0-draft"
+  }
+}

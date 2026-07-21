@@ -1,0 +1,198 @@
+---
+# Solar Skill Registry — single source of truth for all skill metadata
+# Updated by: lib/solar_skills.py promote/rollback
+# Read by:    lib/skill_export.py (stable only), solar-harness skills inventory
+# Schema:     schemas/skill-registry.schema.json (planned S4)
+
+version: "1.0"
+updated_at: "2026-05-09T00:00:00Z"
+
+skills:
+
+  # ─── builtins (shipped with solar-harness) ────────────────────────────────
+
+  - name: plan
+    namespace: builtin
+    status: stable
+    description: "Sprint planning — translate user intent into sliced PRD + implementation plan"
+    tags: [planning, sprint, prd]
+    min_score: 0.8
+    eval_pack: evals/skills/plan.eval.yaml
+    entry: skills/builtins/plan/SKILL.md
+    promoted_at: "2026-05-09T00:00:00Z"
+    promoted_by: s2-builder
+
+  - name: review
+    namespace: builtin
+    status: stable
+    description: "Code review — structural, security, and style analysis of a diff or file"
+    tags: [code-review, quality, security]
+    min_score: 0.8
+    eval_pack: evals/skills/review.eval.yaml
+    entry: skills/builtins/review/SKILL.md
+    promoted_at: "2026-05-09T00:00:00Z"
+    promoted_by: s2-builder
+    # APO capability metadata (v2 extension fields)
+    apo_skill_id: skill.review
+    required_capabilities: [academic_critique, root_cause_debug]
+    mcp_tools: [git.read]
+    applicable_workflow_stages: [ReviewPatch]
+    output_artifacts: [review_report]
+
+  - name: ship
+    namespace: builtin
+    status: stable
+    description: "Release — checklist-driven final verification before pushing/merging"
+    tags: [release, checklist, deploy]
+    min_score: 0.8
+    eval_pack: evals/skills/ship.eval.yaml
+    entry: skills/builtins/ship/SKILL.md
+    promoted_at: "2026-05-09T00:00:00Z"
+    promoted_by: s2-builder
+
+  - name: browse
+    namespace: builtin
+    status: stable
+    description: "Web browsing — navigate URLs, extract content, screenshot via playwright MCP"
+    tags: [web, browser, playwright]
+    min_score: 0.75
+    eval_pack: evals/skills/browse.eval.yaml
+    entry: skills/builtins/browse/SKILL.md
+    promoted_at: "2026-05-09T00:00:00Z"
+    promoted_by: s2-builder
+
+  - name: retro
+    namespace: builtin
+    status: stable
+    description: "Sprint retrospective — extract lessons, update STATE.md, write cortex entries"
+    tags: [retro, lessons, cortex]
+    min_score: 0.75
+    eval_pack: evals/skills/retro.eval.yaml
+    entry: skills/builtins/retro/SKILL.md
+    promoted_at: "2026-05-09T00:00:00Z"
+    promoted_by: s2-builder
+
+  # ─── user / generated skills ─────────────────────────────────────────────
+
+  - name: brainstorm
+    namespace: user
+    status: stable
+    description: "Structured brainstorming — diverge then converge with multi-expert perspective"
+    tags: [creativity, diverge, converge]
+    min_score: 0.75
+    eval_pack: evals/skills/brainstorm.eval.yaml
+    entry: skills/user/brainstorm/SKILL.md
+    promoted_at: "2026-05-09T00:00:00Z"
+    promoted_by: s2-builder
+    # APO capability metadata (v2 extension fields)
+    apo_skill_id: skill.architecture-design
+    required_capabilities: [architecture_reasoning, long_context]
+    mcp_tools: [repo.read]
+    applicable_workflow_stages: [DesignSolution]
+    output_artifacts: [design_doc]
+
+  - name: tdd
+    namespace: user
+    status: stable
+    description: "Test-driven development — write failing test first, then implement to pass"
+    tags: [testing, tdd, quality]
+    min_score: 0.8
+    eval_pack: evals/skills/tdd.eval.yaml
+    entry: skills/user/tdd/SKILL.md
+    promoted_at: "2026-05-09T00:00:00Z"
+    promoted_by: s2-builder
+
+  - name: debug
+    namespace: user
+    status: stable
+    description: "Systematic debugging — root-cause analysis via bisect + evidence chain"
+    tags: [debug, root-cause, diagnosis]
+    min_score: 0.8
+    eval_pack: evals/skills/debug.eval.yaml
+    entry: skills/user/debug/SKILL.md
+    promoted_at: "2026-05-09T00:00:00Z"
+    promoted_by: s2-builder
+    # APO capability metadata (v2 extension fields)
+    apo_skill_id: skill.root-cause-debug
+    required_capabilities: [root_cause_debug, long_context]
+    mcp_tools: [git.read, repo.read]
+    applicable_workflow_stages: [DebugRCA]
+    output_artifacts: [root_cause_report, hypothesis_list]
+
+  - name: qa
+    namespace: user
+    status: "candidate"
+    description: "Quality assurance — comprehensive test run + edge case discovery"
+    tags: [qa, testing, edge-cases]
+    min_score: 0.75
+    eval_pack: evals/skills/qa.eval.yaml
+    entry: skills/user/qa/SKILL.md
+    promoted_at: null
+    promoted_by: null
+
+  - name: investigate
+    namespace: generated
+    status: canary
+    description: "Deep investigation — multi-source evidence gathering for unknown failures"
+    tags: [investigation, evidence, forensics]
+    min_score: 0.75
+    eval_pack: null
+    entry: skills/generated/investigate/SKILL.md
+    promoted_at: null
+    promoted_by: null
+    # APO capability metadata (v2 extension fields)
+    apo_skill_id: skill.context-scan
+    required_capabilities: [research_synthesis, long_context]
+    mcp_tools: [repo.read, git.read]
+    applicable_workflow_stages: [ScanContext]
+    output_artifacts: [context_summary, related_files]
+
+  # ─── APO-injected skill stubs — registered to satisfy classifier references ─
+
+  - name: benchmark-analysis
+    namespace: apo
+    status: draft
+    description: "Benchmark execution and analysis — run suite, collect metrics, compare before/after"
+    tags: [benchmark, performance, metrics]
+    min_score: 0.75
+    eval_pack: null
+    entry: null
+    promoted_at: null
+    promoted_by: null
+    apo_skill_id: skill.benchmark-analysis
+    required_capabilities: [test_execution, root_cause_debug]
+    mcp_tools: [shell.benchmark, artifact.write]
+    applicable_workflow_stages: [RunBenchmark]
+    output_artifacts: [benchmark_report, metrics_summary]
+
+  - name: implementation
+    namespace: apo
+    status: draft
+    description: "Code implementation — write and commit patch or feature module"
+    tags: [implementation, coding, patch]
+    min_score: 0.75
+    eval_pack: null
+    entry: null
+    promoted_at: null
+    promoted_by: null
+    apo_skill_id: skill.implementation
+    required_capabilities: [code_impl, test_generation]
+    mcp_tools: [repo.read, repo.write]
+    applicable_workflow_stages: [ImplementPatch]
+    output_artifacts: [patch_diff, implementation_summary]
+
+  - name: verification
+    namespace: apo
+    status: draft
+    description: "Evidence verification — confirm outputs, write ledger entry, sign-off"
+    tags: [verification, evidence, closeout]
+    min_score: 0.75
+    eval_pack: null
+    entry: null
+    promoted_at: null
+    promoted_by: null
+    apo_skill_id: skill.verification
+    required_capabilities: [test_execution, root_cause_debug]
+    mcp_tools: [artifact.write]
+    applicable_workflow_stages: [VerifyEvidence]
+    output_artifacts: [verification_report, evidence_ledger_entry]

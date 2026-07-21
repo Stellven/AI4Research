@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_128_ee1b169d66_harness_tests_integrations_gepa_optimizer_test_promote.py",
+  "source": "harness/tests/integrations/gepa_optimizer/test_promote.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/integrations/gepa_optimizer/test_promote.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.198,
+  "timeout": false
+}

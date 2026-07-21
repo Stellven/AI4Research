@@ -1,0 +1,46 @@
+{
+  "ok": false,
+  "reason": "no_importable_sources",
+  "imported_sources": 0,
+  "input_md": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0124/pytest/test_import_survey_search_resu0/bad.md",
+  "diagnostics": {
+    "source_heading_count": 0,
+    "url_count": 1,
+    "has_external_search_results_heading": false,
+    "missing_fields_by_source": [],
+    "expected_source_heading": "## Source 1: <title>",
+    "expected_fields": [
+      "URL",
+      "Publisher",
+      "Published",
+      "Source Type",
+      "Research Angles",
+      "Summary",
+      "Key Claims",
+      "Relevant Quotes"
+    ],
+    "repair_hint": "Paste results into returned_sources.md using the exact Source block schema from survey_source_gap_handoff.md.",
+    "required_research_angles": [
+      "literature_lineage",
+      "method_taxonomy",
+      "evaluation_protocol",
+      "controversy",
+      "engineering"
+    ],
+    "research_angle_counts": {
+      "literature_lineage": 0,
+      "method_taxonomy": 0,
+      "evaluation_protocol": 0,
+      "controversy": 0,
+      "engineering": 0
+    },
+    "missing_research_angles": [
+      "literature_lineage",
+      "method_taxonomy",
+      "evaluation_protocol",
+      "controversy",
+      "engineering"
+    ],
+    "example": "# External Search Results: <brief>\n\n## Source 1: <title>\nURL: <https://...>\nPublisher: <publisher or N/A>\nPublished: <date or N/A>\nSource Type: <paper|official_doc|code|benchmark|dataset|standard|web|other>\nResearch Angles: <literature_lineage|method_taxonomy|evaluation_protocol|controversy|engineering>\n\nSummary:\n- <2-5 factual bullets>\n\nKey Claims:\n- <claim supported by this source>\n- <claim supported by this source>\n\nRelevant Quotes:\n> <short quote or N/A>\n"
+  }
+}

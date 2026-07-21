@@ -51,7 +51,7 @@ export class QuotaScheduler {
   private running: boolean = false;
   private schedulerInterval?: Timer;
 
-  constructor(dbPath: string = `${process.env.HOME}/.solar/solar.db`) {
+  constructor(dbPath: string = process.env.SOLAR_DB_PATH || `${process.env.HOME}/.solar/db/solar.db`) {
     this.db = new Database(dbPath);
     this.db.exec('PRAGMA journal_mode = WAL');
   }

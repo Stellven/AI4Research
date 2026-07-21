@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="4" time="0.051" timestamp="2026-07-10T14:50:44.682288-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.runtime.test_mirage_context_access_plane" name="test_mirage_search_registers_cocoindex_degraded_code_hits" time="0.000"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0145/home/.solar/harness/lib/mirage_search.py'">harness/tests/runtime/test_mirage_context_access_plane.py:19: in test_mirage_search_registers_cocoindex_degraded_code_hits
+    mirage_search = load_module("mirage_search_test_coco", HARNESS / "lib" / "mirage_search.py")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/runtime/test_mirage_context_access_plane.py:14: in load_module
+    spec.loader.exec_module(module)
+&lt;frozen importlib._bootstrap_external&gt;:755: in exec_module
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:892: in get_code
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:950: in get_data
+    ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0145/home/.solar/harness/lib/mirage_search.py'</failure></testcase><testcase classname="harness.tests.runtime.test_mirage_context_access_plane" name="test_understanding_adapter_reads_real_artifact_store" time="0.001"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0145/home/.solar/harness/lib/understand_anything_adapter.py'">harness/tests/runtime/test_mirage_context_access_plane.py:53: in test_understanding_adapter_reads_real_artifact_store
+    ua = load_module("understand_anything_adapter_test", HARNESS / "lib" / "understand_anything_adapter.py")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/runtime/test_mirage_context_access_plane.py:14: in load_module
+    spec.loader.exec_module(module)
+&lt;frozen importlib._bootstrap_external&gt;:755: in exec_module
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:892: in get_code
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:950: in get_data
+    ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0145/home/.solar/harness/lib/understand_anything_adapter.py'</failure></testcase><testcase classname="harness.tests.runtime.test_mirage_context_access_plane" name="test_context_usage_verifier_requires_code_source" time="0.000"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0145/home/.solar/harness/lib/verifier/context_usage.py'">harness/tests/runtime/test_mirage_context_access_plane.py:65: in test_context_usage_verifier_requires_code_source
+    verifier = load_module("context_usage_test", HARNESS / "lib" / "verifier" / "context_usage.py")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/runtime/test_mirage_context_access_plane.py:14: in load_module
+    spec.loader.exec_module(module)
+&lt;frozen importlib._bootstrap_external&gt;:755: in exec_module
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:892: in get_code
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:950: in get_data
+    ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0145/home/.solar/harness/lib/verifier/context_usage.py'</failure></testcase><testcase classname="harness.tests.runtime.test_mirage_context_access_plane" name="test_context_usage_verifier_fails_missing_required_source" time="0.000"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0145/home/.solar/harness/lib/verifier/context_usage.py'">harness/tests/runtime/test_mirage_context_access_plane.py:82: in test_context_usage_verifier_fails_missing_required_source
+    verifier = load_module("context_usage_test_missing", HARNESS / "lib" / "verifier" / "context_usage.py")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+harness/tests/runtime/test_mirage_context_access_plane.py:14: in load_module
+    spec.loader.exec_module(module)
+&lt;frozen importlib._bootstrap_external&gt;:755: in exec_module
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:892: in get_code
+    ???
+&lt;frozen importlib._bootstrap_external&gt;:950: in get_data
+    ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0145/home/.solar/harness/lib/verifier/context_usage.py'</failure></testcase></testsuite></testsuites>

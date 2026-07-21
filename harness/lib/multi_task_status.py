@@ -21,6 +21,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from actor_registry import load_actor_registry
+
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
 OPERATOR_LEASE_DIR = HARNESS_DIR / "run" / "operator-leases"
@@ -280,7 +282,7 @@ def _load_json(path: Path) -> Dict[str, Any]:
 
 
 def load_actors(path: Path = ACTORS_PATH) -> Dict[str, Any]:
-    return _load_json(path).get("actors", {})
+    return load_actor_registry(path).get("actors", {})
 
 
 def load_hosts(path: Path = HOSTS_PATH) -> Dict[str, Any]:

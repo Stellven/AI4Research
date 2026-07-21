@@ -1,0 +1,31 @@
+{
+  "approval_ref": "approval-exp-multiseed",
+  "approval_state": "approved_pending_runtime",
+  "collection_duplicate": false,
+  "collection_identity": "eab97d4ed232c34f3d4b2b139e8da03381f5aada",
+  "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/tools/remote.py pull-results --result-dir /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0009/pytest/test_autosci_skill_shim_exp_co5/remote-multiseed-results",
+  "evidence_ids": [
+    "remote-collect:exp-multiseed",
+    "remote-multiseed-results/seed-1.json",
+    "result:exp-multiseed:seed-1",
+    "remote-multiseed-results/seed-2.json",
+    "result:exp-multiseed:seed-2"
+  ],
+  "exit_code": 0,
+  "experiment_id": "exp-multiseed",
+  "limitations": [
+    "Run report records approved executor observations only; route readiness is still decided by runtime semantic verification and final audit boundary."
+  ],
+  "metric_count": 2,
+  "result_collected": true,
+  "result_paths": [
+    "remote-multiseed-results/seed-1.json",
+    "remote-multiseed-results/seed-2.json"
+  ],
+  "runtime_evidence_path": "artifacts/autosci/runs/shim-exp-multiseed-collect/monitor_experiment_runtime_evidence.json",
+  "schema": "autosci_experiment_run_report.v1",
+  "stage": "collect",
+  "status": "completed",
+  "stderr_path": "artifacts/autosci/runs/shim-exp-multiseed-collect/monitor_experiment_executor_stderr.txt",
+  "stdout_path": "artifacts/autosci/runs/shim-exp-multiseed-collect/monitor_experiment_executor_stdout.txt"
+}

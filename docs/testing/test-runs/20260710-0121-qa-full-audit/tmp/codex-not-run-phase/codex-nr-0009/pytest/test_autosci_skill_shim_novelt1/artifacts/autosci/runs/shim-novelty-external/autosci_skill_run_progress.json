@@ -1,0 +1,28 @@
+{
+  "action_count": 1,
+  "actions": [
+    {
+      "action": "evaluate_ideas",
+      "evidence_ids": [
+        "failed:evaluate_ideas"
+      ],
+      "evidence_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0009/pytest/test_autosci_skill_shim_novelt1/artifacts/autosci/runs/shim-novelty-external/envelopes/evaluate_ideas.json",
+      "gate_status": "failed",
+      "reasons": [
+        "Traceback (most recent call last):\n  File \"/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/plugins/autosci/bin/autosci_bridge.py\", line 55, in <module>\n    from policy.gate_policy import GateDecision, decide_gate\nModuleNotFoundError: No module named 'policy.gate_policy'"
+      ],
+      "schema": "N/A",
+      "status": "failed",
+      "warnings": []
+    }
+  ],
+  "completed_count": 1,
+  "current_action": "",
+  "remaining_actions": [],
+  "run_id": "shim-novelty-external",
+  "schema": "autosci_skill_run_progress.v1",
+  "skill": "novelty",
+  "status": "failed",
+  "updated_at": "2026-07-10T18:47:13Z",
+  "work_dir": "artifacts/autosci/runs/shim-novelty-external"
+}

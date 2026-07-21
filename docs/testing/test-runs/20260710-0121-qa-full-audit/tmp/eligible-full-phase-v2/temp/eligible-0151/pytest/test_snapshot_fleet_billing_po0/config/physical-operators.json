@@ -1,0 +1,1 @@
+{"version": 1, "operators": {"op-with-pool": {"display_name": "Operator with Pool", "role": "builder", "persona": "builder", "provider": "anthropic", "vendor": "anthropic", "model": "sonnet", "billing_pool": "anthropic_subscription_interactive", "enabled": true}}}

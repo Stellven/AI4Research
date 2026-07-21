@@ -1,0 +1,11 @@
+{
+  "schema_version": "solar.operator_registry.v1",
+  "lines": {
+    "test_line": {
+      "executors": [],
+      "fallback": [],
+      "schedule": "daily",
+      "output_dir": "reports/test/"
+    }
+  }
+}

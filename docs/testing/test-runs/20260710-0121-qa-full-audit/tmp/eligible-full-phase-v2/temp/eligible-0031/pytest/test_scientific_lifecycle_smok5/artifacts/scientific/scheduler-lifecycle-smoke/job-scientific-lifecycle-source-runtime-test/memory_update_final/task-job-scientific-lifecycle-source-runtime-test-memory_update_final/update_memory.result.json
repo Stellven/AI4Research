@@ -1,0 +1,52 @@
+{
+  "action": "update_memory",
+  "evidence": {
+    "artifacts": [
+      {
+        "path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/memory_update_final/task-job-scientific-lifecycle-source-runtime-test-memory_update_final/final_research_memory_update.json",
+        "type": "solar_evidence_json"
+      }
+    ],
+    "inputs": {
+      "allow_network_fetch": false,
+      "paper_id": "paper-job-scientific-lifecycle-source-runtime-test",
+      "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
+      "smoke_mode": true,
+      "source_evidence": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/report_draft/task-job-scientific-lifecycle-source-runtime-test-report_draft/scientific_report.json"
+    },
+    "limitations": [
+      "Fixture proposes a memory update; it does not mutate wiki state."
+    ],
+    "node_id": "memory_update_final",
+    "outputs": {
+      "changes": [
+        {
+          "confidence": 0.9,
+          "entity_id": "paper-job-scientific-lifecycle-source-runtime-test",
+          "entity_type": "paper",
+          "evidence_ids": [
+            "paper-job-scientific-lifecycle-source-runtime-test"
+          ],
+          "operation": "propose",
+          "path": "knowledge/research/papers/paper-job-scientific-lifecycle-source-runtime-test.md",
+          "summary": "Propose recording normalized metadata for AutoSci Adapter Fixture Paper."
+        }
+      ]
+    },
+    "provenance": {
+      "implementation_package": "plugins/autosci",
+      "operator_id": "autosci-bridge",
+      "timestamp": "2026-07-10T14:05:59Z"
+    },
+    "schema": "research_memory_update.v1",
+    "sprint_id": "job-scientific-lifecycle-source-runtime-test",
+    "status": "completed",
+    "task_id": "task-job-scientific-lifecycle-source-runtime-test-memory_update_final"
+  },
+  "evidence_jsonl": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/memory_update_final/task-job-scientific-lifecycle-source-runtime-test-memory_update_final/evidence.jsonl",
+  "evidence_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/memory_update_final/task-job-scientific-lifecycle-source-runtime-test-memory_update_final/final_research_memory_update.json",
+  "ok": true,
+  "result_path": "artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-source-runtime-test/memory_update_final/task-job-scientific-lifecycle-source-runtime-test-memory_update_final/update_memory.result.json",
+  "schema": "research_memory_update.v1",
+  "status": "completed"
+}

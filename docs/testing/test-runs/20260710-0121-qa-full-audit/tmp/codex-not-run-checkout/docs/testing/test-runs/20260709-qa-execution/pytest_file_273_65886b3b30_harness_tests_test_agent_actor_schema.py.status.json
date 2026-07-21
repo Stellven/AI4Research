@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_273_65886b3b30_harness_tests_test_agent_actor_schema.py",
+  "source": "harness/tests/test_agent_actor_schema.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test_agent_actor_schema.py"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.37,
+  "timeout": false
+}

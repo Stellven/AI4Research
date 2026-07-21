@@ -1,0 +1,18 @@
+{
+  "sprint_id": "test_depth_profile_rejects_lon0",
+  "generated_at": "2026-07-10T18:50:39Z",
+  "document_word_count": 3372,
+  "document_char_count": 25529,
+  "total_token_consumption": 13703,
+  "total_tokens": 13703,
+  "input_tokens": 7320,
+  "output_tokens": 6383,
+  "token_usage_source": "estimated_from_report_artifacts",
+  "token_usage_is_estimated": true,
+  "usage_source": "estimated_from_report_artifacts",
+  "estimated": true,
+  "fallback_reason": "no_provider_usage",
+  "token_usage_files": [],
+  "ledger_path": "",
+  "ledger_lines": 0
+}

@@ -1,0 +1,40 @@
+{
+  "artifacts": [
+    {
+      "path": "artifacts/scientific/no-log/research_memory_update.json",
+      "type": "solar_evidence_json"
+    }
+  ],
+  "inputs": {
+    "paper_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0010/pytest/test_phase9_ingest_registratio0/raw/registered_skillgen.md",
+    "wiki_root": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-path-rerun/codex-nr-0010/pytest/test_phase9_ingest_registratio0/wiki"
+  },
+  "limitations": [
+    "Fixture proposes a memory update; it does not mutate wiki state."
+  ],
+  "node_id": "node-ingest-no-log",
+  "outputs": {
+    "changes": [
+      {
+        "confidence": 0.9,
+        "entity_id": "paper-registered-skillgen",
+        "entity_type": "paper",
+        "evidence_ids": [
+          "paper-registered-skillgen"
+        ],
+        "operation": "propose",
+        "path": "knowledge/research/papers/paper-registered-skillgen.md",
+        "summary": "Propose recording normalized metadata for Registered SkillGen Source."
+      }
+    ]
+  },
+  "provenance": {
+    "implementation_package": "plugins/autosci",
+    "operator_id": "autosci-bridge",
+    "timestamp": "2026-07-10T19:22:42Z"
+  },
+  "schema": "research_memory_update.v1",
+  "sprint_id": "sprint-phase20",
+  "status": "completed",
+  "task_id": "task-ingest-no-log"
+}

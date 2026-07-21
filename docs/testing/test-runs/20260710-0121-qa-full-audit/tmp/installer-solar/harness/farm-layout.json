@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "session_name": "solar-harness",
+  "windows": [
+    {
+      "name": "Product Delivery",
+      "index": 0,
+      "panes": [
+        { "pane_index": 0, "role": "pm", "persona": "pm" },
+        { "pane_index": 1, "role": "planner", "persona": "planner" },
+        { "pane_index": 2, "role": "builder", "persona": "builder" },
+        { "pane_index": 3, "role": "evaluator", "persona": "evaluator" }
+      ]
+    },
+    {
+      "name": "Strategy Lab",
+      "index": 1,
+      "panes": [
+        { "pane_index": 0, "role": "architect", "persona": "architect" },
+        { "pane_index": 1, "role": "lab-builder", "persona": "lab-builder" },
+        { "pane_index": 2, "role": "lab-evaluator", "persona": "lab-evaluator" },
+        { "pane_index": 3, "role": "observer", "persona": "observer" }
+      ]
+    }
+  ],
+  "personas": {
+    "pm":            { "window": 0, "pane": 0, "model": "opus", "cn": "产品经理" },
+    "planner":       { "window": 0, "pane": 1, "model": "opus", "cn": "规划者" },
+    "builder":       { "window": 0, "pane": 2, "model": "glm-5.1", "cn": "建设者" },
+    "evaluator":     { "window": 0, "pane": 3, "model": "glm-5.1", "cn": "审判官" },
+    "architect":     { "window": 1, "pane": 0, "model": "opus", "cn": "架构师" },
+    "lab-builder":   { "window": 1, "pane": 1, "model": "glm-5.1", "cn": "实验建设者" },
+    "lab-evaluator": { "window": 1, "pane": 2, "model": "glm-5.1", "cn": "实验审判官" },
+    "observer":      { "window": 1, "pane": 3, "model": "glm-5.1", "cn": "观察者" }
+  },
+  "lane_hints": {
+    "delivery": { "window": 0, "description": "Normal sprint delivery" },
+    "lab":      { "window": 1, "description": "Experiments, benchmarks, diagnostics" },
+    "strategy": { "window": 1, "description": "Architecture, tech roadmap, paper application" }
+  }
+}

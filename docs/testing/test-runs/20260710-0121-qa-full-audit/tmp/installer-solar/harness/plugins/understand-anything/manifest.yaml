@@ -1,0 +1,61 @@
+---
+id: understand-anything
+name: "Understand-Anything Knowledge Graph Builder"
+version: "0.1.0"
+description: "Solar integration for understand-anything knowledge graph generation, domain analysis, onboarding tours, and repository chat."
+status: enabled
+
+write_scope:
+  - ".understand-anything/"
+
+read_scope:
+  - "<target-project>/"
+
+capabilities:
+  - "understand-anything.knowledge_graph"
+  - "understand-anything.domain_analysis"
+  - "understand-anything.tour"
+  - "understand-anything.chat"
+
+commands:
+  - "/understand"
+  - "/understand-knowledge"
+  - "/understand-domain"
+  - "/understand-chat"
+  - "/understand-dashboard"
+  - "/understand-explain"
+  - "/understand-diff"
+  - "/understand-onboard"
+
+background_safety:
+  mode: bounded
+  idle_only: false
+  rate_limit: "local-pane"
+  max_runtime_s: 900
+  max_memory_mb: 4096
+
+eval_packs:
+  - "tests/test_understand_anything_operator.py"
+  - "tests/graph/test_understand_anything_proof_gate.py"
+
+rollback:
+  strategy: disable
+  commands:
+    - "solar-harness plugins disable understand-anything"
+
+integration_level: default_usable
+
+entry: "/understand-knowledge"
+
+events:
+  - "understand_anything.skill_selected"
+  - "understand_anything.capsule_compiled"
+
+depends_on:
+  - "thunderomlx"
+
+tags:
+  - "knowledge"
+  - "onboarding"
+  - "architecture"
+  - "understand-anything"

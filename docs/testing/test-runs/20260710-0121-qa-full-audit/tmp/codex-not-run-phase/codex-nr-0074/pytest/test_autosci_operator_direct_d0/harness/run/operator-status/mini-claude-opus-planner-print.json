@@ -1,0 +1,19 @@
+{
+  "operator_id": "mini-claude-opus-planner-print",
+  "runtime_state": "auth_expired",
+  "state": "idle",
+  "heartbeat_at": "2026-07-10T18:50:03Z",
+  "resolved_persona": "planner",
+  "model_route": {
+    "requested_model": "opus",
+    "routing_model": "opus",
+    "effective_provider": "anthropic",
+    "effective_model": "opus"
+  },
+  "requested_model": "opus",
+  "routing_model": "opus",
+  "effective_provider": "anthropic",
+  "effective_model": "opus",
+  "expires_at": "2026-07-11T00:50:03Z",
+  "updated_at": "2026-07-10T18:50:03Z"
+}

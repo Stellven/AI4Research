@@ -1,0 +1,20 @@
+=== Solar KB + Obsidian Autouse Integration Tests ===
+SOLAR_DB=/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.P9PKN9mysL/solar.db
+OBSIDIAN_VAULT_PATH=/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.P9PKN9mysL/vault
+
+[PASS] T1 A6 fail-open: missing DB returns empty hits
+[FAIL] T2 A4 memory-influence.sh: syntax error
+[PASS] T3 A1 Solar KB retrieval: hits found, elapsed<800ms
+[obsidian-indexer] vault=/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.P9PKN9mysL/vault indexed=2 skipped=0 deleted=0 errors=0 elapsed=2.3ms
+[PASS] T4 A2 Obsidian vault: Lumen Orbit indexed and retrievable
+[PASS] T5 obsidian_vault_index schema: correct columns
+[PASS] T6 solar-harness.sh: syntax valid
+[PASS] T6 solar-harness wiki sync-vault: subcommand registered
+Solar Wiki Capture listening on http://127.0.0.1:8893
+[PASS] T7 A5 capture server /healthz: ok
+[PASS] T7 A5 /capture-json: structured web capture saved
+[PASS] T7 A5 /capture-json: duplicate content reused
+[PASS] T7 A5 capture server /status: solar_kb+obsidian_sync+dedup present
+[PASS] T8 A6 SOLAR_KB_CONTEXT=0: hook outputs nothing
+
+=== Results: 11 PASS / 1 FAIL ===

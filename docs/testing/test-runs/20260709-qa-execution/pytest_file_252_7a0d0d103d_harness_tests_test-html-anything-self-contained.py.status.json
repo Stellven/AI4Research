@@ -1,0 +1,14 @@
+{
+  "name": "pytest_file_252_7a0d0d103d_harness_tests_test-html-anything-self-contained.py",
+  "source": "harness/tests/test-html-anything-self-contained.py",
+  "command": [
+    "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/harness/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "harness/tests/test-html-anything-self-contained.py"
+  ],
+  "exit_code": 0,
+  "runtime_seconds": 0.147,
+  "timeout": false
+}

@@ -1,0 +1,3 @@
+R1 — modules compile
+  FAIL: ruflo/skills modules compile
+R2 — Ruflo vendor status is readable

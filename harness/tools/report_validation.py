@@ -15,8 +15,6 @@ FORBIDDEN_PUBLIC_FIELD_RE = re.compile(
 CLAIM_SPLIT_RE = re.compile(r"[。！？!?]\s*|\n+-\s+")
 VIDEO_REF_RE = re.compile(r"\bV\d{3}\b")
 ACTION_INSIGHT_RE = re.compile(r"(建议|应当|可以|下一步|观察|优先|风险)")
-UNCERTAINTY_RE = re.compile(r"(证据不足|不确定|暂不作为强结论|待验证|观察项)")
-CLAIM_SIGNAL_RE = re.compile(r"(判断|结论|认为|说明|显示|意味着|证明)")
 
 
 def _text(value: Any) -> str:
@@ -42,10 +40,11 @@ def _evidence_refs(evidence_pack: dict[str, Any]) -> list[str]:
 
 def _claim_sentences(markdown: str) -> list[str]:
     claims: list[str] = []
-    text = re.sub(r"(?m)^#+\s.*$", "", markdown)
-    for part in CLAIM_SPLIT_RE.split(text):
+    for part in CLAIM_SPLIT_RE.split(markdown):
         sentence = part.strip()
-        if len(sentence) < 18 and not CLAIM_SIGNAL_RE.search(sentence):
+        if len(sentence) < 18:
+            continue
+        if sentence.startswith("#"):
             continue
         claims.append(sentence)
     return claims
@@ -70,9 +69,6 @@ def run_chapter_verifier(
         if any(ref in claim for ref in refs) or VIDEO_REF_RE.search(claim):
             claims_with_refs.append(claim)
             continue
-        if UNCERTAINTY_RE.search(claim):
-            claims_with_refs.append(claim)
-            continue
         # Actionable follow-ups can inherit the chapter's cited evidence context,
         # but only after the chapter has cited at least one supplied reference.
         if referenced and ACTION_INSIGHT_RE.search(claim):
@@ -82,7 +78,7 @@ def run_chapter_verifier(
     deep_required = bool(chapter_job.get("deep_writer_required") or (evidence_pack.get("chapter") or {}).get("deep_writer_required"))
     has_deep_proof = bool(proof.get("deep_proof_path") or proof.get("deep_research_state_proof") or proof.get("deep_writer_proof"))
     checks = {
-        "has_clear_thesis": bool(CLAIM_SIGNAL_RE.search(text)) and len(text) >= 80,
+        "has_clear_thesis": bool(re.search(r"(判断|结论|认为|说明|显示|意味着)", text)) and len(text) >= 80,
         "uses_required_evidence": bool(referenced),
         "grounded_claim_ratio": round(grounded_claim_ratio, 4),
         "has_counter_evidence": bool(evidence_pack.get("counter_evidence")) or "证据不足" in text or "不确定" in text,
@@ -108,56 +104,6 @@ def run_chapter_verifier(
         "referenced_evidence": referenced,
         "repair_reasons": repair_reasons,
         "grounded_claim_target": grounded_claim_target,
-    }
-
-
-def repair_chapter_markdown(markdown: str, verification: dict[str, Any], evidence_pack: dict[str, Any]) -> dict[str, Any]:
-    """Deterministically downgrade unsupported claims before asking for model repair.
-
-    This repair is intentionally conservative. It keeps headings, short bridge
-    text, cited claims, and explicit uncertainty statements, while replacing
-    unsupported long claims with a reader-safe uncertainty sentence.
-    """
-    refs = _evidence_refs(evidence_pack)
-    reasons = set(str(item) for item in (verification.get("repair_reasons") or []))
-    needs_grounding_repair = bool(
-        {"no_unsupported_claim", "grounded_claim_ratio_below_target"} & reasons
-        or float((verification.get("checks") or {}).get("grounded_claim_ratio") or 1.0) < float(verification.get("grounded_claim_target") or 0.9)
-    )
-    if not needs_grounding_repair:
-        return {"markdown": markdown, "changed": False, "replacements": []}
-
-    replacements: list[dict[str, Any]] = []
-    repaired_lines: list[str] = []
-    referenced_anywhere = any(ref and ref in str(markdown or "") for ref in refs)
-    for line in str(markdown or "").splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            repaired_lines.append(line)
-            continue
-        pieces = [part for part in re.split(r"(?<=[。！？!?])", line) if part]
-        repaired_pieces: list[str] = []
-        for piece in pieces:
-            text = piece.strip()
-            if len(text) < 18:
-                repaired_pieces.append(piece)
-                continue
-            grounded = any(ref and ref in text for ref in refs) or VIDEO_REF_RE.search(text)
-            acceptable_uncertainty = UNCERTAINTY_RE.search(text)
-            actionable_with_context = referenced_anywhere and ACTION_INSIGHT_RE.search(text)
-            if grounded or acceptable_uncertainty or actionable_with_context:
-                repaired_pieces.append(piece)
-                continue
-            replacement = "该判断缺少可追踪证据，暂不作为强结论。"
-            replacements.append({"removed_preview": text[:160], "replacement": replacement})
-            repaired_pieces.append(replacement)
-        repaired_lines.append("".join(repaired_pieces))
-
-    repaired = "\n".join(repaired_lines).strip()
-    return {
-        "markdown": repaired or markdown,
-        "changed": bool(replacements),
-        "replacements": replacements,
     }
 
 

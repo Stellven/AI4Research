@@ -1,0 +1,27 @@
+{
+  "schema_version": "influence.statement.v1",
+  "statement_id": "stmt-fixture-001",
+  "source": "x_backend",
+  "source_url": "https://example.com/status/12345",
+  "author": {
+    "platform": "x",
+    "handle": "@fixture_user",
+    "display_name": "Fixture User"
+  },
+  "timestamp": "2026-05-28T12:00:00Z",
+  "text": "GPT-5 capability jump is underestimated. The scaling law predictions from 2024 are too conservative.",
+  "language": "en",
+  "entities": ["GPT-5", "scaling law"],
+  "quality_flags": {
+    "is_quote": false,
+    "is_reply": false,
+    "is_joke_or_meme": false,
+    "is_marketing": false,
+    "transcript_quality": null
+  },
+  "raw_metadata": {
+    "likes": 150,
+    "reposts": 42,
+    "replies": 18
+  }
+}

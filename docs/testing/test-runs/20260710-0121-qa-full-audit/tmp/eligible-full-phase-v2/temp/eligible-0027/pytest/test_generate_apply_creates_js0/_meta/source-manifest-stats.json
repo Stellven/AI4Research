@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "total_files": 5,
+  "total_bytes": 74,
+  "error_count": 0,
+  "by_category": {
+    "papers": 1,
+    "webpages": 1,
+    "apple-notes": 1,
+    "chatgpt": 0,
+    "other": 2
+  },
+  "generated_at": "2026-07-10T14:05:15Z",
+  "raw_dir": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0027/pytest/test_generate_apply_creates_js0/_raw/file-uploads",
+  "manifest_path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v2/temp/eligible-0027/pytest/test_generate_apply_creates_js0/_meta/source-manifest.jsonl"
+}

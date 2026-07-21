@@ -1,0 +1,1 @@
+{"schema": "literature_discovery.v1", "task_id": "audit-survey", "status": "completed", "outputs": {"query": "approval audit", "candidates": [{"candidate_id": "local:audit-source", "title": "Audit Source", "source_ref": "fixture://audit-source", "source_channels": ["references"]}]}}

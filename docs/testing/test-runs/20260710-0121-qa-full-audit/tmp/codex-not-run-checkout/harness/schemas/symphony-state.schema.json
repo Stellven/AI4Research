@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Symphony State",
+  "description": "Schema for solar-symphony scheduler state files",
+  "type": "object",
+  "required": ["sprint_id"],
+  "properties": {
+    "sprint_id": {
+      "type": "string",
+      "description": "Sprint identifier"
+    },
+    "claimed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the sprint was claimed (claimed state)"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["P0", "P1", "P2", "P3"],
+      "description": "Sprint priority"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When execution started (running state)"
+    },
+    "workspace": {
+      "type": "string",
+      "description": "Path to the isolated workspace"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When execution completed (completed state)"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["pass", "fail"],
+      "description": "Execution result"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of retry attempts (retry state)"
+    },
+    "next_retry_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Next retry time (retry state)"
+    },
+    "backoff_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Backoff duration in milliseconds (retry state)"
+    }
+  },
+  "additionalProperties": false
+}

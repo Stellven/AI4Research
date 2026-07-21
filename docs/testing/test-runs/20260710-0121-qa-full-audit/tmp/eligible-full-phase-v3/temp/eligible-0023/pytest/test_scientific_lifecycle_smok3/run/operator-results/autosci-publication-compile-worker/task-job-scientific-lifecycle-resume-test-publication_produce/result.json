@@ -1,0 +1,21 @@
+{
+  "task_id": "task-job-scientific-lifecycle-resume-test-publication_produce",
+  "operator_id": "autosci-publication-compile-worker",
+  "sprint_id": "job-scientific-lifecycle-resume-test",
+  "node_id": "publication_produce",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T14:14:09Z",
+  "finished_at": "2026-07-10T14:14:09Z",
+  "log_tail": "            \"path\": \"artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/publication_produce/task-job-scientific-lifecycle-resume-test-publication_produce/paper_compile_report.json\",\n            \"type\": \"paper_compile_report_json\"\n          },\n          {\n            \"path\": \"artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/publication_produce/task-job-scientific-lifecycle-resume-test-publication_produce/compile_paper_approval_contract.json\",\n            \"type\": \"approval_contract_json\"\n          },\n          {\n            \"path\": \"artifacts/scientific/scheduler-lifecycle-smoke/job-scientific-lifecycle-resume-test/publication_produce/task-job-scientific-lifecycle-resume-test-publication_produce/compile_paper_gate_policy_decision.json\",\n            \"type\": \"gate_policy_decision_json\"\n          },\n          {\n            \"path\": \"artifacts/scientific/external/resume-test/compile_target/main.tex\",\n            \"type\": \"latex_source\"\n          },\n          {\n            \"path\": \"artifacts/scientific/external/resume-test/compile_target/main.pdf\",\n            \"type\": \"compiled_pdf\"\n          }\n        ],\n        \"publication_type\": \"paper\",\n        \"source_report_id\": \"paper-compile:users-jamesyuan-developer-github-repos-on-git-bettersolar-docs-testing-test-runs-20260710-0121-qa-full-audit-tmp-eligible-full-phase-v3-temp-eligible-0023-pytest-test-scientific-lifecycle-smok3-artifacts-scientific-external-resume-test-compile-target\"\n      },\n      \"policy_decision\": {\n        \"action\": \"compile_paper\",\n        \"allow_destructive\": false,\n        \"allow_email\": false,\n        \"allow_network\": false,\n        \"allow_remote\": false,\n        \"allowed\": false,\n        \"allowed_write_roots\": [\n          \"artifacts/autosci\",\n          \"artifacts/scientific\"\n        ],\n        \"blocked\": true,\n        \"execute_side_effects\": false,\n        \"mode\": \"strict_hitl\",\n        \"proof_best_effort\": false,\n        \"proof_required\": true,\n        \"reasons\": [\n          \"read_local is allowed in strict_hitl.\",\n          \"write_artifact is allowed in strict_hitl.\",\n          \"tex_compile requires HITL approval in strict_hitl.\",\n          \"local_command requires HITL approval in strict_hitl.\"\n        ],\n        \"require_approval_ref\": true,\n        \"require_before_after_artifacts\": true,\n        \"require_hitl\": true,\n        \"require_runtime_evidence\": true,\n        \"sandbox_required\": false,",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

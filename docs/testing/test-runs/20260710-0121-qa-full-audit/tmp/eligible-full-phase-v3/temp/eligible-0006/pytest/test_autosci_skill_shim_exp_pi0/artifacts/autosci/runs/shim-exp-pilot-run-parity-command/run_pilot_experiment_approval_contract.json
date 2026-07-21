@@ -1,0 +1,191 @@
+{
+  "action": "run_pilot_experiment",
+  "after_artifacts": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_result.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_result.json",
+      "verifiable": true
+    }
+  ],
+  "after_ready": true,
+  "allowlist_evidence": [
+    {
+      "artifact_path": "pilot-parity-allowlist.json",
+      "exists": true,
+      "kind": "file",
+      "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_pi0/pilot-parity-allowlist.json",
+      "verifiable": true
+    },
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_gate_policy_allowlist.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_gate_policy_allowlist.json",
+      "verifiable": true
+    }
+  ],
+  "allowlist_ready": true,
+  "approval_ref": "policy:auto:parity_demo:run_pilot_experiment:2026-07-10T14:12:50Z",
+  "approval_state": "verified",
+  "approved": true,
+  "authorization_request": {
+    "action": "run_pilot_experiment",
+    "approval_state": "verified",
+    "continuation": {
+      "access_patch": {
+        "after_artifacts": [],
+        "allowlist_evidence": [],
+        "approval_ref": "",
+        "before_artifacts": [],
+        "execute_approved_side_effect": true,
+        "runtime_evidence": []
+      },
+      "request_fingerprint": "16c862b26b1a3c48f22c3ddaca66dd604f0e03da24b5716f4a237497e0787ff7",
+      "resume_strategy": "rerun_same_action_with_approval_patch",
+      "retriable": false,
+      "same_envelope_supported": true,
+      "schema": "autosci_gate_continuation.v1",
+      "status": "ready"
+    },
+    "missing": [],
+    "non_error_contract": {
+      "approval_state": "verified",
+      "blocked_runs_exit_successfully": true,
+      "evidence_status": "inconclusive"
+    },
+    "prompt": "Grant approval and provide the missing approval/runtime artifacts, then rerun the same action with the supplied access patch.",
+    "requested_access": {
+      "after_artifacts": false,
+      "allowlist_evidence": false,
+      "approval_ref": false,
+      "before_artifacts": false,
+      "runtime_evidence": false
+    },
+    "requested_side_effects": [
+      "local_process_launch",
+      "remote_execution",
+      "result_collection"
+    ],
+    "schema": "autosci_gate_authorization_request.v1",
+    "status": "authorized"
+  },
+  "before_artifacts": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_gate_policy_decision.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_gate_policy_decision.json",
+      "verifiable": true
+    }
+  ],
+  "before_ready": true,
+  "execution_verified": true,
+  "missing": [],
+  "policy_auto_approved": true,
+  "policy_decision": {
+    "action": "run_pilot_experiment",
+    "allow_destructive": false,
+    "allow_email": false,
+    "allow_network": false,
+    "allow_remote": false,
+    "allowed": true,
+    "allowed_write_roots": [
+      "artifacts/autosci",
+      "artifacts/scientific"
+    ],
+    "blocked": false,
+    "execute_side_effects": true,
+    "mode": "parity_demo",
+    "proof_best_effort": false,
+    "proof_required": true,
+    "reasons": [
+      "read_local is allowed in parity_demo.",
+      "write_artifact is allowed in parity_demo.",
+      "local_command is auto-allowed in parity_demo."
+    ],
+    "require_approval_ref": false,
+    "require_before_after_artifacts": false,
+    "require_hitl": false,
+    "require_runtime_evidence": false,
+    "sandbox_required": true,
+    "side_effects": [
+      "read_local",
+      "write_artifact",
+      "local_command"
+    ],
+    "synthetic_approval_ref": "policy:auto:parity_demo:run_pilot_experiment:2026-07-10T14:12:50Z",
+    "warnings": [
+      "Auto-approved by gate policy mode `parity_demo`; no human approval was requested."
+    ]
+  },
+  "ready_for_execution": true,
+  "runtime_evidence": [
+    {
+      "artifact_path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_runtime_evidence.json",
+      "exists": true,
+      "kind": "file",
+      "path": "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_runtime_evidence.json",
+      "verifiable": true
+    }
+  ],
+  "runtime_ready": true,
+  "schema": "autosci_approval_contract.v1",
+  "semantic_runtime": {
+    "action": "run_pilot_experiment",
+    "checks": [
+      {
+        "check": "approval_contract_execution_verified",
+        "detail": "Approval, allowlist, runtime, and before/after artifact paths are present.",
+        "status": "ok"
+      },
+      {
+        "check": "runtime_records_loaded",
+        "detail": "1 runtime record(s) loaded.",
+        "status": "ok"
+      },
+      {
+        "check": "pilot_exit_ok",
+        "detail": "False",
+        "status": "error"
+      },
+      {
+        "check": "pilot_result_collected",
+        "detail": "True",
+        "status": "ok"
+      }
+    ],
+    "detail": {
+      "command_run": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_pi0/pilot_parity_command.py --experiment-id pilot-parity-001 --marker /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/eligible-full-phase-v3/temp/eligible-0006/pytest/test_autosci_skill_shim_exp_pi0/pilot-parity-marker.txt",
+      "errors": [],
+      "evidence_ids": [
+        "pilot-runtime:pilot-parity-001",
+        "task-autosci-skillgen-run_pilot_experiment",
+        "node-run-pilot-experiment",
+        "artifacts/autosci/runs/shim-exp-pilot-run-parity-command/run_pilot_experiment_runtime_evidence.json"
+      ],
+      "logs": [
+        "Pilot experiment command executed without parseable experiment payload."
+      ],
+      "metrics": [
+        {
+          "name": "experiment_exit_code",
+          "value": 2
+        }
+      ],
+      "outcome": "failed",
+      "pilot_exit_ok": false,
+      "records_loaded": 1,
+      "result_collected": true
+    },
+    "schema": "autosci_runtime_semantic_verification.v1",
+    "status": "incomplete",
+    "verified": false
+  },
+  "side_effects": [
+    "local_process_launch",
+    "remote_execution",
+    "result_collection"
+  ]
+}

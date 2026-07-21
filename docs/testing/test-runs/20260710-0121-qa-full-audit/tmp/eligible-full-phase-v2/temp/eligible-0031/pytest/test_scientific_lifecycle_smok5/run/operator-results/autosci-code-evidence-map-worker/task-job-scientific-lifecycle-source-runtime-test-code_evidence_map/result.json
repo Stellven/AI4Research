@@ -1,0 +1,21 @@
+{
+  "task_id": "task-job-scientific-lifecycle-source-runtime-test-code_evidence_map",
+  "operator_id": "autosci-code-evidence-map-worker",
+  "sprint_id": "job-scientific-lifecycle-source-runtime-test",
+  "node_id": "code_evidence_map",
+  "status": "completed",
+  "exit_code": 0,
+  "started_at": "2026-07-10T14:05:53Z",
+  "finished_at": "2026-07-10T14:05:53Z",
+  "log_tail": "{\n  \"action\": \"map_code_evidence\",",
+  "model_route": {
+    "requested_model": "N/A",
+    "routing_model": "N/A",
+    "effective_provider": "command",
+    "effective_model": "N/A"
+  },
+  "requested_model": "N/A",
+  "routing_model": "N/A",
+  "effective_provider": "command",
+  "effective_model": "N/A"
+}

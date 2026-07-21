@@ -1,0 +1,12 @@
+{
+  "name": "root_ts_individual_tests_semantic-design.test.ts",
+  "source": "tests/semantic-design.test.ts",
+  "command": [
+    "bun",
+    "test",
+    "tests/semantic-design.test.ts"
+  ],
+  "exit_code": 1,
+  "runtime_seconds": 0.14,
+  "timeout": false
+}

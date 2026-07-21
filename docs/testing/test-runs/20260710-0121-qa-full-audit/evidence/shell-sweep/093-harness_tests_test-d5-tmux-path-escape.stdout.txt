@@ -1,0 +1,7 @@
+[D5] tmux send-keys 路径安全测试
+  [0;31m✗[0m solar-harness.sh 只有 0 处 printf '%q' (需要 >= 3)
+  [0;31m✗[0m coordinator-watchdog.sh 只有 0 处 printf '%q' (需要 >= 2)
+  [0;32m✓[0m printf '%q' 对带空格路径转义正确: /tmp/Test\ Project\ With\ Space
+  [0;32m✓[0m 无未转义的 send-keys
+
+  [0;32mPASS: 2[0m  [0;31mFAIL: 2[0m

@@ -1,0 +1,11 @@
+{
+  "schema": "experiment_plan.v1",
+  "fixture_source": true,
+  "hypothesis": "Malformed evidence is rejected",
+  "metrics": [
+    "typed_rejection"
+  ],
+  "budget": {
+    "runs": 1
+  }
+}

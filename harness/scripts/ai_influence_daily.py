@@ -40,8 +40,8 @@ DEFAULT_MAX_AGE_DAYS = int(os.environ.get("AI_INFLUENCE_MAX_AGE_DAYS", "30"))
 DEFAULT_ANALYSIS_TOP_N = int(os.environ.get("AI_INFLUENCE_ANALYSIS_TOP_N", "300"))
 DEFAULT_GLM_BATCH_SIZE = int(os.environ.get("AI_INFLUENCE_GLM_BATCH_SIZE", "10"))
 USER_AGENT = "Solar-AI-Influence-Daily/2.0"
-DEFAULT_MAIL_TO = "sean.lisihao@huawei.com"
-DEFAULT_GMAIL_USER = "lisihao@gmail.com"
+DEFAULT_MAIL_TO = "solar@example.com"
+DEFAULT_GMAIL_USER = ""
 DEFAULT_GMAIL_KEYCHAIN_SERVICE = "solar-ai-influence-gmail"
 
 
@@ -228,7 +228,7 @@ def collect_via_dom_llm(handle: str, session: requests.Session, dry_run: bool = 
     print(f"      [DOM_DIRECT] Launching Playwright to scrape DOM for @{handle}...", flush=True)
 
     scraper_path = str(Path(__file__).resolve().parent.parent / "tools" / "playwright_twitter_scraper.py")
-    python_bin = "/Users/lisihao/.claude/mcp-servers/browser-use/.venv/bin/python"
+    python_bin = "~/.claude/mcp-servers/browser-use/.venv/bin/python"
     
     try:
         proc = subprocess.run([python_bin, scraper_path, handle], capture_output=True, text=True, timeout=60)

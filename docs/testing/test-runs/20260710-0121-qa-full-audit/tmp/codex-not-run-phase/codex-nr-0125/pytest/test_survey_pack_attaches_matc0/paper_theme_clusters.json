@@ -1,0 +1,1 @@
+{"ok": true, "trends": [{"trend_id": "trend_agent", "theme_id": "agent_architecture", "label": "Agent Architecture & Composition", "claim": "Agent architecture uses context, tool, memory, and workflow composition.", "representative_titles": ["A Language for Describing Agentic LLM Contexts"]}]}
