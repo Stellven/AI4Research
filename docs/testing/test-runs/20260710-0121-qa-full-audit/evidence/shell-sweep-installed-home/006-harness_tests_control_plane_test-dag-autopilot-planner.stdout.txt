@@ -1,8 +1,0 @@
-T1: planner contract requires task_graph
-  PASS: planner persona mentions task_graph
-  PASS: contract-template-v2 validates graph
-  PASS: sprint-contract mentions task_graph
-T2: autopilot apply enqueues only ready DAG nodes
-  PASS: autopilot detects graph_ready_nodes
-  PASS: autopilot enqueue result ok
-  FAIL: task queue missing

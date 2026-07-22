@@ -1,1 +1,0 @@
-# Solar Experience Memory Library

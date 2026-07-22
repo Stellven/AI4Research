@@ -1,1 +1,0 @@
-knowledge_extracted_validator ok

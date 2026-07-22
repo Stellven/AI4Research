@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.084" timestamp="2026-07-10T15:01:05.029563-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="" name="harness.tests.test_evidence_compression" time="0.000"><error message="collection failure">ImportError while importing test module '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/tests/test_evidence_compression.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/importlib/__init__.py:88: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-harness/tests/test_evidence_compression.py:16: in &lt;module&gt;
-    from github_intelligence.evidence import (
-E   ImportError: cannot import name 'clean_readme' from 'github_intelligence.evidence' (/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/github_intelligence/evidence.py)</error></testcase></testsuite></testsuites>

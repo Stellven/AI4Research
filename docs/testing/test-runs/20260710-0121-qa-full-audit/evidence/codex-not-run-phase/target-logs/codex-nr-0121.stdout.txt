@@ -1,9 +1,0 @@
-.........................F                                               [100%]
-=================================== FAILURES ===================================
-________________ TestMarkdownReport.test_includes_quality_gates ________________
-harness/tests/research_integration/test_status_ui.py:432: in test_includes_quality_gates
-    assert "## DeepResearch Quality Gates" in md
-E   AssertionError: assert '## DeepResearch Quality Gates' in '# Research Status Report: sid\n\n**Status**: no_data\n**Eval Files**: 0\n\n## Metrics\n\n| Metric | Value |\n|-------...tatus | Verdict | Auto Run | Errors |\n|------|--------|---------|----------|--------|\n| R8 | ok | PASS | True |  |\n'
-=========================== short test summary info ============================
-FAILED harness/tests/research_integration/test_status_ui.py::TestMarkdownReport::test_includes_quality_gates
-1 failed, 25 passed in 0.08s

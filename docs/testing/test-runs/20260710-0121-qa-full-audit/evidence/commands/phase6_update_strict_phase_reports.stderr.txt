@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/update_eligible_phase_reports.py", line 209, in <module>
-    raise SystemExit(main())
-                     ~~~~^^
-  File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/update_eligible_phase_reports.py", line 79, in main
-    f"- Top item types: {inventory['item_type_counts']}",
-                         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
-KeyError: 'item_type_counts'

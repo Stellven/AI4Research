@@ -1,1 +1,0 @@
-{"event_type":"action.executed","sprint_id":"sprint-n9-integration-test","node_id":"N9","actor":"legacy_dispatcher","payload":{"action_id":"X9","exit_code":0,"output_hash":"sha256:deadbeef"},"event_id":"e835aebb-4a68-4b1e-837f-3a8739fa1262","created_at":"2026-07-10T18:50:14.789204Z","schema_version":"v1"}

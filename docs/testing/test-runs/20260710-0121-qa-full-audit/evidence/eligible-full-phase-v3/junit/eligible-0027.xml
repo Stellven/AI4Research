@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.072" timestamp="2026-07-10T10:14:15.573466-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.graph.test_graph_dispatch_hygiene" name="test_dirty_pane_is_unavailable_before_dispatch" time="0.014"><failure message="AssertionError: assert '' == 'pane_hygiene_dirty'&#10;  &#10;  - pane_hygiene_dirty">harness/tests/graph/test_graph_dispatch_hygiene.py:29: in test_dirty_pane_is_unavailable_before_dispatch
-    assert gnd._pane_hygiene_unavailable_reason("solar-harness-lab:0.2") == "pane_hygiene_dirty"
-E   AssertionError: assert '' == 'pane_hygiene_dirty'
-E     
-E     - pane_hygiene_dirty</failure></testcase></testsuite></testsuites>

@@ -1,1 +1,0 @@
-WARN: html_missing:/var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.RuE7ZC7tOr/harness/sprints/missing.html

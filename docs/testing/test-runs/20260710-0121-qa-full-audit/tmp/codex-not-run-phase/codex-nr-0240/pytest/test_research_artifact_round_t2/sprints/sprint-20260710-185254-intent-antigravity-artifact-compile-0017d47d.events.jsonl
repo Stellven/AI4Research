@@ -1,1 +1,0 @@
-{"ts": "2026-07-10T18:52:54Z", "actor": "pm_dispatch", "event": "compiled_requirement_package_created", "sid": "sprint-20260710-185254-intent-antigravity-artifact-compile-0017d47d", "status": "info", "detail": {"phase": "prd_ready", "handoff_to": "planner", "target_role": "planner"}}

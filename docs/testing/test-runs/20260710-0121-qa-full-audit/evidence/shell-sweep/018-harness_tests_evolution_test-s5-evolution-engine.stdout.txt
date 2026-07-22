@@ -1,3 +1,0 @@
-T1: modules compile
-  FAIL: evolution modules compile
-T2: failure mining produces clusters

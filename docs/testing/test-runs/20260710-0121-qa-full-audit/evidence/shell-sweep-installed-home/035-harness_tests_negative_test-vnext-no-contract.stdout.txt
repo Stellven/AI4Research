@@ -1,2 +1,0 @@
-PASS N2-NC-1 reason=no_contract broker_exc=UncontractedActionError ledger_events=1
-OK test-vnext-no-contract.sh

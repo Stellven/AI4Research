@@ -5,6 +5,8 @@ secrets/
 *.env
 .env
 .env*
+!.env.example
+!.env.template
 *_secret*
 *_private*
 
@@ -20,20 +22,54 @@ core/db/*.sqlite
 core/db/*.sqlite3
 .solar/solar.db
 
-# 缓存和临时文件
-*.log
-*.tmp
+# 操作系统元数据
 .DS_Store
 **/.DS_Store
+._*
+**/._*
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# 缓存、临时文件和本地环境
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
 __pycache__/
 **/__pycache__/
 *.pyc
-.venv/
+.venv*/
+venv/
+env/
+ENV/
 .uv-cache/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.ipynb_checkpoints/
 node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+.bun/
 bun.lockb
 *.cache
+/.cache/
+
+# 仓库根目录的临时工作区
+/tmp/
+/tmp_*/
+
+# 本地汇总/迁移 source archive（包含机器路径和重复运行快照）
+/Feature list stuff/Solar_Harness_All_Sources_*/
 
 # 用户私有配置
 .solar/STATE.md
@@ -62,6 +98,14 @@ target/
 # 测试覆盖
 coverage/
 *.cover
+
+# 测试 runner 生成物；只保留目录政策说明
+test-results/
+playwright-report/
+blob-report/
+.nyc_output/
+docs/testing/test-runs/*
+!docs/testing/test-runs/README.md
 
 # Solar Harness 运行时/证据产物
 harness/.coverage
@@ -110,6 +154,7 @@ harness/artifacts/autosci/webui/
 harness/artifacts/autosci/operator-smoke/
 harness/artifacts/autosci/phase19/current-parity-inventory-*.json
 harness/harness/
+harness/artifacts/scientific/sprint-*/
 harness/artifacts/scientific/workflow-runs/
 .solar-backups/
 .worktrees/

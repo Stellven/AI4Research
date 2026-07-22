@@ -1,7 +1,0 @@
-Traceback (most recent call last):
-  File "<stdin>", line 15, in <module>
-  File "<stdin>", line 12, in load
-  File "<frozen importlib._bootstrap_external>", line 755, in exec_module
-  File "<frozen importlib._bootstrap_external>", line 892, in get_code
-  File "<frozen importlib._bootstrap_external>", line 950, in get_data
-FileNotFoundError: [Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0159/home/.solar/harness/lib/solar-unified-context.py'

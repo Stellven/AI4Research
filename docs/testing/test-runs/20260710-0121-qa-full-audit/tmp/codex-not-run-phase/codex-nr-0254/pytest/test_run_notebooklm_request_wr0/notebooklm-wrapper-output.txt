@@ -1,1 +1,0 @@
-{"ok": true, "notebook_name": "AI Influence 2026-05-27", "notebook_title": "AI Influence 2026-05-27", "source_count": 2, "mindmap": {"status": "ready"}, "infographics": [{"title": "图一"}]}

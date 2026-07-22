@@ -1,1 +1,0 @@
-{"evidence_ids": ["visualize:autosci-graph", "visualize-autosci-graph", "autosci graph"], "operation": "propose", "relation": "proposes_visualization_for", "rendered": false, "run_id": "shim-visualize_graph", "source": "visualize:autosci-graph", "source_evidence": "artifacts/autosci/runs/shim-visualize_graph/research_graph_update.visualize.json", "target": "autosci-graph"}

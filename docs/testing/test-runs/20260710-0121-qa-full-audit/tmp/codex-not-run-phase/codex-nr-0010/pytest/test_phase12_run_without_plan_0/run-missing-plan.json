@@ -1,1 +1,0 @@
-{"task_id": "run-missing-plan", "sprint_id": "phase12-test", "node_id": "node-run-experiment", "mode": "solar_native", "output_dir": "artifacts/scientific/smoke", "inputs": {}, "outputs": {"evidence_payload_path": "artifacts/scientific/smoke/run_missing_plan.json"}}

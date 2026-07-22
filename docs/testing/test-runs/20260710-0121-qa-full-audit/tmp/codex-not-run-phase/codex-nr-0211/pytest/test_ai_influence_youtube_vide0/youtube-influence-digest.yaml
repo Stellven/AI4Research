@@ -1,9 +1,0 @@
-channels:
-- name: AI Engineer
-  url: https://www.youtube.com/@aiDotEngineer
-  category: AI / Tech
-  priority: tier1
-- url: https://www.youtube.com/@LatentSpacePod
-  name: Latent Space
-  category: AI / Tech / Podcast
-  priority: rotation

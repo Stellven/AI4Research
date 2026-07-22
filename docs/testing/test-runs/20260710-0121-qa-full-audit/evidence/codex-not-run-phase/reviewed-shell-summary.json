@@ -1,8 +1,0 @@
-{
-  "schema": "qa.codex_not_run_reviewed_shells.v1",
-  "target_count": 11,
-  "status_counts": {
-    "FAIL": 7,
-    "PASS": 4
-  }
-}

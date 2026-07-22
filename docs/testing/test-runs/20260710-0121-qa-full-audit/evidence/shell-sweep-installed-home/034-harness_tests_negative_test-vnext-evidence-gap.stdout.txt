@@ -1,2 +1,0 @@
-PASS N2-NC-6 final=verify_failed reason=verify_failed ledger_events=10
-OK test-vnext-evidence-gap.sh

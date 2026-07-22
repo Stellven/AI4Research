@@ -1,1 +1,0 @@
-{"schema": "autosci_runtime_evidence.v1", "task_id": "pilot-runtime-skillgen", "status": "completed", "exit_code": 0, "outcome": "supports", "metrics": [{"name": "pilot_accuracy", "value": 0.73}], "evidence_ids": ["runtime:pilot-skillgen"]}

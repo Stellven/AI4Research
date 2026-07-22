@@ -1,1 +1,0 @@
-{"schema": "autosci_model_response.v1", "status": "completed", "outputs": {"answer": "The wiki evidence supports the claim.", "confidence": 0.83, "evidence_ids": ["model:ask-support"], "provider": "command", "model": "local-reviewer"}}

@@ -1,7 +1,0 @@
-PASS: registers prd_html in status artifacts
-PASS: opens HTML when enabled
-PASS: respects SOLAR_HTML_AUTO_OPEN=0
-PASS: registers planning_html in status artifacts
-PASS: missing HTML is fail-open
-PASS: missing planning_html does not block builder route
-PASS

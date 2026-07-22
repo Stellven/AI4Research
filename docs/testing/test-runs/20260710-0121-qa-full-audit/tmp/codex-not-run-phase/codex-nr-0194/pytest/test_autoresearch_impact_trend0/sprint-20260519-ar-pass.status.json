@@ -1,1 +1,0 @@
-{"id": "sprint-20260519-ar-pass", "status": "passed", "phase": "planning_complete", "artifacts": {"autoresearch_optimizer": {"canonical_role": "planner", "recommended": true, "trigger_level": "recommended", "telemetry": {"round": 1, "eval_verdict": "", "failed_conditions": [], "error_count": 0}, "quality_metrics": {"must_measure": ["repair_round_delta"]}}}}

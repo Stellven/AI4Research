@@ -1,3 +1,0 @@
-# pytest product-level AutoSci tests
-......                                                                   [100%]
-6 passed in 5.29s

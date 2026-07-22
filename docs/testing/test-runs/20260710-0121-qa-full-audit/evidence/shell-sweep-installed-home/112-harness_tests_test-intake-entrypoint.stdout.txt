@@ -1,6 +1,0 @@
-Sprint created: sprint-20260710-062937-intent-typo-a0370f32
-RawIntent consumed: intent-20260710-062937-a0370f3215 (consumed)
-Planner handoff: skipped
-[0;36m[Harness][0m RawIntent: intent-20260710-062937-a0370f3215
-[0;36m[Harness][0m Raw intake: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.aoIathoiV6/raw/intake-20260710T062937Z.md
-FAIL: expected one sprint status, got 0

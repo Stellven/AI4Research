@@ -1,6 +1,0 @@
-#!/usr/bin/env sh
-set -eu
-
-HARNESS_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-REPO_DIR=$(CDPATH= cd -- "$HARNESS_DIR/.." && pwd)
-exec "$REPO_DIR/.venv/bin/python" "$@"

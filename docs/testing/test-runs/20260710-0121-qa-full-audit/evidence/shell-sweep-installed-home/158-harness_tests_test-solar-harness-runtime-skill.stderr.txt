@@ -1,1 +1,0 @@
-FAIL: Codex skill missing: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/.codex/skills/solar-harness-runtime/SKILL.md

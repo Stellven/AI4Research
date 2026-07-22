@@ -1,2 +1,0 @@
-{"ok": true, "kind": "contract"}
-ok - runtime artifact exporter redaction/kind/id test passed

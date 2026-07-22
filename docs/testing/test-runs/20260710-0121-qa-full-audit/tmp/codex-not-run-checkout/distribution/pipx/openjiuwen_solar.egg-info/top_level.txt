@@ -1,1 +1,0 @@
-opensolar_cli

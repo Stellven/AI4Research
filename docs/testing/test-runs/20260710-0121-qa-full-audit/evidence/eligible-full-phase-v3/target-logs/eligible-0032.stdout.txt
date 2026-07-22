@@ -1,9 +1,0 @@
-F                                                                        [100%]
-=================================== FAILURES ===================================
-_______ test_compact_tmux_session_creates_anchor_when_no_reusable_target _______
-harness/tests/graph/test_multi_task_runner_reuse.py:219: in test_compact_tmux_session_creates_anchor_when_no_reusable_target
-    monkeypatch.setattr(multi_task_runner, "tmux_window_records", lambda: windows)
-E   AttributeError: <module 'multi_task_runner' from '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/multi_task_runner.py'> has no attribute 'tmux_window_records'
-=========================== short test summary info ============================
-FAILED harness/tests/graph/test_multi_task_runner_reuse.py::test_compact_tmux_session_creates_anchor_when_no_reusable_target
-1 failed, 8 deselected in 0.04s

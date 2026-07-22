@@ -1,8 +1,0 @@
-{
-  "schema": "experiment_result.v1",
-  "fixture_source": true,
-  "status": "completed",
-  "metrics": {
-    "typed_rejection": 1
-  }
-}

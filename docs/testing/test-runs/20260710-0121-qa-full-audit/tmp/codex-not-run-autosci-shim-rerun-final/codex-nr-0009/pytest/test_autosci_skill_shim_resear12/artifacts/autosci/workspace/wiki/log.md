@@ -1,2 +1,0 @@
-- 2026-07-10T19:24:58Z | experiment | completed `exp-001` outcome `supports` evidence `exp-001, Validate evidence coverage for `claim-001` using a bounded fixture experiment., runtime:experiment:shim-scheduler, task-experiment-runtime-shim, experiment_runtime, external-experiment-runtime/experiment-runtime.json`
-- 2026-07-10T19:24:59Z | experiment | completed `exp-001` outcome `supports` evidence `exp-001, runtime:experiment:shim-scheduler, task-experiment-runtime-shim, experiment_runtime, external-experiment-runtime/experiment-runtime.json`

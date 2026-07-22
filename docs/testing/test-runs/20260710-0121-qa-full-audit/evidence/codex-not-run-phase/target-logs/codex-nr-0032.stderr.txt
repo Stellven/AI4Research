@@ -1,1 +1,0 @@
-REFUSE: HARNESS_TEST=1 required. This test suite must not run in production mode.

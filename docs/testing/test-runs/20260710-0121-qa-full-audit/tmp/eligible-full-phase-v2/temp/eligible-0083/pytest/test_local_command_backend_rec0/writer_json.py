@@ -1,3 +1,0 @@
-import json, sys
-sys.stdin.read()
-print(json.dumps({'result': '## Architecture Synthesis\n\nJSON writer with [claim:cl_0] [evidence:ev_0].\n\n## Comparative Positioning\n\nComparison text.\n\n## Evaluation And Risk Boundary\n\nEvaluation with [claim:cl_1] [evidence:ev_12].\n\n## Limitations And Failure Modes\n\nLimitations with [claim:cl_1] [evidence:ev_12].\n\n## Contradiction Slots\n\nContradiction with [claim:cl_2] [evidence:ev_1] [evidence:ev_13].\n\n## Source Map\n\nSources.\n\n## Claim Map\n\nClaims.\n\n## Open Problems\n\nOpen problems.\n', 'usage': {'input_tokens': 123, 'output_tokens': 45, 'total_tokens': 168}}))

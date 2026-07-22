@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "<stdin>", line 15, in <module>
-  File "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/lib/projections.py", line 17, in <module>
-    from harness.lib.event_ledger import EventLedger
-ModuleNotFoundError: No module named 'harness.lib'

@@ -1,1 +1,0 @@
-{"id": "sprint-20260519-ar-fail", "status": "failed_review", "phase": "eval_failed", "artifacts": {"autoresearch_optimizer": {"canonical_role": "builder", "recommended": true, "trigger_level": "strong", "telemetry": {"round": 3, "eval_verdict": "FAIL", "failed_conditions": ["regression"], "error_count": 1}, "quality_metrics": {"must_measure": ["repair_round_delta"]}}}}

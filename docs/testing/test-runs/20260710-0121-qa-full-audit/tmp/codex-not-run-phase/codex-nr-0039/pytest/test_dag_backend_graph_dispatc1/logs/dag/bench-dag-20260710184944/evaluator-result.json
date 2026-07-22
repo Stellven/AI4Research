@@ -1,8 +1,0 @@
-{
-  "stage": "evaluator",
-  "verdict": "pass",
-  "workspace_changed": true,
-  "file_count_before": 0,
-  "file_count_after": 1,
-  "builder_return_code": 0
-}

@@ -1,2 +1,0 @@
-=== test-runtime-interface-chaos ===
-PASS: runtime interface chaos suite

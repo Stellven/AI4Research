@@ -1,9 +1,0 @@
-{
-  "schema_version": "solar.capsule_plan_node.v1",
-  "node_id": "R3_claim_mining",
-  "logical_operator": "",
-  "request_type": "",
-  "lane_hint": "",
-  "selected": false,
-  "stages": []
-}

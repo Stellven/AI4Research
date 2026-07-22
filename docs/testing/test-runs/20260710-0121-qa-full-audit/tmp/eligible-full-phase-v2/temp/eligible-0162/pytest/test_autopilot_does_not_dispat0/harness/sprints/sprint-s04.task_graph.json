@@ -1,1 +1,0 @@
-{"sprint_id": "sprint-s04", "nodes": [{"id": "N1_activation_graph_route", "goal": "Wire graph activation", "depends_on": [], "write_scope": ["tools/autopilot.py"], "acceptance": ["ready nodes route to builder"], "status": "pending"}]}

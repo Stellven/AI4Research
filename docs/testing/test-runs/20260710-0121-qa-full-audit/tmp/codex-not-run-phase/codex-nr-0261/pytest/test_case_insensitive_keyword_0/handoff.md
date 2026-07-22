@@ -1,5 +1,0 @@
-# Handoff
-
-DONE.
-
-PASSED.

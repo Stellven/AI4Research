@@ -1,1 +1,0 @@
-{"schema": "research_claims.v1", "task_id": "claims-parity-write", "status": "completed", "outputs": {"claims": [{"claim_id": "claim-skillgen-parity-write", "text": "Parity policy can write verified local claim verdicts.", "evidence_ids": ["claim:parity-write"]}]}}

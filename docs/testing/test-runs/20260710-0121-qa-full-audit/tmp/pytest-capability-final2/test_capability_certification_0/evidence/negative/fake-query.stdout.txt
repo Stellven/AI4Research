@@ -1,6 +1,0 @@
-{
-  "ok": true,
-  "capability": "__solar.fake_missing_capability__",
-  "providers": [],
-  "found": false
-}

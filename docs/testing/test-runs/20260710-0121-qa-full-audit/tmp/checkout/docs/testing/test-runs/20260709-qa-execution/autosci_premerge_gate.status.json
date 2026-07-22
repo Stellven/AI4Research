@@ -1,9 +1,0 @@
-{
-  "name": "autosci_premerge_gate",
-  "command": [
-    "bash",
-    "harness/tests/test-autosci-premerge-gate.sh"
-  ],
-  "exit_code": 1,
-  "runtime_seconds": 0
-}

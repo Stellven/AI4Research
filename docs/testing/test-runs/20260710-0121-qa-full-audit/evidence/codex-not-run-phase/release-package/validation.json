@@ -1,8 +1,0 @@
-{
-  "manifest": "MANIFEST-1.0.0.json",
-  "tarball": "solar-harness-1.0.0.tar.gz",
-  "checksum_match": true,
-  "file_count": 11267,
-  "version": "1.0.0",
-  "forbidden_entries": []
-}

@@ -1,1 +1,0 @@
-knowledge_ingest_health ok

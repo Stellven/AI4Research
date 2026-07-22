@@ -1,2 +1,0 @@
-PASS shell syntax
-SKIP qmd not installed on this machine

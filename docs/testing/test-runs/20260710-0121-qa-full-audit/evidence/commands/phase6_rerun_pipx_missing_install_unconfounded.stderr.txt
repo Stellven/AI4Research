@@ -1,1 +1,0 @@
-COMMAND_NOT_FOUND: [Errno 2] No such file or directory: 'docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python'

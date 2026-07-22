@@ -1,8 +1,0 @@
-.....                                                                    [100%]
-=============================== warnings summary ===============================
-harness/tests/research_survey/test_finalize_run.py::test_finalize_run_cli
-  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-checkout/harness/lib/research/cli.py:3095: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-    "generated_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-5 passed, 1 warning in 0.49s

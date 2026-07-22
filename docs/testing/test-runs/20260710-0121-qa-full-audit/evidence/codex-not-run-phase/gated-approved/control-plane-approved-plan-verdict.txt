@@ -1,6 +1,0 @@
-OK: sprint-fixture-cp-51454 active -> approved (round=0)
-ok: appended to sprint-fixture-cp-51454.events.jsonl
-[0;32m[Harness][0m plan-verdict: sprint-fixture-cp-51454 → approved
-
-=== Results: PASS=13 FAIL=0 ===
-ALL_TESTS_PASS

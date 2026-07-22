@@ -1,4 +1,0 @@
-## Verdict
-FAIL
-
-old review

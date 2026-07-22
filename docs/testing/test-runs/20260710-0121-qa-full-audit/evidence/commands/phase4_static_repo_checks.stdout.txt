@@ -1,1 +1,0 @@
-{"counts": {"json": 1541, "yaml": 106, "shell": 656}, "failure_count": 5}

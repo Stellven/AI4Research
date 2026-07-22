@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="2" time="0.047" timestamp="2026-07-10T14:50:05.560720-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.graph.test_capability_inference_explicit" name="test_explicit_required_capabilities_are_not_union_enriched" time="0.010"><failure message="AssertionError: assert ['python', 't...ipeline', ...] == ['python', 'testing']&#10;  &#10;  Left contains 6 more items, first extra item: 'document.convert'&#10;  Use -v to get more diff">harness/tests/graph/test_capability_inference_explicit.py:27: in test_explicit_required_capabilities_are_not_union_enriched
-    assert enriched["nodes"][0]["required_capabilities"] == ["python", "testing"]
-E   AssertionError: assert ['python', 't...ipeline', ...] == ['python', 'testing']
-E     
-E     Left contains 6 more items, first extra item: 'document.convert'
-E     Use -v to get more diff</failure></testcase><testcase classname="harness.tests.graph.test_capability_inference_explicit" name="test_missing_required_capabilities_are_still_inferred" time="0.000" /></testsuite></testsuites>

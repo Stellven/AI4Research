@@ -1,1 +1,0 @@
-The file chess_board.png has an image of a chess board. Write moves to /app/move.txt.

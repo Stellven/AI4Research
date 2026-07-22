@@ -1,8 +1,0 @@
-T1: syntax and schema files
-  PASS: python modules compile
-  PASS: plugin/capability schemas parse
-T2: plugin manifests validate and declare safety metadata
-  PASS: validate ok
-  PASS: at least five manifests checked
-  PASS: all manifests include commands/background/eval/rollback
-T3: four-level integrations status

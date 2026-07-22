@@ -1,3 +1,0 @@
-# handoff
-
-AutoSci evidence produced.

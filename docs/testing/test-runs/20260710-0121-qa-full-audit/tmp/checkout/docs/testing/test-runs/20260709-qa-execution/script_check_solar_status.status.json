@@ -1,9 +1,0 @@
-{
-  "name": "script_check_solar_status",
-  "command": [
-    "bash",
-    "scripts/check-solar-status.sh"
-  ],
-  "exit_code": 0,
-  "runtime_seconds": 8
-}

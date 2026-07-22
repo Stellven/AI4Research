@@ -1,1 +1,0 @@
-{"ts": "2026-07-10T18:50:00Z", "kind": "eval_state", "sprint_id": "sprint-20260710-184959-intent-official-full-runtime-autosc-783cd2ce", "node_id": "paper_ingest", "eval_dispatch_failures": 0, "max_eval_dispatch_failures": 8, "last_eval_result": "DISPATCHED", "last_eval_reason": "autosci_evaluator_dispatched", "next_action": "await_autosci_eval_verdict", "status": "reviewing"}

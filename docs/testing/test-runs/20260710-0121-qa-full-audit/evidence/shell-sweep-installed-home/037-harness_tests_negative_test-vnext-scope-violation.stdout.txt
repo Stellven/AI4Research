@@ -1,2 +1,0 @@
-PASS N2-NC-3 final=policy_denied reason=policy_denied ledger_events=4
-OK test-vnext-scope-violation.sh

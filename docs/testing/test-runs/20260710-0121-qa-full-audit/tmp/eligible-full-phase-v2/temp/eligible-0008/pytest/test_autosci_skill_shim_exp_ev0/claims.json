@@ -1,1 +1,0 @@
-{"schema": "research_claims.v1", "task_id": "claims-skillgen", "status": "completed", "outputs": {"claims": [{"claim_id": "claim-skillgen-001", "text": "SkillGen improves generated-skill reliability on held-out repair tasks.", "evidence_ids": ["claim:skillgen"]}]}}

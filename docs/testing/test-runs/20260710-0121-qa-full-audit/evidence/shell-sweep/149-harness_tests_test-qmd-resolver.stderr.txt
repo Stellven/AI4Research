@@ -1,1 +1,0 @@
-FAIL qmd resolver missing or not executable

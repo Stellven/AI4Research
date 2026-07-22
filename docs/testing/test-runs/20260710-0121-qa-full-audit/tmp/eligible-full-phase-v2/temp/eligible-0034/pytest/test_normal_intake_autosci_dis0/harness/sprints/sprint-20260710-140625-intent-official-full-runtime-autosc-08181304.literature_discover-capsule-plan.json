@@ -1,7 +1,0 @@
-{
-  "schema_version": "solar.capsule_plan_node.v1",
-  "node_id": "literature_discover",
-  "logical_operator": "ScientificLiteratureDiscoverer",
-  "selected": false,
-  "stages": []
-}

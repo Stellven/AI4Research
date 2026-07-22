@@ -1,1 +1,0 @@
-{"ts": "2026-07-10T18:52:49Z", "actor": "pm_dispatch", "event": "compiled_requirement_package_created", "sid": "sprint-20260710-185248-intent-codex_pm_router-rawintent-247df1a2", "status": "info", "detail": {"phase": "prd_ready", "handoff_to": "planner", "target_role": "planner"}}

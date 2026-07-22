@@ -1,1 +1,0 @@
-{"schema": "autosci_model_response.v1", "status": "completed", "outputs": {"answer": "SkillGen support is grounded in verifier-gated generated skills from the retrieved source.", "confidence": 0.87, "evidence_ids": ["model:skillgen-concept"], "model": "test-model", "provider": "command"}}

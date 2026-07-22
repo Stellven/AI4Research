@@ -1,4 +1,0 @@
-tests/*.log
-tests/*.tmp
-.claude/
-.autoresearch/workflows/*/terminal.log__pycache__/

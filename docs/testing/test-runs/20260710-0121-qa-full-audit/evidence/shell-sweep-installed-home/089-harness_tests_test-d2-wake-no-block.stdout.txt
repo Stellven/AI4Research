@@ -1,8 +1,0 @@
-[D2] 自动恢复无阻塞测试
-  [0;32m✓[0m pane-launcher.sh 无 read -r 阻塞
-  [0;32m✓[0m start-incarnation.sh 无 read -r 阻塞
-  [0;32m✓[0m wake 不调 pane-launcher (无阻塞)
-  [0;32m✓[0m watchdog respawn 用 start-incarnation
-
-  [0;32mPASS: 4[0m  [0;31mFAIL: 0[0m
-PASS

@@ -1,9 +1,0 @@
-....F...                                                                 [100%]
-=================================== FAILURES ===================================
-______________ test_local_command_backend_records_real_usage_json ______________
-harness/tests/research_survey/test_section_compiler.py:277: in test_local_command_backend_records_real_usage_json
-    assert result["ok"] is True
-E   assert False is True
-=========================== short test summary info ============================
-FAILED harness/tests/research_survey/test_section_compiler.py::test_local_command_backend_records_real_usage_json
-1 failed, 7 passed, 11 deselected in 0.15s

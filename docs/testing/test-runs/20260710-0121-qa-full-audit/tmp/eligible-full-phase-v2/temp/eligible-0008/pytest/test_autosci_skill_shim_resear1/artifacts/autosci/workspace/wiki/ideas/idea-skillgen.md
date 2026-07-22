@@ -1,1 +1,0 @@
-# SkillGen Idea

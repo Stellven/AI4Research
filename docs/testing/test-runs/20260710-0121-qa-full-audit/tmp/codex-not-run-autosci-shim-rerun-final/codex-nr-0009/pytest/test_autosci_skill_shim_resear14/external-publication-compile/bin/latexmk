@@ -1,4 +1,0 @@
-#!/usr/bin/env python3
-from pathlib import Path
-Path('main.pdf').write_bytes(b'%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\nxref\n0 1\n0000000000 65535 f \ntrailer\n<<>>\nstartxref\n9\n%%EOF\n')
-print('fake shim scheduler latexmk completed')

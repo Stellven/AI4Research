@@ -1,6 +1,0 @@
-{"by": "core-runtime", "chapter_id": "ch_01", "from": "queued", "reason": "test", "to": "writing", "ts": "2026-07-10T18:53:53Z"}
-{"by": "core-runtime", "chapter_id": "ch_02", "from": "queued", "reason": "test", "to": "writing", "ts": "2026-07-10T18:53:53Z"}
-{"by": "core-runtime", "chapter_id": "ch_02", "from": "writing", "reason": "test", "to": "verifying", "ts": "2026-07-10T18:53:53Z"}
-{"by": "core-runtime", "chapter_id": "ch_01", "from": "writing", "reason": "test", "to": "verifying", "ts": "2026-07-10T18:53:53Z"}
-{"by": "core-runtime", "chapter_id": "ch_02", "from": "verifying", "reason": "test", "to": "passed", "ts": "2026-07-10T18:53:53Z"}
-{"by": "core-runtime", "chapter_id": "ch_01", "from": "verifying", "reason": "test", "to": "passed", "ts": "2026-07-10T18:53:53Z"}

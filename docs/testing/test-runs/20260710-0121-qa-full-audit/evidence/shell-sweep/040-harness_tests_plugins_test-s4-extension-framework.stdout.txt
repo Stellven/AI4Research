@@ -1,4 +1,0 @@
-T1: syntax and schema files
-  FAIL: python modules compile
-  FAIL: plugin/capability schemas parse
-T2: plugin manifests validate and declare safety metadata

@@ -1,1 +1,0 @@
-FAIL: upstream test missing: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/tests/control_plane/test-graph-scheduler.sh

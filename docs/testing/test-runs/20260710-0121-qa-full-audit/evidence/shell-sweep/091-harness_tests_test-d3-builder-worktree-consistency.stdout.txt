@@ -1,9 +1,0 @@
-[D3] Builder worktree 一致性测试
-  [0;31m✗[0m pane-launcher 未引用 worktree.sh
-  [0;31m✗[0m start-incarnation 未引用 worktree.sh
-  [0;31m✗[0m lib/worktree.sh 不存在
-  [0;31m✗[0m worktree.sh 缺少复用逻辑 (watchdog 重启时会重复创建)
-  [0;31m✗[0m watchdog respawn 未传 work_dir 参数
-  [0;31m✗[0m worktree.sh 语法错误
-
-  [0;32mPASS: 0[0m  [0;31mFAIL: 6[0m

@@ -1,1 +1,0 @@
-{"schema": "literature_discovery.v1", "task_id": "lit-paper-draft", "status": "completed", "outputs": {"query": "skill generation", "candidates": [{"candidate_id": "arxiv:2601.00003", "title": "SkillGen Draft Evidence", "arxiv_id": "2601.00003", "source_ref": "https://arxiv.org/abs/2601.00003", "source_channels": ["search_s2"]}]}}

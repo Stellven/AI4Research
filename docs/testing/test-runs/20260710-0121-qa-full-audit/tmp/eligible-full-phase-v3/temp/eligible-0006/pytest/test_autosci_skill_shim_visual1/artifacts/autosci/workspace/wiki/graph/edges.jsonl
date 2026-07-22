@@ -1,3 +1,0 @@
-{"source": "papers/source.md", "target": "concepts/skill.md", "relation": "uses_concept"}
-{"source": "papers/source.md", "target": "methods/filtered.md", "relation": "builds_on"}
-{"evidence_ids": ["visualize:autosci-graph", "visualize-autosci-graph", "autosci graph"], "operation": "confirm", "relation": "uses_concept", "rendered": false, "run_id": "shim-visualize-focus-filter", "source": "papers/source.md", "source_evidence": "artifacts/autosci/runs/shim-visualize-focus-filter/research_graph_update.visualize.json", "target": "concepts/skill.md"}

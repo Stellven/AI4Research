@@ -1,1 +1,0 @@
-{"schema_version": "solar.epic.task_graph.v1", "epic_id": "epic-s04", "nodes": [{"id": "S03", "child_sprint_id": "sprint-s03", "depends_on": [], "status": "active"}, {"id": "S04", "child_sprint_id": "sprint-s04", "depends_on": ["S03"], "status": "active"}]}

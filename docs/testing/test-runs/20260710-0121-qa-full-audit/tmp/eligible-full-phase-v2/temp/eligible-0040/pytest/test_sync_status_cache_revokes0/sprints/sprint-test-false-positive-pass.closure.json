@@ -1,1 +1,0 @@
-{"all_nodes_passed": false, "all_required_gates_passed": false, "open_nodes": ["S1", "S2"], "missing_gates": ["G_PLAN", "G_IMPL"]}

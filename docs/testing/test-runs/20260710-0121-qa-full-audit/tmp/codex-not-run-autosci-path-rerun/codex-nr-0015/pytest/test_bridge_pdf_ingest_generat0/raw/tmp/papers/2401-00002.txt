@@ -1,6 +1,0 @@
-Solar Synthetic PDF Fixture
-arXiv: 2401.00002
-Abstract
-This PDF validates offline synthetic TeX fallback.
-1. Introduction
-The method writes explicit preparation artifacts.

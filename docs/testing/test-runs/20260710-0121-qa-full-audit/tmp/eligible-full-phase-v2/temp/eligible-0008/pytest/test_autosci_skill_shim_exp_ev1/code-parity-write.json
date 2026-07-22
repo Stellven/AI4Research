@@ -1,1 +1,0 @@
-{"schema": "code_evidence_map.v1", "task_id": "code-parity-write", "status": "completed", "outputs": {"mappings": [{"mapping_id": "code-map-parity-write", "claim_id": "claim-skillgen-parity-write", "evidence_ids": ["code:parity-write"], "files": ["experiments/parity_write_eval.py"]}]}}

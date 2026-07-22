@@ -1,4 +1,0 @@
-=== test-solar-kb-qmd-fallback.sh ===
-  FAIL: T1 — expected ≥1 hit, got 0
-  FAIL: T2 — schema check: missing:['source', 'title', 'snippet', 'path']
-  PASS: T3 qmd missing → fail-open valid JSON

@@ -1,1 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.039" timestamp="2026-07-10T10:14:19.559854-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.influence.test_store" name="test_extracted_dir_rejects_unknown_bucket" time="0.001" /></testsuite></testsuites>

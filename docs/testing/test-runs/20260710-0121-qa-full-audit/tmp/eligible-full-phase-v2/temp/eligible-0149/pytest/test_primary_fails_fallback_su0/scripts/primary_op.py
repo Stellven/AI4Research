@@ -1,1 +1,0 @@
-import sys; print("fail", file=sys.stderr); sys.exit(1)

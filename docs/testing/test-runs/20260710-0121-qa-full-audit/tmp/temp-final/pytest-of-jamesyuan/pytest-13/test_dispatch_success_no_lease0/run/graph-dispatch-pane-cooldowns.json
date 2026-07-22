@@ -1,9 +1,0 @@
-{
-  "test:0.1": {
-    "reason": "assigned_pane_unavailable:pane_outside_harness_session",
-    "sid": "test-graph-submit",
-    "dispatch_id": "dispatch-123",
-    "marked_at": "2026-07-10T06:27:56Z",
-    "until": "2026-07-10T06:29:26Z"
-  }
-}

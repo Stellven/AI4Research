@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+      - pkg/migration
+      - openJiuwen-Solar
   push:
     branches:
       - main
@@ -21,6 +23,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repository-hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Reject tracked local and generated state
+        run: bash scripts/check-repo-hygiene.sh
+
+      - name: Verify hygiene gate negative controls
+        run: bash tests/test-repo-hygiene.sh
+
   python-smoke:
     name: Python smoke
     runs-on: ubuntu-latest

@@ -1,2 +1,0 @@
-{"ok": true, "global_status": "warn", "checks": ["model", "knowledge", "mirage_qmd", "intent", "skills", "sandbox"], "main_panes": 4, "lab_panes": 4}
-PASS: status capability health projects to global status and every pane

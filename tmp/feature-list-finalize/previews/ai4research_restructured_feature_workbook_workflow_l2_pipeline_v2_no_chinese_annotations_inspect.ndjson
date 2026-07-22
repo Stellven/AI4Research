@@ -1,4 +1,0 @@
-{"kind":"workbook","id":"wb/fvv81a","sheets":5,"tables":5}
-{"kind":"sheet","id":"ws/k45dc8","name":"Workflow Features","index":0,"range":"A1:O140","address":"A1:O140","tables":1}
-{"kind":"table","sheet":"Workflow Features","address":"A1:O140","values":[["visible_feature_id"]],"valuesTruncated":true}
-{"kind":"notice","message":"Truncated: omitted 13 lines. Increase maxChars, narrow range, or use tableMaxRows/tableMaxCols/tableMaxCellChars."}

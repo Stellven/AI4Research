@@ -1,7 +1,0 @@
-{
-  "pane": "%test-model-pane",
-  "persona": "builder",
-  "auth_source": "anthropic",
-  "model_flag": "--model sonnet",
-  "claude_bin": "/tmp/claude"
-}

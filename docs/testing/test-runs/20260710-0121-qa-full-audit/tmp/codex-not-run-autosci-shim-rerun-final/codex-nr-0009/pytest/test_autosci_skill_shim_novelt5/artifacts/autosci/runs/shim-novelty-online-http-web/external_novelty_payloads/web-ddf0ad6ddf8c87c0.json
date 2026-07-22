@@ -1,9 +1,0 @@
-{
-  "organic": [
-    {
-      "link": "https://example.invalid/generated-skills-http",
-      "snippet": "An HTTP provider result about generated skills for inference-time agents.",
-      "title": "Generated Skills for Inference-Time Agents"
-    }
-  ]
-}

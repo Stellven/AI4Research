@@ -1,3 +1,0 @@
-# SkillGen
-
-Approved edited content.

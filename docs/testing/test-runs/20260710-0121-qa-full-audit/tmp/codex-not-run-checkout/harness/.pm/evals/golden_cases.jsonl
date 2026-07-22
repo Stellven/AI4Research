@@ -1,1 +1,0 @@
-{"case_id": "golden-req-2c8590a11286", "request_type": "research", "goal": "Official full-runtime AutoSci integration test through normal solar intake. Do not call a", "expected_dag_variant": "research.autosci.v1", "expected_template_variant": "research"}

@@ -1,8 +1,0 @@
-{
-  "hosts": {
-    "spark-host": {
-      "host_id": "spark-host",
-      "host_type": "claude_code_session"
-    }
-  }
-}

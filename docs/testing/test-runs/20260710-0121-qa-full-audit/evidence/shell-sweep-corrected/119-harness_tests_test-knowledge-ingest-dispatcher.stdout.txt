@@ -1,2 +1,0 @@
-
-=== knowledge-ingest-dispatcher results: 11 passed, 0 failed ===

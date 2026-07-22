@@ -1,9 +1,0 @@
-{
-  "name": "desktop_runtime_detect",
-  "command": [
-    "node",
-    "desktop/src/runtime-detect.test.js"
-  ],
-  "exit_code": 0,
-  "runtime_seconds": 0
-}

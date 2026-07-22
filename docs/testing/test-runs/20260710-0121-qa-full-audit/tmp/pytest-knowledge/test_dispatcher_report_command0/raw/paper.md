@@ -1,3 +1,0 @@
-# Paper
-
-Grounded fixture.

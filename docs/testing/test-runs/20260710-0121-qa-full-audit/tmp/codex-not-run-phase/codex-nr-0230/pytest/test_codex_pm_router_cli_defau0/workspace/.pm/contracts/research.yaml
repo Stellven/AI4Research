@@ -1,6 +1,0 @@
-enabled: false
-hypothesis: 把 codex_pm_router 入口接到 RawIntent 主链。
-source_papers: []
-experiments: []
-adoption_threshold: {}
-rejection_criteria: []

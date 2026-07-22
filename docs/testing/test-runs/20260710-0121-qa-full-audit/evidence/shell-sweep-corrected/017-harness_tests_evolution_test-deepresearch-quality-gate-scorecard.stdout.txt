@@ -1,2 +1,0 @@
-{"ok": true, "feature": "deepresearch_quality_gate_scorecard"}
-PASS: DeepResearch quality gate scorecard persisted to evolution engine

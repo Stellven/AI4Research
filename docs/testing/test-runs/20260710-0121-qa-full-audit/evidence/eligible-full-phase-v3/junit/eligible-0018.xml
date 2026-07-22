@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.238" timestamp="2026-07-10T10:13:28.631308-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.benchmark.test_terminal_bench_adapter" name="test_empty_missing_prereqs_allows_dry_run_ok" time="0.141"><failure message="AssertionError: assert 'pending' == 'ok'&#10;  &#10;  - ok&#10;  + pending">harness/tests/benchmark/test_terminal_bench_adapter.py:192: in test_empty_missing_prereqs_allows_dry_run_ok
-    assert result.verdict == "ok"
-E   AssertionError: assert 'pending' == 'ok'
-E     
-E     - ok
-E     + pending</failure></testcase></testsuite></testsuites>

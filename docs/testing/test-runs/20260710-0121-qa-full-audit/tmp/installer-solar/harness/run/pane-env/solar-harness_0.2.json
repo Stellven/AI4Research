@@ -1,7 +1,0 @@
-{
-  "pane": "solar-harness:0.2",
-  "persona": "builder",
-  "auth_source": "anthropic",
-  "model_flag": "--model opus",
-  "claude_bin": "/tmp/claude"
-}

@@ -1,5 +1,0 @@
-[wiki-capture] "GET /healthz HTTP/1.1" 200 -
-[wiki-capture] "GET /healthz HTTP/1.1" 200 -
-[wiki-capture] "POST /capture-json HTTP/1.1" 200 -
-[wiki-capture] "POST /capture-json HTTP/1.1" 200 -
-[wiki-capture] "GET /status HTTP/1.1" 200 -

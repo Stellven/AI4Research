@@ -1,5 +1,0 @@
-=== test-hands-runtime ===
-FAIL: T15: guard error message — expected 'True', got 'False'
-FAIL: T15: guard violation path — expected 'True', got 'False'
-
-=== Results: 51 passed, 2 failed ===

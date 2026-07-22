@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.087" timestamp="2026-07-10T10:07:12.711438-04:00" hostname="Jamess-MacBook-Pro.local"><testcase classname="harness.tests.test_chatgpt_report_operator" name="test_deep_writer_submit_action_does_not_require_final_answer" time="0.041"><failure message="subprocess.CalledProcessError: Command '['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tools/chatgpt_report_operator.py']' returned non-zero exit status 1.">harness/tests/test_chatgpt_report_operator.py:343: in test_deep_writer_submit_action_does_not_require_final_answer
-    proc = run_operator(tmp_path, kind="deep_writer", write_deep_proof=True, action="submit")
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-harness/tests/test_chatgpt_report_operator.py:76: in run_operator
-    return subprocess.run(
-/Users/jamesyuan/.local/share/mise/installs/python/3.14.2/lib/python3.14/subprocess.py:577: in run
-    raise CalledProcessError(retcode, process.args,
-E   subprocess.CalledProcessError: Command '['/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/.venv/bin/python', '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tools/chatgpt_report_operator.py']' returned non-zero exit status 1.</failure></testcase></testsuite></testsuites>

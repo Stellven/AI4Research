@@ -1,1 +1,0 @@
-ERROR: config not found: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/final-home/Solar/harness/config/tech-hotspot-radar.yaml

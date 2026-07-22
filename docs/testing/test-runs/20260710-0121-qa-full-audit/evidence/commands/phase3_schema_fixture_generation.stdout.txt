@@ -1,1 +1,0 @@
-{"schema_count": 21, "valid_fixture_pass_count": 21, "invalid_fixture_rejected_count": 21}

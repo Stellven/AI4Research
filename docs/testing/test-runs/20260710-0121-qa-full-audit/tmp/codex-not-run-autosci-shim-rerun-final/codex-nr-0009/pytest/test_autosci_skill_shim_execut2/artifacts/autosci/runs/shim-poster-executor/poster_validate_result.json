@@ -1,9 +1,0 @@
-{
-  "bytes": 2156,
-  "command": "validate",
-  "issues": [],
-  "ok": true,
-  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-autosci-shim-rerun-final/codex-nr-0009/pytest/test_autosci_skill_shim_execut2/artifacts/autosci/runs/shim-poster-executor/poster.html",
-  "schema": "autosci_poster_cli.v1",
-  "status": "completed"
-}

@@ -1,7 +1,0 @@
-- [ ] [2026-07-10T06:31:36Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild
-- [ ] [2026-07-10T06:31:46Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild
-- [ ] [2026-07-10T06:31:57Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild
-- [ ] [2026-07-10T06:32:07Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild
-- [ ] [2026-07-10T06:32:17Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild
-- [ ] [2026-07-10T06:32:28Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild
-- [ ] [2026-07-10T06:32:38Z] [WATCHDOG-SESSION-RECOVERED] tmux session missing; watchdog attempted harness rebuild

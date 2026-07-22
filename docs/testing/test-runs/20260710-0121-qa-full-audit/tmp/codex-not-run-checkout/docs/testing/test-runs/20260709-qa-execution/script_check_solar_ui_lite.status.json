@@ -1,9 +1,0 @@
-{
-  "name": "script_check_solar_ui_lite",
-  "command": [
-    "bash",
-    "scripts/check-solar-ui-lite.sh"
-  ],
-  "exit_code": 0,
-  "runtime_seconds": 9
-}

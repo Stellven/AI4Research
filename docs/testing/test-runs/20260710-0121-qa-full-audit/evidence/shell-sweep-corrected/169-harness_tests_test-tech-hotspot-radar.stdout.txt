@@ -1,6 +1,0 @@
-=== test-tech-hotspot-radar ===
-CLI: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/scripts/tech_hotspot_radar.py
-Config: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/config/tech-hotspot-radar.yaml
-Temp DB: /tmp/test-tech-hotspot-radar-89442.sqlite
-
---- T1: init ---

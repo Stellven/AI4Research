@@ -1,3 +1,0 @@
-# Context
-
-Registered source context.

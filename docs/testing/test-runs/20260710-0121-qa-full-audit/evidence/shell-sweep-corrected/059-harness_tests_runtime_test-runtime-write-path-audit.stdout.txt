@@ -1,2 +1,0 @@
-FAIL expected nonzero with direct status write, got 2
-

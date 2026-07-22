@@ -1,6 +1,0 @@
-enabled: false
-hypothesis: 通过 Browser Agent 前门研究后再编译 requirement package。
-source_papers: []
-experiments: []
-adoption_threshold: {}
-rejection_criteria: []

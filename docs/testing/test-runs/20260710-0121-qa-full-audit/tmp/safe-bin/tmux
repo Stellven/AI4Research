@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-set -eu
-real_tmux=/opt/homebrew/bin/tmux
-case "${1:-}" in
-  -V|-h|--help) exec "$real_tmux" "$@" ;;
-esac
-exec "$real_tmux" -L ai4research-qa-audit "$@"

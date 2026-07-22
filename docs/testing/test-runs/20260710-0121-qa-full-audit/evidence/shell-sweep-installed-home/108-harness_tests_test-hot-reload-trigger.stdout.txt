@@ -1,9 +1,0 @@
-
-══════════════════════════════════════════════════
-  Hot-Reload Trigger Test (sprint-20260502-182804)
-══════════════════════════════════════════════════
-
-  [0;36m[info][0m coordinator.sh 已备份到 /tmp/test-hot-reload-trigger-backup-43754
-  [0;36m[info][0m 测试协调器已启动 (tmux=solar-test-hotreload, TICK=6)
-  [0;31m✗[0m 测试协调器未启动 (tmux session 不存在)
-  [0;36m[info][0m coordinator.sh 已还原

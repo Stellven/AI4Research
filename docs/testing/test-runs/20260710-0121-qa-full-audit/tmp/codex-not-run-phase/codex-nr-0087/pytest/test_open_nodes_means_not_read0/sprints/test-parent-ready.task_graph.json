@@ -1,1 +1,0 @@
-{"sprint_id": "test-parent-ready", "required_gates": ["gate-1"], "nodes": [{"id": "N1", "goal": "Test", "depends_on": [], "write_scope": ["/tmp/test"], "acceptance": ["test"], "status": "reviewing", "gate": "gate-1"}], "node_results": {}, "gate_results": {}}

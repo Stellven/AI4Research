@@ -1,7 +1,0 @@
-{
-  "command": "summary",
-  "error": "AUTOSCI_WIKIPEDIA_FETCH_DISABLED=1",
-  "schema": "autosci_wikipedia_fetch.v1",
-  "status": "fetch_disabled",
-  "title": "LoRA Disabled Fetch"
-}

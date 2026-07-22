@@ -1,3 +1,0 @@
-# Legacy
-
-Extracted fixture.

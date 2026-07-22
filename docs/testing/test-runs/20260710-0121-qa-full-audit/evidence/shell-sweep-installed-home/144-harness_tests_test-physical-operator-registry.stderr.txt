@@ -1,3 +1,0 @@
-Traceback (most recent call last):
-  File "<stdin>", line 26, in <module>
-AssertionError: ({'id': 'kb', 'role': 'builder', 'operator_selector': {'task_type': 'knowledge-extraction'}}, {'role': 'builder', 'label': '构建者', 'persona': 'builder', 'backend': 'claude-cli', 'model': 'sonnet', 'approval_mode': 'yolo', 'best_for': ['implementation', 'debugging', 'tests', 'refactor'], 'max_parallel': 4, 'name': 'builder', 'operator_fallback_reason': 'operator_selector_no_match'})

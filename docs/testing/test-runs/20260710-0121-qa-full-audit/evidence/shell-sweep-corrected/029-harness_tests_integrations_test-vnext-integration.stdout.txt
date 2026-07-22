@@ -1,2 +1,0 @@
-[INFO] upstream modules: ready
-[INFO] fixture dir: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.5No4uak3HN

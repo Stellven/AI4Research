@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "<stdin>", line 11, in <module>
-AssertionError: [{'sid': 'epic-20260710-epic-split-test', 'type': 'epic_ready_children', 'severity': 'info', 'target': '', 'message': 'epic-20260710-epic-split-test has dependency-ready child sprints.', 'ready_children': [{'sid': 'sprint-20260710-epic-split-test-s02-architecture', 'node_id': 'S02_architecture'}], 'blocked_children': [{'sid': 'sprint-20260710-epic-split-test-s03-core-runtime', 'blocked_by': ['sprint-20260710-epic-split-test-s02-architecture']}, {'sid': 'sprint-20260710-epic-split-test-s04-orchestration-ui', 'blocked_by': ['sprint-20260710-epic-split-test-s02-architecture']}, {'sid': 'sprint-20260710-epic-split-test-s05-verification-release', 'blocked_by': ['sprint-20260710-epic-split-test-s03-core-runtime', 'sprint-20260710-epic-split-test-s04-orchestration-ui']}]}]
-Traceback (most recent call last):
-  File "<stdin>", line 15, in <module>
-AssertionError: [{'sid': 'epic-20260710-epic-split-test', 'action': 'epic_ready_children', 'ok': False, 'returncode': 1, 'stdout': ''}]

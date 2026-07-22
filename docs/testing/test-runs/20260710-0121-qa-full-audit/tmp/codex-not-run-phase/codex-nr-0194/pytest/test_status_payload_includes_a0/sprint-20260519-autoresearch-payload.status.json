@@ -1,1 +1,0 @@
-{"id": "sprint-20260519-autoresearch-payload", "status": "active", "phase": "implementation", "artifacts": {"autoresearch_optimizer": {"canonical_role": "planner", "recommended": true, "trigger_level": "recommended", "telemetry": {"round": 1, "eval_verdict": "", "failed_conditions": []}, "quality_metrics": {"must_measure": ["evidence_gap_count"]}}}}

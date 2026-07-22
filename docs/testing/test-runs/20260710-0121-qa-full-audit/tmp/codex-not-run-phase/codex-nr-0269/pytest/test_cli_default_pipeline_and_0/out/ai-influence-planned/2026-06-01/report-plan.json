@@ -1,1 +1,0 @@
-{"schema_version": "legacy", "reports": [{"report_id": "ai-runtime", "title": "AI Runtime", "chapters": [{"chapter_id": "ch_01", "title": "Runtime Shift", "material_video_refs": ["V001", "V002", "V003", "V004"]}, {"chapter_id": "ch_02", "title": "Implications", "priority": "P0", "deep_writer_required": true, "expected_words": 700, "material_video_refs": ["V001"]}]}]}

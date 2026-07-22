@@ -1,9 +1,0 @@
-{
-  "schema_version": "solar.physical_plan_node.v1",
-  "node_id": "paper_analyze",
-  "logical_operator": "ScientificPaperAnalyzer",
-  "selected_operator_id": "",
-  "execution_candidates": [],
-  "attached_capsules": [],
-  "verifier_plans": []
-}

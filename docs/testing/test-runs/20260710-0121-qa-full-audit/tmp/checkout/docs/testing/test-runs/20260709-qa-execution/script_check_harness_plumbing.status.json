@@ -1,9 +1,0 @@
-{
-  "name": "script_check_harness_plumbing",
-  "command": [
-    "bash",
-    "scripts/check-harness-plumbing.sh"
-  ],
-  "exit_code": 0,
-  "runtime_seconds": 89
-}

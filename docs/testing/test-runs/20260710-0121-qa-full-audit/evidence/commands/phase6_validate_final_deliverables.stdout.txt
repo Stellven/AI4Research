@@ -1,6 +1,0 @@
-{
-  "status": "PASS",
-  "checks": 38,
-  "command_count": 81,
-  "sheet_count": 15
-}

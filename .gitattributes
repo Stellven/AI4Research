@@ -4,3 +4,14 @@ harness/status-server/static/p0-app/assets/** -diff linguist-generated
 
 # Shell scripts must stay LF even on a Windows checkout (CRLF breaks bash / WSL).
 *.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+bin/solar text eol=lf
+bin/solar-daemon text eol=lf
+
+# Binary deliverables must never receive line-ending conversion.
+*.xlsx binary
+*.icns binary
+*.ico binary
+*.png binary
+*.pdf binary

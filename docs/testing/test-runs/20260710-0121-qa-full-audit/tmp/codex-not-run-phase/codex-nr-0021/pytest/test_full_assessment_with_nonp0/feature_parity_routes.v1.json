@@ -1,1 +1,0 @@
-{"schema": "autosci_feature_parity_routes.v1", "routes": [{"native_skill": "ask", "autosci_command": "/ask", "solar_backend_action": "ask_wiki", "coverage_status": "partial", "backend_mode": "route_plan", "side_effect_policy": "none", "required_capabilities": ["wiki retrieval", "answer synthesis"], "limitations": ["Needs completed semantic audit."]}]}

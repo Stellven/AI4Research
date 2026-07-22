@@ -1,3 +1,0 @@
-
-=== Results: PASS=25 FAIL=0 ===
-ALL_TESTS_PASS

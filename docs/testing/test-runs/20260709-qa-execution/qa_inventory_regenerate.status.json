@@ -1,9 +1,0 @@
-{
-  "name": "qa_inventory_regenerate",
-  "command": [
-    "python3",
-    "tools/qa_inventory.py"
-  ],
-  "exit_code": 0,
-  "runtime_seconds": 5
-}

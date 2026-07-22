@@ -1,4 +1,0 @@
-=== test-mixture-topology.sh ===
-Fixture SID: test-mixture-fixture-49689
-
---- T1: select_topology auto-inference ---

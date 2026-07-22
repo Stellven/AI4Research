@@ -1,3 +1,0 @@
-# /novelty
-
-Native novelty semantics.

@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-set -eu
-name="$(basename "$0")"
-printf 'QA_AUDIT_BLOCKED_COMMAND: %s is disabled for this offline/no-side-effect audit\n' "$name" >&2
-exit 77

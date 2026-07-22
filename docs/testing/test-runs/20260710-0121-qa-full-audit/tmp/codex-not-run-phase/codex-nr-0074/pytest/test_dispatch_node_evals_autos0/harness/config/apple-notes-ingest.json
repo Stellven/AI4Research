@@ -1,9 +1,0 @@
-{
-  "notes_folder": "网络精华",
-  "tags": ["#solar-ingest", "#知识库", "#solar"],
-  "interval_seconds": 7200,
-  "raw_dir": "~/Knowledge/_raw/apple-notes",
-  "all_notes": false,
-  "fetch_wechat": true,
-  "wechat_timeout_seconds": 20
-}

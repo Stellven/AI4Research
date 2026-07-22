@@ -1,1 +1,0 @@
-{"id": "sprint-20260519-ar-active", "status": "active", "phase": "implementation", "artifacts": {"autoresearch_optimizer": {"canonical_role": "builder", "recommended": true, "trigger_level": "recommended", "telemetry": {"round": 2, "eval_verdict": "", "failed_conditions": [], "error_count": 0}, "quality_metrics": {"must_measure": ["repair_round_delta"]}}}}

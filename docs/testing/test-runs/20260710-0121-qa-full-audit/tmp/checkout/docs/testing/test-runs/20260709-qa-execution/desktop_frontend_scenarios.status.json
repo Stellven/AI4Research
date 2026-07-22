@@ -1,9 +1,0 @@
-{
-  "name": "desktop_frontend_scenarios",
-  "command": [
-    "node",
-    "desktop/frontend-scenarios.test.js"
-  ],
-  "exit_code": 1,
-  "runtime_seconds": 0
-}

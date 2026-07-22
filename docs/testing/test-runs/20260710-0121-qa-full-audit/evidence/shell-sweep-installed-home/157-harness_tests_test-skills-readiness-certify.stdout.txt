@@ -1,2 +1,0 @@
-PASS: syntax checks
-PASS: readiness reports 7 core skills plus accepted-artifacts gap

@@ -1,5 +1,0 @@
-{"event_type": "action.proposed", "payload": {"action_id": "a1"}, "created_at": "2026-05-20T15:00:00Z"}
-{"event_type": "policy.verdict", "payload": {"action_id": "a1", "verdict": "PASS"}, "created_at": "2026-05-20T15:00:01Z"}
-{"event_type": "action.proposed", "payload": {"action_id": "a2"}, "created_at": "2026-05-20T15:00:02Z"}
-{"event_type": "policy.verdict", "payload": {"action_id": "a2", "verdict": "FAIL", "reason": "HUMAN_APPROVAL_REQUIRED"}, "created_at": "2026-05-20T15:00:03Z"}
-{"event_type": "dispatcher.dead_letter", "payload": {"reason": "timeout"}, "created_at": "2026-05-20T15:00:04Z"}

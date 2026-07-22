@@ -1,1 +1,0 @@
-{"sprint_id": "sprint-test", "nodes": [{"id": "N1", "status": "dispatched", "assigned_to": "solar-harness-lab:0.0", "dispatch_id": "dispatch-123"}], "node_results": {"N1": {"status": "dispatched", "assigned_to": "solar-harness-lab:0.0", "dispatch_id": "dispatch-123", "updated_at": "2026-05-27T00:00:00Z"}}}

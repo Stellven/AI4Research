@@ -1,2 +1,0 @@
-sed: 1: "s#/[^/]*0#
-": unescaped newline inside substitute pattern

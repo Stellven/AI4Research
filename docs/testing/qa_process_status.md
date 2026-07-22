@@ -18,7 +18,7 @@ This file is the navigation layer for the repo-derived QA workflow.
 | 2. Normalize into L1/L2 feature hierarchy plus specific I/O | Complete | `docs/testing/qa_feature_inventory.csv`, columns `l1`, `l2`, `specific_inputs_outputs` |
 | 3. Map every feature to existing tests | Complete as static mapping | `docs/testing/qa_feature_inventory.csv`, column `existing_tests` |
 | 4. Finalize master acceptance table | Complete as acceptance grouping | `docs/testing/qa_master_pass_fail_table.md` |
-| 5. Execute local automated tests | Complete for discovered local automated tests | `docs/testing/test-runs/20260709-qa-execution/qa_complete_test_report.md` |
+| 5. Execute local automated tests | Historical run complete; current rerun required | Raw evidence is retained in commit `718aae9a`; see `docs/testing/test-runs/README.md` for the current evidence policy. |
 
 ## Simplified Feature List
 
@@ -68,11 +68,10 @@ Current inventory counts:
 
 ### Test Execution Report
 
-- Complete report: `docs/testing/test-runs/20260709-qa-execution/qa_complete_test_report.md`
-- Command summary: `docs/testing/test-runs/20260709-qa-execution/command_summary.tsv`
-- Pytest matrix: `docs/testing/test-runs/20260709-qa-execution/pytest_file_matrix_latest.tsv`
-- Shell matrix: `docs/testing/test-runs/20260709-qa-execution/shell_sweep_latest.tsv`
-- Root TypeScript matrix: `docs/testing/test-runs/20260709-qa-execution/root_ts_individual_latest.tsv`
+The historical report, command summary, and pytest/shell/TypeScript matrices
+remain recoverable from commit `718aae9a`. They are not current results and are
+not stored in the source tree. New raw evidence belongs outside the checkout;
+see `docs/testing/test-runs/README.md`.
 
 ## Important Clarification
 

@@ -1,6 +1,0 @@
-PASS: epic child queued sprint auto-promotes after dependency reaches terminal state
-PASS: coordinator.sh syntax ok
-
-========================
-PASS=2 FAIL=0
-PASS

@@ -1,4 +1,0 @@
-PASS: skills inject writes intent telemetry sidecar
-PASS: intent summarize produces pane-visible text and title
-PASS: intent audit detects worker usage and passed effect
-PROBES_PASSED=3 PROBES_FAILED=0

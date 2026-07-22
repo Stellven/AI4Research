@@ -1,1 +1,0 @@
-missing repair action: [{'action': 'pm_inbox_reconcile', 'ok': False, 'stdout': ''}, {'sid': '', 'action': 'knowledge_probe_failed', 'target': 'solar-harness-test:0.0', 'dispatched': False, 'recorded_only': True}, {'sid': '', 'action': 'model_registry_doctor_failed', 'target': '', 'dispatched': False, 'recorded_only': True}]

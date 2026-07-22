@@ -1,1 +1,0 @@
-{"case_id": "golden-req-7ff8ecef7c98", "request_type": "full_spec", "goal": "通过 Browser Agent 前门研究后再编译 requirement package。", "expected_dag_variant": "standard", "expected_template_variant": "standard"}

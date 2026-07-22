@@ -1,4 +1,0 @@
-=== test-recursive-refine.sh ===
-Fixture SID: test-refine-fixture-49731
-
---- T1: Create sprint fixture ---

@@ -1,1 +1,0 @@
-{"task_id": "missing-repo-map", "sprint_id": "phase10-test", "node_id": "node-map-code-evidence", "mode": "fixture", "output_dir": "artifacts/scientific/smoke", "inputs": {"claim_id": "claim-001", "repo_path": "plugins/autosci/tests/fixtures/does-not-exist"}, "outputs": {"evidence_payload_path": "artifacts/scientific/smoke/missing_repo_code_evidence_map.json"}}

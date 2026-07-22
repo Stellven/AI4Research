@@ -1,1 +1,0 @@
-{"verdict": "FAIL", "node_id": "N1", "summary": "Artifact omitted package manifests.", "failed_conditions": ["ACC-003"], "errors": [{"cond": "ACC-003", "severity": "high", "evidence": "package.json exists but was reported absent", "fix_hint": "Correct the manifest inventory."}]}

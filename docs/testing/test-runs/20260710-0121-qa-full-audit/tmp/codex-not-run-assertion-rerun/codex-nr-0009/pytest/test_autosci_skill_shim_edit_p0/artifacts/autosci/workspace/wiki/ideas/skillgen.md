@@ -1,3 +1,0 @@
-# SkillGen
-
-Old content.

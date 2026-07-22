@@ -1,6 +1,0 @@
-T1: py_compile
-[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/product_snapshot.py'  FAIL: py_compile fails
-T2: bash -n solar-harness.sh
-bash: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/solar-harness.sh: No such file or directory
-  FAIL: solar-harness.sh syntax error
-T3: snapshot --dry-run

@@ -1,1 +1,0 @@
-{"ts": "2026-07-10T18:52:53Z", "actor": "pm_dispatch", "event": "compiled_requirement_package_created", "sid": "sprint-20260710-185252-intent-codex_bridge-artifact-compil-660277c5", "status": "info", "detail": {"phase": "prd_ready", "handoff_to": "planner", "target_role": "planner"}}

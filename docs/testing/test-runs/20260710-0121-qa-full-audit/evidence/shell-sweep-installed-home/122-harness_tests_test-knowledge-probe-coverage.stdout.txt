@@ -1,2 +1,0 @@
-ok - mirage vfs role -> mirage
-PROBES_PASSED=1 PROBES_FAILED=9

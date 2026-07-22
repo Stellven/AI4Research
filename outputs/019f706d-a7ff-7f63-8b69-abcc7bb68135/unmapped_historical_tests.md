@@ -1,6 +1,6 @@
 # Unmapped historical tests
 
-Source: C:/Users/j50058254/Desktop/Github repo/AI4Research/docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_colored.xlsx
+Source: historical workbook at commit `718aae9a`, path `docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_colored.xlsx`
 
 Total: 250
 

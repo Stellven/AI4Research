@@ -1,5 +1,0 @@
-3147:do_autosci_command() {
-3269:  autosci)
-3271:    do_autosci_command "$@"
-3273:  \$*)
-3274:    do_autosci_command "$@"

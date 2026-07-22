@@ -1,3 +1,0 @@
-=== TC1: pane_is_plan_mode 函数 ===
-PASS: TC1: pane_is_plan_mode 函数存在且特征匹配正确
-=== TC2: Shift+Tab 预解锁 ===

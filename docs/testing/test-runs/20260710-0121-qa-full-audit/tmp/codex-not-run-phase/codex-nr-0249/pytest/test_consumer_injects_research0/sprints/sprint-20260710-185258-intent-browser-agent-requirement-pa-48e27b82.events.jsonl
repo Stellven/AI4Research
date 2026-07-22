@@ -1,1 +1,0 @@
-{"ts": "2026-07-10T18:52:58Z", "actor": "pm_dispatch", "event": "compiled_requirement_package_created", "sid": "sprint-20260710-185258-intent-browser-agent-requirement-pa-48e27b82", "status": "info", "detail": {"phase": "prd_ready", "handoff_to": "planner", "target_role": "planner"}}

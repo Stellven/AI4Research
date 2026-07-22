@@ -1,3 +1,0 @@
-# $ask
-
-Solar wrapper semantics.

@@ -1,6 +1,0 @@
-{
-  "real_repo_final_branch": "openJiuwen-Solar",
-  "real_repo_final_sha": "fb3f589b08e4167ac3cb0043fb3d59801a0f110b",
-  "isolated_checkout_final_sha": "fb3f589b08e4167ac3cb0043fb3d59801a0f110b",
-  "lock_matches": true
-}

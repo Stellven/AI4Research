@@ -1,1 +1,0 @@
-{"backend": "deepresearch-cli", "estimated_input_tokens": 4, "estimated_output_tokens": 4559, "estimated_total_tokens": 4563, "metadata": {"run_id": "c4f9b13e27c80297d8924fa34e0717ee", "source": "compile_report_to_markdown"}, "model": "local-report-compiler", "token_usage_is_estimated": true, "token_usage_source": "estimated_from_model_io", "ts": "2026-07-10T18:50:40Z"}

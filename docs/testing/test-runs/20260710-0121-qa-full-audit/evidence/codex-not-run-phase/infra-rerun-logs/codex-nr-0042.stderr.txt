@@ -1,1 +1,0 @@
-usage: check-top-level-case-duplicates.py <shell_script>

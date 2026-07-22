@@ -1,9 +1,0 @@
-[0;32m[Harness][0m bg task queued: bg-20260710-022344-9611
-[0;36m[Harness][0m status: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.6lg00JYXKw/solar-harness.sh bg status
-[0;36m[Harness][0m logs:   /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.6lg00JYXKw/solar-harness.sh bg logs bg-20260710-022344-9611
-[0;36m[Harness][0m attach: tmux attach -t solar-harness-bg:20260710-022344-9611-task
-[0;32m[Harness][0m bg task queued: bg-20260710-022344-4243
-[0;36m[Harness][0m status: /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.6lg00JYXKw/solar-harness.sh bg status
-[0;36m[Harness][0m logs:   /var/folders/cm/mkjwtys548g3qz7rpq1vbpf00000gn/T/tmp.6lg00JYXKw/solar-harness.sh bg logs bg-20260710-022344-4243
-[0;36m[Harness][0m attach: tmux attach -t solar-harness-bg:20260710-022344-4243-echo-hello
-PASS: bg entrypoint creates tmux-backed task records

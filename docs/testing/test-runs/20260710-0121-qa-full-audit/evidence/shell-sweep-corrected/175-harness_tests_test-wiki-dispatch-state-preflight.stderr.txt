@@ -1,2 +1,0 @@
-[wiki-bridge] ✓ ingest dispatch written → /tmp/solar-wiki-preflight-test.vJ1xet/vault/_raw/solar-harness/.dispatch/wiki-ingest-20260710T062558Z.md
-/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tests/test-wiki-dispatch-state-preflight.sh: line 46: /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.claude/hooks/state-read-enforcer.sh: No such file or directory

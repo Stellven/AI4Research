@@ -1,9 +1,0 @@
-{
-  "schema": "qa.codex_not_run_infra_rerun.v1",
-  "target_count": 5,
-  "status_counts": {
-    "FLAKY": 1,
-    "FAIL": 3,
-    "PASS": 1
-  }
-}

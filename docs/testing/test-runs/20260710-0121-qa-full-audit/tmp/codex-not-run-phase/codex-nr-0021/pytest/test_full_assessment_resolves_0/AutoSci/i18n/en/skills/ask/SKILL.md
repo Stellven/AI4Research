@@ -1,3 +1,0 @@
-# /ask
-
-Native ask semantics.

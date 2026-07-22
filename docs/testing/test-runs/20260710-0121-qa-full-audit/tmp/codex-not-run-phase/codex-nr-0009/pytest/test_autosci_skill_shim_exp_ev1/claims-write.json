@@ -1,1 +1,0 @@
-{"schema": "research_claims.v1", "task_id": "claims-write", "status": "completed", "outputs": {"claims": [{"claim_id": "claim-skillgen-write", "text": "Approved claim writeback.", "evidence_ids": ["claim:write"]}]}}

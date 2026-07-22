@@ -1,1 +1,0 @@
-{"version": 1, "operators": {"text-only": {"role": "builder", "provider": "test", "model": "fake", "cost_tier": "medium", "enabled": true, "available": true, "input_modalities": ["text"]}}}

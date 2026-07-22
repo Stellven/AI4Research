@@ -1,3 +1,0 @@
-# SkillGen
-
-Generated skill paper.

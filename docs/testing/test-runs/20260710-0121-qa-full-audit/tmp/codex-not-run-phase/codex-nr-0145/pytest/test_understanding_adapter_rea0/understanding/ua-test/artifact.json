@@ -1,1 +1,0 @@
-{"artifact_id": "ua-test", "source_path": "/docs/runtime.md", "source_hash": "sha256:test", "summary": "Runtime sidecar records context lineage.", "claims": [{"text": "Context usage is replayable.", "confidence": 0.9}], "confidence": 0.8}

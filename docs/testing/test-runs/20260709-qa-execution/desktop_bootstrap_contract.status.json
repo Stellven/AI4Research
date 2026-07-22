@@ -1,9 +1,0 @@
-{
-  "name": "desktop_bootstrap_contract",
-  "command": [
-    "node",
-    "desktop/bootstrap-contract.test.js"
-  ],
-  "exit_code": 0,
-  "runtime_seconds": 0
-}

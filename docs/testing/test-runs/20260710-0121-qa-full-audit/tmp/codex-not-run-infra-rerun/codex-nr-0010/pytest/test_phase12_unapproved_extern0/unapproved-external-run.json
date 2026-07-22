@@ -1,1 +1,0 @@
-{"task_id": "unapproved-external-run", "sprint_id": "phase12-test", "node_id": "node-run-experiment", "mode": "fixture", "output_dir": "artifacts/scientific/smoke", "inputs": {"execution_mode": "approved-external"}, "outputs": {"evidence_payload_path": "artifacts/scientific/smoke/unapproved_experiment_result.json"}}

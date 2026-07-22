@@ -1,8 +1,0 @@
-PASS fresh packaged app syncs bundled harness before network installer
-PASS symlinked ~/.solar/harness is rejected before sync/start
-PASS stale runtime pid/port/token markers are cleared before start
-PASS macOS bundled sync installs LaunchAgent
-PASS mac package carries LaunchAgent helper resources
-PASS get-solar fallback defaults to a published channel until rc8 tag exists
-PASS session UI has an error boundary fallback
-PASS desktop persists renderer/runtime diagnostics to log file

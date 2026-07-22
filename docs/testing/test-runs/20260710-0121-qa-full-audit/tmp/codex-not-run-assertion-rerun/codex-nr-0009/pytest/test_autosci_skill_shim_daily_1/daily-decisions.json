@@ -1,1 +1,0 @@
-{"decisions": [{"arxiv_id": "2607.00001", "decision": "strong_recommend", "confidence": "high", "score": 0.94, "rationale": "Matches the local AutoSci parity test topic.", "wiki_connections": ["autosci parity"], "signals_used": ["arxiv", "local_decision"]}]}

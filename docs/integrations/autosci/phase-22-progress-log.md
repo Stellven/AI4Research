@@ -37,7 +37,7 @@ the current-repository test-case generation and execution phases.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Historical colored workbook located | complete | Located `docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_colored.xlsx`, including its test-status colors and historical atomic-test inventory. |
+| Historical colored workbook located | complete | Located the historical workbook at `docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_colored.xlsx` in commit `718aae9a`, including its test-status colors and historical atomic-test inventory. Raw run evidence is no longer stored in the current source tree. |
 | Official feature hierarchy selected | complete | `AI4RnD Feature List.xlsx` was designated as the authoritative current Level 1 and Level 2 hierarchy. |
 | Historical workbook authority | limited | The old colored workbook is used for historical atomic features, atomic tests, and old results; it is not used as the current feature hierarchy. |
 | Repository-version equivalence | unresolved by decision | No conclusive evidence was established that the code tested by the historical workbook is identical to the current repository. Historical results therefore remain historical evidence only. |
@@ -116,7 +116,7 @@ into concrete repository-specific test cases.
 | Artifact | Purpose |
 |---|---|
 | `outputs/019f706d-a7ff-7f63-8b69-abcc7bb68135/AI4RnD Feature List - atomic coverage resolved.xlsx` | Current mapping and test-report planning workbook, including atomic-feature names and the complete atomic-test registry. |
-| `docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_colored.xlsx` | Historical colored test workbook and old test inventory. |
+| Commit `718aae9a`, path `docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_colored.xlsx` | Historical colored test workbook and old test inventory; retained in Git history rather than the current source tree. |
 | `outputs/019f706d-a7ff-7f63-8b69-abcc7bb68135/unmapped_historical_tests.md` | Detailed list of historical tests that do not map to the current hierarchy. |
 
 ### Interpretation Guardrails
@@ -180,7 +180,7 @@ during this test campaign.
 | Local source mismatch | identified | The existing local `openJiuwen-Solar` checkout tracks `Stellven/AI4Research`, not `Coconut-ch1ken/OpenSolar`; the two branch histories have diverged. QA commits must therefore be based explicitly on the `Coconut-ch1ken/OpenSolar` branch history. |
 | Atomic registry versus code | verified | The workbook contains 2,297 registry rows representing 524 unique atomic-test names, but exact symbol-name matching found no executable implementation for those names in the original local repository. The registry is currently a test specification and mapping inventory, not a set of existing test files. |
 | Historical workbook file mapping | absent | In the old colored workbook, all 2,117 `Existing Test Map` rows have blank `existing test files` and `existing test cases` fields. All 2,117 `Function Inventory` rows also have blank discovered-path and symbol fields. The colored workbook therefore does not identify an executable file for any atomic row. |
-| Historical execution receipts | located | `docs/testing/test-runs/20260709-qa-execution/` contains 780 status JSON receipts. Of these, 685 name a source file, representing 684 unique source paths: 667 under `harness/tests/` and 17 under root `tests/`. In the original checkout, 666 of those paths still exist and 18 are missing. These receipts show which suites were executed, but they are not bound one-to-one to the 2,117 atomic rows. |
+| Historical execution receipts | located | At commit `718aae9a`, `docs/testing/test-runs/20260709-qa-execution/` contained 780 status JSON receipts. Of these, 685 name a source file, representing 684 unique source paths: 667 under `harness/tests/` and 17 under root `tests/`. In the original checkout, 666 of those paths still exist and 18 are missing. These receipts show which suites were executed, but they are not bound one-to-one to the 2,117 atomic rows and are no longer stored in the current source tree. |
 | Original repository test-file inventory | complete | The original local history contains 988 tracked executable test-like files: 37 under root `tests/` and 951 elsewhere. The largest existing locations are `harness/tests/` (814), other `harness/` test files (70), and `harness/plugins/autosci/tests/` (22). |
 | New-source test-file inventory | complete | The requested `Coconut-ch1ken/OpenSolar` branch contains 773 tracked executable test-like files: 32 under root `tests/` and 741 elsewhere, primarily under `harness/`. |
 | Phase 22 atomic-test location | required | Every new atomic-test implementation created for this campaign must be stored under the repository root `tests/` directory. Categorize tests as `tests/workflow/<level-1-slug>/`, `tests/foundation/<level-1-slug>/`, `tests/vertical/<level-1-slug>/`, or `tests/platform/<surface>/`; shared fixtures and helpers belong under `tests/shared/`. Do not use a single `tests/atomic/` bucket. |

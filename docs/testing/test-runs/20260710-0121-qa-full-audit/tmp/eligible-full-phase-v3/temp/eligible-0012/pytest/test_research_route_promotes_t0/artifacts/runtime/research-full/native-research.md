@@ -1,1 +1,0 @@
-# Native /research lifecycle semantics

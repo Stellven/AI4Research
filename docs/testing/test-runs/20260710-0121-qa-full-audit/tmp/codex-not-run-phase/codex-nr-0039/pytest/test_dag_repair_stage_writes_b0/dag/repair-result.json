@@ -1,6 +1,0 @@
-{
-  "stage": "repair",
-  "applied": true,
-  "reason": "build_pmars_container_install_contract",
-  "path": "/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/codex-not-run-phase/codex-nr-0039/pytest/test_dag_repair_stage_writes_b0/workspace/.solar-harness-container.sh"
-}

@@ -1,2 +1,0 @@
-[build] DRY RUN — would create: /Users/jamesyuan/.solar/harness/release/artifacts/solar-harness-1.0.0.tar.gz
-[build] Exclusions: .git/ __pycache__/ venvs/ vendor/ *.pyc release/artifacts/ run/ backups/ events/ logs/ sessions/ reports/ _extracted_knowledge_fallback/ .pytest_cache/ *.db *.sqlite *.pid *.lock *.tmp

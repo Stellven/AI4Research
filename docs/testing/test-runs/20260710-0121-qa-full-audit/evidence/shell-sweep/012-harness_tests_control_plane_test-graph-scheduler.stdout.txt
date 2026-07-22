@@ -1,5 +1,0 @@
-T1: py_compile
-[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/graph_scheduler.py'  FAIL: compile error
-[Errno 2] No such file or directory: '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/capability_inference.py'  FAIL: capability_inference.py compile error
-  FAIL: task-graph.schema.json invalid
-T2: validate + topo + critical path

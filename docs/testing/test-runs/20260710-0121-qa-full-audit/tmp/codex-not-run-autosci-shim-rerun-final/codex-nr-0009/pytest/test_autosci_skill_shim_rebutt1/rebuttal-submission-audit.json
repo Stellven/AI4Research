@@ -1,1 +1,0 @@
-{"schema": "autosci_publication_submission_audit.v1", "status": "completed", "evidence_ids": ["submission-audit:rebuttal"], "outputs": {"audit": {"status": "completed", "submission_ready": true, "portal_submission_completed": false, "checks": [{"check": "coverage", "status": "ok"}, {"check": "word_limit", "status": "ok"}, {"check": "no_unconfirmed_claims", "status": "ok"}]}}}

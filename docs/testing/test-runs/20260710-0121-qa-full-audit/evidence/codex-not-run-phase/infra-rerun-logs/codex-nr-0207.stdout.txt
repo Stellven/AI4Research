@@ -1,1 +1,0 @@
-ok: youtube influence digest fixture test passed

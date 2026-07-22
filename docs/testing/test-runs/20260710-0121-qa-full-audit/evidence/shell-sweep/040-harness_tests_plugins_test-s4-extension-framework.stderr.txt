@@ -1,4 +1,0 @@
-[Errno 2] No such file or directory: 'lib/plugin_loader.py'Traceback (most recent call last):
-  File "<stdin>", line 3, in <module>
-FileNotFoundError: [Errno 2] No such file or directory: 'schemas/plugin.schema.json'
-python3: can't open file '/Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/home/.solar/harness/lib/plugin_loader.py': [Errno 2] No such file or directory

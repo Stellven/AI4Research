@@ -1,8 +1,0 @@
-..                                                                       [100%]
-=============================== warnings summary ===============================
-harness/tests/test_s04_activation_graph_route.py::test_autopilot_does_not_dispatch_when_dependency_blocked
-  /Users/jamesyuan/Developer/Github Repos (On Git)/BetterSolar/docs/testing/test-runs/20260710-0121-qa-full-audit/tmp/checkout/harness/tools/autopilot.py:66: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2 passed, 3 deselected, 1 warning in 0.06s

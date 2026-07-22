@@ -1,7 +1,0 @@
-  PASS: projects latest succeeded status
-  PASS: projects dispatch id
-  PASS: projects model flag
-  PASS: dashboard has model column
-  PASS: dashboard has model call renderer
-
-=== Model Call Status UI: PASS=5 FAIL=0 ===

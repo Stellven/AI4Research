@@ -1,1 +1,0 @@
-expected dormant cortex_passages, got {'name': 'cortex_passages', 'row_count': 1, 'freshest': '2026-02-01T00:00:00Z', 'age_days': 159, 'status': 'stale'}

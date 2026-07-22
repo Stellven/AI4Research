@@ -1,8 +1,0 @@
-{
-  "hosts": {
-    "mini": {
-      "host_id": "mini",
-      "host_type": "claude_code_session"
-    }
-  }
-}

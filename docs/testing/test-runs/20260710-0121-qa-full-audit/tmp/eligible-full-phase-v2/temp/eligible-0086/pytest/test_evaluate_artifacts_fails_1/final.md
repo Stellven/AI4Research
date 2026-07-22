@@ -1,3 +1,0 @@
-# Final
-
-No citation marker.
